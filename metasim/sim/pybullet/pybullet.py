@@ -73,7 +73,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 pos = np.array([0, 0, 0])
                 rot = np.array([1, 0, 0, 0])
                 object_file = object.urdf_path
-                useFixedBase = True
+                useFixedBase = object.fix_base_link
                 flags = 0
                 flags = flags | p.URDF_USE_SELF_COLLISION
                 flags = flags | p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES

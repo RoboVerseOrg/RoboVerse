@@ -81,7 +81,7 @@ class GenesisHandler(BaseSimHandler):
                 res=(camera.width, camera.height),
                 pos=camera.pos,
                 lookat=camera.look_at,
-                fov=camera.horizontal_fov,
+                fov=camera.vertical_fov,
             )
             self.camera_inst_dict[camera.name] = camera_inst
 

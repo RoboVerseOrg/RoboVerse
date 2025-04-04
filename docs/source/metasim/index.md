@@ -10,8 +10,6 @@ get_started/prerequisite
 get_started/installation
 get_started/docker
 get_started/advanced_installation/index
-get_started/prepare_data
-get_started/supported_simulators
 get_started/quick_start/index
 ```
 
@@ -20,6 +18,7 @@ get_started/quick_start/index
 :maxdepth: 2
 :titlesonly:
 
+get_started/prepare_data_hf
 user_guide/replay_demo
 user_guide/collect_demo
 user_guide/render
@@ -44,7 +43,6 @@ developer_guide/asset_conversions
 developer_guide/docstring
 developer_guide/unit_test
 developer_guide/tips/index
-developer_guide/history/index
 ```
 
 ```{toctree}
