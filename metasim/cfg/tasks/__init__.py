@@ -39,6 +39,8 @@ def __get_quick_ref():
     from .rlbench.close_box_cfg import CloseBoxCfg
     from .robosuite import SquareD0Cfg, SquareD1Cfg, SquareD2Cfg, StackD0Cfg
     from .simpler_env.simpler_env_grasp_opened_coke_can_cfg import SimplerEnvGraspOpenedCokeCanCfg
+
+    # from .skillblender import G1BaseTaskCfg, H1BaseTaskCfg
     from .uh1 import MabaoguoCfg
 
     toc = time.time()
@@ -66,4 +68,5 @@ def __getattr__(name):
         return gapartmanip_getattr(name)
 
     else:
+        raise AttributeError(f"Module {__name__} has no attribute {name}")
         raise AttributeError(f"Module {__name__} has no attribute {name}")
