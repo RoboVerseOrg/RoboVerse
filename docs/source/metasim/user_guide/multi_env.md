@@ -11,7 +11,7 @@ Currently, we support the following simulators to use multiple environments:
 - IsaacLab
 - IsaacGym
 - SAPIEN (on-going)
-- Genesis (on-going)
+- Genesis
 
 We won't support other simulators to use multiple environments due to the limitation of the simulators:
 - PyBullet
