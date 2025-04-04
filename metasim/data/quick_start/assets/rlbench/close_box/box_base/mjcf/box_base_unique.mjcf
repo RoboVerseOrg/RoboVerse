@@ -1,0 +1,48 @@
+<mujoco model="box_base">
+  <option iterations="50" timestep="0.001" solver="PGS" gravity="0 0 -9.81" />
+
+  <compiler angle="radian" meshdir="meshes" eulerseq="zyx" autolimits="true" />
+
+  <default>
+    <joint limited="true" damping="0.01" armature="0.01" frictionloss="0.01" />
+    <geom condim="4" contype="1" conaffinity="15" friction="0.9 0.2 0.2" solref="0.001 2" />
+    <motor ctrllimited="true" />
+    <equality solref="0.001 2" />
+    <default class="visualgeom">
+      <geom material="visualgeom" condim="1" contype="0" conaffinity="0" />
+    </default>
+  </default>
+
+  <worldbody>
+    <light directional="true" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="false" />
+    <light directional="true" diffuse="0.6 0.6 0.6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" />
+    <camera name="fixed" pos="0 -3.0 0.675002" xyaxes="1 0 0 0 0 1" />
+    <camera name="track" mode="trackcom" pos="0 -3.0 0.675002" xyaxes="1 0 0 0 0 1" />
+    <body name="root" pos="0 0 0" quat="1 0 0 0">
+      <site name="imu" size="0.01" pos="0 0 0" />
+      <geom name="box_base5_collision" size="0.125 0.075 0.005" pos="0.000235 -1e-06 -0.175002" quat="-8.60775e-06 0.707107 0.707107 -8.36281e-06" type="box" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+      <geom type="box" rgba="" size="0.125 0.075 0.005" pos="0.000235 -1e-06 -0.175002" quat="-8.60775e-06 0.707107 0.707107 -8.36281e-06" />
+      <geom name="box_base4_collision" size="0.125 0.175 0.0005" pos="-0.074754 1e-06 2e-06" quat="0.500002 0.499998 0.499998 0.500002" type="box" rgba="0.85 0.85 1 1" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+      <geom type="box" rgba="0.85 0.85 1 1" size="0.125 0.175 0.0005" pos="-0.074754 1e-06 2e-06" quat="0.500002 0.499998 0.499998 0.500002" />
+      <geom name="box_base3_collision" size="0.075 0.175 0.005" pos="0.000254 0.124999 5e-06" quat="-3.30445e-06 -8.71636e-06 0.707107 0.707107" type="box" rgba="0.85 0.85 1 1" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+      <geom type="box" rgba="0.85 0.85 1 1" size="0.075 0.175 0.005" pos="0.000254 0.124999 5e-06" quat="-3.30445e-06 -8.71636e-06 0.707107 0.707107" />
+      <geom name="box_base2_collision" size="0.075 0.175 0.005" pos="0.000246 -0.124999 2e-06" quat="-6.48643e-06 -1.18983e-05 0.707107 0.707107" type="box" rgba="0.85 0.85 1 1" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+      <geom type="box" rgba="0.85 0.85 1 1" size="0.075 0.175 0.005" pos="0.000246 -0.124999 2e-06" quat="-6.48643e-06 -1.18983e-05 0.707107 0.707107" />
+      <geom name="box_base_collision" size="0.125 0.075 0.005" pos="0.000245 1e-06 0.175002" quat="-6.48643e-06 0.707107 0.707107 -6.24149e-06" type="box" rgba="0.85 0.85 1 1" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+      <geom type="box" rgba="0.85 0.85 1 1" size="0.125 0.075 0.005" pos="0.000245 1e-06 0.175002" quat="-6.48643e-06 0.707107 0.707107 -6.24149e-06" />
+      <body name="box_lid" pos="0.086229 -0.123002 2e-05" quat="-1.07291e-05 0.707109 0.707104 -1.11912e-05">
+        <inertial pos="0.126009 0.038258 -7e-05" quat="0.5 0.5 -0.5 0.5" mass="0.938" diaginertia="0.0151896 0.00958324 0.00562206" />
+        <joint name="box_joint" pos="0 0 0" axis="0 0 1" range="-0.253073 2.36492" actuatorfrcrange="-10 10" />
+        <geom name="box_lid" size="0.134 0.175 0.005" pos="0.126009 0.038258 -7e-05" quat="-0.701049 0.701067 0.0922885 -0.0922909" type="box" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
+        <geom type="box" rgba="" size="0.134 0.175 0.005" pos="0.126009 0.038258 -7e-05" quat="-0.701049 0.701067 0.0922885 -0.0922909" />
+      </body>
+    </body>
+  </worldbody>
+
+  <asset>
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".0 .0 .0" rgb2=".8 .8 .8" width="100" height="100" />
+    <material name="matplane" reflectance="0." texture="texplane" texrepeat="1 1" texuniform="true" />
+    <material name="visualgeom" rgba="0.5 0.9 0.2 1" />
+  </asset>
+
+</mujoco>
