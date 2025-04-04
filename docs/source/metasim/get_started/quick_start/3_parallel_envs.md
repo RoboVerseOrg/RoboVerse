@@ -32,8 +32,8 @@ Note that we find the `headless` mode of Genesis is not stable. So we recommend 
 
 We can open multiple environments at the same time.
 
-<video width="100%" autoplay loop muted playsinline>
-    <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_demo.mp4" type="video/webm">
+<video width="50%" autoplay loop muted playsinline>
+    <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_demo.mp4" type="video/mp4">
 </video>
 
 You will get the following videos:
