@@ -10,7 +10,7 @@ get_started/prerequisite
 get_started/installation
 get_started/docker
 get_started/advanced_installation/index
-get_started/prepare_data
+get_started/prepare_data_hf
 get_started/supported_simulators
 get_started/quick_start/index
 ```
