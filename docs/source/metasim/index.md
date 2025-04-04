@@ -43,7 +43,6 @@ developer_guide/asset_conversions
 developer_guide/docstring
 developer_guide/unit_test
 developer_guide/tips/index
-developer_guide/history/index
 ```
 
 ```{toctree}
