@@ -42,7 +42,6 @@ developer_guide/new_sim
 developer_guide/asset_conversions
 <!-- developer_guide/rl -->
 developer_guide/docstring
-developer_guide/unit_test
 developer_guide/tips/index
 ```
 
