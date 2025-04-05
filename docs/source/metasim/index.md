@@ -18,7 +18,7 @@ get_started/quick_start/index
 :maxdepth: 2
 :titlesonly:
 
-get_started/prepare_data_hf
+user_guide/configuration/index
 user_guide/replay_demo
 user_guide/collect_demo
 user_guide/render
@@ -26,6 +26,7 @@ user_guide/multi_env
 user_guide/cross_embodiment
 user_guide/cross_sim
 user_guide/teleoperate_demo
+get_started/prepare_data_hf
 user_guide/tips/index
 ```
 

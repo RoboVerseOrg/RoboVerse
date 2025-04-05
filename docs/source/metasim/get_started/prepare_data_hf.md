@@ -1,4 +1,4 @@
-# Prepare Data
+# Store Data Locally
 If you are not a developer, you don't have to follow this instruction. The required data will be downloaded automatically from HuggingFace when you run the code.
 
 For the current stage, the HuggingFace dataset is private. So you need a token to access it. See tips for using HuggingFace [here](../developer_guide/tips/huggingface.md).
