@@ -44,4 +44,4 @@ class BaseRobotCfg(ArticulationObjCfg):
     """Whether to enable gravity in the simulation."""
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = True
-    isaacgym_collapse_fixed_joints: bool = False
+    collapse_fixed_joints: bool = False

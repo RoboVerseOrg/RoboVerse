@@ -43,6 +43,7 @@ class GenesisHandler(BaseSimHandler):
             gs.morphs.URDF(
                 file=self.robot.urdf_path,
                 fixed=self.robot.fix_base_link,
+                merge_fixed_links=self.robot.collapse_fixed_joints,
             ),
             material=gs.materials.Rigid(gravity_compensation=1 if not self.robot.enabled_gravity else 0),
         )

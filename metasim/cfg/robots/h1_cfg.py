@@ -16,7 +16,7 @@ class H1Cfg(BaseRobotCfg):
     fix_base_link: bool = False  # TODO: Isaacgym has problem with fix_base_link=True
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
-    isaacgym_collapse_fixed_joints: bool = True
+    collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
         "left_hip_yaw": BaseActuatorCfg(),
