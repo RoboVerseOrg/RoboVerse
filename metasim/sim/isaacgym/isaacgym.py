@@ -204,6 +204,7 @@ class IsaacgymHandler(BaseSimHandler):
         asset_options.fix_base_link = self.robot.fix_base_link
         asset_options.disable_gravity = not self.robot.enabled_gravity
         asset_options.flip_visual_attachments = self.robot.isaacgym_flip_visual_attachments
+        asset_options.collapse_fixed_joints = self.robot.isaacgym_collapse_fixed_joints
         robot_asset = self.gym.load_asset(self.sim, asset_root, robot_asset_file, asset_options)
         # configure robot dofs
         robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
@@ -472,7 +473,7 @@ class IsaacgymHandler(BaseSimHandler):
                     body_state["com"] = self._rigid_body_states[
                         self._body_info[obj.name]["global_indices"][body_name], :3
                     ].cpu()
-                    env_state["metasim"][f"body_{body_name}"] = body_state
+                    env_state["metasim"][f"metasim_body_{body_name}"] = body_state
 
             for i_cam, cam in enumerate(self._cameras):
                 cam_state = {}
