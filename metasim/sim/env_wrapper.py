@@ -112,7 +112,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
                 ):
                     # XXX: compatible with old states format
                     states = [
-                        {**state["robots"], **state["objects"], **state["metasim"]}
+                        {**state["robots"], **state["objects"], **state.get("metasim", {})}
                         for state in self.handler.get_states()
                     ]
                     final_reward += reward_func(self.handler.robot.name)(states) * reward_weight
