@@ -13,6 +13,8 @@ class H12WithoutHandCfg(BaseRobotCfg):
     enabled_gravity: bool = True  # ! critical
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
+    isaacgym_collapse_fixed_joints: bool = True
+
     actuators: dict[str, BaseActuatorCfg] = {
         "torso_joint": BaseActuatorCfg(),
         "left_shoulder_pitch_joint": BaseActuatorCfg(),
