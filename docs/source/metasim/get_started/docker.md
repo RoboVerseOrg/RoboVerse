@@ -19,7 +19,7 @@ sudo systemctl restart docker
 
 Please create and add the docker user information to `.env` file. To use the same user information as the host machine, run in project root:
 ```bash
-echo "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER" > .env
+printf "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER\n" > .env
 ```
 Otherwise docker will use `user(uid=1000,gid=1000)` as default.
 
@@ -31,7 +31,7 @@ docker compose up --build -d && docker exec -it metasim bash
 ```
 This will automatically build docker image `roboverse-metasim`.
 
-It may take ~30mins when the network speed is ~20MB/s. The docker image size would be ~35GB.
+It may take ~30mins when the network speed is ~20MB/s. The docker image size would be ~32GB.
 
 ## Run the docker container in VSCode/Cursor
 
