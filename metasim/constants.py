@@ -44,6 +44,7 @@ class BenchmarkType(enum.Enum):
 
     ## SimplerEnv
     SIMPLERENVGRASPSINGLEOPENEDCOKECAN = "SimplerEnvGraspSingleOpenedCokeCan"
+    SIMPLERENVMOVENEAR = "SimplerEnvMoveNear"
 
     ## humanoid
     HUMANOIDBENCH = "HumanoidBench"
