@@ -6,31 +6,17 @@ MetaSim uses [cuRobo](https://github.com/NVlabs/curobo) to perform IK, motion pl
 cuRobo installation is tested on Ubuntu 22.04LTS, with both Python 3.8 and 3.10. For other platforms, please refer to the [official guide](https://curobo.org/get_started/1_install_instructions.html).
 ```
 
-
-## Install with Isaac Sim
-
-Please refer to the [official guide](https://curobo.org/get_started/1_install_instructions.html#install-for-use-in-isaac-sim), or run:
-
-```shell
-pip install tomli wheel ninja
-cd third_party
-git clone https://github.com/RoboVerseOrg/curobo
-cd curobo
-python -m pip install -e ".[isaacsim]" --no-build-isolation
-```
-
-If the last line above raises error about CUDA, consider installing the CUDA Toolkit with the version that matches the one with which your PyTorch is compiled (for IsaacLab, CUDA Toolkit 12.x will do).
-
-## Install without Isaac Sim
+## Installation
 
 Please refer to the [official guide](https://curobo.org/get_started/1_install_instructions.html#library-installation).
 ```bash
 sudo apt install git-lfs
-cd third_party
-git clone https://github.com/RoboVerseOrg/curobo
-cd curobo
-pip install -e . --no-build-isolation
+git submodule update --init --recursive
+cd third_party/curobo
+uv pip install -e . --no-build-isolation
 ```
+
+This may take ~5 minutes.
 
 ## Troubleshooting
 - If you encounter `cc1plus: warning: command-line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++` when building cuRobo, try adding the following lines at the top of `third_party/curobo/setup.py`:
