@@ -629,7 +629,7 @@ class IsaacgymHandler(BaseSimHandler):
         if not self.headless:
             self.gym.draw_viewer(self.viewer, self.sim, False)
 
-        self.gym.sync_frame_time(self.sim)
+        # self.gym.sync_frame_time(self.sim)
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
         ## TODO: support the case when env_ids != list(range(self.num_envs))
