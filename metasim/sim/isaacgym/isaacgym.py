@@ -687,6 +687,13 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list)
         self._set_actor_joint_state(q_list)
 
+        # Refresh tensors
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_dof_state_tensor(self.sim)
+        self.gym.refresh_jacobian_tensors(self.sim)
+        self.gym.refresh_mass_matrix_tensors(self.sim)
+
     def _set_actor_root_state(self, position_list, rotation_list):
         new_root_states = self._root_states.clone()
         new_root_states_pos = torch.tensor(np.array(position_list), dtype=torch.float32, device=self.device).reshape(
