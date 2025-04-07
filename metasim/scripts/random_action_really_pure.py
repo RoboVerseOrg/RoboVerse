@@ -38,7 +38,9 @@ def main():
     env_class = get_sim_env_class(SimType(args.sim))
     env = env_class(scenario)
 
-    init_states = [{scenario.robot.name: {"pos": [0.0, 0.0, args.z_pos]}}] * scenario.num_envs
+    init_states = [
+        {"robots": {scenario.robot.name: {"pos": [0.0, 0.0, args.z_pos]}}, "objects": {}}
+    ] * scenario.num_envs
     env.reset(states=init_states)
 
     robot_joint_limits = scenario.robot.joint_limits
