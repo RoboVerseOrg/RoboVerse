@@ -29,7 +29,7 @@ To develop with the full capability of MetaSim, it is recommended to [install wi
 
 ## Light-weight Installation
 
-If you only want to try MetaSim, you can install the specific simulator backends as you need.
+If you only want to try MetaSim, you can [directly install](./installation.rst) the specific simulator backends as you need.
 
 You may choose one or more of the following simulators, according to your operating system.
 
