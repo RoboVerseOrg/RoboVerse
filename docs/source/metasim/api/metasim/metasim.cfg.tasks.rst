@@ -1,8 +1,6 @@
 ﻿metasim.cfg.tasks
 ==================
 
-A task dashboard is available at `RoboVerse Dashboard <https://roboverse-dashboard.robofisher.xyz/>`_.
-
 .. automodule:: metasim.cfg.tasks
 
    .. rubric:: Base Class
