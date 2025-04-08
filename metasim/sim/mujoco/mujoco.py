@@ -328,32 +328,6 @@ class MujocoHandler(BaseSimHandler):
                     ),  # Contact torque in local frame (x,y,z)
                 }
 
-        # NOTE: Site does not compatible with urdf or usd, so we don't use it
-        # for site_id in range(self.physics.model.nsite):
-        #     site = self.physics.model.site(site_id)
-
-        #     linear_vel = None
-        #     angular_vel = None
-        #     for sensor_id in range(self.physics.model.nsensor):
-        #         sensor = self.physics.model.sensor(sensor_id)
-        #         if self.physics.model.sensor_objid[sensor_id] == site_id:
-        #             # mjtSensor enum: VELOCIMETER=2, GYRO=3
-        #             if sensor.type == 2:
-        #                 linear_vel = torch.tensor(
-        #                     self.physics.data.sensordata[sensor_id : sensor_id + 3], dtype=torch.float32
-        #                 )
-        #             elif sensor.type == 3:
-        #                 angular_vel = torch.tensor(
-        #                     self.physics.data.sensordata[sensor_id : sensor_id + 3], dtype=torch.float32
-        #                 )
-
-        #     state["metasim"][f"metasim_site_{site.name.split('/')[-1]}"] = {
-        #         "pos": torch.tensor(self.physics.data.site_xpos[site_id], dtype=torch.float32),
-        #         "rot": torch.tensor(self.physics.data.site_xmat[site_id], dtype=torch.float32),
-        #         "vel": linear_vel if linear_vel is not None else None,
-        #         "ang_vel": angular_vel if angular_vel is not None else None,
-        #     }
-
         for camera in self.cameras:
             camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
             state["cameras"][camera.name] = {}
