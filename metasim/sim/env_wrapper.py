@@ -98,25 +98,10 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self.handler.close()
 
         def _get_reward(self) -> Reward:
-            from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-
             if hasattr(self.handler.task, "reward_fn"):
                 # XXX: compatible with old states format
                 states = [{**state["robots"], **state["objects"]} for state in self.handler.get_states()]
                 return self.handler.task.reward_fn(states)
-
-            if isinstance(self.handler.task, BaseRLTaskCfg):
-                final_reward = torch.zeros(self.handler.num_envs)
-                for reward_func, reward_weight in zip(
-                    self.handler.task.reward_functions, self.handler.task.reward_weights
-                ):
-                    # XXX: compatible with old states format
-                    states = [
-                        {**state["robots"], **state["objects"], **state.get("metasim", {})}
-                        for state in self.handler.get_states()
-                    ]
-                    final_reward += reward_func(self.handler.robot.name)(states) * reward_weight
-                return final_reward
             else:
                 return None
 

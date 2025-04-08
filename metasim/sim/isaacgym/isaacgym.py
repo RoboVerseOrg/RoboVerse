@@ -412,9 +412,8 @@ class IsaacgymHandler(BaseSimHandler):
             env_ids = list(range(self.num_envs))
 
         states = []
-        self.gym.start_access_image_tensors(self.sim)
         for env_id in env_ids:
-            env_state = {"objects": {}, "robots": {}, "cameras": {}, "metasim": {}}
+            env_state = {"objects": {}, "robots": {}, "cameras": {}}
             for obj_id, obj in enumerate(self.objects + [self._robot]):
                 obj_state = {}
                 object_type = "robots" if obj.name in self._robot_names else "objects"
@@ -453,49 +452,51 @@ class IsaacgymHandler(BaseSimHandler):
                     }
                 env_state[object_type][obj.name] = obj_state
 
-                ## Body states
-                ### XXX: will have bug when there are multiple objects with same structure, e.g. dual gripper
-
                 for i, body_name in enumerate(self._body_info[obj.name]["name"]):
-                    body_state = {}
-                    body_state["pos"] = self._rigid_body_states[
-                        self._body_info[obj.name]["global_indices"][body_name], :3
-                    ].cpu()
-                    body_state["rot"] = self._rigid_body_states[
-                        self._body_info[obj.name]["global_indices"][body_name], 3:7
-                    ].cpu()
-                    body_state["vel"] = self._rigid_body_states[
-                        self._body_info[obj.name]["global_indices"][body_name], 7:10
-                    ].cpu()
-                    body_state["ang_vel"] = self._rigid_body_states[
-                        self._body_info[obj.name]["global_indices"][body_name], 10:
-                    ].cpu()
-                    body_state["com"] = self._rigid_body_states[
-                        self._body_info[obj.name]["global_indices"][body_name], :3
-                    ].cpu()
-                    env_state["metasim"][f"metasim_body_{body_name}"] = body_state
+                    body_state = {
+                        "pos": self._rigid_body_states[
+                            self._body_info[obj.name]["global_indices"][body_name], :3
+                        ].cpu(),
+                        "rot": self._rigid_body_states[
+                            self._body_info[obj.name]["global_indices"][body_name], 3:7
+                        ].cpu(),
+                        "vel": self._rigid_body_states[
+                            self._body_info[obj.name]["global_indices"][body_name], 7:10
+                        ].cpu(),
+                        "ang_vel": self._rigid_body_states[
+                            self._body_info[obj.name]["global_indices"][body_name], 10:
+                        ].cpu(),
+                    }
+                    env_state[object_type][obj.name][body_name] = body_state
 
-            for i_cam, cam in enumerate(self._cameras):
-                cam_state = {}
-                cam_state[cam.name] = {
-                    "rgb": self._rgb_tensors[env_id][i_cam][..., :3],
-                    "depth": self._depth_tensors[env_id][i_cam],
-                    "pos": torch.tensor(cam.pos, device=self.device),
-                    "look_at": torch.tensor(cam.look_at, device=self.device),
-                    "intrinsic": torch.zeros((3, 3), device=self.device),  # TODO: get intrinsic matrix
-                    "extrinsic": torch.zeros((4, 4), device=self.device),  # TODO: get extrinsic matrix
-                }
-            env_state["cameras"] = cam_state
+            if len(self.cameras) > 0:
+                self.gym.start_access_image_tensors(self.sim)
+                for i_cam, cam in enumerate(self._cameras):
+                    cam_state = {}
+                    cam_state[cam.name] = {
+                        "rgb": self._rgb_tensors[env_id][i_cam][..., :3],
+                        "depth": self._depth_tensors[env_id][i_cam],
+                        "pos": torch.tensor(cam.pos, device=self.device),
+                        "look_at": torch.tensor(cam.look_at, device=self.device),
+                        "intrinsic": torch.zeros((3, 3), device=self.device),  # TODO: get intrinsic matrix
+                        "extrinsic": torch.zeros((4, 4), device=self.device),  # TODO: get extrinsic matrix
+                    }
+                env_state["cameras"] = cam_state
+                self.gym.end_access_image_tensors(self.sim)
+
             states.append(env_state)
-        self.gym.end_access_image_tensors(self.sim)
         return states
 
     def get_observation(self, action=None) -> dict:
         states = self.get_states()
-        rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-        rgb_tensor = torch.stack(rgbs, dim=0)
-        depths = [state["cameras"][self.cameras[0].name]["depth"] for state in states]
-        depth_tensor = torch.stack(depths, dim=0)
+        if len(self.cameras) > 0:
+            rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
+            rgb_tensor = torch.stack(rgbs, dim=0)
+            depths = [state["cameras"][self.cameras[0].name]["depth"] for state in states]
+            depth_tensor = torch.stack(depths, dim=0)
+        else:
+            rgb_tensor = None
+            depth_tensor = None
 
         ## TODO: get the following items from states
         joint_qpos = (
