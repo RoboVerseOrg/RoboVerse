@@ -13,7 +13,6 @@ from metasim.cfg.objects import (
     RigidObjCfg,
 )
 from metasim.cfg.robots import BaseRobotCfg
-from metasim.constants import PhysicStateType
 
 try:
     from .empty_env import EmptyEnv
@@ -41,7 +40,6 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
             collision_props = None
-
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):

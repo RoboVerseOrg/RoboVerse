@@ -54,6 +54,7 @@ class RigidObjCfg(BaseObjCfg):
     physics: PhysicStateType | None = None
 
     def __post_init__(self):
+        """Parse the physics state to the enabled and fix_base_link."""
         super().__post_init__()
         if self.physics is not None:
             if self.physics == PhysicStateType.XFORM:
