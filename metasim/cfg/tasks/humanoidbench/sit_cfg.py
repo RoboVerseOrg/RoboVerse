@@ -11,28 +11,28 @@ from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces,
-    center_of_mass_position,
-    center_of_mass_velocity,
     head_height,
+    robot_position,
+    robot_velocity,
     torso_upright,
 )
 
-from .base_cfg import HumanoidTaskCfg
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg
 
 
-class SitReward:
+class SitReward(HumanoidBaseReward):
     """Reward function for the sit task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the sit reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the sit reward."""
         results = []
         for state in states:
             # Get robot position (center of mass)
-            robot_pos = center_of_mass_position(state)
+            robot_pos = robot_position(state, self.robot_name)
 
             # Get chair position (assuming the chair object is named "sit" based on the config)
             chair_pos = state["metasim_body_chair/chair"]["pos"]
@@ -44,7 +44,7 @@ class SitReward:
             imu_z = state[f"metasim_site_{self.robot_name}/imu"]["pos"][2]
 
             # Get velocity for stillness calculation
-            velocity = center_of_mass_velocity(state)
+            velocity = robot_velocity(state, self.robot_name)
             vx, vy = velocity[0], velocity[1]
 
             # Calculate sitting components using tolerance function

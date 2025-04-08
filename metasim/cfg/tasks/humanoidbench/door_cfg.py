@@ -10,15 +10,15 @@ from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util, humanoid_robot_util
 
-from .base_cfg import HumanoidTaskCfg, StableReward
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg, StableReward
 
 
-class DoorReward:
+class DoorReward(HumanoidBaseReward):
     """Reward function for the door task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the door reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the door reward."""

@@ -13,7 +13,7 @@ class H1Cfg(BaseRobotCfg):
     mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
     urdf_path: str = "roboverse_data/robots/h1/urdf/h1.urdf"
     enabled_gravity: bool = True
-    fix_base_link: bool = False  # TODO: Isaacgym has problem with fix_base_link=True
+    fix_base_link: bool = False
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
     collapse_fixed_joints: bool = True

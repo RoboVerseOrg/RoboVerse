@@ -11,17 +11,15 @@ from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import left_hand_position
 
-from .base_cfg import HumanoidTaskCfg
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg
 
 
-class SuccessReward:
+class SuccessReward(HumanoidBaseReward):
     """Reward function for the push task when the object is pushed to the destination."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the push reward."""
-        self._robot_name = robot_name
-        if robot_name != "h1" and robot_name != "h1_simple_hand":
-            raise ValueError(f"Unknown robot {robot_name} without hand")
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> float:
         """Compute the push reward."""
@@ -33,12 +31,12 @@ class SuccessReward:
         return reward_success
 
 
-class GoalDistanceReward:
+class GoalDistanceReward(HumanoidBaseReward):
     """Reward function for the push task when the object is getting close to the destination."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the push reward."""
-        self._robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the push reward."""
@@ -49,14 +47,12 @@ class GoalDistanceReward:
         return reward_goal
 
 
-class HandDistanceReward:
+class HandDistanceReward(HumanoidBaseReward):
     """Reward function for the push task when the hand is getting close to the object."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the push reward."""
-        self._robot_name = robot_name
-        if robot_name != "h1" and robot_name != "h1_simple_hand":
-            raise ValueError(f"Unknown robot {robot_name} without hand")
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the push reward."""

@@ -357,7 +357,6 @@ class SlideChecker(BaseChecker):
         from metasim.utils.humanoid_robot_util import torso_upright
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
             if torso_upright(state, handler._robot.name) < 0.6:
@@ -370,13 +369,12 @@ class SlideChecker(BaseChecker):
 @configclass
 class WalkChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.2:
+            if robot_position(state, handler.robot.name)[2] < 0.2:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -397,7 +395,6 @@ class RunChecker(WalkChecker):
 class CrawlChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = [False] * len(states)
         return torch.tensor(terminated)
 
@@ -413,13 +410,12 @@ class HurdleChecker(BaseChecker):
 @configclass
 class MazeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.2:
+            if robot_position(state, handler.robot.name)[2] < 0.2:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -429,13 +425,12 @@ class MazeChecker(BaseChecker):
 @configclass
 class PoleChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.6:
+            if robot_position(state, handler.robot.name)[2] < 0.6:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -445,13 +440,12 @@ class PoleChecker(BaseChecker):
 @configclass
 class SitChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.5:
+            if robot_position(state, handler.robot.name)[2] < 0.5:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -461,13 +455,12 @@ class SitChecker(BaseChecker):
 @configclass
 class BalanceChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.8:
+            if robot_position(state, handler.robot.name)[2] < 0.8:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -480,7 +473,6 @@ class StairChecker(BaseChecker):
         from metasim.utils.humanoid_robot_util import torso_upright
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
             if torso_upright(state, handler.robot.name) < 0.1:
@@ -494,7 +486,6 @@ class StairChecker(BaseChecker):
 class PushChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
 
         for state in states:
@@ -520,7 +511,6 @@ class PushChecker(BaseChecker):
 class CubeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
 
         for state in states:
@@ -543,13 +533,12 @@ class CubeChecker(BaseChecker):
 @configclass
 class DoorChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.58:
+            if robot_position(state, handler.robot.name)[2] < 0.58:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -560,7 +549,6 @@ class DoorChecker(BaseChecker):
 class PackageChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
             package_pos = state["metasim_body_package/package"]["pos"]
@@ -577,13 +565,12 @@ class PackageChecker(BaseChecker):
 @configclass
 class PowerliftChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import z_height
+        from metasim.utils.humanoid_robot_util import robot_position
 
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = []
         for state in states:
-            if z_height(state, handler.robot.name) < 0.2:
+            if robot_position(state, handler.robot.name)[2] < 0.2:
                 terminated.append(True)
             else:
                 terminated.append(False)
@@ -594,7 +581,6 @@ class PowerliftChecker(BaseChecker):
 class SpoonChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = [False] * len(states)
         return torch.tensor(terminated)
 
@@ -603,6 +589,5 @@ class SpoonChecker(BaseChecker):
 class HighbarChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
-        states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         terminated = [False] * len(states)
         return torch.tensor(terminated)

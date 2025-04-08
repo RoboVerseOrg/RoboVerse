@@ -14,15 +14,15 @@ from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance
 
-from .base_cfg import HumanoidTaskCfg, StableReward
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg, StableReward
 
 
-class PowerliftReward:
+class PowerliftReward(HumanoidBaseReward):
     """Reward function for the powerlift task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the powerlift reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the powerlift reward."""
