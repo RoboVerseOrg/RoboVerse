@@ -50,7 +50,23 @@ class RigidObjCfg(BaseObjCfg):
     urdf_path: str | None = None
     mjcf_path: str | None = None
     mesh_path: str | None = None
-    physics: PhysicStateType = MISSING
+    enabled: bool = True
+    physics: PhysicStateType | None = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.physics is not None:
+            if self.physics == PhysicStateType.XFORM:
+                self.enabled = False
+                self.fix_base_link = True
+            elif self.physics == PhysicStateType.GEOM:
+                self.enabled = True
+                self.fix_base_link = True
+            elif self.physics == PhysicStateType.RIGIDBODY:
+                self.enabled = True
+                self.fix_base_link = False
+            else:
+                raise ValueError(f"Invalid physics type: {self.physics}")
 
 
 @configclass

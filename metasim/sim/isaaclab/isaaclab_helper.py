@@ -33,17 +33,15 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
     prim_path = f"/World/envs/env_.*/{obj.name}"
     ## Rigid object
     if isinstance(obj, RigidObjCfg):
-        if obj.physics == PhysicStateType.XFORM:
+        if obj.fix_base_link:
             rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
-            collision_props = None
-        elif obj.physics == PhysicStateType.GEOM:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
-            collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-        elif obj.physics == PhysicStateType.RIGIDBODY:
+        else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg()
+        if obj.enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
-            raise ValueError(f"Unsupported physics state: {obj.physics}")
+            collision_props = None
+
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
