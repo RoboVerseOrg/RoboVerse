@@ -36,7 +36,7 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
         else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg()
-        if obj.enabled:
+        if obj.collision_enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
             collision_props = None
