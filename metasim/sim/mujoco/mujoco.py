@@ -272,7 +272,9 @@ class MujocoHandler(BaseSimHandler):
         ## Body states -- for both robot and object
         object_names = [obj.name for obj in self.objects]
         robot_names = [self._robot.name]
-        for obj in self.objects + [self._robot]:
+        for obj in self.objects:
+            state["objects"][obj.name]["body"] = {}
+        for obj in [self._robot]:
             state["robots"][obj.name]["body"] = {}
         for body_id in range(self.physics.model.nbody):
             body = self.physics.model.body(body_id)
