@@ -33,7 +33,7 @@ class CloseBoxCfg(RLBenchTaskCfg):
     def reward_fn(self, states):
         # HACK: metasim_body_panda_hand may not be universal across all robots
         try:
-            ee_poses = torch.stack([state["metasim_body_panda_hand"]["pos"] for state in states])
+            ee_poses = torch.stack([state["metasim"]["metasim_body_panda_hand"]["pos"] for state in states])
         except KeyError as e:
             log.error(f"KeyError: {e}")
             ee_poses = torch.zeros(len(states), 3)
