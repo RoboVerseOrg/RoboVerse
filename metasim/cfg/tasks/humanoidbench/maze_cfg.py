@@ -13,15 +13,15 @@ from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass
 
-from .base_cfg import HumanoidTaskCfg
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg
 
 
-class MazeReward:
+class MazeReward(HumanoidBaseReward):
     """Reward function for the maze task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the maze reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the maze reward."""

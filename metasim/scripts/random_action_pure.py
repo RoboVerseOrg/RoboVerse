@@ -55,7 +55,13 @@ def main():
     args = parse_args()
     num_envs: int = args.num_envs
     scenario = ScenarioCfg(
-        task=args.task, robot=args.robot, try_add_table=args.add_table, sim=args.sim, num_envs=num_envs
+        task=args.task,
+        robot=args.robot,
+        try_add_table=args.add_table,
+        sim=args.sim,
+        num_envs=num_envs,
+        # headless=True, # NOTE: uncomment this to run in headless mode with no camera, maximizes performance
+        # cameras=[],
     )
 
     log.info(f"Using simulator: {args.sim}")

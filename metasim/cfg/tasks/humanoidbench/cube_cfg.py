@@ -10,15 +10,15 @@ from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util, humanoid_robot_util
 
-from .base_cfg import HumanoidTaskCfg, StableReward
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg, StableReward
 
 
-class StandingReward:
+class StandingReward(HumanoidBaseReward):
     """Reward function for maintaining standing posture."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the standing reward."""
-        self._robot_name = robot_name
+        super().__init__(robot_name)
         self._stand_height = 0.6  # 需要根据实际机器人调整
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
@@ -35,12 +35,12 @@ class StandingReward:
         return torch.tensor(results_still) * stable_rewards
 
 
-class OrientationReward:
+class OrientationReward(HumanoidBaseReward):
     """Reward function for cube orientation alignment."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the orientation reward."""
-        self._robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the orientation reward."""
@@ -57,12 +57,12 @@ class OrientationReward:
         return torch.tensor(results)
 
 
-class HandProximityReward:
+class HandProximityReward(HumanoidBaseReward):
     """Reward function for hand-cube proximity."""
 
     def __init__(self, robot_name="h1_simple_hand"):
         """Initialize the hand proximity reward."""
-        self._robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the hand proximity reward."""

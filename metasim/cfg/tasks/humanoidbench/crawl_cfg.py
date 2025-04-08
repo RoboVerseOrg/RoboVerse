@@ -11,21 +11,20 @@ from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces,
-    center_of_mass_position,
-    center_of_mass_rotation,
-    center_of_mass_velocity,
-    imu_position,
+    robot_position,
+    robot_rotation,
+    robot_velocity,
 )
 
-from .base_cfg import HumanoidTaskCfg
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg
 
 
-class CrawlReward:
+class CrawlReward(HumanoidBaseReward):
     """Reward function for the crawl task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the crawl reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
         # Define the expected quaternion for crawling, normalized
         quat_raw = torch.tensor([0.75, 0, 0.65, 0])
@@ -36,14 +35,14 @@ class CrawlReward:
         results = []
         for state in states:
             # Get robot position and IMU data
-            robot_pos = center_of_mass_position(state)
-            imu_pos = imu_position(state)
+            robot_pos = robot_position(state, self.robot_name)
+            imu_pos = robot_position(state, self.robot_name)
 
             # Get pelvis quaternion for orientation calculation
-            pelvis_quat = center_of_mass_rotation(state)
+            pelvis_quat = robot_rotation(state, self.robot_name)
 
             # Get velocity for speed calculation
-            velocity = center_of_mass_velocity(state)
+            velocity = robot_velocity(state, self.robot_name)
             vx = velocity[0]
 
             # heightcrawl = height((0.6,1),1)

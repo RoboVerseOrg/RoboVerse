@@ -11,36 +11,25 @@ from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces,
-    center_of_mass_velocity,
     head_height,
     left_foot_height,
     right_foot_height,
+    robot_velocity,
     torso_upright,
 )
 
 from .base_cfg import (
-    _G1_CRAWL_HEIGHT,
-    _G1_STAND_HEIGHT,
-    _H1_CRAWL_HEIGHT,
-    _H1_STAND_HEIGHT,
+    HumanoidBaseReward,
     HumanoidTaskCfg,
 )
 
 
-class SlideReward:
+class SlideReward(HumanoidBaseReward):
     """Reward function for the slide task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the slide reward."""
-        self._robot_name = robot_name
-        if robot_name == "h1" or robot_name == "h1_simple_hand":
-            self._stand_height = _H1_STAND_HEIGHT
-            self._crawl_height = _H1_CRAWL_HEIGHT
-        elif robot_name == "g1":
-            self._stand_height = _G1_STAND_HEIGHT
-            self._crawl_height = _G1_CRAWL_HEIGHT
-        else:
-            raise ValueError(f"Unknown robot {robot_name}")
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the slide reward."""
@@ -57,7 +46,7 @@ class SlideReward:
 
             # Reward for sliding motion - encourage horizontal velocity
             root_x_speed = humanoid_reward_util.tolerance(
-                center_of_mass_velocity(state)[0],  # x-axis velocity
+                robot_velocity(state, self._robot_name)[0],  # x-axis velocity
                 bounds=(1.0, float("inf")),  # Adjust velocity threshold as needed
                 margin=1.0,
                 value_at_margin=0,

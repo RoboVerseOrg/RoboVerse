@@ -15,8 +15,8 @@ from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces,
-    center_of_mass_velocity,
-    head_height,
+    neck_height,
+    robot_velocity,
     torso_upright,
 )
 
@@ -28,10 +28,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 ########################################################
 
 # Height of head above which stand reward is 1.
-_H1_STAND_HEIGHT = 1.65
-_H1_CRAWL_HEIGHT = 0.8
-_G1_STAND_HEIGHT = 1.28
-_G1_CRAWL_HEIGHT = 0.6
+H1_STAND_HEAD_HEIGHT = 1.65
+H1_STAND_NECK_HEIGHT = 1.41
+H1_CRAWL_HEAD_HEIGHT = 0.8
+G1_STAND_HEAD_HEIGHT = 1.28
+G1_STAND_NECK_HEIGHT = 1.0
+G1_CRAWL_HEAD_HEIGHT = 0.6
 
 
 @configclass
@@ -47,35 +49,68 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
 
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
-        """Observation function for humanoid tasks."""
+        """Observation function for humanoid tasks.
+
+        Args:
+            envstates (list[EnvState]): List of environment states to process.
+
+        Returns:
+            torch.Tensor: Flattened observations for all environments.
+        """
         env_obs = []
+
         for envstate in envstates:
             flattened = []
-            for obj_name, obj_state in envstate.items():
-                if obj_name == "h1" or obj_name == "g1" or obj_name == "h1_simple_hand" or obj_name == "h1_hand":
+
+            # Process object states
+            if "objects" in envstate:
+                for _, obj_state in sorted(envstate["objects"].items()):
                     for key in ["pos", "rot", "vel", "ang_vel"]:
                         if key in obj_state and obj_state[key] is not None:
                             flattened.append(np.array(obj_state[key]).flatten())
-                    if "dof_pos" in obj_state:
-                        for key, value in obj_state["dof_pos"].items():
-                            if isinstance(value, (np.ndarray, float)):
-                                flattened.append(np.array(value).flatten())
-                    if "dof_vel" in obj_state:
-                        for key, value in obj_state["dof_vel"].items():
-                            if isinstance(value, (np.ndarray, float)):
-                                flattened.append(np.array(value).flatten())
-                elif not obj_name.startswith("metasim"):
-                    # flatten pos, rot, vel, ang_vel for other objects. (state-based observation)
+
+            # Process robot states
+            if "robots" in envstate:
+                for robot_name, robot_state in sorted(envstate["robots"].items()):
+                    # Process basic robot properties
                     for key in ["pos", "rot", "vel", "ang_vel"]:
-                        if key in obj_state and obj_state[key] is not None:
-                            flattened.append(obj_state[key].numpy())
-            env_obs.append(np.concatenate([arr for arr in flattened]))
+                        if key in robot_state and robot_state[key] is not None:
+                            flattened.append(np.array(robot_state[key]).flatten())
 
-        env_obs = np.stack(env_obs)
-        return env_obs
+                    # Process DOF positions and velocities
+                    for dof_type in ["dof_pos", "dof_vel"]:
+                        if dof_type in robot_state:
+                            for _, value in robot_state[dof_type].items():
+                                if isinstance(value, (np.ndarray, float)):
+                                    flattened.append(np.array(value).flatten())
+
+            # Concatenate all flattened arrays for this environment
+            env_obs.append(np.concatenate(flattened))
+
+        # Stack observations from all environments
+        result = np.stack(env_obs)  # (num_envs, 51) for Unitree-H1
+        return torch.from_numpy(result)
 
 
-class StableReward:
+class HumanoidBaseReward:
+    """Base class for humanoid rewards."""
+
+    def __init__(self, robot_name="h1"):
+        """Initialize the humanoid reward."""
+        self.robot_name = robot_name
+        if robot_name == "h1" or robot_name == "h1_simple_hand" or robot_name == "h1_hand":
+            self._stand_height = H1_STAND_HEAD_HEIGHT
+            self._stand_neck_height = H1_STAND_NECK_HEIGHT
+            self._crawl_height = H1_CRAWL_HEAD_HEIGHT
+        elif robot_name == "g1":
+            self._stand_height = G1_STAND_HEAD_HEIGHT
+            self._stand_neck_height = G1_STAND_NECK_HEIGHT
+            self._crawl_height = G1_CRAWL_HEAD_HEIGHT
+        else:
+            raise ValueError(f"Unknown robot {robot_name}")
+
+
+class StableReward(HumanoidBaseReward):
     """Base class for locomotion rewards."""
 
     _move_speed = None
@@ -85,27 +120,19 @@ class StableReward:
 
     def __init__(self, robot_name="h1"):
         """Initialize the locomotion reward."""
-        self.robot_name = robot_name
-        if robot_name == "h1" or robot_name == "h1_simple_hand" or robot_name == "h1_hand":
-            self._stand_height = _H1_STAND_HEIGHT
-            self._crawl_height = _H1_CRAWL_HEIGHT
-        elif robot_name == "g1":
-            self._stand_height = _G1_STAND_HEIGHT
-            self._crawl_height = _G1_CRAWL_HEIGHT
-        else:
-            raise ValueError(f"Unknown robot {robot_name}")
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the locomotion reward."""
         ret_rewards = []
         for state in states:
             standing = humanoid_reward_util.tolerance(
-                head_height(state),
-                bounds=(self._stand_height, float("inf")),
-                margin=self._stand_height / 4,
+                neck_height(state, self.robot_name),
+                bounds=(self._stand_neck_height, float("inf")),
+                margin=self._stand_neck_height / 4,
             )
             upright = humanoid_reward_util.tolerance(
-                torso_upright(state),
+                torso_upright(state, self.robot_name),
                 bounds=(0.9, float("inf")),
                 sigmoid="linear",
                 margin=1.9,
@@ -125,7 +152,7 @@ class StableReward:
         return ret_rewards
 
 
-class BaseLocomotionReward:
+class BaseLocomotionReward(HumanoidBaseReward):
     """Base class for locomotion rewards."""
 
     _move_speed = None
@@ -135,15 +162,7 @@ class BaseLocomotionReward:
 
     def __init__(self, robot_name="h1"):
         """Initialize the locomotion reward."""
-        self.robot_name = robot_name
-        if robot_name == "h1" or robot_name == "h1_simple_hand" or robot_name == "h1_hand":
-            self._stand_height = _H1_STAND_HEIGHT
-            self._crawl_height = _H1_CRAWL_HEIGHT
-        elif robot_name == "g1":
-            self._stand_height = _G1_STAND_HEIGHT
-            self._crawl_height = _G1_CRAWL_HEIGHT
-        else:
-            raise ValueError(f"Unknown robot {robot_name}")
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the locomotion reward."""
@@ -151,11 +170,11 @@ class BaseLocomotionReward:
         stable_rewards = StableReward(self.robot_name)(states)
         for state in states:
             if self._move_speed == 0:
-                horizontal_velocity = center_of_mass_velocity(state)[[0, 1]]
+                horizontal_velocity = robot_velocity(state, self.robot_name)[[0, 1]]
                 dont_move = humanoid_reward_util.tolerance(horizontal_velocity, margin=2).mean()
                 moving_reward.append(dont_move)
             else:
-                com_velocity = center_of_mass_velocity(state)[0]
+                com_velocity = robot_velocity(state, self.robot_name)[0]
                 move = humanoid_reward_util.tolerance(
                     com_velocity,
                     bounds=(self._move_speed, float("inf")),

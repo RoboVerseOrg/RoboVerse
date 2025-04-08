@@ -259,50 +259,76 @@ class MujocoHandler(BaseSimHandler):
     def get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         state = {"objects": {}, "robots": {}, "cameras": {}}
 
+        ## Root states -- for both robot and object
         for obj in self.objects + [self._robot]:
             object_type = "robots" if obj == self._robot else "objects"
             state[object_type][obj.name] = {}
             state[object_type][obj.name].update(self._get_root_state(obj, obj.name))
             state[object_type][obj.name].update(self._get_joint_states(obj.name))
+            ## Actuator states -- for robot
             if obj == self._robot:
                 state[object_type][obj.name].update(self._get_actuator_states(obj.name))
 
+        ## Body states -- for both robot and object
+        object_names = [obj.name for obj in self.objects]
+        robot_names = [self._robot.name]
+        for obj in self.objects:
+            state["objects"][obj.name]["body"] = {}
+        for obj in [self._robot]:
+            state["robots"][obj.name]["body"] = {}
         for body_id in range(self.physics.model.nbody):
             body = self.physics.model.body(body_id)
-            if body.name not in [self._mujoco_robot_name] + [obj.name for obj in self.objects]:
-                state[f"metasim_body_{body.name.split('/')[-1]}"] = {
-                    "pos": torch.tensor(self.physics.data.xpos[body_id], dtype=torch.float32),
-                    "rot": torch.tensor(self.physics.data.xquat[body_id], dtype=torch.float32),
-                    "vel": torch.tensor(self.physics.data.cvel[body_id][:3], dtype=torch.float32),
-                    "ang_vel": torch.tensor(self.physics.data.cvel[body_id][3:6], dtype=torch.float32),
-                    "com": torch.tensor(self.physics.data.subtree_com[body_id], dtype=torch.float32),
-                    "com_vel": torch.tensor(self.physics.data.subtree_linvel[body_id], dtype=torch.float32),
+            body_full_name = body.name  # e.g. h1/left_shoulder_pitch_link
+            robot_name_body_belong = body_full_name.split("/")[0]  # e.g. h1
+            body_base_name = body_full_name.split("/")[-1]  # e.g. left_shoulder_pitch_link
+            if robot_name_body_belong in robot_names:
+                state["robots"][robot_name_body_belong]["body"][body_base_name] = {
+                    # Position and orientation in world frame
+                    "pos": torch.tensor(
+                        self.physics.data.xpos[body_id], dtype=torch.float32
+                    ),  # Position in world frame (x,y,z)
+                    "rot": torch.tensor(
+                        self.physics.data.xquat[body_id], dtype=torch.float32
+                    ),  # Orientation in world frame (quaternion)
+                    # Linear and angular velocity in world frame
+                    "vel": torch.tensor(
+                        self.physics.data.cvel[body_id][:3], dtype=torch.float32
+                    ),  # Linear velocity in world frame (x,y,z)
+                    "ang_vel": torch.tensor(
+                        self.physics.data.cvel[body_id][3:6], dtype=torch.float32
+                    ),  # Angular velocity in world frame (x,y,z)
+                    # Contact forces and torques in local frame
+                    "contact_force": torch.tensor(
+                        self.physics.data.cfrc_ext[body_id][:3], dtype=torch.float32
+                    ),  # Contact force in local frame (x,y,z)
+                    "contact_torque": torch.tensor(
+                        self.physics.data.cfrc_ext[body_id][3:6], dtype=torch.float32
+                    ),  # Contact torque in local frame (x,y,z)
                 }
-
-        for site_id in range(self.physics.model.nsite):
-            site = self.physics.model.site(site_id)
-
-            linear_vel = None
-            angular_vel = None
-            for sensor_id in range(self.physics.model.nsensor):
-                sensor = self.physics.model.sensor(sensor_id)
-                if self.physics.model.sensor_objid[sensor_id] == site_id:
-                    # mjtSensor enum: VELOCIMETER=2, GYRO=3
-                    if sensor.type == 2:
-                        linear_vel = torch.tensor(
-                            self.physics.data.sensordata[sensor_id : sensor_id + 3], dtype=torch.float32
-                        )
-                    elif sensor.type == 3:
-                        angular_vel = torch.tensor(
-                            self.physics.data.sensordata[sensor_id : sensor_id + 3], dtype=torch.float32
-                        )
-
-            state[f"metasim_site_{site.name.split('/')[-1]}"] = {
-                "pos": torch.tensor(self.physics.data.site_xpos[site_id], dtype=torch.float32),
-                "rot": torch.tensor(self.physics.data.site_xmat[site_id], dtype=torch.float32),
-                "vel": linear_vel if linear_vel is not None else None,
-                "ang_vel": angular_vel if angular_vel is not None else None,
-            }
+            elif robot_name_body_belong in object_names:
+                state["objects"][robot_name_body_belong]["body"][body_base_name] = {
+                    # Position and orientation in world frame
+                    "pos": torch.tensor(
+                        self.physics.data.xpos[body_id], dtype=torch.float32
+                    ),  # Position in world frame (x,y,z)
+                    "rot": torch.tensor(
+                        self.physics.data.xquat[body_id], dtype=torch.float32
+                    ),  # Orientation in world frame (quaternion)
+                    # Linear and angular velocity in world frame
+                    "vel": torch.tensor(
+                        self.physics.data.cvel[body_id][:3], dtype=torch.float32
+                    ),  # Linear velocity in world frame (x,y,z)
+                    "ang_vel": torch.tensor(
+                        self.physics.data.cvel[body_id][3:6], dtype=torch.float32
+                    ),  # Angular velocity in world frame (x,y,z)
+                    # Contact forces and torques in local frame
+                    "contact_force": torch.tensor(
+                        self.physics.data.cfrc_ext[body_id][:3], dtype=torch.float32
+                    ),  # Contact force in local frame (x,y,z)
+                    "contact_torque": torch.tensor(
+                        self.physics.data.cfrc_ext[body_id][3:6], dtype=torch.float32
+                    ),  # Contact torque in local frame (x,y,z)
+                }
 
         for camera in self.cameras:
             camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
@@ -430,8 +456,11 @@ class MujocoHandler(BaseSimHandler):
     ############################################################
     def get_observation(self) -> Obs | None:
         states = self.get_states()
-        rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-        obs = {"rgb": torch.stack(rgbs, dim=0)}
+        if len(self.cameras) > 0:
+            rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
+            obs = {"rgb": torch.stack(rgbs, dim=0)}
+        else:
+            obs = {}
         return obs
 
     ############################################################

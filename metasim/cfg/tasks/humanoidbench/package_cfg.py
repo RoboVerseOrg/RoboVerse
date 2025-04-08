@@ -11,15 +11,15 @@ from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import left_hand_position, right_hand_position
 
-from .base_cfg import HumanoidTaskCfg, StableReward
+from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg, StableReward
 
 
-class PackageReward:
+class PackageReward(HumanoidBaseReward):
     """Reward function for the package task."""
 
     def __init__(self, robot_name="h1"):
         """Initialize the package reward."""
-        self.robot_name = robot_name
+        super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
         """Compute the package reward."""
