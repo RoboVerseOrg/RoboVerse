@@ -418,13 +418,13 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_state = {}
                 object_type = "robots" if obj.name in self._robot_names else "objects"
 
-                ## Basic states
+                ## Basic states -- for both robot and object
                 obj_state["pos"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, :3].cpu()
                 obj_state["rot"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 3:7].cpu()
                 obj_state["vel"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 7:10].cpu()
                 obj_state["ang_vel"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 10:].cpu()
 
-                ## Joint states
+                ## Joint states -- for robot and articulated object
                 if isinstance(obj, ArticulationObjCfg):
                     obj_state["dof_pos"] = {
                         joint_name: self._dof_states.view(self.num_envs, -1, 2)[env_id, global_idx, 0].item()
@@ -435,7 +435,7 @@ class IsaacgymHandler(BaseSimHandler):
                         for joint_name, global_idx in (self._joint_info[obj.name]["global_indices"]).items()
                     }
 
-                ## Actuator states
+                ## Actuator states -- for robot
                 ## XXX: Could non-robot objects have actuators?
                 if isinstance(obj, BaseRobotCfg):
                     obj_state["dof_pos_target"] = {
@@ -452,6 +452,8 @@ class IsaacgymHandler(BaseSimHandler):
                     }
                 env_state[object_type][obj.name] = obj_state
 
+                ## Body states -- for both robot and object
+                env_state[object_type][obj.name]["body"] = {}
                 for i, body_name in enumerate(self._body_info[obj.name]["name"]):
                     body_state = {
                         "pos": self._rigid_body_states[
@@ -467,7 +469,7 @@ class IsaacgymHandler(BaseSimHandler):
                             self._body_info[obj.name]["global_indices"][body_name], 10:
                         ].cpu(),
                     }
-                    env_state[object_type][obj.name][body_name] = body_state
+                    env_state[object_type][obj.name]["body"][body_name] = body_state
 
             if len(self.cameras) > 0:
                 self.gym.start_access_image_tensors(self.sim)

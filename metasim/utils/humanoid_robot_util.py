@@ -5,7 +5,7 @@ import torch
 
 def torso_upright(envstate, robot_name: str):
     """Returns projection from z-axes of torso to the z-axes of world."""
-    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["pelvis"]["rot"])
+    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["body"]["pelvis"]["rot"])
     return xmat[2, 2]
 
 
@@ -20,21 +20,21 @@ def neck_height(envstate, robot_name: str):
     # print(envstate["robots"][robot_name].keys())
     # exit()
     return (
-        envstate["robots"][robot_name]["left_shoulder_roll_link"]["pos"][2]
-        + envstate["robots"][robot_name]["right_shoulder_roll_link"]["pos"][2]
+        envstate["robots"][robot_name]["body"]["left_shoulder_roll_link"]["pos"][2]
+        + envstate["robots"][robot_name]["body"]["right_shoulder_roll_link"]["pos"][2]
     ) / 2
 
 
 def left_foot_height(envstate, robot_name: str):
     """Returns the height of the left foot."""
     # return envstate[f"{_METASIM_SITE_PREFIX}left_foot"]["pos"][2] # Only for mujoco
-    return envstate["robots"][robot_name]["left_ankle_link"]["pos"][2]
+    return envstate["robots"][robot_name]["body"]["left_ankle_link"]["pos"][2]
 
 
 def right_foot_height(envstate, robot_name: str):
     """Returns the height of the right foot."""
     # return envstate[f"{_METASIM_SITE_PREFIX}right_foot"]["pos"][2] # Only for mujoco
-    return envstate["robots"][robot_name]["right_ankle_link"]["pos"][2]
+    return envstate["robots"][robot_name]["body"]["right_ankle_link"]["pos"][2]
 
 
 def robot_position(envstate, robot_name: str):
@@ -54,7 +54,7 @@ def robot_rotation(envstate, robot_name: str):
 
 def torso_vertical_orientation(envstate, robot_name: str):
     """Returns the z-projection of the torso orientation matrix."""
-    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["pelvis"]["rot"])
+    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["body"]["pelvis"]["rot"])
     return xmat[2, :]
 
 
@@ -66,37 +66,37 @@ def actuator_forces(envstate, robot_name: str):
 def left_hand_position(envstate, robot_name: str):
     """Returns the position of the left hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}left_hand"]["pos"] # Only for mujoco
-    return envstate["robots"][robot_name]["left_elbow_link"]["pos"]
+    return envstate["robots"][robot_name]["body"]["left_elbow_link"]["pos"]
 
 
 def left_hand_velocity(envstate, robot_name: str):
     """Returns the velocity of the left hand."""
     # return envstate[f"{_METASIM_BODY_PREFIX}left_hand"]["left_hand_subtreelinvel"] # Only for mujoco
-    return envstate["robots"][robot_name]["left_elbow_link"]["vel"]
+    return envstate["robots"][robot_name]["body"]["left_elbow_link"]["vel"]
 
 
 def left_hand_orientation(envstate, robot_name: str):
     """Returns the orientation of the left hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}left_hand"]["rot"] # Only for mujoco
-    return envstate["robots"][robot_name]["left_elbow_link"]["rot"]
+    return envstate["robots"][robot_name]["body"]["left_elbow_link"]["rot"]
 
 
 def right_hand_position(envstate, robot_name: str):
     """Returns the position of the right hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}right_hand"]["pos"] # Only for mujoco
-    return envstate["robots"][robot_name]["right_elbow_link"]["pos"]
+    return envstate["robots"][robot_name]["body"]["right_elbow_link"]["pos"]
 
 
 def right_hand_velocity(envstate, robot_name: str):
     """Returns the velocity of the right hand."""
     # return envstate[f"{_METASIM_BODY_PREFIX}right_hand"]["right_hand_subtreelinvel"] # Only for mujoco
-    return envstate["robots"][robot_name]["right_elbow_link"]["vel"]
+    return envstate["robots"][robot_name]["body"]["right_elbow_link"]["vel"]
 
 
 def right_hand_orientation(envstate, robot_name: str):
     """Returns the orientation of the right hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}right_hand"]["rot"] # Only for mujoco
-    return envstate["robots"][robot_name]["right_elbow_link"]["rot"]
+    return envstate["robots"][robot_name]["body"]["right_elbow_link"]["rot"]
 
 
 #######################################################

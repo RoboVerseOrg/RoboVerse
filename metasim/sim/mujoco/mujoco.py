@@ -259,23 +259,28 @@ class MujocoHandler(BaseSimHandler):
     def get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         state = {"objects": {}, "robots": {}, "cameras": {}}
 
+        ## Root states -- for both robot and object
         for obj in self.objects + [self._robot]:
             object_type = "robots" if obj == self._robot else "objects"
             state[object_type][obj.name] = {}
             state[object_type][obj.name].update(self._get_root_state(obj, obj.name))
             state[object_type][obj.name].update(self._get_joint_states(obj.name))
+            ## Actuator states -- for robot
             if obj == self._robot:
                 state[object_type][obj.name].update(self._get_actuator_states(obj.name))
 
+        ## Body states -- for both robot and object
         object_names = [obj.name for obj in self.objects]
         robot_names = [self._robot.name]
+        for obj in self.objects + [self._robot]:
+            state["robots"][obj.name]["body"] = {}
         for body_id in range(self.physics.model.nbody):
             body = self.physics.model.body(body_id)
             body_full_name = body.name  # e.g. h1/left_shoulder_pitch_link
-            body_belong_to = body_full_name.split("/")[0]  # e.g. h1
+            robot_name_body_belong = body_full_name.split("/")[0]  # e.g. h1
             body_base_name = body_full_name.split("/")[-1]  # e.g. left_shoulder_pitch_link
-            if body_belong_to in robot_names:
-                state["robots"][body_belong_to][body_base_name] = {
+            if robot_name_body_belong in robot_names:
+                state["robots"][robot_name_body_belong]["body"][body_base_name] = {
                     # Position and orientation in world frame
                     "pos": torch.tensor(
                         self.physics.data.xpos[body_id], dtype=torch.float32
@@ -298,8 +303,8 @@ class MujocoHandler(BaseSimHandler):
                         self.physics.data.cfrc_ext[body_id][3:6], dtype=torch.float32
                     ),  # Contact torque in local frame (x,y,z)
                 }
-            elif body_belong_to in object_names:
-                state["objects"][body_belong_to][body_base_name] = {
+            elif robot_name_body_belong in object_names:
+                state["objects"][robot_name_body_belong]["body"][body_base_name] = {
                     # Position and orientation in world frame
                     "pos": torch.tensor(
                         self.physics.data.xpos[body_id], dtype=torch.float32
