@@ -635,16 +635,30 @@ class IsaacgymHandler(BaseSimHandler):
         # self.gym.sync_frame_time(self.sim)
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
-        ## TODO: support the case when env_ids != list(range(self.num_envs))
+        ## Support setting status only for specified env_ids
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        assert len(states) == self.num_envs
+        assert len(states) == self.num_envs, (
+            f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
+        )
+        log.info(f"Setting states for env_ids: {env_ids}")
+
         pos_list = []
         rot_list = []
         q_list = []
-        states_flat = [{**state["objects"], **state["robots"]} for state in states]
-        for state in states_flat:
+        states_flat = [{**states[i]["objects"], **states[i]["robots"]} for i in env_ids]
+
+        # Prepare state data for specified env_ids
+        env_indices = {env_id: i for i, env_id in enumerate(env_ids)}
+
+        for i in range(self.num_envs):
+            if i not in env_indices:
+                continue
+
+            state_idx = env_indices[i]
+            state = states_flat[state_idx]
+
             pos_list_i = []
             rot_list_i = []
             q_list_i = []
@@ -687,8 +701,8 @@ class IsaacgymHandler(BaseSimHandler):
             rot_list.append(rot_list_i)
             q_list.append(q_list_i)
 
-        self._set_actor_root_state(pos_list, rot_list)
-        self._set_actor_joint_state(q_list)
+        self._set_actor_root_state(pos_list, rot_list, env_ids)
+        self._set_actor_joint_state(q_list, env_ids)
 
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
@@ -697,24 +711,31 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_mass_matrix_tensors(self.sim)
 
-    def _set_actor_root_state(self, position_list, rotation_list):
+    def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()
-        new_root_states_pos = torch.tensor(np.array(position_list), dtype=torch.float32, device=self.device).reshape(
-            -1, 3
-        )
-        new_root_states_rot = torch.tensor(np.array(rotation_list), dtype=torch.float32, device=self.device).reshape(
-            -1, 4
-        )
-        new_root_states[:, :3] = new_root_states_pos
-        new_root_states[:, 3:7] = new_root_states_rot
-        # self.rb_states[:, self.actor_id, :7] = target_pose
-        root_reset_actors_indices = torch.unique(
-            torch.tensor(
-                np.arange(new_root_states.shape[0]),
-                dtype=torch.float32,
-                device=self.device,
-            )
-        ).to(dtype=torch.int32)
+
+        # Only modify the positions and rotations for the specified env_ids
+        for i, env_id in enumerate(env_ids):
+            env_offset = env_id * (len(self.objects) + 1)  # objects + robot
+            for j in range(len(self.objects) + 1):
+                actor_idx = env_offset + j
+                new_root_states[actor_idx, :3] = torch.tensor(
+                    position_list[i][j], dtype=torch.float32, device=self.device
+                )
+                new_root_states[actor_idx, 3:7] = torch.tensor(
+                    rotation_list[i][j], dtype=torch.float32, device=self.device
+                )
+
+        # Get the actor indices to update
+        actor_indices = []
+        for env_id in env_ids:
+            env_offset = env_id * (len(self.objects) + 1)
+            actor_indices.extend(range(env_offset, env_offset + len(self.objects) + 1))
+
+        # Convert the actor indices to a tensor
+        root_reset_actors_indices = torch.tensor(actor_indices, dtype=torch.int32, device=self.device)
+
+        # Use indexed setting to set the root state
         res = self.gym.set_actor_root_state_tensor_indexed(
             self.sim,
             gymtorch.unwrap_tensor(new_root_states),
@@ -725,24 +746,38 @@ class IsaacgymHandler(BaseSimHandler):
 
         return
 
-    def _set_actor_joint_state(self, joint_pos_list):
+    def _set_actor_joint_state(self, joint_pos_list, env_ids):
         new_dof_states = self._dof_states.clone()
 
-        new_dof_pos = []
-        # Process each element in M x N
-        for env_i in range(self.num_envs):
-            flat_vals = []
-            for i in range(len(joint_pos_list[env_i])):
-                flat_vals.extend(joint_pos_list[env_i][i])
-            flat_array = np.array(flat_vals)
-            new_dof_pos.append(flat_array)
-        new_dof_pos = torch.tensor(np.array(new_dof_pos), dtype=torch.float32, device=self.device)
+        # Calculate the indices of DOFs in the tensor
+        dof_indices = []
+        new_dof_pos_values = []
 
-        zero_vel = torch.zeros_like(new_dof_pos)
-        new_dof_states[:, 0] = new_dof_pos.reshape(-1)
-        new_dof_states[:, 1] = zero_vel.reshape(-1)
+        for i, env_id in enumerate(env_ids):
+            # Get the joint positions for this environment
+            flat_vals = []
+            for obj_joints in joint_pos_list[i]:
+                flat_vals.extend(obj_joints)
+
+            # Calculate the indices of DOFs in the global DOF tensor
+            dof_start_idx = env_id * self._num_joints
+            for j, val in enumerate(flat_vals):
+                dof_idx = dof_start_idx + j
+                dof_indices.append(dof_idx)
+                new_dof_pos_values.append(val)
+
+        # Update the DOF positions for the specified indices
+        dof_indices_tensor = torch.tensor(dof_indices, dtype=torch.int64, device=self.device)
+        new_dof_pos_tensor = torch.tensor(new_dof_pos_values, dtype=torch.float32, device=self.device)
+
+        # Update the positions and velocities (set velocities to 0)
+        new_dof_states[dof_indices_tensor, 0] = new_dof_pos_tensor
+        new_dof_states[dof_indices_tensor, 1] = 0.0
+
+        # Apply the updated DOF state
         res = self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(new_dof_states))
         assert res
+
         return
 
     def close(self) -> None:
