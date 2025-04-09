@@ -45,7 +45,7 @@ class FetchCfg(BaseRobotCfg):
         "r_gripper_finger_joint": (0.0, 0.05),
         "l_gripper_finger_joint": (0.0, 0.05),
     }
-    ee_prim_path: str = "gripper_link"
+    ee_body_name: str = "gripper_link"
 
     # TODO: Make it more elegant
     gripper_release_q = [0.04, 0.04]

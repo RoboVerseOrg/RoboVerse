@@ -10,7 +10,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     # Articulation
     num_joints: int = MISSING
     actuators: dict[str, BaseActuatorCfg] = {}
-    ee_prim_path: str | None = None
+    ee_body_name: str | None = None
     fix_base_link: bool = True
     joint_limits: dict[str, tuple[float, float]] = {}
     default_joint_positions: dict[str, float] = {}
@@ -78,7 +78,7 @@ class FrankaCfg(BaseRobotCfg):
         "panda_finger_joint1": (0.0, 0.04),  # 0.0 close, 0.04 open
         "panda_finger_joint2": (0.0, 0.04),  # 0.0 close, 0.04 open
     }
-    ee_prim_path: str = "panda_hand"
+    ee_body_name: str = "panda_hand"
 
     default_joint_positions: dict[str, float] = {
         "panda_joint1": 0.0,

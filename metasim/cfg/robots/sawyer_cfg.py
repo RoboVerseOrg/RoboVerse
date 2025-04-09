@@ -36,7 +36,7 @@ class SawyerCfg(BaseRobotCfg):
         "right_gripper_l_finger_joint": (0.0, 0.020833),
         "right_gripper_r_finger_joint": (-0.020833, 0),
     }
-    ee_prim_path: str = "sawyer_right_hand"
+    ee_body_name: str = "sawyer_right_hand"
     gripper_release_q = [0.020833, -0.020833]
     gripper_actuate_q = [0.0, 0.0]
 

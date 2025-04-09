@@ -506,10 +506,10 @@ class IsaacgymHandler(BaseSimHandler):
             .clone()
             .cpu()
         )
-        if self.robot.ee_prim_path is not None:
+        if self.robot.ee_body_name is not None:
             robot_ee_state = (
                 self._rigid_body_states.reshape(self.num_envs, -1, self._rigid_body_states.shape[1])[
-                    :, self._env_rigid_body_global_indices[0]["robot"][self.robot.ee_prim_path], :
+                    :, self._env_rigid_body_global_indices[0]["robot"][self.robot.ee_body_name], :
                 ]
                 .clone()
                 .cpu()

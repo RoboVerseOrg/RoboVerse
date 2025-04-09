@@ -36,7 +36,7 @@ class SawyerMujocoCfg(BaseRobotCfg):
         "r_close": (0.0, 0.04),
         "l_close": (-0.03, 0),
     }
-    # ee_prim_path: str = "sawyer_right_hand"
+    # ee_body_name: str = "sawyer_right_hand"
     # gripper_release_q = [0.020833, -0.020833]
     # gripper_actuate_q = [0.0, 0.0]
 

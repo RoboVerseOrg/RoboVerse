@@ -35,7 +35,7 @@ class FrankaWithGripperExtensionCfg(BaseRobotCfg):
         "panda_finger_joint1": (0.0, 0.04),  # 0.0 close, 0.04 open
         "panda_finger_joint2": (0.0, 0.04),  # 0.0 close, 0.04 open
     }
-    ee_prim_path: str = "panda_hand"
+    ee_body_name: str = "panda_hand"
     gripper_release_q = [0.04, 0.04]
     gripper_actuate_q = [0.0, 0.0]
 

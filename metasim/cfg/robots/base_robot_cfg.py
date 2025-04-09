@@ -21,7 +21,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     # Articulation
     num_joints: int = MISSING
     actuators: dict[str, BaseActuatorCfg] = {}
-    ee_prim_path: str | None = None
+    ee_body_name: str | None = None
     fix_base_link: bool = True
     joint_limits: dict[str, tuple[float, float]] = {}
     default_joint_positions: dict[str, float] = {}

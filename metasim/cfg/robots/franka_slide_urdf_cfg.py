@@ -25,4 +25,4 @@ class FrankaSlideUrdfCfg(BaseRobotCfg):
         "panda_finger_joint1": BaseActuatorCfg(velocity_limit=0.2),
         "panda_finger_joint2": BaseActuatorCfg(velocity_limit=0.2),
     }
-    ee_prim_path: str = "panda_hand"
+    ee_body_name: str = "panda_hand"

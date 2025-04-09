@@ -23,7 +23,7 @@ class IiwaCfg(BaseRobotCfg):
         "panda_finger_joint1": BaseActuatorCfg(velocity_limit=None, is_ee=True),
         "panda_finger_joint2": BaseActuatorCfg(velocity_limit=None, is_ee=True),
     }
-    ee_prim_path: str = "panda_hand"
+    ee_body_name: str = "panda_hand"
     gripper_release_q = [0.04, 0.04]
     gripper_actuate_q = [0.0, 0.0]
 

@@ -25,4 +25,4 @@ class GoogleRobotStaticCfg(BaseRobotCfg):
         "joint_head_pan": BaseActuatorCfg(velocity_limit=0.5),
         "joint_head_tilt": BaseActuatorCfg(velocity_limit=0.5),
     }
-    # ee_prim_path: str = "panda_hand"
+    # ee_body_name: str = "panda_hand"

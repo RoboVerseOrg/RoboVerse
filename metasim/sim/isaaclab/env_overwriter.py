@@ -388,8 +388,8 @@ class IsaaclabEnvOverwriter:
             robot_body_state = env.robot.data.body_state_w.cpu()
             robot_root_state[..., 0:3] -= env.scene.env_origins.cpu()
             robot_body_state[..., 0:3] -= env.scene.env_origins.cpu().unsqueeze(1)
-            if self.robot.ee_prim_path is not None:
-                ee_pos, ee_quat = get_pose(env, self.robot.name, self.robot.ee_prim_path)
+            if self.robot.ee_body_name is not None:
+                ee_pos, ee_quat = get_pose(env, self.robot.name, self.robot.ee_body_name)
                 robot_ee_state = torch.cat([ee_pos, ee_quat, joint_qpos[:, -1:]], dim=-1)
             else:
                 log.warning(f"No end-effector prim path for {self.robot.name}")
