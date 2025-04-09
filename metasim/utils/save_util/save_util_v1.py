@@ -13,6 +13,11 @@ import torch
 from metasim.utils.io_util import write_16bit_depth_video
 
 
+def is_v1_demo(demo: list[dict[str, torch.Tensor]]) -> bool:
+    """Check if the demo is in the v1 (deprecated) format."""
+    return "robot_ee_state" in demo[0]
+
+
 def _shift_actions_to_previous_timestep(demo: list[dict[str, torch.Tensor]]):
     for i in range(len(demo) - 1):
         demo[i]["joint_qpos_target"] = demo[i + 1]["joint_qpos_target"]
@@ -25,7 +30,7 @@ def _normalize_depth(depth: np.ndarray) -> np.ndarray:
     return (depth - depth.min()) / (depth.max() - depth.min())
 
 
-def save_demo(save_dir: str, demo: list[dict[str, torch.Tensor]]):
+def save_demo_v1(save_dir: str, demo: list[dict[str, torch.Tensor]]):
     """Save a demo to a directory.
 
     Args:
