@@ -303,7 +303,9 @@ class IsaaclabHandler(BaseSimHandler):
         states = []
         for env_id in env_ids:
             env_state = {"objects": {}, "robots": {}, "cameras": {}}
+
             for obj in self.objects + [self.robot]:
+                object_type = "robots" if obj is self.robot else "objects"
                 if isinstance(obj, ArticulationObjCfg):
                     obj_inst = self.env.scene.articulations[obj.name]
                 else:
@@ -347,14 +349,10 @@ class IsaaclabHandler(BaseSimHandler):
                         for i, joint_name in enumerate(obj_inst.joint_names)
                     }
                 env_state[obj.name] = obj_state
-                if obj is self.robot:
-                    env_state["robots"][obj.name] = obj_state
-                else:
-                    env_state["objects"][obj.name] = obj_state
+                env_state[object_type][obj.name] = obj_state
 
                 ## Body states
-                ## TODO: move these to "bodies"?
-                ## XXX: will have bug when there are multiple objects with same structure, e.g. dual gripper
+                env_state[object_type][obj.name]["body"] = {}
                 coms = obj_inst.root_physx_view.get_coms()
                 coms = coms.reshape((self.env.num_envs, obj_inst.num_bodies, 7))
                 com_positions = coms[:, :, :3]  # (num_envs, num_bodies, 3)
@@ -367,16 +365,16 @@ class IsaaclabHandler(BaseSimHandler):
                     body_state["vel"] = obj_inst.data.body_lin_vel_w[env_id, i].cpu()
                     body_state["ang_vel"] = obj_inst.data.body_ang_vel_w[env_id, i].cpu()
                     body_state["com"] = com_positions[env_id, i].cpu()
-                    env_state[f"metasim_body_{body_name}"] = body_state
+                    env_state[object_type][obj.name]["body"][body_name] = body_state
 
-                ## Cameras
-                env_state["cameras"] = {
-                    camera.name: {
-                        "rgb": rgb_datas[i],
-                        "depth": depth_datas[i],
-                    }
-                    for i, camera in enumerate(self.cameras)
+            ## Cameras
+            env_state["cameras"] = {
+                camera.name: {
+                    "rgb": rgb_datas[i],
+                    "depth": depth_datas[i],
                 }
+                for i, camera in enumerate(self.cameras)
+            }
 
             states.append(env_state)
         return states

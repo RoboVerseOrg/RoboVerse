@@ -76,7 +76,6 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             if states is not None:
                 self.handler.set_states(states, env_ids=env_ids)
             self.handler.checker.reset(self.handler, env_ids=env_ids)
-            self.handler.simulate()
             obs = self.handler.get_observation()
             return obs, None
 
