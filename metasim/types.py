@@ -24,7 +24,7 @@ class ObjectState(TypedDict):
     rot: torch.Tensor
     vel: torch.Tensor | None
     ang_vel: torch.Tensor | None
-    dof_pos: Dof
+    dof_pos: Dof | None
     dof_vel: Dof | None
     com: torch.Tensor | None
     com_vel: torch.Tensor | None
