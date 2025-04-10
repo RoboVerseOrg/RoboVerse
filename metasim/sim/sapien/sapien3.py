@@ -27,7 +27,7 @@ from metasim.cfg.objects import (
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
-from metasim.types import EnvState, Obs
+from metasim.types import Action, EnvState, Obs
 from metasim.utils.math import quat_from_euler_np
 
 
@@ -46,6 +46,7 @@ class SingleSapien3Handler(BaseSimHandler):
         log.warning("Sapien3 is still under development, some metasim apis yet don't have sapien3 support")
         super().__init__(scenario)
         self.headless = False  # XXX: no headless anyway
+        self._actions_cache: list[Action] = []
 
     def _build_sapien(self):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
@@ -321,17 +322,18 @@ class SingleSapien3Handler(BaseSimHandler):
             joint.set_drive_target(action[i])
         # instance.set_drive_target(action)
 
-    def set_dof_targets(self, obj_name, target):
+    def set_dof_targets(self, obj_name, actions: list[Action]):
         """Set the dof targets of the object.
 
         Args:
             obj_name (str): The name of the object
             target (dict): The target values for the object
         """
+        self._actions_cache = actions
         instance = self.object_ids[obj_name]
         if isinstance(instance, sapien_core.physx.PhysxArticulation):
-            action = target[0]
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]])
+            action = actions[0]
+            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
             self._apply_action(action_arr, instance)
 
     def simulate(self):
@@ -373,6 +375,17 @@ class SingleSapien3Handler(BaseSimHandler):
                 states[object_type][obj_name]["dof_pos"] = {
                     name: dof_pos[id] for id, name in enumerate(self.object_joint_order[obj_name])
                 }
+            if obj_name == self.robot.name:
+                ## TODO: read from simulator instead of cache
+                if self.actions_cache:
+                    states[object_type][obj_name]["dof_pos_target"] = {
+                        name: self.actions_cache[0]["dof_pos_target"][name]
+                        for name in self.object_joint_order[obj_name]
+                    }
+                else:
+                    states[object_type][obj_name]["dof_pos_target"] = None
+            else:
+                states[object_type][obj_name]["dof_pos_target"] = None
             pose = obj_id.get_pose()
             states[object_type][obj_name].update({
                 "pos": torch.tensor(pose.p),
@@ -421,6 +434,10 @@ class SingleSapien3Handler(BaseSimHandler):
 
             # Reset base position and orientation
             obj_id.set_pose(sapien_core.Pose(p=val["pos"], q=val["rot"]))
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 Sapien3Handler = ParallelSimWrapper(SingleSapien3Handler)
