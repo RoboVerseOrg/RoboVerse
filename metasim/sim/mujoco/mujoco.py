@@ -449,8 +449,8 @@ class MujocoHandler(BaseSimHandler):
                 actuator.ctrl = target_pos
 
     def refresh_render(self) -> None:
+        self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
         if self.viewer is not None:
-            self.physics.forward()
             self.viewer.sync()
 
     def simulate(self):
