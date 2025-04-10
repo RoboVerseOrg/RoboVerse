@@ -60,11 +60,11 @@ def main():
     env_class = get_sim_env_class(SimType(args.sim))
     env = env_class(scenario)
 
-    from omni.isaac.core.objects import FixedSphere
-
     try:
+        from omni.isaac.core.objects import FixedSphere
         from omni.isaac.core.prims import XFormPrim
     except ModuleNotFoundError:
+        from isaacsim.core.api.objects import FixedSphere
         from isaacsim.core.prims import SingleXFormPrim as XFormPrim
 
     ## Reset
