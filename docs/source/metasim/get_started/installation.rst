@@ -116,6 +116,15 @@ Install IsaacGym
       mkdir -p $CONDA_PREFIX/lib/python3.8/site-packages/isaacgym/_bindings/src
       cp -r third_party/isaacgym/python/isaacgym/_bindings/src/gymtorch $CONDA_PREFIX/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
 
+   If you encounter the error ``ImportError: libpython3.8.so.1.0: cannot open shared object file: No such file or directory``, you can try to run the following command:
+
+   .. code-block:: bash
+
+      export LD_LIBRARY_PATH=$CONDA_HOME/envs/metasim_isaacgym/lib:$LD_LIBRARY_PATH
+
+   where ``$CONDA_HOME`` is the path to your conda installation. It is typically ``~/anaconda3``, ``~/miniconda3`` or ``~/miniforge3``.
+   You can also add it to your ``~/.bashrc`` to make it permanent.
+
 Combine Simulators
 ------------------
 
