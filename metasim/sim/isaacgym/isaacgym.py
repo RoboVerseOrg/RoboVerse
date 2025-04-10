@@ -437,6 +437,7 @@ class IsaacgymHandler(BaseSimHandler):
                     }
 
                 ## Actions -- for robot
+                ## TODO: read from simulator instead of cache
                 if isinstance(obj, BaseRobotCfg):
                     if self.actions_cache:
                         obj_state["dof_pos_target"] = {
