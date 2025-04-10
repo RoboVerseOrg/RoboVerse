@@ -1,6 +1,13 @@
 Direct Installation
 ===================
 
+First, clone the RoboVerse project:
+
+.. code-block:: bash
+
+    git clone git@github.com:RoboVerseOrg/RoboVerse.git
+    cd RoboVerse
+
 MetaSim uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies.
 
 To install ``uv``, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
