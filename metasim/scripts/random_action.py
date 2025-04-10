@@ -112,9 +112,16 @@ def main():
             ee_quat_target = quat_from_euler_xyz(ee_rot_target[..., 0], ee_rot_target[..., 1], ee_rot_target[..., 2])
 
             # Compute targets
-            curr_robot_q = obs["joint_qpos"].cuda()
-            robot_root_state = obs["robot_root_state"].cuda()
-            robot_pos, robot_quat = robot_root_state[:, 0:3], robot_root_state[:, 3:7]
+            curr_robot_q = torch.tensor([
+                [obs[env_id]["robots"][scenario.robot.name]["dof_pos"][jn] for jn in robot.joint_limits.keys()]
+                for env_id in range(num_envs)
+            ]).cuda()
+            robot_pos = torch.stack([
+                obs[env_id]["robots"][scenario.robot.name]["pos"] for env_id in range(num_envs)
+            ]).cuda()
+            robot_quat = torch.stack([
+                obs[env_id]["robots"][scenario.robot.name]["rot"] for env_id in range(num_envs)
+            ]).cuda()
 
             if robot.name == "iiwa":
                 ee_pos_target = torch.distributions.Uniform(-0.5, 0.5).sample((num_envs, 3)).to("cuda:0")
@@ -162,7 +169,7 @@ def main():
             env.handler.refresh_render()
         step += 1
 
-        obs = env.handler.get_observation()
+        obs = env.handler.get_states()
 
     env.handler.close()
 
