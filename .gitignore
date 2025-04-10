@@ -83,3 +83,6 @@ id_rsa*
 
 # for docker
 .env
+
+# for sapien
+*.convex.stl
