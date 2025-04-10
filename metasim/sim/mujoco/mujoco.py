@@ -17,6 +17,7 @@ from metasim.types import Action, Obs
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
+        self._actions_cache: list[Action] = []
 
         if scenario.num_envs > 1:
             raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
@@ -268,6 +269,17 @@ class MujocoHandler(BaseSimHandler):
             ## Actuator states -- for robot
             if obj == self._robot:
                 state[object_type][obj.name].update(self._get_actuator_states(obj.name))
+                joint_names = [
+                    self.physics.model.joint(joint_id).name.split("/")[-1]
+                    for joint_id in range(self.physics.model.njnt)
+                    if self.physics.model.joint(joint_id).name.startswith(self._mujoco_robot_name)
+                ]
+                if self.actions_cache:
+                    state[object_type][obj.name]["dof_pos_target"] = {
+                        joint_name: self.actions_cache[0]["dof_pos_target"][joint_name] for joint_name in joint_names
+                    }
+                else:
+                    state[object_type][obj.name]["dof_pos_target"] = None
 
         ## Body states -- for both robot and object
         object_names = [obj.name for obj in self.objects]
@@ -423,6 +435,7 @@ class MujocoHandler(BaseSimHandler):
             self.physics.data.xfrc_applied[body_id, 3:6] = 0
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        self._actions_cache = actions
         joint_targets = actions[0]["dof_pos_target"]
 
         if self.replay_traj:
@@ -473,6 +486,10 @@ class MujocoHandler(BaseSimHandler):
     @property
     def episode_length_buf(self) -> list[int]:
         return [self._episode_length_buf]
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoHandler)
