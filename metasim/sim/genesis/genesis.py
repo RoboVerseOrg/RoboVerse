@@ -10,6 +10,7 @@ from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, GymEnvWrapper
 from metasim.types import Action, EnvState
@@ -18,6 +19,7 @@ from metasim.types import Action, EnvState
 class GenesisHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
+        self._actions_cache: list[Action] = []
         self.object_inst_dict: dict[str, RigidEntity] = {}
         self.camera_inst_dict: dict[str, Camera] = {}
 
@@ -101,7 +103,6 @@ class GenesisHandler(BaseSimHandler):
             states_concat[obj.name]["rot"] = obj_inst.get_quat(envs_idx=env_ids).cpu()
             if isinstance(obj, ArticulationObjCfg):
                 states_concat[obj.name]["dof_pos"] = obj_inst.get_qpos(envs_idx=env_ids).cpu()
-
         camera_obs = {}
         for camera_name, camera_inst in self.camera_inst_dict.items():
             rgb, _, _, _ = camera_inst.render()
@@ -120,6 +121,14 @@ class GenesisHandler(BaseSimHandler):
                         jn: states_concat[obj.name]["dof_pos"][env_id][jid]
                         for jid, jn in enumerate(self.get_object_joint_names(obj))
                     }
+                if isinstance(obj, BaseRobotCfg):
+                    if self.actions_cache:
+                        obj_state["dof_pos_target"] = {
+                            jn: self.actions_cache[env_id]["dof_pos_target"][jn]
+                            for jid, jn in enumerate(self.get_object_joint_names(obj))
+                        }
+                    else:
+                        obj_state["dof_pos_target"] = None
                 if obj.name == self.robot.name:
                     env_state["robots"][obj.name] = obj_state
                 else:
@@ -156,6 +165,7 @@ class GenesisHandler(BaseSimHandler):
                     )
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        self._actions_cache = actions
         position = [
             [actions[env_id]["dof_pos_target"][jn] for jn in self.get_object_joint_names(self.object_dict[obj_name])]
             for env_id in range(self.num_envs)
@@ -202,6 +212,10 @@ class GenesisHandler(BaseSimHandler):
     @property
     def num_envs(self) -> int:
         return self.scene_inst.n_envs
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 GenesisEnv = GymEnvWrapper(GenesisHandler)
