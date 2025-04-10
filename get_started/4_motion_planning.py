@@ -11,20 +11,18 @@ except ImportError:
 
 import os
 
-import imageio as iio
-import numpy as np
 import rootutils
 import torch
 import tyro
 from curobo.types.math import Pose
 from loguru import logger as log
-from numpy.typing import NDArray
 from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
+from get_started.utils import ObsSaver
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
@@ -32,45 +30,6 @@ from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.setup_util import get_sim_env_class
-
-
-class ObsSaver:
-    """Save the observations to images or videos."""
-
-    def __init__(self, image_dir: str | None = None, video_path: str | None = None):
-        """Initialize the ObsSaver."""
-        assert image_dir is not None or video_path is not None
-        self.image_dir = image_dir
-        self.video_path = video_path
-        self.images: list[NDArray] = []
-
-        self.image_idx = 0
-
-    def add(self, obs: dict):
-        """Add the observation to the list."""
-        from torchvision.utils import make_grid, save_image
-
-        if obs is None or obs.get("rgb", None) is None:
-            return
-
-        rgb_data = obs["rgb"]  # (N, H, W, C), uint8
-        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
-
-        if self.image_dir is not None:
-            os.makedirs(self.image_dir, exist_ok=True)
-            save_image(image, os.path.join(self.image_dir, f"rgb_{self.image_idx:04d}.png"))
-            self.image_idx += 1
-
-        image = image.cpu().numpy().transpose(1, 2, 0)  # (H, W, C)
-        image = (image * 255).astype(np.uint8)
-        self.images.append(image)
-
-    def save(self):
-        """Save the images or videos."""
-        if self.video_path is not None:
-            log.info(f"Saving video of {len(self.images)} frames to {self.video_path}")
-            os.makedirs(os.path.dirname(self.video_path), exist_ok=True)
-            iio.mimsave(self.video_path, self.images, fps=30)
 
 
 @configclass
