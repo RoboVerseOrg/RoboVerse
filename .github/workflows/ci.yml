@@ -1,0 +1,20 @@
+name: CI Checks
+
+on: [push, pull_request]
+
+jobs:
+  integration-tests:
+    runs-on: [self-hosted, linux, x64, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker
+        run: |
+          docker compose up --build -d
+      - name: Test 1 - IsaacLab stack_cube
+        run: >
+          docker exec -it metasim
+          conda run --no-capture-output -n metasim
+          python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
+      - name: Stop Docker
+        run: |
+          docker compose down
