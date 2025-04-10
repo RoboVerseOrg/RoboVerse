@@ -84,11 +84,11 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf += 1
             self.handler.set_dof_targets(self.handler.robot.name, actions)
             self.handler.simulate()
-            obs = self.handler.get_observation()
             reward = self._get_reward()
             success = self.handler.checker.check(self.handler)
+            states = self.handler.get_states()
             time_out = self._episode_length_buf >= self.handler.scenario.episode_length
-            return obs, reward, success, time_out, None
+            return states, reward, success, time_out, None
 
         def render(self) -> None:
             log.warning("render() is not implemented yet")
