@@ -268,6 +268,7 @@ class MujocoHandler(BaseSimHandler):
             state[object_type][obj.name].update(self._get_joint_states(obj.name))
             ## Actuator states -- for robot
             if obj == self._robot:
+                ## TODO: read from simulator instead of cache
                 state[object_type][obj.name].update(self._get_actuator_states(obj.name))
                 joint_names = [
                     self.physics.model.joint(joint_id).name.split("/")[-1]

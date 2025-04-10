@@ -122,6 +122,7 @@ class GenesisHandler(BaseSimHandler):
                         for jid, jn in enumerate(self.get_object_joint_names(obj))
                     }
                 if isinstance(obj, BaseRobotCfg):
+                    ## TODO: read from simulator instead of cache
                     if self.actions_cache:
                         obj_state["dof_pos_target"] = {
                             jn: self.actions_cache[env_id]["dof_pos_target"][jn]
