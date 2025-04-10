@@ -260,6 +260,7 @@ class SinglePybulletHandler(BaseSimHandler):
     def refresh_render(self):
         """Refresh the render."""
         # XXX: This implementation is not correct, but just work for compatibility
+        # calvin also use this to refresh the render, seems no better way?
         p.stepSimulation()
 
     def launch(self) -> None:
