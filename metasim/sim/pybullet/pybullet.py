@@ -231,7 +231,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
 
-    def set_dof_targets(self, obj_name, target):
+    def set_dof_targets(self, obj_name, actions: list[Action]):
         """Set the target joint positions for the object.
 
         Args:
@@ -239,9 +239,9 @@ class SinglePybulletHandler(BaseSimHandler):
             target: The target joint positions
         """
         # For multi-env version, rewrite this function
-
-        action = target[0]
-        action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]])
+        self._actions_cache = actions
+        action = actions[0]
+        action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
         self._apply_action(action_arr, self.object_ids[obj_name])
 
     def simulate(self):
