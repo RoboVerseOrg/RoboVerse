@@ -17,6 +17,7 @@ from metasim.types import Action, EnvState
 class IsaacgymHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
+        self._actions_cache: list[Action] = []
         self._robot: BaseRobotCfg = scenario.robot
         self._robot_names = {self._robot.name}
         self._robot_init_pose = (0, 0, 0) if not self.robot.default_position else self.robot.default_position
@@ -435,6 +436,16 @@ class IsaacgymHandler(BaseSimHandler):
                         for joint_name, global_idx in (self._joint_info[obj.name]["global_indices"]).items()
                     }
 
+                ## Actions -- for robot
+                if isinstance(obj, BaseRobotCfg):
+                    if self.actions_cache:
+                        obj_state["dof_pos_target"] = {
+                            joint_name: self.actions_cache[env_id]["dof_pos_target"][joint_name]
+                            for joint_name in self._joint_info[obj.name]["names"]
+                        }
+                    else:
+                        obj_state["dof_pos_target"] = None
+
                 ## Actuator states -- for robot
                 ## XXX: Could non-robot objects have actuators?
                 if isinstance(obj, BaseRobotCfg):
@@ -585,6 +596,7 @@ class IsaacgymHandler(BaseSimHandler):
         return action_array_all
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]):
+        self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0].clone())
         action_array_all = self._get_action_array_all(actions)
         robot_dim = action_array_all.shape[1]
@@ -811,6 +823,10 @@ class IsaacgymHandler(BaseSimHandler):
     @property
     def num_envs(self) -> int:
         return self._num_envs
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 # TODO: try to align handler API and use GymWrapper instead

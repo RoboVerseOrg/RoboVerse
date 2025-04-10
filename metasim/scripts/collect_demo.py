@@ -19,6 +19,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 ### Add command line arguments
 #########################################
 import math
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Literal
 
@@ -183,8 +184,9 @@ class DemoCollector:
     def add(self, demo_idx: int, data_dict: dict):
         if data_dict is None:
             log.warning("Skipping adding obs to DemoCollector because obs is None")
+            return
         assert demo_idx in self.cache
-        self.cache[demo_idx].append(data_dict)
+        self.cache[demo_idx].append(deepcopy(data_dict))
 
     def save(self, demo_idx: int):
         assert demo_idx in self.cache
@@ -372,7 +374,7 @@ def main():
 
     ## Initialize
     for env_id, demo_idx in enumerate(demo_idxs):
-        collector.create(demo_idx, {k: v[env_id] for k, v in obs.items()})
+        collector.create(demo_idx, obs[env_id])
 
     ## Main Loop
     while not all(finished):
@@ -386,7 +388,7 @@ def main():
                 continue
 
             demo_idx = demo_idxs[env_id]
-            collector.add(demo_idx, {k: v[env_id] for k, v in obs.items()})
+            collector.add(demo_idx, obs[env_id])
 
         for env_id in success.nonzero().squeeze(-1).tolist():
             if finished[env_id]:
@@ -413,7 +415,7 @@ def main():
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
                     obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
-                    collector.create(demo_indexer.next_idx, {k: v[env_id] for k, v in obs.items()})
+                    collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
                     run_out[env_id] = False
                 else:
@@ -435,7 +437,7 @@ def main():
                 ## Timeout --> CollectingDemo
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
                 obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
-                collector.create(demo_idx, {k: v[env_id] for k, v in obs.items()})
+                collector.create(demo_idx, obs[env_id])
             else:
                 ## Timeout --> NextDemo
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
@@ -448,7 +450,7 @@ def main():
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
                     obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
-                    collector.create(demo_indexer.next_idx, {k: v[env_id] for k, v in obs.items()})
+                    collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
                 else:
                     ## NextDemo --> Finished

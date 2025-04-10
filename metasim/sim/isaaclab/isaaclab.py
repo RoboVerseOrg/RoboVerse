@@ -29,6 +29,7 @@ except:
 class IsaaclabHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
+        self._actions_cache: list[Action] = []
 
     ############################################################
     ## Launch
@@ -112,6 +113,7 @@ class IsaaclabHandler(BaseSimHandler):
     ## Gymnasium main methods
     ############################################################
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+        self._actions_cache = action
         joint_names = self.get_object_joint_names(self.robot)
         action_env_tensors = torch.zeros((self.num_envs, len(joint_names)), device=self.env.device)
         for env_id in range(self.num_envs):
@@ -125,11 +127,10 @@ class IsaaclabHandler(BaseSimHandler):
         _, _, _, time_out, extras = self.env.step(action_env_tensors)
         time_out = time_out.cpu()
         success = self.checker.check(self)
-        obs = self.get_observation()
+        states = self.get_states()
+        return states, None, success, time_out, extras
 
-        return obs, None, success, time_out, extras
-
-    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Extra]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -164,11 +165,11 @@ class IsaaclabHandler(BaseSimHandler):
 
         ## Update obs
         tic = time.time()
-        obs = self.get_observation()
+        states = self.get_states()
         toc = time.time()
         log.trace(f"Reset getting obs time: {toc - tic:.2f}s")
 
-        return obs, extras
+        return states, extras
 
     def close(self) -> None:
         self.env.close()
@@ -359,19 +360,19 @@ class IsaaclabHandler(BaseSimHandler):
                 for i, body_name in enumerate(obj_inst.body_names):
                     body_state = {}
                     body_state["pos"] = (
-                        obj_inst.data.body_pos_w[env_id, i].cpu() - self.env.scene.env_origins[env_id].cpu()
+                        obj_inst.data.body_link_pos_w[env_id, i].cpu() - self.env.scene.env_origins[env_id].cpu()
                     )
-                    body_state["rot"] = obj_inst.data.body_quat_w[env_id, i].cpu()
-                    body_state["vel"] = obj_inst.data.body_lin_vel_w[env_id, i].cpu()
-                    body_state["ang_vel"] = obj_inst.data.body_ang_vel_w[env_id, i].cpu()
+                    body_state["rot"] = obj_inst.data.body_link_quat_w[env_id, i].cpu()
+                    body_state["vel"] = obj_inst.data.body_link_vel_w[env_id, i].cpu()
+                    body_state["ang_vel"] = obj_inst.data.body_link_ang_vel_w[env_id, i].cpu()
                     body_state["com"] = com_positions[env_id, i].cpu()
                     env_state[object_type][obj.name]["body"][body_name] = body_state
 
             ## Cameras
             env_state["cameras"] = {
                 camera.name: {
-                    "rgb": rgb_datas[i],
-                    "depth": depth_datas[i],
+                    "rgb": rgb_datas[i][env_id],
+                    "depth": depth_datas[i][env_id],
                 }
                 for i, camera in enumerate(self.cameras)
             }
@@ -437,6 +438,10 @@ class IsaaclabHandler(BaseSimHandler):
         eyes = eyes + self.env.scene.env_origins
         targets = targets + self.env.scene.env_origins
         camera_inst.set_world_poses_from_view(eyes=eyes, targets=targets)
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 IsaaclabEnv: Type[EnvWrapper[IsaaclabHandler]] = IdentityEnvWrapper(IsaaclabHandler)

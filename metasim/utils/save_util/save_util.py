@@ -5,6 +5,7 @@ from __future__ import annotations
 import torch
 
 from .save_util_v1 import is_v1_demo, save_demo_v1
+from .save_util_v2 import is_v2_demo, save_demo_v2
 
 
 def save_demo(save_dir: str, demo: list[dict[str, torch.Tensor]]):
@@ -16,5 +17,7 @@ def save_demo(save_dir: str, demo: list[dict[str, torch.Tensor]]):
     """
     if is_v1_demo(demo):
         save_demo_v1(save_dir, demo)
+    elif is_v2_demo(demo):
+        save_demo_v2(save_dir, demo)
     else:
-        raise ValueError(f"Unknown demo format: {demo}")
+        raise ValueError("Unknown demo format")

@@ -168,3 +168,10 @@ class BaseSimHandler:
         The timestep of each environment, restart from 0 when reset, plus 1 at each step.
         """
         raise NotImplementedError
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        """
+        Cache of actions.
+        """
+        raise NotImplementedError
