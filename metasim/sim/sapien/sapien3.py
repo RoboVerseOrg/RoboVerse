@@ -402,6 +402,14 @@ class SingleSapien3Handler(BaseSimHandler):
 
         return [states]
 
+    def refresh_render(self):
+        """Refresh the render."""
+        self.scene.update_render()
+        if not self.headless:
+            self.viewer.render()
+        for camera_name, camera_id in self.camera_ids.items():
+            camera_id.take_picture()
+
     def get_observation(self) -> Obs:
         """Get observation for compatibility with other simulators."""
         ## TODO: only support single env for now

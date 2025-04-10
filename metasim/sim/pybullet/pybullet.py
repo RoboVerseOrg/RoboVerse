@@ -257,6 +257,11 @@ class SinglePybulletHandler(BaseSimHandler):
 
         # return None, None, np.zeros(1), np.zeros(1), np.zeros(1)
 
+    def refresh_render(self):
+        """Refresh the render."""
+        # XXX: This implementation is not correct, but just work for compatibility
+        p.stepSimulation()
+
     def launch(self) -> None:
         """Launch the simulation."""
         self._build_pybullet()

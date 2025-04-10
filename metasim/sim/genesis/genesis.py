@@ -196,6 +196,11 @@ class GenesisHandler(BaseSimHandler):
         for _ in range(self.scenario.decimation):
             self.scene_inst.step()
 
+    def refresh_render(self):
+        """Refresh the render."""
+        self.scene_inst.viewer.update()
+        self.scene_inst.visualizer.update()
+
     def close(self):
         pass
 

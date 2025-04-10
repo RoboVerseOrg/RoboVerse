@@ -317,6 +317,14 @@ class SingleSapienHandler(BaseSimHandler):
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
+    def refresh_render(self):
+        """Refresh the render."""
+        self.scene.update_render()
+        if not self.headless:
+            self.viewer.render()
+        for camera_name, camera_id in self.camera_ids.items():
+            camera_id.take_picture()
+
     def launch(self) -> None:
         """Launch the simulation."""
         self._build_sapien()
