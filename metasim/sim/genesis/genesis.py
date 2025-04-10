@@ -198,7 +198,8 @@ class GenesisHandler(BaseSimHandler):
 
     def refresh_render(self):
         """Refresh the render."""
-        self.scene_inst.viewer.update()
+        if not self.headless:
+            self.scene_inst.viewer.update()
         self.scene_inst.visualizer.update()
 
     def close(self):
