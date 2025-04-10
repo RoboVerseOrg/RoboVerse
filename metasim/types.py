@@ -47,14 +47,7 @@ class EnvState(TypedDict):
 
 
 ## Gymnasium types
-class Obs(TypedDict):
-    """Observation of the environment."""
-
-    rgb: torch.Tensor
-    depth: torch.Tensor
-    states: list[EnvState]
-
-
+Obs = List[EnvState]
 Reward = List[List[float]]  # TODO: you may modify this if necessary
 Success = torch.BoolTensor
 TimeOut = torch.BoolTensor

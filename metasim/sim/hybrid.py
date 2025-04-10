@@ -18,8 +18,8 @@ class HybridSimEnv(EnvWrapper[BaseSimHandler]):
         states = self.sim_env1.handler.get_states()
         self.sim_env2.handler.set_states(states)
         self.sim_env2.handler.refresh_render()
-        obs = self.sim_env2.handler.get_observation()
-        return obs, reward, success, time_out, extra
+        states = self.sim_env2.handler.get_states()
+        return states, reward, success, time_out, extra
 
     def render(self):
         self.sim_env2.render()

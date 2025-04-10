@@ -19,7 +19,7 @@ from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
-from metasim.types import EnvState, Obs
+from metasim.types import Action, EnvState, Obs
 from metasim.utils.math import convert_quat
 
 
@@ -35,6 +35,7 @@ class SinglePybulletHandler(BaseSimHandler):
             headless: Whether to run the simulation in headless mode
         """
         super().__init__(scenario)
+        self._actions_cache: list[Action] = []
 
     def _build_pybullet(self):
         self.client = p.connect(p.GUI)
@@ -230,7 +231,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
 
-    def set_dof_targets(self, obj_name, target):
+    def set_dof_targets(self, obj_name, actions: list[Action]):
         """Set the target joint positions for the object.
 
         Args:
@@ -238,9 +239,9 @@ class SinglePybulletHandler(BaseSimHandler):
             target: The target joint positions
         """
         # For multi-env version, rewrite this function
-
-        action = target[0]
-        action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]])
+        self._actions_cache = actions
+        action = actions[0]
+        action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
         self._apply_action(action_arr, self.object_ids[obj_name])
 
     def simulate(self):
@@ -255,6 +256,12 @@ class SinglePybulletHandler(BaseSimHandler):
             p.stepSimulation()
 
         # return None, None, np.zeros(1), np.zeros(1), np.zeros(1)
+
+    def refresh_render(self):
+        """Refresh the render."""
+        # XXX: This implementation is not correct, but just work for compatibility
+        # calvin also use this to refresh the render, seems no better way?
+        p.stepSimulation()
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -320,6 +327,17 @@ class SinglePybulletHandler(BaseSimHandler):
                     states[object_type][name]["dof_pos"][joint_name] = joint_state[0]
                     states[object_type][name]["dof_vel"][joint_name] = joint_state[1]
 
+            ## Actions -- for robot
+            ## TODO: read from simulator instead of cache
+            if isinstance(self.object_dict[name], BaseRobotCfg):
+                joint_names = self.object_joint_order[name]
+                if self.actions_cache:
+                    states[object_type][name]["dof_pos_target"] = {
+                        joint_name: self.actions_cache[0]["dof_pos_target"][joint_name] for joint_name in joint_names
+                    }
+                else:
+                    states[object_type][name]["dof_pos_target"] = None
+
         for camera in self.cameras:
             width, height, view_matrix, projection_matrix = self.camera_ids[camera.name]
             img_arr = p.getCameraImage(
@@ -349,6 +367,10 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     def get_object_joint_names(self, object):
         return self.object_joint_order[object.name]
+
+    @property
+    def actions_cache(self) -> list[Action]:
+        return self._actions_cache
 
 
 PybulletHandler = ParallelSimWrapper(SinglePybulletHandler)
