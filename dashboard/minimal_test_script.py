@@ -1,11 +1,19 @@
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
+
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
 
 import rootutils
 import tyro
 from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
+from metasim.types import EnvState
 
 
 @dataclass
@@ -20,21 +28,21 @@ class Args:
 args = tyro.cli(Args)
 
 
-def save_obs(obs, filepath: str):
+def save_obs(states: list[EnvState], filepath: str):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     from torchvision.utils import make_grid, save_image
 
     try:
-        rgb_data = obs["rgb"]
+        rgb_data = next(iter(states[0]["cameras"].values()))["rgb"]
     except Exception as e:
         log.error(f"{e=}")
         return
 
-    if rgb_data.shape != (1, 256, 256, 3):
+    if rgb_data.shape != (256, 256, 3):
         log.error(f"{type(rgb_data)=}")
         log.error(f"{rgb_data.shape=}")
         return
-
+    rgb_data = rgb_data.unsqueeze(0)
     image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     save_image(image, filepath)
