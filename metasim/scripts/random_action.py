@@ -159,7 +159,7 @@ def main():
 
         for _ in range(1 if args.js else 30):
             env.step(actions)
-            env.handler.render()
+            env.handler.refresh_render()
         step += 1
 
         obs = env.handler.get_observation()
