@@ -21,7 +21,6 @@ Please create and add the docker user information to `.env` file. To use the sam
 ```bash
 printf "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER\n" > .env
 ```
-Otherwise docker will use `user(uid=1000,gid=1000)` as default.
 
 ## Build the docker image
 
