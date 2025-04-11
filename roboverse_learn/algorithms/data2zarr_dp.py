@@ -44,13 +44,6 @@ def main():
     )
 
     parser.add_argument(
-        "--custom_name",
-        type=str,
-        default="data_policy",
-        help="The custom name of the zarr file",
-    )
-
-    parser.add_argument(
         "--observation_space",
         type=str,
         default="joint_pos",
@@ -80,10 +73,9 @@ def main():
     num = args.expert_data_num
     load_dir = args.metadata_dir
     downsample_ratio = args.downsample_ratio
-    custom_name = args.custom_name
 
     print("Metadata load dir:", load_dir)
-    save_dir = f"data_policy/{task_name}_{num}_{custom_name}.zarr"
+    save_dir = f"data_policy/{task_name}_{num}.zarr"
     print("ZARR save dir:", save_dir)
 
     if os.path.exists(save_dir):
@@ -281,7 +273,6 @@ def main():
         "task_name": args.task_name,
         "num_episodes": args.expert_data_num,
         "downsample_ratio": args.downsample_ratio,
-        "custom_name": args.custom_name,
     }
 
     # Save metadata to zarr group

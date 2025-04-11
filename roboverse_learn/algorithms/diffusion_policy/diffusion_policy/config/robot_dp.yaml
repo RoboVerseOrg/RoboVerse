@@ -148,17 +148,17 @@ checkpoint:
     format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
   save_last_ckpt: True
   save_last_snapshot: False
-  save_root_dir: info/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+  save_root_dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
 
 multi_run:
-  run_dir: info/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+  run_dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${task_name}
 
 hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: info/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+    dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
   sweep:
-    dir: info/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+    dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
     subdir: ${hydra.job.num}

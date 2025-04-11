@@ -110,7 +110,7 @@ class PolicyRunner:
             {
                 "dof_pos_target": {
                     joint_name: curr_action[i, index]
-                    for index, joint_name in enumerate(self.scenario.robot.joint_limits.keys())
+                    for index, joint_name in enumerate(sorted(self.scenario.robot.joint_limits.keys()))
                 }
             }
             for i in range(self.num_envs)

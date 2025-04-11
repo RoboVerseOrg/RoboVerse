@@ -10,15 +10,11 @@ cd ../../../
 pip install pandas wandb
 ```
 
-## Training Procedure
 
-The main script for training is `train.sh`, which automates both data preparation and training.
+## Option 1: Two Step, Pre-processing and Training
 
-
-### Option1: 2 Step, Pre-processing and Training
-
-#### Step1: Data Preparation
-**Data Preparation**: _data2zarr_dp.py_ Converts the metadata into Zarr format for efficient dataloading. Automatically parses arguments and points to the correct `metadata_dir` (the location of data collected by the `collect_demo` script) to convert demonstration data into Zarr format.
+### **Data Preparation**:
+_data2zarr_dp.py_ converts the metadata stored by the collect_demo script into Zarr format for efficient dataloading. This script can handle both joint position and end effector action and observation spaces.
 
 Command:
 ```shell
@@ -30,108 +26,62 @@ python roboverse_learn/algorithms/data2zarr_dp.py \
 --action_space <action_space> \
 --observation_space <observation_space>
 ```
-| Argument | Description |
-|----------|-------------|
-| `task_name` | Name of the task (e.g., CloseBox_Franka_Level0_16) |
-| `expert_data_num` | Number of expert demonstrations to process |
-| `metadata_dir` | Path to the directory containing demonstration metadata |
-| `custom_name` | Custom string to append to the output filename |
-| `action_space` | Type of action space to use (options: 'joint_pos' or 'ee') |
-| `observation_space` | Type of observation space to use (options: 'joint_pos' or 'ee') |
+| Argument | Description | Example |
+|----------|-------------|---------|
+| `task_name` | Name of the task | `CloseBox_Franka_Level0_obs:joint_pos_action:joint_pos` |
+| `expert_data_num` | Number of expert demonstrations to process | `100` |
+| `metadata_dir` | Path to the directory containing demonstration metadata saved by collect_demo | `roboverse_demo/demo_isaaclab/CloseBox-Level0/robot-franka` |
+| `action_space` | Type of action space to use (options: 'joint_pos' or 'ee') | `joint_pos` |
+| `observation_space` | Type of observation space to use (options: 'joint_pos' or 'ee') | `joint_pos` |
+| `delta_ee` | (optional) Delta control (0: absolute, 1: delta; default 0) | `0` |
 
-**Example:**
-```shell
-python roboverse_learn/algorithms/data2zarr_dp.py \
---task_name CloseBox_Franka_Level0_16 \
---expert_data_num 100 \
---metadata_dir roboverse_demo/demo_isaaclab/CloseBox-Level0/robot-franka \
---custom_name customized_additional_string \
---action_space joint_pos \
---observation_space joint_pos
-```
-
-#### Step2: Training
-**Training**: _diffusion_policy/train.py_ Uses the generated Zarr data, which gets stored in the `data_policy/` directory, to train the diffusion policy model.
+### **Training**:
+_diffusion_policy/train.py_ uses the generated Zarr data, which gets stored in the `data_policy/` directory, to train the diffusion policy model. Note the policy.runner arguments should match the arguments used in _data2zarr_dp.py_ and are used in downstream evaluations.
 
 Command:
 ```shell
 python roboverse_learn/algorithms/diffusion_policy/train.py \
 --config-name=robot_dp.yaml \
-task.name=<task_name>_<robot>_level<level>_<expert_data_num>_<name> \
-task.dataset.zarr_path=<zarr_path> \
-training.debug=<debug_mode> \
-training.seed=<seed> \
-exp_name=<experiment_name> \
-logging.mode=<wandb_mode> \
-horizon=<horizon> \
-n_obs_steps=<n_obs_steps> \
-n_action_steps=<n_action_steps> \
-training.num_epochs=<num_epochs> \
-policy_runner.obs.obs_type=<obs_type> \
-policy_runner.action.action_type=<action_type> \
-policy_runner.action.delta=<delta> \
-training.device=<device>
+--task.name=<task_name> \
+--task.dataset.zarr_path=<zarr_path> \
+--training.seed=<seed> \
+--horizon=<horizon> \
+--n_obs_steps=<n_obs_steps> \
+--n_action_steps=<n_action_steps> \
+--training.num_epochs=<num_epochs> \
+--policy_runner.obs.obs_type=<obs_type> \
+--policy_runner.action.action_type=<action_type> \
+--policy_runner.action.delta=<delta> \
+--training.device=<device>
 ```
-| Argument | Description |
-|----------|-------------|
-| `task_name` | Name of the task |
-| `robot` | Type of robot being used |
-| `level` | Difficulty level of the task |
-| `expert_data_num` | Number of expert demonstrations |
-| `name` | Custom name for the experiment |
-| `zarr_path` | Path to the zarr dataset created in Step 1 |
-| `debug_mode` | Enable/disable debug mode (True/False) |
-| `seed` | Random seed for reproducibility |
-| `experiment_name` | Name for the experiment run |
-| `wandb_mode` | Weights & Biases logging mode |
-| `horizon` | Time horizon for the policy |
-| `n_obs_steps` | Number of observation steps |
-| `n_action_steps` | Number of action steps |
-| `num_epochs` | Number of training epochs |
-| `obs_type` | Observation type (joint_pos or ee) |
-| `action_type` | Action type (joint_pos or ee) |
-| `delta` | Delta control mode (0 for absolute, 1 for delta) |
-| `device` | GPU device to use (e.g., "cuda:0") |
+| Argument | Description | Example |
+|----------|-------------|---------|
+| `task_name` | Name of the task | `CloseBox_Franka_Level0_obs:joint_pos_action:joint_pos` |
+| `zarr_path` | Path to the zarr dataset created in Step 1. This will be {task_name}_{expert_data_num}.zarr | `data_policy/CloseBox_Franka_Level0_obs:joint_pos_action:joint_pos_100.zarr` |
+| `seed` | Random seed for reproducibility | `42` |
+| `horizon` | Time horizon for the policy | `8` |
+| `n_obs_steps` | Number of observation steps | `3` |
+| `n_action_steps` | Number of action steps | `4` |
+| `num_epochs` | Number of training epochs | `200` |
+| `obs_type` | Observation type (joint_pos or ee) | `joint_pos` |
+| `action_type` | Action type (joint_pos or ee) | `joint_pos` |
+| `delta` | Delta control mode (0 for absolute, 1 for delta) | `0` |
+| `device` | GPU device to use | `"cuda:7"` |
 
-**Example:**
-```shell
-python roboverse_learn/algorithms/diffusion_policy/train.py \
---config-name=robot_dp.yaml \
-task.name=${task_name}_${robot}_level${level}_${expert_data_num}_${name} \        task.dataset.zarr_path="data_policy/CloseBox_Franka_Level0_16_100_test.zarr" \
-training.debug=False \
-training.seed=0 \
-exp_name=CloseBox_Franka_Level0_16_100_test \
-logging.mode=${wandb_mode} \
-horizon=16 \
-n_obs_steps=8 \
-n_action_steps=8 \
-training.num_epochs=1000 \
-policy_runner.obs.obs_type=joint_pos \
-policy_runner.action.action_type=joint_pos \
-policy_runner.action.delta=0 \
-training.device="cuda:7"
-```
+## Option 2: Run with Single Command: train_dp.sh
 
-
-
-### Option2: Run with Single Command: train.sh
-
-We further wrap the data preparation and training into a single command: `train.sh`.
+We further wrap the data preparation and training into a single command: `train_dp.sh`. This ensures consistency between the parameters of the data preparation and training, especially the action space, observation space, data directory.
 
 ```shell
-bash roboverse_learn/algorithms/diffusion_policy/train.sh <metadata_dir> <task_name> <robot> <expert_data_num> <level> <seed> <gpu_id> <DEBUG> <num_epochs> <obs_space> <act_space> [<delta_ee>]
+bash roboverse_learn/algorithms/diffusion_policy/train_dp.sh <metadata_dir> <task_name> <expert_data_num> <gpu_id> <num_epochs> <obs_space> <act_space> [<delta_ee>]
 ```
 
 | Argument          | Description                                                 |
 |-------------------|-------------------------------------------------------------|
-| `metadata_dir`    | Path to the directory containing the demonstration metadata |
+| `metadata_dir`    | Path to the directory containing demonstration metadata saved by collect_demo |
 | `task_name`       | Name of the task                                            |
-| `robot`           | Robot type used for training                                |
-| `expert_data_num` | Number of expert demonstrations that were collected         |
-| `level`           | Randomization level of the demonstrations                   |
-| `seed`            | Random seed for reproducibility                             |
+| `expert_data_num` | Number of expert demonstrations to use         |
 | `gpu_id`          | ID of the GPU to use                                        |
-| `DEBUG`           | Debug mode toggle (`True` or `False`)                       |
 | `num_epochs`      | Number of training epochs                                   |
 | `obs_space`       | Observation space (`joint_pos` or `ee`)                     |
 | `act_space`       | Action space (`joint_pos` or `ee`)                          |
@@ -139,43 +89,13 @@ bash roboverse_learn/algorithms/diffusion_policy/train.sh <metadata_dir> <task_n
 
 **Example:**
 ```shell
-bash roboverse_learn/algorithms/diffusion_policy/train.sh roboverse_demo/demo_isaaclab/CloseBox-Level0/robot-franka CloseBox franka 100 0 42 0 False 500 ee ee 0
+bash roboverse_learn/algorithms/diffusion_policy/train.sh roboverse_demo/demo_isaaclab/CloseBox-Level0/robot-franka CloseBoxFrankaL0 100 0 200 joint_pos joint_pos
 ```
-
-This script runs in two parts:
-
-1. **Data Preparation**: _data2zarr_dp.py_ Converts the metadata into Zarr format for efficient dataloading. Automatically parses arguments and points to the correct `metadata_dir` (the location of data collected by the `collect_demo` script) to convert demonstration data into Zarr format.
-2. **Training**: _diffusion_policy/train.py_ Uses the generated Zarr data, which gets stored in the `data_policy/` directory, to train the diffusion policy model.
-
-We chose to combine these two parts for consistency of action-space and observation-space data processing, but these two parts can be ran independently if desired.
-
-#### Understanding data2zarr_dp.py
-
-The `data2zarr_dp.py` script converts demonstration data into Zarr format for efficient data loading. While `train.sh` handles this automatically, you may want to run this step separately for custom data preprocessing.
-
-```bash
-python roboverse_learn/algorithms/data2zarr_dp.py [arguments]
-```
-
-**Key Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `--task_name` | Name of the task (e.g., StackCube_franka) |
-| `--expert_data_num` | Number of episodes to process |
-| `--metadata_dir` | Path to the demonstration metadata |
-| `--downsample_ratio` | Downsample ratio for demonstration data |
-| `--custom_name` | Custom name for the output Zarr file |
-| `--observation_space` | Observation space to use (`joint_pos` or `ee`) |
-| `--action_space` | Action space to use (`joint_pos` or `ee`) |
-| `--delta_ee` | (optional) Delta control mode for end effector (0: absolute, 1: delta) |
-| `--joint_pos_padding` | (optional) If > 0, pad joint positions to this length when using `joint_pos` observation/action space |
-
-The processed data is saved to `data_policy/[task_name]_[expert_data_num]_[custom_name].zarr` and is ready for training. This script also saves a metadata.json which contains some of the above parameters so that the downstream policy training can see how the data is processed.
 
 **Important Parameter Overrides:**
 - `horizon`, `n_obs_steps`, and `n_action_steps` are set directly in `train.sh` and override the YAML configurations.
 - All other parameters (e.g., batch size, number of epochs) can be manually adjusted in the YAML file: `roboverse_learn/algorithms/diffusion_policy/diffusion_policy/config/robot_dp.yaml`
-- If you alter observation and action spaces, verify the corresponding shapes in: `roboverse_learn/algorithms/diffusion_policy/diffusion_policy/config/task/default_task.yaml`
+- If you alter observation and action spaces, verify the corresponding shapes in: `roboverse_learn/algorithms/diffusion_policy/diffusion_policy/config/task/default_task.yaml` Both end effector control and Franka joint space, have dimension 9 but keep this in mind if using a different robot.
 
 #### Switching between Joint Position and End Effector Control
 
@@ -191,7 +111,7 @@ Adjust relevant configuration parameters in:
 To deploy and evaluate the trained policy:
 
 ```bash
-python roboverse_learn/eval.py --task CloseBox --algo diffusion_policy --num_envs <up to ~50 envs works on RTX> --checkpoint_path <absolute_checkpoint_path>
+python roboverse_learn/eval.py --task CloseBox --algo diffusion_policy --num_envs <up to ~50 envs works on RTX> --checkpoint_path <checkpoint_path>
 ```
 
-Ensure that `<absolute_checkpoint_path>` points to your trained model checkpoint.
+Ensure that `<checkpoint_path>` points to the file of the trained model checkpoint, ie `info/outputs/DP/...`

@@ -20,6 +20,8 @@ from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+import torch
+
 from metasim.cfg.randomization import RandomizationCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors.cameras import PinholeCameraCfg
@@ -102,7 +104,7 @@ def main():
 
     time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     ckpt_name = args.checkpoint_path.split("/")[-1] + "_" + time_str
-    ckpt_name = f"{args.task}/{args.robot}/{args.algo}_{ckpt_name}"
+    ckpt_name = f"{args.task}/{args.algo}/{args.robot}/{ckpt_name}"
     runnerCls = get_runner(args.algo)
     policyRunner: PolicyRunner = runnerCls(
         scenario=scenario,
@@ -143,12 +145,22 @@ def main():
         SuccessOnce = [False] * num_envs
         TimeOut = [False] * num_envs
         images_list = []
-
+        print(policyRunner.policy_cfg)
         while step < MaxStep:
             log.debug(f"Step {step}")
+            new_obs = {
+                "rgb": torch.stack([env["cameras"]["camera0"]["rgb"] for env in obs]),
+                "joint_qpos": torch.tensor([
+                    [
+                        env["robots"][args.robot]["dof_pos"][k]
+                        for k in sorted(env["robots"][args.robot]["dof_pos"].keys())
+                    ]
+                    for env in obs
+                ]),
+            }
 
-            images_list.append(np.array(obs["rgb"]))
-            action = policyRunner.get_action(obs)
+            images_list.append(np.array(new_obs["rgb"].cpu()))
+            action = policyRunner.get_action(new_obs)
 
             for round_i in range(action_set_steps):
                 obs, reward, success, time_out, extras = env.step(action)
