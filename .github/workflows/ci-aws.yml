@@ -1,0 +1,15 @@
+name: AWS CI Checks
+
+on: [push]
+
+jobs:
+  integration-tests:
+    runs-on: codebuild-RoboVerse-CI-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: printf "DOCKER_UID=1000\nDOCKER_GID=1000\nDOCKER_USER=user\n" > .env
+      - run: docker compose up --build -d
+      - run: >
+          docker exec metasim
+          conda run --no-capture-output -n metasim
+          python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
