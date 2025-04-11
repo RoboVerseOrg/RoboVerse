@@ -37,6 +37,7 @@ user_guide/tips/index
 :titlesonly:
 
 developer_guide/precommit_hooks
+developer_guide/state
 developer_guide/new_task/index
 developer_guide/new_robot
 developer_guide/new_sim
