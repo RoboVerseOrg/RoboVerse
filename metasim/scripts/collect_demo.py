@@ -112,6 +112,7 @@ from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.tensor_util import tensor_to_cpu
 
 
 ###########################################################
@@ -184,9 +185,8 @@ class DemoCollector:
     def add(self, demo_idx: int, data_dict: dict):
         if data_dict is None:
             log.warning("Skipping adding obs to DemoCollector because obs is None")
-            return
         assert demo_idx in self.cache
-        self.cache[demo_idx].append(deepcopy(data_dict))
+        self.cache[demo_idx].append(deepcopy(tensor_to_cpu(data_dict)))
 
     def save(self, demo_idx: int):
         assert demo_idx in self.cache
