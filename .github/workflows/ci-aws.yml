@@ -6,11 +6,9 @@ jobs:
   integration-tests:
     runs-on: codebuild-RoboVerse-CI-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - run: echo "Hello World!"
       - uses: actions/checkout@v4
+      - run: printf "DOCKER_UID=1000\nDOCKER_GID=1000\nDOCKER_USER=user\n" > .env
       - run: docker compose up --build -d
-      - run: docker exec metasim ls -al /home/
-      - run: docker exec metasim ls -al /home/user/RoboVerse/dashboard/
       - run: >
           docker exec metasim
           conda run --no-capture-output -n metasim
