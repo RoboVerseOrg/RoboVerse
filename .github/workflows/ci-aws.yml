@@ -7,14 +7,25 @@ jobs:
     runs-on: codebuild-RoboVerse-CI-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - run: echo "Hello World!"
-      - name: Build Docker
-        run: |
-          docker compose up --build -d
-      - name: Test 1 - IsaacLab stack_cube
-        run: >
-          docker exec -it metasim
-          conda run --no-capture-output -n metasim
-          python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
-      - name: Stop Docker
-        run: |
-          docker compose down
+      - name: Run Codebuild
+        uses: aws-actions/aws-codebuild-run-build@v1
+        with:
+          project-name: RoboVerse-CI
+          disable-source-override: true
+          buildspec-override: |
+            version: 0.2
+            phases:
+              pre_build:
+              commands:
+                - echo "Pre-build phase"
+            build:
+              commands:
+                - echo "Build phase"
+                - docker compose up --build -d
+                - >
+                  docker exec -it metasim
+                  conda run --no-capture-output -n metasim
+                  python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
+              post_build:
+                commands:
+                  - echo "Post-build phase"
