@@ -9,6 +9,8 @@ jobs:
       - run: echo "Hello World!"
       - uses: actions/checkout@v4
       - run: docker compose up --build -d
+      - run: docker exec metasim ls -al /home/
+      - run: docker exec metasim ls -al /home/user/RoboVerse/dashboard/
       - run: >
           docker exec metasim
           conda run --no-capture-output -n metasim
