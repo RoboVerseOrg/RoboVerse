@@ -1,6 +1,6 @@
 name: AWS CI Checks
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   integration-tests:
@@ -19,13 +19,13 @@ jobs:
               commands:
                 - echo "Pre-build phase"
             build:
-              commands:
-                - echo "Build phase"
-                - docker compose up --build -d
-                - >
-                  docker exec -it metasim
-                  conda run --no-capture-output -n metasim
-                  python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
-              post_build:
-                commands:
-                  - echo "Post-build phase"
+              steps:
+                - uses: actions/checkout@v4
+                - name: Build Docker
+                  run: |
+                    docker compose up --build -d
+                - name: Test case 1
+                  run: >
+                    docker exec -it metasim
+                    conda run --no-capture-output -n metasim
+                    python dashboard/minimal_test_script.py --task=stack_cube --robot=franka --sim=isaaclab --save_dir=dashboard/logs/stack_cube_franka_isaaclab/minimal/results
