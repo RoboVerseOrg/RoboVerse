@@ -72,6 +72,7 @@ class DiffusionPolicyCfg(BasePolicyCfg):
     """
 
     name: str = "DiffusionPolicy"
+    action_config: ActionCfg = ActionCfg(temporal_agg=False)
 
 
 @configclass
