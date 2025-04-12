@@ -3,7 +3,6 @@
 import os
 
 from huggingface_hub import HfApi, HfFileSystem, hf_hub_download
-from huggingface_hub.errors import LocalTokenNotFoundError
 from loguru import logger as log
 
 REPO_ID = "RoboVerseOrg/roboverse_data"
@@ -11,15 +10,6 @@ LOCAL_DIR = "roboverse_data"
 
 hf_api = HfApi()
 hf_fs = HfFileSystem()
-
-
-def _has_repo_access():
-    try:
-        hf_api.repo_exists(REPO_ID, repo_type="dataset", token=True)
-        return True
-    except LocalTokenNotFoundError as e:
-        log.error(e)
-        return False
 
 
 def check_and_download(filepath: str):
@@ -36,30 +26,12 @@ def check_and_download(filepath: str):
         if hf_exists:
             return
         else:
-            if not _has_repo_access():
-                log.error(
-                    "Cannot access the huggingface repository. Please check your token is correctly set and try again."
-                    "\nTo generate a token, go to https://huggingface.co/settings/tokens. A token with read access is"
-                    " enough."
-                    "\nTo set your token, run `huggingface-cli login` or `export HF_TOKEN=<your_token>`."
-                    "\nIf one way doesn't work, please try the other way. It is very likely a huggingface bug."
-                )
             log.warning(f"Please upload the file {filepath} to the huggingface dataset!")
             return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
 
-        ## First, make sure we have the access to the repo
-        if not _has_repo_access():
-            raise Exception(
-                "Cannot access the huggingface repository. Please check your token is correctly set and try again."
-                "\nTo generate a token, go to https://huggingface.co/settings/tokens. A token with read access is"
-                " enough."
-                "\nTo set your token, run `huggingface-cli login` or `export HF_TOKEN=<your_token>`."
-                "\nIf one way doesn't work, please try the other way. It is very likely a huggingface bug."
-            )
-
-        ## Then, make sure the file exists in the huggingface dataset.
+        ## Make sure the file exists in the huggingface dataset.
         if not hf_exists:
             raise Exception(
                 f"File {filepath} neither exists in the local directory nor exists in the huggingface dataset. Please"
@@ -79,7 +51,6 @@ def check_and_download(filepath: str):
                 repo_id=REPO_ID,
                 filename=os.path.relpath(filepath, LOCAL_DIR),
                 repo_type="dataset",
-                token=True,
                 local_dir=LOCAL_DIR,
             )
         except Exception as e:

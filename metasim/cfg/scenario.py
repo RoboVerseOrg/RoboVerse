@@ -111,8 +111,5 @@ class ScenarioCfg:
                 and traj_filepath.find(".yaml") == -1
                 and traj_filepath.find(".yml") == -1
             ):
-                if os.path.exists(os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl.gz")):
-                    traj_filepath = os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl.gz")
-                else:
-                    traj_filepath = os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl")
+                traj_filepath = os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl.gz")
             check_and_download(traj_filepath)
