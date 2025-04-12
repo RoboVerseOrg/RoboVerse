@@ -16,6 +16,8 @@ roboverse_data/
 roboverse_data
 roboverse_data_dev/
 roboverse_data_dev
+roboverse_data_release/
+roboverse_data_release
 *.pth
 checkpoints
 slurm.sh
