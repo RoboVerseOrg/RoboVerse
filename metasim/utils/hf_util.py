@@ -1,9 +1,12 @@
 """This file contains the utility functions for automatically checking the access and downloading files from the huggingface dataset."""
 
 import os
+from multiprocessing import Pool
 
 from huggingface_hub import HfApi, HfFileSystem, hf_hub_download
 from loguru import logger as log
+
+from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
 
 REPO_ID = "RoboVerseOrg/roboverse_data"
 LOCAL_DIR = "roboverse_data"
@@ -13,10 +16,27 @@ hf_fs = HfFileSystem()
 
 
 def check_and_download(filepath: str):
+    """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist. If the file is a URDF or MJCF file, it will download the referenced mesh and texture files recursively.
+
+    Args:
+        filepath: the filepath to check and download.
+    """
+    check_and_download_single(filepath)
+    if filepath.endswith(".urdf"):
+        mesh_paths = extract_mesh_paths_from_urdf(filepath)
+        with Pool(processes=16) as p:
+            p.map(check_and_download_single, mesh_paths)
+    elif filepath.endswith(".xml"):
+        mesh_paths = extract_mesh_paths_from_mjcf(filepath)
+        with Pool(processes=16) as p:
+            p.map(check_and_download_single, mesh_paths)
+
+
+def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
 
     Args:
-        filepath: the filepath to check and download. It should a existing file in the local directory. It should start with `LOCAL_DIR`.
+        filepath: the filepath to check and download.
     """
     local_exists = os.path.exists(filepath)
     hf_exists = hf_fs.exists(os.path.join("datasets", REPO_ID, os.path.relpath(filepath, LOCAL_DIR)))
