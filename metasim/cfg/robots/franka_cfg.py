@@ -16,10 +16,10 @@ class FrankaCfg(BaseRobotCfg):
     name: str = "franka"
     num_joints: int = 9
     fix_base_link: bool = True
-    usd_path: str = "metasim/data/quick_start/robots/franka/usd/franka_v2.usd"
-    mjcf_path: str = "metasim/data/quick_start/robots/franka/mjcf/panda.xml"
+    usd_path: str = "roboverse_data/robots/franka/usd/franka_v2.usd"
+    mjcf_path: str = "roboverse_data/robots/franka/mjcf/panda.xml"
     # urdf_path: str = "roboverse_data/robots/franka/urdf/panda.urdf"  # work for pybullet and sapien
-    urdf_path: str = "metasim/data/quick_start/robots/franka/urdf/franka_panda.urdf"  # work for isaacgym
+    urdf_path: str = "roboverse_data/robots/franka/urdf/franka_panda.urdf"  # work for isaacgym
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {
