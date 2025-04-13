@@ -7,22 +7,22 @@ from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import BenchmarkType, TaskType
 from metasim.utils import configclass
 
-config_filepath = "roboverse_data/trajs/simpler_env/MoveNearGoogleScene-v0/task_config.json"
+config_filepath = "roboverse_data/trajs/simpler_env/MoveNearGoogleInScene-v0/task_config.json"
 
 object_config_dict = {
     "baked_opened_coke_can_v2": RigidObjCfg(
-        name="opened_coke_can",
-        urdf_path="roboverse_data/assets/simpler_env/models/coke_can/mobility.urdf",
+        name="baked_opened_coke_can_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_opened_coke_can_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "baked_opened_redbull_can_v2": RigidObjCfg(
-        name="opened_redbull_can",
-        urdf_path="roboverse_data/assets/simpler_env/models/redbull_can/mobility.urdf",
+        name="baked_opened_redbull_can_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_opened_redbull_can_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "baked_apple_v2": RigidObjCfg(
-        name="apple",
-        urdf_path="roboverse_data/assets/simpler_env/models/apple/mobility.urdf",
+        name="baked_apple_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_apple_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "blue_plastic_bottle": RigidObjCfg(
@@ -31,8 +31,8 @@ object_config_dict = {
         fix_base_link=False,
     ),
     "baked_opened_pepsi_can_v2": RigidObjCfg(
-        name="opened_pepsi_can",
-        urdf_path="roboverse_data/assets/simpler_env/models/pepsi_can/mobility.urdf",
+        name="baked_opened_pepsi_can_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_opened_pepsi_can_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "orange": RigidObjCfg(
@@ -41,25 +41,25 @@ object_config_dict = {
         fix_base_link=False,
     ),
     "baked_opened_7up_can_v2": RigidObjCfg(
-        name="opened_7up_can",
-        urdf_path="roboverse_data/assets/simpler_env/models/7up_can/mobility.urdf",
+        name="baked_opened_7up_can_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_opened_7up_can_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "baked_opened_soda_can_v2": RigidObjCfg(
-        name="opened_soda_can",
-        urdf_path="roboverse_data/assets/simpler_env/models/soda_can/mobility.urdf",
+        name="baked_opened_soda_can_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_opened_soda_can_v2/mobility.urdf",
         fix_base_link=False,
     ),
     "baked_sponge_v2": RigidObjCfg(
-        name="sponge",
-        urdf_path="roboverse_data/assets/simpler_env/models/sponge/mobility.urdf",
+        name="baked_sponge_v2",
+        urdf_path="roboverse_data/assets/simpler_env/models/baked_sponge_v2/mobility.urdf",
         fix_base_link=False,
     ),
 }
 
 
 @configclass
-class SimplerEnvMoveNear(BaseTaskCfg):
+class SimplerEnvMoveNearCfg(BaseTaskCfg):
     # source_benchmark = BenchmarkType.SIMPLERENVGRASPSINGLEOPENEDCOKECAN
     # task_type = TaskType.TABLETOP_MANIPULATION
 
@@ -88,7 +88,9 @@ class SimplerEnvMoveNear(BaseTaskCfg):
         self.task_type = TaskType.TABLETOP_MANIPULATION
         self.episode_length = 200
         self.objects = [
-            object_config_dict[self.config_dict["object_name"]],
+            object_config_dict[self.config_dict["extras"]["triplet"][0]],
+            object_config_dict[self.config_dict["extras"]["triplet"][1]],
+            object_config_dict[self.config_dict["extras"]["triplet"][2]],
             NonConvexRigidObjCfg(
                 name="scene",
                 usd_path="roboverse_data/assets/simpler_env/scenes/google_pick_coke_can_1_v4/google_pick_coke_can_1_v4.glb",
