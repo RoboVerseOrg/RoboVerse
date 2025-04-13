@@ -443,5 +443,9 @@ class IsaaclabHandler(BaseSimHandler):
     def actions_cache(self) -> list[Action]:
         return self._actions_cache
 
+    @property
+    def device(self) -> torch.device:
+        return self.env.device
+
 
 IsaaclabEnv: Type[EnvWrapper[IsaaclabHandler]] = IdentityEnvWrapper(IsaaclabHandler)

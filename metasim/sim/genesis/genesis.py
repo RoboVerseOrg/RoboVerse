@@ -224,5 +224,9 @@ class GenesisHandler(BaseSimHandler):
     def actions_cache(self) -> list[Action]:
         return self._actions_cache
 
+    @property
+    def device(self) -> torch.device:
+        return gs.device
+
 
 GenesisEnv = GymEnvWrapper(GenesisHandler)

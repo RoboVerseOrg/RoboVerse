@@ -175,3 +175,7 @@ class BaseSimHandler:
         Cache of actions.
         """
         raise NotImplementedError
+
+    @property
+    def device(self) -> torch.device:
+        raise NotImplementedError
