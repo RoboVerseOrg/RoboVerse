@@ -215,7 +215,7 @@ def main():
             states = get_states(all_states, step, num_envs)
             env.handler.set_states(states)
             env.handler.refresh_render()
-            obs = env.handler.get_observation()
+            obs = env.handler.get_states()
 
             ## XXX: hack
             success = env.handler.task.checker.check(env.handler)

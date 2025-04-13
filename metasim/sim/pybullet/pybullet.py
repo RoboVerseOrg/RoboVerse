@@ -19,7 +19,7 @@ from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
-from metasim.types import Action, EnvState, Obs
+from metasim.types import Action, EnvState
 from metasim.utils.math import convert_quat
 
 
@@ -355,12 +355,6 @@ class SinglePybulletHandler(BaseSimHandler):
             }
 
         return [states]
-
-    def get_observation(self) -> Obs | None:
-        states = self.get_states()
-        rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-        obs = {"rgb": torch.stack(rgbs, dim=0)}
-        return obs
 
     ############################################################
     ## Utils

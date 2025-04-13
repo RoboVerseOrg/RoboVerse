@@ -183,10 +183,6 @@ class IsaaclabHandler(BaseSimHandler):
             sensor.update(dt=0)
         self.env.sim.render()
 
-    def get_observation(self) -> Obs:
-        obs = self.env._get_observations()
-        return obs
-
     ############################################################
     ## Set states
     ############################################################

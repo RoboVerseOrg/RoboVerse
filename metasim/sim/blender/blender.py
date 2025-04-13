@@ -90,7 +90,7 @@ class BlenderHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         assert env_ids == [0]
-        obs = self.get_observation()
+        obs = self._get_observation()
         return obs, None
 
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, Termination, Extra]:
@@ -113,7 +113,7 @@ class BlenderHandler(BaseSimHandler):
 
         get_blender_camera_from_KRT(K, R, T)
 
-    def get_observation(self) -> Obs:
+    def _get_observation(self) -> Obs:
         context = self.context
 
         context.scene.view_layers["ViewLayer"].use_pass_combined = True

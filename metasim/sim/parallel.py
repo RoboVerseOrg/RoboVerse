@@ -73,9 +73,6 @@ def _worker(
             #     remote.send(states)
             elif cmd == "simulate":
                 env.simulate()
-            elif cmd == "get_observation":
-                obs = env.get_observation()
-                remote.send(obs)
             elif cmd == "get_reward":
                 reward = env.get_reward()
                 remote.send(reward)
@@ -302,9 +299,6 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
 
         def refresh_render(self):
             log.error("Rendering not supported in parallel mode")
-
-        def get_observation(self):
-            log.error("get_observation not supported in parallel mode")
 
         def get_reward(self):
             log.error("get_reward not supported in parallel mode")
