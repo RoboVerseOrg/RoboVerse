@@ -21,7 +21,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._robot: BaseRobotCfg = scenario.robot
         self._robot_names = {self._robot.name}
         self._robot_init_pose = (0, 0, 0) if not self.robot.default_position else self.robot.default_position
-        self._robot_init_quat = (0, 0, 0, 1) if not self.robot.default_orientation else self.robot.default_orientation
+        self._robot_init_quat = (1, 0, 0, 0) if not self.robot.default_orientation else self.robot.default_orientation
         self._cameras = scenario.cameras
 
         self.gym = None
