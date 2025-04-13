@@ -60,7 +60,8 @@ def extract_mesh_paths_from_mjcf(xml_file_path):
     root = tree.getroot()
 
     # Get the mesh directory if specified
-    meshdir = root.find(".//compiler").get("meshdir", "")
+    compiler_elem = root.find(".//compiler")
+    meshdir = compiler_elem.get("meshdir", "") if compiler_elem is not None else ""
 
     # Base directory of the XML file
     base_dir = os.path.dirname(os.path.abspath(xml_file_path))
