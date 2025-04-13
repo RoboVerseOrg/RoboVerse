@@ -274,6 +274,7 @@ class MujocoHandler(BaseSimHandler):
                     self.physics.model.joint(joint_id).name.split("/")[-1]
                     for joint_id in range(self.physics.model.njnt)
                     if self.physics.model.joint(joint_id).name.startswith(self._mujoco_robot_name)
+                    and len(self.physics.model.joint(joint_id).name.split("/")[-1]) > 0
                 ]
                 if self.actions_cache:
                     state[object_type][obj.name]["dof_pos_target"] = {
