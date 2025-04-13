@@ -407,6 +407,10 @@ class SingleSapienHandler(BaseSimHandler):
             if "pos" in val and "rot" in val:
                 obj_id.set_pose(sapien_core.Pose(p=val["pos"], q=val["rot"]))
 
+    @property
+    def device(self) -> torch.device:
+        return torch.device("cpu")
+
 
 SapienHandler = ParallelSimWrapper(SingleSapienHandler)
 

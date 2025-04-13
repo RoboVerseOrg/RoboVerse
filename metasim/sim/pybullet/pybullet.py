@@ -372,6 +372,10 @@ class SinglePybulletHandler(BaseSimHandler):
     def actions_cache(self) -> list[Action]:
         return self._actions_cache
 
+    @property
+    def device(self) -> torch.device:
+        return torch.device("cpu")
+
 
 PybulletHandler = ParallelSimWrapper(SinglePybulletHandler)
 

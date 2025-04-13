@@ -447,6 +447,10 @@ class SingleSapien3Handler(BaseSimHandler):
     def actions_cache(self) -> list[Action]:
         return self._actions_cache
 
+    @property
+    def device(self) -> torch.device:
+        return torch.device("cpu")
+
 
 Sapien3Handler = ParallelSimWrapper(SingleSapien3Handler)
 
