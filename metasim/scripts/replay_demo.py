@@ -13,7 +13,6 @@ except ImportError:
 import imageio as iio
 import numpy as np
 import rootutils
-import torch
 import tyro
 from loguru import logger as log
 from numpy.typing import NDArray
@@ -31,10 +30,10 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.sim import HybridSimEnv
-from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.state import TensorState
 
 
 @configclass
@@ -108,22 +107,12 @@ class ObsSaver:
 
         self.image_idx = 0
 
-    def add(self, states: list[EnvState]):
+    def add(self, state: TensorState):
         """Add the observation to the list."""
         if self.image_dir is None and self.video_path is None:
             return
 
-        rgb_data_list = []
-        for state in states:
-            for camera_name, camera_data in state["cameras"].items():
-                if "rgb" in camera_data:
-                    rgb_data_list.append(camera_data["rgb"])
-                    continue
-
-        if not rgb_data_list:
-            return
-
-        rgb_data = torch.stack(rgb_data_list, dim=0)
+        rgb_data = next(iter(state.cameras.values())).rgb
         image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
 
         if self.image_dir is not None:
