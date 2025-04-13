@@ -23,6 +23,10 @@ class BaseObjCfg:
     """Whether to fix the base link of the object, default is False"""
     scale: float | tuple[float, float, float] = 1.0
     """Object scaling (in scalar) for the object, default is 1.0"""
+    default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    """Default position of the object, default is (0.0, 0.0, 0.0)"""
+    default_orientation: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    """Default orientation of the object, default is (0.0, 0.0, 0.0, 1.0)"""
 
     def __post_init__(self):
         """Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale)."""

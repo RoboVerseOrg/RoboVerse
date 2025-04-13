@@ -1,5 +1,6 @@
 # ruff: noqa: F401
 
+from .allegrohand_cfg import AllegroHandCfg
 from .ant_cfg import AntCfg
 from .base_robot_cfg import BaseRobotCfg
 from .fetch_cfg import FetchCfg

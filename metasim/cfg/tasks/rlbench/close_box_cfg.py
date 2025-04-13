@@ -1,8 +1,5 @@
 import math
 
-import torch
-from loguru import logger as log
-
 from metasim.cfg.checkers import JointPosChecker
 from metasim.cfg.objects import ArticulationObjCfg
 from metasim.utils import configclass
@@ -29,13 +26,3 @@ class CloseBoxCfg(RLBenchTaskCfg):
         mode="le",
         radian_threshold=-14 / 180 * math.pi,
     )
-
-    def reward_fn(self, states):
-        # HACK: metasim_body_panda_hand may not be universal across all robots
-        try:
-            ee_poses = torch.stack([state["metasim"]["metasim_body_panda_hand"]["pos"] for state in states])
-        except KeyError as e:
-            log.error(f"KeyError: {e}")
-            ee_poses = torch.zeros(len(states), 3)
-        distance = torch.norm(ee_poses, dim=-1)
-        return -distance

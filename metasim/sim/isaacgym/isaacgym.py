@@ -21,6 +21,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._robot: BaseRobotCfg = scenario.robot
         self._robot_names = {self._robot.name}
         self._robot_init_pose = (0, 0, 0) if not self.robot.default_position else self.robot.default_position
+        self._robot_init_quat = (0, 0, 0, 1) if not self.robot.default_orientation else self.robot.default_orientation
         self._cameras = scenario.cameras
 
         self.gym = None
@@ -188,7 +189,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_path = object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
+            asset_options.fix_base_link = object.fix_base_link
             asset_options.disable_gravity = False
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
@@ -551,6 +552,10 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.render_all_camera_sensors(self.sim)
         if not self.headless:
             self.gym.draw_viewer(self.viewer, self.sim, False)
+
+    def render(self) -> None:
+        self.refresh_render()
+        return self.gym.render_all_camera_sensors(self.sim)
 
     def simulate(self) -> None:
         # Step the physics

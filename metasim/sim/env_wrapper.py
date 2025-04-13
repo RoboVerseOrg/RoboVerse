@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
+import gym
 import torch
 from loguru import logger as log
 
@@ -84,11 +85,16 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf += 1
             self.handler.set_dof_targets(self.handler.robot.name, actions)
             self.handler.simulate()
-            reward = self._get_reward()
-            success = self.handler.checker.check(self.handler)
             states = self.handler.get_states()
-            time_out = self._episode_length_buf >= self.handler.scenario.episode_length
-            return states, reward, success, time_out, None
+            reward = self.handler.task.reward_fn(states, actions).to(self.handler.device)
+            termination = (
+                self.handler.task.termination_fn(states).to(self.handler.device)
+                if hasattr(self.handler.task, "termination_fn")
+                else None
+            )
+            success = self.handler.checker.check(self.handler).to(self.handler.device)
+            time_out = (self._episode_length_buf >= self.handler.scenario.episode_length).to(self.handler.device)
+            return states, reward, success, time_out, termination
 
         def render(self) -> None:
             log.warning("render() is not implemented yet")
@@ -97,16 +103,16 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
         def close(self) -> None:
             self.handler.close()
 
-        def _get_reward(self) -> Reward:
-            if hasattr(self.handler.task, "reward_fn"):
-                # XXX: compatible with old states format
-                states = [{**state["robots"], **state["objects"]} for state in self.handler.get_states()]
-                return self.handler.task.reward_fn(states)
-            else:
-                return None
-
         @property
         def episode_length_buf(self) -> list[int]:
             return self._episode_length_buf.tolist()
+
+        @property
+        def action_space(self) -> gym.Space:
+            return self.handler.scenario.robot.action_space
+
+        @property
+        def observation_space(self) -> gym.Space:
+            return self.handler.scenario.task.observation_space
 
     return GymEnv

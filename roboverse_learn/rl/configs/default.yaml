@@ -10,13 +10,15 @@ experiment:
   seed: 42
   output_name: ${train.task_name}
   debug: False
-  checkpoint: null
+  checkpoint: "outputs/AllegroHand/nn/best_reward_89891.17.pth"
   resume_training: False
+  use_wandb: False
 
 environment:
-  num_envs: 32
-  headless: True
-  sim_name: "mujoco"
+  num_envs: 32 # XXX: use inheritance from hydra in the future
+  headless: False
+  # Options: "isaacgym", "mujoco", or "isaaclab"
+  sim_name: "isaacgym"
   rgb_observation: False
 
 wandb:
