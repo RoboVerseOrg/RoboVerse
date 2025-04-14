@@ -12,6 +12,7 @@ from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class IsaacgymHandler(BaseSimHandler):
@@ -413,94 +414,43 @@ class IsaacgymHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        states = []
-        for env_id in env_ids:
-            env_state = {"objects": {}, "robots": {}, "cameras": {}}
-            for obj_id, obj in enumerate(self.objects + [self._robot]):
-                obj_state = {}
-                object_type = "robots" if obj.name in self._robot_names else "objects"
+        object_states = {}
+        for obj_id, obj in enumerate(self.objects):
+            if isinstance(obj, ArticulationObjCfg):
+                joint_reindex = self.get_object_joint_reindex(obj.name)
+                state = ObjectState(
+                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
+                    joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
+                )
+            else:
+                state = ObjectState(
+                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                )
+            object_states[obj.name] = state
 
-                ## Basic states -- for both robot and object
-                obj_state["pos"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, :3].cpu()
-                obj_state["rot"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 3:7].cpu()
-                obj_state["vel"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 7:10].cpu()
-                obj_state["ang_vel"] = self._root_states.view(self.num_envs, -1, 13)[env_id, obj_id, 10:].cpu()
+        robot_states = {}
+        for obj_id, obj in enumerate([self.robot]):
+            joint_reindex = self.get_object_joint_reindex(obj.name)
+            state = RobotState(
+                root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
+                joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
+                joint_pos_target=None,  # TODO
+                joint_vel_target=None,  # TODO
+                joint_effort_target=None,  # TODO
+            )
+            robot_states[obj.name] = state
 
-                ## Joint states -- for robot and articulated object
-                if isinstance(obj, ArticulationObjCfg):
-                    obj_state["dof_pos"] = {
-                        joint_name: self._dof_states.view(self.num_envs, -1, 2)[env_id, global_idx, 0].item()
-                        for joint_name, global_idx in (self._joint_info[obj.name]["global_indices"]).items()
-                    }
-                    obj_state["dof_vel"] = {
-                        joint_name: self._dof_states.view(self.num_envs, -1, 2)[env_id, global_idx, 1].item()
-                        for joint_name, global_idx in (self._joint_info[obj.name]["global_indices"]).items()
-                    }
+        camera_states = {}
+        for cam_id, cam in enumerate(self.cameras):
+            state = CameraState(
+                rgb=torch.stack([self._rgb_tensors[env_id][cam_id][..., :3] for env_id in env_ids]),
+                depth=torch.stack([self._depth_tensors[env_id][cam_id] for env_id in env_ids]),
+            )
+            camera_states[cam.name] = state
 
-                ## Actions -- for robot
-                ## TODO: read from simulator instead of cache
-                if isinstance(obj, BaseRobotCfg):
-                    if self.actions_cache:
-                        obj_state["dof_pos_target"] = {
-                            joint_name: self.actions_cache[env_id]["dof_pos_target"][joint_name]
-                            for joint_name in self._joint_info[obj.name]["names"]
-                        }
-                    else:
-                        obj_state["dof_pos_target"] = None
-
-                ## Actuator states -- for robot
-                ## XXX: Could non-robot objects have actuators?
-                if isinstance(obj, BaseRobotCfg):
-                    obj_state["dof_pos_target"] = {
-                        joint_name: None  # TODO
-                        for i, joint_name in enumerate(self._joint_info[obj.name]["names"])
-                    }
-                    obj_state["dof_vel_target"] = {
-                        joint_name: None  # TODO
-                        for i, joint_name in enumerate(self._joint_info[obj.name]["names"])
-                    }
-                    obj_state["dof_torque"] = {
-                        joint_name: None  # TODO
-                        for i, joint_name in enumerate(self._joint_info[obj.name]["names"])
-                    }
-                env_state[object_type][obj.name] = obj_state
-
-                ## Body states -- for both robot and object
-                env_state[object_type][obj.name]["body"] = {}
-                for i, body_name in enumerate(self._body_info[obj.name]["name"]):
-                    body_state = {
-                        "pos": self._rigid_body_states[
-                            self._body_info[obj.name]["global_indices"][body_name], :3
-                        ].cpu(),
-                        "rot": self._rigid_body_states[
-                            self._body_info[obj.name]["global_indices"][body_name], 3:7
-                        ].cpu(),
-                        "vel": self._rigid_body_states[
-                            self._body_info[obj.name]["global_indices"][body_name], 7:10
-                        ].cpu(),
-                        "ang_vel": self._rigid_body_states[
-                            self._body_info[obj.name]["global_indices"][body_name], 10:
-                        ].cpu(),
-                    }
-                    env_state[object_type][obj.name]["body"][body_name] = body_state
-
-            if len(self.cameras) > 0:
-                self.gym.start_access_image_tensors(self.sim)
-                for i_cam, cam in enumerate(self._cameras):
-                    cam_state = {}
-                    cam_state[cam.name] = {
-                        "rgb": self._rgb_tensors[env_id][i_cam][..., :3],
-                        "depth": self._depth_tensors[env_id][i_cam],
-                        "pos": torch.tensor(cam.pos, device=self.device),
-                        "look_at": torch.tensor(cam.look_at, device=self.device),
-                        "intrinsic": torch.zeros((3, 3), device=self.device),  # TODO: get intrinsic matrix
-                        "extrinsic": torch.zeros((4, 4), device=self.device),  # TODO: get extrinsic matrix
-                    }
-                env_state["cameras"] = cam_state
-                self.gym.end_access_image_tensors(self.sim)
-
-            states.append(env_state)
-        return states
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     @property
     def episode_length_buf(self) -> list[int]:
@@ -724,27 +674,11 @@ class IsaacgymHandler(BaseSimHandler):
         pass
 
     ############################################################
-    ## Set object states per step
-    ############################################################
-    def _set_object_joint_pos(
-        self,
-        object: BaseObjCfg,
-        joint_pos: list[float],
-    ) -> None:
-        assert len(joint_pos) == self.env.scene.articulations[object.name].num_joints
-
-        pos = torch.tensor(joint_pos, device=self.env.device)
-        vel = torch.zeros_like(pos)
-        self.env.scene.articulations[object.name].write_joint_state_to_sim(
-            pos, vel, env_ids=torch.tensor([0], device=self.env.device)
-        )
-
-    ############################################################
     ## Utils
     ############################################################
-    def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
-        if isinstance(object, ArticulationObjCfg):
-            return self.env.scene.articulations[object.name].joint_names
+    def get_object_joint_names(self, obj: BaseObjCfg) -> list[str]:
+        if isinstance(obj, ArticulationObjCfg):
+            return list(self._joint_info[obj.name]["global_indices"].keys())
         else:
             return []
 

@@ -7,8 +7,12 @@ from itertools import chain
 
 import torch
 
-from metasim.sim.base import BaseSimHandler
 from metasim.types import EnvState
+
+try:
+    from metasim.sim.base import BaseSimHandler
+except:
+    pass
 
 
 @dataclass
@@ -100,9 +104,21 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
             }
             robot_states[robot_name]["dof_pos"] = _dof_tensor_to_dict(robot_state.joint_pos[env_id], jns)
             robot_states[robot_name]["dof_vel"] = _dof_tensor_to_dict(robot_state.joint_vel[env_id], jns)
-            robot_states[robot_name]["dof_pos_target"] = _dof_tensor_to_dict(robot_state.joint_pos_target[env_id], jns)
-            robot_states[robot_name]["dof_vel_target"] = _dof_tensor_to_dict(robot_state.joint_vel_target[env_id], jns)
-            robot_states[robot_name]["dof_torque"] = _dof_tensor_to_dict(robot_state.joint_effort_target[env_id], jns)
+            robot_states[robot_name]["dof_pos_target"] = (
+                _dof_tensor_to_dict(robot_state.joint_pos_target[env_id], jns)
+                if robot_state.joint_pos_target is not None
+                else None
+            )
+            robot_states[robot_name]["dof_vel_target"] = (
+                _dof_tensor_to_dict(robot_state.joint_vel_target[env_id], jns)
+                if robot_state.joint_vel_target is not None
+                else None
+            )
+            robot_states[robot_name]["dof_torque"] = (
+                _dof_tensor_to_dict(robot_state.joint_effort_target[env_id], jns)
+                if robot_state.joint_effort_target is not None
+                else None
+            )
 
         camera_states = {}
         for camera_name, camera_state in tensor_state.cameras.items():

@@ -6,6 +6,7 @@ from loguru import logger as log
 from metasim.cfg.objects import BaseObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.utils.state import tensor_state_to_env_states
 
 
 class BaseSimHandler:
@@ -89,6 +90,7 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
+        states = tensor_state_to_env_states(self, states)
         return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["vel"] for env_state in states])
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
@@ -101,6 +103,7 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
+        states = tensor_state_to_env_states(self, states)
         return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["pos"] for env_state in states])
 
     def get_rot(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
@@ -113,6 +116,7 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
+        states = tensor_state_to_env_states(self, states)
         return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["rot"] for env_state in states])
 
     def get_dof_pos(self, obj_name: str, joint_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
@@ -125,6 +129,7 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
+        states = tensor_state_to_env_states(self, states)
         return torch.tensor([
             {**env_state["objects"], **env_state["robots"]}[obj_name]["dof_pos"][joint_name] for env_state in states
         ])
