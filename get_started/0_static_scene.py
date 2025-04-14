@@ -142,6 +142,6 @@ init_states = [
 ]
 obs, extras = env.reset(states=init_states)
 os.makedirs("get_started/output", exist_ok=True)
-imageio.imwrite(
-    f"get_started/output/0_static_scene_{args.sim}.png", next(iter(obs[0]["cameras"].values()))["rgb"].cpu().numpy()
-)
+save_path = f"get_started/output/0_static_scene_{args.sim}.png"
+log.info(f"Saving image to {save_path}")
+imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())

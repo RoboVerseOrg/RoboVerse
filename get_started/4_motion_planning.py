@@ -163,8 +163,7 @@ robot_joint_limits = scenario.robot.joint_limits
 for step in range(200):
     log.debug(f"Step {step}")
     states = env.handler.get_states()
-    robot_states = [next(iter(s["robots"].values())) for s in states]
-    curr_robot_q = torch.tensor([[s["dof_pos"][jn] for jn in robot.actuators.keys()] for s in robot_states]).cuda()
+    curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
     seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
     x_target = 0.3 + 0.1 * (step / 100)

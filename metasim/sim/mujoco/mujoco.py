@@ -237,7 +237,6 @@ class MujocoHandler(BaseSimHandler):
 
         robot_states = {}
         for robot in [self.robot]:
-            assert self.mj_objects[robot.name].model == robot.name
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = sorted(self.get_object_joint_names(robot))

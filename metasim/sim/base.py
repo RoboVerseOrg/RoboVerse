@@ -6,7 +6,7 @@ from loguru import logger as log
 from metasim.cfg.objects import BaseObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
-from metasim.utils.state import tensor_state_to_env_states
+from metasim.utils.state import TensorState, tensor_state_to_env_states
 
 
 class BaseSimHandler:
@@ -42,7 +42,7 @@ class BaseSimHandler:
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         raise NotImplementedError
 
-    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Extra]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[TensorState, Extra]:
         """
         Reset the environment.
 

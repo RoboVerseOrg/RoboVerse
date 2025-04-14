@@ -6,12 +6,11 @@ import os
 
 import imageio.v2 as iio
 import numpy as np
-import torch
 from loguru import logger as log
 from numpy.typing import NDArray
 from torchvision.utils import make_grid, save_image
 
-from metasim.types import EnvState
+from metasim.utils.state import TensorState
 
 
 class ObsSaver:
@@ -25,23 +24,17 @@ class ObsSaver:
 
         self.image_idx = 0
 
-    def add(self, states: list[EnvState]):
+    def add(self, state: TensorState):
         """Add the observation to the list."""
         if self.image_dir is None and self.video_path is None:
             return
 
-        rgb_data_list = []
-        for state in states:
-            for camera_name, camera_data in state["cameras"].items():
-                if "rgb" in camera_data:
-                    rgb_data_list.append(camera_data["rgb"])
-                    continue
-
-        if not rgb_data_list:
+        try:
+            rgb_data = next(iter(state.cameras.values())).rgb
+            image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
+        except Exception as e:
+            log.error(f"Error adding observation: {e}")
             return
-
-        rgb_data = torch.stack(rgb_data_list, dim=0)
-        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
 
         if self.image_dir is not None:
             os.makedirs(self.image_dir, exist_ok=True)
