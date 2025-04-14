@@ -121,7 +121,6 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
-            bns = handler.get_object_body_names(robot_name)
             jns = handler.get_object_joint_names(handler.object_dict[robot_name])
             robot_states[robot_name] = {
                 "pos": robot_state.root_state[env_id, :3].cpu(),
@@ -129,7 +128,6 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
                 "vel": robot_state.root_state[env_id, 7:10].cpu(),
                 "ang_vel": robot_state.root_state[env_id, 10:13].cpu(),
             }
-            robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
             robot_states[robot_name]["dof_pos"] = _dof_tensor_to_dict(robot_state.joint_pos[env_id], jns)
             robot_states[robot_name]["dof_vel"] = _dof_tensor_to_dict(robot_state.joint_vel[env_id], jns)
             robot_states[robot_name]["dof_pos_target"] = (
@@ -147,6 +145,9 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
                 if robot_state.joint_effort_target is not None
                 else None
             )
+            if hasattr(handler, "get_object_body_names"):
+                bns = handler.get_object_body_names(robot_name)
+                robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 
         camera_states = {}
         for camera_name, camera_state in tensor_state.cameras.items():

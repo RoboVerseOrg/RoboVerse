@@ -221,6 +221,7 @@ class MujocoHandler(BaseSimHandler):
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                         torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                     ]).unsqueeze(0),
+                    body_state=None,  # TODO
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                     ]).unsqueeze(0),
@@ -250,6 +251,7 @@ class MujocoHandler(BaseSimHandler):
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                     torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                 ]).unsqueeze(0),
+                body_state=None,  # TODO
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                 ]).unsqueeze(0),
@@ -260,6 +262,7 @@ class MujocoHandler(BaseSimHandler):
                 joint_vel_target=None,  # TODO
                 joint_effort_target=None,  # TODO
             )
+            robot_states[robot.name] = state
 
         camera_states = {}
         for camera in self.cameras:

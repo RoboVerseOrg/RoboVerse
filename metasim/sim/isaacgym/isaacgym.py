@@ -420,6 +420,7 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_reindex = self.get_object_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    body_state=None,  # TODO
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 )
@@ -430,17 +431,18 @@ class IsaacgymHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for obj_id, obj in enumerate([self.robot]):
-            joint_reindex = self.get_object_joint_reindex(obj.name)
+        for obj_id, robot in enumerate([self.robot]):
+            joint_reindex = self.get_object_joint_reindex(robot.name)
             state = RobotState(
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                body_state=None,  # TODO
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
                 joint_effort_target=None,  # TODO
             )
-            robot_states[obj.name] = state
+            robot_states[robot.name] = state
 
         camera_states = {}
         for cam_id, cam in enumerate(self.cameras):

@@ -109,6 +109,7 @@ class GenesisHandler(BaseSimHandler):
                         ],
                         dim=-1,
                     ),
+                    body_state=None,  # TODO
                     joint_pos=obj_inst.get_dofs_position(envs_idx=env_ids)[:, joint_reindex],
                     joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
                 )
@@ -140,6 +141,7 @@ class GenesisHandler(BaseSimHandler):
                     ],
                     dim=-1,
                 ),
+                body_state=None,  # TODO
                 joint_pos=obj_inst.get_dofs_position(envs_idx=env_ids)[:, joint_reindex],
                 joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
                 joint_pos_target=None,  # TODO
