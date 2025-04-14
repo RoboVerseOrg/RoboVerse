@@ -14,13 +14,13 @@ import pybullet as p
 import pybullet_data
 import torch
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action, EnvState
 from metasim.utils.math import convert_quat
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class SinglePybulletHandler(BaseSimHandler):
@@ -311,33 +311,47 @@ class SinglePybulletHandler(BaseSimHandler):
         """
         # For multi-env version, rewrite this function
 
-        states = {"objects": {}, "robots": {}, "cameras": {}}
-        for name, obj_id in self.object_ids.items():
-            object_type = "robots" if name == self.robot.name else "objects"
+        object_states = {}
+        for obj in self.objects:
+            obj_id = self.object_ids[obj.name]
             pos, rot = p.getBasePositionAndOrientation(obj_id)
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
-            states[object_type][name] = {"pos": pos, "rot": rot}
-            if isinstance(self.object_dict[name], ArticulationObjCfg):
-                states[object_type][name]["dof_pos"] = {}
-                states[object_type][name]["dof_vel"] = {}
-                joint_names = self.object_joint_order[name]
-                for i, joint_name in enumerate(joint_names):
-                    joint_state = p.getJointState(obj_id, i)
-                    states[object_type][name]["dof_pos"][joint_name] = joint_state[0]
-                    states[object_type][name]["dof_vel"][joint_name] = joint_state[1]
+            lin_vel = torch.zeros_like(pos)  # TODO
+            ang_vel = torch.zeros_like(pos)  # TODO
+            root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
+            if isinstance(obj, ArticulationObjCfg):
+                joint_reindex = self.get_object_joint_reindex(obj.name)
+                state = ObjectState(
+                    root_state=root_state,
+                    joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
+                    joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
+                )
+            else:
+                state = ObjectState(root_state=root_state)
+            object_states[obj.name] = state
 
-            ## Actions -- for robot
-            ## TODO: read from simulator instead of cache
-            if isinstance(self.object_dict[name], BaseRobotCfg):
-                joint_names = self.object_joint_order[name]
-                if self.actions_cache:
-                    states[object_type][name]["dof_pos_target"] = {
-                        joint_name: self.actions_cache[0]["dof_pos_target"][joint_name] for joint_name in joint_names
-                    }
-                else:
-                    states[object_type][name]["dof_pos_target"] = None
+        robot_states = {}
+        for robot in [self.robot]:
+            joint_reindex = self.get_object_joint_reindex(robot.name)
+            obj_id = self.object_ids[robot.name]
+            pos, rot = p.getBasePositionAndOrientation(obj_id)
+            pos = torch.tensor(pos, dtype=torch.float32)
+            rot = torch.tensor(rot, dtype=torch.float32)
+            lin_vel = torch.zeros_like(pos)  # TODO
+            ang_vel = torch.zeros_like(pos)  # TODO
+            root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
+            state = RobotState(
+                root_state=root_state,
+                joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
+                joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
+                joint_pos_target=None,  # TODO
+                joint_vel_target=None,  # TODO
+                joint_effort_target=None,  # TODO
+            )
+            robot_states[robot.name] = state
 
+        camera_states = {}
         for camera in self.cameras:
             width, height, view_matrix, projection_matrix = self.camera_ids[camera.name]
             img_arr = p.getCameraImage(
@@ -350,17 +364,22 @@ class SinglePybulletHandler(BaseSimHandler):
             rgb_img = np.reshape(img_arr[2], (height, width, 4))
             depth_img = np.reshape(img_arr[3], (height, width))
             segmentation_mask = np.reshape(img_arr[4], (height, width))
-            states["cameras"][camera.name] = {
-                "rgb": torch.from_numpy(rgb_img[:, :, :3]),
-            }
+            state = CameraState(
+                rgb=torch.from_numpy(rgb_img[:, :, :3]).unsqueeze(0),
+                depth=torch.from_numpy(depth_img).unsqueeze(0),
+            )
+            camera_states[camera.name] = state
 
-        return [states]
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     ############################################################
     ## Utils
     ############################################################
-    def get_object_joint_names(self, object):
-        return self.object_joint_order[object.name]
+    def get_object_joint_names(self, obj: BaseObjCfg) -> list[str]:
+        if isinstance(obj, ArticulationObjCfg):
+            return self.object_joint_order[obj.name]
+        else:
+            return []
 
     @property
     def actions_cache(self) -> list[Action]:
@@ -371,6 +390,6 @@ class SinglePybulletHandler(BaseSimHandler):
         return torch.device("cpu")
 
 
-PybulletHandler = ParallelSimWrapper(SinglePybulletHandler)
+PybulletHandler = SinglePybulletHandler  # TODO: support parallel
 
 PybulletEnv: type[EnvWrapper[PybulletHandler]] = GymEnvWrapper(PybulletHandler)  # type: ignore
