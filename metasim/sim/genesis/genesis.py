@@ -186,12 +186,6 @@ class GenesisHandler(BaseSimHandler):
                 ],
             )
 
-    def get_observation(self):
-        states = self.get_states()
-        rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-        obs = {"rgb": torch.stack(rgbs, dim=0)}
-        return obs
-
     def simulate(self):
         for _ in range(self.scenario.decimation):
             self.scene_inst.step()

@@ -27,7 +27,7 @@ from metasim.cfg.objects import (
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
-from metasim.types import Action, EnvState, Obs
+from metasim.types import Action, EnvState
 from metasim.utils.math import quat_from_euler_np
 
 
@@ -409,14 +409,6 @@ class SingleSapien3Handler(BaseSimHandler):
             self.viewer.render()
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
-
-    def get_observation(self) -> Obs:
-        """Get observation for compatibility with other simulators."""
-        ## TODO: only support single env for now
-        states = self.get_states()
-        rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-        obs = {"rgb": torch.stack(rgbs, dim=0)}
-        return obs
 
     def set_states(self, states, env_ids=None):
         """Set the states of the environment.

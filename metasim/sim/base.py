@@ -141,9 +141,6 @@ class BaseSimHandler:
     def refresh_render(self) -> None:
         raise NotImplementedError
 
-    def get_observation(self) -> Obs:
-        raise NotImplementedError
-
     ############################################################
     ## Misc
     ############################################################

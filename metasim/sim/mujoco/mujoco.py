@@ -11,7 +11,7 @@ from metasim.cfg.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg, Primitiv
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import Action, Obs
+from metasim.types import Action
 
 
 class MujocoHandler(BaseSimHandler):
@@ -465,18 +465,6 @@ class MujocoHandler(BaseSimHandler):
     def close(self):
         if self.viewer is not None:
             self.viewer.close()
-
-    ############################################################
-    ## Utils
-    ############################################################
-    def get_observation(self) -> Obs | None:
-        states = self.get_states()
-        if len(self.cameras) > 0:
-            rgbs = [state["cameras"][self.cameras[0].name]["rgb"] for state in states]
-            obs = {"rgb": torch.stack(rgbs, dim=0)}
-        else:
-            obs = {}
-        return obs
 
     ############################################################
     ## Misc
