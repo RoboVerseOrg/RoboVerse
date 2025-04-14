@@ -382,12 +382,12 @@ class IsaaclabEnvOverwriter:
             assert torch.allclose(cam_intr0, cam_intr)
 
             ## Robot State
-            joint_qpos_target = env.actions.cpu()
-            joint_qpos = env.robot.data.joint_pos.cpu()
-            robot_root_state = env.robot.data.root_state_w.cpu()
-            robot_body_state = env.robot.data.body_link_state_w.cpu()
-            robot_root_state[..., 0:3] -= env.scene.env_origins.cpu()
-            robot_body_state[..., 0:3] -= env.scene.env_origins.cpu().unsqueeze(1)
+            joint_qpos_target = env.actions
+            joint_qpos = env.robot.data.joint_pos
+            robot_root_state = env.robot.data.root_state_w
+            robot_body_state = env.robot.data.body_link_state_w
+            robot_root_state[..., 0:3] -= env.scene.env_origins
+            robot_body_state[..., 0:3] -= env.scene.env_origins.unsqueeze(1)
             if self.robot.ee_body_name is not None:
                 ee_pos, ee_quat = get_pose(env, self.robot.name, self.robot.ee_body_name)
                 robot_ee_state = torch.cat([ee_pos, ee_quat, joint_qpos[:, -1:]], dim=-1)
@@ -411,11 +411,6 @@ class IsaaclabEnvOverwriter:
                 "robot_root_state": robot_root_state,
                 "robot_body_state": robot_body_state,
             }
-
-            for k, v in data_dict.items():
-                if isinstance(v, torch.Tensor):
-                    data_dict[k] = v.cpu()
-            torch.cuda.empty_cache()
 
             return data_dict
 
