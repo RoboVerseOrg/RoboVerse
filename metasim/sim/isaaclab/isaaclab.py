@@ -287,16 +287,6 @@ class IsaaclabHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        ## Preprocess camera data
-        rgb_datas = []
-        depth_datas = []
-        for camera in self.cameras:
-            camera_inst = self.env.scene.sensors[camera.name]
-            rgb_data = camera_inst.data.output.get("rgb", None)
-            depth_data = camera_inst.data.output.get("depth", None)
-            rgb_datas.append(rgb_data)
-            depth_datas.append(depth_data)
-
         object_states = {}
         for obj in self.objects:
             if isinstance(obj, ArticulationObjCfg):
