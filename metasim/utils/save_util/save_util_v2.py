@@ -98,7 +98,7 @@ def save_demo_v2(save_dir: str, demo: list[EnvState]):
         ee_pos = robot_state["pos"]
         ee_rot = robot_state["rot"]
         last_joint_pos = robot_state["dof_pos"][sorted(robot_state["dof_pos"].keys())[-1]]
-        robot_ee_state = torch.cat([ee_pos, ee_rot, torch.tensor([last_joint_pos])]).tolist()
+        robot_ee_state = torch.cat([ee_pos, ee_rot, torch.tensor([last_joint_pos], device=ee_pos.device)]).tolist()
         jsondata["robot_ee_state"].append(robot_ee_state)
 
         # Set robot_ee_state_target

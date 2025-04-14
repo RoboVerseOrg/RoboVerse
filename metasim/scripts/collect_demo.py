@@ -112,6 +112,7 @@ from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.state import tensor_state_to_env_states
 from metasim.utils.tensor_util import tensor_to_cpu
 
 
@@ -371,6 +372,7 @@ def main():
 
     ## Reset before first step
     obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+    obs = tensor_state_to_env_states(env.handler, obs)
 
     ## Initialize
     for env_id, demo_idx in enumerate(demo_idxs):
@@ -381,6 +383,7 @@ def main():
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs)
         obs, reward, success, time_out, extras = env.step(actions)
+        obs = tensor_state_to_env_states(env.handler, obs)
         run_out = get_run_out(all_actions, env, demo_idxs)
 
         for env_id in range(env.handler.num_envs):
@@ -415,6 +418,7 @@ def main():
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
                     obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                    obs = tensor_state_to_env_states(env.handler, obs)
                     collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
                     run_out[env_id] = False
@@ -437,6 +441,7 @@ def main():
                 ## Timeout --> CollectingDemo
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
                 obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                obs = tensor_state_to_env_states(env.handler, obs)
                 collector.create(demo_idx, obs[env_id])
             else:
                 ## Timeout --> NextDemo
@@ -450,6 +455,7 @@ def main():
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
                     obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                    obs = tensor_state_to_env_states(env.handler, obs)
                     collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
                 else:

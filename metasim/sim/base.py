@@ -155,6 +155,26 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
+    def get_object_joint_reindex(self, obj_name: str) -> list[int]:
+        """Get the reindex of the joint names for a specified object. After reindexing, the joint order is alphabetical.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: A list of integers including the reindex of the joint names.
+        """
+        if not hasattr(self, "_joint_reindex_cache"):
+            self._joint_reindex_cache = {}
+
+        if obj_name not in self._joint_reindex_cache:
+            obj_cfg = self.object_dict[obj_name]
+            origin_joint_names = self.get_object_joint_names(obj_cfg)
+            sorted_joint_names = sorted(origin_joint_names)
+            self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
+
+        return self._joint_reindex_cache[obj_name]
+
     @property
     def num_envs(self) -> int:
         return self._num_envs
