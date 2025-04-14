@@ -180,6 +180,25 @@ class BaseSimHandler:
 
         return self._joint_reindex_cache[obj_name]
 
+    def get_body_reindex(self, obj_name: str) -> list[int]:
+        """Get the reindex of the body names for a specified object. After reindexing, the body order is alphabetical.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: A list of integers including the reindex of the body names.
+        """
+        if not hasattr(self, "_body_reindex_cache"):
+            self._body_reindex_cache = {}
+
+        if obj_name not in self._body_reindex_cache:
+            origin_body_names = self.get_object_body_names(obj_name)
+            sorted_body_names = sorted(origin_body_names)
+            self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
+
+        return self._body_reindex_cache[obj_name]
+
     @property
     def num_envs(self) -> int:
         return self._num_envs
