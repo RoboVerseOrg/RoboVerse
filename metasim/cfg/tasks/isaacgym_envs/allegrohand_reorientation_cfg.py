@@ -1,16 +1,17 @@
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType, TaskType
 from metasim.utils import configclass
+from metasim.utils.math import quat_conjugate, quat_mul
 
 from ..base_task_cfg import BaseTaskCfg
 
 
 @configclass
-class AllegroHandCfg(BaseTaskCfg):
+class AllegroHandReorientationCfg(BaseTaskCfg):
     episode_length = 600
     traj_filepath = None
     task_type = TaskType.TABLETOP_MANIPULATION
@@ -90,7 +91,7 @@ class AllegroHandCfg(BaseTaskCfg):
 
             goal_dist = torch.norm(object_pos - goal_pos, p=2)
 
-            quat_diff = self._quat_mul(object_rot, self._quat_conjugate(goal_rot))
+            quat_diff = quat_mul(object_rot, quat_conjugate(goal_rot))
             rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[0:3], p=2, dim=-1), max=1.0))
 
             dist_rew = goal_dist * dist_reward_scale
@@ -109,23 +110,6 @@ class AllegroHandCfg(BaseTaskCfg):
             rewards.append(reward)
 
         return torch.tensor(rewards) if rewards else torch.tensor([0.0])
-
-    def _quat_mul(self, a, b):
-        """Multiply two quaternions."""
-        assert a.shape == b.shape
-        x1, y1, z1, w1 = a[0], a[1], a[2], a[3]
-        x2, y2, z2, w2 = b[0], b[1], b[2], b[3]
-
-        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-        y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
-        z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
-
-        return torch.tensor([x, y, z, w])
-
-    def _quat_conjugate(self, q):
-        """Conjugate of quaternion."""
-        return torch.tensor([-q[0], -q[1], -q[2], q[3]])
 
     def termination_fn(self, states):
         terminations = []

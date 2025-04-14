@@ -26,7 +26,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     joint_limits: dict[str, tuple[float, float]] = {}
     default_joint_positions: dict[str, float] = {}
     default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    default_orientation: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)  # x, y, z, w
+    default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
     """
     Joint limits in the format of `{joint_name: (lower_limit, upper_limit)}`.
     Note that different simulators may have different order of joints, so you should not use the order in this dict!

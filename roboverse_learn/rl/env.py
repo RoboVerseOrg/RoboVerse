@@ -223,7 +223,19 @@ class RLEnvWrapper:
                 env_action["dof_pos_target"][joint_name] = float(processed_action[env_idx, i])
             action_dict.append(env_action)
 
-        states, reward, success, timeout, termination = self.env.step(action_dict)
+        # states, reward, success, timeout, termination = self.env.step(action_dict)
+        self.env._episode_length_buf += 1
+        self.env.handler.set_dof_targets(self.env.handler.robot.name, action_dict)
+        self.env.handler.simulate()
+        reward = self.env.handler.task.reward_fn(self.env.handler.get_states(), action_dict).to(self.device)
+        termination = (
+            self.env.handler.task.termination_fn(self.env.handler.get_states()).to(self.device)
+            if hasattr(self.env.handler.task, "termination_fn")
+            else None
+        )
+        success = self.env.handler.checker.check(self.env.handler).to(self.device)
+        states = self.env.handler.get_states()
+        timeout = (self.env._episode_length_buf >= self.env.handler.scenario.episode_length).to(self.device)
         done = (success | timeout | termination).int()
 
         reward = reward.unsqueeze(-1)

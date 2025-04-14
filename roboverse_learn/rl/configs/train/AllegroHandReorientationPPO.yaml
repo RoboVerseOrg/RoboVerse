@@ -1,7 +1,7 @@
 defaults:
   - ../default
 
-task_name: "AllegroHand"
+task_name: "AllegroHandReorientation"
 robot_name: "allegro_hand"
 
 algo: "ppo"

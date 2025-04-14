@@ -20,8 +20,8 @@ class IsaacgymHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
         self._robot: BaseRobotCfg = scenario.robot
         self._robot_names = {self._robot.name}
-        self._robot_init_pose = (0, 0, 0) if not self.robot.default_position else self.robot.default_position
-        self._robot_init_quat = (1, 0, 0, 0) if not self.robot.default_orientation else self.robot.default_orientation
+        self._robot_init_pose = self.robot.default_position
+        self._robot_init_quat = self.robot.default_orientation
         self._cameras = scenario.cameras
 
         self.gym = None
@@ -552,10 +552,6 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.render_all_camera_sensors(self.sim)
         if not self.headless:
             self.gym.draw_viewer(self.viewer, self.sim, False)
-
-    def render(self) -> None:
-        self.refresh_render()
-        return self.gym.render_all_camera_sensors(self.sim)
 
     def simulate(self) -> None:
         # Step the physics

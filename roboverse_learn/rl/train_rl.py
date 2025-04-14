@@ -36,7 +36,7 @@ def main(cfg: DictConfig):
     sim_name = cfg.environment.sim_name.lower()
     set_np_formatting()
     if sim_name == "isaacgym":
-        pass
+        import isaacgym  # noqa: F401
 
     from metasim.cfg.scenario import ScenarioCfg
     from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
