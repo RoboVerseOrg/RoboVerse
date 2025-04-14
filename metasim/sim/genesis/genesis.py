@@ -10,10 +10,10 @@ from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, GymEnvWrapper
 from metasim.types import Action, EnvState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class GenesisHandler(BaseSimHandler):
@@ -93,49 +93,72 @@ class GenesisHandler(BaseSimHandler):
     def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-        states = []
 
-        states_concat = {}
-        for obj in self.objects + [self.robot]:
+        object_states = {}
+        for obj in self.objects:
             obj_inst = self.object_inst_dict[obj.name]
-            states_concat[obj.name] = {}
-            states_concat[obj.name]["pos"] = obj_inst.get_pos(envs_idx=env_ids).cpu()
-            states_concat[obj.name]["rot"] = obj_inst.get_quat(envs_idx=env_ids).cpu()
             if isinstance(obj, ArticulationObjCfg):
-                states_concat[obj.name]["dof_pos"] = obj_inst.get_qpos(envs_idx=env_ids).cpu()
-        camera_obs = {}
-        for camera_name, camera_inst in self.camera_inst_dict.items():
-            rgb, _, _, _ = camera_inst.render()
-            rgb = torch.from_numpy(rgb.copy())
-            camera_obs[camera_name] = {"rgb": rgb}
+                joint_reindex = self.get_object_joint_reindex(obj.name)
+                state = ObjectState(
+                    root_state=torch.cat(
+                        [
+                            obj_inst.get_pos(envs_idx=env_ids),
+                            obj_inst.get_quat(envs_idx=env_ids),
+                            obj_inst.get_vel(envs_idx=env_ids),
+                            obj_inst.get_ang(envs_idx=env_ids),
+                        ],
+                        dim=-1,
+                    ),
+                    joint_pos=obj_inst.get_dofs_position(envs_idx=env_ids)[:, joint_reindex],
+                    joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
+                )
+            else:
+                state = ObjectState(
+                    root_state=torch.cat(
+                        [
+                            obj_inst.get_pos(envs_idx=env_ids),
+                            obj_inst.get_quat(envs_idx=env_ids),
+                            obj_inst.get_vel(envs_idx=env_ids),
+                            obj_inst.get_ang(envs_idx=env_ids),
+                        ],
+                        dim=-1,
+                    ),
+                )
+            object_states[obj.name] = state
 
-        for env_id in env_ids:
-            env_state = {"objects": {}, "robots": {}, "cameras": camera_obs}
-            for obj in self.objects + [self.robot]:
-                obj_inst = self.object_inst_dict[obj.name]
-                obj_state = {}
-                obj_state["pos"] = states_concat[obj.name]["pos"][env_id]
-                obj_state["rot"] = states_concat[obj.name]["rot"][env_id]
-                if isinstance(obj, ArticulationObjCfg):
-                    obj_state["dof_pos"] = {
-                        jn: states_concat[obj.name]["dof_pos"][env_id][jid]
-                        for jid, jn in enumerate(self.get_object_joint_names(obj))
-                    }
-                if isinstance(obj, BaseRobotCfg):
-                    ## TODO: read from simulator instead of cache
-                    if self.actions_cache:
-                        obj_state["dof_pos_target"] = {
-                            jn: self.actions_cache[env_id]["dof_pos_target"][jn]
-                            for jid, jn in enumerate(self.get_object_joint_names(obj))
-                        }
-                    else:
-                        obj_state["dof_pos_target"] = None
-                if obj.name == self.robot.name:
-                    env_state["robots"][obj.name] = obj_state
-                else:
-                    env_state["objects"][obj.name] = obj_state
-            states.append(env_state)
-        return states
+        robot_states = {}
+        for obj in [self.robot]:
+            obj_inst = self.object_inst_dict[obj.name]
+            joint_reindex = self.get_object_joint_reindex(obj.name)
+            state = RobotState(
+                root_state=torch.cat(
+                    [
+                        obj_inst.get_pos(envs_idx=env_ids),
+                        obj_inst.get_quat(envs_idx=env_ids),
+                        obj_inst.get_vel(envs_idx=env_ids),
+                        obj_inst.get_ang(envs_idx=env_ids),
+                    ],
+                    dim=-1,
+                ),
+                joint_pos=obj_inst.get_dofs_position(envs_idx=env_ids)[:, joint_reindex],
+                joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
+                joint_pos_target=None,  # TODO
+                joint_vel_target=None,  # TODO
+                joint_effort_target=None,  # TODO
+            )
+            robot_states[obj.name] = state
+
+        camera_states = {}
+        for camera in self.cameras:
+            camera_inst = self.camera_inst_dict[camera.name]
+            rgb, depth, _, _ = camera_inst.render(depth=True)
+            state = CameraState(
+                rgb=torch.from_numpy(rgb.copy()).unsqueeze(0).repeat_interleave(self.num_envs, dim=0),  # XXX
+                depth=torch.from_numpy(depth.copy()).unsqueeze(0).repeat_interleave(self.num_envs, dim=0),  # XXX
+            )
+            camera_states[camera.name] = state
+
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
