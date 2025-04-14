@@ -26,7 +26,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym = None
         self.sim = None
         self.viewer = None
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
@@ -828,6 +828,10 @@ class IsaacgymHandler(BaseSimHandler):
     @property
     def actions_cache(self) -> list[Action]:
         return self._actions_cache
+
+    @property
+    def device(self) -> torch.device:
+        return self._device
 
 
 # TODO: try to align handler API and use GymWrapper instead
