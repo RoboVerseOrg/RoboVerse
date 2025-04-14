@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from itertools import chain
 
 import torch
+from loguru import logger as log
 
 from metasim.types import EnvState
 
@@ -93,6 +94,10 @@ def _body_tensor_to_dict(body_tensor: torch.Tensor, body_names: list[str]) -> di
 
 def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorState) -> list[EnvState]:
     """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
+    log.warning(
+        "Users please ignore this message, we are working on it. For developers: You are using the very inefficient function to convert the tensorized states to old nested states. Please consider not using this function and optimize your code when number of environments is large."
+    )
+
     num_envs = next(iter(chain(tensor_state.objects.values(), tensor_state.robots.values()))).root_state.shape[0]
     env_states = []
     for env_id in range(num_envs):
