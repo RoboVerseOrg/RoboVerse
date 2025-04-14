@@ -10,7 +10,7 @@ experiment:
   seed: 42
   output_name: ${train.task_name}
   debug: False
-  checkpoint: "outputs/AllegroHand/nn/best_reward_89891.17.pth"
+  checkpoint: null
   resume_training: False
   use_wandb: False
 
