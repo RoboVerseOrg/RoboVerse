@@ -112,8 +112,12 @@ class ObsSaver:
         if self.image_dir is None and self.video_path is None:
             return
 
-        rgb_data = next(iter(state.cameras.values())).rgb
-        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
+        try:
+            rgb_data = next(iter(state.cameras.values())).rgb
+            image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
+        except Exception as e:
+            log.error(f"Error adding observation: {e}")
+            return
 
         if self.image_dir is not None:
             os.makedirs(self.image_dir, exist_ok=True)
