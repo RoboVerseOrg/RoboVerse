@@ -18,6 +18,7 @@ from sapien.utils import Viewer
 
 from metasim.cfg.objects import (
     ArticulationObjCfg,
+    BaseObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
@@ -28,6 +29,7 @@ from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import EnvState
 from metasim.utils.math import quat_from_euler_np
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class SingleSapienHandler(BaseSimHandler):
@@ -344,34 +346,61 @@ class SingleSapienHandler(BaseSimHandler):
         Returns:
             dict: A dictionary containing the states of the environment
         """
-        states = {"objects": {}, "robots": {}, "cameras": {}}
-        for obj_name, obj_id in self.object_ids.items():
-            object_type = "robots" if obj_name == self.robot.name else "objects"
-            states[object_type][obj_name] = {}
-            if isinstance(obj_id, sapien_core.Articulation):
-                dof_pos = obj_id.get_qpos()
-                dof_vel = obj_id.get_qvel()
-                states[object_type][obj_name]["dof_pos"] = {
-                    name: dof_pos[id] for id, name in enumerate(self.object_joint_order[obj_name])
-                }
-                states[object_type][obj_name]["dof_vel"] = {
-                    name: dof_vel[id] for id, name in enumerate(self.object_joint_order[obj_name])
-                }
-            pose = obj_id.get_pose()
-            states[object_type][obj_name].update({
-                "pos": torch.tensor(pose.p, dtype=torch.float32),
-                "rot": torch.tensor(pose.q, dtype=torch.float32),
-            })
 
-        states["cameras"] = {}
+        object_states = {}
+        for obj in self.objects:
+            obj_inst = self.object_ids[obj.name]
+            pose = obj_inst.get_pose()
+            pos = torch.tensor(pose.p)
+            rot = torch.tensor(pose.q)
+            vel = torch.zeros_like(pos)  # TODO
+            ang_vel = torch.zeros_like(pos)  # TODO
+            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            if isinstance(obj, ArticulationObjCfg):
+                assert isinstance(obj_inst, sapien_core.Articulation)
+                joint_reindex = self.get_object_joint_reindex(obj.name)
+                state = ObjectState(
+                    root_state=root_state,
+                    joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
+                    joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
+                )
+            else:
+                state = ObjectState(root_state=root_state)
+            object_states[obj.name] = state
 
-        for camera_name, camera_id in self.camera_ids.items():
-            color_img = camera_id.get_float_texture("Color")[..., :3]
-            color_img = (color_img * 255).clip(0, 255).astype("uint8")
-            depth_img = -camera_id.get_float_texture("Position")[..., 2]
-            states["cameras"][camera_name] = {"rgb": torch.from_numpy(color_img)}
+        robot_states = {}
+        for robot in [self.robot]:
+            robot_inst = self.object_ids[robot.name]
+            assert isinstance(robot_inst, sapien_core.Articulation)
+            pose = robot_inst.get_pose()
+            pos = torch.tensor(pose.p)
+            rot = torch.tensor(pose.q)
+            vel = torch.zeros_like(pos)  # TODO
+            ang_vel = torch.zeros_like(pos)  # TODO
+            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            joint_reindex = self.get_object_joint_reindex(robot.name)
+            state = RobotState(
+                root_state=root_state,
+                joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
+                joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
+                joint_pos_target=None,  # TODO
+                joint_vel_target=None,  # TODO
+                joint_effort_target=None,  # TODO
+            )
+            robot_states[robot.name] = state
 
-        return [states]
+        camera_states = {}
+        for camera in self.cameras:
+            cam_inst = self.camera_ids[camera.name]
+            rgb = cam_inst.get_float_texture("Color")[..., :3]
+            rgb = (rgb * 255).clip(0, 255).astype("uint8")
+            rgb = torch.from_numpy(rgb.copy())
+            depth = -cam_inst.get_float_texture("Position")[..., 2]
+            depth = torch.from_numpy(depth.copy())
+            state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
+            camera_states[camera.name] = state
+
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     def set_states(self, states, env_ids=None):
         """Set the states of the environment.
@@ -403,6 +432,12 @@ class SingleSapienHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cpu")
+
+    def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
+        if isinstance(object, ArticulationObjCfg):
+            return self.object_joint_order[object.name]
+        else:
+            return []
 
 
 SapienHandler = ParallelSimWrapper(SingleSapienHandler)
