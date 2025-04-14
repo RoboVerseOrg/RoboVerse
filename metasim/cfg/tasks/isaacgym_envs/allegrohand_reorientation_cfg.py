@@ -1,5 +1,3 @@
-import gymnasium as gym
-import numpy as np
 import torch
 
 from metasim.cfg.objects import RigidObjCfg
@@ -36,9 +34,29 @@ class AllegroHandReorientationCfg(BaseTaskCfg):
         ),
     ]
 
-    observation_space = gym.spaces.Dict({
-        "joint_qpos": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(16,), dtype=np.float32)
-    })
+    observation_space = {
+        "robot": {
+            "joint_qpos": {
+                "low": float("-inf"),
+                "high": float("inf"),
+                "shape": (16,),
+            },
+        },
+        "objects": {
+            "block": {
+                "pos": {
+                    "low": float("-inf"),
+                    "high": float("inf"),
+                    "shape": (3,),
+                },
+                "rot": {
+                    "low": float("-inf"),
+                    "high": float("inf"),
+                    "shape": (4,),
+                },
+            },
+        },
+    }
 
     randomize = {
         "object": {

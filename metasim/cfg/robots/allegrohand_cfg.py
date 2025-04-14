@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import gymnasium as gym
-import numpy as np
-
 from metasim.utils import configclass
 
 from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
@@ -85,9 +82,3 @@ class AllegroHandCfg(BaseRobotCfg):
         0.6833299994468689,
         -0.6217824220657349,
     )  # w, x, y, z
-
-    _joint_limit_values = list(joint_limits.values())
-    _action_low = np.array([limit[0] for limit in _joint_limit_values], dtype=np.float32)
-    _action_high = np.array([limit[1] for limit in _joint_limit_values], dtype=np.float32)
-
-    action_space: gym.Space = gym.spaces.Box(low=_action_low, high=_action_high, shape=(16,), dtype=np.float32)

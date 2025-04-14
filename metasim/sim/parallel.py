@@ -81,7 +81,7 @@ def _worker(
                 remote.send(names)
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized
-                # before sending any commands
+                # before sending any commandsHandler
                 remote.send("handshake")
             else:
                 raise NotImplementedError(f"Command {cmd} not implemented")

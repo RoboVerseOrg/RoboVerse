@@ -54,6 +54,12 @@ def main(cfg: DictConfig):
     scenario.headless = cfg.environment.headless
 
     env_class = get_sim_env_class(SimType(sim_name))
+    if sim_name == "mujoco":
+        from metasim.sim import GymEnvWrapper
+        from metasim.sim.mujoco import MujocoHandler
+        from metasim.sim.parallel import ParallelSimWrapper
+
+        env_class = GymEnvWrapper(ParallelSimWrapper(MujocoHandler))
     env = env_class(scenario)
 
     env = RLEnvWrapper(
