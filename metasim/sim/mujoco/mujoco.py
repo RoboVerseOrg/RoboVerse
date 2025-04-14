@@ -17,12 +17,8 @@ from metasim.cfg.objects import (
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-<<<<<<< HEAD
 from metasim.types import Action
-=======
-from metasim.types import Action, Obs
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
->>>>>>> d832f32 (mujoco replay close_box/stack_cube successful)
 
 
 class MujocoHandler(BaseSimHandler):
