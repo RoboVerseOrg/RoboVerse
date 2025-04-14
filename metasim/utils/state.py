@@ -77,19 +77,36 @@ def _dof_tensor_to_dict(dof_tensor: torch.Tensor, joint_names: list[str]) -> dic
     return {jn: dof_tensor[i].item() for i, jn in enumerate(joint_names)}
 
 
+def _body_tensor_to_dict(body_tensor: torch.Tensor, body_names: list[str]) -> dict[str, float]:
+    """Convert a body tensor to a dictionary of body positions."""
+    body_names = sorted(body_names)
+    return {
+        bn: {
+            "pos": body_tensor[i][:3].cpu(),
+            "rot": body_tensor[i][3:7].cpu(),
+            "vel": body_tensor[i][7:10].cpu(),
+            "ang_vel": body_tensor[i][10:13].cpu(),
+        }
+        for i, bn in enumerate(body_names)
+    }
+
+
 def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorState) -> list[EnvState]:
-    """Convert a tensor state to a list of env states."""
+    """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
     num_envs = next(iter(chain(tensor_state.objects.values(), tensor_state.robots.values()))).root_state.shape[0]
     env_states = []
     for env_id in range(num_envs):
         object_states = {}
         for obj_name, obj_state in tensor_state.objects.items():
             object_states[obj_name] = {
-                "pos": obj_state.root_state[env_id, :3],
-                "rot": obj_state.root_state[env_id, 3:7],
-                "vel": obj_state.root_state[env_id, 7:10],
-                "ang_vel": obj_state.root_state[env_id, 10:13],
+                "pos": obj_state.root_state[env_id, :3].cpu(),
+                "rot": obj_state.root_state[env_id, 3:7].cpu(),
+                "vel": obj_state.root_state[env_id, 7:10].cpu(),
+                "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
+            if obj_state.body_state is not None:
+                bns = handler.get_object_body_names(obj_name)
+                object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
                 jns = handler.get_object_joint_names(handler.object_dict[obj_name])
                 object_states[obj_name]["dof_pos"] = _dof_tensor_to_dict(obj_state.joint_pos[env_id], jns)
@@ -99,13 +116,15 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
+            bns = handler.get_object_body_names(robot_name)
             jns = handler.get_object_joint_names(handler.object_dict[robot_name])
             robot_states[robot_name] = {
-                "pos": robot_state.root_state[env_id, :3],
-                "rot": robot_state.root_state[env_id, 3:7],
-                "vel": robot_state.root_state[env_id, 7:10],
-                "ang_vel": robot_state.root_state[env_id, 10:13],
+                "pos": robot_state.root_state[env_id, :3].cpu(),
+                "rot": robot_state.root_state[env_id, 3:7].cpu(),
+                "vel": robot_state.root_state[env_id, 7:10].cpu(),
+                "ang_vel": robot_state.root_state[env_id, 10:13].cpu(),
             }
+            robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
             robot_states[robot_name]["dof_pos"] = _dof_tensor_to_dict(robot_state.joint_pos[env_id], jns)
             robot_states[robot_name]["dof_vel"] = _dof_tensor_to_dict(robot_state.joint_vel[env_id], jns)
             robot_states[robot_name]["dof_pos_target"] = (
@@ -127,8 +146,8 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
         camera_states = {}
         for camera_name, camera_state in tensor_state.cameras.items():
             camera_states[camera_name] = {
-                "rgb": camera_state.rgb[env_id],
-                "depth": camera_state.depth[env_id],
+                "rgb": camera_state.rgb[env_id].cpu(),
+                "depth": camera_state.depth[env_id].cpu(),
             }
 
         env_state = {
