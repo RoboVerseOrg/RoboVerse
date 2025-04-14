@@ -212,6 +212,12 @@ class MujocoHandler(BaseSimHandler):
             if isinstance(obj, ArticulationObjCfg):
                 joint_names = sorted(self.get_object_joint_names(obj))
                 body_reindex = self.get_body_reindex(obj.name)
+                body_ids_origin = [
+                    bi
+                    for bi in range(self.physics.model.nbody)
+                    if self.physics.model.body(bi).name.split("/")[0] == model_name
+                ]
+                body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
                 state = ObjectState(
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
@@ -226,7 +232,7 @@ class MujocoHandler(BaseSimHandler):
                                 self.physics.data.cvel[body_id],  # (6,)
                             ])
                         ).float()
-                        for body_id in body_reindex
+                        for body_id in body_ids_reindex
                     ]).unsqueeze(0),
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
@@ -251,6 +257,12 @@ class MujocoHandler(BaseSimHandler):
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = sorted(self.get_object_joint_names(robot))
             body_reindex = self.get_body_reindex(robot.name)
+            body_ids_origin = [
+                bi
+                for bi in range(self.physics.model.nbody)
+                if self.physics.model.body(bi).name.split("/")[0] == model_name
+            ]
+            body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
             state = RobotState(
                 root_state=torch.concat([
                     torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
@@ -265,7 +277,7 @@ class MujocoHandler(BaseSimHandler):
                             self.physics.data.cvel[body_id],  # (6,)
                         ])
                     ).float()
-                    for body_id in body_reindex
+                    for body_id in body_ids_reindex
                 ]).unsqueeze(0),
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
