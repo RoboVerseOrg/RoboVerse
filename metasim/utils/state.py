@@ -145,7 +145,7 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
                 if robot_state.joint_effort_target is not None
                 else None
             )
-            if hasattr(handler, "get_object_body_names"):
+            if robot_state.body_state is not None:
                 bns = handler.get_object_body_names(robot_name)
                 robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 

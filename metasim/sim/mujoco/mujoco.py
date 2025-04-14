@@ -211,13 +211,23 @@ class MujocoHandler(BaseSimHandler):
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             if isinstance(obj, ArticulationObjCfg):
                 joint_names = sorted(self.get_object_joint_names(obj))
+                body_reindex = self.get_body_reindex(obj.name)
                 state = ObjectState(
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                         torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                     ]).unsqueeze(0),
-                    body_state=None,  # TODO
+                    body_state=torch.stack([
+                        torch.from_numpy(
+                            np.concatenate([
+                                self.physics.data.xpos[body_id],  # (3,)
+                                self.physics.data.xquat[body_id],  # (4,)
+                                self.physics.data.cvel[body_id],  # (6,)
+                            ])
+                        ).float()
+                        for body_id in body_reindex
+                    ]).unsqueeze(0),
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                     ]).unsqueeze(0),
@@ -240,13 +250,23 @@ class MujocoHandler(BaseSimHandler):
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = sorted(self.get_object_joint_names(robot))
+            body_reindex = self.get_body_reindex(robot.name)
             state = RobotState(
                 root_state=torch.concat([
                     torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                     torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                 ]).unsqueeze(0),
-                body_state=None,  # TODO
+                body_state=torch.stack([
+                    torch.from_numpy(
+                        np.concatenate([
+                            self.physics.data.xpos[body_id],  # (3,)
+                            self.physics.data.xquat[body_id],  # (4,)
+                            self.physics.data.cvel[body_id],  # (6,)
+                        ])
+                    ).float()
+                    for body_id in body_reindex
+                ]).unsqueeze(0),
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                 ]).unsqueeze(0),
@@ -394,6 +414,15 @@ class MujocoHandler(BaseSimHandler):
             joint_names = [name.split("/")[-1] for name in joint_names]
             joint_names = [name for name in joint_names if name != ""]
             return joint_names
+        else:
+            return []
+
+    def get_object_body_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
+            names = [name for name in names if name != ""]
+            return names
         else:
             return []
 
