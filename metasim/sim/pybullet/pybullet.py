@@ -14,7 +14,7 @@ import pybullet as p
 import pybullet_data
 import torch
 
-from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
@@ -379,9 +379,9 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     ## Utils
     ############################################################
-    def get_object_joint_names(self, obj: BaseObjCfg) -> list[str]:
-        if isinstance(obj, ArticulationObjCfg):
-            return self.object_joint_order[obj.name]
+    def get_object_joint_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            return self.object_joint_order[obj_name]
         else:
             return []
 

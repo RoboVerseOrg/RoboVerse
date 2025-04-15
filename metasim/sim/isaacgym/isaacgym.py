@@ -684,9 +684,9 @@ class IsaacgymHandler(BaseSimHandler):
     ############################################################
     ## Utils
     ############################################################
-    def get_object_joint_names(self, obj: BaseObjCfg) -> list[str]:
-        if isinstance(obj, ArticulationObjCfg):
-            return list(self._joint_info[obj.name]["global_indices"].keys())
+    def get_object_joint_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            return list(self._joint_info[obj_name]["global_indices"].keys())
         else:
             return []
 

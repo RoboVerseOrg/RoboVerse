@@ -49,7 +49,7 @@ def get_actions(demo_original, robot: BaseRobotCfg, handler: BaseSimHandler):
         for action_idx in range(len(demo_original[demo_idx]["robot_traj"]["q"])):
             dof_pos_target = {}
             dof_array = demo_original[demo_idx]["robot_traj"]["q"][action_idx]
-            for i, joint_name in enumerate(handler.get_object_joint_names(robot)):
+            for i, joint_name in enumerate(handler.get_object_joint_names(robot.name)):
                 value = dof_array[i]
                 if type(value) is np.ndarray:
                     value = value.item()
@@ -87,7 +87,7 @@ def get_init_states(demo_original: list[dict], num_envs: int, task, handler, rob
             d["rot"] = demo_original[i]["env_setup"][f"init_{obj.name}_quat"]
             dof = {}
             if isinstance(obj, ArticulationObjCfg):
-                for joint_name in handler.get_object_joint_names(obj):
+                for joint_name in handler.get_object_joint_names(obj.name):
                     value = demo_original[i]["env_setup"][f"init_{joint_name}_q"]
                     if type(value) is np.ndarray:
                         value = value.item()
@@ -103,7 +103,7 @@ def get_init_states(demo_original: list[dict], num_envs: int, task, handler, rob
         d["rot"] = demo_original[i]["env_setup"]["init_robot_quat"]
         dof = {}
         dof_array = demo_original[i]["env_setup"]["init_q"]
-        for i, joint_name in enumerate(handler.get_object_joint_names(robot)):
+        for i, joint_name in enumerate(handler.get_object_joint_names(robot.name)):
             value = dof_array[i]
             if type(value) is np.ndarray:
                 value = value.item()
@@ -148,7 +148,7 @@ def get_all_states(demo_original, task: BaseTaskCfg, handler: BaseSimHandler, ro
 
                 if isinstance(obj, ArticulationObjCfg):
                     dof = {}
-                    for joint_name in handler.get_object_joint_names(obj):
+                    for joint_name in handler.get_object_joint_names(obj.name):
                         value = demo_original[demo_idx]["object_states"][i][f"{joint_name}_q"]
                         if type(value) is np.ndarray:
                             value = value.item()
@@ -163,7 +163,7 @@ def get_all_states(demo_original, task: BaseTaskCfg, handler: BaseSimHandler, ro
             robot_state["pos"] = demo_original[demo_idx]["env_setup"]["init_robot_pos"]
             robot_state["rot"] = demo_original[demo_idx]["env_setup"]["init_robot_quat"]
             dof = {}
-            for j, joint_name in enumerate(handler.get_object_joint_names(robot)):
+            for j, joint_name in enumerate(handler.get_object_joint_names(robot.name)):
                 value = demo_original[demo_idx]["robot_traj"]["q"][i][j]
                 if type(value) is np.ndarray:
                     value = value.item()

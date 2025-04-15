@@ -3,7 +3,6 @@ from __future__ import annotations
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import BaseObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.state import TensorState, state_tensor_to_nested
@@ -161,11 +160,11 @@ class BaseSimHandler:
     ############################################################
     ## Misc
     ############################################################
-    def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
+    def get_object_joint_names(self, obj_name: str) -> list[str]:
         """Get the joint names for a specified object in the order of the simulator default joint order. For same object, different simulator may have different joint order, but joint names are the same.
 
         Args:
-            object (BaseObjCfg): The target object.
+            obj_name (str): The name of the object.
 
         Returns:
             list[str]: A list of strings including the joint names. For non-articulation objects, return an empty list.
@@ -185,8 +184,7 @@ class BaseSimHandler:
             self._joint_reindex_cache = {}
 
         if obj_name not in self._joint_reindex_cache:
-            obj_cfg = self.object_dict[obj_name]
-            origin_joint_names = self.get_object_joint_names(obj_cfg)
+            origin_joint_names = self.get_object_joint_names(obj_name)
             sorted_joint_names = sorted(origin_joint_names)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
 
