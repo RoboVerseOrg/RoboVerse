@@ -122,31 +122,6 @@ class StableReward(HumanoidBaseReward):
         ).mean()
         small_control = (4 + small_control) / 5
         ret_rewards = small_control * stand_reward
-        # ret_rewards.append()
-        # for state in states:
-        #     standing = humanoid_reward_util.tolerance(
-        #         neck_height(state, self.robot_name),
-        #         bounds=(self._stand_neck_height, float("inf")),
-        #         margin=self._stand_neck_height / 4,
-        #     )
-        #     upright = humanoid_reward_util.tolerance(
-        #         torso_upright(state, self.robot_name),
-        #         bounds=(0.9, float("inf")),
-        #         sigmoid="linear",
-        #         margin=1.9,
-        #         value_at_margin=0,
-        #     )
-        #     stand_reward = standing * upright
-        #     small_control = humanoid_reward_util.tolerance(
-        #         actuator_forces(state, self.robot_name),
-        #         margin=10,
-        #         value_at_margin=0,
-        #         sigmoid="quadratic",
-        #     ).mean()
-        #     small_control = (4 + small_control) / 5
-        #     ret_rewards.append(small_control * stand_reward)
-
-        # ret_rewards = torch.tensor(ret_rewards)
         return ret_rewards
 
 
@@ -167,13 +142,13 @@ class BaseLocomotionReward(HumanoidBaseReward):
         moving_reward = []
         stable_rewards = StableReward(self.robot_name)(states)
         if self._move_speed == 0:
-            horizontal_velocity = robot_velocity_tensor(states, self.robot_name)[[0, 1]]
+            horizontal_velocity = robot_velocity_tensor(states, self.robot_name)[:, [0, 1]]
             dont_move = humanoid_reward_util.tolerance_tensor(horizontal_velocity, margin=2).mean()
             moving_reward = dont_move
         else:
-            com_velocity = robot_velocity_tensor(states, self.robot_name)[0]
+            com_x_velocity = robot_velocity_tensor(states, self.robot_name)[:, 0]
             move = humanoid_reward_util.tolerance_tensor(
-                com_velocity,
+                com_x_velocity,
                 bounds=(self._move_speed, float("inf")),
                 margin=self._move_speed,
                 value_at_margin=0,
@@ -181,21 +156,4 @@ class BaseLocomotionReward(HumanoidBaseReward):
             )
             move = (5 * move + 1) / 6
             moving_reward = move
-        # for state in states:
-        #     if self._move_speed == 0:
-        #         horizontal_velocity = robot_velocity(state, self.robot_name)[[0, 1]]
-        #         dont_move = humanoid_reward_util.tolerance(horizontal_velocity, margin=2).mean()
-        #         moving_reward.append(dont_move)
-        #     else:
-        #         com_velocity = robot_velocity(state, self.robot_name)[0]
-        #         move = humanoid_reward_util.tolerance(
-        #             com_velocity,
-        #             bounds=(self._move_speed, float("inf")),
-        #             margin=self._move_speed,
-        #             value_at_margin=0,
-        #             sigmoid="linear",
-        #         )
-        #         move = (5 * move + 1) / 6
-        #         moving_reward.append(move)
-        # moving_reward = torch.tensor(moving_reward)
         return stable_rewards * moving_reward
