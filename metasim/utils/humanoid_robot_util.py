@@ -45,8 +45,6 @@ def head_height(envstate, robot_name: str):
 
 def neck_height(envstate, robot_name: str):
     """Returns the height of the neck."""
-    # print(envstate["robots"][robot_name].keys())
-    # exit()
     return (
         envstate["robots"][robot_name]["body"]["left_shoulder_roll_link"]["pos"][2]
         + envstate["robots"][robot_name]["body"]["right_shoulder_roll_link"]["pos"][2]

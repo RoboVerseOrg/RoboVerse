@@ -40,7 +40,7 @@ G1_CRAWL_HEAD_HEIGHT = 0.6
 class HumanoidTaskCfg(BaseRLTaskCfg):
     """Base class for humanoid tasks."""
 
-    decimation: int = 1
+    decimation: int = 10
     source_benchmark = BenchmarkType.HUMANOIDBENCH
     task_type = TaskType.LOCOMOTION
     episode_length = 800  # TODO: may change
