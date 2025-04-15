@@ -368,7 +368,7 @@ class IsaaclabHandler(BaseSimHandler):
         else:
             return []
 
-    def get_object_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             return self.env.scene.articulations[obj_name].body_names
         else:

@@ -442,7 +442,7 @@ class MujocoHandler(BaseSimHandler):
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
-    def get_object_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]

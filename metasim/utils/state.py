@@ -110,7 +110,7 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
                 "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
             if obj_state.body_state is not None:
-                bns = handler.get_object_body_names(obj_name)
+                bns = handler.get_body_names(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
                 jns = handler.get_object_joint_names(handler.object_dict[obj_name])
@@ -146,7 +146,7 @@ def tensor_state_to_env_states(handler: BaseSimHandler, tensor_state: TensorStat
                 else None
             )
             if robot_state.body_state is not None:
-                bns = handler.get_object_body_names(robot_name)
+                bns = handler.get_body_names(robot_name)
                 robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 
         camera_states = {}

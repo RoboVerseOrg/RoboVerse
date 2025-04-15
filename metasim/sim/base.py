@@ -180,7 +180,7 @@ class BaseSimHandler:
 
         return self._joint_reindex_cache[obj_name]
 
-    def get_object_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str) -> list[str]:
         """Get the body names for a specified object in the order of the simulator default body order. For same object, different simulator may have different body order, but body names are the same.
 
         Args:
@@ -204,7 +204,7 @@ class BaseSimHandler:
             self._body_reindex_cache = {}
 
         if obj_name not in self._body_reindex_cache:
-            origin_body_names = self.get_object_body_names(obj_name)
+            origin_body_names = self.get_body_names(obj_name)
             sorted_body_names = sorted(origin_body_names)
             self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
 
