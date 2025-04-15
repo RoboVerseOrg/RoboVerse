@@ -14,6 +14,7 @@ from metasim.cfg.objects import (
     PrimitiveCylinderCfg,
     PrimitiveSphereCfg,
 )
+from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
@@ -256,6 +257,7 @@ class MujocoHandler(BaseSimHandler):
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = sorted(self.get_object_joint_names(robot))
+            actuator_reindex = self.get_actuator_reindex(robot.name)
             body_reindex = self.get_body_reindex(robot.name)
             body_ids_origin = [
                 bi
@@ -285,9 +287,9 @@ class MujocoHandler(BaseSimHandler):
                 joint_vel=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
                 ]).unsqueeze(0),
-                joint_pos_target=None,  # TODO
+                joint_pos_target=torch.from_numpy(self.physics.data.ctrl[actuator_reindex]).unsqueeze(0),
                 joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_effort_target=torch.from_numpy(self.physics.data.actuator_force[actuator_reindex]).unsqueeze(0),
             )
             robot_states[robot.name] = state
 
@@ -428,6 +430,25 @@ class MujocoHandler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def get_actuator_names(self, robot_name: str) -> list[str]:
+        robot_cfg = self.object_dict[robot_name]
+        if isinstance(robot_cfg, BaseRobotCfg):
+            actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+            actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
+            actuator_names = [name for name in actuator_names if name != ""]
+            joint_names = self.get_object_joint_names(robot_cfg)
+            assert set(actuator_names) == set(joint_names), (
+                f"Actuator names {actuator_names} do not match joint names {joint_names}"
+            )
+            return actuator_names
+        else:
+            return []
+
+    def get_actuator_reindex(self, robot_name: str) -> list[int]:
+        origin_actuator_names = self.get_actuator_names(robot_name)
+        sorted_actuator_names = sorted(origin_actuator_names)
+        return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
     def get_object_body_names(self, obj_name: str) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
