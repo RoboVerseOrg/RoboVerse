@@ -37,7 +37,7 @@ class Args:
         "isaaclab"
     )
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     def __post_init__(self):
         log.info(f"Args: {self}")
