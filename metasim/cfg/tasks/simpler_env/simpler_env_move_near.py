@@ -86,7 +86,7 @@ class SimplerEnvMoveNearCfg(BaseTaskCfg):
             config_json = json.load(f)
             assert subtask_id < len(config_json)
             self.config_dict = config_json[subtask_id]
-        self.source_benchmark = BenchmarkType.SIMPLERENVMOVENEAR
+        self.source_benchmark = BenchmarkType.SIMPLERENV
         self.task_type = TaskType.TABLETOP_MANIPULATION
         self.episode_length = 200
         self.objects = [

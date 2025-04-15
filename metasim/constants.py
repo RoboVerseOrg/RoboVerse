@@ -43,8 +43,7 @@ class BenchmarkType(enum.Enum):
     RLAOPENDOOR = "RLAffordOpenDoor"
 
     ## SimplerEnv
-    SIMPLERENVGRASPSINGLEOPENEDCOKECAN = "SimplerEnvGraspSingleOpenedCokeCan"
-    SIMPLERENVMOVENEAR = "SimplerEnvMoveNear"
+    SIMPLERENV = "SimperEnv"
 
     ## humanoid
     HUMANOIDBENCH = "HumanoidBench"
