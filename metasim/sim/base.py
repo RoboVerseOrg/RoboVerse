@@ -90,8 +90,12 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
-        states = state_tensor_to_nested(self, states)
-        return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["vel"] for env_state in states])
+        if obj_name in states.objects:
+            return states.objects[obj_name].root_state[:, 7:10]
+        elif obj_name in states.robots:
+            return states.robots[obj_name].root_state[:, 7:10]
+        else:
+            raise ValueError(f"Object {obj_name} not found in states")
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if self.num_envs > 1:
@@ -103,8 +107,12 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
-        states = state_tensor_to_nested(self, states)
-        return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["pos"] for env_state in states])
+        if obj_name in states.objects:
+            return states.objects[obj_name].root_state[:, :3]
+        elif obj_name in states.robots:
+            return states.robots[obj_name].root_state[:, :3]
+        else:
+            raise ValueError(f"Object {obj_name} not found in states")
 
     def get_rot(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if self.num_envs > 1:
@@ -116,8 +124,12 @@ class BaseSimHandler:
             env_ids = list(range(self.num_envs))
 
         states = self.get_states(env_ids=env_ids)
-        states = state_tensor_to_nested(self, states)
-        return torch.stack([{**env_state["objects"], **env_state["robots"]}[obj_name]["rot"] for env_state in states])
+        if obj_name in states.objects:
+            return states.objects[obj_name].root_state[:, 3:7]
+        elif obj_name in states.robots:
+            return states.robots[obj_name].root_state[:, 3:7]
+        else:
+            raise ValueError(f"Object {obj_name} not found in states")
 
     def get_dof_pos(self, obj_name: str, joint_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if self.num_envs > 1:
