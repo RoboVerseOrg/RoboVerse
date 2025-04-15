@@ -418,12 +418,10 @@ class IsaacgymHandler(BaseSimHandler):
         for obj_id, obj in enumerate(self.objects):
             if isinstance(obj, ArticulationObjCfg):
                 joint_reindex = self.get_joint_reindex(obj.name)
-                body_ids_reindex = [
-                    self._body_info[obj.name]["global_indices"][bn] for bn in sorted(self.get_body_names(obj.name))
-                ]
+                body_ids_reindex = self._get_body_ids_reindex(obj.name)
                 state = ObjectState(
                     root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
-                    body_names=sorted(self.get_body_names(obj.name)),
+                    body_names=self.get_body_names(obj.name),
                     body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
@@ -437,12 +435,10 @@ class IsaacgymHandler(BaseSimHandler):
         robot_states = {}
         for obj_id, robot in enumerate([self.robot]):
             joint_reindex = self.get_joint_reindex(robot.name)
-            body_ids_reindex = [
-                self._body_info[robot.name]["global_indices"][bn] for bn in sorted(self.get_body_names(robot.name))
-            ]
+            body_ids_reindex = self._get_body_ids_reindex(robot.name)
             state = RobotState(
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
-                body_names=sorted(self.get_body_names(robot.name)),
+                body_names=self.get_body_names(robot.name),
                 body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
@@ -692,11 +688,17 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            return self._body_info[obj_name]["name"]
+            body_names = self._body_info[obj_name]["name"]
+            if sort:
+                body_names.sort()
+            return body_names
         else:
             return []
+
+    def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
+        return [self._body_info[obj_name]["global_indices"][bn] for bn in self.get_body_names(obj_name)]
 
     @property
     def num_envs(self) -> int:

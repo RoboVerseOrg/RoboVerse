@@ -295,7 +295,7 @@ class IsaaclabHandler(BaseSimHandler):
                 body_reindex = self.get_body_reindex(obj.name)
                 state = ObjectState(
                     root_state=obj_inst.data.root_state_w,
-                    body_names=sorted(self.get_body_names(obj.name)),
+                    body_names=self.get_body_names(obj.name),
                     body_state=obj_inst.data.body_state_w[:, body_reindex],
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -315,7 +315,7 @@ class IsaaclabHandler(BaseSimHandler):
             body_reindex = self.get_body_reindex(obj.name)
             state = RobotState(
                 root_state=obj_inst.data.root_state_w,
-                body_names=sorted(self.get_body_names(obj.name)),
+                body_names=self.get_body_names(obj.name),
                 body_state=obj_inst.data.body_state_w[:, body_reindex],
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -370,9 +370,12 @@ class IsaaclabHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            return self.env.scene.articulations[obj_name].body_names
+            body_names = self.env.scene.articulations[obj_name].body_names
+            if sort:
+                body_names.sort()
+            return body_names
         else:
             return []
 
