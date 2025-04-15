@@ -89,7 +89,7 @@ for task_i, task in enumerate(tasks):
     # Generate Python files
     output_dir = f"metasim/cfg/tasks/open6dor/task/{CAT_TAG}"
     os.makedirs(output_dir, exist_ok=True)
-    # import pdb; pdb.set_trace()
+
     class_name = f"Opensdor{CAT_TAG}{CateTag}{ObjTag}{task_i}"
     cfg = {
         "file_name": f"{PosTag}.py",
@@ -106,7 +106,7 @@ for task_i, task in enumerate(tasks):
     tag2 = task.split("/")[-2]
     root_new = f"data_isaaclab/source_data/open6dor/{CAT}/{tag4}/{tag3}/{tag2}"
     traj_filepath = f"{root_new}/trajectory-unified_wo_traj_v2.pkl"
-    # import pdb; pdb.set_trace()
+
     # for cfg in config_list:
     object_defs = ",\n        ".join([generate_object_def(obj) for obj in cfg["objects"]])
 
