@@ -295,6 +295,7 @@ class IsaaclabHandler(BaseSimHandler):
                 body_reindex = self.get_body_reindex(obj.name)
                 state = ObjectState(
                     root_state=obj_inst.data.root_state_w,
+                    body_names=sorted(self.get_body_names(obj.name)),
                     body_state=obj_inst.data.body_state_w[:, body_reindex],
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -314,6 +315,7 @@ class IsaaclabHandler(BaseSimHandler):
             body_reindex = self.get_body_reindex(obj.name)
             state = RobotState(
                 root_state=obj_inst.data.root_state_w,
+                body_names=sorted(self.get_body_names(obj.name)),
                 body_state=obj_inst.data.body_state_w[:, body_reindex],
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],

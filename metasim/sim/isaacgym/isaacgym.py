@@ -423,6 +423,7 @@ class IsaacgymHandler(BaseSimHandler):
                 ]
                 state = ObjectState(
                     root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    body_names=sorted(self.get_body_names(obj.name)),
                     body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
@@ -441,6 +442,7 @@ class IsaacgymHandler(BaseSimHandler):
             ]
             state = RobotState(
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                body_names=sorted(self.get_body_names(robot.name)),
                 body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],

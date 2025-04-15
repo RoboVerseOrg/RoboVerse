@@ -22,6 +22,8 @@ class ObjectState:
 
     root_state: torch.Tensor
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
+    body_names: list[str] | None = None
+    """Body names. This is only available for articulation objects."""
     body_state: torch.Tensor | None = None
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13). This is only available for articulation objects."""
     joint_pos: torch.Tensor | None = None
@@ -36,6 +38,8 @@ class RobotState:
 
     root_state: torch.Tensor
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
+    body_names: list[str]
+    """Body names."""
     body_state: torch.Tensor
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
     joint_pos: torch.Tensor

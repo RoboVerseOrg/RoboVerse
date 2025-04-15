@@ -225,6 +225,7 @@ class MujocoHandler(BaseSimHandler):
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                         torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                     ]).unsqueeze(0),
+                    body_names=sorted(self.get_body_names(obj.name)),
                     body_state=torch.stack([
                         torch.from_numpy(
                             np.concatenate([
@@ -266,6 +267,7 @@ class MujocoHandler(BaseSimHandler):
             ]
             body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
             state = RobotState(
+                body_names=sorted(self.get_body_names(robot.name)),
                 root_state=torch.concat([
                     torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
