@@ -18,14 +18,16 @@ class Sb3EnvWrapper(VecEnv):
 
     def __init__(self, scenario: ScenarioCfg):
         # Create the base environment
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.num_envs = scenario.num_envs
+        self.sim_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if SimType(scenario.sim) == SimType.MUJOCO:
+            self.sim_device = torch.device("cpu")
         scenario.headless = True
+        self.num_envs = scenario.num_envs
+        self.robot = scenario.robot
+        self.task = scenario.task
 
         env_class = get_sim_env_class(SimType(scenario.sim))
         self.env = env_class(scenario)
-
-        self.robot = scenario.robot
 
         self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
         if len(self.init_states) < self.num_envs:
@@ -44,8 +46,8 @@ class Sb3EnvWrapper(VecEnv):
             action_low.append(joint_limits[joint_name][0])
             action_high.append(joint_limits[joint_name][1])
 
-        self._action_low = torch.tensor(action_low, dtype=torch.float32, device=device)
-        self._action_high = torch.tensor(action_high, dtype=torch.float32, device=device)
+        self._action_low = torch.tensor(action_low, dtype=torch.float32, device=self.sim_device)
+        self._action_high = torch.tensor(action_high, dtype=torch.float32, device=self.sim_device)
 
         # action space is normalized to [-1, 1]
         self.action_space = spaces.Box(low=-1, high=1, shape=self._action_low.shape, dtype=np.float32)
@@ -61,7 +63,7 @@ class Sb3EnvWrapper(VecEnv):
         self.max_episode_steps = self.env.handler.task.episode_length
         log.info(f"Max episode steps: {self.max_episode_steps}")
 
-        # 获取success_bar，如果不存在则设置为一个较大的值
+        # Get success_bar, and if it does not exist, set it to a relatively large value.
         try:
             self.success_bar = getattr(self.env.handler.task.reward_functions[0], "success_bar", 1000.0)
             log.info(f"Success reward threshold: {self.success_bar}")
@@ -103,7 +105,6 @@ class Sb3EnvWrapper(VecEnv):
         # convert input to numpy array
         import torch
 
-        self.sim_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if not isinstance(actions, torch.Tensor):
             actions = np.asarray(actions)
             actions = torch.from_numpy(actions).to(device=self.sim_device, dtype=torch.float32)
@@ -205,19 +206,14 @@ class Sb3EnvWrapper(VecEnv):
         return observations, rewards, dones, infos
 
     def get_humanoid_observation(self, states) -> torch.Tensor:
-        gym_observation = self.env.handler.task.humanoid_obs_flatten_func(states)
+        gym_observation = self.task.humanoid_obs_flatten_func(states)
         return gym_observation
 
     def get_humanoid_reward(self, states):
         # NOTE: For IsaacLab, metasim_reward is None, so calculate reward here
         final_reward = torch.zeros(self.num_envs, device=self.sim_device)
-        for reward_func, reward_weight in zip(
-            self.env.handler.task.reward_functions, self.env.handler.task.reward_weights
-        ):
-            states.robots[self.env.handler.robot.name].body_names = self.env.handler.get_body_names(
-                self.env.handler.robot.name
-            )
-            final_reward += reward_func(self.env.handler.robot.name)(states) * reward_weight
+        for reward_func, reward_weight in zip(self.task.reward_functions, self.task.reward_weights):
+            final_reward += reward_func(self.robot.name)(states) * reward_weight
         return final_reward
 
     def render(self):

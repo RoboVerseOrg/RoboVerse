@@ -153,8 +153,8 @@ def main():
                     self.returns_info["results/episode_length"].append(curr_info["episode"]["l"])
                     cur_info_success = curr_info.get("success", 0)
                     self.returns_info["results/success"].append(cur_info_success)
-                    cur_info_success_subtasks = curr_info.get("success_subtasks", 0)
-                    self.returns_info["results/success_subtasks"].append(cur_info_success_subtasks)
+                    # cur_info_success_subtasks = curr_info.get("success_subtasks", 0)
+                    # self.returns_info["results/success_subtasks"].append(cur_info_success_subtasks)
             return True
 
         def _on_rollout_end(self) -> None:
