@@ -411,14 +411,6 @@ class MujocoHandler(BaseSimHandler):
     ## Utils
     ############################################################
     def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
-        """Get the joint names for a specified object in the order of the simulator default joint order.
-
-        Args:
-            object (BaseObjCfg): The target object.
-
-        Returns:
-            list[str]: A list of strings including the joint names. For non-articulation objects, return an empty list.
-        """
         if isinstance(object, ArticulationObjCfg):
             joint_names = [
                 self.physics.model.joint(joint_id).name

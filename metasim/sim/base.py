@@ -150,7 +150,7 @@ class BaseSimHandler:
     ## Misc
     ############################################################
     def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
-        """Get the joint names for a specified object in the order of the simulator default joint order.
+        """Get the joint names for a specified object in the order of the simulator default joint order. For same object, different simulator may have different joint order, but joint names are the same.
 
         Args:
             object (BaseObjCfg): The target object.
@@ -161,7 +161,7 @@ class BaseSimHandler:
         raise NotImplementedError
 
     def get_object_joint_reindex(self, obj_name: str) -> list[int]:
-        """Get the reindex of the joint names for a specified object. After reindexing, the joint order is alphabetical.
+        """Get the reindex of the joint names for a specified object. After reindexing, the joint order is alphabetical. For same object, different simulator may have different joint order, thus have different reindex.
 
         Args:
             obj_name (str): The name of the object.
@@ -180,8 +180,19 @@ class BaseSimHandler:
 
         return self._joint_reindex_cache[obj_name]
 
+    def get_object_body_names(self, obj_name: str) -> list[str]:
+        """Get the body names for a specified object in the order of the simulator default body order. For same object, different simulator may have different body order, but body names are the same.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[str]: A list of strings including the body names. For non-articulation objects, return an empty list.
+        """
+        raise NotImplementedError
+
     def get_body_reindex(self, obj_name: str) -> list[int]:
-        """Get the reindex of the body names for a specified object. After reindexing, the body order is alphabetical.
+        """Get the reindex of the body names for a specified object. After reindexing, the body order is alphabetical. For same object, different simulator may have different body order, thus have different reindex.
 
         Args:
             obj_name (str): The name of the object.
