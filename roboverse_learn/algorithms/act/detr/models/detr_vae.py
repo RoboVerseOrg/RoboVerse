@@ -237,7 +237,6 @@ def build(args):
     transformer = build_transformer(args)
 
     encoder = build_encoder(args)
-    # import pdb; pdb.set_trace()
     state_dim = args.state_dim if args.state_dim is not None else 14
     model = DETRVAE(
         backbones,

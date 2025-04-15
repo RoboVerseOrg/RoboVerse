@@ -285,8 +285,6 @@ def _normalize(x, params, forward=True):
     offset = params["offset"]
     x = x.to(device=scale.device, dtype=scale.dtype)
     src_shape = x.shape
-    # import pdb
-    # pdb.set_trace()
     x = x.reshape(-1, scale.shape[0])
     if forward:
         x = x * scale + offset

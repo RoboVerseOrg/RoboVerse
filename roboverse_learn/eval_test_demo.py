@@ -179,9 +179,7 @@ def main():
 
         # execute action
         # for action_index in range(len(action)):
-        import pdb
 
-        pdb.set_trace()
         actions = [
             {
                 "dof_pos_target": {
@@ -211,7 +209,6 @@ def main():
         if all(TimeOut):
             break
 
-    # import pdb; pdb.set_trace()
     images_to_video(image_list, f"tmp/{ckpt_name}/000.mp4")
     log.info("Num Envs: ", num_envs)
     log.info(f"SuccessOnce: {SuccessOnce}")
