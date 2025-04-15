@@ -60,7 +60,11 @@ def torso_vertical_orientation(envstate, robot_name: str):
 
 def actuator_forces(envstate, robot_name: str):
     """Returns a copy of the forces applied by the actuators."""
-    return torch.tensor([(x if x is not None else 0) for x in envstate["robots"][robot_name]["dof_torque"].values()])
+    return (
+        torch.tensor([x for x in envstate["robots"][robot_name]["dof_torque"].values()])
+        if envstate["robots"][robot_name].get("dof_torque", None) is not None
+        else torch.zeros(len(envstate["robots"][robot_name]["dof_pos"]))
+    )
 
 
 def left_hand_position(envstate, robot_name: str):

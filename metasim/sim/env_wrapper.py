@@ -90,6 +90,9 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf[env_ids] = 0
             if states is not None:
                 self.handler.set_states(states, env_ids=env_ids)
+            if self.handler.scenario.sim in ["mujoco", "isaacgym"]:
+                ## HACK
+                self.handler.simulate()
             self.handler.checker.reset(self.handler, env_ids=env_ids)
             self.handler.refresh_render()
             states = self.handler.get_states()
@@ -99,7 +102,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf += 1
             self.handler.set_dof_targets(self.handler.robot.name, actions)
             self.handler.simulate()
-            reward = self._get_reward()
+            reward = None
             success = self.handler.checker.check(self.handler)
             states = self.handler.get_states()
             time_out = self._episode_length_buf >= self.handler.scenario.episode_length

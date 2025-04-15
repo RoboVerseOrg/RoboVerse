@@ -82,14 +82,20 @@ def save_demo_v2(save_dir: str, demo: list[EnvState]):
         jsondata["joint_qpos"].append([robot_state["dof_pos"][k] for k in sorted(robot_state["dof_pos"].keys())])
 
         # For targets, handle them in the same way as the original function
-        if i < len(demo) - 1:
-            next_robot_state = demo[i + 1]["robots"][robot_name]
-            target_dof_pos = [
-                next_robot_state["dof_pos_target"][k] for k in sorted(next_robot_state["dof_pos_target"].keys())
-            ]
+        ## XXX
+        if next(iter(demo[0]["robots"].values())).get("dof_pos_target", None) is not None:
+            if i < len(demo) - 1:
+                next_robot_state = demo[i + 1]["robots"][robot_name]
+                target_dof_pos = [
+                    next_robot_state["dof_pos_target"][k] for k in sorted(next_robot_state["dof_pos_target"].keys())
+                ]
+            else:
+                # For the last timestep, use the same target as the current state
+                target_dof_pos = [
+                    robot_state["dof_pos_target"][k] for k in sorted(robot_state["dof_pos_target"].keys())
+                ]
         else:
-            # For the last timestep, use the same target as the current state
-            target_dof_pos = [robot_state["dof_pos_target"][k] for k in sorted(robot_state["dof_pos_target"].keys())]
+            target_dof_pos = None
 
         jsondata["joint_qpos_target"].append(target_dof_pos)
 
@@ -98,7 +104,7 @@ def save_demo_v2(save_dir: str, demo: list[EnvState]):
         ee_pos = robot_state["pos"]
         ee_rot = robot_state["rot"]
         last_joint_pos = robot_state["dof_pos"][sorted(robot_state["dof_pos"].keys())[-1]]
-        robot_ee_state = torch.cat([ee_pos, ee_rot, torch.tensor([last_joint_pos])]).tolist()
+        robot_ee_state = torch.cat([ee_pos, ee_rot, torch.tensor([last_joint_pos], device=ee_pos.device)]).tolist()
         jsondata["robot_ee_state"].append(robot_ee_state)
 
         # Set robot_ee_state_target

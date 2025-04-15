@@ -54,11 +54,13 @@ class RelativeBboxDetector(BaseDetector):
         if env_ids is None:
             env_ids = list(range(handler.num_envs))
 
-        relative_rot_mat = matrix_from_quat(torch.tensor(self.relative_quat, dtype=torch.float32))  # [3, 3]
-        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32)  # [3]
+        relative_rot_mat = matrix_from_quat(
+            torch.tensor(self.relative_quat, dtype=torch.float32, device=handler.device)
+        )  # [3, 3]
+        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32, device=handler.device)  # [3]
         base_pos = handler.get_pos(self.base_obj_name, env_ids=env_ids)
         if self.ignore_base_ori:
-            base_quat = torch.zeros((len(env_ids), 4), dtype=torch.float32)
+            base_quat = torch.zeros((len(env_ids), 4), dtype=torch.float32, device=handler.device)
             base_quat[:, 0] = 1.0
         else:
             base_quat = handler.get_rot(self.base_obj_name, env_ids=env_ids)
@@ -67,11 +69,11 @@ class RelativeBboxDetector(BaseDetector):
         checker_rot_mat = torch.matmul(base_rot_mat, relative_rot_mat)  # [n_env, 3, 3]
 
         if not hasattr(self, "checker_pos"):
-            self.checker_pos = torch.zeros((handler.num_envs, 3), dtype=torch.float32)
+            self.checker_pos = torch.zeros((handler.num_envs, 3), dtype=torch.float32, device=handler.device)
         if not hasattr(self, "checker_rot_mat"):
-            self.checker_rot_mat = torch.zeros((handler.num_envs, 3, 3), dtype=torch.float32)
+            self.checker_rot_mat = torch.zeros((handler.num_envs, 3, 3), dtype=torch.float32, device=handler.device)
         if not hasattr(self, "checker_quat"):
-            self.checker_quat = torch.zeros((handler.num_envs, 4), dtype=torch.float32)
+            self.checker_quat = torch.zeros((handler.num_envs, 4), dtype=torch.float32, device=handler.device)
 
         self.checker_pos[env_ids] = checker_pos
         self.checker_rot_mat[env_ids] = checker_rot_mat
@@ -82,8 +84,8 @@ class RelativeBboxDetector(BaseDetector):
             env_ids = list(range(handler.num_envs))
         self._update_checker(handler, env_ids)
 
-        self.checker_lower = torch.tensor(self.checker_lower, dtype=torch.float32)
-        self.checker_upper = torch.tensor(self.checker_upper, dtype=torch.float32)
+        self.checker_lower = torch.tensor(self.checker_lower, dtype=torch.float32, device=handler.device)
+        self.checker_upper = torch.tensor(self.checker_upper, dtype=torch.float32, device=handler.device)
 
         ## Reset debug viewer
         self.reset_debug_viewer(handler, env_ids)

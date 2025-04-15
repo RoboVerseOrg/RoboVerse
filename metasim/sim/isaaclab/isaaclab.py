@@ -7,13 +7,13 @@ import torch
 from loguru import logger as log
 
 from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, RigidObjCfg
-from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
-from .isaaclab_helper import get_pose, joint_is_implicit_actuator
+from .isaaclab_helper import get_pose
 
 try:
     from omni.isaac.lab.app import AppLauncher
@@ -283,98 +283,54 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        ## Preprocess camera data
-        rgb_datas = []
-        depth_datas = []
+        object_states = {}
+        for obj in self.objects:
+            if isinstance(obj, ArticulationObjCfg):
+                obj_inst = self.env.scene.articulations[obj.name]
+                joint_reindex = self.get_joint_reindex(obj.name)
+                body_reindex = self.get_body_reindex(obj.name)
+                state = ObjectState(
+                    root_state=obj_inst.data.root_state_w,
+                    body_state=obj_inst.data.body_state_w[:, body_reindex],
+                    joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
+                    joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
+                )
+            else:
+                obj_inst = self.env.scene.rigid_objects[obj.name]
+                state = ObjectState(
+                    root_state=obj_inst.data.root_state_w,
+                )
+            object_states[obj.name] = state
+
+        robot_states = {}
+        for obj in [self.robot]:
+            ## TODO: dof_pos_target, dof_vel_target, dof_torque
+            obj_inst = self.env.scene.articulations[obj.name]
+            joint_reindex = self.get_joint_reindex(obj.name)
+            body_reindex = self.get_body_reindex(obj.name)
+            state = RobotState(
+                root_state=obj_inst.data.root_state_w,
+                body_state=obj_inst.data.body_state_w[:, body_reindex],
+                joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
+                joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
+                joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex],
+                joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex],
+                joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex],
+            )
+            robot_states[obj.name] = state
+
+        camera_states = {}
         for camera in self.cameras:
             camera_inst = self.env.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
             depth_data = camera_inst.data.output.get("depth", None)
-            rgb_datas.append(rgb_data)
-            depth_datas.append(depth_data)
+            camera_states[camera.name] = CameraState(rgb=rgb_data, depth=depth_data)
 
-        states = []
-        for env_id in env_ids:
-            env_state = {"objects": {}, "robots": {}, "cameras": {}}
-
-            for obj in self.objects + [self.robot]:
-                object_type = "robots" if obj is self.robot else "objects"
-                if isinstance(obj, ArticulationObjCfg):
-                    obj_inst = self.env.scene.articulations[obj.name]
-                else:
-                    obj_inst = self.env.scene.rigid_objects[obj.name]
-                obj_state = {}
-
-                ## Basic states
-                obj_state["pos"] = obj_inst.data.root_pos_w[env_id].cpu() - self.env.scene.env_origins[env_id].cpu()
-                obj_state["rot"] = obj_inst.data.root_quat_w[env_id].cpu()
-                obj_state["vel"] = obj_inst.data.root_lin_vel_w[env_id].cpu()
-                obj_state["ang_vel"] = obj_inst.data.root_ang_vel_w[env_id].cpu()
-
-                ## Joint states
-                if isinstance(obj, ArticulationObjCfg):
-                    obj_state["dof_pos"] = {
-                        joint_name: obj_inst.data.joint_pos[env_id][i].item()
-                        for i, joint_name in enumerate(obj_inst.joint_names)
-                    }
-                    obj_state["dof_vel"] = {
-                        joint_name: obj_inst.data.joint_vel[env_id][i].item()
-                        for i, joint_name in enumerate(obj_inst.joint_names)
-                    }
-
-                ## Actuator states
-                ## XXX: Could non-robot objects have actuators?
-                if isinstance(obj, BaseRobotCfg):
-                    obj_state["dof_pos_target"] = {
-                        joint_name: obj_inst.data.joint_pos_target[env_id][i].item()
-                        for i, joint_name in enumerate(obj_inst.joint_names)
-                    }
-                    obj_state["dof_vel_target"] = {
-                        joint_name: obj_inst.data.joint_vel_target[env_id][i].item()
-                        for i, joint_name in enumerate(obj_inst.joint_names)
-                    }
-                    obj_state["dof_torque"] = {
-                        joint_name: (
-                            obj_inst.data.joint_effort_target[env_id][i].item()
-                            if joint_is_implicit_actuator(joint_name, obj_inst)
-                            else obj_inst.data.applied_torque[env_id][i].item()
-                        )
-                        for i, joint_name in enumerate(obj_inst.joint_names)
-                    }
-                env_state[obj.name] = obj_state
-                env_state[object_type][obj.name] = obj_state
-
-                ## Body states
-                env_state[object_type][obj.name]["body"] = {}
-                coms = obj_inst.root_physx_view.get_coms()
-                coms = coms.reshape((self.env.num_envs, obj_inst.num_bodies, 7))
-                com_positions = coms[:, :, :3]  # (num_envs, num_bodies, 3)
-                for i, body_name in enumerate(obj_inst.body_names):
-                    body_state = {}
-                    body_state["pos"] = (
-                        obj_inst.data.body_link_pos_w[env_id, i].cpu() - self.env.scene.env_origins[env_id].cpu()
-                    )
-                    body_state["rot"] = obj_inst.data.body_link_quat_w[env_id, i].cpu()
-                    body_state["vel"] = obj_inst.data.body_link_vel_w[env_id, i].cpu()
-                    body_state["ang_vel"] = obj_inst.data.body_link_ang_vel_w[env_id, i].cpu()
-                    body_state["com"] = com_positions[env_id, i].cpu()
-                    env_state[object_type][obj.name]["body"][body_name] = body_state
-
-            ## Cameras
-            env_state["cameras"] = {
-                camera.name: {
-                    "rgb": rgb_datas[i][env_id],
-                    "depth": depth_datas[i][env_id],
-                }
-                for i, camera in enumerate(self.cameras)
-            }
-
-            states.append(env_state)
-        return states
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if env_ids is None:
@@ -409,6 +365,12 @@ class IsaaclabHandler(BaseSimHandler):
     def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
         if isinstance(object, ArticulationObjCfg):
             return self.env.scene.articulations[object.name].joint_names
+        else:
+            return []
+
+    def get_body_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            return self.env.scene.articulations[obj_name].body_names
         else:
             return []
 

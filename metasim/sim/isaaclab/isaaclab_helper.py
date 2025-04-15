@@ -216,8 +216,8 @@ def get_pose(
         raise ValueError(f"Object {obj_name} not found")
 
     if obj_subpath is None:
-        pos = obj_inst.data.root_pos_w.cpu()[env_ids] - env.scene.env_origins.cpu()[env_ids]
-        rot = obj_inst.data.root_quat_w.cpu()[env_ids]
+        pos = obj_inst.data.root_pos_w[env_ids] - env.scene.env_origins[env_ids]
+        rot = obj_inst.data.root_quat_w[env_ids]
     else:
         ## TODO: Following code has bug with IsaacLab2.0 (IsaacSim 4.5)
         if ISAACLAB_VERSION == 1:
@@ -228,12 +228,10 @@ def get_pose(
             )
             pos, rot = view.get_world_poses(indices=env_ids)
             pos = pos - env.scene.env_origins[env_ids]
-            pos = pos.cpu()
-            rot = rot.cpu()
         else:
             log.warning("IsaacLab2.0 (IsaacSim 4.5) does not support creating RigidPrimView, so we return zeros.")
-            pos = torch.zeros((len(env_ids), 3))
-            rot = torch.zeros((len(env_ids), 4))
+            pos = torch.zeros((len(env_ids), 3), device=env.device)
+            rot = torch.zeros((len(env_ids), 4), device=env.device)
 
     assert pos.shape == (len(env_ids), 3)
     assert rot.shape == (len(env_ids), 4)

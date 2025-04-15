@@ -7,11 +7,19 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.cfg.objects import (
+    ArticulationObjCfg,
+    BaseObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveCylinderCfg,
+    PrimitiveSphereCfg,
+)
+from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class MujocoHandler(BaseSimHandler):
@@ -175,67 +183,6 @@ class MujocoHandler(BaseSimHandler):
         self._mujoco_robot_name = robot_xml.full_identifier
         return mjcf_model
 
-    def _get_root_state(self, obj, obj_name):
-        """Get root position, rotation, velocity for an object or robot."""
-        if obj == self._robot:
-            if not self._robot.fix_base_link:
-                root_joint = self.physics.data.joint(self._mujoco_robot_name)
-                return {
-                    "pos": torch.tensor(root_joint.qpos[:3], dtype=torch.float32),
-                    "rot": torch.tensor(root_joint.qpos[3:7], dtype=torch.float32),
-                    "vel": torch.tensor(root_joint.qvel[:3], dtype=torch.float32),
-                    "ang_vel": torch.tensor(root_joint.qvel[3:6], dtype=torch.float32),
-                }
-            else:
-                root_body_id = self.physics.model.body(self._mujoco_robot_name).id
-                return {
-                    "pos": torch.tensor(self.physics.data.xpos[root_body_id], dtype=torch.float32),
-                    "rot": torch.tensor(self.physics.data.xquat[root_body_id], dtype=torch.float32),
-                    "vel": torch.tensor(self.physics.data.cvel[root_body_id][:3], dtype=torch.float32),
-                    "ang_vel": torch.tensor(self.physics.data.cvel[root_body_id][3:6], dtype=torch.float32),
-                }
-        else:
-            model_name = self.mj_objects[obj_name].model + "/"
-            try:
-                obj_joint = self.physics.data.joint(model_name)
-                return {
-                    "pos": torch.tensor(obj_joint.qpos[:3], dtype=torch.float32),
-                    "rot": torch.tensor(obj_joint.qpos[3:7], dtype=torch.float32),
-                    "vel": torch.tensor(obj_joint.qvel[:3], dtype=torch.float32),
-                    "ang_vel": torch.tensor(obj_joint.qvel[3:6], dtype=torch.float32),
-                }
-            except KeyError:
-                obj_body_id = self.physics.model.body(model_name).id
-                return {
-                    "pos": torch.tensor(self.physics.data.xpos[obj_body_id], dtype=torch.float32),
-                    "rot": torch.tensor(self.physics.data.xquat[obj_body_id], dtype=torch.float32),
-                    "vel": torch.tensor(self.physics.data.cvel[obj_body_id][:3], dtype=torch.float32),
-                    "ang_vel": torch.tensor(self.physics.data.cvel[obj_body_id][3:6], dtype=torch.float32),
-                }
-
-    def _get_joint_states(self, obj_name):
-        """Get joint positions and velocities."""
-        joint_states = {"dof_pos": {}, "dof_vel": {}}
-
-        for joint_id in range(self.physics.model.njnt):
-            joint_name = self.physics.model.joint(joint_id).name
-            if joint_name.startswith(f"{obj_name}/") or (
-                obj_name == self._robot.name and joint_name.startswith(self._mujoco_robot_name)
-            ):
-                clean_joint_name = joint_name.split("/")[-1]
-                if clean_joint_name == "":
-                    continue
-                joint = self.physics.data.joint(joint_name)
-
-                if len(joint.qpos.shape) == 0 or joint.qpos.shape == (1,):
-                    joint_states["dof_pos"][clean_joint_name] = joint.qpos.item()
-                    joint_states["dof_vel"][clean_joint_name] = joint.qvel.item()
-                else:  # free joint
-                    joint_states["dof_pos"][clean_joint_name] = torch.tensor(joint.qpos.copy(), dtype=torch.float32)
-                    joint_states["dof_vel"][clean_joint_name] = torch.tensor(joint.qvel.copy(), dtype=torch.float32)
-
-        return joint_states
-
     def _get_actuator_states(self, obj_name):
         """Get actuator states (targets and forces)."""
         actuator_states = {
@@ -258,114 +205,108 @@ class MujocoHandler(BaseSimHandler):
         return actuator_states
 
     def get_states(self, env_ids: list[int] | None = None) -> list[dict]:
-        state = {"objects": {}, "robots": {}, "cameras": {}}
-
-        ## Root states -- for both robot and object
-        for obj in self.objects + [self._robot]:
-            object_type = "robots" if obj == self._robot else "objects"
-            state[object_type][obj.name] = {}
-            state[object_type][obj.name].update(self._get_root_state(obj, obj.name))
-            state[object_type][obj.name].update(self._get_joint_states(obj.name))
-            ## Actuator states -- for robot
-            if obj == self._robot:
-                ## TODO: read from simulator instead of cache
-                state[object_type][obj.name].update(self._get_actuator_states(obj.name))
-                joint_names = [
-                    self.physics.model.joint(joint_id).name.split("/")[-1]
-                    for joint_id in range(self.physics.model.njnt)
-                    if self.physics.model.joint(joint_id).name.startswith(self._mujoco_robot_name)
-                    and len(self.physics.model.joint(joint_id).name.split("/")[-1]) > 0
-                ]
-                if self.actions_cache:
-                    state[object_type][obj.name]["dof_pos_target"] = {
-                        joint_name: self.actions_cache[0]["dof_pos_target"][joint_name] for joint_name in joint_names
-                    }
-                else:
-                    state[object_type][obj.name]["dof_pos_target"] = None
-
-        ## Body states -- for both robot and object
-        object_names = [obj.name for obj in self.objects]
-        robot_names = [self._robot.name]
+        object_states = {}
         for obj in self.objects:
-            state["objects"][obj.name]["body"] = {}
-        for obj in [self._robot]:
-            state["robots"][obj.name]["body"] = {}
-        for body_id in range(self.physics.model.nbody):
-            body = self.physics.model.body(body_id)
-            body_full_name = body.name  # e.g. h1/left_shoulder_pitch_link
-            robot_name_body_belong = body_full_name.split("/")[0]  # e.g. h1
-            body_base_name = body_full_name.split("/")[-1]  # e.g. left_shoulder_pitch_link
-            if robot_name_body_belong in robot_names:
-                state["robots"][robot_name_body_belong]["body"][body_base_name] = {
-                    # Position and orientation in world frame
-                    "pos": torch.tensor(
-                        self.physics.data.xpos[body_id], dtype=torch.float32
-                    ),  # Position in world frame (x,y,z)
-                    "rot": torch.tensor(
-                        self.physics.data.xquat[body_id], dtype=torch.float32
-                    ),  # Orientation in world frame (quaternion)
-                    # Linear and angular velocity in world frame
-                    "vel": torch.tensor(
-                        self.physics.data.cvel[body_id][:3], dtype=torch.float32
-                    ),  # Linear velocity in world frame (x,y,z)
-                    "ang_vel": torch.tensor(
-                        self.physics.data.cvel[body_id][3:6], dtype=torch.float32
-                    ),  # Angular velocity in world frame (x,y,z)
-                    # Contact forces and torques in local frame
-                    "contact_force": torch.tensor(
-                        self.physics.data.cfrc_ext[body_id][:3], dtype=torch.float32
-                    ),  # Contact force in local frame (x,y,z)
-                    "contact_torque": torch.tensor(
-                        self.physics.data.cfrc_ext[body_id][3:6], dtype=torch.float32
-                    ),  # Contact torque in local frame (x,y,z)
-                }
-            elif robot_name_body_belong in object_names:
-                state["objects"][robot_name_body_belong]["body"][body_base_name] = {
-                    # Position and orientation in world frame
-                    "pos": torch.tensor(
-                        self.physics.data.xpos[body_id], dtype=torch.float32
-                    ),  # Position in world frame (x,y,z)
-                    "rot": torch.tensor(
-                        self.physics.data.xquat[body_id], dtype=torch.float32
-                    ),  # Orientation in world frame (quaternion)
-                    # Linear and angular velocity in world frame
-                    "vel": torch.tensor(
-                        self.physics.data.cvel[body_id][:3], dtype=torch.float32
-                    ),  # Linear velocity in world frame (x,y,z)
-                    "ang_vel": torch.tensor(
-                        self.physics.data.cvel[body_id][3:6], dtype=torch.float32
-                    ),  # Angular velocity in world frame (x,y,z)
-                    # Contact forces and torques in local frame
-                    "contact_force": torch.tensor(
-                        self.physics.data.cfrc_ext[body_id][:3], dtype=torch.float32
-                    ),  # Contact force in local frame (x,y,z)
-                    "contact_torque": torch.tensor(
-                        self.physics.data.cfrc_ext[body_id][3:6], dtype=torch.float32
-                    ),  # Contact torque in local frame (x,y,z)
-                }
+            model_name = self.mj_objects[obj.name].model
 
+            obj_body_id = self.physics.model.body(f"{model_name}/").id
+            if isinstance(obj, ArticulationObjCfg):
+                joint_names = sorted(self.get_object_joint_names(obj))
+                body_reindex = self.get_body_reindex(obj.name)
+                body_ids_origin = [
+                    bi
+                    for bi in range(self.physics.model.nbody)
+                    if self.physics.model.body(bi).name.split("/")[0] == model_name
+                ]
+                body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+                state = ObjectState(
+                    root_state=torch.concat([
+                        torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
+                        torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
+                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                    ]).unsqueeze(0),
+                    body_state=torch.stack([
+                        torch.from_numpy(
+                            np.concatenate([
+                                self.physics.data.xpos[body_id],  # (3,)
+                                self.physics.data.xquat[body_id],  # (4,)
+                                self.physics.data.cvel[body_id],  # (6,)
+                            ])
+                        ).float()
+                        for body_id in body_ids_reindex
+                    ]).unsqueeze(0),
+                    joint_pos=torch.tensor([
+                        self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
+                    ]).unsqueeze(0),
+                    joint_vel=torch.tensor([
+                        self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
+                    ]).unsqueeze(0),
+                )
+            else:
+                state = ObjectState(
+                    root_state=torch.concat([
+                        torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
+                        torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
+                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                    ]).unsqueeze(0),
+                )
+            object_states[obj.name] = state
+
+        robot_states = {}
+        for robot in [self.robot]:
+            model_name = self.mj_objects[robot.name].model
+            obj_body_id = self.physics.model.body(f"{model_name}/").id
+            joint_names = sorted(self.get_object_joint_names(robot))
+            actuator_reindex = self.get_actuator_reindex(robot.name)
+            body_reindex = self.get_body_reindex(robot.name)
+            body_ids_origin = [
+                bi
+                for bi in range(self.physics.model.nbody)
+                if self.physics.model.body(bi).name.split("/")[0] == model_name
+            ]
+            body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+            state = RobotState(
+                root_state=torch.concat([
+                    torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
+                    torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
+                    torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                ]).unsqueeze(0),
+                body_state=torch.stack([
+                    torch.from_numpy(
+                        np.concatenate([
+                            self.physics.data.xpos[body_id],  # (3,)
+                            self.physics.data.xquat[body_id],  # (4,)
+                            self.physics.data.cvel[body_id],  # (6,)
+                        ])
+                    ).float()
+                    for body_id in body_ids_reindex
+                ]).unsqueeze(0),
+                joint_pos=torch.tensor([
+                    self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
+                ]).unsqueeze(0),
+                joint_vel=torch.tensor([
+                    self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
+                ]).unsqueeze(0),
+                joint_pos_target=torch.from_numpy(self.physics.data.ctrl[actuator_reindex]).unsqueeze(0),
+                joint_vel_target=None,  # TODO
+                joint_effort_target=torch.from_numpy(self.physics.data.actuator_force[actuator_reindex]).unsqueeze(0),
+            )
+            robot_states[robot.name] = state
+
+        camera_states = {}
         for camera in self.cameras:
             camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
-            state["cameras"][camera.name] = {}
-
+            camera_states[camera.name] = {}
             if "rgb" in camera.data_types:
-                rgb_img = self.physics.render(
-                    width=camera.width,
-                    height=camera.height,
-                    camera_id=camera_id,
-                    depth=False,
-                )
-                state["cameras"][camera.name].update({"rgb": torch.from_numpy(rgb_img.copy())})
+                rgb = self.physics.render(width=camera.width, height=camera.height, camera_id=camera_id, depth=False)
+                rgb = torch.from_numpy(rgb.copy()).unsqueeze(0)
             if "depth" in camera.data_types:
-                depth_img = self.physics.render(
-                    width=camera.width,
-                    height=camera.height,
-                    camera_id=camera_id,
-                    depth=True,
-                )
-                state["cameras"][camera.name].update({"depth": torch.from_numpy(depth_img.copy())})
+                depth = self.physics.render(width=camera.width, height=camera.height, camera_id=camera_id, depth=True)
+                depth = torch.from_numpy(depth.copy()).unsqueeze(0)
+            state = CameraState(rgb=rgb, depth=depth)
+            camera_states[camera.name] = state
 
-        return [state]
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
         """Set root position and rotation."""
@@ -465,6 +406,50 @@ class MujocoHandler(BaseSimHandler):
     def close(self):
         if self.viewer is not None:
             self.viewer.close()
+
+    ############################################################
+    ## Utils
+    ############################################################
+    def get_object_joint_names(self, object: BaseObjCfg) -> list[str]:
+        if isinstance(object, ArticulationObjCfg):
+            joint_names = [
+                self.physics.model.joint(joint_id).name
+                for joint_id in range(self.physics.model.njnt)
+                if self.physics.model.joint(joint_id).name.startswith(object.name + "/")
+            ]
+            joint_names = [name.split("/")[-1] for name in joint_names]
+            joint_names = [name for name in joint_names if name != ""]
+            return joint_names
+        else:
+            return []
+
+    def get_actuator_names(self, robot_name: str) -> list[str]:
+        robot_cfg = self.object_dict[robot_name]
+        if isinstance(robot_cfg, BaseRobotCfg):
+            actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+            actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
+            actuator_names = [name for name in actuator_names if name != ""]
+            joint_names = self.get_object_joint_names(robot_cfg)
+            assert set(actuator_names) == set(joint_names), (
+                f"Actuator names {actuator_names} do not match joint names {joint_names}"
+            )
+            return actuator_names
+        else:
+            return []
+
+    def get_actuator_reindex(self, robot_name: str) -> list[int]:
+        origin_actuator_names = self.get_actuator_names(robot_name)
+        sorted_actuator_names = sorted(origin_actuator_names)
+        return [origin_actuator_names.index(name) for name in sorted_actuator_names]
+
+    def get_body_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
+            names = [name for name in names if name != ""]
+            return names
+        else:
+            return []
 
     ############################################################
     ## Misc
