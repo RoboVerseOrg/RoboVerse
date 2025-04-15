@@ -212,29 +212,26 @@ class MujocoHandler(BaseSimHandler):
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             if isinstance(obj, ArticulationObjCfg):
                 joint_names = sorted(self.get_object_joint_names(obj))
-                body_reindex = self.get_body_reindex(obj.name)
-                body_ids_origin = [
-                    bi
-                    for bi in range(self.physics.model.nbody)
-                    if self.physics.model.body(bi).name.split("/")[0] == model_name
-                ]
-                body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+                body_sort_indices_global = self.get_body_sort_indices_global(obj.name)
                 state = ObjectState(
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                         torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                     ]).unsqueeze(0),
-                    body_state=torch.stack([
-                        torch.from_numpy(
-                            np.concatenate([
-                                self.physics.data.xpos[body_id],  # (3,)
-                                self.physics.data.xquat[body_id],  # (4,)
-                                self.physics.data.cvel[body_id],  # (6,)
-                            ])
-                        ).float()
-                        for body_id in body_ids_reindex
-                    ]).unsqueeze(0),
+                    # body_state (torch.Tensor, shape=(1, num_bodies, 13)): The combined state of each body’s position (3,), quaternion (4,), and velocity (6).
+                    body_state=torch.from_numpy(
+                        np.concatenate(
+                            [
+                                self.physics.data.xpos[body_sort_indices_global],  # (num_bodies, 3)
+                                self.physics.data.xquat[body_sort_indices_global],  # (num_bodies, 4)
+                                self.physics.data.cvel[body_sort_indices_global],  # (num_bodies, 6)
+                            ],
+                            axis=1,
+                        )
+                    )
+                    .float()
+                    .unsqueeze(0),
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                     ]).unsqueeze(0),
@@ -258,29 +255,27 @@ class MujocoHandler(BaseSimHandler):
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = sorted(self.get_object_joint_names(robot))
             actuator_reindex = self.get_actuator_reindex(robot.name)
-            body_reindex = self.get_body_reindex(robot.name)
-            body_ids_origin = [
-                bi
-                for bi in range(self.physics.model.nbody)
-                if self.physics.model.body(bi).name.split("/")[0] == model_name
-            ]
-            body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+            body_sort_indices_global = self.get_body_sort_indices_global(robot.name)
             state = RobotState(
+                body_names=self.get_body_names_sort(robot.name),
                 root_state=torch.concat([
                     torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                     torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                 ]).unsqueeze(0),
-                body_state=torch.stack([
-                    torch.from_numpy(
-                        np.concatenate([
-                            self.physics.data.xpos[body_id],  # (3,)
-                            self.physics.data.xquat[body_id],  # (4,)
-                            self.physics.data.cvel[body_id],  # (6,)
-                        ])
-                    ).float()
-                    for body_id in body_ids_reindex
-                ]).unsqueeze(0),
+                # body_state (torch.Tensor, shape=(1, num_bodies, 13)): The combined state of each body’s position (3,), quaternion (4,), and velocity (6).
+                body_state=torch.from_numpy(
+                    np.concatenate(
+                        [
+                            self.physics.data.xpos[body_sort_indices_global],  # (num_bodies, 3)
+                            self.physics.data.xquat[body_sort_indices_global],  # (num_bodies, 4)
+                            self.physics.data.cvel[body_sort_indices_global],  # (num_bodies, 6)
+                        ],
+                        axis=1,
+                    )
+                )
+                .float()
+                .unsqueeze(0),
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                 ]).unsqueeze(0),
@@ -442,7 +437,26 @@ class MujocoHandler(BaseSimHandler):
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
-    def get_body_names(self, obj_name: str) -> list[str]:
+    def get_body_names_unsort(self, obj_name: str) -> list[str]:
+        """
+        Get the unsorted body names for a given object.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[str]: Unsorted body names, shape (num_bodies,).
+
+        Only returns the body names for ArticulationObjCfg objects. The names are not sorted and exclude the root body (empty name after '/').
+
+        Example:
+
+            Suppose `obj_name = "robot1"`, and the model has bodies:
+
+            `["robot1/", "robot1/torso", "robot1/left_leg", "robot1/right_leg", "cube1/", "cube2/"]`
+
+            This function will return: `["torso", "left_leg", "right_leg"]`
+        """
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
@@ -450,6 +464,84 @@ class MujocoHandler(BaseSimHandler):
             return names
         else:
             return []
+
+    def get_body_indices_unsort_global(self, obj_name: str) -> list[int]:
+        """
+        Get the unsorted body indices for a given object. Global means all objects' bodies are considered, just like in the following example, `robot1/`, `cube1/` and `cube2/` are all considered in the indices.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: Unsorted body indices, shape (num_bodies,).
+
+        Example:
+
+            Suppose `obj_name = "robot1"`, and the model has bodies:
+
+            index 0: `"robot1/"`
+
+            index 1: `"robot1/torso"`
+
+            index 2: `"robot1/left_leg"`
+
+            index 3: `"robot1/right_leg"`
+
+            index 4: `"cube1/"`
+
+            index 5: `"cube2/"`
+
+            This function will return: `[1, 2, 3]`
+        """
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            # Only return the body ids belonging to obj_name, excluding the root body (empty name after '/')
+            return [
+                self.physics.model.body(i).id
+                for i in range(self.physics.model.nbody)
+                if self.physics.model.body(i).name.split("/")[0] == obj_name
+                and self.physics.model.body(i).name.split("/")[1] != ""
+            ]
+        else:
+            return []
+
+    def get_body_sort_indices_global(self, obj_name: str) -> list[int]:
+        """
+        Get the sorted body indices for a given object. Global means all objects' bodies are considered, just like in the following example, `robot1/`, `cube1/` and `cube2/` are all considered in the indices.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: Sorted body indices, shape (num_bodies,).
+
+        Example:
+
+            Suppose `obj_name = "robot1"`, and the model has bodies:
+
+            index 0: `"robot1/"`
+
+            index 1: `"robot1/torso"`
+
+            index 2: `"robot1/left_leg"`
+
+            index 3: `"robot1/right_leg"`
+
+            index 4: `"cube1/"`
+
+            index 5: `"cube2/"`
+
+            This function will return: `[2, 3, 1]`
+        """
+        if not hasattr(self, "_body_sort_indices_global_cache"):
+            self._body_sort_indices_global_cache = {}
+
+        if obj_name not in self._body_sort_indices_global_cache:
+            body_sort_indices_local = self.get_body_indices_sort_local(obj_name)
+            body_unsort_indices_global = self.get_body_indices_unsort_global(obj_name)
+            body_sort_indices_global = [body_unsort_indices_global[i] for i in body_sort_indices_local]
+            self._body_sort_indices_global_cache[obj_name] = body_sort_indices_global
+
+        return self._body_sort_indices_global_cache[obj_name]
 
     ############################################################
     ## Misc

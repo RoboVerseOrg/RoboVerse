@@ -36,6 +36,8 @@ class RobotState:
 
     root_state: torch.Tensor
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
+    body_names: list[str]
+    """Body names. Shape is (num_bodies)."""
     body_state: torch.Tensor
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
     joint_pos: torch.Tensor
@@ -110,7 +112,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
             if obj_state.body_state is not None:
-                bns = handler.get_body_names(obj_name)
+                bns = handler.get_body_names_unsort(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
                 jns = handler.get_object_joint_names(handler.object_dict[obj_name])
@@ -146,7 +148,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 else None
             )
             if robot_state.body_state is not None:
-                bns = handler.get_body_names(robot_name)
+                bns = handler.get_body_names_unsort(robot_name)
                 robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 
         camera_states = {}
