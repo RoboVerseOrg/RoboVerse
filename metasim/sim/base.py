@@ -160,11 +160,12 @@ class BaseSimHandler:
     ############################################################
     ## Misc
     ############################################################
-    def get_joint_names(self, obj_name: str) -> list[str]:
+    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a specified object in the order of the simulator default joint order. For same object, different simulator may have different joint order, but joint names are the same.
 
         Args:
             obj_name (str): The name of the object.
+            sort (bool): Whether to sort the joint names. Default is True.
 
         Returns:
             list[str]: A list of strings including the joint names. For non-articulation objects, return an empty list.
@@ -184,8 +185,8 @@ class BaseSimHandler:
             self._joint_reindex_cache = {}
 
         if obj_name not in self._joint_reindex_cache:
-            origin_joint_names = self.get_joint_names(obj_name)
-            sorted_joint_names = sorted(origin_joint_names)
+            origin_joint_names = self.get_joint_names(obj_name, sort=False)
+            sorted_joint_names = self.get_joint_names(obj_name, sort=True)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
 
         return self._joint_reindex_cache[obj_name]

@@ -114,7 +114,7 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         self._actions_cache = action
-        joint_names = self.get_joint_names(self.robot.name)
+        joint_names = self.get_joint_names(self.robot.name, sort=False)
         action_env_tensors = torch.zeros((self.num_envs, len(joint_names)), device=self.env.device)
         for env_id in range(self.num_envs):
             action_env = action[env_id]
@@ -264,7 +264,7 @@ class IsaaclabHandler(BaseSimHandler):
                     log.warning(f"No dof_pos found for {obj.name}")
                 else:
                     dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
-                    joint_names = self.get_joint_names(obj.name)
+                    joint_names = self.get_joint_names(obj.name, sort=False)
                     joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.env.device)
                     for i, joint_name in enumerate(joint_names):
                         if joint_name in dof_dict[0]:
@@ -364,9 +364,12 @@ class IsaaclabHandler(BaseSimHandler):
     def simulate(self):
         pass
 
-    def get_joint_names(self, obj_name: str) -> list[str]:
+    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            return self.env.scene.articulations[obj_name].joint_names
+            joint_names = self.env.scene.articulations[obj_name].joint_names
+            if sort:
+                joint_names.sort()
+            return joint_names
         else:
             return []
 

@@ -176,13 +176,16 @@ class GenesisHandler(BaseSimHandler):
                 if obj.fix_base_link:
                     obj_inst.set_qpos(
                         np.array([
-                            [states_flat[env_id][obj.name]["dof_pos"][jn] for jn in self.get_joint_names(obj.name)]
+                            [
+                                states_flat[env_id][obj.name]["dof_pos"][jn]
+                                for jn in self.get_joint_names(obj.name, sort=False)
+                            ]
                             for env_id in env_ids
                         ]),
                         envs_idx=env_ids,
                     )
                 else:
-                    joint_names = self.get_joint_names(obj.name)
+                    joint_names = self.get_joint_names(obj.name, sort=False)
                     qs_idx_local = torch.arange(1, 1 + len(joint_names), dtype=torch.int32, device=gs.device).tolist()
                     obj_inst.set_qpos(
                         np.array([
@@ -195,7 +198,7 @@ class GenesisHandler(BaseSimHandler):
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
         position = [
-            [actions[env_id]["dof_pos_target"][jn] for jn in self.get_joint_names(obj_name)]
+            [actions[env_id]["dof_pos_target"][jn] for jn in self.get_joint_names(obj_name, sort=False)]
             for env_id in range(self.num_envs)
         ]
         if self.object_dict[obj_name].fix_base_link:
@@ -226,14 +229,17 @@ class GenesisHandler(BaseSimHandler):
     def close(self):
         pass
 
-    def get_joint_names(self, obj_name: str) -> list[str]:
+    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
-            return [
+            joint_names = [
                 j.name
                 for j in joints
                 if j.dof_idx_local is not None and j.name != self.object_inst_dict[obj_name].base_joint.name
             ]
+            if sort:
+                joint_names.sort()
+            return joint_names
         else:
             return []
 
