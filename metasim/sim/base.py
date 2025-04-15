@@ -180,7 +180,7 @@ class BaseSimHandler:
 
         return self._joint_reindex_cache[obj_name]
 
-    def get_body_names_unsort(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str) -> list[str]:
         """Get the body names for a specified object in the order of the simulator default body order. For same object, different simulator may have different body order, but body names are the same.
 
         Args:
@@ -191,59 +191,20 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
-    def get_body_names_sort(self, obj_name: str) -> list[str]:
-        """
-        Get the sorted body names for a given object.
-
-        Args:
-            obj_name (str): The name of the object.
-
-        Returns:
-            list[str]: Sorted body names, shape (num_bodies,).
-
-        Only returns the body names for ArticulationObjCfg objects. The names are not sorted and exclude the root body (empty name after '/').
-
-        Example:
-
-            Suppose `obj_name = "robot1"`, and the model has bodies:
-
-            `["robot1/", "robot1/torso", "robot1/left_leg", "robot1/right_leg", "cube1/", "cube2/"]`
-
-            This function will return: `["left_leg", "right_leg", "torso"]`
-        """
-        if not hasattr(self, "_body_names_sort_cache"):
-            self._body_names_sort_cache = {}
-
-        if obj_name not in self._body_names_sort_cache:
-            self._body_names_sort_cache[obj_name] = sorted(self.get_body_names_unsort(obj_name))
-
-        return self._body_names_sort_cache[obj_name]
-
-    def get_body_indices_sort_local(self, obj_name: str) -> list[int]:
-        """At which index in the unsorted list of body names does the sorted body name appear. Local means other objects' bodies are not considered, just like in the following example, `robot1/`, `cube1/` and `cube2/` are not considered in the indices.
+    def get_body_reindex(self, obj_name: str) -> list[int]:
+        """Get the reindex of the body names for a specified object. After reindexing, the body order is alphabetical. For same object, different simulator may have different body order, thus have different reindex.
 
         Args:
             obj_name (str): The name of the object.
 
         Returns:
             list[int]: A list of integers including the reindex of the body names.
-
-        Example:
-            Suppose `obj_name = "robot1"`, and the model has bodies (format of `MuJoCo`):
-
-            `["robot1/", "robot1/torso", "robot1/left_leg", "robot1/right_leg", "cube1/", "cube2/"]`
-
-            The unsorted body names are: `["torso", "left_leg", "right_leg"]`
-
-            The sorted body names are: `["left_leg", "right_leg", "torso"]`
-
-            This function will return: `[1, 2, 0]`
         """
         if not hasattr(self, "_body_reindex_cache"):
             self._body_reindex_cache = {}
 
         if obj_name not in self._body_reindex_cache:
-            origin_body_names = self.get_body_names_unsort(obj_name)
+            origin_body_names = self.get_body_names(obj_name)
             sorted_body_names = sorted(origin_body_names)
             self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
 

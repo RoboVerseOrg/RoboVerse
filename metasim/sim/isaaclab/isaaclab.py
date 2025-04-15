@@ -292,9 +292,10 @@ class IsaaclabHandler(BaseSimHandler):
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.env.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
-                body_reindex = self.get_body_indices_sort_local(obj.name)
+                body_reindex = self.get_body_reindex(obj.name)
                 state = ObjectState(
                     root_state=obj_inst.data.root_state_w,
+                    body_names=sorted(self.get_body_names(obj.name)),
                     body_state=obj_inst.data.body_state_w[:, body_reindex],
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -311,10 +312,10 @@ class IsaaclabHandler(BaseSimHandler):
             ## TODO: dof_pos_target, dof_vel_target, dof_torque
             obj_inst = self.env.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
-            body_reindex = self.get_body_indices_sort_local(obj.name)
+            body_reindex = self.get_body_reindex(obj.name)
             state = RobotState(
                 root_state=obj_inst.data.root_state_w,
-                body_names=self.get_body_names_sort(obj.name),
+                body_names=sorted(self.get_body_names(obj.name)),
                 body_state=obj_inst.data.body_state_w[:, body_reindex],
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -369,7 +370,7 @@ class IsaaclabHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names_unsort(self, obj_name: str) -> list[str]:
+    def get_body_names(self, obj_name: str) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             return self.env.scene.articulations[obj_name].body_names
         else:
