@@ -98,7 +98,7 @@ class GenesisHandler(BaseSimHandler):
         for obj in self.objects:
             obj_inst = self.object_inst_dict[obj.name]
             if isinstance(obj, ArticulationObjCfg):
-                joint_reindex = self.get_object_joint_reindex(obj.name)
+                joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=torch.cat(
                         [
@@ -130,7 +130,7 @@ class GenesisHandler(BaseSimHandler):
         robot_states = {}
         for obj in [self.robot]:
             obj_inst = self.object_inst_dict[obj.name]
-            joint_reindex = self.get_object_joint_reindex(obj.name)
+            joint_reindex = self.get_joint_reindex(obj.name)
             state = RobotState(
                 root_state=torch.cat(
                     [

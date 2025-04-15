@@ -321,7 +321,7 @@ class SinglePybulletHandler(BaseSimHandler):
             ang_vel = torch.zeros_like(pos)  # TODO
             root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
-                joint_reindex = self.get_object_joint_reindex(obj.name)
+                joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
                     body_state=None,  # TODO
@@ -334,7 +334,7 @@ class SinglePybulletHandler(BaseSimHandler):
 
         robot_states = {}
         for robot in [self.robot]:
-            joint_reindex = self.get_object_joint_reindex(robot.name)
+            joint_reindex = self.get_joint_reindex(robot.name)
             obj_id = self.object_ids[robot.name]
             pos, rot = p.getBasePositionAndOrientation(obj_id)
             pos = torch.tensor(pos, dtype=torch.float32)

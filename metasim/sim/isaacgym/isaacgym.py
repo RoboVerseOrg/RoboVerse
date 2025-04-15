@@ -417,7 +417,7 @@ class IsaacgymHandler(BaseSimHandler):
         object_states = {}
         for obj_id, obj in enumerate(self.objects):
             if isinstance(obj, ArticulationObjCfg):
-                joint_reindex = self.get_object_joint_reindex(obj.name)
+                joint_reindex = self.get_joint_reindex(obj.name)
                 body_ids_reindex = [
                     self._body_info[obj.name]["global_indices"][bn] for bn in sorted(self.get_body_names(obj.name))
                 ]
@@ -435,7 +435,7 @@ class IsaacgymHandler(BaseSimHandler):
 
         robot_states = {}
         for obj_id, robot in enumerate([self.robot]):
-            joint_reindex = self.get_object_joint_reindex(robot.name)
+            joint_reindex = self.get_joint_reindex(robot.name)
             body_ids_reindex = [
                 self._body_info[robot.name]["global_indices"][bn] for bn in sorted(self.get_body_names(robot.name))
             ]

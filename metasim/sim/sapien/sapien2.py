@@ -358,7 +358,7 @@ class SingleSapienHandler(BaseSimHandler):
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.Articulation)
-                joint_reindex = self.get_object_joint_reindex(obj.name)
+                joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
                     body_state=None,  # TODO
@@ -379,7 +379,7 @@ class SingleSapienHandler(BaseSimHandler):
             vel = torch.zeros_like(pos)  # TODO
             ang_vel = torch.zeros_like(pos)  # TODO
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
-            joint_reindex = self.get_object_joint_reindex(robot.name)
+            joint_reindex = self.get_joint_reindex(robot.name)
             state = RobotState(
                 root_state=root_state,
                 body_state=None,  # TODO

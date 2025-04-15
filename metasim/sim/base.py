@@ -160,7 +160,7 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
-    def get_object_joint_reindex(self, obj_name: str) -> list[int]:
+    def get_joint_reindex(self, obj_name: str) -> list[int]:
         """Get the reindex of the joint names for a specified object. After reindexing, the joint order is alphabetical. For same object, different simulator may have different joint order, thus have different reindex.
 
         Args:

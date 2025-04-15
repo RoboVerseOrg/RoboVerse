@@ -291,7 +291,7 @@ class IsaaclabHandler(BaseSimHandler):
         for obj in self.objects:
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.env.scene.articulations[obj.name]
-                joint_reindex = self.get_object_joint_reindex(obj.name)
+                joint_reindex = self.get_joint_reindex(obj.name)
                 body_reindex = self.get_body_reindex(obj.name)
                 state = ObjectState(
                     root_state=obj_inst.data.root_state_w,
@@ -310,7 +310,7 @@ class IsaaclabHandler(BaseSimHandler):
         for obj in [self.robot]:
             ## TODO: dof_pos_target, dof_vel_target, dof_torque
             obj_inst = self.env.scene.articulations[obj.name]
-            joint_reindex = self.get_object_joint_reindex(obj.name)
+            joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)
             state = RobotState(
                 root_state=obj_inst.data.root_state_w,
