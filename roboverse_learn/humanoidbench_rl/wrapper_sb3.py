@@ -11,7 +11,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
-from metasim.utils.state import tensor_state_to_env_states
+from metasim.utils.state import state_tensor_to_nested
 
 
 class Sb3EnvWrapper(VecEnv):
@@ -206,13 +206,13 @@ class Sb3EnvWrapper(VecEnv):
         return observations, rewards, dones, infos
 
     def get_humanoid_observation(self, states) -> torch.Tensor:
-        states = tensor_state_to_env_states(self.env.handler, states)
+        states = state_tensor_to_nested(self.env.handler, states)
         gym_observation = self.env.handler.task.humanoid_obs_flatten_func(states)
         return gym_observation
 
     def get_humanoid_reward(self, states):
         # NOTE: For IsaacLab, metasim_reward is None, so calculate reward here
-        states = tensor_state_to_env_states(self.env.handler, states)
+        states = state_tensor_to_nested(self.env.handler, states)
         final_reward = torch.zeros(self.num_envs)
         for reward_func, reward_weight in zip(
             self.env.handler.task.reward_functions, self.env.handler.task.reward_weights

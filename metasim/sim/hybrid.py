@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.types import Action, EnvState, Extra, Reward, Success, TimeOut
-from metasim.utils.state import TensorState, tensor_state_to_env_states
+from metasim.utils.state import TensorState, state_tensor_to_nested
 
 
 class HybridSimEnv(EnvWrapper[BaseSimHandler]):
@@ -17,7 +17,7 @@ class HybridSimEnv(EnvWrapper[BaseSimHandler]):
     def step(self, action: list[Action]) -> tuple[TensorState, Reward, Success, TimeOut, Extra]:
         obs, reward, success, time_out, extra = self.sim_env1.step(action)
         states = self.sim_env1.handler.get_states()
-        states_nested = tensor_state_to_env_states(self.sim_env1.handler, obs)
+        states_nested = state_tensor_to_nested(self.sim_env1.handler, obs)
         self.sim_env2.handler.set_states(states_nested)
         self.sim_env2.handler.refresh_render()
         states = self.sim_env2.handler.get_states()
