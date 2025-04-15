@@ -418,9 +418,13 @@ class IsaacgymHandler(BaseSimHandler):
         for obj_id, obj in enumerate(self.objects):
             if isinstance(obj, ArticulationObjCfg):
                 joint_reindex = self.get_object_joint_reindex(obj.name)
+                body_ids_reindex = [
+                    self._body_info[obj.name]["global_indices"][bn]
+                    for bn in sorted(self.get_object_body_names(obj.name))
+                ]
                 state = ObjectState(
                     root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
-                    body_state=None,  # TODO
+                    body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 )
@@ -433,9 +437,13 @@ class IsaacgymHandler(BaseSimHandler):
         robot_states = {}
         for obj_id, robot in enumerate([self.robot]):
             joint_reindex = self.get_object_joint_reindex(robot.name)
+            body_ids_reindex = [
+                self._body_info[robot.name]["global_indices"][bn]
+                for bn in sorted(self.get_object_body_names(robot.name))
+            ]
             state = RobotState(
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
-                body_state=None,  # TODO
+                body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
@@ -681,6 +689,12 @@ class IsaacgymHandler(BaseSimHandler):
     def get_object_joint_names(self, obj: BaseObjCfg) -> list[str]:
         if isinstance(obj, ArticulationObjCfg):
             return list(self._joint_info[obj.name]["global_indices"].keys())
+        else:
+            return []
+
+    def get_object_body_names(self, obj_name: str) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            return self._body_info[obj_name]["name"]
         else:
             return []
 
