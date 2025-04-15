@@ -436,7 +436,7 @@ class SingleSapienHandler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
-    def get_object_joint_names(self, obj_name: str) -> list[str]:
+    def get_joint_names(self, obj_name: str) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             return self.object_joint_order[obj_name]
         else:

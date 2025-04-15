@@ -160,7 +160,7 @@ class BaseSimHandler:
     ############################################################
     ## Misc
     ############################################################
-    def get_object_joint_names(self, obj_name: str) -> list[str]:
+    def get_joint_names(self, obj_name: str) -> list[str]:
         """Get the joint names for a specified object in the order of the simulator default joint order. For same object, different simulator may have different joint order, but joint names are the same.
 
         Args:
@@ -184,7 +184,7 @@ class BaseSimHandler:
             self._joint_reindex_cache = {}
 
         if obj_name not in self._joint_reindex_cache:
-            origin_joint_names = self.get_object_joint_names(obj_name)
+            origin_joint_names = self.get_joint_names(obj_name)
             sorted_joint_names = sorted(origin_joint_names)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
 

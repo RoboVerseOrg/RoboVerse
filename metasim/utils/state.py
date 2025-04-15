@@ -117,15 +117,15 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 bns = handler.get_body_names(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
-                jns = handler.get_object_joint_names(obj_name)
+                jns = handler.get_joint_names(obj_name)
                 object_states[obj_name]["dof_pos"] = _dof_tensor_to_dict(obj_state.joint_pos[env_id], jns)
             if obj_state.joint_vel is not None:
-                jns = handler.get_object_joint_names(obj_name)
+                jns = handler.get_joint_names(obj_name)
                 object_states[obj_name]["dof_vel"] = _dof_tensor_to_dict(obj_state.joint_vel[env_id], jns)
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
-            jns = handler.get_object_joint_names(robot_name)
+            jns = handler.get_joint_names(robot_name)
             robot_states[robot_name] = {
                 "pos": robot_state.root_state[env_id, :3].cpu(),
                 "rot": robot_state.root_state[env_id, 3:7].cpu(),
