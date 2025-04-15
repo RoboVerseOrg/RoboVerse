@@ -449,12 +449,14 @@ class IsaacgymHandler(BaseSimHandler):
             robot_states[robot.name] = state
 
         camera_states = {}
+        self.gym.start_access_image_tensors(self.sim)
         for cam_id, cam in enumerate(self.cameras):
             state = CameraState(
                 rgb=torch.stack([self._rgb_tensors[env_id][cam_id][..., :3] for env_id in env_ids]),
                 depth=torch.stack([self._depth_tensors[env_id][cam_id] for env_id in env_ids]),
             )
             camera_states[cam.name] = state
+        self.gym.end_access_image_tensors(self.sim)
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
