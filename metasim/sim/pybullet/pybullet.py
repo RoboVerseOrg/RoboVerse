@@ -315,6 +315,7 @@ class SinglePybulletHandler(BaseSimHandler):
         for obj in self.objects:
             obj_id = self.object_ids[obj.name]
             pos, rot = p.getBasePositionAndOrientation(obj_id)
+            rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
             lin_vel = torch.zeros_like(pos)  # TODO
@@ -338,6 +339,7 @@ class SinglePybulletHandler(BaseSimHandler):
             joint_reindex = self.get_joint_reindex(robot.name)
             obj_id = self.object_ids[robot.name]
             pos, rot = p.getBasePositionAndOrientation(obj_id)
+            rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
             lin_vel = torch.zeros_like(pos)  # TODO
