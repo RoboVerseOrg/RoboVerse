@@ -2,18 +2,38 @@
 
 import torch
 
+from metasim.utils.math import matrix_from_quat
+
 
 def torso_upright(envstate, robot_name: str):
-    """Returns projection from z-axes of torso to the z-axes of world."""
-    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["body"]["pelvis"]["rot"])
-    return xmat[2, 2]
+    """Returns the projection of the torso's z-axis onto the world's z-axis.
+
+    Args:
+        envstate (dict): Environment state dictionary.
+        robot_name (str): Name of the robot.
+
+    Returns:
+        float: The projection value, shape=(1,)
+    """
+    quat = envstate["robots"][robot_name]["body"]["pelvis"]["rot"]  # (4,)
+    xmat = matrix_from_quat(torch.tensor(quat).unsqueeze(0))[0]  # (3, 3)
+    return xmat[2, 2].item()
 
 
 def torso_upright_tensor(envstate, robot_name: str):
-    """Returns projection from z-axes of torso to the z-axes of world."""
+    """Returns the projection of the torso's z-axis onto the world's z-axis for a batch of environments.
+
+    Args:
+        envstate: Environment state object with batched robot states.
+        robot_name (str): Name of the robot.
+
+    Returns:
+        torch.Tensor: Projection values, shape=(batch_size,)
+    """
     robot_body_name = envstate.robots[robot_name].body_names
     body_id = robot_body_name.index("pelvis")
-    xmat = quaternion_to_matrix_tensor(envstate.robots[robot_name].body_state[:, body_id, 3:7])
+    quat = envstate.robots[robot_name].body_state[:, body_id, 3:7]  # (batch_size, 4)
+    xmat = matrix_from_quat(quat)  # (batch_size, 3, 3)
     return xmat[:, 2, 2]
 
 
@@ -81,8 +101,17 @@ def robot_rotation(envstate, robot_name: str):
 
 
 def torso_vertical_orientation(envstate, robot_name: str):
-    """Returns the z-projection of the torso orientation matrix."""
-    xmat = quaternion_to_matrix(envstate["robots"][robot_name]["body"]["pelvis"]["rot"])
+    """Returns the z-projection of the torso orientation matrix.
+
+    Args:
+        envstate: Environment state object with batched robot states.
+        robot_name (str): Name of the robot.
+
+    Returns:
+        torch.Tensor: z-axis projection, shape=(batch_size,)
+    """
+    quat = envstate["robots"][robot_name]["body"]["pelvis"]["rot"]  # (4,)
+    xmat = matrix_from_quat(torch.tensor(quat).unsqueeze(0))[0]  # (3, 3)
     return xmat[2, :]
 
 
@@ -138,61 +167,3 @@ def right_hand_orientation(envstate, robot_name: str):
     """Returns the orientation of the right hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}right_hand"]["rot"] # Only for mujoco
     return envstate["robots"][robot_name]["body"]["right_elbow_link"]["rot"]
-
-
-#######################################################
-## Helper functions
-#######################################################
-
-
-def quaternion_to_matrix(quat: torch.Tensor):
-    """Converts a quaternion to a rotation matrix."""
-    q_w, q_x, q_y, q_z = quat
-    R = torch.tensor(
-        [
-            [1 - 2 * (q_y**2 + q_z**2), 2 * (q_x * q_y - q_w * q_z), 2 * (q_x * q_z + q_w * q_y)],
-            [2 * (q_x * q_y + q_w * q_z), 1 - 2 * (q_x**2 + q_z**2), 2 * (q_y * q_z - q_w * q_x)],
-            [2 * (q_x * q_z - q_w * q_y), 2 * (q_y * q_z + q_w * q_x), 1 - 2 * (q_x**2 + q_y**2)],
-        ],
-        dtype=quat.dtype,
-    )
-    return R
-
-
-def quaternion_to_matrix_tensor(quat: torch.Tensor) -> torch.Tensor:
-    """Converts a batch of quaternions to rotation matrices.
-
-    Args:
-        quat: Quaternion tensor of shape (..., 4) where last dim is (w,x,y,z)
-
-    Returns:
-        Rotation matrix tensor of shape (..., 3, 3)
-    """
-    # Split quaternion components along last dimension
-    q_w = quat[..., 0]
-    q_x = quat[..., 1]
-    q_y = quat[..., 2]
-    q_z = quat[..., 3]
-
-    # Compute common terms
-    qx2 = q_x**2
-    qy2 = q_y**2
-    qz2 = q_z**2
-    qxqy = q_x * q_y
-    qxqz = q_x * q_z
-    qyqz = q_y * q_z
-    qwqx = q_w * q_x
-    qwqy = q_w * q_y
-    qwqz = q_w * q_z
-
-    # Build rotation matrix
-    R = torch.stack(
-        [
-            torch.stack([1 - 2 * (qy2 + qz2), 2 * (qxqy - qwqz), 2 * (qxqz + qwqy)], dim=-1),
-            torch.stack([2 * (qxqy + qwqz), 1 - 2 * (qx2 + qz2), 2 * (qyqz - qwqx)], dim=-1),
-            torch.stack([2 * (qxqz - qwqy), 2 * (qyqz + qwqx), 1 - 2 * (qx2 + qy2)], dim=-1),
-        ],
-        dim=-2,
-    )
-
-    return R
