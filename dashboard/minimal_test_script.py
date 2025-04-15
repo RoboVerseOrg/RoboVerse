@@ -13,7 +13,7 @@ import tyro
 from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
-from metasim.types import EnvState
+from metasim.utils.state import TensorState
 
 
 @dataclass
@@ -28,23 +28,19 @@ class Args:
 args = tyro.cli(Args)
 
 
-def save_obs(states: list[EnvState], filepath: str):
+def save_obs(state: TensorState, filepath: str):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     from torchvision.utils import make_grid, save_image
 
     try:
-        rgb_data = next(iter(states[0]["cameras"].values()))["rgb"]
+        rgb_data = next(iter(state.cameras.values())).rgb
+        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
     except Exception as e:
-        log.error(f"{e=}")
+        log.error(f"Error adding observation: {e}")
         return
 
-    if rgb_data.shape != (256, 256, 3):
-        log.error(f"{type(rgb_data)=}")
-        log.error(f"{rgb_data.shape=}")
-        return
-    rgb_data = rgb_data.unsqueeze(0)
-    image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    log.info(f"Saving image to {filepath}")
     save_image(image, filepath)
 
 
