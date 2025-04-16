@@ -7,8 +7,8 @@ Currently using Pybullet 3.2.6
 
 from __future__ import annotations
 
-import copy
 import math
+from copy import deepcopy
 
 import numpy as np
 import pybullet as p
@@ -384,7 +384,7 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = copy.deepcopy(self.object_joint_order[obj_name])
+            joint_names = deepcopy(self.object_joint_order[obj_name])
             if sort:
                 joint_names.sort()
             return joint_names
