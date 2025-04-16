@@ -7,6 +7,7 @@ Currently using Sapien 2.2
 
 from __future__ import annotations
 
+import copy
 import math
 
 import numpy as np
@@ -16,19 +17,16 @@ import torch
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
-from metasim.cfg.objects import (
-    ArticulationObjCfg,
-    NonConvexRigidObjCfg,
-    PrimitiveCubeCfg,
-    PrimitiveSphereCfg,
-    RigidObjCfg,
-)
+from metasim.cfg.objects import (ArticulationObjCfg, NonConvexRigidObjCfg,
+                                 PrimitiveCubeCfg, PrimitiveSphereCfg,
+                                 RigidObjCfg)
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import EnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import (CameraState, ObjectState, RobotState,
+                                 TensorState)
 
 
 class SingleSapienHandler(BaseSimHandler):
@@ -287,6 +285,8 @@ class SingleSapienHandler(BaseSimHandler):
         self.debug_lines = []
 
         self.scene.update_render()
+        if not self.headless:
+            self.viewer.render()    # Sapien feature: viewer need to be rendered to allow cameras to create buffer
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
@@ -438,7 +438,7 @@ class SingleSapienHandler(BaseSimHandler):
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = self.object_joint_order[obj_name]
+            joint_names = copy.deepcopy(self.object_joint_order[obj_name])
             if sort:
                 joint_names.sort()
             return joint_names
