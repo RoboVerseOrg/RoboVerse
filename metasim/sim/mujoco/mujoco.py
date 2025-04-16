@@ -439,6 +439,27 @@ class MujocoHandler(BaseSimHandler):
             return []
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
+        """
+        Get the reindexed body ids for a given object. Reindex means the body reordered by the returned ids will be sorted by their names alphabetically.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: body ids in the order that making body names sorted alphabetically, length is number of bodies.
+
+        Example:
+            Suppose `obj_name = "h1"`, and the model has bodies:
+
+            id 0: `"h1/"`
+            id 1: `"h1/torso"`
+            id 2: `"h1/left_leg"`
+            id 3: `"h1/right_leg"`
+            id 4: `"cube1/"`
+            id 5: `"cube2/"`
+
+            This function will return: `[2, 3, 1]`
+        """
         assert isinstance(self.object_dict[obj_name], ArticulationObjCfg)
         if not hasattr(self, "_body_ids_reindex_cache"):
             self._body_ids_reindex_cache = {}

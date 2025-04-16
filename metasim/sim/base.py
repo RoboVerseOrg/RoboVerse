@@ -161,25 +161,39 @@ class BaseSimHandler:
     ## Misc
     ############################################################
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the joint names for a specified object in the order of the simulator default joint order. For same object, different simulator may have different joint order, but joint names are the same.
+        """Get the joint names for a given object.
+
+        Note:
+            Different simulators may have different joint order, but joint names should be the same.
 
         Args:
             obj_name (str): The name of the object.
-            sort (bool): Whether to sort the joint names. Default is True.
+            sort (bool): Whether to sort the joint names. Default is True. If True, the joint names are returned in alphabetical order. If False, the joint names are returned in the order defined by the simulator.
 
         Returns:
-            list[str]: A list of strings including the joint names. For non-articulation objects, return an empty list.
+            list[str]: A list of joint names. For non-articulation objects, return an empty list.
         """
         raise NotImplementedError
 
     def get_joint_reindex(self, obj_name: str) -> list[int]:
-        """Get the reindex of the joint names for a specified object. After reindexing, the joint order is alphabetical. For same object, different simulator may have different joint order, thus have different reindex.
+        """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
 
         Args:
             obj_name (str): The name of the object.
 
         Returns:
-            list[int]: A list of integers including the reindex of the joint names.
+            list[int]: A list of joint indices that specifies the order to sort the joints alphabetically by their names.
+               The length of the list matches the number of joints.
+
+        Example:
+            Suppose `obj_name = "h1"`, and the `h1` has joints:
+
+            index 0: `"hip"`
+            index 1: `"knee"`
+            index 2: `"ankle"`
+
+            This function will return: `[2, 0, 1]`, which corresponds to the alphabetical order:
+                `"ankle"`, `"hip"`, `"knee"`.
         """
         if not hasattr(self, "_joint_reindex_cache"):
             self._joint_reindex_cache = {}
@@ -192,25 +206,39 @@ class BaseSimHandler:
         return self._joint_reindex_cache[obj_name]
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the body names for a specified object in the order of the simulator default body order. For same object, different simulator may have different body order, but body names are the same.
+        """Get the body names for a given object.
+
+        Note:
+            Different simulators may have different body order, but body names should be the same.
 
         Args:
             obj_name (str): The name of the object.
-            sort (bool): Whether to sort the body names. Default is True.
+            sort (bool): Whether to sort the body names. Default is True. If True, the body names are returned in alphabetical order. If False, the body names are returned in the order defined by the simulator.
 
         Returns:
-            list[str]: A list of strings including the body names. For non-articulation objects, return an empty list.
+            list[str]: A list of body names. For non-articulation objects, return an empty list.
         """
         raise NotImplementedError
 
     def get_body_reindex(self, obj_name: str) -> list[int]:
-        """Get the reindex of the body names for a specified object. After reindexing, the body order is alphabetical. For same object, different simulator may have different body order, thus have different reindex.
+        """Get the reindexing order for body indices of a given object. The returned indices can be used to reorder the bodies such that they are sorted alphabetically by their names.
 
         Args:
             obj_name (str): The name of the object.
 
         Returns:
-            list[int]: A list of integers including the reindex of the body names.
+            list[int]: A list of body indices that specifies the order to sort the bodies alphabetically by their names.
+               The length of the list matches the number of bodies.
+
+        Example:
+            Suppose `obj_name = "h1"`, and the `h1` has the following bodies:
+
+            index 0: `"torso"`
+            index 1: `"left_leg"`
+            index 2: `"right_leg"`
+
+            This function will return: `[1, 2, 0]`, which corresponds to the alphabetical order:
+                `"left_leg"`, `"right_leg"`, `"torso"`.
         """
         if not hasattr(self, "_body_reindex_cache"):
             self._body_reindex_cache = {}
