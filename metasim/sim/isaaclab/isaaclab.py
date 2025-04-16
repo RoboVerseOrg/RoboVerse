@@ -1,5 +1,6 @@
 import argparse
 import time
+from copy import deepcopy
 from typing import Type
 
 import gymnasium as gym
@@ -366,7 +367,7 @@ class IsaaclabHandler(BaseSimHandler):
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = self.env.scene.articulations[obj_name].joint_names
+            joint_names = deepcopy(self.env.scene.articulations[obj_name].joint_names)
             if sort:
                 joint_names.sort()
             return joint_names
@@ -375,7 +376,7 @@ class IsaaclabHandler(BaseSimHandler):
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            body_names = self.env.scene.articulations[obj_name].body_names
+            body_names = deepcopy(self.env.scene.articulations[obj_name].body_names)
             if sort:
                 body_names.sort()
             return body_names

@@ -8,6 +8,7 @@ Currently using Sapien 2.2
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 
 import numpy as np
 import sapien
@@ -469,7 +470,7 @@ class SingleSapien3Handler(BaseSimHandler):
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = self.object_joint_order[obj_name]
+            joint_names = deepcopy(self.object_joint_order[obj_name])
             if sort:
                 joint_names.sort()
             return joint_names
