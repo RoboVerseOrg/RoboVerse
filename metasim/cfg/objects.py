@@ -93,20 +93,16 @@ class ArticulationObjCfg(BaseObjCfg):
 # Primitive object are all rigid objects
 @configclass
 class PrimitiveCubeCfg(RigidObjCfg):
-    """Primitive cube object cfg.
-
-    This class specifies configuration parameters of a primitive cube.
-
-    Attributes:
-        mass: Mass of the object, in kg, default is 0.1
-        color: Color of the object in RGB
-        size: Size of the object, extent in m
-    """
+    """Primitive cube object cfg."""
 
     mass: float = 0.1
+    """Mass of the object (in kg), default is 0.1 kg"""
     color: list[float] = MISSING
+    """Color of the object in RGB"""
     size: list[float] = MISSING
+    """Size of the object (in m)"""
     physics: PhysicStateType = MISSING
+    """Physics state of the object"""
     mjcf_path: str | None = None  # TODO: remove this field
 
     @property

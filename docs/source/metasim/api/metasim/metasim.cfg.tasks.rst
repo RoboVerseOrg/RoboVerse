@@ -7,22 +7,22 @@
 
    .. autosummary::
 
-      BaseTaskMetaCfg
+      BaseTaskCfg
 
 
    .. rubric:: ManiSkill Tasks
 
    .. autosummary::
 
-        maniskill.PickCubeMetaCfg
-        maniskill.PickSingleYcbCrackerBoxMetaCfg
-        maniskill.StackCubeMetaCfg
+        maniskill.PickCubeCfg
+        maniskill.PickSingleYcbCrackerBoxCfg
+        maniskill.StackCubeCfg
 
    .. rubric:: RLBench Tasks
 
    .. autosummary::
 
-        rlbench.BasketballInHoopMetaCfg
+        rlbench.BasketballInHoopCfg
 
 
 
@@ -31,31 +31,31 @@
 
    .. autosummary::
 
-        humanoidbench.BalanceMetaCfg
-        humanoidbench.CrawlMetaCfg
-        humanoidbench.HurdleMetaCfg
-        humanoidbench.MazeMetaCfg
-        humanoidbench.PoleMetaCfg
-        humanoidbench.PushMetaCfg
-        humanoidbench.RunMetaCfg
-        humanoidbench.SitMetaCfg
-        humanoidbench.SlideMetaCfg
-        humanoidbench.StairMetaCfg
-        humanoidbench.StandMetaCfg
-        humanoidbench.WalkMetaCfg
+        humanoidbench.BalanceCfg
+        humanoidbench.CrawlCfg
+        humanoidbench.HurdleCfg
+        humanoidbench.MazeCfg
+        humanoidbench.PoleCfg
+        humanoidbench.PushCfg
+        humanoidbench.RunCfg
+        humanoidbench.SitCfg
+        humanoidbench.SlideCfg
+        humanoidbench.StairCfg
+        humanoidbench.StandCfg
+        humanoidbench.WalkCfg
 
 
    .. rubric:: LIBERO Tasks
 
    .. autosummary::
 
-        libero.LiberoPickAlphabetSoupMetaCfg
-        libero.LiberoPickBbqSauceMetaCfg
-        libero.LiberoPickButterMetaCfg
-        libero.LiberoPickChocolatePuddingMetaCfg
-        libero.LiberoPickCreamCheeseMetaCfg
-        libero.LiberoPickKetchupMetaCfg
-        libero.LiberoPickMilkMetaCfg
-        libero.LiberoPickOrangeJuiceMetaCfg
-        libero.LiberoPickSaladDressingMetaCfg
-        libero.LiberoPickTomatoSauceMetaCfg
+        libero.LiberoPickAlphabetSoupCfg
+        libero.LiberoPickBbqSauceCfg
+        libero.LiberoPickButterCfg
+        libero.LiberoPickChocolatePuddingCfg
+        libero.LiberoPickCreamCheeseCfg
+        libero.LiberoPickKetchupCfg
+        libero.LiberoPickMilkCfg
+        libero.LiberoPickOrangeJuiceCfg
+        libero.LiberoPickSaladDressingCfg
+        libero.LiberoPickTomatoSauceCfg

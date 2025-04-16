@@ -29,5 +29,3 @@ You will get the following images:
 | Ray Tracing | Path Tracing |
 |:---:|:---:|
 | ![Ray Tracing](../../../_static/standard_output/6_advanced_rendering_isaaclab_raytracing.png) | ![Path Tracing](../../../_static/standard_output/6_advanced_rendering_isaaclab_pathtracing.png) |
-
----

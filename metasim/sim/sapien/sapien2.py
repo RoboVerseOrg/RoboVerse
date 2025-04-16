@@ -450,5 +450,6 @@ class SingleSapienHandler(BaseSimHandler):
 
 
 SapienHandler = ParallelSimWrapper(SingleSapienHandler)
+"""SAPIEN2 Handler"""
 
 SapienEnv: type[EnvWrapper[SapienHandler]] = GymEnvWrapper(SapienHandler)  # type: ignore

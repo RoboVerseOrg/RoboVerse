@@ -186,14 +186,16 @@ class BaseSimHandler:
                The length of the list matches the number of joints.
 
         Example:
-            Suppose `obj_name = "h1"`, and the `h1` has joints:
+            Suppose ``obj_name = "h1"``, and the ``h1`` has joints:
 
-            index 0: `"hip"`
-            index 1: `"knee"`
-            index 2: `"ankle"`
+            index 0: ``"hip"``
 
-            This function will return: `[2, 0, 1]`, which corresponds to the alphabetical order:
-                `"ankle"`, `"hip"`, `"knee"`.
+            index 1: ``"knee"``
+
+            index 2: ``"ankle"``
+
+            This function will return: ``[2, 0, 1]``, which corresponds to the alphabetical order:
+                ``"ankle"``, ``"hip"``, ``"knee"``.
         """
         if not hasattr(self, "_joint_reindex_cache"):
             self._joint_reindex_cache = {}
@@ -231,14 +233,14 @@ class BaseSimHandler:
                The length of the list matches the number of bodies.
 
         Example:
-            Suppose `obj_name = "h1"`, and the `h1` has the following bodies:
+            Suppose ``obj_name = "h1"``, and the ``h1`` has the following bodies:
 
-            index 0: `"torso"`
-            index 1: `"left_leg"`
-            index 2: `"right_leg"`
+                - index 0: ``"torso"``
+                - index 1: ``"left_leg"``
+                - index 2: ``"right_leg"``
 
-            This function will return: `[1, 2, 0]`, which corresponds to the alphabetical order:
-                `"left_leg"`, `"right_leg"`, `"torso"`.
+            This function will return: ``[1, 2, 0]``, which corresponds to the alphabetical order:
+                ``"left_leg"``, ``"right_leg"``, ``"torso"``.
         """
         if not hasattr(self, "_body_reindex_cache"):
             self._body_reindex_cache = {}

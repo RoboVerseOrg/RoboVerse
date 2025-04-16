@@ -114,8 +114,6 @@ autosummary_generate_overwrite = False  # do not overwrite existing rst files
 ########################################################
 
 autodoc_mock_imports = [
-    ## MetaSim, TODO: Be very careful because this could break the docstring parsing
-    "metasim.sim",
     ## IsaacLab
     "matplotlib",
     "scipy",
@@ -166,6 +164,7 @@ autodoc_mock_imports = [
     "trimesh",
     "toml",
     ## Mujoco
+    "mujoco",
     "mujoco_viewer",
     "dm_control",
     ## IsaacGym
