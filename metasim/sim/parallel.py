@@ -76,8 +76,8 @@ def _worker(
             elif cmd == "get_reward":
                 reward = env.get_reward()
                 remote.send(reward)
-            elif cmd == "get_object_joint_names":
-                names = env.get_object_joint_names(data[0])
+            elif cmd == "get_joint_names":
+                names = env.get_joint_names(data[0])
                 remote.send(names)
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized
@@ -303,8 +303,8 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def get_reward(self):
             log.error("get_reward not supported in parallel mode")
 
-        def get_object_joint_names(self, obj_name: str) -> list[str]:
-            self.remotes[0].send(("get_object_joint_names", (obj_name,)))
+        def get_joint_names(self, obj_name: str) -> list[str]:
+            self.remotes[0].send(("get_joint_names", (obj_name,)))
             names = self.remotes[0].recv()
             return names[0]
 

@@ -97,7 +97,7 @@ Document methods and functions (including properties) with a clear description o
 ```python
 class BaseSimHandler
     # ...
-    def get_object_joint_names(self, object: ArticulationObjMetaCfg) -> list[str]:
+    def get_joint_names(self, object: ArticulationObjMetaCfg) -> list[str]:
         """Get the joint names for a specified articulated object.
 
         Args:
