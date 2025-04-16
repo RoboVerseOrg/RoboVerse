@@ -1,6 +1,6 @@
 
 
-# GSNet
+# GSNet Installation
 
 ## Installation
 
