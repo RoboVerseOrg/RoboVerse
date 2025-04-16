@@ -249,7 +249,7 @@ class MujocoHandler(BaseSimHandler):
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = self.get_joint_names(robot.name, sort=True)
-            actuator_reindex = self.get_actuator_reindex(robot.name)
+            actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
             state = RobotState(
                 body_names=self.get_body_names(robot.name),
@@ -410,21 +410,20 @@ class MujocoHandler(BaseSimHandler):
         else:
             return []
 
-    def get_actuator_names(self, robot_name: str) -> list[str]:
-        if isinstance(self.object_dict[robot_name], BaseRobotCfg):
-            actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
-            actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
-            actuator_names = [name for name in actuator_names if name != ""]
-            joint_names = self.get_joint_names(robot_name)
-            assert set(actuator_names) == set(joint_names), (
-                f"Actuator names {actuator_names} do not match joint names {joint_names}"
-            )
-            return actuator_names
-        else:
-            return []
+    def _get_actuator_names(self, robot_name: str) -> list[str]:
+        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+        actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
+        actuator_names = [name for name in actuator_names if name != ""]
+        joint_names = self.get_joint_names(robot_name)
+        assert set(actuator_names) == set(joint_names), (
+            f"Actuator names {actuator_names} do not match joint names {joint_names}"
+        )
+        return actuator_names
 
-    def get_actuator_reindex(self, robot_name: str) -> list[int]:
-        origin_actuator_names = self.get_actuator_names(robot_name)
+    def _get_actuator_reindex(self, robot_name: str) -> list[int]:
+        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        origin_actuator_names = self._get_actuator_names(robot_name)
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
