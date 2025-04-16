@@ -127,6 +127,9 @@ def main():
         cameras=[],
     )
 
+    # For different simulators, the decimation factor is different, so we need to set it here
+    scenario.task.decimation = config.get("decimation", 1)
+
     from roboverse_learn.humanoidbench_rl.wrapper_sb3 import Sb3EnvWrapper
 
     if config.get("sim") == "mujoco":
