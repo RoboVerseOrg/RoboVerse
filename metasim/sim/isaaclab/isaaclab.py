@@ -135,8 +135,6 @@ class IsaaclabHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        log.info(f"Resetting envs {env_ids}")
-
         tic = time.time()
         _, extras = self.env.reset(env_ids=env_ids)
         toc = time.time()
