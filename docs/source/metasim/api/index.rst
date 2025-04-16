@@ -13,7 +13,7 @@ metasim
 
     cfg.objects
     cfg.robots
-    cfg.cameras
+    cfg.sensors
     cfg.checkers
     cfg.tasks
     cfg.scenes

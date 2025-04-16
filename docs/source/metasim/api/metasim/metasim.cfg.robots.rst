@@ -6,29 +6,27 @@
    .. rubric:: Base Class
 
    .. autosummary::
-      :toctree: _autosummary
 
-      BaseRobotMetaCfg
+      BaseRobotCfg
 
    .. rubric:: Classes
 
    .. autosummary::
-      :toctree: _autosummary
 
-      AntMetaCfg
-      FetchMetaCfg
-      FrankaMetaCfg
-      FrankaSlideUrdfMetaCfg
-      FrankaSlideUrdfSapienMetaCfg
-      FrankaUrdfMetaCfg
-      FrankaUrdfSapienMetaCfg
-      FrankaWithGripperExtensionMetaCfg
-      GoogleRobotStaticMetaCfg
-      H12WithoutHandMetaCfg
-      H1MetaCfg
-      H1SimpleHandMetaCfg
-      IiwaMetaCfg
-      SawyerMetaCfg
-      SawyerMujocoMetaCfg
-      Ur5E2F85MetaCfg
-      WalkerMetaCfg
+      AntCfg
+      FetchCfg
+      FrankaCfg
+      FrankaSlideUrdfCfg
+      FrankaSlideUrdfSapienCfg
+      FrankaUrdfCfg
+      FrankaUrdfSapienCfg
+      FrankaWithGripperExtensionCfg
+      GoogleRobotStaticCfg
+      H12WithoutHandCfg
+      H1Cfg
+      H1SimpleHandCfg
+      IiwaCfg
+      SawyerCfg
+      SawyerMujocoCfg
+      Ur5E2F85Cfg
+      WalkerCfg

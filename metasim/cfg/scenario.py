@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
+from dataclasses import MISSING
 from typing import Literal
 
 from loguru import logger as log
-from tyro import MISSING
 
 from metasim.utils.configclass import configclass
 from metasim.utils.hf_util import check_and_download

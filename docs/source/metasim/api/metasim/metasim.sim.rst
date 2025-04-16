@@ -3,11 +3,24 @@
 
 .. automodule:: metasim.sim
 
-   .. autosummary::
-      :toctree: _autosummary
+   .. rubric:: Base Handler
 
+   .. autosummary::
+      BaseSimHandler
+
+   .. rubric:: Simulator Handlers
+
+   .. autosummary::
       isaaclab.IsaacLabHandler
       isaacgym.IsaacGymHandler
       mujoco.MujocoHandler
       pybullet.PybulletHandler
-      sapien.SapienHandler
+      genesis.GenesisHandler
+      sapien.sapien2.SapienHandler
+      sapien.sapien3.Sapien3Handler
+
+Base Handler
+------------
+
+.. autoclass:: BaseSimHandler
+   :members:

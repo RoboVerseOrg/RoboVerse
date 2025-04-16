@@ -7,61 +7,61 @@
 
    .. autosummary::
 
-      BaseObjMetaCfg
+      BaseObjCfg
 
    .. rubric:: Primitive Object Classes
 
    .. autosummary::
 
-      PrimitiveCubeMetaCfg
-      PrimitiveSphereMetaCfg
-      PrimitiveCylinderMetaCfg
+      PrimitiveCubeCfg
+      PrimitiveSphereCfg
+      PrimitiveCylinderCfg
 
    .. rubric:: File-based Object Classes
 
    .. autosummary::
 
-      RigidObjMetaCfg
-      ArticulationObjMetaCfg
+      RigidObjCfg
+      ArticulationObjCfg
 
    .. rubric:: Special Object Classes
 
    .. autosummary::
 
-      NonConvexRigidObjMetaCfg
+      NonConvexRigidObjCfg
 
 .. currentmodule:: metasim.cfg.objects
 
 Base Object
 -----------
 
-.. autoclass:: BaseObjMetaCfg
+.. autoclass:: BaseObjCfg
    :members:
 
 
 Primitive Objects
-----------------
+-----------------
 
-.. autoclass:: PrimitiveCubeMetaCfg
+.. autoclass:: PrimitiveCubeCfg
    :members:
 
-.. autoclass:: PrimitiveSphereMetaCfg
+.. autoclass:: PrimitiveSphereCfg
    :members:
 
-.. autoclass:: PrimitiveCylinderMetaCfg
+.. autoclass:: PrimitiveCylinderCfg
    :members:
 
 File-based Objects
 ------------------
 
-.. autoclass:: RigidObjMetaCfg
+.. autoclass:: RigidObjCfg
    :members:
 
-.. autoclass:: ArticulationObjMetaCfg
+.. autoclass:: ArticulationObjCfg
    :members:
 
 Special Objects
 ---------------
 
-.. autoclass:: NonConvexRigidObjMetaCfg
+.. autoclass:: NonConvexRigidObjCfg
    :members:

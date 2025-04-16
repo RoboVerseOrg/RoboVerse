@@ -53,5 +53,3 @@ You will get the following image:
 | Genesis | Sapien | PyBullet |
 |:---:|:---:|:---:|
 | ![Genesis](../../../_static/standard_output/0_static_scene_genesis.png) | ![Sapien](../../../_static/standard_output/0_static_scene_sapien3.png) | ![Pybullet](../../../_static/standard_output/0_static_scene_pybullet.png) |
-
----
