@@ -211,13 +211,7 @@ class MujocoHandler(BaseSimHandler):
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             if isinstance(obj, ArticulationObjCfg):
                 joint_names = self.get_joint_names(obj.name, sort=True)
-                body_reindex = self.get_body_reindex(obj.name)
-                body_ids_origin = [
-                    bi
-                    for bi in range(self.physics.model.nbody)
-                    if self.physics.model.body(bi).name.split("/")[0] == model_name
-                ]
-                body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+                body_ids_reindex = self._get_body_ids_reindex(obj.name)
                 state = ObjectState(
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
@@ -225,16 +219,14 @@ class MujocoHandler(BaseSimHandler):
                         torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                     ]).unsqueeze(0),
                     body_names=self.get_body_names(obj.name),
-                    body_state=torch.stack([
-                        torch.from_numpy(
-                            np.concatenate([
-                                self.physics.data.xpos[body_id],  # (3,)
-                                self.physics.data.xquat[body_id],  # (4,)
-                                self.physics.data.cvel[body_id],  # (6,)
-                            ])
-                        ).float()
-                        for body_id in body_ids_reindex
-                    ]).unsqueeze(0),
+                    body_state=torch.concat(
+                        [
+                            torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
+                            torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
+                            torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
+                        ],
+                        dim=1,
+                    ).unsqueeze(0),
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                     ]).unsqueeze(0),
@@ -257,14 +249,8 @@ class MujocoHandler(BaseSimHandler):
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = self.get_joint_names(robot.name, sort=True)
-            actuator_reindex = self.get_actuator_reindex(robot.name)
-            body_reindex = self.get_body_reindex(robot.name)
-            body_ids_origin = [
-                bi
-                for bi in range(self.physics.model.nbody)
-                if self.physics.model.body(bi).name.split("/")[0] == model_name
-            ]
-            body_ids_reindex = [body_ids_origin[i] for i in body_reindex]
+            actuator_reindex = self._get_actuator_reindex(robot.name)
+            body_ids_reindex = self._get_body_ids_reindex(robot.name)
             state = RobotState(
                 body_names=self.get_body_names(robot.name),
                 root_state=torch.concat([
@@ -272,16 +258,14 @@ class MujocoHandler(BaseSimHandler):
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
                     torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
                 ]).unsqueeze(0),
-                body_state=torch.stack([
-                    torch.from_numpy(
-                        np.concatenate([
-                            self.physics.data.xpos[body_id],  # (3,)
-                            self.physics.data.xquat[body_id],  # (4,)
-                            self.physics.data.cvel[body_id],  # (6,)
-                        ])
-                    ).float()
-                    for body_id in body_ids_reindex
-                ]).unsqueeze(0),
+                body_state=torch.concat(
+                    [
+                        torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
+                        torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
+                        torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
+                    ],
+                    dim=1,
+                ).unsqueeze(0),
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                 ]).unsqueeze(0),
@@ -426,21 +410,20 @@ class MujocoHandler(BaseSimHandler):
         else:
             return []
 
-    def get_actuator_names(self, robot_name: str) -> list[str]:
-        if isinstance(self.object_dict[robot_name], BaseRobotCfg):
-            actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
-            actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
-            actuator_names = [name for name in actuator_names if name != ""]
-            joint_names = self.get_joint_names(robot_name)
-            assert set(actuator_names) == set(joint_names), (
-                f"Actuator names {actuator_names} do not match joint names {joint_names}"
-            )
-            return actuator_names
-        else:
-            return []
+    def _get_actuator_names(self, robot_name: str) -> list[str]:
+        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+        actuator_names = [name.split("/")[-1] for name in actuator_names if name.split("/")[0] == robot_name]
+        actuator_names = [name for name in actuator_names if name != ""]
+        joint_names = self.get_joint_names(robot_name)
+        assert set(actuator_names) == set(joint_names), (
+            f"Actuator names {actuator_names} do not match joint names {joint_names}"
+        )
+        return actuator_names
 
-    def get_actuator_reindex(self, robot_name: str) -> list[int]:
-        origin_actuator_names = self.get_actuator_names(robot_name)
+    def _get_actuator_reindex(self, robot_name: str) -> list[int]:
+        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        origin_actuator_names = self._get_actuator_names(robot_name)
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
@@ -454,6 +437,22 @@ class MujocoHandler(BaseSimHandler):
             return names
         else:
             return []
+
+    def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
+        assert isinstance(self.object_dict[obj_name], ArticulationObjCfg)
+        if not hasattr(self, "_body_ids_reindex_cache"):
+            self._body_ids_reindex_cache = {}
+        if obj_name not in self._body_ids_reindex_cache:
+            model_name = self.mj_objects[obj_name].model
+            body_ids_origin = [
+                bi
+                for bi in range(self.physics.model.nbody)
+                if self.physics.model.body(bi).name.split("/")[0] == model_name
+                and self.physics.model.body(bi).name != f"{model_name}/"
+            ]
+            body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
+            self._body_ids_reindex_cache[obj_name] = body_ids_reindex
+        return self._body_ids_reindex_cache[obj_name]
 
     ############################################################
     ## Misc
