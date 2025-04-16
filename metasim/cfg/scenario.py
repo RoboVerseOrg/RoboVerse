@@ -31,7 +31,7 @@ def check_asset(obj: BaseObjCfg, sim: Literal["isaaclab", "isaacgym", "pyrep", "
 
     if sim in ["isaaclab"]:
         check_and_download(obj.usd_path)
-    elif sim in ["isaacgym", "pybullet", "sapien"]:
+    elif sim in ["isaacgym", "pybullet", "sapien", "sapien3", "genesis"]:
         check_and_download(obj.urdf_path)
     elif sim in ["mujoco"]:
         check_and_download(obj.mjcf_path)
