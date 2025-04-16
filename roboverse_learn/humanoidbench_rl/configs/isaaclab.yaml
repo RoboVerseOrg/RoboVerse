@@ -1,0 +1,30 @@
+# IsaacLab config
+
+# Environment settings
+sim: isaaclab
+robot: h1
+task: Stand
+decimation: 1
+num_envs: 4096
+add_table: false
+
+# Training settings
+train_or_eval: train
+total_timesteps: 50_000_000
+model_path: null
+
+# PPO parameters
+learning_rate: 0.0003
+n_steps: 64
+num_batch: 32
+n_epochs: 4
+
+# Learning rate schedule
+use_lr_schedule: true
+lr_schedule_type: linear  # Optional: linear, constant, cosine
+final_lr_fraction: 0.1    # Optional: final learning rate is 10% of initial learning rate
+
+# Wandb settings
+use_wandb: false
+wandb_project: humanoidbench_rl_training
+wandb_entity: <YOUR_WANDB_ENTITY>

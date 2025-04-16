@@ -1,0 +1,30 @@
+# MuJoCo config
+
+# Environment settings
+sim: mujoco
+robot: h1
+task: Stand
+decimation: 10
+num_envs: 1  # MuJoCo only supports single environment
+add_table: false
+
+# Training settings
+train_or_eval: train
+total_timesteps: 50_000_000
+model_path: null
+
+# PPO parameters
+learning_rate: 0.0003
+n_steps: 2048
+num_batch: 4
+n_epochs: 4
+
+# Learning rate schedule
+use_lr_schedule: true
+lr_schedule_type: linear  # Option: linear, constant, cosine
+final_lr_fraction: 0.1    # final learning rate is 10% of initial learning rate
+
+# Wandb settings
+use_wandb: false
+wandb_project: humanoidbench_rl_training
+wandb_entity: <YOUR_WANDB_ENTITY>
