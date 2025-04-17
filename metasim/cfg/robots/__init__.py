@@ -16,6 +16,8 @@ from .h1_cfg import H1Cfg
 from .h1_hand_cfg import H1HandCfg
 from .h1_simple_hand_cfg import H1SimpleHandCfg
 from .iiwa_cfg import IiwaCfg
+from .kinova_gen3_cfg import KinovaGen3Cfg
+from .kinova_gen3_robotiq_2f85 import KinovaGen3Robotiq2f85Cfg
 from .sawyer_cfg import SawyerCfg
 from .sawyer_mujoco_cfg import SawyerMujocoCfg
 from .ur5e_2f85_cfg import Ur5E2F85Cfg
