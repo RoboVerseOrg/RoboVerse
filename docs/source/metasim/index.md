@@ -26,6 +26,7 @@ user_guide/multi_env
 user_guide/cross_embodiment
 user_guide/cross_sim
 user_guide/teleoperate_demo
+user_guide/real2sim
 get_started/prepare_data_hf
 user_guide/tips/index
 ```
