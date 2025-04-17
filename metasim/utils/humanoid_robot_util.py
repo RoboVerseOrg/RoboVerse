@@ -2,7 +2,7 @@
 
 import torch
 
-from metasim.utils.math import matrix_from_quat
+from metasim.utils.math import axis_angle_from_quat, matrix_from_quat, quat_from_angle_axis, quat_mul
 
 
 def torso_upright(envstate, robot_name: str):
@@ -93,9 +93,73 @@ def robot_velocity_tensor(envstate, robot_name: str):
     return envstate.robots[robot_name].root_state[:, 7:10]
 
 
+def robot_local_velocity_tensor(envstate, robot_name: str):
+    """Returns the local linear velocity of the robot in its local frame.
+
+    Args:
+        envstate: Environment state object with batched robot states.
+        robot_name (str): Name of the robot.
+
+    Returns:
+        torch.Tensor: Local velocities, shape=(batch_size, 2), where columns correspond to forward (x) and lateral (y) velocities.
+    """
+    world_velocity = robot_velocity_tensor(envstate, robot_name)
+    world_rotation = robot_rotation_tensor(envstate, robot_name)
+
+    # Extract yaw (rotation around z-axis) from the full rotation matrices
+    def decompose_rotation_with_zaxis(rot_quat):
+        """Decompose a rotation quaternion into a z angle and a xy rotation. R = Rz * Rxy.
+
+        Args:
+            rot_quat: The rotation quaternion. Shape is (batch_size, 4).
+
+        Returns:
+            z_angle: The z angle. Shape is (batch_size,).
+        """
+        rot_matrix = matrix_from_quat(rot_quat)  # Compute rotation matrix
+        batch_size = rot_matrix.shape[0]
+        Rz_angle = torch.zeros(batch_size)
+        for i in range(batch_size):
+            z_new = (
+                rot_matrix[i] @ torch.tensor([0.0, 0.0, 1.0], dtype=torch.float)
+            ).T  # Compute z-axis rotation direction
+            z_ori = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float).T  # z-axis original direction
+            theta_z = torch.arccos(
+                torch.dot(z_new, z_ori) / (torch.norm(z_new) * torch.norm(z_ori))
+            )  # Compute z-axis rotation angle
+            rot_axis_z = torch.cross(z_new, z_ori) / torch.norm(
+                torch.cross(z_new, z_ori)
+            )  # Compute z-axis rotation axis
+            Rz_quat = quat_mul(
+                quat_from_angle_axis(theta_z, rot_axis_z)[None, :], rot_quat[i][None, :]
+            )  # Compute z-axis rotation quaternion
+            Rz_rotvec = axis_angle_from_quat(Rz_quat)  # Compute z-axis rotation vector
+            # print(f"Rz_rotvec: {Rz_rotvec/torch.norm(Rz_rotvec, dim=-1)}")
+            # Rz_quat_inv = quat_inv(Rz_quat)
+            # Rxy_quat = quat_mul(Rz_quat_inv, rot_quat)
+            # Rxy_rotvec = axis_angle_from_quat(Rxy_quat)
+            # print(f"Rxy_rotvec: {Rxy_rotvec/torch.norm(Rxy_rotvec, dim=-1)}")
+            # exit()
+            Rz_angle[i] = torch.norm(Rz_rotvec, dim=-1)  # Compute z-axis rotation angle
+        return Rz_angle
+
+    yaws = decompose_rotation_with_zaxis(world_rotation)
+    cos_z = torch.cos(yaws)
+    sin_z = torch.sin(yaws)
+    local_xy_velocity = torch.zeros_like((world_velocity.shape[0], 2))
+    local_xy_velocity[:, 0] = world_velocity[:, 0] * cos_z + world_velocity[:, 1] * sin_z
+    local_xy_velocity[:, 1] = -world_velocity[:, 0] * sin_z + world_velocity[:, 1] * cos_z
+    return local_xy_velocity
+
+
 def robot_rotation(envstate, robot_name: str):
     """Returns the rotation of the robot."""
     return envstate["robots"][robot_name]["rot"]
+
+
+def robot_rotation_tensor(envstate, robot_name: str):
+    """Returns the rotation of the robot."""
+    return envstate.robots[robot_name].root_state[:, 3:7]
 
 
 def torso_vertical_orientation(envstate, robot_name: str):

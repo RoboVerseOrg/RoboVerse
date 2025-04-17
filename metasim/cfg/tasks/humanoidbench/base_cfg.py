@@ -16,6 +16,7 @@ from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces_tensor,
     neck_height_tensor,
+    robot_local_velocity_tensor,
     robot_velocity_tensor,
     torso_upright_tensor,
 )
@@ -146,7 +147,7 @@ class BaseLocomotionReward(HumanoidBaseReward):
             dont_move = humanoid_reward_util.tolerance_tensor(horizontal_velocity, margin=2).mean()
             moving_reward = dont_move
         else:
-            com_x_velocity = robot_velocity_tensor(states, self.robot_name)[:, 0]
+            com_x_velocity = robot_local_velocity_tensor(states, self.robot_name)[:, 0]
             move = humanoid_reward_util.tolerance_tensor(
                 com_x_velocity,
                 bounds=(self._move_speed, float("inf")),
