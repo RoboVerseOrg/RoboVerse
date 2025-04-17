@@ -3,7 +3,7 @@
 # Environment settings
 sim: isaaclab
 robot: h1
-task: Stand
+task: humanoidbench:Stand
 decimation: 1
 num_envs: 4096
 add_table: false

@@ -3,7 +3,7 @@
 # Environment settings
 sim: mujoco
 robot: h1
-task: Stand
+task: humanoidbench:Stand
 decimation: 10
 num_envs: 1  # MuJoCo only supports single environment
 add_table: false
