@@ -11,7 +11,11 @@ add_table: false
 # Training settings
 train_or_eval: train
 total_timesteps: 50_000_000
-model_path: null
+model_save_path: ./saved_models
+model_save_freq: 1_000_000
+
+# Eval settings
+eval_model_path: <path to eval model>
 
 # PPO parameters
 learning_rate: 0.0003
@@ -27,4 +31,4 @@ final_lr_fraction: 0.1    # final learning rate is 10% of initial learning rate
 # Wandb settings
 use_wandb: false
 wandb_project: humanoidbench_rl_training
-wandb_entity: <YOUR_WANDB_ENTITY>
+wandb_entity: <wandb entity>

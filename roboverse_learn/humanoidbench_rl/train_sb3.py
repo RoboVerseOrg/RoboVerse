@@ -4,7 +4,6 @@ import math
 import os
 import sys
 import time
-from collections import deque
 from typing import Callable
 
 import numpy as np
@@ -123,7 +122,7 @@ def main():
         try_add_table=config.get("add_table", False),
         sim=config.get("sim"),
         num_envs=config.get("num_envs", 1),
-        headless=True,
+        headless=True if config.get("train_or_eval") == "train" else False,
         cameras=[],
     )
 
@@ -168,20 +167,6 @@ def main():
         device="cpu",
     )
 
-    # Setup wandb callback with additional monitoring options
-    from wandb.integration.sb3 import WandbCallback
-
-    wandb_callback = (
-        WandbCallback(
-            model_save_freq=100000,
-            model_save_path=f"models/{run.id}",
-            verbose=2,
-            gradient_save_freq=100000,  # Added to track gradients
-        )
-        if config.get("use_wandb")
-        else None
-    )
-
     from stable_baselines3.common.callbacks import BaseCallback
 
     class EpisodeLogCallback(BaseCallback):
@@ -219,141 +204,72 @@ def main():
                     self.logger.record(key, np.mean(self.returns_info[key]), global_step)
                     self.returns_info[key] = []
 
-    class EvalCallback(BaseCallback):
-        def __init__(self, eval_every: int = 5000, scenario=None, sim_type=None, verbose: int = 0):
-            super().__init__(verbose=verbose)
-            self.eval_every = eval_every
-            self.eval_env = None
-            self.scenario = scenario
-            self.sim_type = sim_type
+    class SaveModelCallback(BaseCallback):
+        """
+        Callback for saving the model every 1M timesteps.
 
-        def _on_training_start(self) -> None:
-            from wrapper_sb3 import Sb3EnvWrapper
+        Args:
+            save_path (str): Path to the directory where models will be saved
+            save_freq (int): Frequency in timesteps at which to save the model
+            verbose (int): Verbosity level
+        """
 
-            from metasim.constants import SimType
-
-            if self.sim_type == SimType.MUJOCO:
-                self.eval_env = Sb3EnvWrapper(scenario=self.scenario)
-            else:
-                raise ValueError(f"Invalid sim type: {self.sim_type}")
-
-        def _on_step(self) -> bool:
-            if self.num_timesteps % self.eval_every == 0:
-                self.record_video()
-            return True
-
-        def record_video(self) -> None:
-            log.info("recording video")
-            obs, info = self.eval_env.reset()
-            video = [self.eval_env.render().transpose(2, 0, 1)]
-            for _ in range(1000):
-                action = self.model.predict(obs, deterministic=True)[0]
-                obs, _, terminated, truncated, _ = self.eval_env.step(action)
-                pixels = self.eval_env.render()
-                if pixels is not None:
-                    video.append(pixels.transpose(2, 0, 1))
-                if terminated or truncated:
-                    break
-
-            if video:
-                video = np.stack(video)
-                wandb.log(
-                    {
-                        "results/video": wandb.Video(video, fps=10, format="mp4"),
-                        "total_timesteps": self.model.num_timesteps,
-                    },
-                    step=self.model.num_timesteps,
-                )
-            else:
-                log.warning("No video recorded")
-
-    class LogCallback(BaseCallback):
-        def __init__(self, verbose=0, info_keywords=(), args=None):
+        def __init__(self, save_path: str, save_freq: int = 1000, verbose: int = 0):
             super().__init__(verbose)
-            self.aux_rewards = {}
-            self.aux_returns = {}
-            for key in info_keywords:
-                self.aux_rewards[key] = np.zeros(args.get("num_envs", 1))
-                self.aux_returns[key] = deque(maxlen=100)
+            self.save_path = save_path
+            self.save_freq = save_freq
+            self.last_save_step = 0
+
+        def _init_callback(self) -> None:
+            # Create save directory if it doesn't exist
+            os.makedirs(self.save_path, exist_ok=True)
 
         def _on_step(self) -> bool:
-            infos = self.locals["infos"]
-            for idx in range(len(infos)):
-                for key in self.aux_rewards.keys():
-                    self.aux_rewards[key][idx] += infos[idx][key]
-
-                if self.locals["dones"][idx]:
-                    for key in self.aux_rewards.keys():
-                        self.aux_returns[key].append(self.aux_rewards[key][idx])
-                        self.aux_rewards[key][idx] = 0
+            # Check if it's time to save the model
+            if self.num_timesteps - self.last_save_step >= self.save_freq:
+                path = os.path.join(self.save_path, f"model_{self.num_timesteps}")
+                self.model.save(path)
+                log.info(f"Model saved to {path}")
+                self.last_save_step = self.num_timesteps
             return True
-
-        def _on_rollout_end(self) -> None:
-            global_step = self.model.num_timesteps
-            for key in self.aux_returns.keys():
-                self.logger.record(f"aux_returns_{key}/mean", np.mean(self.aux_returns[key]), global_step)
 
     if config.get("train_or_eval") == "train":
-        # Train the agent with additional callbacks
         log.info("Starting training...")
-        # from metasim.constants import SimType
+
+        # Set up save directory
+        save_dir = f"{config.get('model_save_path')}/{run.id}"
+        os.makedirs(save_dir, exist_ok=True)
+
         model.learn(
-            total_timesteps=config.get("total_timesteps", 1000000),
+            total_timesteps=config.get("total_timesteps", 1_000_000),
             log_interval=1,
             callback=[
-                # EvalCallback(scenario=scenario, sim_type=SimType(args.sim)),
                 EpisodeLogCallback(),
-                LogCallback(args=config),
-            ]
-            + ([wandb_callback] if config.get("use_wandb") else []),
+                SaveModelCallback(save_path=save_dir, save_freq=config.get("model_save_freq", 1_000_000)),
+            ],
             progress_bar=True,
         )
-
-        # Save the trained model
-        model_path = f"models/ppo_model_{config.get('robot')}_{config.get('sim')}_{run.id}"
-        model.save(model_path)
-        log.info(f"Model saved to {model_path}")
     elif config.get("train_or_eval") == "eval":
         # Load the trained model
         model.load(config.get("model_path"))
 
         # Evaluate the agent
         log.info("Starting evaluation...")
-        obs, info = env.reset()
+        obs = env.reset()
         rewards = []
         for _ in range(1000):
             action, _ = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = env.step(action)
+            obs, reward, done, info = env.step(action)
             rewards.append(reward)
             env.render()
-            if terminated or truncated:
-                obs, info = env.reset()
+            if done:
+                obs = env.reset()
                 import matplotlib.pyplot as plt
 
                 plt.plot(rewards)
                 plt.savefig("rewards.png")
                 plt.clf()
                 rewards = []
-
-    elif config.get("train_or_eval") == "test":
-        # Test the joints
-        log.info("Starting evaluation...")
-        obs, info = env.reset()
-        rewards = []
-
-        step = 0
-        target_joint = 0
-        while True:
-            step += 1
-            action = np.array(
-                [0] * 19,
-                dtype=np.float32,
-            )
-            action[target_joint] = np.sin(step / 10)
-            # action = env.normalize_action(np.array([0,0,-0.4,0.8,-0.4,0,0,-0.4,0.8,-0.4,0,0,0,0,0,0,0,0,0]))
-            # action = env.normalize_action(obs[7:26])
-            obs, reward, terminated, truncated, info = env.step(action)
-            env.render()
 
     # Close environment and wandb
     env.close()

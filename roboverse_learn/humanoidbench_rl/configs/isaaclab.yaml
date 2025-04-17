@@ -5,18 +5,23 @@ sim: isaaclab
 robot: h1
 task: humanoidbench:Stand
 decimation: 1
-num_envs: 4096
+num_envs: 1024
 add_table: false
 
 # Training settings
 train_or_eval: train
 total_timesteps: 50_000_000
-model_path: null
+model_save_path: ./saved_models
+model_save_freq: 1_000_000
+
+# Eval settings
+eval_model_path: <path to eval model>
+
 
 # PPO parameters
 learning_rate: 0.0003
-n_steps: 64
-num_batch: 32
+n_steps: 256
+num_batch: 64
 n_epochs: 4
 
 # Learning rate schedule

@@ -21,7 +21,6 @@ class Sb3EnvWrapper(VecEnv):
         self.sim_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if SimType(scenario.sim) == SimType.MUJOCO:
             self.sim_device = torch.device("cpu")
-        scenario.headless = True
         self.num_envs = scenario.num_envs
         self.robot = scenario.robot
         self.task = scenario.task
