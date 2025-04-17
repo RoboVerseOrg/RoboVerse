@@ -118,23 +118,26 @@ def robot_local_velocity_tensor(envstate, robot_name: str):
         """
         rot_matrix = matrix_from_quat(rot_quat)  # Compute rotation matrix
         batch_size = rot_matrix.shape[0]
-        Rz_angle = torch.zeros(batch_size)
+        Rz_angle = torch.zeros(batch_size, device=rot_matrix.device)
         for i in range(batch_size):
-            z_new = (
-                rot_matrix[i] @ torch.tensor([0.0, 0.0, 1.0], dtype=torch.float)
-            ).T  # Compute z-axis rotation direction
-            z_ori = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float).T  # z-axis original direction
+            z_new = rot_matrix[i] @ torch.tensor(
+                [0.0, 0.0, 1.0], dtype=torch.float, device=rot_matrix.device
+            )  # Compute z-axis rotation direction
+            z_ori = torch.tensor(
+                [0.0, 0.0, 1.0], dtype=torch.float, device=rot_matrix.device
+            )  # z-axis original direction
             theta_z = torch.arccos(
                 torch.dot(z_new, z_ori) / (torch.norm(z_new) * torch.norm(z_ori))
             )  # Compute z-axis rotation angle
-            rot_axis_z = torch.cross(z_new, z_ori) / torch.norm(
-                torch.cross(z_new, z_ori)
+            rot_axis_z = torch.cross(z_new, z_ori, dim=0) / torch.norm(
+                torch.cross(z_new, z_ori, dim=0)
             )  # Compute z-axis rotation axis
             Rz_quat = quat_mul(
                 quat_from_angle_axis(theta_z, rot_axis_z)[None, :], rot_quat[i][None, :]
             )  # Compute z-axis rotation quaternion
             Rz_rotvec = axis_angle_from_quat(Rz_quat)  # Compute z-axis rotation vector
             # print(f"Rz_rotvec: {Rz_rotvec/torch.norm(Rz_rotvec, dim=-1)}")
+            # from metasim.utils.math import quat_inv
             # Rz_quat_inv = quat_inv(Rz_quat)
             # Rxy_quat = quat_mul(Rz_quat_inv, rot_quat)
             # Rxy_rotvec = axis_angle_from_quat(Rxy_quat)
@@ -146,7 +149,7 @@ def robot_local_velocity_tensor(envstate, robot_name: str):
     yaws = decompose_rotation_with_zaxis(world_rotation)
     cos_z = torch.cos(yaws)
     sin_z = torch.sin(yaws)
-    local_xy_velocity = torch.zeros_like((world_velocity.shape[0], 2))
+    local_xy_velocity = torch.zeros((world_velocity.shape[0], 2), device=world_velocity.device)
     local_xy_velocity[:, 0] = world_velocity[:, 0] * cos_z + world_velocity[:, 1] * sin_z
     local_xy_velocity[:, 1] = -world_velocity[:, 0] * sin_z + world_velocity[:, 1] * cos_z
     return local_xy_velocity
