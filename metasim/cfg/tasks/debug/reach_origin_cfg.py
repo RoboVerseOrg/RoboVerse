@@ -5,10 +5,11 @@ import torch
 from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import BenchmarkType, TaskType
 from metasim.utils import configclass
+from metasim.utils.state import TensorState
 
 
-def negative_distance(states, robot_name: str | None = None) -> torch.Tensor:
-    ee_pos = torch.stack([state["metasim_body_panda_hand"]["pos"] for state in states])
+def negative_distance(states: TensorState, robot_name: str | None = None) -> torch.Tensor:
+    ee_pos = states.robots[robot_name].body_state[:, states.robots[robot_name].body_names.index("panda_hand"), :3]
     distances = torch.norm(ee_pos, dim=1)
     return -distances  # Negative distance as reward
 
