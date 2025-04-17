@@ -24,24 +24,26 @@ wandb login
 
 ## Training
 
-> NOTE: You can add `--use_wandb --wandb_entity <your_wandb_entity_name>` to use wandb to log the training process.
+> NOTE:
+> 1. Modify `task: humanoidbench:Stand` in the config files to the task you want to train.
+> 2. Modify `use_wandb: true` and `wandb_entity: <your_wandb_entity_name>` in the config files to use wandb to log the training process.
 
 - MuJoCo:
 
     ```bash
-    python roboverse_learn/humanoidbench_rl/train_sb3.py --sim mujoco --num_envs 1 --robot=h1 --task humanoidbench:Stand
+    python roboverse_learn/humanoidbench_rl/train_sb3.py mujoco
     ```
 
 - IsaacGym:
 
     ```bash
-    python roboverse_learn/humanoidbench_rl/train_sb3.py --sim isaacgym --num_envs 2 --robot=h1 --task humanoidbench:Stand
+    python roboverse_learn/humanoidbench_rl/train_sb3.py isaacgym
     ```
 
 - IsaacLab:
 
     ```bash
-    python roboverse_learn/humanoidbench_rl/train_sb3.py --sim isaaclab --num_envs 2 --robot=h1 --task humanoidbench:Stand
+    python roboverse_learn/humanoidbench_rl/train_sb3.py isaaclab
     ```
 
 ## Task list
