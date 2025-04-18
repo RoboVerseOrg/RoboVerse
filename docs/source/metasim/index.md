@@ -51,6 +51,7 @@ developer_guide/tips/index
 :maxdepth: 2
 :titlesonly:
 
+troubleshooting/common
 troubleshooting/docker
 troubleshooting/isaaclab
 ```
