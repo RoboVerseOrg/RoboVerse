@@ -22,6 +22,7 @@ class GAPartManipOpenToiletCfg(GAPartManipBaseTaskCfg):
             fix_base_link=True,
             urdf_path="roboverse_data/assets/gapartmanip/Toilet/102630/mobility_annotation_gapartnet.urdf",
             scale=0.3,
+            enabled_self_collisions=False,
         ),
     ]
     traj_filepath = "metasim/cfg/tasks/gapartmanip/example_open_toilet_v2.json"

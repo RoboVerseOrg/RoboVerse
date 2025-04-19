@@ -77,9 +77,10 @@ class SinglePybulletHandler(BaseSimHandler):
                 object_file = object.urdf_path
                 useFixedBase = object.fix_base_link
                 flags = 0
-                flags = flags | p.URDF_USE_SELF_COLLISION
                 flags = flags | p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES
                 flags = flags | p.URDF_MAINTAIN_LINK_ORDER
+                if object.enabled_self_collisions:
+                    flags = flags | p.URDF_ENABLE_SELF_COLLISION
                 if True:  # object.collapse_fixed_joints :
                     flags = flags | p.URDF_MERGE_FIXED_LINKS
 
