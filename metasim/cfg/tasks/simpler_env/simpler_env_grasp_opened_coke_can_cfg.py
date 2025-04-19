@@ -35,7 +35,7 @@ class SimplerEnvGraspOpenedCokeCanCfg(BaseTaskCfg):
     # checker = BaseChecker()
 
     def __init__(self, subtask_id=0):
-        self.source_benchmark = BenchmarkType.SIMPLERENVGRASPSINGLEOPENEDCOKECAN
+        self.source_benchmark = BenchmarkType.SIMPLERENV
         self.task_type = TaskType.TABLETOP_MANIPULATION
         self.episode_length = 200
         self.objects = [
