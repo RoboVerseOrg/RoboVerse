@@ -75,7 +75,8 @@ class SingleSapienHandler(BaseSimHandler):
         self.loader: sapien_core.URDFLoader = self.scene.create_urdf_loader()
 
         # Add agents
-        self.object_ids = {}
+        self.object_ids: dict[str, sapien_core.Actor | sapien_core.Articulation] = {}
+        self.link_ids: dict[str, list[sapien_core.LinkBase]] = {}
         self.object_joint_order = {}
         self.camera_ids = {}
 
@@ -219,6 +220,10 @@ class SingleSapienHandler(BaseSimHandler):
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
+            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+                self.link_ids[object.name] = self.object_ids[object.name].get_links()
+            else:
+                self.link_ids[object.name] = []
             # elif agent.type == "capsule":
             #     actor_builder = self.scene.create_actor_builder()
             #     material = get_material(self.scene, agent.rigid_shape_property)
@@ -339,6 +344,25 @@ class SingleSapienHandler(BaseSimHandler):
             self.viewer.close()
         self.scene = None
 
+    def _get_link_states(self, obj_name: str) -> dict[str, tuple[list, torch.Tensor]]:
+        link_name_list = []
+        link_state_list = []
+
+        if len(self.link_ids[obj_name]) == 0:
+            return [], torch.zeros((0, 13), dtype=torch.float32)
+
+        for link in self.link_ids[obj_name]:
+            pose = link.get_pose()
+            pos = torch.tensor(pose.p)
+            rot = torch.tensor(pose.q)
+            vel = torch.tensor(link.get_velocity())
+            ang_vel = torch.tensor(link.get_angular_velocity())
+            link_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            link_name_list.append(link.get_name())
+            link_state_list.append(link_state)
+        link_state_tensor = torch.cat(link_state_list, dim=0)
+        return link_name_list, link_state_tensor
+
     def get_states(self, env_ids=None) -> list[EnvState]:
         """Get the states of the environment.
 
@@ -355,16 +379,17 @@ class SingleSapienHandler(BaseSimHandler):
             pose = obj_inst.get_pose()
             pos = torch.tensor(pose.p)
             rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            vel = torch.tensor(obj_inst.get_velocity())
+            ang_vel = torch.tensor(obj_inst.get_angular_velocity())
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            link_names, link_state = self._get_link_states(obj.name)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.Articulation)
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=None,
-                    body_state=None,  # TODO
+                    body_names=link_names,
+                    body_state=link_state,
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 )
@@ -379,14 +404,15 @@ class SingleSapienHandler(BaseSimHandler):
             pose = robot_inst.get_pose()
             pos = torch.tensor(pose.p)
             rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            vel = torch.tensor(obj_inst.get_velocity())
+            ang_vel = torch.tensor(obj_inst.get_angular_velocity())
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
+            link_names, link_state = self._get_link_states(robot.name)
             state = RobotState(
                 root_state=root_state,
-                body_names=None,
-                body_state=None,  # TODO
+                body_names=link_names,
+                body_state=link_state,
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 joint_pos_target=None,  # TODO
