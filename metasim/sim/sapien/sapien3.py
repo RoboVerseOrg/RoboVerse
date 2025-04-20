@@ -80,6 +80,9 @@ class SingleSapien3Handler(BaseSimHandler):
         # Add agents
         self.object_ids: dict[str, sapien_core.Entity] = {}
         self.link_ids: dict[str, list[sapien.physx.PhysxArticulationLinkComponent]] = {}
+        self._previous_dof_pos_target: dict[str, np.ndarray] = {}
+        self._previous_dof_vel_target: dict[str, np.ndarray] = {}
+        self._previous_dof_torque_target: dict[str, np.ndarray] = {}
         self.object_joint_order = {}
         self.camera_ids = {}
 
@@ -247,6 +250,15 @@ class SingleSapien3Handler(BaseSimHandler):
 
             if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
                 self.link_ids[object.name] = self.object_ids[object.name].get_links()
+                self._previous_dof_pos_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_vel_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_torque_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
             else:
                 self.link_ids[object.name] = []
 
@@ -343,6 +355,7 @@ class SingleSapien3Handler(BaseSimHandler):
         if isinstance(instance, sapien_core.physx.PhysxArticulation):
             action = actions[0]
             action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
+            self._previous_dof_pos_target[obj_name] = action_arr
             self._apply_action(action_arr, instance)
 
     def simulate(self):
@@ -436,9 +449,9 @@ class SingleSapien3Handler(BaseSimHandler):
                 body_state=link_state,
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=None,  # TODO
-                joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_pos_target=self._previous_dof_pos_target[robot.name].unsqueeze(0),
+                joint_vel_target=self._previous_dof_vel_target[robot.name].unsqueeze(0),
+                joint_effort_target=self._previous_dof_torque_target[robot.name].unsqueeze(0),
             )
             robot_states[robot.name] = state
 
