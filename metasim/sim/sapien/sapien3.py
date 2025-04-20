@@ -243,7 +243,6 @@ class SingleSapien3Handler(BaseSimHandler):
                     ## HACK
                     curr_id = curr_id[0]
                 curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
-                self.scene.add_entity(curr_id)
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -389,7 +388,7 @@ class SingleSapien3Handler(BaseSimHandler):
             self.viewer.close()
         self.scene = None
 
-    def _get_link_states(self, obj_name: str) -> dict[str, tuple[list, torch.Tensor]]:
+    def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:
         link_name_list = []
         link_state_list = []
 
@@ -422,23 +421,29 @@ class SingleSapien3Handler(BaseSimHandler):
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
             pose = obj_inst.get_pose()
-            pos = torch.tensor(pose.p)
-            rot = torch.tensor(pose.q)
-            vel = torch.tensor(obj_inst.get_components()[1].get_linear_velocity())
-            ang_vel = torch.tensor(obj_inst.get_components()[1].get_angular_velocity())
-            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             link_names, link_state = self._get_link_states(obj.name)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.physx.PhysxArticulation)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_root_linear_velocity())
+                ang_vel = torch.tensor(obj_inst.get_root_angular_velocity())
+                root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
                     body_names=link_names,
-                    body_state=link_state,
+                    body_state=link_state.unsqueeze(0),
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 )
             else:
+                assert isinstance(obj_inst, sapien_core.Entity)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_components()[1].get_linear_velocity())
+                ang_vel = torch.tensor(obj_inst.get_components()[1].get_angular_velocity())
+                root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
                 state = ObjectState(root_state=root_state)
             object_states[obj.name] = state
 
@@ -472,7 +477,7 @@ class SingleSapien3Handler(BaseSimHandler):
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,
-                body_state=link_state,
+                body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 joint_pos_target=pos_target,
@@ -543,6 +548,23 @@ class SingleSapien3Handler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def get_body_names(self, obj_name, sort=True):
+        """Get the names of links of an object by obj_name
+
+        Args:
+            obj_name: the name of the object to get link names.
+            sort: if sort the link names by lexical order.
+
+        Returns:
+            list: the list of link names.
+        """
+
+        body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
+        if sort:
+            return sorted(body_names)
+        else:
+            return deepcopy(body_names)
 
 
 Sapien3Handler = ParallelSimWrapper(SingleSapien3Handler)
