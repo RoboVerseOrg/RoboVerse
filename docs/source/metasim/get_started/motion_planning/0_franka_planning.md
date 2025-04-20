@@ -12,8 +12,10 @@ python get_started/motion_planning/0_franka_planning.py --sim <simulator>
 ```
 
 Here is a visualization of how we plan the motion for the Franka robot:
-![FrankaPlanningUnderstand](../../../_static/standard_output/motion_planning/franka_planning_understanding.png)
-
+<div style="text-align: center;">
+    <img src="../../../_static/standard_output/motion_planning/franka_planning_understanding.png" width="40%"/>
+</div>
+<br>
 
 You will get the following videos:
 
