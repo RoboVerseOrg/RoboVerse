@@ -14,6 +14,7 @@ import numpy as np
 import sapien
 import sapien.core as sapien_core
 import torch
+from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
@@ -217,7 +218,6 @@ class SingleSapienHandler(BaseSimHandler):
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
                 curr_id = self.loader.load(file_path)
-                builder = self.loader.load_file_as_articulation_builder(file_path)
                 curr_id.set_root_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
 
                 self.object_ids[object.name] = curr_id
@@ -370,7 +370,7 @@ class SingleSapienHandler(BaseSimHandler):
             self.viewer.close()
         self.scene = None
 
-    def _get_link_states(self, obj_name: str) -> dict[str, tuple[list, torch.Tensor]]:
+    def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:
         link_name_list = []
         link_state_list = []
 
@@ -403,19 +403,27 @@ class SingleSapienHandler(BaseSimHandler):
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
             pose = obj_inst.get_pose()
-            pos = torch.tensor(pose.p)
-            rot = torch.tensor(pose.q)
-            vel = torch.tensor(obj_inst.get_velocity())
-            ang_vel = torch.tensor(obj_inst.get_angular_velocity())
-            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             link_names, link_state = self._get_link_states(obj.name)
+            if isinstance(obj_inst, sapien_core.Articulation):
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.zeros(3)
+                ang_vel = torch.zeros(3)
+                log.warning("Sapien2 does not support getting velocity of articulation")
+            else:
+                assert isinstance(obj_inst, sapien_core.Actor)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_velocity())
+                ang_vel = torch.tensor(obj_inst.get_angular_velocity())
+            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.Articulation)
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
                     body_names=link_names,
-                    body_state=link_state,
+                    body_state=link_state.unsqueeze(0),
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 )
@@ -430,8 +438,9 @@ class SingleSapienHandler(BaseSimHandler):
             pose = robot_inst.get_pose()
             pos = torch.tensor(pose.p)
             rot = torch.tensor(pose.q)
-            vel = torch.tensor(obj_inst.get_velocity())
-            ang_vel = torch.tensor(obj_inst.get_angular_velocity())
+            vel = torch.zeros(3)
+            ang_vel = torch.zeros(3)
+            log.warning("Sapien2 does not support getting velocity of articulations")
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
             link_names, link_state = self._get_link_states(robot.name)
@@ -453,7 +462,7 @@ class SingleSapienHandler(BaseSimHandler):
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,
-                body_state=link_state,
+                body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 joint_pos_target=pos_target,
@@ -514,6 +523,23 @@ class SingleSapienHandler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def get_body_names(self, obj_name, sort=True):
+        """Get the names of links of an object by obj_name
+
+        Args:
+            obj_name: the name of the object to get link names.
+            sort: if sort the link names by lexical order.
+
+        Returns:
+            list: the list of link names.
+        """
+
+        body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
+        if sort:
+            return sorted(body_names)
+        else:
+            return deepcopy(body_names)
 
 
 SapienHandler = ParallelSimWrapper(SingleSapienHandler)
