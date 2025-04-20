@@ -12,6 +12,13 @@ class BaseActuatorCfg:
     is_ee: bool = False
     damping: float = 40.0
     stiffness: float = 400.0
+    actionable: bool = True
+    """Whether the actuator is actionable, i.e. can be driven by a motor.
+
+    Example:
+        Most actuators are actionable, but some are not, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper.
+        See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
+    """
 
 
 @configclass

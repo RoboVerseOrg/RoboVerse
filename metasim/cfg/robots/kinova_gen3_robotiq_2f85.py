@@ -14,7 +14,7 @@ class KinovaGen3Robotiq2f85Cfg(BaseRobotCfg):
     name: str = "kinova_gen3_robotiq_2f85"
     num_joints: int = 9
     fix_base_link: bool = True
-    usd_path: str = "roboverse_data/robots/kinova_gen3_robotiq_2f85/usd/kinova_gen3_robotiq_2f85_v1.usd"
+    usd_path: str = "roboverse_data/robots/kinova_gen3_robotiq_2f85/usd/renew_v1.usd"
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {
@@ -26,6 +26,8 @@ class KinovaGen3Robotiq2f85Cfg(BaseRobotCfg):
         "joint_6": BaseActuatorCfg(),
         "joint_7": BaseActuatorCfg(),
         "finger_joint": BaseActuatorCfg(),
+        "left_outer_finger_joint": BaseActuatorCfg(actionable=False),
+        "right_outer_finger_joint": BaseActuatorCfg(actionable=False),
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "joint_1": (-math.pi, math.pi),  # actually is -inf to +inf

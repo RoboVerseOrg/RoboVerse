@@ -356,7 +356,12 @@ class IsaaclabEnvOverwriter:
         env.actions = actions
 
     def _apply_action(self, env: "EmptyEnv") -> None:
-        env.robot.set_joint_position_target(env.actions)
+        actionable_joint_ids = [
+            env.scene.articulations[self.robot.name].joint_names.index(jn)
+            for jn in self.robot.actuators
+            if self.robot.actuators[jn].actionable
+        ]
+        env.robot.set_joint_position_target(env.actions, joint_ids=actionable_joint_ids)
 
     def _get_observations(self, env: "EmptyEnv") -> None:
         ## TODO: get proprioception observations
