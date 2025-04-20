@@ -21,19 +21,19 @@ You will get the following videos:
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/franka_planning_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/0_franka_planning_isaaclab.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Isaac Lab</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/franka_planning_isaacgym.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/0_franka_planning_isaacgym.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Isaac Gym</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/franka_planning_genesis.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/motion_planning/0_franka_planning_genesis.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Genesis</p>
         </div>
