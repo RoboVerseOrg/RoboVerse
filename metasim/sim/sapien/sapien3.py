@@ -336,27 +336,38 @@ class SingleSapien3Handler(BaseSimHandler):
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
-    def _apply_action(self, action, instance):
+    def _apply_action(self, instance: sapien_core.physx.PhysxArticulation, pos_action=None, vel_action=None):
         qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True)
         instance.set_qf(qf)
-        for i, joint in enumerate(instance.get_active_joints()):
-            joint.set_drive_target(action[i])
+        if pos_action is not None:
+            for joint in instance.get_active_joints():
+                joint.set_drive_target(pos_action[joint.get_name()])
+        if vel_action is not None:
+            for joint in instance.get_active_joints():
+                joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
-    def set_dof_targets(self, obj_name, actions: list[Action]):
+    def set_dof_targets(self, obj_name, target: list[Action]):
         """Set the dof targets of the object.
 
         Args:
             obj_name (str): The name of the object
             target (dict): The target values for the object
         """
-        self._actions_cache = actions
         instance = self.object_ids[obj_name]
         if isinstance(instance, sapien_core.physx.PhysxArticulation):
-            action = actions[0]
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
-            self._previous_dof_pos_target[obj_name] = action_arr
-            self._apply_action(action_arr, instance)
+            action = target[0]
+            pos_target = action.get("dof_pos_target", None)
+            vel_target = action.get("dof_vel_target", None)
+            pos_target_arr = (
+                np.array([pos_target[name] for name in self.object_joint_order[obj_name]]) if pos_target else None
+            )
+            vel_target_arr = (
+                np.array([vel_target[name] for name in self.object_joint_order[obj_name]]) if vel_target else None
+            )
+            self._previous_dof_pos_target[obj_name] = pos_target_arr
+            self._previous_dof_vel_target[obj_name] = vel_target_arr
+            self._apply_action(instance, pos_target, vel_target)
 
     def simulate(self):
         """Step the simulation."""
@@ -443,15 +454,30 @@ class SingleSapien3Handler(BaseSimHandler):
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
             link_names, link_state = self._get_link_states(robot.name)
+            pos_target = (
+                torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_pos_target[robot.name] is not None
+                else None
+            )
+            vel_target = (
+                torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_vel_target[robot.name] is not None
+                else None
+            )
+            effort_target = (
+                torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_torque_target[robot.name] is not None
+                else None
+            )
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,
                 body_state=link_state,
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0),
-                joint_vel_target=torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0),
-                joint_effort_target=torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0),
+                joint_pos_target=pos_target,
+                joint_vel_target=vel_target,
+                joint_effort_target=effort_target,
             )
             robot_states[robot.name] = state
 
