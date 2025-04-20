@@ -3,7 +3,7 @@
 
 Motion Planning is always challenging and complex to tune. Every time you want to plan a motion, you need to tune the rotation convention, the planning library, etc. We provide a simple tutorial to show you how to plan a motion for the Franka robot.
 
-First, you need to install [curobo](https://roboverse.wiki/metasim/get_started/advanced_installation/curobo) and [gsnet](https://roboverse.wiki/metasim/get_started/advanced_installation/gsnet). RoboVerse provides a clean readme to help you install the dependencies. Follow the link to install them!
+First, you need to install [curobo](https://roboverse.wiki/metasim/get_started/advanced_installation/curobo). RoboVerse provides a clean readme to help you install the dependencies. Follow the link to install them!
 
 
 Then run:
