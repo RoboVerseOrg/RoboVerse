@@ -2,7 +2,7 @@
 
 ## Table of Contents
 ```{toctree}
-:caption: Get Started
+:caption: Installation
 :maxdepth: 2
 :titlesonly:
 
@@ -10,7 +10,15 @@ get_started/prerequisite
 get_started/installation
 get_started/docker
 get_started/advanced_installation/index
+```
+
+```{toctree}
+:caption: Getting Started
+:maxdepth: 2
+:titlesonly:
+
 get_started/quick_start/index
+get_started/motion_planning/index
 ```
 
 ```{toctree}
