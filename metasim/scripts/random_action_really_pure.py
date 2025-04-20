@@ -43,18 +43,17 @@ def main():
     ] * scenario.num_envs
     env.reset(states=init_states)
 
-    robot_joint_limits = scenario.robot.joint_limits
+    joint_min = {jn: scenario.robot.joint_limits[jn][0] for jn in scenario.robot.joint_limits.keys()}
+    joint_max = {jn: scenario.robot.joint_limits[jn][1] for jn in scenario.robot.joint_limits.keys()}
     step = 0
     while True:
         log.debug(f"Step {step}")
         actions = [
             {
                 "dof_pos_target": {
-                    joint_name: (
-                        torch.rand(1).item() * (robot_joint_limits[joint_name][1] - robot_joint_limits[joint_name][0])
-                        + robot_joint_limits[joint_name][0]
-                    )
-                    for joint_name in robot_joint_limits.keys()
+                    jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
+                    for jn in scenario.robot.actuators.keys()
+                    if scenario.robot.actuators[jn].actionable
                 }
             }
             for _ in range(scenario.num_envs)

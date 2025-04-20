@@ -115,14 +115,13 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         self._actions_cache = action
-        joint_names = self.get_joint_names(self.robot.name, sort=False)
-        action_env_tensors = torch.zeros((self.num_envs, len(joint_names)), device=self.env.device)
+        actuator_names = [k for k, v in self.robot.actuators.items() if v.actionable]
+        action_env_tensors = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
         for env_id in range(self.num_envs):
             action_env = action[env_id]
-            for i, joint_name in enumerate(joint_names):
-                # Convert numpy float32 to torch tensor and move to correct device
+            for i, actuator_name in enumerate(actuator_names):
                 action_env_tensors[env_id, i] = torch.tensor(
-                    action_env["dof_pos_target"][joint_name], device=self.env.device
+                    action_env["dof_pos_target"][actuator_name], device=self.env.device
                 )
 
         _, _, _, time_out, extras = self.env.step(action_env_tensors)
