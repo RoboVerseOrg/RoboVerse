@@ -449,9 +449,9 @@ class SingleSapien3Handler(BaseSimHandler):
                 body_state=link_state,
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=self._previous_dof_pos_target[robot.name].unsqueeze(0),
-                joint_vel_target=self._previous_dof_vel_target[robot.name].unsqueeze(0),
-                joint_effort_target=self._previous_dof_torque_target[robot.name].unsqueeze(0),
+                joint_pos_target=torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0),
+                joint_vel_target=torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0),
+                joint_effort_target=torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0),
             )
             robot_states[robot.name] = state
 
