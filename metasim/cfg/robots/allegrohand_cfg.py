@@ -10,7 +10,7 @@ class AllegroHandCfg(BaseRobotCfg):
     name: str = "allegro_hand"
     num_joints: int = 16
     fix_base_link: bool = True
-    usd_path: str = "roboverse_data/robots/allegro_hand/usd/allegro_hand.usd"
+    usd_path: str = "roboverse_data/robots/allegro_hand/usd/allegro_hand_instanceable.usd"
     mjcf_path: str = "roboverse_data/robots/allegro_hand/mjcf/allegro_hand.xml"
     urdf_path: str = "roboverse_data/robots/allegro_hand/urdf/allegro_touch_sensor.urdf"
     enabled_gravity: bool = True

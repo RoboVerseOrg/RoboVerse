@@ -17,7 +17,7 @@ class AllegroHandReorientationCfg(BaseTaskCfg):
     objects = [
         RigidObjCfg(
             name="block",
-            usd_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
+            usd_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/usd/cube_multicolor_allegro.usd",
             mjcf_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
             urdf_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
             default_position=(0.0, -0.2, 0.56),
@@ -25,7 +25,7 @@ class AllegroHandReorientationCfg(BaseTaskCfg):
         ),
         RigidObjCfg(
             name="goal",
-            usd_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
+            usd_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/usd/cube_multicolor_allegro.usd",
             mjcf_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
             urdf_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
             default_position=(0.0, 0.0, 0.92),
