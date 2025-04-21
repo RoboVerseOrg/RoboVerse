@@ -25,13 +25,13 @@ python get_started/rl/0_ppo_reaching.py --sim <simulator> --task debug:reach_tar
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/0_ppo_reaching_isaacgym.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/rl/0_ppo_reaching_isaacgym.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Isaac Gym</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/0_ppo_reaching_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/rl/0_ppo_reaching_isaaclab.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Isaac Lab</p>
         </div>
