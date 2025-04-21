@@ -43,7 +43,7 @@ python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_origin
 ```
 
 #### You can get the video like this:
-
+Reach Far Away:
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
@@ -59,5 +59,21 @@ python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_origin
             <p style="margin-top: 5px;">Isaac Lab</p>
         </div>
     </div>
-
+</div>
+Reach Origin:
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
+        <div style="width: 48%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/rl/0_ppo_reaching_ReachOrigin_isaacgym.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Isaac Gym</p>
+        </div>
+        <div style="width: 48%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/rl/0_ppo_reaching_ReachOrigin_isaaclab.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Isaac Lab</p>
+        </div>
+    </div>
 </div>
