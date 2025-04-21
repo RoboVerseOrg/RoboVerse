@@ -678,7 +678,15 @@ class IsaacgymHandler(BaseSimHandler):
         return
 
     def close(self) -> None:
-        pass
+        try:
+            self.gym.destroy_sim(self.sim)
+            self.gym.destroy_viewer(self.viewer)
+            self.gym = None
+            self.sim = None
+            self.viewer = None
+        except Exception as e:
+            log.error(f"Error closing IsaacGym environment: {e}")
+            pass
 
     ############################################################
     ## Utils
