@@ -48,14 +48,14 @@ class FrankaCfg(BaseRobotCfg):
 
     default_joint_positions: dict[str, float] = {
         "panda_joint1": 0.0,
-        "panda_joint2": 0.0,
+        "panda_joint2": -0.785398,
         "panda_joint3": 0.0,
-        "panda_joint4": 0.0,
+        "panda_joint4": -2.356194,
         "panda_joint5": 0.0,
-        "panda_joint6": 0.0,
-        "panda_joint7": 0.0,
-        "panda_finger_joint1": 0.0,
-        "panda_finger_joint2": 0.0,
+        "panda_joint6": 1.570796,
+        "panda_joint7": 0.785398,
+        "panda_finger_joint1": 0.04,
+        "panda_finger_joint2": 0.04,
     }
 
     # TODO: Make it more elegant
