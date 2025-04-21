@@ -196,6 +196,7 @@ class StableBaseline3VecEnv(VecEnv):
 def train_ppo():
     ## Choice 1: use scenario config to initialize the environment
     scenario = ScenarioCfg(**vars(args))
+    scenario.cameras = []
     metasim_env = MetaSimVecEnv(scenario)
 
     ## Choice 2: use gym.make to initialize the environment
