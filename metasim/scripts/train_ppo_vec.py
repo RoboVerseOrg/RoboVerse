@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import random
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import rootutils
@@ -29,6 +35,7 @@ class Args(ScenarioCfg):
     task: str = "debug:reach_origin"
     robot: str = "franka"
     num_envs: int = 16
+    sim: Literal["isaaclab", "isaacgym", "mujoco"] = "isaaclab"
 
 
 args = tyro.cli(Args)
@@ -40,7 +47,7 @@ class MetaSimVecEnv(VectorEnv):
     def __init__(
         self,
         scenario: ScenarioCfg | None = None,
-        sim_type: SimType = SimType.ISAACLAB,
+        sim: str = "isaaclab",
         task_name: str | None = None,
         num_envs: int | None = 4,
     ):
@@ -50,7 +57,7 @@ class MetaSimVecEnv(VectorEnv):
             scenario.num_envs = num_envs
             scenario = ScenarioCfg(**vars(scenario))
         self.num_envs = scenario.num_envs
-        env_class = get_sim_env_class(sim_type)
+        env_class = get_sim_env_class(SimType(sim))
         env = env_class(scenario)
         self.env: EnvWrapper[BaseSimHandler] = env
         self.render_mode = None  # XXX
@@ -196,8 +203,8 @@ class StableBaseline3VecEnv(VecEnv):
 def train_ppo():
     ## Choice 1: use scenario config to initialize the environment
     scenario = ScenarioCfg(**vars(args))
-    scenario.cameras = []
-    metasim_env = MetaSimVecEnv(scenario)
+    scenario.cameras = []  # XXX: remove cameras to avoid rendering to speed up
+    metasim_env = MetaSimVecEnv(scenario, task_name=args.task, num_envs=args.num_envs, sim=args.sim)
 
     ## Choice 2: use gym.make to initialize the environment
     # metasim_env = gym.make("reach_origin", num_envs=args.num_envs)
