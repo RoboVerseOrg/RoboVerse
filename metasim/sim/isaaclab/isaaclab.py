@@ -292,10 +292,12 @@ class IsaaclabHandler(BaseSimHandler):
                 obj_inst = self.env.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
                 body_reindex = self.get_body_reindex(obj.name)
+                root_state = obj_inst.data.root_state_w
+                root_state[:, 0:3] -= self.env.scene.env_origins
                 body_state = obj_inst.data.body_state_w[:, body_reindex]
                 body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
                 state = ObjectState(
-                    root_state=obj_inst.data.root_state_w,
+                    root_state=root_state,
                     body_names=self.get_body_names(obj.name),
                     body_state=body_state,
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
@@ -303,8 +305,10 @@ class IsaaclabHandler(BaseSimHandler):
                 )
             else:
                 obj_inst = self.env.scene.rigid_objects[obj.name]
+                root_state = obj_inst.data.root_state_w
+                root_state[:, 0:3] -= self.env.scene.env_origins
                 state = ObjectState(
-                    root_state=obj_inst.data.root_state_w,
+                    root_state=root_state,
                 )
             object_states[obj.name] = state
 
@@ -314,10 +318,12 @@ class IsaaclabHandler(BaseSimHandler):
             obj_inst = self.env.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)
+            root_state = obj_inst.data.root_state_w
+            root_state[:, 0:3] -= self.env.scene.env_origins
             body_state = obj_inst.data.body_state_w[:, body_reindex]
             body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
             state = RobotState(
-                root_state=obj_inst.data.root_state_w,
+                root_state=root_state,
                 body_names=self.get_body_names(obj.name),
                 body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
