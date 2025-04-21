@@ -292,10 +292,12 @@ class IsaaclabHandler(BaseSimHandler):
                 obj_inst = self.env.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
                 body_reindex = self.get_body_reindex(obj.name)
+                body_state = obj_inst.data.body_state_w[:, body_reindex]
+                body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
                 state = ObjectState(
                     root_state=obj_inst.data.root_state_w,
                     body_names=self.get_body_names(obj.name),
-                    body_state=obj_inst.data.body_state_w[:, body_reindex],
+                    body_state=body_state,
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
                 )
@@ -312,10 +314,12 @@ class IsaaclabHandler(BaseSimHandler):
             obj_inst = self.env.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)
+            body_state = obj_inst.data.body_state_w[:, body_reindex]
+            body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
             state = RobotState(
                 root_state=obj_inst.data.root_state_w,
                 body_names=self.get_body_names(obj.name),
-                body_state=obj_inst.data.body_state_w[:, body_reindex],
+                body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
                 joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex],
