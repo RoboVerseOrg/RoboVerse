@@ -405,6 +405,7 @@ class PPO(object):
             # do env step
             actions = res_dict["actions"]
             actions = actions.squeeze(0)
+            actions = actions.clamp(-1.0, 1.0)
             self.obs, rewards, self.dones, timeout, infos = self.env.step(actions)
             # update dones and rewards after env step
             self.storage.update_data("dones", n, self.dones)
