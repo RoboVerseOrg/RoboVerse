@@ -43,7 +43,7 @@ python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_origin
 ```
 
 #### You can get the video like this:
-Reach Far Away:
+##### Reach Far Away:
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
@@ -60,7 +60,7 @@ Reach Far Away:
         </div>
     </div>
 </div>
-Reach Origin:
+##### Reach Origin:
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
