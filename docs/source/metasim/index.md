@@ -19,6 +19,7 @@ get_started/advanced_installation/index
 
 get_started/quick_start/index
 get_started/motion_planning/index
+get_started/rl_example/index
 ```
 
 ```{toctree}
