@@ -97,7 +97,7 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
                 RigidObjectCfg(
                     prim_path=prim_path,
                     spawn=sim_utils.UsdFileCfg(
-                        usd_path="/home/fs/Downloads/frame_prim.usd",
+                        usd_path="metasim/data/quick_start/assets/COMMON/frame/usd/frame.usd",
                         rigid_props=sim_utils.RigidBodyPropertiesCfg(
                             disable_gravity=True, kinematic_enabled=True
                         ),  # fixed
