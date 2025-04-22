@@ -69,7 +69,7 @@ def main():
 
     # reset before first step
     tic = time.time()
-    obs, extras = env.reset(states=init_states[:num_envs])
+    states, extras = env.reset(states=init_states[:num_envs])
     toc = time.time()
     log.trace(f"Time to reset: {toc - tic:.2f}s")
 
@@ -100,14 +100,17 @@ def main():
 
         keyboard_client.draw_instructions()
 
-        obs = env.handler.get_observation()
-
         # compute target
-        curr_robot_q = obs["joint_qpos"].cuda()
-        robot_ee_state = obs["robot_ee_state"].cuda()
-        robot_root_state = obs["robot_root_state"].cuda()
-        robot_pos, robot_quat = robot_root_state[:, 0:3], robot_root_state[:, 3:7]
-        curr_ee_pos, curr_ee_quat = robot_ee_state[:, 0:3], robot_ee_state[:, 3:7]
+        reorder_idx = env.handler.get_joint_reindex(robot.name)
+        inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+        curr_robot_q = states.robots[robot.name].joint_pos[:, inverse_reorder_idx]
+        ee_idx = states.robots[robot.name].body_names.index(robot.ee_body_name)
+        robot_ee_state = states.robots[robot.name].body_state[0, ee_idx, :7]
+        robot_root_state = states.robots[robot.name].root_state[0, :7]
+        robot_pos, robot_quat = robot_root_state[0:3], robot_root_state[3:7]
+        curr_ee_pos, curr_ee_quat = robot_ee_state[0:3], robot_ee_state[3:7]
+        robot_pos, robot_quat = states.robots[robot.name].root_state[0, :7].split([3, 4])
+        curr_ee_pos, curr_ee_quat = states.robots[robot.name].body_state[0, ee_idx, :7].split([3, 4])
 
         curr_ee_pos = quat_apply(quat_invert(robot_quat), curr_ee_pos - robot_pos)
         curr_ee_quat_local = quat_mul(quat_invert(robot_quat), curr_ee_quat)
@@ -136,8 +139,7 @@ def main():
         actions = [
             {"dof_pos_target": dict(zip(robot.joint_limits.keys(), q[i_env].tolist()))} for i_env in range(num_envs)
         ]
-        env.step(actions)
-        env.handler.render()
+        states, _, _, _, _ = env.step(actions)
 
         step += 1
         log.debug(f"Step {step}")
