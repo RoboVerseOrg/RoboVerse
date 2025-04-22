@@ -5,7 +5,7 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveS
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.utils.camera_util import get_cam_params
 
-from .isaaclab_helper import add_lights, add_objects, add_robot, get_pose
+from .isaaclab_helper import add_lights, add_objects, add_robot, add_sensors, get_pose
 
 try:
     from .empty_env import EmptyEnv
@@ -34,6 +34,7 @@ class IsaaclabEnvOverwriter:
         self.task = scenario.task
         self.robot = scenario.robot
         self.cameras = scenario.cameras
+        self.sensors = scenario.sensors
         self.objects = scenario.objects
         self.scene = scenario.scene
         self.checker = scenario.checker
@@ -350,6 +351,9 @@ class IsaaclabEnvOverwriter:
                     height=camera.height,
                 )
             )
+
+        ## Add sensors
+        add_sensors(env, self.sensors)
 
     def _pre_physics_step(self, env: "EmptyEnv", actions: torch.Tensor) -> None:
         ## TODO: Clip action or not?
