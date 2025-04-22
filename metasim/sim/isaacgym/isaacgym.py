@@ -458,7 +458,7 @@ class IsaacgymHandler(BaseSimHandler):
             camera_states[cam.name] = state
         self.gym.end_access_image_tensors(self.sim)
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
     @property
     def episode_length_buf(self) -> list[int]:

@@ -162,7 +162,7 @@ class GenesisHandler(BaseSimHandler):
             )
             camera_states[camera.name] = state
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:

@@ -406,7 +406,7 @@ class SingleSapienHandler(BaseSimHandler):
             state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
             camera_states[camera.name] = state
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
     def set_states(self, states, env_ids=None):
         """Set the states of the environment.

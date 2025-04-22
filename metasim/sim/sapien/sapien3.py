@@ -425,7 +425,7 @@ class SingleSapien3Handler(BaseSimHandler):
             state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
             camera_states[camera.name] = state
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
     def refresh_render(self):
         """Refresh the render."""
