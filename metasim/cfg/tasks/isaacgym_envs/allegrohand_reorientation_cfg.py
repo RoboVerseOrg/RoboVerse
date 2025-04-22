@@ -22,6 +22,7 @@ class AllegroHandReorientationCfg(BaseTaskCfg):
             urdf_path="roboverse_data/assets/isaacgymenvs/block_allegrohand_multicolor/urdf/cube_multicolor_allegro.urdf",
             default_position=(0.0, -0.2, 0.56),
             default_orientation=(1.0, 0.0, 0.0, 0.0),
+            physics=PhysicStateType.XFORM,
         ),
         RigidObjCfg(
             name="goal",
