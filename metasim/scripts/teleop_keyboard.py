@@ -105,10 +105,6 @@ def main():
         inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
         curr_robot_q = states.robots[robot.name].joint_pos[:, inverse_reorder_idx]
         ee_idx = states.robots[robot.name].body_names.index(robot.ee_body_name)
-        robot_ee_state = states.robots[robot.name].body_state[0, ee_idx, :7]
-        robot_root_state = states.robots[robot.name].root_state[0, :7]
-        robot_pos, robot_quat = robot_root_state[0:3], robot_root_state[3:7]
-        curr_ee_pos, curr_ee_quat = robot_ee_state[0:3], robot_ee_state[3:7]
         robot_pos, robot_quat = states.robots[robot.name].root_state[0, :7].split([3, 4])
         curr_ee_pos, curr_ee_quat = states.robots[robot.name].body_state[0, ee_idx, :7].split([3, 4])
 
