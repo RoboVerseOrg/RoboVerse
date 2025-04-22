@@ -132,6 +132,22 @@ class PrimitiveSphereCfg(RigidObjCfg):
 
 
 @configclass
+class PrimitiveFrameCfg(RigidObjCfg):
+    """Primitive coordinate frame cfg."""
+
+    # TODO: This is object shouldn't inherit from RigidObjCfg?
+    name: str = MISSING
+    scale: float = 1.0
+    """Scale of the frame"""
+    base_link: str | tuple[str, str] | None = None
+    """Base link to attach the frame.
+        If ``None``, the frame will be attached to the world origin.
+        If a ``str``, the frame will be attached to the root link of the object specified by the name.
+        If a ``tuple[str, str]``, the frame will be attached to the object specified by the first str and the body link specified by the second str.
+    """
+
+
+@configclass
 class PrimitiveCylinderCfg(RigidObjCfg):
     """Primitive cylinder object cfg."""
 
