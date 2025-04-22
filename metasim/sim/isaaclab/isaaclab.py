@@ -135,6 +135,7 @@ class IsaaclabHandler(BaseSimHandler):
                 if obj.base_link is None:
                     pos = torch.zeros((self.num_envs, 3), device=self.device)
                     rot = torch.zeros((self.num_envs, 4), device=self.device)
+                    rot[:, 0] = 1.0
                 elif isinstance(obj.base_link, str):
                     pos, rot = (states.objects | states.robots)[obj.base_link].root_state[:, :7].split([3, 4], dim=-1)
                 else:
