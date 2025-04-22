@@ -17,6 +17,17 @@ except:
 
 
 @dataclass
+class ContactForceState:
+    """State of a single contact force sensor."""
+
+    force: torch.Tensor
+    """Contact force. Shape is (num_envs, 3)."""
+
+
+SensorState = ContactForceState
+
+
+@dataclass
 class ObjectState:
     """State of a single object."""
 
@@ -74,6 +85,8 @@ class TensorState:
     """States of all robots."""
     cameras: dict[str, CameraState]
     """States of all cameras."""
+    sensors: dict[str, SensorState]
+    """States of all sensors."""
 
 
 def _dof_tensor_to_dict(dof_tensor: torch.Tensor, joint_names: list[str]) -> dict[str, float]:

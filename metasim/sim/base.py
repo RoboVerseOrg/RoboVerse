@@ -27,6 +27,7 @@ class BaseSimHandler:
         self.task = scenario.task
         self.robot = scenario.robot
         self.cameras = scenario.cameras
+        self.sensors = scenario.sensors
         self.objects = scenario.objects
         self.checker = scenario.checker
         self.object_dict = {obj.name: obj for obj in self.objects + [self.robot] + self.checker.get_debug_viewers()}

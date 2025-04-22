@@ -14,6 +14,7 @@ from metasim.cfg.objects import (
     RigidObjCfg,
 )
 from metasim.cfg.robots import BaseRobotCfg
+from metasim.cfg.sensors import BaseSensorCfg, ContactForceSensorCfg
 
 try:
     from .empty_env import EmptyEnv
@@ -150,6 +151,7 @@ def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
     cfg = ArticulationCfg(
         spawn=sim_utils.UsdFileCfg(
             usd_path=robot.usd_path,
+            activate_contact_sensors=True,  # TODO: only activate when contact sensor is added
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(),
         ),
@@ -206,6 +208,66 @@ def add_lights(env: "EmptyEnv", lights: list[BaseLightCfg]) -> None:
             _add_light(env, light, f"/World/lights/light_{i}")
         else:
             _add_light(env, light, f"/World/envs/env_0/lights/light_{i}")
+
+
+def _add_contact_force_sensor(env: "EmptyEnv", sensor: ContactForceSensorCfg) -> None:
+    try:
+        import omni.isaac.core.utils.prims as prim_utils
+        from omni.isaac.lab.sensors import ContactSensor, ContactSensorCfg
+    except ModuleNotFoundError:
+        import isaacsim.core.utils.prims as prim_utils
+        from isaaclab.sensors import ContactSensor, ContactSensorCfg
+
+    if isinstance(sensor, ContactForceSensorCfg):
+        _base_prim_regex_path = (
+            f"/World/envs/env_0/{sensor.base_link}"
+            if isinstance(sensor.base_link, str)
+            else f"/World/envs/env_0/{sensor.base_link[0]}/.*{sensor.base_link[1]}"  # TODO: improve the regex
+        )
+        _base_prim_paths = prim_utils.find_matching_prim_paths(_base_prim_regex_path)
+        if len(_base_prim_paths) == 0:
+            log.error(f"Base link {sensor.base_link} of cotact force sensor not found")
+            return
+        if len(_base_prim_paths) > 1:
+            log.warning(
+                f"Multiple base links found for contact force sensor {sensor.name}, using the first one: {_base_prim_paths[0]}"
+            )
+        base_prim_path = _base_prim_paths[0]
+        log.info(f"Base prim path: {base_prim_path}")
+        if sensor.source_link is not None:
+            _source_prim_regex_path = (
+                f"/World/envs/env_0/{sensor.source_link}"
+                if isinstance(sensor.source_link, str)
+                else f"/World/envs/env_0/{sensor.source_link[0]}/.*{sensor.source_link[1]}"  # TODO: improve the regex
+            )
+            _source_prim_paths = prim_utils.find_matching_prim_paths(_source_prim_regex_path)
+            if len(_source_prim_paths) == 0:
+                log.error(f"Source link {sensor.source_link} of cotact force sensor not found")
+                return
+            if len(_source_prim_paths) > 1:
+                log.warning(
+                    f"Multiple source links found for contact force sensor {sensor.name}, using the first one: {_source_prim_paths[0]}"
+                )
+            source_prim_path = _source_prim_paths[0]
+        else:
+            source_prim_path = None
+
+        env.scene.sensors[sensor.name] = ContactSensor(
+            ContactSensorCfg(
+                prim_path=base_prim_path.replace("env_0", "env_.*"),  # HACK: this is so hacky
+                filter_prim_paths_expr=[source_prim_path.replace("env_0", "env_.*")]  # HACK: this is so hacky
+                if source_prim_path is not None
+                else [],
+                history_length=6,  # XXX: hard-coded
+                update_period=0.0,  # XXX: hard-coded
+            )
+        )
+
+
+def add_sensors(env: "EmptyEnv", sensors: list[BaseSensorCfg]) -> None:
+    for sensor in sensors:
+        if isinstance(sensor, ContactForceSensorCfg):
+            _add_contact_force_sensor(env, sensor)
 
 
 def get_pose(

@@ -9,9 +9,10 @@ from loguru import logger as log
 
 from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveFrameCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.cfg.sensors import ContactForceSensorCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ContactForceState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
 from .isaaclab_helper import get_pose
@@ -357,7 +358,19 @@ class IsaaclabHandler(BaseSimHandler):
             depth_data = camera_inst.data.output.get("depth", None)
             camera_states[camera.name] = CameraState(rgb=rgb_data, depth=depth_data)
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        sensor_states = {}
+        for sensor in self.sensors:
+            if isinstance(sensor, ContactForceSensorCfg):
+                sensor_inst = self.env.scene.sensors[sensor.name]
+                if sensor.source_link is None:
+                    force = sensor_inst.data.net_forces_w.squeeze(1)
+                else:
+                    force = sensor_inst.data.force_matrix_w.squeeze((1, 2))
+                sensor_states[sensor.name] = ContactForceState(force=force)
+            else:
+                raise ValueError(f"Unknown sensor type: {type(sensor)}")
+
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors=sensor_states)
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if env_ids is None:
