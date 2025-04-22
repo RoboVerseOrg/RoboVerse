@@ -26,7 +26,7 @@ class EmptyChecker(BaseChecker):
         pass
 
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        return torch.zeros(handler.num_envs, dtype=torch.bool)
+        return torch.zeros(handler.num_envs, dtype=torch.bool, device=handler.device)
 
     def get_debug_viewers(self) -> list[BaseObjCfg]:
         return []
@@ -39,8 +39,8 @@ class DetectedChecker(BaseChecker):
     ignore_if_first_check_success: bool = False
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
-        self._first_check = torch.ones(handler.num_envs, dtype=torch.bool)  # True
-        self._ignore = torch.zeros(handler.num_envs, dtype=torch.bool)  # False
+        self._first_check = torch.ones(handler.num_envs, dtype=torch.bool, device=handler.device)  # True
+        self._ignore = torch.zeros(handler.num_envs, dtype=torch.bool, device=handler.device)  # False
         self.detector.reset(handler, env_ids=env_ids)
 
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -93,7 +93,7 @@ class JointPosShiftChecker(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_joint_pos"):
-            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32)
+            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32, device=handler.device)
 
         self.init_joint_pos[env_ids] = handler.get_dof_pos(self.obj_name, self.joint_name, env_ids=env_ids)
 
@@ -128,7 +128,7 @@ class JointPosPercentShiftChecker(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_joint_pos"):
-            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32)
+            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32, device=handler.device)
 
         self.init_joint_pos[env_ids] = handler.get_dof_pos(self.obj_name, self.joint_name, env_ids=env_ids)
 
@@ -180,7 +180,7 @@ class UpAxisRotationChecker(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_quat"):
-            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32)
+            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32, device=handler.device)
 
         self.init_quat[env_ids] = handler.get_rot(self.obj_name, env_ids=env_ids)
 
@@ -233,7 +233,7 @@ class RotationShiftChecker(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_quat"):
-            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32)
+            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32, device=handler.device)
 
         self.init_quat[env_ids] = handler.get_rot(self.obj_name, env_ids=env_ids)
 
@@ -277,7 +277,7 @@ class PositionShiftChecker(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_pos"):
-            self.init_pos = torch.zeros(handler.num_envs, 3, dtype=torch.float32)
+            self.init_pos = torch.zeros((handler.num_envs, 3), dtype=torch.float32, device=handler.device)
 
         tmp = handler.get_pos(self.obj_name, env_ids=env_ids)
         assert tmp.shape == (len(env_ids), 3)
@@ -287,7 +287,7 @@ class PositionShiftChecker(BaseChecker):
         cur_pos = handler.get_pos(self.obj_name)
         if torch.isnan(cur_pos).any():
             log.debug(f"Object {self.obj_name} moved to nan position")
-            return torch.ones(cur_pos.shape[0], dtype=torch.bool)
+            return torch.ones(cur_pos.shape[0], dtype=torch.bool, device=handler.device)
         dim = {"x": 0, "y": 1, "z": 2}[self.axis]
         dis_diff = cur_pos - self.init_pos
         dim_diff = dis_diff[:, dim]
@@ -321,7 +321,7 @@ class PositionShiftCheckerWithTolerance(BaseChecker):
             env_ids = list(range(handler.num_envs))
 
         if not hasattr(self, "init_pos"):
-            self.init_pos = torch.zeros(handler.num_envs, 3, dtype=torch.float32)
+            self.init_pos = torch.zeros((handler.num_envs, 3), dtype=torch.float32, device=handler.device)
 
         tmp = handler.get_pos(self.obj_name, env_ids=env_ids)
         assert tmp.shape == (len(env_ids), 3)
@@ -333,7 +333,7 @@ class PositionShiftCheckerWithTolerance(BaseChecker):
 
         if torch.isnan(cur_pos).any():
             log.debug(f"Object {self.obj_name} moved to nan position")
-            return torch.ones(cur_pos.shape[0], dtype=torch.bool)
+            return torch.ones(cur_pos.shape[0], dtype=torch.bool, device=handler.device)
         dim = {"x": 0, "y": 1, "z": 2}[self.axis]
         dis_diff = cur_pos - self.init_pos
         dim_diff = dis_diff[:, dim]
