@@ -9,6 +9,7 @@ from metasim.cfg.objects import (
     BaseObjCfg,
     PrimitiveCubeCfg,
     PrimitiveCylinderCfg,
+    PrimitiveFrameCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
@@ -87,6 +88,21 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
+                    ),
+                )
+            )
+            return
+        if isinstance(obj, PrimitiveFrameCfg):
+            env.scene.rigid_objects[obj.name] = RigidObject(
+                RigidObjectCfg(
+                    prim_path=prim_path,
+                    spawn=sim_utils.UsdFileCfg(
+                        usd_path="/home/fs/Downloads/frame_prim.usd",
+                        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                            disable_gravity=True, kinematic_enabled=True
+                        ),  # fixed
+                        collision_props=None,  # no collision
+                        scale=obj.scale,
                     ),
                 )
             )

@@ -7,7 +7,7 @@ import gymnasium as gym
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, RigidObjCfg
+from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveFrameCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
@@ -128,6 +128,22 @@ class IsaaclabHandler(BaseSimHandler):
         time_out = time_out.cpu()
         success = self.checker.check(self)
         states = self.get_states()
+
+        ## TODO: organize this
+        for obj in self.objects:
+            if isinstance(obj, PrimitiveFrameCfg):
+                if obj.base_link is None:
+                    pos = torch.zeros((self.num_envs, 3), device=self.device)
+                    rot = torch.zeros((self.num_envs, 4), device=self.device)
+                elif isinstance(obj.base_link, str):
+                    pos, rot = (states.objects | states.robots)[obj.base_link].root_state[:, :7].split([3, 4], dim=-1)
+                else:
+                    base_obj_name = obj.base_link[0]
+                    base_body_name = obj.base_link[1]
+                    merged_states = states.objects | states.robots
+                    body_idx = merged_states[base_obj_name].body_names.index(base_body_name)
+                    pos, rot = merged_states[base_obj_name].body_state[:, body_idx, :7].split([3, 4], dim=-1)
+                self._set_object_pose(obj, pos, rot)
         return states, None, success, time_out, extras
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
