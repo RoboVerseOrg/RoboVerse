@@ -28,11 +28,12 @@ class Args:
     sim: str = "isaaclab"
     robot: str = "franka"
     z_pos: float = 0.0
+    decimation: int = 20
 
 
 def main():
     args = tyro.cli(Args)
-    scenario = ScenarioCfg(robot=args.robot, sim=args.sim, num_envs=args.num_envs)
+    scenario = ScenarioCfg(robot=args.robot, sim=args.sim, num_envs=args.num_envs, decimation=args.decimation)
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_env_class(SimType(args.sim))
