@@ -14,7 +14,7 @@ from metasim.cfg.objects import (
     RigidObjCfg,
 )
 from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.sensors import BaseSensorCfg, ContactForceSensorCfg
+from metasim.cfg.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
 
 try:
     from .empty_env import EmptyEnv
@@ -22,7 +22,7 @@ except:
     pass
 
 
-def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
+def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
     try:
         import omni.isaac.lab.sim as sim_utils
         from omni.isaac.lab.assets import Articulation, ArticulationCfg, RigidObject, RigidObjectCfg
@@ -135,7 +135,7 @@ def add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
 
 def add_objects(env: "EmptyEnv", objects: list[BaseObjCfg]) -> None:
     for obj in objects:
-        add_object(env, obj)
+        _add_object(env, obj)
 
 
 def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
@@ -268,6 +268,39 @@ def add_sensors(env: "EmptyEnv", sensors: list[BaseSensorCfg]) -> None:
     for sensor in sensors:
         if isinstance(sensor, ContactForceSensorCfg):
             _add_contact_force_sensor(env, sensor)
+
+
+def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
+    try:
+        import omni.isaac.lab.sim as sim_utils
+        from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg
+    except ModuleNotFoundError:
+        import isaaclab.sim as sim_utils
+        from isaaclab.sensors import TiledCamera, TiledCameraCfg
+
+    env.scene.sensors[camera.name] = TiledCamera(
+        TiledCameraCfg(
+            prim_path=f"/World/envs/env_.*/{camera.name}",
+            offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
+            data_types=camera.data_types,
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=camera.focal_length,
+                focus_distance=camera.focus_distance,
+                horizontal_aperture=camera.horizontal_aperture,
+                clipping_range=camera.clipping_range,
+            ),
+            width=camera.width,
+            height=camera.height,
+        )
+    )
+
+
+def add_cameras(env: "EmptyEnv", cameras: list[BaseCameraCfg]) -> None:
+    for camera in cameras:
+        if isinstance(camera, PinholeCameraCfg):
+            _add_pinhole_camera(env, camera)
+        else:
+            raise ValueError(f"Unsupported camera type: {type(camera)}")
 
 
 def get_pose(

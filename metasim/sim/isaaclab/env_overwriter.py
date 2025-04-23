@@ -3,9 +3,8 @@ from loguru import logger as log
 
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.utils.camera_util import get_cam_params
 
-from .isaaclab_helper import add_lights, add_objects, add_robot, add_sensors, get_pose
+from .isaaclab_helper import add_cameras, add_lights, add_objects, add_robot, add_sensors, get_pose
 
 try:
     from .empty_env import EmptyEnv
@@ -170,13 +169,9 @@ class IsaaclabEnvOverwriter:
 
     def _setup_scene(self, env: "EmptyEnv") -> None:
         try:
-            import omni.isaac.lab.sim as sim_utils
             from omni.isaac.core.prims import GeometryPrim
             from omni.isaac.core.utils.stage import add_reference_to_stage
-            from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg
         except ModuleNotFoundError:
-            import isaaclab.sim as sim_utils
-            from isaaclab.sensors import TiledCamera, TiledCameraCfg
             from isaacsim.core.prims import SingleGeometryPrim as GeometryPrim
             from isaacsim.core.utils.stage import add_reference_to_stage
 
@@ -335,22 +330,7 @@ class IsaaclabEnvOverwriter:
             add_lights(env, self.lights)
 
         ## Add camera
-        for camera in self.cameras:
-            env.scene.sensors[camera.name] = TiledCamera(
-                TiledCameraCfg(
-                    prim_path=f"/World/envs/env_.*/{camera.name}",
-                    offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
-                    data_types=camera.data_types,
-                    spawn=sim_utils.PinholeCameraCfg(
-                        focal_length=camera.focal_length,
-                        focus_distance=camera.focus_distance,
-                        horizontal_aperture=camera.horizontal_aperture,
-                        clipping_range=camera.clipping_range,
-                    ),
-                    width=camera.width,
-                    height=camera.height,
-                )
-            )
+        add_cameras(env, self.cameras)
 
         ## Add sensors
         add_sensors(env, self.sensors)
@@ -368,60 +348,7 @@ class IsaaclabEnvOverwriter:
         env.robot.set_joint_position_target(env.actions, joint_ids=actionable_joint_ids)
 
     def _get_observations(self, env: "EmptyEnv") -> None:
-        ## TODO: get proprioception observations
-        for camera in self.cameras:
-            camera_inst = env.scene.sensors[camera.name]
-
-            ## Vision
-            rgb_data = camera_inst.data.output.get("rgb", None)
-            depth_data = camera_inst.data.output.get("depth", None)
-
-            ## Camera
-            cam_pos = torch.tensor(camera.pos, device=env.device)[None, :].repeat(env.num_envs, 1)
-            cam_look_at = torch.tensor(camera.look_at, device=env.device)[None, :].repeat(env.num_envs, 1)
-            cam_intr0 = camera_inst.data.intrinsic_matrices
-            cam_extr, cam_intr = get_cam_params(
-                cam_pos,
-                cam_look_at,
-                width=camera.width,
-                height=camera.height,
-                focal_length=camera.focal_length,
-                horizontal_aperture=camera.horizontal_aperture,
-            )
-            assert torch.allclose(cam_intr0, cam_intr)
-
-            ## Robot State
-            joint_qpos_target = env.actions
-            joint_qpos = env.robot.data.joint_pos
-            robot_root_state = env.robot.data.root_state_w
-            robot_body_state = env.robot.data.body_link_state_w
-            robot_root_state[..., 0:3] -= env.scene.env_origins
-            robot_body_state[..., 0:3] -= env.scene.env_origins.unsqueeze(1)
-            if self.robot.ee_body_name is not None:
-                ee_pos, ee_quat = get_pose(env, self.robot.name, self.robot.ee_body_name)
-                robot_ee_state = torch.cat([ee_pos, ee_quat, joint_qpos[:, -1:]], dim=-1)
-            else:
-                log.warning(f"No end-effector prim path for {self.robot.name}")
-                robot_ee_state = None
-
-            data_dict = {
-                ## Vision
-                "rgb": rgb_data,
-                "depth": depth_data,
-                ## Camera
-                "cam_pos": cam_pos,
-                "cam_look_at": cam_look_at,
-                "cam_intr": cam_intr,
-                "cam_extr": cam_extr,
-                ## State
-                "joint_qpos_target": joint_qpos_target,
-                "joint_qpos": joint_qpos,  # align with old version
-                "robot_ee_state": robot_ee_state,  # align with old version
-                "robot_root_state": robot_root_state,
-                "robot_body_state": robot_body_state,
-            }
-
-            return data_dict
+        pass
 
     def _get_rewards(self, env: "EmptyEnv") -> None:
         pass
