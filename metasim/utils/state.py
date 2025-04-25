@@ -9,6 +9,7 @@ import torch
 from loguru import logger as log
 
 from metasim.types import EnvState
+from metasim.utils.math import convert_camera_frame_orientation_convention
 
 try:
     from metasim.sim.base import BaseSimHandler
@@ -73,6 +74,34 @@ class CameraState:
     """RGB image. Shape is (num_envs, H, W, 3)."""
     depth: torch.Tensor | None
     """Depth image. Shape is (num_envs, H, W)."""
+    pos: torch.Tensor | None = None  # TODO: remove N
+    """Position of the camera. Shape is (num_envs, 3)."""
+    quat_world: torch.Tensor | None = None  # TODO: remove N
+    """Quaternion ``(w, x, y, z)`` of the camera, following the world frame convention. Shape is (num_envs, 4).
+
+    Note:
+        World frame convention follows the camera aligned with forward axis +X and up axis +Z.
+    """
+    intrinsics: torch.Tensor | None = None  # TODO: remove N
+    """Intrinsics matrix of the camera. Shape is (num_envs, 3, 3)."""
+
+    @property
+    def quat_ros(self) -> torch.Tensor:
+        """Quaternion ``(w, x, y, z)`` of the camera, following the ROS convention. Shape is (num_envs, 4).
+
+        Note:
+            ROS convention follows the camera aligned with forward axis +Z and up axis -Y.
+        """
+        return convert_camera_frame_orientation_convention(self.quat_world, origin="world", target="ros")
+
+    @property
+    def quat_opengl(self) -> torch.Tensor:
+        """Quaternion ``(w, x, y, z)`` of the camera, following the OpenGL convention. Shape is (num_envs, 4).
+
+        Note:
+            OpenGL convention follows the camera aligned with forward axis -Z and up axis +Y.
+        """
+        return convert_camera_frame_orientation_convention(self.quat_world, origin="world", target="opengl")
 
 
 @dataclass

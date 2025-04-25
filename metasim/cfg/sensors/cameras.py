@@ -54,6 +54,19 @@ class PinholeCameraCfg(BaseCameraCfg):
         """Vertical field of view, in degrees."""
         return 2 * math.atan(self.vertical_aperture / (2 * self.focal_length)) / math.pi * 180
 
+    @property
+    def intrinsics(self) -> list[list[float]]:
+        """Intrinsics matrix of the camera. Type is 3x3 nested list of floats."""
+        fx = self.width * self.focal_length / self.horizontal_aperture
+        fy = self.height * self.focal_length / self.vertical_aperture
+        cx = self.width * 0.5
+        cy = self.height * 0.5
+        return [
+            [fx, 0.0, cx],
+            [0.0, fy, cy],
+            [0.0, 0.0, 1.0],
+        ]
+
 
 REALSENSE_CAMERA = PinholeCameraCfg(
     name="realsense_camera",
