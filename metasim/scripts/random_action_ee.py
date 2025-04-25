@@ -36,7 +36,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.kinematics_utils import get_curobo_models
-from metasim.utils.math import quat_apply, quat_from_euler_xyz, quat_invert
+from metasim.utils.math import quat_apply, quat_from_euler_xyz, quat_inv
 from metasim.utils.setup_util import get_robot, get_sim_env_class
 
 
@@ -113,7 +113,7 @@ def main():
             raise ValueError(f"Unsupported robot: {robot.name}")
 
         target_prim = XFormPrim("/World/envs/env_0/target", name="target")
-        target_prim.set_world_pose(position=quat_apply(quat_invert(robot_quat), ee_pos_target) + robot_pos)
+        target_prim.set_world_pose(position=quat_apply(quat_inv(robot_quat), ee_pos_target) + robot_pos)
 
         # Solve IK
         seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
