@@ -88,6 +88,7 @@ class ArticulationObjCfg(BaseObjCfg):
     usd_path: str | None = None
     urdf_path: str | None = None
     mjcf_path: str | None = None
+    enabled_self_collisions: bool = True
 
 
 # Primitive object are all rigid objects
