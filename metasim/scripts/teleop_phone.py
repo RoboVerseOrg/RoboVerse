@@ -25,7 +25,7 @@ from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.kinematics_utils import get_curobo_models
-from metasim.utils.math import quat_apply, quat_invert
+from metasim.utils.math import quat_apply, quat_inv
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 from metasim.utils.teleop_utils import (
     TRANSFORMATION_MATRIX,
@@ -112,7 +112,7 @@ def main():
         robot_pos, robot_quat = robot_root_state[:, 0:3], robot_root_state[:, 3:7]
         curr_ee_pos, curr_ee_quat = robot_ee_state[:, 0:3], robot_ee_state[:, 3:7]
 
-        curr_ee_pos = quat_apply(quat_invert(robot_quat), curr_ee_pos - robot_pos)
+        curr_ee_pos = quat_apply(quat_inv(robot_quat), curr_ee_pos - robot_pos)
 
         ee_to_world_matpose = np.eye(4)
         ee_to_world_matpose[:3, :3] = quaternion_to_rotation_matrix(

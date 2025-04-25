@@ -510,7 +510,7 @@ def quat_box_minus(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     Returns:
         The difference between the two quaternions. Shape is (N, 3).
     """
-    quat_diff = quat_mul(q1, quat_invert(q2))  # q1 * q2^-1
+    quat_diff = quat_mul(q1, quat_inv(q2))  # q1 * q2^-1
     re = quat_diff[:, 0]  # real part, q = [w, x, y, z] = [re, im]
     im = quat_diff[:, 1:]  # imaginary part
     norm_im = torch.norm(im, dim=1)
@@ -543,7 +543,7 @@ def yaw_quat(quat: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
-def quat_invert(quat: torch.Tensor) -> torch.Tensor:
+def quat_inv(quat: torch.Tensor) -> torch.Tensor:
     """Given a quaternion representing rotation, get the quaternion representing its inverse.
 
     Args:
@@ -699,7 +699,7 @@ def quat_error_magnitude(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     Returns:
         Angular error between input quaternions in radians.
     """
-    quat_diff = quat_mul(q1, quat_invert(q2))
+    quat_diff = quat_mul(q1, quat_inv(q2))
     return torch.norm(axis_angle_from_quat(quat_diff), dim=-1)
 
 
@@ -817,7 +817,7 @@ def subtract_frame_transforms(
         Shape of the tensors are (N, 3) and (N, 4) respectively.
     """
     # compute orientation
-    q10 = quat_invert(q01)
+    q10 = quat_inv(q01)
     if q02 is not None:
         q12 = quat_mul(q10, q02)
     else:
@@ -863,9 +863,9 @@ def compute_pose_error(
     # Compute quaternion error (i.e., difference quaternion)
     # Reference: https://personal.utdallas.edu/~sxb027100/dock/quaternion.html
     # q_current_norm = q_current * q_current_conj
-    source_quat_norm = quat_mul(q01, quat_invert(q01))[:, 0]
+    source_quat_norm = quat_mul(q01, quat_inv(q01))[:, 0]
     # q_current_inv = q_current_conj / q_current_norm
-    source_quat_inv = quat_invert(q01) / source_quat_norm.unsqueeze(-1)
+    source_quat_inv = quat_inv(q01) / source_quat_norm.unsqueeze(-1)
     # q_error = q_target * q_current_inv
     quat_error = quat_mul(q02, source_quat_inv)
 

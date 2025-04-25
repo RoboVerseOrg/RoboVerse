@@ -3,7 +3,7 @@ import torch
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType, TaskType
 from metasim.utils import configclass
-from metasim.utils.math import quat_invert, quat_mul
+from metasim.utils.math import quat_inv, quat_mul
 
 from ..base_task_cfg import BaseTaskCfg
 
@@ -109,7 +109,7 @@ class AllegroHandReorientationCfg(BaseTaskCfg):
 
             goal_dist = torch.norm(object_pos - goal_pos, p=2)
 
-            quat_diff = quat_mul(object_rot, quat_invert(goal_rot))
+            quat_diff = quat_mul(object_rot, quat_inv(goal_rot))
             rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[0:3], p=2, dim=-1), max=1.0))
 
             dist_rew = goal_dist * dist_reward_scale
