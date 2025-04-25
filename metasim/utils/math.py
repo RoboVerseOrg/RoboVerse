@@ -461,6 +461,20 @@ def quat_unique(q: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
+def quat_inv(q: torch.Tensor) -> torch.Tensor:
+    """Compute the inverse of a quaternion.
+
+    Args:
+        q: The quaternion orientation in (w, x, y, z). Shape is (N, 4).
+
+    Returns:
+        The inverse quaternion in (w, x, y, z). Shape is (N, 4).
+    """
+    scaling = torch.tensor([1, -1, -1, -1], device=q.device)
+    return q * scaling
+
+
+@torch.jit.script
 def quat_mul(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     """Multiply two quaternions together.
 
@@ -540,20 +554,6 @@ def yaw_quat(quat: torch.Tensor) -> torch.Tensor:
     quat_yaw[:, 0] = torch.cos(yaw / 2)
     quat_yaw = normalize(quat_yaw)
     return quat_yaw.view(shape)
-
-
-@torch.jit.script
-def quat_inv(quat: torch.Tensor) -> torch.Tensor:
-    """Given a quaternion representing rotation, get the quaternion representing its inverse.
-
-    Args:
-        quat: Quaternions as tensor of shape (..., 4), with real part first, which must be versors (unit quaternions).
-
-    Returns:
-        The inverse, a tensor of quaternions of shape (..., 4).
-    """
-    scaling = torch.tensor([1, -1, -1, -1], device=quat.device)
-    return quat * scaling
 
 
 @torch.jit.script
