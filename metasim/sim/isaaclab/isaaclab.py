@@ -15,7 +15,7 @@ from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.state import CameraState, ContactForceState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
-from .isaaclab_helper import get_pose
+from .isaaclab_helper import _update_tiled_camera_pose, get_pose
 
 try:
     from omni.isaac.lab.app import AppLauncher
@@ -146,6 +146,10 @@ class IsaaclabHandler(BaseSimHandler):
                     body_idx = merged_states[base_obj_name].body_names.index(base_body_name)
                     pos, rot = merged_states[base_obj_name].body_state[:, body_idx, :7].split([3, 4], dim=-1)
                 self._set_object_pose(obj, pos, rot)
+
+        ## NOTE: Below is a workaround for IsaacLab bug. In IsaacLab v1.4.1-v2.1.0, the tiled camera pose data is never updated. The code is copied from `_update_poses` method in Camera class in `source/isaaclab/sensors/camera/camera.py` in IsaacLab v2.1.0.
+        _update_tiled_camera_pose(self.env, self.cameras)
+
         return states, None, success, time_out, extras
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
@@ -178,6 +182,9 @@ class IsaaclabHandler(BaseSimHandler):
             sensor.update(dt=0)
         toc = time.time()
         log.trace(f"Reset sensor buffer time: {toc - tic:.2f}s")
+
+        ## NOTE: Below is a workaround for IsaacLab bug. In IsaacLab v1.4.1-v2.1.0, the tiled camera pose data is never updated. The code is copied from `_update_poses` method in Camera class in `source/isaaclab/sensors/camera/camera.py` in IsaacLab v2.1.0.
+        _update_tiled_camera_pose(self.env, self.cameras)
 
         ## Update obs
         tic = time.time()
@@ -356,7 +363,13 @@ class IsaaclabHandler(BaseSimHandler):
             camera_inst = self.env.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
             depth_data = camera_inst.data.output.get("depth", None)
-            camera_states[camera.name] = CameraState(rgb=rgb_data, depth=depth_data)
+            camera_states[camera.name] = CameraState(
+                rgb=rgb_data,
+                depth=depth_data,
+                pos=camera_inst.data.pos_w,
+                quat_world=camera_inst.data.quat_w_world,
+                intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
+            )
 
         sensor_states = {}
         for sensor in self.sensors:

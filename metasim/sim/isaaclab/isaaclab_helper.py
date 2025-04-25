@@ -15,6 +15,7 @@ from metasim.cfg.objects import (
 )
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
+from metasim.utils.math import convert_camera_frame_orientation_convention
 
 try:
     from .empty_env import EmptyEnv
@@ -365,3 +366,13 @@ def joint_is_implicit_actuator(joint_name: str, obj_inst) -> bool:
         log.warning(f"Joint {joint_name} is found in multiple actuators of {obj_inst.cfg.prim_path}")
     actuator = actuators[0]
     return isinstance(actuator, ImplicitActuatorCfg)
+
+
+def _update_tiled_camera_pose(env: "EmptyEnv", cameras: list[BaseCameraCfg]):
+    for camera in cameras:
+        camera_inst = env.scene.sensors[camera.name]
+        pos, quat = camera_inst._view.get_world_poses()
+        camera_inst._data.pos_w = pos
+        camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
+            quat, origin="opengl", target="world"
+        )
