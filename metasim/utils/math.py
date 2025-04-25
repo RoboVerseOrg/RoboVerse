@@ -237,19 +237,6 @@ def quat_conjugate(q: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
-def quat_inv(q: torch.Tensor) -> torch.Tensor:
-    """Compute the inverse of a quaternion.
-
-    Args:
-        q: The quaternion orientation in (w, x, y, z). Shape is (N, 4).
-
-    Returns:
-        The inverse quaternion in (w, x, y, z). Shape is (N, 4).
-    """
-    return normalize(quat_conjugate(q))
-
-
-@torch.jit.script
 def quat_from_euler_xyz(roll: torch.Tensor, pitch: torch.Tensor, yaw: torch.Tensor) -> torch.Tensor:
     """Convert rotations given as Euler angles in radians to Quaternions.
 
@@ -845,7 +832,7 @@ def subtract_frame_transforms(
         Shape of the tensors are (N, 3) and (N, 4) respectively.
     """
     # compute orientation
-    q10 = quat_inv(q01)
+    q10 = quat_invert(q01)
     if q02 is not None:
         q12 = quat_mul(q10, q02)
     else:
