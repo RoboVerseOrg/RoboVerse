@@ -222,21 +222,6 @@ def convert_quat(quat: torch.Tensor | np.ndarray, to: Literal["xyzw", "wxyz"] = 
 
 
 @torch.jit.script
-def quat_conjugate(q: torch.Tensor) -> torch.Tensor:
-    """Computes the conjugate of a quaternion.
-
-    Args:
-        q: The quaternion orientation in (w, x, y, z). Shape is (..., 4).
-
-    Returns:
-        The conjugate quaternion in (w, x, y, z). Shape is (..., 4).
-    """
-    shape = q.shape
-    q = q.reshape(-1, 4)
-    return torch.cat((q[:, 0:1], -q[:, 1:]), dim=-1).view(shape)
-
-
-@torch.jit.script
 def quat_from_euler_xyz(roll: torch.Tensor, pitch: torch.Tensor, yaw: torch.Tensor) -> torch.Tensor:
     """Convert rotations given as Euler angles in radians to Quaternions.
 
@@ -525,7 +510,7 @@ def quat_box_minus(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     Returns:
         The difference between the two quaternions. Shape is (N, 3).
     """
-    quat_diff = quat_mul(q1, quat_conjugate(q2))  # q1 * q2^-1
+    quat_diff = quat_mul(q1, quat_invert(q2))  # q1 * q2^-1
     re = quat_diff[:, 0]  # real part, q = [w, x, y, z] = [re, im]
     im = quat_diff[:, 1:]  # imaginary part
     norm_im = torch.norm(im, dim=1)
@@ -714,7 +699,7 @@ def quat_error_magnitude(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     Returns:
         Angular error between input quaternions in radians.
     """
-    quat_diff = quat_mul(q1, quat_conjugate(q2))
+    quat_diff = quat_mul(q1, quat_invert(q2))
     return torch.norm(axis_angle_from_quat(quat_diff), dim=-1)
 
 
@@ -878,9 +863,9 @@ def compute_pose_error(
     # Compute quaternion error (i.e., difference quaternion)
     # Reference: https://personal.utdallas.edu/~sxb027100/dock/quaternion.html
     # q_current_norm = q_current * q_current_conj
-    source_quat_norm = quat_mul(q01, quat_conjugate(q01))[:, 0]
+    source_quat_norm = quat_mul(q01, quat_invert(q01))[:, 0]
     # q_current_inv = q_current_conj / q_current_norm
-    source_quat_inv = quat_conjugate(q01) / source_quat_norm.unsqueeze(-1)
+    source_quat_inv = quat_invert(q01) / source_quat_norm.unsqueeze(-1)
     # q_error = q_target * q_current_inv
     quat_error = quat_mul(q02, source_quat_inv)
 
