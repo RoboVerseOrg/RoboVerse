@@ -19,19 +19,10 @@ class BaseObjCfg:
 
     name: str = MISSING
     """Object name"""
-    fix_base_link: bool = False
-    """Whether to fix the base link of the object, default is False"""
-    scale: float | tuple[float, float, float] = 1.0
-    """Object scaling (in scalar) for the object, default is 1.0"""
     default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """Default position of the object, default is (0.0, 0.0, 0.0)"""
     default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
     """Default orientation of the object, default is (1.0, 0.0, 0.0, 0.0)"""
-
-    def __post_init__(self):
-        """Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale)."""
-        if isinstance(self.scale, float):
-            self.scale = (self.scale, self.scale, self.scale)
 
 
 # File-based object
@@ -56,10 +47,15 @@ class RigidObjCfg(BaseObjCfg):
     mesh_path: str | None = None
     collision_enabled: bool = True
     physics: PhysicStateType | None = None
+    fix_base_link: bool = False
+    """Whether to fix the base link of the object, default is False"""
+    scale: float | tuple[float, float, float] = 1.0
+    """Object scaling (in scalar) for the object, default is 1.0"""
 
     def __post_init__(self):
-        """Parse the physics state to the enabled and fix_base_link."""
         super().__post_init__()
+
+        ## Parse the physics state to the enabled and fix_base_link.
         if self.physics is not None:
             if self.physics == PhysicStateType.XFORM:
                 self.collision_enabled = False
@@ -72,6 +68,10 @@ class RigidObjCfg(BaseObjCfg):
                 self.fix_base_link = False
             else:
                 raise ValueError(f"Invalid physics type: {self.physics}")
+
+        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
+        if isinstance(self.scale, float):
+            self.scale = (self.scale, self.scale, self.scale)
 
 
 @configclass
@@ -88,6 +88,17 @@ class ArticulationObjCfg(BaseObjCfg):
     usd_path: str | None = None
     urdf_path: str | None = None
     mjcf_path: str | None = None
+    fix_base_link: bool = False
+    """Whether to fix the base link of the object, default is False"""
+    scale: float | tuple[float, float, float] = 1.0
+    """Object scaling (in scalar) for the object, default is 1.0"""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
+        if isinstance(self.scale, float):
+            self.scale = (self.scale, self.scale, self.scale)
 
 
 # Primitive object are all rigid objects
