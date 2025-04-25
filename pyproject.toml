@@ -74,6 +74,8 @@ lint.select = [
 ]
 lint.ignore = [
     "B007",  # allow used loop control variable without leading underscore
+    "D105",  # allow magic methods without docstring
+    "D107",  # allow __init__ without docstring
     "E266",  # allow multiple leading # in comments
     "E402",  # allow imports not at the top of the file
     "E501",  # allow long lines
