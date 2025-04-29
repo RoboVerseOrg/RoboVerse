@@ -14,6 +14,7 @@ import numpy as np
 import sapien
 import sapien.core as sapien_core
 import torch
+from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
@@ -75,7 +76,11 @@ class SingleSapienHandler(BaseSimHandler):
         self.loader: sapien_core.URDFLoader = self.scene.create_urdf_loader()
 
         # Add agents
-        self.object_ids = {}
+        self.object_ids: dict[str, sapien_core.Actor | sapien_core.Articulation] = {}
+        self._previous_dof_pos_target: dict[str, list[float]] = {}
+        self._previous_dof_vel_target: dict[str, list[float]] = {}
+        self._previous_dof_torque_target: dict[str, list[float]] = {}
+        self.link_ids: dict[str, list[sapien_core.LinkBase]] = {}
         self.object_joint_order = {}
         self.camera_ids = {}
 
@@ -213,12 +218,24 @@ class SingleSapienHandler(BaseSimHandler):
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
                 curr_id = self.loader.load(file_path)
-                builder = self.loader.load_file_as_articulation_builder(file_path)
                 curr_id.set_root_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
+            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+                self.link_ids[object.name] = self.object_ids[object.name].get_links()
+                self._previous_dof_pos_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_vel_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_torque_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+            else:
+                self.link_ids[object.name] = []
             # elif agent.type == "capsule":
             #     actor_builder = self.scene.create_actor_builder()
             #     material = get_material(self.scene, agent.rigid_shape_property)
@@ -293,10 +310,13 @@ class SingleSapienHandler(BaseSimHandler):
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
-    def _apply_action(self, action, instance):
+    def _apply_action(self, instance: sapien_core.Articulation, pos_action=None, vel_action=None):
         qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True, external=False)
         instance.set_qf(qf)
-        instance.set_drive_target(action)
+        if pos_action is not None:
+            instance.set_drive_target(pos_action)
+        if vel_action is not None:
+            instance.set_drive_velocity_target(vel_action)
 
     def set_dof_targets(self, obj_name, target):
         """Set the dof targets of the object.
@@ -308,8 +328,19 @@ class SingleSapienHandler(BaseSimHandler):
         instance = self.object_ids[obj_name]
         if isinstance(instance, sapien_core.Articulation):
             action = target[0]
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]])
-            self._apply_action(action_arr, instance)
+            pos_target = None
+            vel_target = None
+            if "dof_pos_target" in action:
+                pos_target = np.array([
+                    action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]
+                ])
+            if "dof_vel_target" in action:
+                vel_target = np.array([
+                    action["dof_vel_target"][name] for name in self.object_joint_order[self.robot.name]
+                ])
+            self._previous_dof_pos_target[obj_name] = pos_target
+            self._previous_dof_vel_target[obj_name] = vel_target
+            self._apply_action(instance, pos_target, vel_target)
 
     def simulate(self):
         """Step the simulation."""
@@ -339,6 +370,25 @@ class SingleSapienHandler(BaseSimHandler):
             self.viewer.close()
         self.scene = None
 
+    def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:
+        link_name_list = []
+        link_state_list = []
+
+        if len(self.link_ids[obj_name]) == 0:
+            return [], torch.zeros((0, 13), dtype=torch.float32)
+
+        for link in self.link_ids[obj_name]:
+            pose = link.get_pose()
+            pos = torch.tensor(pose.p)
+            rot = torch.tensor(pose.q)
+            vel = torch.tensor(link.get_velocity())
+            ang_vel = torch.tensor(link.get_angular_velocity())
+            link_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            link_name_list.append(link.get_name())
+            link_state_list.append(link_state)
+        link_state_tensor = torch.cat(link_state_list, dim=0)
+        return link_name_list, link_state_tensor
+
     def get_states(self, env_ids=None) -> list[EnvState]:
         """Get the states of the environment.
 
@@ -353,18 +403,27 @@ class SingleSapienHandler(BaseSimHandler):
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
             pose = obj_inst.get_pose()
-            pos = torch.tensor(pose.p)
-            rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            link_names, link_state = self._get_link_states(obj.name)
+            if isinstance(obj_inst, sapien_core.Articulation):
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.zeros(3)
+                ang_vel = torch.zeros(3)
+                log.warning("Sapien2 does not support getting velocity of articulation")
+            else:
+                assert isinstance(obj_inst, sapien_core.Actor)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_velocity())
+                ang_vel = torch.tensor(obj_inst.get_angular_velocity())
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.Articulation)
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=None,
-                    body_state=None,  # TODO
+                    body_names=link_names,
+                    body_state=link_state.unsqueeze(0),
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 )
@@ -379,19 +438,36 @@ class SingleSapienHandler(BaseSimHandler):
             pose = robot_inst.get_pose()
             pos = torch.tensor(pose.p)
             rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            vel = torch.zeros(3)
+            ang_vel = torch.zeros(3)
+            log.warning("Sapien2 does not support getting velocity of articulations")
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
+            link_names, link_state = self._get_link_states(robot.name)
+            pos_target = (
+                torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_pos_target[robot.name] is not None
+                else None
+            )
+            vel_target = (
+                torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_vel_target[robot.name] is not None
+                else None
+            )
+            torque_target = (
+                torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_torque_target[robot.name] is not None
+                else None
+            )
             state = RobotState(
                 root_state=root_state,
-                body_names=None,
-                body_state=None,  # TODO
+                body_names=link_names,
+                body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=None,  # TODO
-                joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_pos_target=pos_target,
+                joint_vel_target=vel_target,
+                joint_effort_target=torque_target,
             )
             robot_states[robot.name] = state
 
@@ -447,6 +523,23 @@ class SingleSapienHandler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def get_body_names(self, obj_name, sort=True):
+        """Get the names of links of an object by obj_name
+
+        Args:
+            obj_name: the name of the object to get link names.
+            sort: if sort the link names by lexical order.
+
+        Returns:
+            list: the list of link names.
+        """
+
+        body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
+        if sort:
+            return sorted(body_names)
+        else:
+            return deepcopy(body_names)
 
 
 SapienHandler = ParallelSimWrapper(SingleSapienHandler)

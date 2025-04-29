@@ -75,10 +75,14 @@ class SingleSapien3Handler(BaseSimHandler):
         ground_material.specular = 0.5
         self.scene.add_ground(altitude=0, render_material=ground_material)
 
-        self.loader: sapien_core.URDFLoader = self.scene.create_urdf_loader()
+        self.loader = self.scene.create_urdf_loader()
 
         # Add agents
-        self.object_ids = {}
+        self.object_ids: dict[str, sapien_core.Entity] = {}
+        self.link_ids: dict[str, list[sapien.physx.PhysxArticulationLinkComponent]] = {}
+        self._previous_dof_pos_target: dict[str, np.ndarray] = {}
+        self._previous_dof_vel_target: dict[str, np.ndarray] = {}
+        self._previous_dof_torque_target: dict[str, np.ndarray] = {}
         self.object_joint_order = {}
         self.camera_ids = {}
 
@@ -243,6 +247,20 @@ class SingleSapien3Handler(BaseSimHandler):
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
+            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+                self.link_ids[object.name] = self.object_ids[object.name].get_links()
+                self._previous_dof_pos_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_vel_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+                self._previous_dof_torque_target[object.name] = np.zeros(
+                    (len(self.object_joint_order[object.name]),), dtype=np.float32
+                )
+            else:
+                self.link_ids[object.name] = []
+
             # elif agent.type == "capsule":
             #     actor_builder = self.scene.create_actor_builder()
             #     material = get_material(self.scene, agent.rigid_shape_property)
@@ -317,26 +335,38 @@ class SingleSapien3Handler(BaseSimHandler):
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
-    def _apply_action(self, action, instance):
+    def _apply_action(self, instance: sapien_core.physx.PhysxArticulation, pos_action=None, vel_action=None):
         qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True)
         instance.set_qf(qf)
-        for i, joint in enumerate(instance.get_active_joints()):
-            joint.set_drive_target(action[i])
+        if pos_action is not None:
+            for joint in instance.get_active_joints():
+                joint.set_drive_target(pos_action[joint.get_name()])
+        if vel_action is not None:
+            for joint in instance.get_active_joints():
+                joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
-    def set_dof_targets(self, obj_name, actions: list[Action]):
+    def set_dof_targets(self, obj_name, target: list[Action]):
         """Set the dof targets of the object.
 
         Args:
             obj_name (str): The name of the object
             target (dict): The target values for the object
         """
-        self._actions_cache = actions
         instance = self.object_ids[obj_name]
         if isinstance(instance, sapien_core.physx.PhysxArticulation):
-            action = actions[0]
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
-            self._apply_action(action_arr, instance)
+            action = target[0]
+            pos_target = action.get("dof_pos_target", None)
+            vel_target = action.get("dof_vel_target", None)
+            pos_target_arr = (
+                np.array([pos_target[name] for name in self.object_joint_order[obj_name]]) if pos_target else None
+            )
+            vel_target_arr = (
+                np.array([vel_target[name] for name in self.object_joint_order[obj_name]]) if vel_target else None
+            )
+            self._previous_dof_pos_target[obj_name] = pos_target_arr
+            self._previous_dof_vel_target[obj_name] = vel_target_arr
+            self._apply_action(instance, pos_target, vel_target)
 
     def simulate(self):
         """Step the simulation."""
@@ -358,6 +388,25 @@ class SingleSapien3Handler(BaseSimHandler):
             self.viewer.close()
         self.scene = None
 
+    def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:
+        link_name_list = []
+        link_state_list = []
+
+        if len(self.link_ids[obj_name]) == 0:
+            return [], torch.zeros((0, 13), dtype=torch.float32)
+
+        for link in self.link_ids[obj_name]:
+            pose = link.get_pose()
+            pos = torch.tensor(pose.p)
+            rot = torch.tensor(pose.q)
+            vel = torch.tensor(link.linear_velocity)
+            ang_vel = torch.tensor(link.angular_velocity)
+            link_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            link_name_list.append(link.get_name())
+            link_state_list.append(link_state)
+        link_state_tensor = torch.cat(link_state_list, dim=0)
+        return link_name_list, link_state_tensor
+
     def get_states(self, env_ids=None) -> list[EnvState]:
         """Get the states of the environment.
 
@@ -372,22 +421,29 @@ class SingleSapien3Handler(BaseSimHandler):
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
             pose = obj_inst.get_pose()
-            pos = torch.tensor(pose.p)
-            rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
-            root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
+            link_names, link_state = self._get_link_states(obj.name)
             if isinstance(obj, ArticulationObjCfg):
                 assert isinstance(obj_inst, sapien_core.physx.PhysxArticulation)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_root_linear_velocity())
+                ang_vel = torch.tensor(obj_inst.get_root_angular_velocity())
+                root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=None,
-                    body_state=None,  # TODO
+                    body_names=link_names,
+                    body_state=link_state.unsqueeze(0),
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
                 )
             else:
+                assert isinstance(obj_inst, sapien_core.Entity)
+                pos = torch.tensor(pose.p)
+                rot = torch.tensor(pose.q)
+                vel = torch.tensor(obj_inst.get_components()[1].get_linear_velocity())
+                ang_vel = torch.tensor(obj_inst.get_components()[1].get_angular_velocity())
+                root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
                 state = ObjectState(root_state=root_state)
             object_states[obj.name] = state
 
@@ -398,19 +454,35 @@ class SingleSapien3Handler(BaseSimHandler):
             pose = robot_inst.get_pose()
             pos = torch.tensor(pose.p)
             rot = torch.tensor(pose.q)
-            vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            vel = torch.tensor(robot_inst.root_linear_velocity)
+            ang_vel = torch.tensor(robot_inst.root_angular_velocity)
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
+            link_names, link_state = self._get_link_states(robot.name)
+            pos_target = (
+                torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_pos_target[robot.name] is not None
+                else None
+            )
+            vel_target = (
+                torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_vel_target[robot.name] is not None
+                else None
+            )
+            effort_target = (
+                torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
+                if self._previous_dof_torque_target[robot.name] is not None
+                else None
+            )
             state = RobotState(
                 root_state=root_state,
-                body_names=None,
-                body_state=None,  # TODO
+                body_names=link_names,
+                body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=None,  # TODO
-                joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_pos_target=pos_target,
+                joint_vel_target=vel_target,
+                joint_effort_target=effort_target,
             )
             robot_states[robot.name] = state
 
@@ -476,6 +548,23 @@ class SingleSapien3Handler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def get_body_names(self, obj_name, sort=True):
+        """Get the names of links of an object by obj_name
+
+        Args:
+            obj_name: the name of the object to get link names.
+            sort: if sort the link names by lexical order.
+
+        Returns:
+            list: the list of link names.
+        """
+
+        body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
+        if sort:
+            return sorted(body_names)
+        else:
+            return deepcopy(body_names)
 
 
 Sapien3Handler = ParallelSimWrapper(SingleSapien3Handler)
