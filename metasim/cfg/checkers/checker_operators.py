@@ -24,7 +24,7 @@ class AndOp(BaseChecker):
             checker.reset(handler, env_ids=env_ids)
 
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        success = torch.ones(handler.num_envs, dtype=torch.bool)
+        success = torch.ones(handler.num_envs, dtype=torch.bool, device=handler.device)
         for checker in self.checkers:
             success = success & checker.check(handler)
         return success
@@ -45,7 +45,7 @@ class OrOp(BaseChecker):
             checker.reset(handler, env_ids=env_ids)
 
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        success = torch.zeros(handler.num_envs, dtype=torch.bool)
+        success = torch.zeros(handler.num_envs, dtype=torch.bool, device=handler.device)
         for checker in self.checkers:
             success = success | checker.check(handler)
         return success
