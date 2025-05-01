@@ -28,7 +28,7 @@ class FrankaCfg(BaseRobotCfg):
         "panda_joint3": BaseActuatorCfg(stiffness=10.0, damping=2.0, velocity_limit=2.175),
         "panda_joint4": BaseActuatorCfg(stiffness=10.0, damping=2.0, velocity_limit=2.175),
         "panda_joint5": BaseActuatorCfg(stiffness=10.0, damping=2.0, velocity_limit=2.61),
-        "panda_joint6": BaseActuatorCfg(stiffness=10.0, damping=.0, velocity_limit=2.61),
+        "panda_joint6": BaseActuatorCfg(stiffness=10.0, damping=0.0, velocity_limit=2.61),
         "panda_joint7": BaseActuatorCfg(stiffness=1.0, damping=0.4, velocity_limit=2.61),
         "panda_finger_joint1": BaseActuatorCfg(velocity_limit=0.2, is_ee=True),
         "panda_finger_joint2": BaseActuatorCfg(velocity_limit=0.2, is_ee=True),
@@ -65,4 +65,3 @@ class FrankaCfg(BaseRobotCfg):
     curobo_ref_cfg_name: str = "franka.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]
     curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]
-
