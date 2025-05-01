@@ -34,11 +34,25 @@ wandb login
     python roboverse_learn/humanoidbench_rl/train_sb3.py mujoco
     ```
 
+
+
 - IsaacGym:
 
     ```bash
     python roboverse_learn/humanoidbench_rl/train_sb3.py isaacgym
     ```
+    After training around 5k steps, you can see result like this
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="text-align: center;">
+        <img src="humanoid_bench_rl_isaacgym.png" alt="IsaacGym Training" style="width: 88%;">
+        <p>IsaacGym Training</p>
+    </div>
+    <div style="text-align: center;">
+        <img src="humanoid_bench_rl_isaacgym_curve.png" alt="IsaacGym Training Curve" style="width: 78%;">
+        <p>IsaacGym Training Curve</p>
+    </div>
+</div>
+
 
 - IsaacLab:
 
