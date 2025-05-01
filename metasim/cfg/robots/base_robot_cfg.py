@@ -5,6 +5,7 @@ from dataclasses import MISSING
 from metasim.cfg.objects import ArticulationObjCfg
 from metasim.utils import configclass
 
+
 @configclass
 class BaseActuatorCfg:
     velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?

@@ -66,7 +66,6 @@ class IsaacgymHandler(BaseSimHandler):
         self.torque_limits: torch.Tensor | None = None
         self.default_dof_pos: torch.Tensor | None = None
 
-
     def launch(self) -> None:
         ## IsaacGym Initialization
         self._init_gym()
@@ -514,7 +513,6 @@ class IsaacgymHandler(BaseSimHandler):
         action_input[robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
         self.actions = action_input
-
 
     def refresh_render(self) -> None:
         # Step the physics
