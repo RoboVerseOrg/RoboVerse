@@ -223,9 +223,18 @@ class IsaacgymHandler(BaseSimHandler):
         robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
         self._num_dof = robot_num_dofs
 
-        default_dof_pos = np.array(list(self._robot.default_joint_positions.values()))
+        default_dof_pos = []
+        robot_lower_limits = robot_dof_props["lower"]
+        robot_upper_limits = robot_dof_props["upper"]
+        actuator_configs = self._robot.actuators.values()
+        for i, actuator_cfg in enumerate(actuator_configs):
+            if actuator_cfg.is_ee:
+                default_dof_pos.append(robot_upper_limits[i])
+            else:
+                default_dof_pos.append(0.3 * (robot_lower_limits[i] + robot_lower_limits[i]))
+
         default_dof_state = np.zeros(robot_num_dofs, gymapi.DofState.dtype)
-        default_dof_state["pos"] = default_dof_pos
+        default_dof_state["pos"] = np.array(default_dof_pos)
         self.default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)
         self.actions = self.default_dof_pos.repeat(self._num_envs, 1).to(self.device)
 
