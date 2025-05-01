@@ -31,6 +31,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
+        self._num_dof: int
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         # asset related
@@ -56,6 +57,15 @@ class IsaacgymHandler(BaseSimHandler):
         self._root_states: torch.Tensor | None = None  # will update after refresh
         self._dof_states: torch.Tensor | None = None  # will update after refresh
         self._rigid_body_states: torch.Tensor | None = None  # will update after refresh
+
+        self.default_dof_state = None
+
+        self.actions: torch.Tensor | None = None
+        self.p_gains: torch.Tensor | None = None
+        self.d_gains: torch.Tensor | None = None
+        self.torque_limits: torch.Tensor | None = None
+        self.default_dof_pos: torch.Tensor | None = None
+
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -211,31 +221,35 @@ class IsaacgymHandler(BaseSimHandler):
         robot_asset = self.gym.load_asset(self.sim, asset_root, robot_asset_file, asset_options)
         # configure robot dofs
         robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
-        robot_lower_limits = robot_dof_props["lower"]
-        robot_upper_limits = robot_dof_props["upper"]
-        robot_ranges = robot_upper_limits - robot_lower_limits
-        robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
-        robot_dof_props["driveMode"][:7].fill(gymapi.DOF_MODE_POS)
-        robot_dof_props["stiffness"][:7].fill(400.0)
-        robot_dof_props["damping"][:7].fill(40.0)
-
-        # grippers
-        robot_dof_props["driveMode"][7:].fill(gymapi.DOF_MODE_POS)
-        robot_dof_props["stiffness"][7:].fill(800.0)
-        robot_dof_props["damping"][7:].fill(40.0)
-
         robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
-        default_dof_pos = np.zeros(robot_num_dofs, dtype=np.float32)
-        default_dof_pos[:7] = robot_mids[:7]
-        # grippers open
-        default_dof_pos[7:] = robot_upper_limits[7:]
+        self._num_dof = robot_num_dofs
 
+        default_dof_pos = np.array(list(self._robot.default_joint_positions.values()))
         default_dof_state = np.zeros(robot_num_dofs, gymapi.DofState.dtype)
         default_dof_state["pos"] = default_dof_pos
+        self.default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)
+        self.actions = self.default_dof_pos.repeat(self._num_envs, 1).to(self.device)
 
         # # get link index of panda hand, which we will use as end effector
         self._robot_link_dict = self.gym.get_asset_rigid_body_dict(robot_asset)
         self._robot_joint_dict = self.gym.get_asset_dof_dict(robot_asset)
+
+        # pd control params
+        self.p_gains = torch.zeros(
+            self.num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.d_gains = torch.zeros(
+            self.num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.torque_limits = torch.zeros(
+            self.num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+
+        dof_name = self.gym.get_asset_dof_names(robot_asset)
+        for i in range(len(dof_name)):
+            self.p_gains[:, i] = self._robot.actuators[dof_name[i]].stiffness
+            self.d_gains[:, i] = self._robot.actuators[dof_name[i]].damping
+            self.torque_limits[:, i] = self._robot.actuators[dof_name[i]].torque_limit
 
         return robot_asset, robot_dof_props, default_dof_state, default_dof_pos
 
@@ -483,6 +497,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]):
         self._actions_cache = actions
+        # the method clone() is useless
         action_input = torch.zeros_like(self._dof_states[:, 0].clone())
         action_array_all = self._get_action_array_all(actions)
         robot_dim = action_array_all.shape[1]
@@ -498,7 +513,8 @@ class IsaacgymHandler(BaseSimHandler):
         ]
         action_input[robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
-        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
+        self.actions = action_input
+
 
     def refresh_render(self) -> None:
         # Step the physics
@@ -514,6 +530,7 @@ class IsaacgymHandler(BaseSimHandler):
     def simulate(self) -> None:
         # Step the physics
         for _ in range(self.scenario.decimation):
+            self.compute_torques()
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
 
@@ -531,6 +548,14 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.draw_viewer(self.viewer, self.sim, False)
 
         # self.gym.sync_frame_time(self.sim)
+
+    def compute_torques(self):
+        self.actions = self.actions.view(self._num_envs, self._num_dof)
+        dof_pos = self._dof_states.view(self.num_envs, self._num_dof, 2)[..., 0]
+        dof_vel = self._dof_states.view(self.num_envs, self._num_dof, 2)[..., 1]
+        _torques = self.p_gains * (self.actions - (dof_pos - self.default_dof_pos)) - self.d_gains * dof_vel
+        self.torques = torch.clip(_torques, -self.torque_limits, self.torque_limits)
+        self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques.to(torch.float32)))
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids

@@ -5,7 +5,6 @@ from dataclasses import MISSING
 from metasim.cfg.objects import ArticulationObjCfg
 from metasim.utils import configclass
 
-
 @configclass
 class BaseActuatorCfg:
     velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?
@@ -13,6 +12,7 @@ class BaseActuatorCfg:
     damping: float = 40.0
     stiffness: float = 400.0
     actionable: bool = True
+    torque_limit: float = 200.0
     """Whether the actuator is actionable, i.e. can be driven by a motor.
 
     Example:
