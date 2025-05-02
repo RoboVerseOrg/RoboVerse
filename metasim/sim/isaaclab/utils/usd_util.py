@@ -57,37 +57,36 @@ class ShaderFixer:
         shader_prim = shader.GetPrim()  # often == material_prim + '/Shader'
         log.debug(f"Trying to fix shader {shader_prim.GetPath()}")
 
-        attr = shader_prim.GetAttribute("inputs:diffuse_texture")
-        if not attr:
-            log.debug("No diffuse_texture attribute found for shader, skipping")
-            return
+        target_attrs = ["diffuse_texture", "opacity_texture"]
+        for attr_name in target_attrs:
+            attr = shader_prim.GetAttribute(f"inputs:{attr_name}")
+            if not attr:
+                log.debug(f"No {attr_name} attribute found for shader, skipping")
+                continue
 
-        texture_path = str(attr.Get()).replace("@", "")
-        if os.path.isabs(texture_path):
-            if os.path.exists(texture_path):
-                log.error(f"diffuse_texture path {texture_path} is absolute, please change to relative path!")
-                return
+            original_path = str(attr.Get()).replace("@", "")
+            if os.path.isabs(original_path):
+                if os.path.exists(original_path):
+                    log.error(f"{attr_name} path {original_path} is absolute, please change to relative path!")
+                else:
+                    log.error(
+                        f"{attr_name} path {original_path} is absolute and does not exist, please fix manually as"
+                        " relative path!"
+                    )
             else:
-                log.error(
-                    f"diffuse_texture path {texture_path} is absolute and does not exist, please fix manually as"
-                    " relative path!"
-                )
-                return
-        else:
-            usd_abs_path = os.path.abspath(self.usd_path)
-            texture_abs_path = os.path.join(os.path.dirname(usd_abs_path), texture_path)
-            if os.path.exists(texture_abs_path):
-                attr.Set(Sdf.AssetPath(texture_abs_path))
-                log.info(
-                    f"Fixing shader {shader_prim.GetPath()}, replace diffuse_texture path from {texture_path} to"
-                    f" {texture_abs_path}"
-                )
-            else:
-                log.error(
-                    f"diffuse_texture path {texture_abs_path} (parsed from {texture_path}) does not exist, please fix"
-                    " manually as relative path!"
-                )
-                return
+                usd_abs_path = os.path.abspath(self.usd_path)
+                abs_path = os.path.join(os.path.dirname(usd_abs_path), original_path)
+                if os.path.exists(abs_path):
+                    attr.Set(Sdf.AssetPath(abs_path))
+                    log.info(
+                        f"Fixing shader {shader_prim.GetPath()}, replace {attr_name} path from {original_path} to"
+                        f" {abs_path}"
+                    )
+                else:
+                    log.error(
+                        f"{attr_name} path {abs_path} (parsed from {original_path}) does not exist, please fix"
+                        " manually as relative path!"
+                    )
 
     def fix_all(self):
         for shader in self._find_unique_shaders():
