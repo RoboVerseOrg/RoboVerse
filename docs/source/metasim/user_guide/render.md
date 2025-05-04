@@ -2,10 +2,12 @@
 
 Fixed protocol:
 
-- **Level 1:** Whole task space, same env cfg
-- **Level 2:** Randomize Ground Texture
-- **Level 3:** Randomize Camera Pose
-- **Level 4:** Rondomize "Material"/Lighting
+- **Level 0:** Whole task space, same env cfg
+- **Level 1:** Randomize Texture
+- **Level 2:** Randomize Camera Pose
+- **Level 3:** Rondomize Material/Lighting
+
+Note that each level includes randomizations of the previous levels.
 
 For overall Sim2Real, Randomization is applied on:
 
