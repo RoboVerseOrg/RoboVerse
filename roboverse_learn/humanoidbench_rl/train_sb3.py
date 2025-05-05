@@ -122,7 +122,7 @@ def main():
         try_add_table=config.get("add_table", False),
         sim=config.get("sim"),
         num_envs=config.get("num_envs", 1),
-        headless=config.get("headless", True),
+        headless=True if config.get("train_or_eval") == "train" else False,
         cameras=[],
     )
 

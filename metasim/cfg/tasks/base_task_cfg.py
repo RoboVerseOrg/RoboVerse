@@ -13,8 +13,6 @@ from metasim.constants import BenchmarkType, TaskType
 from metasim.types import EnvState
 from metasim.utils import configclass
 
-from .sim_param_cfg import SimParamCfg
-
 
 @configclass
 class BaseTaskCfg:
@@ -31,7 +29,6 @@ class BaseTaskCfg:
         can_tabletop: Whether the task can be tabletop.
         reward_functions: The list of reward functions.
         reward_weights: The list of reward weights.
-        sim_params: The simulation params.
     """
 
     decimation: int = 3
@@ -44,7 +41,6 @@ class BaseTaskCfg:
     can_tabletop: bool = False
     reward_functions: list[callable[[list[EnvState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
-    sim_params: SimParamCfg = SimParamCfg()
 
 
 @configclass
