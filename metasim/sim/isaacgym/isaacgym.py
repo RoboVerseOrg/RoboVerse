@@ -67,7 +67,9 @@ class IsaacgymHandler(BaseSimHandler):
         self._torque_limits: torch.Tensor | None = None
         self._default_dof_pos: torch.Tensor | None = None
         self._gripper_dof_dix = []
-        self.effort_mode = True if scenario.task.task_type == TaskType.LOCOMOTION else False # torque for reward computation
+        self.effort_mode = (
+            True if scenario.task.task_type == TaskType.LOCOMOTION else False
+        )  # torque for reward computation
 
     def launch(self) -> None:
         ## IsaacGym Initialization

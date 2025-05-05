@@ -49,12 +49,8 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     objects = []
     reward_weights = [1.0]
     sim_params: SimParamCfg = SimParamCfg(
-        timestep=0.001,
-        contact_offset=0.01,
-        num_position_iterations=8,
-        num_velocity_iterations=0
+        timestep=0.001, contact_offset=0.01, num_position_iterations=8, num_velocity_iterations=0
     )
-
 
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
