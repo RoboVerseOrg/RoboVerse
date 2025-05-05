@@ -14,7 +14,7 @@ from metasim.utils.setup_util import get_robot, get_scene, get_task
 
 from .checkers import BaseChecker, EmptyChecker
 from .lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
-from .objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
+from .objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from .randomization import RandomizationCfg
 from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
@@ -26,7 +26,11 @@ from .tasks.base_task_cfg import BaseTaskCfg
 def check_asset(obj: BaseObjCfg, sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"]):
     """Check and download the asset."""
     ## TODO: add a primitive base class?
-    if isinstance(obj, PrimitiveCubeCfg) or isinstance(obj, PrimitiveSphereCfg):
+    if (
+        isinstance(obj, PrimitiveCubeCfg)
+        or isinstance(obj, PrimitiveSphereCfg)
+        or isinstance(obj, PrimitiveCylinderCfg)
+    ):
         return
 
     if sim in ["isaaclab"]:
