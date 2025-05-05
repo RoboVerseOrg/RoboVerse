@@ -13,7 +13,6 @@ class BaseActuatorCfg:
     damping: float = 40.0
     stiffness: float = 400.0
     actionable: bool = True
-    torque_limit: float | None = None
     """Whether the actuator is actionable, i.e. can be driven by a motor.
 
     Example:
