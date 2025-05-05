@@ -1,1 +1,1 @@
-from .mjx import MJXEnv,MJXHandler
+from .mjx import MJXEnv, MJXHandler

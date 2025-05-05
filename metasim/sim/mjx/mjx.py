@@ -31,7 +31,7 @@ from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
 
-def _j2t(arr: jax.Array, device: str | torch.device | None = "cuda") -> torch.Tensor: 
+def _j2t(arr: jax.Array, device: str | torch.device | None = "cuda") -> torch.Tensor:
     if device is not None:
         tgt = torch.device(device)
         plat = "gpu" if tgt.type == "cuda" else tgt.type
@@ -40,30 +40,32 @@ def _j2t(arr: jax.Array, device: str | torch.device | None = "cuda") -> torch.Te
     t = torch.from_dlpack(jax.dlpack.to_dlpack(arr))
     return t
 
+
 def _t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.ndarray:
     if device is not None and arr.device != torch.device(device):
         arr = arr.to(device, non_blocking=True)
     x = jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
     return x
 
+
 class MJXHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, *, seed: int | None = None):
         super().__init__(scenario)
 
         self._scenario = scenario
-        self._seed     = seed or 0
-        self._mjx_model  = None
-        self._robot      = scenario.robot
+        self._seed = seed or 0
+        self._mjx_model = None
+        self._robot = scenario.robot
         self._robot_path = self._robot.mjcf_path
         self.cameras = []
         for camera in scenario.cameras:
             self.cameras.append(camera)
 
-        self._renderer     = None
+        self._renderer = None
 
         self._episode_length_buf = torch.zeros(self.num_envs, dtype=torch.int32)
-        self.replay_traj         = False
-        self.use_taskdecimation  = False
+        self.replay_traj = False
+        self.use_taskdecimation = False
 
         if self.use_taskdecimation:
             self.decimation = self.scenario.decimation
@@ -78,7 +80,7 @@ class MJXHandler(BaseSimHandler):
 
     def launch(self) -> None:
         self._mj_model = self._init_mujoco()
-        for geom in self._mj_model.find_all('geom'):
+        for geom in self._mj_model.find_all("geom"):
             if geom.mesh is not None:
                 geom.contype = 0
                 geom.conaffinity = 0
@@ -90,11 +92,10 @@ class MJXHandler(BaseSimHandler):
             body_name for body_name in self.body_names if body_name.startswith(self._mujoco_robot_name)
         ]
 
-
         self._mjx_model = self._make_mjx_model()
 
         pool = self._mjx_model.names
-        adr  = self._mjx_model.name_jntadr        
+        adr = self._mjx_model.name_jntadr
 
         robot_prefix = self._scenario.robot.name
 
@@ -108,20 +109,19 @@ class MJXHandler(BaseSimHandler):
             if "/" not in raw:
                 self._joint_name2id[f"{robot_prefix}/{raw}"] = i
 
-        data= mjx.make_data(self._mjx_model)
+        data = mjx.make_data(self._mjx_model)
 
         def broadcast_tree(x, N):
-            return jax.tree_util.tree_map(
-                lambda y: jnp.broadcast_to(y, (N, *y.shape)), x)
-        
-        #batch data
-        self._data =  broadcast_tree(data, self.num_envs)
+            return jax.tree_util.tree_map(lambda y: jnp.broadcast_to(y, (N, *y.shape)), x)
+
+        # batch data
+        self._data = broadcast_tree(data, self.num_envs)
         self._robot_joint_ids: dict[str, list[int]] = {}
 
-       
         self._substep = self._make_substep(self.decimation)
         if self._scenario.cameras:
             from madrona_mjx.renderer import BatchRenderer
+
             ref_w, ref_h = self._scenario.cameras[0].width, self._scenario.cameras[0].height
 
             # Assert all cameras share same resolution
@@ -132,21 +132,19 @@ class MJXHandler(BaseSimHandler):
                         f"Using the first camera's resolution for rendering."
                     )
 
-            #TODO multi renderer for different cameras
+            # TODO multi renderer for different cameras
             self._renderer = BatchRenderer(
                 m=self._mjx_model,
-                gpu_id = 0,  #TODO choose GPU
-                num_worlds = self.num_envs,
-
-                #cameras should have same resolution
-                batch_render_view_width  = self._scenario.cameras[0].width,
-                batch_render_view_height = self._scenario.cameras[0].height,
-
-                enabled_geom_groups = np.array([0, 1, 2, 3, 4, 5], dtype=np.int32),
-                enabled_cameras     = np.arange(len(self.cameras), dtype=np.int32),
-                use_rasterizer      = False,
-                add_cam_debug_geo   = False,
-                viz_gpu_hdls        = None,
+                gpu_id=0,  # TODO choose GPU
+                num_worlds=self.num_envs,
+                # cameras should have same resolution
+                batch_render_view_width=self._scenario.cameras[0].width,
+                batch_render_view_height=self._scenario.cameras[0].height,
+                enabled_geom_groups=np.array([0, 1, 2, 3, 4, 5], dtype=np.int32),
+                enabled_cameras=np.arange(len(self.cameras), dtype=np.int32),
+                use_rasterizer=False,
+                add_cam_debug_geo=False,
+                viz_gpu_hdls=None,
             )
             self._render_tokens = self._renderer.init(self._data, self._mjx_model)
         # create env
@@ -156,87 +154,88 @@ class MJXHandler(BaseSimHandler):
         self._data = self._substep(self._mjx_model, self._data)
 
     def get_states(self) -> TensorState:
-
-        data = self._data 
+        data = self._data
         N = data.qpos.shape[0]
         robots, objects = {}, {}
         # ---------------------- Robot -------------------------------------------
-        r_cfg  = self._scenario.robot
+        r_cfg = self._scenario.robot
         prefix = f"{r_cfg.name}/"
 
-        qadr_r, vadr_r, jnames_r  = self._sorted_joint_info(prefix)
-        aid_r                     = self._sorted_actuator_ids(prefix)
-        bid_r, bnames_r           = self._sorted_body_ids(prefix)
-        root_id_r                 = bid_r[0]
+        qadr_r, vadr_r, jnames_r = self._sorted_joint_info(prefix)
+        aid_r = self._sorted_actuator_ids(prefix)
+        bid_r, bnames_r = self._sorted_body_ids(prefix)
+        root_id_r = bid_r[0]
 
-        root_state_r = jnp.concatenate([
-            data.xpos[:, root_id_r],        # (N,3)
-            data.xquat[:, root_id_r],       # (N,4)
-            data.cvel[:, root_id_r]         # (N,6)
-        ], axis=-1)                         # (N,13)
+        root_state_r = jnp.concatenate(
+            [
+                data.xpos[:, root_id_r],  # (N,3)
+                data.xquat[:, root_id_r],  # (N,4)
+                data.cvel[:, root_id_r],  # (N,6)
+            ],
+            axis=-1,
+        )  # (N,13)
 
-        body_state_r = jnp.concatenate([
-            data.xpos[:, bid_r],            # (N,B,3)
-            data.xquat[:, bid_r],           # (N,B,4)
-            data.cvel[:, bid_r]             # (N,B,6)
-        ], axis=-1)                         # (N,B,13)
+        body_state_r = jnp.concatenate(
+            [
+                data.xpos[:, bid_r],  # (N,B,3)
+                data.xquat[:, bid_r],  # (N,B,4)
+                data.cvel[:, bid_r],  # (N,B,6)
+            ],
+            axis=-1,
+        )  # (N,B,13)
 
-        joint_pos         = _j2t(data.qpos[:, qadr_r])
+        joint_pos = _j2t(data.qpos[:, qadr_r])
         robots[r_cfg.name] = RobotState(
-            root_state        = _j2t(root_state_r),
-            body_names        = bnames_r,
-            body_state        = _j2t(body_state_r),
-            joint_pos         = _j2t(data.qpos[:, qadr_r]),        # (N,J)
-            joint_vel         = _j2t(data.qvel[:, vadr_r]),       # (N,J)
-            joint_pos_target  = _j2t(data.ctrl[:, aid_r]),        # (N,J)
-            joint_vel_target  = None,
-            joint_effort_target=_j2t(data.actuator_force[:, aid_r])  # (N,J)
+            root_state=_j2t(root_state_r),
+            body_names=bnames_r,
+            body_state=_j2t(body_state_r),
+            joint_pos=_j2t(data.qpos[:, qadr_r]),  # (N,J)
+            joint_vel=_j2t(data.qvel[:, vadr_r]),  # (N,J)
+            joint_pos_target=_j2t(data.ctrl[:, aid_r]),  # (N,J)
+            joint_vel_target=None,
+            joint_effort_target=_j2t(data.actuator_force[:, aid_r]),  # (N,J)
         )
 
         # ---------------------- Objects -----------------------------------------
         for obj in self._scenario.objects:
             prefix = f"{obj.name}/"
             bid_o, bnames_o = self._sorted_body_ids(prefix)
-            root_id_o       = bid_o[0]
+            root_id_o = bid_o[0]
 
-            root_state_o = jnp.concatenate([
-                data.xpos[:, root_id_o],
-                data.xquat[:, root_id_o],
-                data.cvel[:, root_id_o]
-            ], axis=-1)                                           # (N,13)
+            root_state_o = jnp.concatenate(
+                [data.xpos[:, root_id_o], data.xquat[:, root_id_o], data.cvel[:, root_id_o]], axis=-1
+            )  # (N,13)
 
-            if isinstance(obj, BaseRobotCfg):                     # articulated
+            if isinstance(obj, BaseRobotCfg):  # articulated
                 qadr_o, vadr_o, jnames_o = self._sorted_joint_info(prefix)
-                body_state_o = jnp.concatenate([
-                    data.xpos[:, bid_o],
-                    data.xquat[:, bid_o],
-                    data.cvel[:, bid_o]
-                ], axis=-1)                                       # (N,B,13)
-                joint_pos  = _j2t(data.qpos[:, qadr_o])
-                joint_vel  = _j2t(data.qvel[:, vadr_o])
+                body_state_o = jnp.concatenate(
+                    [data.xpos[:, bid_o], data.xquat[:, bid_o], data.cvel[:, bid_o]], axis=-1
+                )  # (N,B,13)
+                joint_pos = _j2t(data.qpos[:, qadr_o])
+                joint_vel = _j2t(data.qvel[:, vadr_o])
             else:
                 body_state_o = joint_pos = joint_vel = None
 
             objects[obj.name] = ObjectState(
-                root_state = _j2t(root_state_o),
-                body_names = bnames_o if body_state_o is not None else None,
-                body_state = _j2t(body_state_o) if body_state_o is not None else None,
-                joint_pos  = joint_pos,
-                joint_vel  = joint_vel,
+                root_state=_j2t(root_state_o),
+                body_names=bnames_o if body_state_o is not None else None,
+                body_state=_j2t(body_state_o) if body_state_o is not None else None,
+                joint_pos=joint_pos,
+                joint_vel=joint_vel,
             )
 
         # ---------------------- Cameras -----------------------------
-        if self._renderer is not None :
+        if self._renderer is not None:
             rgb_batch, depth_batch = self.render_batch(data)
-            rgb_batch = _j2t(rgb_batch)                          # (N,K,H,W,4)
-            depth_batch = _j2t(depth_batch)                      # (N,K,H,W,1)
+            rgb_batch = _j2t(rgb_batch)  # (N,K,H,W,4)
+            depth_batch = _j2t(depth_batch)  # (N,K,H,W,1)
         cameras = {}
         for cam_i, cam_cfg in enumerate(self.cameras):
-            rgb   = depth = None
+            rgb = depth = None
             if "rgb" in cam_cfg.data_types and rgb_batch is not None:
-                rgb = rgb_batch[:, cam_i, ..., :3]         # (N,H,W,3)
+                rgb = rgb_batch[:, cam_i, ..., :3]  # (N,H,W,3)
             if "depth" in cam_cfg.data_types and depth_batch is not None:
-                depth = depth_batch[:, cam_i, ...]         # (N,H,W,1)
+                depth = depth_batch[:, cam_i, ...]  # (N,H,W,1)
             cameras[cam_cfg.name] = CameraState(rgb=rgb, depth=depth)
 
         return TensorState(objects=objects, robots=robots, cameras=cameras, sensors={})
@@ -256,13 +255,11 @@ class MJXHandler(BaseSimHandler):
         env_ids: list[int] | None = None,
         zero_vel: bool = True,
     ) -> None:
+        ts = list_state_to_tensor(self, ts)  # convert back to nested dict
 
-        ts= list_state_to_tensor(self,ts)  # convert back to nested dict
-
-
-        data  = self._data
+        data = self._data
         model = self._mjx_model
-        N     = data.qpos.shape[0]
+        N = data.qpos.shape[0]
 
         idx = jnp.arange(N, dtype=int) if env_ids is None else jnp.array(env_ids, dtype=int)
 
@@ -273,25 +270,18 @@ class MJXHandler(BaseSimHandler):
         self._robot_joint_ids = {}
         for rname in ts.robots.keys():
             jnames = self.get_joint_names(rname, sort=True)
-            self._robot_joint_ids[rname] = [
-                mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, jn)
-                for jn in jnames
-            ]
+            self._robot_joint_ids[rname] = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, jn) for jn in jnames]
         self._object_joint_ids = {}
         for oname in ts.objects.keys():
             jnames = self.get_joint_names(oname, sort=True)
             full = [f"{oname}/{jn}" for jn in jnames]
-            self._object_joint_ids[oname] = [
-                mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, fn)
-                for fn in full
-            ]
-
+            self._object_joint_ids[oname] = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, fn) for fn in full]
 
         def _scatter_root(qpos, qvel, root_t):
             qpos = qpos.at[idx, :3].set(root_t[:, :3])
             qpos = qpos.at[idx, 3:7].set(root_t[:, 3:7])
             if zero_vel:
-                qvel = qvel.at[idx, :6].set(0.)
+                qvel = qvel.at[idx, :6].set(0.0)
             else:
                 qvel = qvel.at[idx, :3].set(root_t[:, 7:10])
                 qvel = qvel.at[idx, 3:6].set(root_t[:, 10:13])
@@ -307,9 +297,7 @@ class MJXHandler(BaseSimHandler):
             qpos, qvel = _scatter_root(qpos, qvel, r.root_state)
             if r.joint_pos is not None:
                 qpos = qpos.at[idx[:, None], qadr].set(_t2j(r.joint_pos))
-            qvel = qvel.at[idx[:, None], vadr].set(
-                jnp.zeros_like(_t2j(r.joint_vel)) if zero_vel else _t2j(r.joint_vel)
-            )
+            qvel = qvel.at[idx[:, None], vadr].set(jnp.zeros_like(_t2j(r.joint_vel)) if zero_vel else _t2j(r.joint_vel))
             ctrl = ctrl.at[idx[:, None], vadr].set(_t2j(r.joint_pos_target))
 
         # ------------------------ OBJECTS ------------------------------------
@@ -344,15 +332,12 @@ class MJXHandler(BaseSimHandler):
         # ---------- (N, J) torch tensor ----------
         tgt_torch = torch.stack(
             [
-                torch.tensor(
-                    [actions[e]["dof_pos_target"][jn] for jn in jnames_local],
-                    dtype=torch.float32
-                )
+                torch.tensor([actions[e]["dof_pos_target"][jn] for jn in jnames_local], dtype=torch.float32)
                 for e in range(N)
             ],
             dim=0,
         )
-        tgt_jax = _t2j(tgt_torch)                                      # (N, J)
+        tgt_jax = _t2j(tgt_torch)  # (N, J)
 
         # ----------  joint ids ----------
         if obj_name == self._scenario.robot.name:
@@ -360,12 +345,11 @@ class MJXHandler(BaseSimHandler):
         else:
             full_names = [f"{obj_name}/{jn}" for jn in jnames_local]
 
-
         j_ids = [self._joint_name2id[n] for n in full_names]
 
         model = self._mjx_model
-        vadr  = model.jnt_dofadr[j_ids]      # (J,)
-        qadr  = model.jnt_qposadr[j_ids]     # (J,)
+        vadr = model.jnt_dofadr[j_ids]  # (J,)
+        qadr = model.jnt_qposadr[j_ids]  # (J,)
 
         data = self._data
         if self.replay_traj:
@@ -375,12 +359,8 @@ class MJXHandler(BaseSimHandler):
             ctrl = data.ctrl.at[:, vadr].set(tgt_jax)
             self._data = data.replace(ctrl=ctrl)
 
-
-
     def close(self):
         pass
-
-
 
     ############################################################
     ## Utils
@@ -473,17 +453,15 @@ class MJXHandler(BaseSimHandler):
         self._mujoco_robot_name = robot_xml.full_identifier
         return mjcf_model
 
-
     ############################################################
     ## Misc
     ###########################################################
     def refresh_render(self) -> None:
         pass
 
-
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            m=self._mj_model
+            m = self._mj_model
             names = [self._mj_model.body(i).name for i in range(self._mj_model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
             names = [name for name in names if name != ""]
@@ -507,62 +485,59 @@ class MJXHandler(BaseSimHandler):
             return joint_names
         else:
             return []
-        
+
     def _make_mjx_model(self) -> mjcf.RootElement:
         robot_dir = Path(self._scenario.robot.mjcf_path).parent
         asset_dir = robot_dir / "assets"
 
         xml_str = self._mj_model.to_xml_string()
-        xml_str = re.sub(r'-[0-9a-f]{40}\.(stl|obj|dae)', r'.\1', xml_str)
+        xml_str = re.sub(r"-[0-9a-f]{40}\.(stl|obj|dae)", r".\1", xml_str)
 
         tmp_xml = Path(tempfile.mktemp(suffix=".xml", dir=asset_dir))
         tmp_xml.write_text(xml_str)
 
-
-        self._mj_model  = mujoco.MjModel.from_xml_path(str(tmp_xml))
+        self._mj_model = mujoco.MjModel.from_xml_path(str(tmp_xml))
         tmp_xml.unlink(missing_ok=True)
         return mjx.put_model(self._mj_model)
-
 
     def _make_substep(self, n_sub: int):
         def _one_env(model, data):
             def body(d, _):
                 return mjx.step(model, d), None
+
             data, _ = jax.lax.scan(body, data, None, length=n_sub)
             return data
 
         batched = jax.vmap(_one_env, in_axes=(None, 0))
         return jax.jit(batched, donate_argnums=(1,))
 
-
-
     def _create_primitive_xml(self, obj) -> str:
-            """Generate a minimal MJCF string for primitive objects."""
-            if isinstance(obj, PrimitiveCubeCfg):
-                size, gtype = (
-                    f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}",
-                    "box",
-                )
-            elif isinstance(obj, PrimitiveCylinderCfg):
-                size, gtype = f"{obj.radius} {obj.height}", "cylinder"
-            elif isinstance(obj, PrimitiveSphereCfg):
-                size, gtype = f"{obj.radius}", "sphere"
-            else:
-                raise ValueError("Unknown primitive type")
-
-            rgba = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-            return (
-                f'<mujoco model="{obj.name}_model">'
-                f'<worldbody><body name="{gtype}_body" pos="0 0 0">'
-                f'<geom type="{gtype}" size="{size}" rgba="{rgba}"/>'
-                f"</body></worldbody></mujoco>"
+        """Generate a minimal MJCF string for primitive objects."""
+        if isinstance(obj, PrimitiveCubeCfg):
+            size, gtype = (
+                f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}",
+                "box",
             )
-    _KIND_META = {
-        "joint"    : ("njnt" , "name_jntadr"),
-        "actuator" : ("nu"   , "name_actuatoradr"),
-        "body"     : ("nbody", "name_bodyadr"),
-    }
+        elif isinstance(obj, PrimitiveCylinderCfg):
+            size, gtype = f"{obj.radius} {obj.height}", "cylinder"
+        elif isinstance(obj, PrimitiveSphereCfg):
+            size, gtype = f"{obj.radius}", "sphere"
+        else:
+            raise ValueError("Unknown primitive type")
 
+        rgba = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
+        return (
+            f'<mujoco model="{obj.name}_model">'
+            f'<worldbody><body name="{gtype}_body" pos="0 0 0">'
+            f'<geom type="{gtype}" size="{size}" rgba="{rgba}"/>'
+            f"</body></worldbody></mujoco>"
+        )
+
+    _KIND_META = {
+        "joint": ("njnt", "name_jntadr"),
+        "actuator": ("nu", "name_actuatoradr"),
+        "body": ("nbody", "name_bodyadr"),
+    }
 
     def _decode_name(self, pool: bytes, adr: int) -> str:
         end = pool.find(b"\x00", adr)
@@ -571,11 +546,11 @@ class MJXHandler(BaseSimHandler):
     def _names_ids_mjx(self, kind: str):
         model = self._mjx_model
         size_attr, adr_attr = self._KIND_META[kind]
-        size   = int(getattr(model, size_attr))
-        adr_arr= getattr(model, adr_attr)
-        pool   = model.names
-        names  = [self._decode_name(pool, int(adr_arr[i])) for i in range(size)]
-        ids    = list(range(size))
+        size = int(getattr(model, size_attr))
+        adr_arr = getattr(model, adr_attr)
+        pool = model.names
+        names = [self._decode_name(pool, int(adr_arr[i])) for i in range(size)]
+        ids = list(range(size))
         return names, ids
 
     def _sorted_joint_info(self, prefix: str):
@@ -587,8 +562,8 @@ class MJXHandler(BaseSimHandler):
         names_sorted, j_ids = zip(*filt)
 
         model = self._mjx_model
-        qadr  = model.jnt_qposadr[list(j_ids)]
-        vadr  = model.jnt_dofadr[list(j_ids)]
+        qadr = model.jnt_qposadr[list(j_ids)]
+        vadr = model.jnt_dofadr[list(j_ids)]
         local = [n.split("/")[-1] for n in names_sorted]
         return jnp.asarray(qadr), jnp.asarray(vadr), local
 
@@ -599,13 +574,12 @@ class MJXHandler(BaseSimHandler):
 
     def _sorted_body_ids(self, prefix: str):
         names, ids = self._names_ids_mjx("body")
-        filt = [(n, i) for n, i in zip(names, ids)
-                if n.startswith(prefix) and n != prefix]
+        filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
         filt.sort(key=lambda t: t[0])
-        body_ids    = [i for _, i in filt]
+        body_ids = [i for _, i in filt]
         local_names = [n.split("/")[-1] for n, _ in filt]
         return body_ids, local_names
-    
+
     @property
     def num_envs(self) -> int:
         return self._scenario.num_envs
@@ -621,4 +595,6 @@ class MJXHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 MJXEnv: type[EnvWrapper[MJXHandler]] = GymEnvWrapper(MJXHandler)
