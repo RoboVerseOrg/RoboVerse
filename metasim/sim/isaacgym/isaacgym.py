@@ -10,6 +10,7 @@ from loguru import logger as log
 from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -58,14 +59,15 @@ class IsaacgymHandler(BaseSimHandler):
         self._rigid_body_states: torch.Tensor | None = None  # will update after refresh
         self._robot_dof_state: torch.Tensor | None = None
 
-        self._robot_num_dof: int   #FIXME robots which have passive joint may not compatible
-        self._obj_num_dof: int = 0 #
+        self._robot_num_dof: int  # TODO robots which have passive joint may not compatible
+        self._obj_num_dof: int = 0
         self._actions: torch.Tensor | None = None
         self._p_gains: torch.Tensor | None = None
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
         self._default_dof_pos: torch.Tensor | None = None
         self._gripper_dof_dix = []
+        self.effort_mode = True if scenario.task.task_type == TaskType.LOCOMOTION else False # torque for reward computation
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -84,17 +86,18 @@ class IsaacgymHandler(BaseSimHandler):
         physics_engine = gymapi.SIM_PHYSX
         self.gym = gymapi.acquire_gym()
         # configure sim
+        # TODO move more params into sim_params cfg
         sim_params = gymapi.SimParams()
         sim_params.up_axis = gymapi.UP_AXIS_Z
         sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.8)
-        sim_params.dt = 0.001  # default is 1.0/60.0, not enough for locomotion task TODO get from a task realated simulator-param config
+        sim_params.dt = self.task.sim_params.timestep
         sim_params.substeps = 2
         sim_params.use_gpu_pipeline = True
         sim_params.physx.solver_type = 1
-        sim_params.physx.num_position_iterations = 8
-        sim_params.physx.num_velocity_iterations = 0
+        sim_params.physx.num_position_iterations = self.task.sim_params.num_position_iterations
+        sim_params.physx.num_velocity_iterations = self.task.sim_params.num_velocity_iterations
         sim_params.physx.rest_offset = 0.0
-        sim_params.physx.contact_offset = 0.01  # TODO get from task realated simulator-param config
+        sim_params.physx.contact_offset = self.task.sim_params.contact_offset
         sim_params.physx.friction_offset_threshold = 0.001
         sim_params.physx.friction_correlation_distance = 0.0005
         sim_params.physx.num_threads = 0
@@ -268,9 +271,14 @@ class IsaacgymHandler(BaseSimHandler):
                     if actuator_cfg.torque_limit is not None
                     else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
                 )
-                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                robot_dof_props["stiffness"][i] = 0.0
-                robot_dof_props["damping"][i] = 0.0
+                if self.effort_mode:
+                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
+                    robot_dof_props["stiffness"][i] = 0.0
+                    robot_dof_props["damping"][i] = 0.0
+                else:
+                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
+                    robot_dof_props["stiffness"][i] = 400.0
+                    robot_dof_props["damping"][i] = 40.0
             # for end effector joint, use built-in pos contorl
             else:
                 # grippers
@@ -498,7 +506,7 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
-                joint_effort_target=self._torques,
+                joint_effort_target=self._torques if self.effort_mode else None,
             )
             robot_states[robot.name] = state
 
@@ -536,7 +544,7 @@ class IsaacgymHandler(BaseSimHandler):
         return action_array_all
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]):
-        #TODO add controller api
+        # TODO add controller api
         self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0])
         action_array_all = self._get_action_array_all(actions)
@@ -553,7 +561,10 @@ class IsaacgymHandler(BaseSimHandler):
         ]
         action_input[robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
-        self.actions = action_input.view(self._num_envs, self._robot_num_dof + self._obj_num_dof)
+        if self.effort_mode:
+            self.actions = action_input.view(self._num_envs, self._robot_num_dof + self._obj_num_dof)
+        else:
+            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
     def refresh_render(self) -> None:
         # Step the physics
@@ -563,15 +574,16 @@ class IsaacgymHandler(BaseSimHandler):
         # Refresh cameras and viewer
         self.gym.step_graphics(self.sim)
         self.gym.render_all_camera_sensors(self.sim)
-        #TODO add keyboard callback(mostly likely push v) to stop rendering in render mode
+        # TODO add keyboard callback(mostly likely push v) to stop rendering in render mode
         if not self.headless:
             self.gym.draw_viewer(self.viewer, self.sim, False)
-
 
     def simulate(self) -> None:
         # Step the physics
         for _ in range(self.scenario.decimation):
-            self._apply_action()
+            # if effort mode, use pd controller to get torque
+            if self.effort_mode:
+                self._apply_action()
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
             self.gym.refresh_dof_state_tensor(self.sim)
