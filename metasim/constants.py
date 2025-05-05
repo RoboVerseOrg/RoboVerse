@@ -76,6 +76,7 @@ class SimType(enum.Enum):
     SAPIEN2 = "sapien2"
     SAPIEN3 = "sapien3"
     BLENDER = "blender"
+    MJX = "mjx"
 
 
 class RobotType(enum.Enum):
