@@ -34,8 +34,6 @@ wandb login
     python roboverse_learn/humanoidbench_rl/train_sb3.py mujoco
     ```
 
-
-
 - IsaacGym:
 
     ```bash
