@@ -34,7 +34,6 @@ final_lr_fraction: 0.1    # Optional: final learning rate is 10% of initial lear
 use_wandb: true
 # use_wandb: false
 wandb_project: humanoidbench_rl_training
-wandb_entity: weisonweileen-southern-university-of-science-technology
 
 # visualization
 headless: false
