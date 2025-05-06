@@ -10,8 +10,9 @@ from metasim.utils import configclass
 class BaseActuatorCfg:
     velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?
     is_ee: bool = False
-    damping: float = 40.0
-    stiffness: float = 400.0
+    damping: float | None = None
+    stiffness: float | None = None
+    torque_limit: float | None = None
     actionable: bool = True
     """Whether the actuator is actionable, i.e. can be driven by a motor.
 

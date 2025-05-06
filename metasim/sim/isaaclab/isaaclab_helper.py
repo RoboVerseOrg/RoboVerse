@@ -157,7 +157,12 @@ def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(),
         ),
         actuators={
-            jn: ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=None, damping=None) for jn in robot.actuators
+            jn: ImplicitActuatorCfg(
+                joint_names_expr=[jn],
+                stiffness=actuator.stiffness,
+                damping=actuator.damping,
+            )
+            for jn, actuator in robot.actuators.items()
         },
     )
     cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
