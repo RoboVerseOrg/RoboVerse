@@ -1,3 +1,5 @@
+## ruff: noqa: D102
+
 from __future__ import annotations
 
 from dataclasses import MISSING
@@ -17,6 +19,8 @@ except:
 
 @configclass
 class AndOp(BaseChecker):
+    """Combine multiple checkers with a logical AND operation."""
+
     checkers: list[BaseChecker] = MISSING
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
@@ -38,6 +42,8 @@ class AndOp(BaseChecker):
 
 @configclass
 class OrOp(BaseChecker):
+    """Combine multiple checkers with a logical OR operation."""
+
     checkers: list[BaseChecker] = MISSING
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
@@ -59,6 +65,8 @@ class OrOp(BaseChecker):
 
 @configclass
 class NotOp(BaseChecker):
+    """Negate the result of a checker."""
+
     checker: BaseChecker = MISSING
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):

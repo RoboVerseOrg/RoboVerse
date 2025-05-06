@@ -1,3 +1,5 @@
+## ruff: noqa: D102
+
 from __future__ import annotations
 
 from dataclasses import MISSING
@@ -19,23 +21,28 @@ except:
 
 @configclass
 class BaseDetector:
+    """Base class for all detectors. Detectors are used to detect whether the object is inside the detector."""
+
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
+        """The code to run when the environment is reset."""
         raise NotImplementedError
 
     def is_detected(self, handler: BaseSimHandler, obj_name: str) -> torch.BoolTensor:
+        """Check if the object is inside the detector."""
         raise NotImplementedError
 
     def get_debug_viewers(self) -> list[BaseObjCfg]:
+        """Get the viewers to be used for debugging the detector."""
         raise NotImplementedError
 
 
 @configclass
 class RelativeBboxDetector(BaseDetector):
-    """
-    Check if the object is in the bounding box detector
+    """Check if the object is in the bounding box detector.
+
     - The bbox detector is defined by `relative_pos` and `relative_quat` to the base object specified by `base_obj_name`
     - The bbox size is defined by `checker_lower` and `checker_upper`
-    - If `ignore_base_ori` is True, the base object orientation is ignored
+    - If `ignore_base_ori` is True, the base object orientation is ignored.
     """
 
     base_obj_name: str = MISSING
@@ -136,9 +143,16 @@ class RelativeBboxDetector(BaseDetector):
 
 @configclass
 class Relative2DSphereDetector(BaseDetector):
+    """Detect whether the object is in a 2D sphere region.
+
+    - The detector position is defined by `relative_pos` to the base object specified by `base_obj_name`
+    - The region size is defined by `radius`
+    - The axis which the detector is along is defined by `axis`
+    """
+
     base_obj_name: str = MISSING
     relative_pos: tuple[float, float, float] = MISSING
-    aixs: tuple[int, int] = MISSING
+    axis: tuple[int, int] = MISSING
     radius: float = MISSING
     debug_vis: bool = False
 
@@ -156,7 +170,7 @@ class Relative2DSphereDetector(BaseDetector):
         obj_pos = handler.get_pos(obj_name)
 
         object_in_checker = (
-            torch.norm(obj_pos[:, self.aixs] - self.checker_pos[:, self.aixs], p=2, dim=-1) < self.radius
+            torch.norm(obj_pos[:, self.axis] - self.checker_pos[:, self.axis], p=2, dim=-1) < self.radius
         )
         if object_in_checker.shape[0] != handler.num_envs:
             raise ValueError(
@@ -171,6 +185,12 @@ class Relative2DSphereDetector(BaseDetector):
 
 @configclass
 class Relative3DSphereDetector(BaseDetector):
+    """Detect whether the object is in a 3D sphere region.
+
+    - The detector position is defined by `relative_pos` to the base object specified by `base_obj_name`
+    - The region size is defined by `radius`
+    """
+
     base_obj_name: str = MISSING
     relative_pos: tuple[float, float, float] = MISSING
     radius: float = MISSING

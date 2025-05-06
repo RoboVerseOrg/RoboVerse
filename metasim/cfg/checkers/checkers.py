@@ -1,3 +1,5 @@
+## ruff: noqa: D102
+
 from __future__ import annotations
 
 from dataclasses import MISSING
@@ -22,6 +24,8 @@ except:
 
 @configclass
 class EmptyChecker(BaseChecker):
+    """A checker that always returns False."""
+
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         pass
 
@@ -34,6 +38,11 @@ class EmptyChecker(BaseChecker):
 
 @configclass
 class DetectedChecker(BaseChecker):
+    """Check if the object with ``obj_name`` is detected by the detector.
+
+    This class should always be used with a detector.
+    """
+
     obj_name: str = MISSING
     detector: BaseDetector = MISSING
     ignore_if_first_check_success: bool = False
@@ -58,6 +67,12 @@ class DetectedChecker(BaseChecker):
 
 @configclass
 class JointPosChecker(BaseChecker):
+    """Check if the joint with ``joint_name`` of the object with ``obj_name`` has position ``radian_threshold`` units.
+
+    - ``mode`` should be one of "ge", "le". "ge" for greater than or equal to, "le" for less than or equal to.
+    - ``radian_threshold`` is the threshold for the joint position.
+    """
+
     obj_name: str = MISSING
     joint_name: str = MISSING
     mode: Literal["ge", "le"] = MISSING
@@ -79,9 +94,9 @@ class JointPosChecker(BaseChecker):
 
 @configclass
 class JointPosShiftChecker(BaseChecker):
-    """
-    Check if the joint with `joint_name` of the object with `obj_name` was moved more than `threshold` units.
-    - `threshold` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` units.
+
+    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
     """
 
     obj_name: str = MISSING
@@ -111,9 +126,9 @@ class JointPosShiftChecker(BaseChecker):
 
 @configclass
 class JointPosPercentShiftChecker(BaseChecker):
-    """
-    Check if the joint with `joint_name` of the object with `obj_name` was moved more than `threshold` percent.
-    - `threshold` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` percent.
+
+    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
     """
 
     obj_name: str = MISSING
@@ -163,10 +178,10 @@ class JointPosPercentShiftChecker(BaseChecker):
 
 @configclass
 class UpAxisRotationChecker(BaseChecker):
-    """
-    Check if the object with `obj_name` was rotated away 'target_degree' degrees from the given `axis` (for example,  "z", [0,0,1] ) by more than `degree_threshold` degrees.
-    - `degree_threshold` should be in the range of [0, 180].
-    - `axis` should be one of "x", "y", "z". default is "z".
+    """Check if the object with ``obj_name`` was rotated away ``target_degree`` degrees from the given ``axis`` (for example,  "z", [0,0,1] ) by more than ``degree_threshold`` degrees.
+
+    - ``degree_threshold`` should be in the range of [0, 180].
+    - ``axis`` should be one of "x", "y", "z". default is "z".
     """
 
     ## ref: https://github.com/mees/calvin_env/blob/c7377a6485be43f037f4a0b02e525c8c6e8d24b0/calvin_env/envs/tasks.py#L54
@@ -216,11 +231,11 @@ class UpAxisRotationChecker(BaseChecker):
 
 @configclass
 class RotationShiftChecker(BaseChecker):
-    """
-    Check if the object with `obj_name` was rotated more than `radian_threshold` radians around the given `axis`.
-    - `radian_threshold` is negative for clockwise rotations and positive for counter-clockwise rotations.
-    - `radian_threshold` should be in the range of [-pi, pi].
-    - `axis` should be one of "x", "y", "z". default is "z".
+    """Check if the object with ``obj_name`` was rotated more than ``radian_threshold`` radians around the given ``axis``.
+
+    - ``radian_threshold`` is negative for clockwise rotations and positive for counter-clockwise rotations.
+    - ``radian_threshold`` should be in the range of [-pi, pi].
+    - ``axis`` should be one of "x", "y", "z". default is "z".
     """
 
     ## ref: https://github.com/mees/calvin_env/blob/c7377a6485be43f037f4a0b02e525c8c6e8d24b0/calvin_env/envs/tasks.py#L54
@@ -260,11 +275,11 @@ class RotationShiftChecker(BaseChecker):
 
 @configclass
 class PositionShiftChecker(BaseChecker):
-    """
-    Check if the object with `obj_name` was moved more than `distance` meters in given `axis`.
-    - `distance` is negative for moving towards the negative direction and positive for moving towards the positive direction.
-    - `max_distance` is the maximum distance the object can move.
-    - `axis` should be one of "x", "y", "z".
+    """Check if the object with ``obj_name`` was moved more than ``distance`` meters in given ``axis``.
+
+    - ``distance`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    - ``max_distance`` is the maximum distance the object can move.
+    - ``axis`` should be one of "x", "y", "z".
     """
 
     obj_name: str = MISSING
@@ -301,11 +316,11 @@ class PositionShiftChecker(BaseChecker):
 
 @configclass
 class PositionShiftCheckerWithTolerance(BaseChecker):
-    """
-    Check if the object with `obj_name` was moved to `distance` meters in given `axis` with a tolerance of `tolerance`.
-    - `distance` is negative for moving towards the negative direction and positive for moving towards the positive direction.
-    - `max_distance` is the maximum distance the object can move.
-    - `axis` should be one of "x", "y", "z".
+    """Check if the object with ``obj_name`` was moved to ``distance`` meters in given ``axis`` with a tolerance of ``tolerance``.
+
+    - ``distance`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    - ``max_distance`` is the maximum distance the object can move.
+    - ``axis`` should be one of "x", "y", "z".
     """
 
     ## FIXME: this function is redundant with PositionShiftChecker, we should remove it
@@ -352,7 +367,7 @@ class PositionShiftCheckerWithTolerance(BaseChecker):
 
 
 @configclass
-class SlideChecker(BaseChecker):
+class _SlideChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import torso_upright
 
@@ -367,7 +382,7 @@ class SlideChecker(BaseChecker):
 
 
 @configclass
-class WalkChecker(BaseChecker):
+class _WalkChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position_tensor
 
@@ -377,17 +392,17 @@ class WalkChecker(BaseChecker):
 
 
 @configclass
-class StandChecker(WalkChecker):
+class _StandChecker(_WalkChecker):
     pass
 
 
 @configclass
-class RunChecker(WalkChecker):
+class _RunChecker(_WalkChecker):
     pass
 
 
 @configclass
-class CrawlChecker(BaseChecker):
+class _CrawlChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = [False] * len(states)
@@ -395,7 +410,7 @@ class CrawlChecker(BaseChecker):
 
 
 @configclass
-class HurdleChecker(BaseChecker):
+class _HurdleChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = [False] * len(states)
@@ -403,7 +418,7 @@ class HurdleChecker(BaseChecker):
 
 
 @configclass
-class MazeChecker(BaseChecker):
+class _MazeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position
 
@@ -418,7 +433,7 @@ class MazeChecker(BaseChecker):
 
 
 @configclass
-class PoleChecker(BaseChecker):
+class _PoleChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position
 
@@ -433,7 +448,7 @@ class PoleChecker(BaseChecker):
 
 
 @configclass
-class SitChecker(BaseChecker):
+class _SitChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position
 
@@ -448,22 +463,7 @@ class SitChecker(BaseChecker):
 
 
 @configclass
-class BalanceChecker(BaseChecker):
-    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import robot_position
-
-        states = handler.get_states()
-        terminated = []
-        for state in states:
-            if robot_position(state, handler.robot.name)[2] < 0.8:
-                terminated.append(True)
-            else:
-                terminated.append(False)
-        return torch.tensor(terminated)
-
-
-@configclass
-class StairChecker(BaseChecker):
+class _StairChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import torso_upright
 
@@ -478,7 +478,7 @@ class StairChecker(BaseChecker):
 
 
 @configclass
-class PushChecker(BaseChecker):
+class _PushChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = []
@@ -503,7 +503,7 @@ class PushChecker(BaseChecker):
 
 
 @configclass
-class CubeChecker(BaseChecker):
+class _CubeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = []
@@ -526,7 +526,7 @@ class CubeChecker(BaseChecker):
 
 
 @configclass
-class DoorChecker(BaseChecker):
+class _DoorChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position
 
@@ -541,7 +541,7 @@ class DoorChecker(BaseChecker):
 
 
 @configclass
-class PackageChecker(BaseChecker):
+class _PackageChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = []
@@ -558,7 +558,7 @@ class PackageChecker(BaseChecker):
 
 
 @configclass
-class PowerliftChecker(BaseChecker):
+class _PowerliftChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position
 
@@ -573,7 +573,7 @@ class PowerliftChecker(BaseChecker):
 
 
 @configclass
-class SpoonChecker(BaseChecker):
+class _SpoonChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = [False] * len(states)
@@ -581,7 +581,7 @@ class SpoonChecker(BaseChecker):
 
 
 @configclass
-class HighbarChecker(BaseChecker):
+class _HighbarChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         states = handler.get_states()
         terminated = [False] * len(states)

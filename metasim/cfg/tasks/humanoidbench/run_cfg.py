@@ -1,6 +1,6 @@
 """Run task for humanoid robots."""
 
-from metasim.cfg.checkers import RunChecker
+from metasim.cfg.checkers import _RunChecker
 from metasim.utils import configclass
 
 from .base_cfg import BaseLocomotionReward, HumanoidTaskCfg
@@ -19,6 +19,6 @@ class RunCfg(HumanoidTaskCfg):
 
     episode_length = 1000
     traj_filepath = "roboverse_data/trajs/humanoidbench/run/v2/initial_state_v2.json"
-    checker = RunChecker()
+    checker = _RunChecker()
     reward_functions = [RunReward]
     reward_weights = [1.0]
