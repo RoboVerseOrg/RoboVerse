@@ -1,19 +1,17 @@
 ﻿metasim.cfg.checkers
 ====================
 
+.. currentmodule:: metasim.cfg.checkers
+
 .. automodule:: metasim.cfg.checkers
 
    .. rubric:: Base Class
-
-   .. currentmodule:: metasim.cfg.checkers._base_checker
 
    .. autosummary::
 
       BaseChecker
 
    .. rubric:: Checker Operators
-
-   .. currentmodule:: metasim.cfg.checkers._checker_operators
 
    .. autosummary::
 
@@ -22,8 +20,6 @@
       NotOp
 
    .. rubric:: Checkers
-
-   .. currentmodule:: metasim.cfg.checkers._checkers
 
    .. autosummary::
 
@@ -35,63 +31,80 @@
 
    .. rubric:: Detectors
 
-   .. currentmodule:: metasim.cfg.checkers._detectors
-
    .. autosummary::
 
       RelativeBboxDetector
       Relative3DSphereDetector
 
-.. currentmodule:: metasim.cfg.checkers
-
-
-Base Checker
-------------
+BaseChecker
+-----------
 
 .. autoclass:: BaseChecker
    :members:
 
-Checker Operators
------------------
+AndOp
+-----
 
 .. autoclass:: AndOp
    :members:
 
+OrOp
+----
+
 .. autoclass:: OrOp
    :members:
+
+NotOp
+-----
 
 .. autoclass:: NotOp
    :members:
 
-Checkers
---------
+DetectedChecker
+---------------
 
 .. autoclass:: DetectedChecker
    :members:
    :show-inheritance:
 
+JointPosChecker
+---------------
+
 .. autoclass:: JointPosChecker
    :members:
    :show-inheritance:
+
+PositionShiftChecker
+--------------------
 
 .. autoclass:: PositionShiftChecker
    :members:
    :show-inheritance:
 
+RotationShiftChecker
+--------------------
+
 .. autoclass:: RotationShiftChecker
    :members:
    :show-inheritance:
+
+JointPosShiftChecker
+--------------------
 
 .. autoclass:: JointPosShiftChecker
    :members:
    :show-inheritance:
 
-Detectors
----------
+RelativeBboxDetector
+--------------------
 
 .. autoclass:: RelativeBboxDetector
    :members:
    :show-inheritance:
+
+Relative3DSphereDetector
+------------------------
+
 
 .. autoclass:: Relative3DSphereDetector
    :members:
