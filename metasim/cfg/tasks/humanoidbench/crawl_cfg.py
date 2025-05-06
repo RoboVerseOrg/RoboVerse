@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import CrawlChecker
+from metasim.cfg.checkers import _CrawlChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -97,6 +97,6 @@ class CrawlCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/crawl/v2/initial_state_v2.json"
-    checker = CrawlChecker()
+    checker = _CrawlChecker()
     reward_weights = [1.0]
     reward_functions = [CrawlReward]

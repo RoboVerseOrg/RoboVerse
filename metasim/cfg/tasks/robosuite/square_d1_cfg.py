@@ -44,7 +44,7 @@ class SquareD1Cfg(BaseTaskCfg):
             detector=Relative2DSphereDetector(
                 base_obj_name="peg1",
                 relative_pos=[0.0, 0.0, 0.05],
-                aixs=[0, 1],
+                axis=[0, 1],
                 radius=0.02,
             ),
         ),

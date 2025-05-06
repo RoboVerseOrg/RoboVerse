@@ -1,7 +1,6 @@
 """The plug charger task from ManiSkill."""
 
-from metasim.cfg.checkers.checkers import DetectedChecker
-from metasim.cfg.checkers.detectors import RelativeBboxDetector
+from metasim.cfg.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.utils import configclass

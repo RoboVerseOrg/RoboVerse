@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from metasim.cfg.checkers import PositionShiftCheckerWithTolerance
+from metasim.cfg.checkers import _PositionShiftCheckerWithTolerance
 from metasim.cfg.objects import RigidObjCfg
 from metasim.cfg.robots import FrankaCfg
 from metasim.cfg.scenes import SceneCfg
@@ -65,7 +65,7 @@ class {name}(ArnoldTaskCfg):
             ),
         ]
 
-        self.checker = PositionShiftCheckerWithTolerance(
+        self.checker = _PositionShiftCheckerWithTolerance(
             obj_name="Bottle",
             axis="z",
             distance=target,

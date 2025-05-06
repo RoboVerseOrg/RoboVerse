@@ -11,14 +11,19 @@ except:
 
 @configclass
 class BaseChecker:
+    """Base class for all checkers. Checkers are used to check whether the task is executed successfully."""
+
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
+        """The code to run when the environment is reset."""
         pass
 
     def check(self, handler: BaseSimHandler):
+        """Check whether the task is executed successfully."""
         import torch
 
         # log.warning("Checker not implemented, task will never succeed")
         return torch.zeros(handler.num_envs, dtype=torch.bool)
 
     def get_debug_viewers(self) -> list[BaseObjCfg]:
+        """Get the viewers to be used for debugging the checker."""
         return []

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import PushChecker
+from metasim.cfg.checkers import _PushChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -88,6 +88,6 @@ class PushCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/push/v2/initial_state_v2.json"
-    checker = PushChecker()
+    checker = _PushChecker()
     reward_weights = [1000, 1, 0.1]  # αs, αt, αh
     reward_functions = [SuccessReward, GoalDistanceReward, HandDistanceReward]

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import SpoonChecker
+from metasim.cfg.checkers import _SpoonChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -41,6 +41,6 @@ class SpoonCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/spoon/v2/initial_state_v2.json"
-    checker = SpoonChecker()
+    checker = _SpoonChecker()
     reward_weights = [1.0]
     reward_functions = [SpoonReward]

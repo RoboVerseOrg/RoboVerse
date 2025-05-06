@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import HurdleChecker
+from metasim.cfg.checkers import _HurdleChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -42,6 +42,6 @@ class HurdleCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/hurdle/v2/initial_state_v2.json"
-    checker = HurdleChecker()
+    checker = _HurdleChecker()
     reward_weights = [1.0]
     reward_functions = [HurdleReward]

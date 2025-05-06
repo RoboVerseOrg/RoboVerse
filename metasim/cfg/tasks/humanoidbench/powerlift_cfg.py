@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import PowerliftChecker
+from metasim.cfg.checkers import _PowerliftChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -58,6 +58,6 @@ class PowerliftCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/powerlift/v2/initial_state_v2.json"
-    checker = PowerliftChecker()
+    checker = _PowerliftChecker()
     reward_weights = [1.0]
     reward_functions = [PowerliftReward]

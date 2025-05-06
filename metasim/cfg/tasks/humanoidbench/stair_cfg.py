@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import StairChecker
+from metasim.cfg.checkers import _StairChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -99,6 +99,6 @@ class StairCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/stair/v2/initial_state_v2.json"
-    checker = StairChecker()
+    checker = _StairChecker()
     reward_weights = [1.0]
     reward_functions = [StairReward]

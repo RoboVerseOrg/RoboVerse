@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import PackageChecker
+from metasim.cfg.checkers import _PackageChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -76,6 +76,6 @@ class PackageCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/package/v2/initial_state_v2.json"
-    checker = PackageChecker()
+    checker = _PackageChecker()
     reward_weights = [1.0]
     reward_functions = [PackageReward]

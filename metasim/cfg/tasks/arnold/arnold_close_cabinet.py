@@ -6,7 +6,7 @@ import pickle
 
 import numpy as np
 
-from metasim.cfg.checkers import JointPosPercentShiftChecker
+from metasim.cfg.checkers import _JointPosPercentShiftChecker
 from metasim.cfg.objects import ArticulationObjCfg
 from metasim.cfg.robots import FrankaCfg
 from metasim.cfg.scenes import SceneCfg
@@ -70,7 +70,7 @@ class {name}(ArnoldTaskCfg):
             ),
         ]
         # assuming uniform scaling
-        self.checker = JointPosPercentShiftChecker(
+        self.checker = _JointPosPercentShiftChecker(
             obj_name="Cabinet",
             joint_name=self.joint_name,
             percentage_target=self.target,
