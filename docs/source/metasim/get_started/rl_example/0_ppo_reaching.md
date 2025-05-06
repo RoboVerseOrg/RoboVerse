@@ -4,24 +4,24 @@ RL is a powerful tool for training agents to perform tasks in simulation, expeci
 
 In this example, we will train a PPO agent to reach as far away as possible and also reach a target position in a 3D environment.
 
-### One Command to Train PPO, Inference and Save Video
+## One Command to Train PPO, Inference and Save Video
 We provide tutorials for training PPO, inference and saving video. In this example, we will use stable baseline 3 to train PPO.
 
-#### Task: Reach Far Away
+### Task: Reach Far Away
 
 ```bash
 python get_started/rl/0_ppo_reaching.py --sim <simulator> --task debug:reach_far_away --num_envs <num_envs> --headless
 ```
 
-#### Task: Reach Target
+### Task: Reach Target
 
 ```bash
 python get_started/rl/0_ppo_reaching.py --sim <simulator> --task debug:reach_origin --num_envs <num_envs> --headless
 ```
 
-### Example Commands and Results
+## Example Commands and Results
 
-#### Task: Reach Far Away
+### Task: Reach Far Away
 Isaac Gym:
 ```bash
 python get_started/rl/0_ppo_reaching.py --sim isaacgym --task debug:reach_far_away --num_envs 128 --headless
@@ -31,7 +31,7 @@ Isaac Lab:
 ```bash
 python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_far_away --num_envs 128 --headless
 ```
-#### Task: Reach Target
+### Task: Reach Target
 Isaac Gym:
 ```bash
 python get_started/rl/0_ppo_reaching.py --sim isaacgym --task debug:reach_origin --num_envs 128 --headless
@@ -42,8 +42,8 @@ Isaac Lab:
 python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_origin --num_envs 128 --headless
 ```
 
-#### You can get the video like this:
-##### Reach Far Away:
+### You can get the video like this:
+#### Reach Far Away:
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
@@ -61,7 +61,7 @@ python get_started/rl/0_ppo_reaching.py --sim isaaclab --task debug:reach_origin
     </div>
 </div>
 
-##### Reach Origin:
+#### Reach Origin:
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">

@@ -70,7 +70,7 @@ Please also check the `prerequisites <./prerequisite.html>`_ for supported platf
 Install IsaacLab v1.4
 ---------------------
 
-.. code-block:: bashx
+.. code-block:: bash
 
     uv pip install -e ".[isaaclab]"
     cd third_party
