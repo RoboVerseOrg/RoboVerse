@@ -135,111 +135,6 @@ class JointPosShiftChecker(BaseChecker):
 
 
 @configclass
-class JointPosPercentShiftChecker(BaseChecker):
-    """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` percent.
-
-    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
-    """
-
-    obj_name: str = MISSING
-    joint_name: str = MISSING
-    threshold: float = MISSING
-    percentage_target: float = MISSING
-    scale: float = 100.0
-    type: Literal["prismatic", "revolute"] = "prismatic"
-
-    def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
-        if env_ids is None:
-            env_ids = list(range(handler.num_envs))
-
-        if not hasattr(self, "init_joint_pos"):
-            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32, device=handler.device)
-
-        self.init_joint_pos[env_ids] = handler.get_dof_pos(self.obj_name, self.joint_name, env_ids=env_ids)
-
-    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        # Get the current joint position as a tensor.
-        cur_joint_pos = handler.get_dof_pos(self.obj_name, self.joint_name)
-
-        # Get the joint limits tensor and joint names list.
-        joint_limits = handler.get_joint_limits(self.obj_name, self.joint_name)
-        joint_lower_limit = joint_limits[:, 0]
-        if self.type == "prismatic":
-            joint_upper_limit = joint_limits[:, 1] / self.scale
-        elif self.type == "revolute":
-            joint_upper_limit = joint_limits[:, 1]
-        else:
-            raise ValueError(f"Invalid joint type: {self.type}")
-        # Compute the joint range and the percentage of the position within that range.
-        joint_range = joint_upper_limit - joint_lower_limit
-        joint_pos_percentage = (cur_joint_pos - joint_lower_limit) / joint_range
-
-        # Check if the current position is within the desired threshold of the target percentage.
-        # Use the bitwise '&' operator for element-wise logical AND on tensors.
-        condition = (joint_pos_percentage >= self.percentage_target - self.threshold) & (
-            joint_pos_percentage <= self.percentage_target + self.threshold
-        )
-
-        log.debug(
-            f"joint_pos_percentage {tensor_to_str(joint_pos_percentage)}, percentage_target {self.percentage_target}, threshold {self.threshold}"
-        )
-        return condition
-
-
-@configclass
-class UpAxisRotationChecker(BaseChecker):
-    """Check if the object with ``obj_name`` was rotated away ``target_degree`` degrees from the given ``axis`` (for example,  "z", [0,0,1] ) by more than ``degree_threshold`` degrees.
-
-    - ``degree_threshold`` should be in the range of [0, 180].
-    - ``axis`` should be one of "x", "y", "z". default is "z".
-    """
-
-    ## ref: https://github.com/mees/calvin_env/blob/c7377a6485be43f037f4a0b02e525c8c6e8d24b0/calvin_env/envs/tasks.py#L54
-    obj_name: str = MISSING
-    degree_threshold: float = MISSING
-    target_degree: float = MISSING
-    axis: Literal["x", "y", "z"] = "z"
-
-    def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
-        if env_ids is None:
-            env_ids = list(range(handler.num_envs))
-
-        if not hasattr(self, "init_quat"):
-            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32, device=handler.device)
-
-        self.init_quat[env_ids] = handler.get_rot(self.obj_name, env_ids=env_ids)
-
-    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        cur_quat = handler.get_rot(self.obj_name)
-        cur_rot_mat = matrix_from_quat(cur_quat)
-
-        v = {"x": 0, "y": 1, "z": 2}[self.axis]
-
-        # Get the rotation around the up axis.
-        # If cur_rot_mat is batched (e.g. shape [B, 3, 3]), this indexing works over the batch.
-        up_axis = cur_rot_mat[..., v, :]
-
-        # Compute the norm (magnitude) of the up_axis vector along the last dimension.
-        norm = torch.norm(up_axis, dim=-1)
-
-        # Compute the cosine of the angle using batch division.
-        cos_angle = up_axis[..., 1] / norm
-
-        # Calculate the angle in radians then convert to degrees.
-        angle = torch.acos(cos_angle)
-        angle = angle * 180.0 / torch.pi
-
-        # Compute the absolute difference from the target degree.
-        delta_angle = torch.abs(angle - self.target_degree)
-
-        log.debug(
-            f"Object {self.obj_name} rotated {angle} degrees away from {self.axis}-axis, the delta is {delta_angle}"
-        )
-
-        return delta_angle <= self.degree_threshold
-
-
-@configclass
 class RotationShiftChecker(BaseChecker):
     """Check if the object with ``obj_name`` was rotated more than ``radian_threshold`` radians around the given ``axis``.
 
@@ -331,16 +226,73 @@ class PositionShiftChecker(BaseChecker):
             return dim_diff <= self.distance
 
 
+################################################################################
+## The following checkers are deprecated, we should remove them in the future!
+################################################################################
+
+
+## XXX: this checker is hacky, we should remove it!
 @configclass
-class PositionShiftCheckerWithTolerance(BaseChecker):
+class _JointPosPercentShiftChecker(BaseChecker):
+    """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` percent.
+
+    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    """
+
+    obj_name: str = MISSING
+    joint_name: str = MISSING
+    threshold: float = MISSING
+    percentage_target: float = MISSING
+    scale: float = 100.0
+    type: Literal["prismatic", "revolute"] = "prismatic"
+
+    def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
+        if env_ids is None:
+            env_ids = list(range(handler.num_envs))
+
+        if not hasattr(self, "init_joint_pos"):
+            self.init_joint_pos = torch.zeros(handler.num_envs, dtype=torch.float32, device=handler.device)
+
+        self.init_joint_pos[env_ids] = handler.get_dof_pos(self.obj_name, self.joint_name, env_ids=env_ids)
+
+    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
+        # Get the current joint position as a tensor.
+        cur_joint_pos = handler.get_dof_pos(self.obj_name, self.joint_name)
+
+        # Get the joint limits tensor and joint names list.
+        joint_limits = handler.get_joint_limits(self.obj_name, self.joint_name)
+        joint_lower_limit = joint_limits[:, 0]
+        if self.type == "prismatic":
+            joint_upper_limit = joint_limits[:, 1] / self.scale
+        elif self.type == "revolute":
+            joint_upper_limit = joint_limits[:, 1]
+        else:
+            raise ValueError(f"Invalid joint type: {self.type}")
+        # Compute the joint range and the percentage of the position within that range.
+        joint_range = joint_upper_limit - joint_lower_limit
+        joint_pos_percentage = (cur_joint_pos - joint_lower_limit) / joint_range
+
+        # Check if the current position is within the desired threshold of the target percentage.
+        # Use the bitwise '&' operator for element-wise logical AND on tensors.
+        condition = (joint_pos_percentage >= self.percentage_target - self.threshold) & (
+            joint_pos_percentage <= self.percentage_target + self.threshold
+        )
+
+        log.debug(
+            f"joint_pos_percentage {tensor_to_str(joint_pos_percentage)}, percentage_target {self.percentage_target}, threshold {self.threshold}"
+        )
+        return condition
+
+
+## FIXME: this function is redundant with PositionShiftChecker, we should remove it!
+@configclass
+class _PositionShiftCheckerWithTolerance(BaseChecker):
     """Check if the object with ``obj_name`` was moved to ``distance`` meters in given ``axis`` with a tolerance of ``tolerance``.
 
     - ``distance`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
     - ``max_distance`` is the maximum distance the object can move.
     - ``axis`` should be one of "x", "y", "z".
     """
-
-    ## FIXME: this function is redundant with PositionShiftChecker, we should remove it
 
     obj_name: str = MISSING
     distance: float = MISSING
@@ -383,6 +335,61 @@ class PositionShiftCheckerWithTolerance(BaseChecker):
             return dim_diff <= self.distance + self.tolerance
 
 
+## FIXME: this function is redundant with RotationShiftChecker, we should remove it!
+@configclass
+class _UpAxisRotationChecker(BaseChecker):
+    """Check if the object with ``obj_name`` was rotated away ``target_degree`` degrees from the given ``axis`` (for example,  "z", [0,0,1] ) by more than ``degree_threshold`` degrees.
+
+    - ``degree_threshold`` should be in the range of [0, 180].
+    - ``axis`` should be one of "x", "y", "z". default is "z".
+    """
+
+    ## ref: https://github.com/mees/calvin_env/blob/c7377a6485be43f037f4a0b02e525c8c6e8d24b0/calvin_env/envs/tasks.py#L54
+    obj_name: str = MISSING
+    degree_threshold: float = MISSING
+    target_degree: float = MISSING
+    axis: Literal["x", "y", "z"] = "z"
+
+    def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
+        if env_ids is None:
+            env_ids = list(range(handler.num_envs))
+
+        if not hasattr(self, "init_quat"):
+            self.init_quat = torch.zeros(handler.num_envs, 4, dtype=torch.float32, device=handler.device)
+
+        self.init_quat[env_ids] = handler.get_rot(self.obj_name, env_ids=env_ids)
+
+    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
+        cur_quat = handler.get_rot(self.obj_name)
+        cur_rot_mat = matrix_from_quat(cur_quat)
+
+        v = {"x": 0, "y": 1, "z": 2}[self.axis]
+
+        # Get the rotation around the up axis.
+        # If cur_rot_mat is batched (e.g. shape [B, 3, 3]), this indexing works over the batch.
+        up_axis = cur_rot_mat[..., v, :]
+
+        # Compute the norm (magnitude) of the up_axis vector along the last dimension.
+        norm = torch.norm(up_axis, dim=-1)
+
+        # Compute the cosine of the angle using batch division.
+        cos_angle = up_axis[..., 1] / norm
+
+        # Calculate the angle in radians then convert to degrees.
+        angle = torch.acos(cos_angle)
+        angle = angle * 180.0 / torch.pi
+
+        # Compute the absolute difference from the target degree.
+        delta_angle = torch.abs(angle - self.target_degree)
+
+        log.debug(
+            f"Object {self.obj_name} rotated {angle} degrees away from {self.axis}-axis, the delta is {delta_angle}"
+        )
+
+        return delta_angle <= self.degree_threshold
+
+
+## FIXME: This checker should be removed!
 @configclass
 class _SlideChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -398,6 +405,7 @@ class _SlideChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _WalkChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -408,16 +416,19 @@ class _WalkChecker(BaseChecker):
         return terminated
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _StandChecker(_WalkChecker):
     pass
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _RunChecker(_WalkChecker):
     pass
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _CrawlChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -426,6 +437,7 @@ class _CrawlChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _HurdleChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -434,6 +446,7 @@ class _HurdleChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _MazeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -449,6 +462,7 @@ class _MazeChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _PoleChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -464,6 +478,7 @@ class _PoleChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _SitChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -479,6 +494,7 @@ class _SitChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _StairChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -494,6 +510,7 @@ class _StairChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _PushChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -519,6 +536,7 @@ class _PushChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _CubeChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -542,6 +560,7 @@ class _CubeChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _DoorChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -557,6 +576,7 @@ class _DoorChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _PackageChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -574,6 +594,7 @@ class _PackageChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _PowerliftChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -589,6 +610,7 @@ class _PowerliftChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _SpoonChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
@@ -597,6 +619,7 @@ class _SpoonChecker(BaseChecker):
         return torch.tensor(terminated)
 
 
+## FIXME: This checker should be removed!
 @configclass
 class _HighbarChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:

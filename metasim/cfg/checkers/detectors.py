@@ -148,6 +148,8 @@ class RelativeBboxDetector(BaseDetector):
             handler.set_pose(self.name, pos, rot)
 
 
+## FIXME: this detector is actually used in very hacky way, we should remove it!
+# Its functionality should be implemented by a `RelativeCylinderDetector` instead
 @configclass
 class Relative2DSphereDetector(BaseDetector):
     """Detect whether the object is in a 2D sphere region.
