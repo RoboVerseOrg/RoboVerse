@@ -189,7 +189,6 @@ autodoc_mock_imports = [
     "imageio",
     "loguru",
     "gymnasium",
-    "rootutils",
     "rich",
     "tyro",
     "tqdm",

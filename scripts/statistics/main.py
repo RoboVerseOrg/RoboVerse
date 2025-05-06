@@ -2,11 +2,9 @@ import os
 import pickle as pkl
 
 import numpy as np
-import rootutils
 from loguru import logger as log
 from matplotlib import pyplot as plt
 
-rootutils.setup_root(__file__, pythonpath=True)
 from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import TaskType
 from metasim.utils.demo_util import get_traj

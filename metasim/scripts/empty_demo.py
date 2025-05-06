@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-from typing import Literal
-
 try:
     import isaacgym  # noqa: F401
 except ImportError:
     pass
 
+from typing import Literal
+
 import imageio
-import rootutils
 import torch
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
-
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
 
 from metasim.cfg.objects import PrimitiveCubeCfg
 from metasim.cfg.randomization import RandomizationCfg
@@ -26,6 +21,8 @@ from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_handler_class
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass

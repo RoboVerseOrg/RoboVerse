@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
-
 try:
     import isaacgym  # noqa: F401
 except ImportError:
     pass
 
-import rootutils
+import os
+from dataclasses import dataclass
+
 import tyro
 from loguru import logger as log
 
-rootutils.setup_root(__file__, pythonpath=True)
 from metasim.utils.state import TensorState
 
 

@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
-import rootutils
 import torch
 import tyro
 from gymnasium import spaces
@@ -20,14 +19,13 @@ from rich.logging import RichHandler
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecEnv
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @dataclass

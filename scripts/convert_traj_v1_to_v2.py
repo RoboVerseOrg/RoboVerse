@@ -3,11 +3,8 @@ import os
 import pickle as pkl
 
 import numpy as np
-import rootutils
 import torch
 from loguru import logger as log
-
-rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
