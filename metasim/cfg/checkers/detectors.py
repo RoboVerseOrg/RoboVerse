@@ -46,16 +46,23 @@ class RelativeBboxDetector(BaseDetector):
     """
 
     base_obj_name: str = MISSING
+    """The name of the base object."""
     relative_pos: tuple[float, float, float] = MISSING
+    """The relative position (x, y, z) (in m) of the bbox detector to the base object."""
     relative_quat: tuple[float, float, float, float] = MISSING
+    """The relative rotation (w, x, y, z) of the bbox detector to the base object."""
     checker_lower: tuple[float, float, float] = MISSING
+    """The lower threshold (x, y, z) (in m) of the bbox detector."""
     checker_upper: tuple[float, float, float] = MISSING
+    """The upper threshold (x, y, z) (in m) of the bbox detector."""
     ignore_base_ori: bool = False
+    """If True, the base object orientation is ignored, so the ``relative_quat`` becomes the absolute rotation of the bbox detector."""
     debug_vis: bool = False
-    """Visualize the bounding box. Only supported with IsaacLab."""
+    """Visualize the bbox detector. Only supported with IsaacLab for now."""
     name: str = "bbox_detector"  # TODO: This is used for obj meta cfg name, need to handle multiple detectors
+    """The name of the bbox detector."""
     fixed: bool = True
-    """The pose of the bounding box is fixed once reset. Otherwise, it will be updated every step in correspond to the base object. Default to True."""
+    """The pose of the bbox detector is fixed once reset. Otherwise, it will be updated every step in correspond to the base object. Default to True."""
 
     def _update_checker(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -151,10 +158,15 @@ class Relative2DSphereDetector(BaseDetector):
     """
 
     base_obj_name: str = MISSING
+    """The name of the base object."""
     relative_pos: tuple[float, float, float] = MISSING
+    """The relative position (x, y, z) (in m) of the 2D sphere detector to the base object."""
     axis: tuple[int, int] = MISSING
+    """The axis which the detector is along."""
     radius: float = MISSING
+    """The radius of the 2D sphere detector."""
     debug_vis: bool = False
+    """Visualize the 2D sphere detector. Not supported for now."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -192,9 +204,13 @@ class Relative3DSphereDetector(BaseDetector):
     """
 
     base_obj_name: str = MISSING
+    """The name of the base object."""
     relative_pos: tuple[float, float, float] = MISSING
+    """The relative position (x, y, z) (in m) of the 3D sphere detector to the base object."""
     radius: float = MISSING
+    """The radius (in m) of the 3D sphere detector."""
     debug_vis: bool = False
+    """Visualize the 3D sphere detector. Not supported for now."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:

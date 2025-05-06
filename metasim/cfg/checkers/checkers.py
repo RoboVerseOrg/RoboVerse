@@ -44,8 +44,11 @@ class DetectedChecker(BaseChecker):
     """
 
     obj_name: str = MISSING
+    """The name of the object to be checked."""
     detector: BaseDetector = MISSING
+    """The detector to be used."""
     ignore_if_first_check_success: bool = False
+    """If True, the checker will ignore the success of the first check. Default to False."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         self._first_check = torch.ones(handler.num_envs, dtype=torch.bool, device=handler.device)  # True
@@ -74,9 +77,13 @@ class JointPosChecker(BaseChecker):
     """
 
     obj_name: str = MISSING
+    """The name of the object to be checked."""
     joint_name: str = MISSING
+    """The name of the joint to be checked."""
     mode: Literal["ge", "le"] = MISSING
+    """The mode of the joint position checker. "ge" for greater than or equal to, "le" for less than or equal to."""
     radian_threshold: float = MISSING
+    """The threshold for the joint position. (in radian)"""
 
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         dof_pos = handler.get_dof_pos(self.obj_name, self.joint_name)
@@ -100,8 +107,11 @@ class JointPosShiftChecker(BaseChecker):
     """
 
     obj_name: str = MISSING
+    """The name of the object to be checked."""
     joint_name: str = MISSING
+    """The name of the joint to be checked."""
     threshold: float = MISSING
+    """The threshold for the joint position. (in radian)"""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -240,8 +250,11 @@ class RotationShiftChecker(BaseChecker):
 
     ## ref: https://github.com/mees/calvin_env/blob/c7377a6485be43f037f4a0b02e525c8c6e8d24b0/calvin_env/envs/tasks.py#L54
     obj_name: str = MISSING
+    """The name of the object to be checked."""
     radian_threshold: float = MISSING
+    """The threshold for the rotation. (in radian)"""
     axis: Literal["x", "y", "z"] = "z"
+    """The axis to detect the rotation around."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -283,9 +296,13 @@ class PositionShiftChecker(BaseChecker):
     """
 
     obj_name: str = MISSING
+    """The name of the object to be checked."""
     distance: float = MISSING
+    """The threshold for the position shift. (in meters)"""
     bounding_distance: float = 1e2
+    """The maximum distance the object can move. (in meters)"""
     axis: Literal["x", "y", "z"] = MISSING
+    """The axis to detect the position shift along."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         if env_ids is None:
