@@ -9,7 +9,6 @@ dependencies = [
     "loguru",
     "opencv-python",
     "rich",
-    "rootutils",
     "torch",
     "torchvision",
     "tqdm",

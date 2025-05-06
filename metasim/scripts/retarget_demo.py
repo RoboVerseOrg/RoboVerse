@@ -33,30 +33,26 @@ args = tyro.cli(Args)
 #########################################
 ### Normal code
 #########################################
-import os
-
 try:
     import isaacgym  # noqa: F401
 except ImportError:
     pass
 
+import os
+from glob import glob
+
 import numpy as np
-import rootutils
 import torch
 from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 from tqdm.rich import tqdm, trange
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
-from glob import glob
-
 from metasim.utils.demo_util.loader import load_traj_file, save_traj_file
 from metasim.utils.kinematics_utils import ee_pose_from_tcp_pose, get_curobo_models, tcp_pose_from_ee_pose
 from metasim.utils.setup_util import get_robot, get_task
 
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 NUM_SEED = 20
 
 

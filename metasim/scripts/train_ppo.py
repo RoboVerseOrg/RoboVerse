@@ -1,6 +1,5 @@
 import gymnasium as gym
 import numpy as np
-import rootutils
 import torch
 from gymnasium import spaces
 from loguru import logger as log
@@ -8,13 +7,12 @@ from rich.logging import RichHandler
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 class MetaSimGymEnv(gym.Env):

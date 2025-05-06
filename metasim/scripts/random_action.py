@@ -37,11 +37,9 @@ try:
 except ImportError:
     pass
 
-import rootutils
 import torch
 from curobo.types.math import Pose
 
-rootutils.setup_root(__file__, pythonpath=True)
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType

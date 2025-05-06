@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import genesis as gs
 import numpy as np
-import rootutils
 import torch
 from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
 from genesis.vis.camera import Camera
 from loguru import logger as log
 
-rootutils.setup_root(__file__, pythonpath=True)
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, GymEnvWrapper

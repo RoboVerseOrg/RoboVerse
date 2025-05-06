@@ -12,17 +12,12 @@ except ImportError:
 
 import imageio as iio
 import numpy as np
-import rootutils
 import tyro
 from loguru import logger as log
 from numpy.typing import NDArray
 from rich.logging import RichHandler
 from torchvision.utils import make_grid, save_image
 from tyro import MISSING
-
-logging.addLevelName(5, "TRACE")
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.cfg.randomization import RandomizationCfg
 from metasim.cfg.render import RenderCfg
@@ -34,6 +29,9 @@ from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import TensorState
+
+logging.addLevelName(5, "TRACE")
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass

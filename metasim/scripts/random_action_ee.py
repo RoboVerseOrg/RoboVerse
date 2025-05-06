@@ -23,14 +23,10 @@ try:
 except ImportError:
     pass
 
-import rootutils
 import torch
 from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
-
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
@@ -38,6 +34,8 @@ from metasim.constants import SimType
 from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.math import quat_apply, quat_from_euler_xyz, quat_inv
 from metasim.utils.setup_util import get_robot, get_sim_env_class
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 def main():

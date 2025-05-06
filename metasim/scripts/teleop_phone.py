@@ -11,14 +11,10 @@ except ImportError:
     pass
 
 import numpy as np
-import rootutils
 import torch
 from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
-
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
@@ -33,6 +29,8 @@ from metasim.utils.teleop_utils import (
     quaternion_to_rotation_matrix,
     transform_orientation,
 )
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 def parse_args():
