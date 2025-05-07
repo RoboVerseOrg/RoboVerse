@@ -67,7 +67,9 @@ class IsaacgymHandler(BaseSimHandler):
         self._torque_limits: torch.Tensor | None = None
         self._default_dof_pos: torch.Tensor | None = None
         self._gripper_dof_dix = []
-        self.effort_mode = True if scenario.task.task_type == TaskType.LOCOMOTION else False # torque for reward computation
+        self.effort_mode = (
+            True if self.scenario.control_type == 'effort' else False
+        )   # FIXME acuation mode type not complete for all task
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -90,19 +92,19 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params = gymapi.SimParams()
         sim_params.up_axis = gymapi.UP_AXIS_Z
         sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.8)
-        sim_params.dt = self.task.sim_params.timestep
-        sim_params.substeps = 2
+        sim_params.dt = self.scenario.sim_params.timestep
+        sim_params.substeps = self.scenario.sim_params.substeps
         sim_params.use_gpu_pipeline = True
         sim_params.physx.solver_type = 1
-        sim_params.physx.num_position_iterations = self.task.sim_params.num_position_iterations
-        sim_params.physx.num_velocity_iterations = self.task.sim_params.num_velocity_iterations
+        sim_params.physx.num_position_iterations = self.scenario.sim_params.num_position_iterations
+        sim_params.physx.num_velocity_iterations = self.scenario.sim_params.num_velocity_iterations
         sim_params.physx.rest_offset = 0.0
-        sim_params.physx.contact_offset = self.task.sim_params.contact_offset
-        sim_params.physx.friction_offset_threshold = 0.001
-        sim_params.physx.friction_correlation_distance = 0.0005
+        sim_params.physx.contact_offset = self.scenario.sim_params.contact_offset
+        sim_params.physx.friction_offset_threshold = self.scenario.sim_params.friction_offset_threshold
+        sim_params.physx.friction_correlation_distance = self.scenario.sim_params.friction_correlation_distance
         sim_params.physx.num_threads = 0
         sim_params.physx.use_gpu = True
-        sim_params.physx.bounce_threshold_velocity = 0.5
+        sim_params.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
 
         compute_device_id = 0
         graphics_device_id = 0
@@ -701,7 +703,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         # reset all env_id action to default
         self.actions[env_ids] = 0.0
-        # self.actions_cache[env_ids] = self._default_dof_pos
 
     def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()

@@ -9,8 +9,7 @@ import torch
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.sim_param_cfg import SimParamCfg
+from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg, SimParamCfg
 from metasim.constants import BenchmarkType, TaskType
 from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util
@@ -49,12 +48,9 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     objects = []
     reward_weights = [1.0]
     sim_params: SimParamCfg = SimParamCfg(
-        timestep=0.001,
-        contact_offset=0.01,
-        num_position_iterations=8,
-        num_velocity_iterations=0
+        timestep=0.001, contact_offset=0.01, num_position_iterations=8, num_velocity_iterations=0, bounce_threshold_velocity=0.5
     )
-
+    control_type = 'effort'
 
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:

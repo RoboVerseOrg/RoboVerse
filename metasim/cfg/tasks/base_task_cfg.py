@@ -9,11 +9,10 @@ import torch
 
 from metasim.cfg.checkers import BaseChecker
 from metasim.cfg.objects import BaseObjCfg
+from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import BenchmarkType, TaskType
 from metasim.types import EnvState
 from metasim.utils import configclass
-
-from .sim_param_cfg import SimParamCfg
 
 
 @configclass
@@ -45,6 +44,7 @@ class BaseTaskCfg:
     reward_functions: list[callable[[list[EnvState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
+    control_type: str = None # TODO provide a basic control type
 
 
 @configclass

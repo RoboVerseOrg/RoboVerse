@@ -20,6 +20,7 @@ from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
 from .scenes.base_scene_cfg import SceneCfg
 from .sensors import BaseCameraCfg, BaseSensorCfg, PinholeCameraCfg
+from .simulator_params import SimParamCfg
 from .tasks.base_task_cfg import BaseTaskCfg
 
 
@@ -66,6 +67,8 @@ class ScenarioCfg:
     object_states: bool = False
     split: Literal["train", "val", "test", "all"] = "all"
     headless: bool = False
+    sim_params: SimParamCfg = SimParamCfg()
+    control_type: Literal["pos", "effort"] = "pos"
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -114,3 +117,7 @@ class ScenarioCfg:
             ):
                 traj_filepath = os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl.gz")
             check_and_download(traj_filepath)
+        ## Simulator parameters
+        self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
+        #  control type
+        self.control_type = self.task.control_type if self.task is not None else self.control_type
