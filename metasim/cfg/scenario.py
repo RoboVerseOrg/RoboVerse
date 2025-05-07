@@ -69,6 +69,8 @@ class ScenarioCfg:
     headless: bool = False
     sim_params: SimParamCfg = SimParamCfg()
     control_type: Literal["pos", "effort"] = "pos"
+    action_scale: float = 1.0
+
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -119,5 +121,7 @@ class ScenarioCfg:
             check_and_download(traj_filepath)
         ## Simulator parameters
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
-        #  control type
+        #  Control type
         self.control_type = self.task.control_type if self.task is not None else self.control_type
+        # Action sacle
+        self.action_scale = self.task.action_scale if self.task is not None else self.action_scale

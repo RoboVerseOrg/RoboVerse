@@ -51,6 +51,7 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
         timestep=0.001, contact_offset=0.01, num_position_iterations=8, num_velocity_iterations=0, bounce_threshold_velocity=0.5
     )
     control_type = 'effort'
+    action_scale = 0.5
 
 
     @staticmethod

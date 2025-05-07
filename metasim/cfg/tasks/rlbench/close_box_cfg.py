@@ -26,3 +26,4 @@ class CloseBoxCfg(RLBenchTaskCfg):
         mode="le",
         radian_threshold=-14 / 180 * math.pi,
     )
+    control_type = 'pos'
