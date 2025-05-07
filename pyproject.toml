@@ -37,6 +37,7 @@ isaacgym = [
     "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco", "dm-control"]
+mjx = ["mujoco-mjx", "dm-control", "jax[cuda]"]
 sapien2 = ["mani-skill2 @ git+https://github.com/haosulab/ManiSkill.git@v0.5.3"]
 sapien3 = ["sapien>=3.0.0.b1"]
 pybullet = ["numpy<2", "pybullet"]
