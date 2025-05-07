@@ -273,7 +273,7 @@ class IsaacgymHandler(BaseSimHandler):
                 )
                 default_dof_pos.append(default_dof_pos_i)
                 if self._effort_mode:
-                # use pd controller to get force/torque
+                    # use pd controller to get force/torque
                     self._p_gains[:, i] = actuator_cfg.stiffness
                     self._d_gains[:, i] = actuator_cfg.damping
                     self._torque_limits[:, i] = 0.85 * (
