@@ -71,7 +71,6 @@ scenario.objects = [
         size=(0.1, 0.1, 0.1),
         color=(0.0, 1.0, 0.0),
         physics=PhysicStateType.RIGIDBODY,
-        mjcf_path="roboverse_data/assets/maniskill/cube/cube.mjcf",
     )
 ]
 
