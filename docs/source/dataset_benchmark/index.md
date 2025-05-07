@@ -16,7 +16,6 @@ tasks/descriptions
 dataset/robots
 dataset/objects
 dataset/scenes
-dataset/assets_converter
 ```
 
 ```{toctree}

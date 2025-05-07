@@ -4,7 +4,6 @@ RoboVerse supports a wide variety of **USD**-formatted assets that contribute to
 
 - [Scenes in RoboVerse](#scenes-in-roboverse)
   - [Ground Materials](#ground-materials)
-  - [Scenes](#scenes)
 
 ## Ground Materials
 Ground Materials are mainly adapted from [ARNOLD](https://arnold-benchmark.github.io/). These materials are ideal for texturing environments and can be applied easily in your tasks. Here’s an example of how you can use them:

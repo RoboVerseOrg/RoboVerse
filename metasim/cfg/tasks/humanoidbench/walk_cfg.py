@@ -1,6 +1,6 @@
 """Walking task for humanoid robots."""
 
-from metasim.cfg.checkers import WalkChecker
+from metasim.cfg.checkers import _WalkChecker
 from metasim.utils import configclass
 
 from .base_cfg import BaseLocomotionReward, HumanoidTaskCfg
@@ -20,6 +20,6 @@ class WalkCfg(HumanoidTaskCfg):
     episode_length = 1000
     # traj_filepath = "roboverse_data/trajs/humanoidbench/walk/v2/h1_v2.pkl"
     traj_filepath = "roboverse_data/trajs/humanoidbench/walk/v2/initial_state_v2.json"
-    checker = WalkChecker()
+    checker = _WalkChecker()
     reward_functions = [WalkReward]
     reward_weights = [1.0]

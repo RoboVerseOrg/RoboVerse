@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import SitChecker
+from metasim.cfg.checkers import _SitChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -112,6 +112,6 @@ class SitCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/sit/v2/initial_state_v2.json"
-    checker = SitChecker()
+    checker = _SitChecker()
     reward_weights = [1.0]
     reward_functions = [SitReward]

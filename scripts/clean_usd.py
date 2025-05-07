@@ -17,6 +17,7 @@ import tyro
 @dataclass
 class Args:
     tasks: list[str]
+    collision_mode: Literal["convexDecomposition", "convexHull", "meshSimplification"] = "convexDecomposition"
 
 
 args = tyro.cli(Args)
@@ -74,16 +75,20 @@ def ensure_collision_api(
     usd_path: str,
     collision_mode: Literal["convexDecomposition", "convexHull", "meshSimplification"] = "convexDecomposition",
 ):
-    if has_collision_api(usd_path):
-        return
-
     stage = Usd.Stage.Open(usd_path)
-    for prim in stage.Traverse():
-        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
-            prim.ApplyAPI(UsdPhysics.CollisionAPI)
-            meshCollisionAPI = UsdPhysics.MeshCollisionAPI.Apply(prim)
-            meshCollisionAPI.CreateApproximationAttr().Set(collision_mode)
-    stage.Save()
+    if has_collision_api(usd_path):
+        for prim in stage.Traverse():
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                meshCollisionAPI = UsdPhysics.MeshCollisionAPI.Apply(prim)
+                meshCollisionAPI.CreateApproximationAttr().Set(collision_mode)
+        stage.Save()
+    else:
+        for prim in stage.Traverse():
+            if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                prim.ApplyAPI(UsdPhysics.CollisionAPI)
+                meshCollisionAPI = UsdPhysics.MeshCollisionAPI.Apply(prim)
+                meshCollisionAPI.CreateApproximationAttr().Set(collision_mode)
+        stage.Save()
 
 
 def remove_fixed_joint(usd_path: str):
@@ -109,7 +114,7 @@ def main():
         log.info(f"Cleaning {usd_path}")
         assert not is_articulation(usd_path), f"{usd_path} is an articulation"
         remove_articulation_root_api(usd_path)
-        ensure_collision_api(usd_path)
+        ensure_collision_api(usd_path, args.collision_mode)
         remove_fixed_joint(usd_path)
 
 

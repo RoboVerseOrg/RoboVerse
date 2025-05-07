@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import MISSING
 from typing import Literal
 
 from loguru import logger as log
 
 from metasim.utils.configclass import configclass
-from metasim.utils.hf_util import check_and_download
+from metasim.utils.hf_util import FileDownloader
 from metasim.utils.setup_util import get_robot, get_scene, get_task
 
 from .checkers import BaseChecker, EmptyChecker
 from .lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
-from .objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
+from .objects import BaseObjCfg
 from .randomization import RandomizationCfg
 from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
@@ -22,20 +21,6 @@ from .scenes.base_scene_cfg import SceneCfg
 from .sensors import BaseCameraCfg, BaseSensorCfg, PinholeCameraCfg
 from .simulator_params import SimParamCfg
 from .tasks.base_task_cfg import BaseTaskCfg
-
-
-def check_asset(obj: BaseObjCfg, sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"]):
-    """Check and download the asset."""
-    ## TODO: add a primitive base class?
-    if isinstance(obj, PrimitiveCubeCfg) or isinstance(obj, PrimitiveSphereCfg):
-        return
-
-    if sim in ["isaaclab"]:
-        check_and_download(obj.usd_path)
-    elif sim in ["isaacgym", "pybullet", "sapien", "sapien3", "genesis"]:
-        check_and_download(obj.urdf_path)
-    elif sim in ["mujoco"]:
-        check_and_download(obj.mjcf_path)
 
 
 @configclass
@@ -71,7 +56,6 @@ class ScenarioCfg:
     control_type: Literal["pos", "effort"] = "pos"
     action_scale: float = 1.0
 
-
     def __post_init__(self):
         """Post-initialization configuration."""
         ### Align configurations
@@ -96,32 +80,11 @@ class ScenarioCfg:
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
 
-        ### Check and download all the paths
-        ## Object paths
-        objects = self.task.objects if self.task is not None else self.objects
-        for obj in objects:
-            check_asset(obj, self.sim)
-        ## Robot paths
-        check_asset(self.robot, self.sim)
-        ## Scene paths
-        if self.scene is not None:
-            check_asset(self.scene, self.sim)
-        ## Traj paths
-        if self.task is not None:
-            traj_filepath = self.task.traj_filepath
-            if traj_filepath is None:
-                return
-            if (
-                traj_filepath.find(".pkl") == -1
-                and traj_filepath.find(".json") == -1
-                and traj_filepath.find(".yaml") == -1
-                and traj_filepath.find(".yml") == -1
-            ):
-                traj_filepath = os.path.join(traj_filepath, f"{self.robot.name}_v2.pkl.gz")
-            check_and_download(traj_filepath)
         ## Simulator parameters
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
         #  Control type
         self.control_type = self.task.control_type if self.task is not None else self.control_type
         # Action sacle
         self.action_scale = self.task.action_scale if self.task is not None else self.action_scale
+
+        FileDownloader(self).do_it()

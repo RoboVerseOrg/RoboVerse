@@ -25,7 +25,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
-    "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
@@ -95,6 +94,8 @@ html_context = {
 html_css_files = [
     "css/custom.css",
 ]
+html_show_copyright = True
+html_show_sphinx = False
 html_static_path = ["_static"]
 
 ### Autodoc configurations ###
@@ -103,6 +104,7 @@ autodoc_typehints = "signature"
 autodoc_class_signature = "separated"
 autodoc_default_options = {
     "autosummary": True,
+    "exclude-members": "__init__",
 }
 autodoc_inherit_docstrings = True
 autodoc_member_order = "bysource"
@@ -189,7 +191,6 @@ autodoc_mock_imports = [
     "imageio",
     "loguru",
     "gymnasium",
-    "rootutils",
     "rich",
     "tyro",
     "tqdm",

@@ -9,7 +9,6 @@ dependencies = [
     "loguru",
     "opencv-python",
     "rich",
-    "rootutils",
     "torch",
     "torchvision",
     "tqdm",
@@ -74,6 +73,7 @@ lint.select = [
 ]
 lint.ignore = [
     "B007",  # allow used loop control variable without leading underscore
+    "D100",  # allow no docstrings in public module
     "D105",  # allow magic methods without docstring
     "D107",  # allow __init__ without docstring
     "E266",  # allow multiple leading # in comments
@@ -139,7 +139,6 @@ include = ["metasim*"]
 ## For roboverse_learn, allow no docstrings, allow print
 "roboverse_learn/**.py" = ["D", "T20"]
 ## Temporary disable linting for quick testing
-"metasim/cfg/checkers/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
 "metasim/cfg/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
 "metasim/cfg/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
 "metasim/cfg/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this

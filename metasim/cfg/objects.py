@@ -114,7 +114,6 @@ class PrimitiveCubeCfg(RigidObjCfg):
     """Size of the object (in m)"""
     physics: PhysicStateType = MISSING
     """Physics state of the object"""
-    mjcf_path: str | None = None  # TODO: remove this field
 
     @property
     def half_size(self) -> list[float]:

@@ -84,7 +84,3 @@ If you find RoboVerse useful, please consider citing it:
     url={https://github.com/RoboVerseOrg/RoboVerse},
 }
 ```
-
-## 🌟 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=RoboVerseOrg/RoboVerse&type=Timeline)](https://www.star-history.com/#RoboVerseOrg/RoboVerse&Timeline)

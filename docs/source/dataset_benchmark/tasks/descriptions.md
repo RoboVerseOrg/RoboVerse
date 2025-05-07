@@ -8,9 +8,9 @@ We are now actively collecting scenes from multiple sources and updating the exi
 
 | Source | Path in Roboverse | Categories & Amounts                      |
 | ------ | ------------------ | ----------------------- |
-| [ARNOLD](#ARNOLD) | `metasim/cfg/tasks/arnold` | House (6) |
-| [CALVIN](#CALVIN) | `metasim/cfg/tasks/calvin` | CALVIN Table (4: Calvin Table A, B, C, D) |
-| [DMControl](#DMControl) | `metasim/cfg/tasks/dmcontrol` | Locomotion (1) |
+| [ARNOLD](#arnold) | `metasim/cfg/tasks/arnold` | House (6) |
+| [CALVIN](#calvin) | `metasim/cfg/tasks/calvin` | CALVIN Table (4: Calvin Table A, B, C, D) |
+| [DMControl](#dmcontrol) | `metasim/cfg/tasks/dmcontrol` | Locomotion (1) |
 | Fetch | `metasim/cfg/tasks/fetch` | Manipulation (1) |
 | [GAPartManip](#gapartmanip) | `metasim/cfg/tasks/gapartmanip` | Manipulation (2) |
 | [GAPartNet](#gapartnet) | `metasim/cfg/tasks/gapartnet` | Manipulation (5) |
@@ -163,9 +163,9 @@ file of $1000$ different trajectories is saved in the RoboVerse supported format
 
 **Tasks and assets**: We roll out ${\sim}2K$ trajectories in RLBench for each task, and migrate them to RoboVerse.
 
-### RoboSuite & MiminGen
+### RoboSuite
 
-[RoboSuite](https://robosuite.ai/) RoboSuite provides a suite of task environments for robotic manipulation, built on the MuJoCo physics engine. Each task is implemented as a separate class, with most configuration details embedded in the source code. Based on these environments, MimicGen offers thousands of demonstrations, serving as a widely used benchmark for imitation learning.
+[RoboSuite](https://robosuite.ai/) provides a suite of task environments for robotic manipulation, built on the MuJoCo physics engine. Each task is implemented as a separate class, with most configuration details embedded in the source code. Based on these environments, MimicGen offers thousands of demonstrations, serving as a widely used benchmark for imitation learning.
 
 
 **Tasks and Assets**: For tasks with separate object description files (MJCF), we directly migrate the corresponding assets through our Asset Conversion pipeline. However, some tasks contain hard-coded assets within the source code, such as a hammer composed of multiple cubes, cylinders and other primitives with carefully designed relative poses. To integrate these tasks, we will manually reconstruct the assets within our framework. We also argue that hard-coded asset and task definitions, as opposed to modular task descriptions, are not scalable for future robotic task benchmarking.

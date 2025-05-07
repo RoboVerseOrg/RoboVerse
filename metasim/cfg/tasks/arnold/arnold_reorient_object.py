@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from metasim.cfg.checkers import PositionShiftCheckerWithTolerance, UpAxisRotationChecker
+from metasim.cfg.checkers import _PositionShiftCheckerWithTolerance, _UpAxisRotationChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.cfg.robots import FrankaCfg
 from metasim.cfg.scenes import SceneCfg
@@ -66,7 +66,7 @@ class {name}(ArnoldTaskCfg):
             ),
         ]
 
-        self.checker = UpAxisRotationChecker(
+        self.checker = _UpAxisRotationChecker(
             obj_name="Bottle",
             axis="z",
             degree_threshold=21,

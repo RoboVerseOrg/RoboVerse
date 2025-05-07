@@ -1,6 +1,6 @@
 """Stand task for humanoid robots."""
 
-from metasim.cfg.checkers import StandChecker
+from metasim.cfg.checkers import _StandChecker
 from metasim.utils import configclass
 
 from .base_cfg import BaseLocomotionReward, HumanoidTaskCfg
@@ -20,6 +20,6 @@ class StandCfg(HumanoidTaskCfg):
     episode_length = 1000
     # traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/h1_v2.pkl"
     traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
-    checker = StandChecker()
+    checker = _StandChecker()
     reward_weights = [1.0]
     reward_functions = [StandReward]

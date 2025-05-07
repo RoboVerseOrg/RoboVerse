@@ -8,17 +8,16 @@ try:
 except ImportError:
     pass
 
-import rootutils
 import torch
 from loguru import logger as log
 from rich.logging import RichHandler
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 def parse_args():

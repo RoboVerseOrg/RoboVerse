@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.checkers import CubeChecker
+from metasim.cfg.checkers import _CubeChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -107,6 +107,6 @@ class CubeCfg(HumanoidTaskCfg):
         ),
     ]
     traj_filepath = "roboverse_data/trajs/humanoidbench/cube/v2/initial_state_v2.json"
-    checker = CubeChecker()
+    checker = _CubeChecker()
     reward_weights = [0.2, 0.5, 0.3]
     reward_functions = [StandingReward, OrientationReward, HandProximityReward]

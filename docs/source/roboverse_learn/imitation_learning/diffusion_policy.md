@@ -96,7 +96,7 @@ bash roboverse_learn/algorithms/diffusion_policy/train_dp.sh roboverse_demo/demo
 - All other parameters (e.g., batch size, number of epochs) can be manually adjusted in the YAML file: `roboverse_learn/algorithms/diffusion_policy/diffusion_policy/config/robot_dp.yaml`
 - If you alter observation and action spaces, verify the corresponding shapes in: `roboverse_learn/algorithms/diffusion_policy/diffusion_policy/config/task/default_task.yaml` Both end effector control and Franka joint space, have dimension 9 but keep this in mind if using a different robot.
 
-#### Switching between Joint Position and End Effector Control
+### Switching between Joint Position and End Effector Control
 
 - **Joint Position Control**: Set both `obs_space` and `act_space` to `joint_pos`.
 - **End Effector Control**: Set both `obs_space` and `act_space` to `ee`. You may use `delta_ee=1` for delta mode or `delta_ee=0` for absolute positioning.

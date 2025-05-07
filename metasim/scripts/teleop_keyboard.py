@@ -11,14 +11,10 @@ except ImportError:
     pass
 
 import pygame
-import rootutils
 import torch
 from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
-
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
@@ -28,6 +24,8 @@ from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.math import matrix_from_euler, quat_apply, quat_from_matrix, quat_inv, quat_mul
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 from metasim.utils.teleop_utils import PygameKeyboardClient, process_kb_input
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 def parse_args():

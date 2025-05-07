@@ -51,7 +51,6 @@ simulation_app = launch_isaaclab()
 
 import omni
 import omni.isaac.lab.sim as sim_utils
-import rootutils
 from loguru import logger as log
 from omni.isaac.lab.assets import (
     Articulation,
@@ -67,7 +66,6 @@ try:
 except ModuleNotFoundError:
     import isaacsim.core.utils.prims as prim_utils
 
-rootutils.setup_root(__file__, pythonpath=True)
 from metasim.sim.isaaclab.utils.ground_util import create_ground, set_ground_material, set_ground_material_scale
 from metasim.sim.isaaclab.utils.usd_util import ShaderFixer
 
