@@ -21,7 +21,6 @@ class StackCubeCfg(ManiskillTaskCfg):
             mass=0.02,
             physics=PhysicStateType.RIGIDBODY,
             color=[1.0, 0.0, 0.0],
-            mjcf_path="roboverse_data/assets/maniskill/cube/cube.mjcf",
         ),
         PrimitiveCubeCfg(
             name="base",
@@ -29,7 +28,6 @@ class StackCubeCfg(ManiskillTaskCfg):
             mass=0.02,
             physics=PhysicStateType.RIGIDBODY,
             color=[0.0, 0.0, 1.0],
-            mjcf_path="roboverse_data/assets/maniskill/cube/base.mjcf",
         ),
     ]
     traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2"

@@ -25,7 +25,6 @@ class PickCubeCfg(ManiskillTaskCfg):
             mass=0.02,
             physics=PhysicStateType.RIGIDBODY,
             color=[1.0, 0.0, 0.0],
-            mjcf_path="roboverse_data/assets/maniskill/cube/cube.mjcf",
         ),
     ]
     traj_filepath = "roboverse_data/trajs/maniskill/pick_cube/trajectory-unified-retarget_v2.pkl"
