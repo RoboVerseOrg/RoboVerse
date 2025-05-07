@@ -52,6 +52,7 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     )
     control_type = 'effort'
 
+
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
         """Observation function for humanoid tasks.
