@@ -25,3 +25,9 @@ class SimParamCfg:
     bounce_threshold_velocity: float = 0.2
     friction_offset_threshold: float = 0.001
     friction_correlation_distance: float = 0.0005
+    replace_cylinder_with_capsule: bool = False
+    solver_type: int = 1
+    rest_offset: float = 0.0
+    num_threads: int = 0
+    use_gpu_pipeline: bool = True
+    use_gpu: bool = True

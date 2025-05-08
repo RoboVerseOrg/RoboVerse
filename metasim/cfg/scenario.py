@@ -55,6 +55,7 @@ class ScenarioCfg:
     sim_params: SimParamCfg = SimParamCfg()
     control_type: Literal["pos", "effort"] = "pos"
     action_scale: float = 1.0
+    action_offset: bool = False  # true for locomotion task, desire_pos=action_scale*action+default_pos
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -86,5 +87,7 @@ class ScenarioCfg:
         self.control_type = self.task.control_type if self.task is not None else self.control_type
         # Action sacle
         self.action_scale = self.task.action_scale if self.task is not None else self.action_scale
+        # action offset
+        self.action_offset = self.task.action_offset if self.task is not None else self.action_offset
 
         FileDownloader(self).do_it()

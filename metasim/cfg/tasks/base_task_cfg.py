@@ -46,6 +46,7 @@ class BaseTaskCfg:
     sim_params: SimParamCfg = SimParamCfg()
     control_type: str = None # TODO provide a basic control type
     action_scale: float = 1.0
+    action_offset: bool = False
 
 
 @configclass
