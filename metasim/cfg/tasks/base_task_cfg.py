@@ -44,7 +44,7 @@ class BaseTaskCfg:
     reward_functions: list[callable[[list[EnvState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
-    control_type: Literal["pos", "effort"] = "pos"
+    control_type: Literal[pos, effort] = "pos"
     action_scale: float = 1.0
 
 
