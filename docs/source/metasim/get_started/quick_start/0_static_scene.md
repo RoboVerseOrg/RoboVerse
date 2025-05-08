@@ -34,7 +34,7 @@ Note that we find the `headless` mode of Genesis is not stable. So we recommend 
 
 #### Sapien
 ```bash
-python get_started/0_static_scene.py  --sim sapien
+python get_started/0_static_scene.py  --sim sapien3
 ```
 
 #### Pybullet
