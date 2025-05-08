@@ -44,7 +44,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     && bash "Miniforge3-$(uname)-$(uname -m).sh" -b -p ${HOME}/conda \
     && rm "Miniforge3-$(uname)-$(uname -m).sh"
 ENV PATH=${HOME}/conda/condabin:$PATH
-RUN mamba init bash
+RUN conda init bash
 
 ## Install uv
 RUN wget https://astral.sh/uv/install.sh \
