@@ -642,8 +642,6 @@ class IsaacgymHandler(BaseSimHandler):
     def _apply_action(self, actions):
         """
         Compute torque using pd controller for effort actuator and set desire postion for position actuator given action.
-        TODO: 1. integrate controller api
-              2. check whether replay demo works when using effort mode
         """
         effort = self._compute_effort(actions)
 
