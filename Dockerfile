@@ -18,7 +18,9 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 # RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
 #     sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
 
+########################################################
 ## Install dependencies
+########################################################
 RUN apt update && apt install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -54,7 +56,9 @@ RUN wget https://astral.sh/uv/install.sh \
     && rm install.sh
 ENV PATH=${HOME}/.local/bin:$PATH
 
+########################################################
 ## Clone RoboVerse
+########################################################
 ## Option 1: Clone from github
 # TODO: remove this when released
 # COPY --chown=${DOCKER_USER} id_ed25519 ${HOME}/.ssh/id_ed25519
@@ -66,6 +70,10 @@ COPY --chown=${DOCKER_USER} ./third_party ${HOME}/RoboVerse/third_party
 COPY --chown=${DOCKER_USER} ./pyproject.toml ${HOME}/RoboVerse/pyproject.toml
 
 WORKDIR ${HOME}/RoboVerse
+
+########################################################
+## Install isaaclab, mujoco, genesis, sapien3, pybullet
+########################################################
 
 ## Create conda environment
 RUN mamba create -n metasim python=3.10 -y \
@@ -93,10 +101,13 @@ RUN mkdir -p ${HOME}/packages \
     && ./isaaclab.sh -i \
     && pip cache purge
 
+########################################################
 ## Install isaacgym
+########################################################
 RUN mamba create -n metasim_isaacgym python=3.8 -y \
     && mamba clean -a -y
-RUN cd ${HOME}/packages \
+RUN mkdir -p ${HOME}/packages \
+    && cd ${HOME}/packages \
     && wget https://developer.nvidia.com/isaac-gym-preview-4 \
     && tar -xf isaac-gym-preview-4 \
     && rm isaac-gym-preview-4
@@ -106,9 +117,18 @@ RUN cd ${HOME}/RoboVerse \
     && mamba activate metasim_isaacgym \
     && uv pip install -e ".[isaacgym]" "isaacgym @ ${HOME}/packages/isaacgym/python" \
     && uv cache clean
-RUN echo 'export LD_LIBRARY_PATH=${HOME}/conda/envs/metasim_isaacgym/lib/:$LD_LIBRARY_PATH' >> ${HOME}/.bashrc
+## Fix error: libpython3.8.so.1.0: cannot open shared object file
+## Refer to https://stackoverflow.com/a/75872751
+RUN export CONDA_PREFIX=${HOME}/conda/envs/metasim_isaacgym \
+    && mkdir -p $CONDA_PREFIX/etc/conda/activate.d \
+    && echo "export OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH && export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:\$LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh \
+    && mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d \
+    && echo "export LD_LIBRARY_PATH=\$OLD_LD_LIBRARY_PATH && unset OLD_LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
+## Fix error: No such file or directory: '.../lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'
 RUN mkdir -p ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src \
     && cp -r ${HOME}/packages/isaacgym/python/isaacgym/_bindings/src/gymtorch ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
 
+########################################################
 ## Helpful message
+########################################################
 RUN echo 'echo "Remember to run: xhost +local:docker on the host to enable GUI applications."' >> ${HOME}/.bashrc
