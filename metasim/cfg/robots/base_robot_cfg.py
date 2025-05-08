@@ -14,7 +14,6 @@ class BaseActuatorCfg:
     stiffness: float | None = None
     torque_limit: float | None = None
     actionable: bool = True
-    torque_limit: float | None = None
     """Whether the actuator is actionable, i.e. can be driven by a motor.
 
     Example:
