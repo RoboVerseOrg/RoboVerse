@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING
+from typing import Literal
 
 import gymnasium as gym
 import torch
@@ -44,7 +45,7 @@ class BaseTaskCfg:
     reward_functions: list[callable[[list[EnvState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
-    control_type: str = None # TODO provide a basic control type
+    control_type: Literal["pos", "effort"] = "pos"
     action_scale: float = 1.0
     action_offset: bool = False
 
