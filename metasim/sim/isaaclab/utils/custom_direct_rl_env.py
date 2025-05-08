@@ -1,6 +1,6 @@
 ## TODO: This code need to be checked carefully when upgrading to new IsaacLab version
 
-from typing import Sequence
+from typing import Any, Sequence
 
 import torch
 
@@ -18,7 +18,7 @@ class CustomDirectRLEnv(DirectRLEnv):
         self,
         env_ids: Sequence[int] | None = None,  # ! new argument
         seed: int | None = None,
-        options=None,
+        options: dict[str, Any] | None = None,
     ) -> tuple[VecEnvObs, dict]:
         """
         Compared to `DirectRLEnv.reset()`, this function support resetting specific environments
@@ -33,6 +33,10 @@ class CustomDirectRLEnv(DirectRLEnv):
         elif isinstance(env_ids, list):
             env_ids = torch.tensor(env_ids, dtype=torch.int64, device=self.device)
         self._reset_idx(env_ids)
+
+        # update articulation kinematics
+        self.scene.write_data_to_sim()
+        self.sim.forward()
 
         # if sensors are added to the scene, make sure we render to reflect changes in reset
         if self.sim.has_rtx_sensors() and self.cfg.rerender_on_reset:
@@ -88,6 +92,9 @@ class CustomDirectRLEnv(DirectRLEnv):
         # reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         # if len(reset_env_ids) > 0:
         #     self._reset_idx(reset_env_ids)
+        #     # update articulation kinematics
+        #     self.scene.write_data_to_sim()
+        #     self.sim.forward()
         #     # if sensors are added to the scene, make sure we render to reflect changes in reset
         #     if self.sim.has_rtx_sensors() and self.cfg.rerender_on_reset:
         #         self.sim.render()
