@@ -59,7 +59,6 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     action_scale = 0.5
     action_offset = True
 
-
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
         """Observation function for humanoid tasks.
