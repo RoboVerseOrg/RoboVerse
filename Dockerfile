@@ -44,7 +44,9 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     && bash "Miniforge3-$(uname)-$(uname -m).sh" -b -p ${HOME}/conda \
     && rm "Miniforge3-$(uname)-$(uname -m).sh"
 ENV PATH=${HOME}/conda/condabin:$PATH
-RUN mamba init bash
+
+## Initialize all future shells
+RUN mamba shell init --shell bash
 
 ## Install uv
 RUN wget https://astral.sh/uv/install.sh \
@@ -72,8 +74,7 @@ RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
 
 ## Pip install
 RUN cd ${HOME}/RoboVerse \
-    && source "${HOME}/conda/etc/profile.d/conda.sh" \
-    && source "${HOME}/conda/etc/profile.d/mamba.sh" \
+    && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
     && uv pip install -e ".[isaaclab,mujoco,genesis,sapien3,pybullet]" \
     && uv cache clean
@@ -84,8 +85,7 @@ RUN cd ${HOME}/RoboVerse \
 ## Install IsaacLab v1.4.1
 RUN mkdir -p ${HOME}/packages \
     && cd ${HOME}/packages \
-    && source "${HOME}/conda/etc/profile.d/conda.sh" \
-    && source "${HOME}/conda/etc/profile.d/mamba.sh" \
+    && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
     && git clone --depth 1 --branch v1.4.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab \
     && cd IsaacLab \
@@ -102,8 +102,7 @@ RUN cd ${HOME}/packages \
     && rm isaac-gym-preview-4
 RUN find ${HOME}/packages/isaacgym/python -type f -name "*.py" -exec sed -i 's/np\.float/np.float32/g' {} +
 RUN cd ${HOME}/RoboVerse \
-    && source "${HOME}/conda/etc/profile.d/conda.sh" \
-    && source "${HOME}/conda/etc/profile.d/mamba.sh" \
+    && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim_isaacgym \
     && uv pip install -e ".[isaacgym]" "isaacgym @ ${HOME}/packages/isaacgym/python" \
     && uv cache clean

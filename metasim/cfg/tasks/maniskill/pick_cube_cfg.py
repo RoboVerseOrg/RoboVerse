@@ -27,7 +27,7 @@ class PickCubeCfg(ManiskillTaskCfg):
             color=[1.0, 0.0, 0.0],
         ),
     ]
-    traj_filepath = "roboverse_data/trajs/maniskill/pick_cube/trajectory-unified-retarget_v2.pkl"
+    traj_filepath = "roboverse_data/trajs/maniskill/pick_cube/v2"
     checker = PositionShiftChecker(
         obj_name="cube",
         distance=0.1,
