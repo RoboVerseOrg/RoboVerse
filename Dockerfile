@@ -32,6 +32,10 @@ RUN apt update && apt install -y --no-install-recommends \
     ninja-build \
     vulkan-tools \
     libglu1 \
+    # ref: https://askubuntu.com/a/1072878
+    libglib2.0-0 \
+    # ref: https://stackoverflow.com/a/76778289
+    libxrandr2 \
     && apt clean
 RUN apt install -y -o Dpkg::Options::="--force-confold" sudo
 
