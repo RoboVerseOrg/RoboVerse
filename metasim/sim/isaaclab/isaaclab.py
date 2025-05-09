@@ -7,7 +7,7 @@ import gymnasium as gym
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveFrameCfg, RigidObjCfg
+from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, FluidObjCfg, PrimitiveFrameCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import ContactForceSensorCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
@@ -59,6 +59,7 @@ class IsaaclabHandler(BaseSimHandler):
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
         args.enable_cameras = True
+        args.device = "cpu"
         args.headless = self.headless
 
         ## Only set args.renderer seems not enough
@@ -79,7 +80,8 @@ class IsaaclabHandler(BaseSimHandler):
         except ModuleNotFoundError:
             from isaaclab_tasks.utils import parse_env_cfg
 
-        env_cfg = parse_env_cfg("MetaSimEmptyTaskEnv")
+        env_cfg = parse_env_cfg("MetaSimEmptyTaskEnv", device=args.device)
+        env_cfg.sim.use_fabric = False
         env_cfg.scene.num_envs = self.num_envs
         env_cfg.decimation = self.scenario.decimation
         env_cfg.episode_length_s = self.scenario.episode_length * (1 / 60) * self.scenario.decimation
@@ -96,6 +98,7 @@ class IsaaclabHandler(BaseSimHandler):
         rep.settings.set_render_rtx_realtime()  # fix noising rendered images
 
         settings = carb.settings.get_settings()
+        settings.set("/rtx/translucency/enabled", True)
         if self.scenario.render.mode == "pathtracing":
             settings.set_string("/rtx/rendermode", "PathTracing")
         elif self.scenario.render.mode == "raytracing":
@@ -267,6 +270,8 @@ class IsaaclabHandler(BaseSimHandler):
 
         states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
         for obj in self.objects + [self.robot] + self.checker.get_debug_viewers():
+            if isinstance(obj, FluidObjCfg):
+                continue
             if obj.name not in states_flat[0]:
                 log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
                 pos, rot = get_pose(self.env, obj.name, env_ids=env_ids)
@@ -312,6 +317,8 @@ class IsaaclabHandler(BaseSimHandler):
 
         object_states = {}
         for obj in self.objects:
+            if isinstance(obj, FluidObjCfg):
+                continue
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.env.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)

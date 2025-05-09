@@ -171,3 +171,16 @@ class PrimitiveCylinderCfg(RigidObjCfg):
     def density(self) -> float:
         """For SAPIEN usage."""
         return self.mass / (math.pi * self.radius**2 * self.height)
+
+
+@configclass
+class FluidObjCfg(BaseObjCfg):
+    """Fluid object cfg."""
+
+    numParticlesX: int = MISSING
+    numParticlesY: int = MISSING
+    numParticlesZ: int = MISSING
+    particleSpacing: float = MISSING
+    particle_mass: float = MISSING
+    density: float = MISSING
+    viscosity: float = MISSING

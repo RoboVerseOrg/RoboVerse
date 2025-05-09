@@ -7,6 +7,7 @@ from metasim.cfg.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
 from metasim.cfg.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
+    FluidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveCylinderCfg,
     PrimitiveFrameCfg,
@@ -23,6 +24,147 @@ except:
     pass
 
 
+def _add_fluid_object(env: "EmptyEnv", obj: FluidObjCfg, use_point_instancer: bool = True) -> None:
+    ## For more info, see IsaacSim 4.2's FluidBallEmitterDemo
+    ## _isaac_sim/extsPhysics/omni.physx.demos/omni/physxdemos/scenes/FluidBallEmitterDemo.py
+    from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, Vt
+
+    try:
+        import omni.kit.commands
+        from omni.isaac.core.utils.stage import get_current_stage
+        from omni.physx.scripts import particleUtils, physicsUtils
+    except ModuleNotFoundError as e:
+        raise NotImplementedError("IsaacSim 4.5 not supported yet") from e
+
+    stage = get_current_stage()
+    default_prim = UsdGeom.Xform.Define(stage, Sdf.Path("/World")).GetPrim()
+    stage.SetDefaultPrim(default_prim)
+    default_prim_path = stage.GetDefaultPrim().GetPath()  # /World
+    scenePath = Sdf.Path("/physicsScene")
+
+    # Particle System
+    particleSystemPath = default_prim_path.AppendChild("particleSystem")
+
+    # Particle points
+    particlesPath = Sdf.Path(f"/World/envs/env_0/{obj.name}/particles")
+
+    # solver iterations
+    physxAPI = PhysxSchema.PhysxSceneAPI.Apply(stage.GetPrimAtPath(scenePath))
+    physxAPI.CreateSolverTypeAttr("TGS")
+
+    # particle params
+    restOffset = obj.particleSpacing * 0.9
+    fluidRestOffset = restOffset * 0.6
+    particleContactOffset = restOffset + 0.001
+    particle_system = particleUtils.add_physx_particle_system(
+        stage=stage,
+        particle_system_path=particleSystemPath,
+        simulation_owner=scenePath,
+        contact_offset=restOffset * 1.5 + 0.01,
+        rest_offset=restOffset * 1.5,
+        particle_contact_offset=particleContactOffset,
+        solid_rest_offset=0.0,
+        fluid_rest_offset=fluidRestOffset,
+        solver_position_iterations=16,
+    )
+
+    mtl_created = []
+    omni.kit.commands.execute(
+        "CreateAndBindMdlMaterialFromLibrary",
+        mdl_name="OmniSurfacePresets.mdl",
+        mtl_name="OmniSurface_DeepWater",
+        mtl_created_list=mtl_created,
+    )
+    pbd_particle_material_path = mtl_created[0]
+    omni.kit.commands.execute("BindMaterial", prim_path=particleSystemPath, material_path=pbd_particle_material_path)
+
+    # Create a pbd particle material and set it on the particle system
+    particleUtils.add_pbd_particle_material(
+        stage,
+        pbd_particle_material_path,
+        cohesion=10,
+        viscosity=obj.viscosity,
+        surface_tension=0.74,
+        friction=0.1,
+    )
+    physicsUtils.add_physics_material_to_prim(stage, particle_system.GetPrim(), pbd_particle_material_path)
+
+    particle_system.CreateMaxVelocityAttr().Set(200)
+
+    # add particle anisotropy
+    anisotropyAPI = PhysxSchema.PhysxParticleAnisotropyAPI.Apply(particle_system.GetPrim())
+    anisotropyAPI.CreateParticleAnisotropyEnabledAttr().Set(True)
+    aniso_scale = 5.0
+    anisotropyAPI.CreateScaleAttr().Set(aniso_scale)
+    anisotropyAPI.CreateMinAttr().Set(1.0)
+    anisotropyAPI.CreateMaxAttr().Set(2.0)
+
+    # add particle smoothing
+    smoothingAPI = PhysxSchema.PhysxParticleSmoothingAPI.Apply(particle_system.GetPrim())
+    smoothingAPI.CreateParticleSmoothingEnabledAttr().Set(True)
+    smoothingAPI.CreateStrengthAttr().Set(0.5)
+
+    # apply isosurface params
+    isosurfaceAPI = PhysxSchema.PhysxParticleIsosurfaceAPI.Apply(particle_system.GetPrim())
+    isosurfaceAPI.CreateIsosurfaceEnabledAttr().Set(True)
+    isosurfaceAPI.CreateMaxVerticesAttr().Set(1024 * 1024)
+    isosurfaceAPI.CreateMaxTrianglesAttr().Set(2 * 1024 * 1024)
+    isosurfaceAPI.CreateMaxSubgridsAttr().Set(1024 * 4)
+    isosurfaceAPI.CreateGridSpacingAttr().Set(fluidRestOffset * 1.5)
+    isosurfaceAPI.CreateSurfaceDistanceAttr().Set(fluidRestOffset * 1.6)
+    isosurfaceAPI.CreateGridFilteringPassesAttr().Set("")
+    isosurfaceAPI.CreateGridSmoothingRadiusAttr().Set(fluidRestOffset * 2)
+    isosurfaceAPI.CreateNumMeshSmoothingPassesAttr().Set(1)
+
+    # No cast shadows
+    primVarsApi = UsdGeom.PrimvarsAPI(particle_system)
+    primVarsApi.CreatePrimvar("doNotCastShadows", Sdf.ValueTypeNames.Bool).Set(True)
+    stage.SetInterpolationType(Usd.InterpolationTypeHeld)
+
+    # Create grid and particles
+    gridSpacing = obj.particleSpacing
+    lower = Gf.Vec3f(obj.default_position) + Gf.Vec3f(
+        -gridSpacing * obj.numParticlesX / 2, -gridSpacing * obj.numParticlesY / 2, 0
+    )  # Translate lower corner
+    positions, velocities = particleUtils.create_particles_grid(
+        lower, gridSpacing, obj.numParticlesX, obj.numParticlesY, obj.numParticlesZ
+    )
+    widths = [obj.particleSpacing] * len(positions)
+
+    if use_point_instancer:
+        particlesPrim = particleUtils.add_physx_particleset_pointinstancer(
+            stage=stage,
+            path=particlesPath,
+            positions=Vt.Vec3fArray(positions),
+            velocities=Vt.Vec3fArray(velocities),
+            particle_system_path=particleSystemPath,
+            self_collision=True,
+            fluid=True,
+            particle_group=0,
+            particle_mass=obj.particle_mass,
+            density=obj.density,
+            num_prototypes=0,
+        )
+    else:
+        particlesPrim = particleUtils.add_physx_particleset_points(
+            stage=stage,
+            path=particlesPath,
+            positions_list=Vt.Vec3fArray(positions),
+            velocities_list=Vt.Vec3fArray(velocities),
+            widths_list=widths,
+            particle_system_path=particleSystemPath,
+            self_collision=True,
+            fluid=True,
+            particle_group=0,
+            particle_mass=obj.particle_mass,
+            density=obj.density,
+        )
+
+        # Hide particles
+        visibility_attribute = particlesPrim.GetVisibilityAttr()
+        visibility_attribute.Set("invisible")
+
+
 def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
     try:
         import omni.isaac.lab.sim as sim_utils
@@ -33,6 +175,12 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
 
     assert isinstance(obj, BaseObjCfg)
     prim_path = f"/World/envs/env_.*/{obj.name}"
+
+    ## Fluid object
+    if isinstance(obj, FluidObjCfg):
+        _add_fluid_object(env, obj)
+        return
+
     ## Rigid object
     if isinstance(obj, RigidObjCfg):
         if obj.fix_base_link:
@@ -44,11 +192,17 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
         else:
             collision_props = None
 
+        init_cfg = RigidObjectCfg.InitialStateCfg(
+            pos=obj.default_position,
+            rot=obj.default_orientation,
+        )
+
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
             env.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
+                    init_state=init_cfg,
                     spawn=sim_utils.MeshCuboidCfg(
                         size=tuple([x * s for x, s in zip(obj.size, obj.scale)]),
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
@@ -65,6 +219,7 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             env.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
+                    init_state=init_cfg,
                     spawn=sim_utils.MeshSphereCfg(
                         radius=obj.radius,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
@@ -81,6 +236,7 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             env.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
+                    init_state=init_cfg,
                     spawn=sim_utils.MeshCylinderCfg(
                         radius=obj.radius,
                         height=obj.height,
@@ -98,6 +254,7 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             env.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
+                    init_state=init_cfg,
                     spawn=sim_utils.UsdFileCfg(
                         usd_path="metasim/data/quick_start/assets/COMMON/frame/usd/frame.usd",
                         rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -118,14 +275,22 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             scale=obj.scale,
         )
         if isinstance(obj, RigidObjCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg))
+            env.scene.rigid_objects[obj.name] = RigidObject(
+                RigidObjectCfg(prim_path=prim_path, init_state=init_cfg, spawn=usd_file_cfg)
+            )
             return
 
     ## Articulation object
     if isinstance(obj, ArticulationObjCfg):
+        init_cfg = ArticulationCfg.InitialStateCfg(
+            pos=obj.default_position,
+            rot=obj.default_orientation,
+            ## TODO: add dof pos
+        )
         env.scene.articulations[obj.name] = Articulation(
             ArticulationCfg(
                 prim_path=prim_path,
+                init_state=init_cfg,
                 spawn=sim_utils.UsdFileCfg(usd_path=obj.usd_path, scale=obj.scale),
                 actuators={},
             )
