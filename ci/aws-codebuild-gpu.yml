@@ -1,3 +1,4 @@
+## Ref: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-codebuild-project.html
 AWSTemplateFormatVersion: 2010-09-09
 Description: A sample template
 Resources:
@@ -15,6 +16,6 @@ Resources:
         GitCloneDepth: 1
       Environment:
         Type: LINUX_GPU_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
+        ComputeType: BUILD_GENERAL1_LARGE
         Image: aws/codebuild/standard:7.0
         PrivilegedMode: true
