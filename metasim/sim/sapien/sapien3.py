@@ -47,7 +47,7 @@ class SingleSapien3Handler(BaseSimHandler):
         assert parse_version(sapien.__version__) < parse_version("4.0.0"), "Sapien3 is required"
         log.warning("Sapien3 is still under development, some metasim apis yet don't have sapien3 support")
         super().__init__(scenario)
-        self.headless = False  # XXX: no headless anyway
+        self.headless = scenario.headless
         self._actions_cache: list[Action] = []
 
     def _build_sapien(self):
