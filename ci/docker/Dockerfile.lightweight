@@ -1,4 +1,5 @@
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+## ref: https://stackoverflow.com/a/68213856/30487149
+FROM public.ecr.aws/gumgum-verity/oss/nvidia-cuda:11.8.0-runtime-ubuntu22.04
 
 ARG HOME=/root
 
