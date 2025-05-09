@@ -52,6 +52,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
 ENV PATH=${HOME}/conda/condabin:$PATH
 
 ## Initialize all future shells
+RUN conda init bash
 RUN mamba shell init --shell bash
 
 ## Install uv
