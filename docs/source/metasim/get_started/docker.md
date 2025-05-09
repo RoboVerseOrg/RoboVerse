@@ -30,7 +30,7 @@ docker compose up --build -d && docker exec -it metasim bash
 ```
 This will automatically build docker image `roboverse-metasim`.
 
-It may take ~30mins when the network speed is ~20MB/s. The docker image size would be ~32GB.
+It may take ~10mins when the network speed is ~25MB/s. The docker image size would be 35~40GB.
 
 ## Run the docker container in VSCode/Cursor
 
