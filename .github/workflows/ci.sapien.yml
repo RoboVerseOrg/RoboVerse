@@ -8,7 +8,7 @@ jobs:
     steps:
         - uses: actions/checkout@v4
         - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
-        - run: docker run -d --runtime=nvidia -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
+        - run: docker run -d --runtime=nvidia --privileged=true -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
