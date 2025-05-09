@@ -1,0 +1,15 @@
+name: SAPIEN3 CI Checks on GitHub
+
+on: [push]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-22.04
+    steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v3
+          with:
+            python-version: '3.10'
+        - run: pip install -e ".[sapien3]"
+        - run: >
+            python metasim/test/state_consistency.py --sim=sapien3
