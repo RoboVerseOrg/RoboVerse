@@ -11,6 +11,6 @@ jobs:
           with:
             python-version: '3.10'
         - run: pip install uv
-        - run: uv pip install -e ".[sapien3]"
+        - run: uv pip install --system -e ".[sapien3]"
         - run: >
             python metasim/test/state_consistency.py --sim=sapien3
