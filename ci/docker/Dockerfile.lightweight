@@ -1,0 +1,72 @@
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+
+ARG HOME=/root
+
+## Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+ENV NVIDIA_VISIBLE_DEVICES=all
+
+
+RUN apt update && apt install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    ssh \
+    x11-apps \
+    mesa-utils \
+    ninja-build \
+    vulkan-tools \
+    libglu1 \
+    # ref: https://askubuntu.com/a/1072878
+    libglib2.0-0 \
+    # ref: https://stackoverflow.com/a/76778289
+    libxrandr2 \
+    && apt clean
+
+WORKDIR ${HOME}
+
+## Use bash instead of sh
+SHELL ["/bin/bash", "-c"]
+
+## Install conda
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" \
+    && bash "Miniforge3-$(uname)-$(uname -m).sh" -b -p ${HOME}/conda \
+    && rm "Miniforge3-$(uname)-$(uname -m).sh"
+ENV PATH=${HOME}/conda/condabin:$PATH
+
+## Initialize all future shells
+RUN conda init bash \
+    && mamba shell init --shell bash
+
+## Install uv
+RUN wget https://astral.sh/uv/install.sh \
+    && bash install.sh \
+    && rm install.sh
+ENV PATH=${HOME}/.local/bin:$PATH
+
+########################################################
+## Clone RoboVerse
+########################################################
+COPY ./metasim ${HOME}/RoboVerse/metasim
+COPY ./third_party ${HOME}/RoboVerse/third_party
+COPY ./pyproject.toml ${HOME}/RoboVerse/pyproject.toml
+
+WORKDIR ${HOME}/RoboVerse
+
+########################################################
+## Install mujoco, genesis, sapien3, pybullet
+########################################################
+
+## Create conda environment
+RUN mamba create -n metasim python=3.10 -y \
+    && mamba clean -a -y
+RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
+
+## Pip install
+RUN cd ${HOME}/RoboVerse \
+    && eval "$(mamba shell hook --shell bash)" \
+    && mamba activate metasim \
+    && uv pip install -e ".[mujoco,genesis,sapien3,pybullet]" \
+    && uv cache clean

@@ -7,10 +7,9 @@ jobs:
     runs-on: codebuild-RoboVerse-CI-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
         - uses: actions/checkout@v4
-        - uses: actions/setup-python@v5
-          with:
-            python-version: '3.10.17'
-        - run: pip install uv
-        - run: uv pip install --system -e ".[sapien3]"
+        - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
+        - run: docker run -d --runtime=nvidia -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
         - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
             python metasim/test/state_consistency.py --sim=sapien3
