@@ -13,7 +13,7 @@ jobs:
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
-            python -c "import torch; print(torch.cuda.is_available())"
+            python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_arch_list()); print(torch.version.cuda)"
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
