@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: A sample template
+Resources:
+  MyEC2Instance:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: "Tmp2"
+      Description: "This is a temporary Codebuild project for GPU testing"
+      ServiceRole: arn:aws:iam::869171547451:role/CodeBuildServiceRole
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Source:
+        Type: GITHUB
+        Location: https://github.com/RoboVerseOrg/RoboVerse
+        GitCloneDepth: 1
+      Environment:
+        Type: LINUX_GPU_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
