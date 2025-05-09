@@ -5,7 +5,7 @@ Resources:
   MyEC2Instance:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Tmp2"
+      Name: "Tmp3"
       Description: "This is a temporary Codebuild project for GPU testing"
       ServiceRole: arn:aws:iam::869171547451:role/CodeBuildServiceRole
       Artifacts:

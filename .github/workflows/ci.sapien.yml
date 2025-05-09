@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   integration-tests:
-    runs-on: codebuild-Tmp2-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-Tmp3-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
         - uses: actions/checkout@v4
         - run: nvidia-smi
