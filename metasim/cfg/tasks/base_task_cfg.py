@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import MISSING
-from typing import Literal
 
 import gymnasium as gym
 import torch
 
 from metasim.cfg.checkers import BaseChecker
+from metasim.cfg.control import ControlCfg
 from metasim.cfg.objects import BaseObjCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import BenchmarkType, TaskType
@@ -45,9 +45,7 @@ class BaseTaskCfg:
     reward_functions: list[callable[[list[EnvState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
-    control_type: Literal["pos", "effort"] = "pos"
-    action_scale: float = 1.0
-    action_offset: bool = False
+    control: ControlCfg = ControlCfg()
 
 
 @configclass

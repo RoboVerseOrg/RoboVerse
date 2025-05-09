@@ -12,6 +12,7 @@ from metasim.utils.hf_util import FileDownloader
 from metasim.utils.setup_util import get_robot, get_scene, get_task
 
 from .checkers import BaseChecker, EmptyChecker
+from .control import ControlCfg
 from .lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
 from .objects import BaseObjCfg
 from .randomization import RandomizationCfg
@@ -39,6 +40,8 @@ class ScenarioCfg:
     checker: BaseChecker = EmptyChecker()
     render: RenderCfg = RenderCfg()
     random: RandomizationCfg = RandomizationCfg()
+    sim_params: SimParamCfg = SimParamCfg()
+    control: ControlCfg = ControlCfg()
 
     ## Handlers
     sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"] = "isaaclab"
@@ -52,10 +55,6 @@ class ScenarioCfg:
     object_states: bool = False
     split: Literal["train", "val", "test", "all"] = "all"
     headless: bool = False
-    sim_params: SimParamCfg = SimParamCfg()
-    control_type: Literal["pos", "effort"] = "pos"
-    action_scale: float = 1.0
-    action_offset: bool = False  # true for locomotion task, desire_pos=action_scale*action+default_pos
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -81,13 +80,9 @@ class ScenarioCfg:
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
 
-        ## Simulator parameters
+        ### Simulator parameters overvide by task
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
-        #  Control type
-        self.control_type = self.task.control_type if self.task is not None else self.control_type
-        # Action sacle
-        self.action_scale = self.task.action_scale if self.task is not None else self.action_scale
-        # action offset
-        self.action_offset = self.task.action_offset if self.task is not None else self.action_offset
+        ### Control parameters  overvide by task
+        self.control = self.task.control if self.task is not None else self.control
 
         FileDownloader(self).do_it()

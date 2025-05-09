@@ -235,10 +235,10 @@ class IsaacgymHandler(BaseSimHandler):
         robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
         self._robot_num_dof = robot_num_dofs
 
-        self._action_scale = torch.tensor(self.scenario.action_scale, device=self.device)
-        self._action_offset = self.scenario.action_offset
+        self._action_scale = torch.tensor(self.scenario.control.action_scale, device=self.device)
+        self._action_offset = self.scenario.control.action_offset
         self._effort_mode = (
-            True if self.scenario.control_type == "effort" else False
+            True if self.scenario.control.control_type == "effort" else False
         )  # FIXME acuation mode type not complete for all task
         if self._effort_mode:
             # manually pd control params
@@ -276,12 +276,14 @@ class IsaacgymHandler(BaseSimHandler):
                     # use pd controller to get force/torque
                     self._p_gains[:, i] = actuator_cfg.stiffness
                     self._d_gains[:, i] = actuator_cfg.damping
-                    # TODO add 0.85 into config
-                    self._torque_limits[:, i] = 0.85 * (
+
+                    torque_limit = (
                         actuator_cfg.torque_limit
                         if actuator_cfg.torque_limit is not None
                         else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
                     )
+                    self._torque_limits[:, i] = self.scenario.control.torque_limit_scale * torque_limit
+
                     robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
                     robot_dof_props["stiffness"][i] = 0.0
                     robot_dof_props["damping"][i] = 0.0
