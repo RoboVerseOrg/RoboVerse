@@ -7,8 +7,13 @@ jobs:
     runs-on: codebuild-Tmp2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
         - uses: actions/checkout@v4
+        - run: nvidia-smi
         - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
         - run: docker run -d --runtime=nvidia --privileged=true -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python -c "import torch; print(torch.cuda.is_available())"
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
