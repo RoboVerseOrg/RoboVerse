@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   integration-tests:
-    runs-on: codebuild-Tmp1-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-Tmp2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
         - uses: actions/checkout@v4
         - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
