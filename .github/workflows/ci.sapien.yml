@@ -9,7 +9,12 @@ jobs:
         - uses: actions/checkout@v4
         - run: nvidia-smi
         - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
-        - run: docker run -d --runtime=nvidia --privileged=true --ipc=host -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
+        - run: docker run -d --runtime=nvidia --privileged=true --ipc=host --gpus=all -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            nvidia-smi
+          continue-on-error: true
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
