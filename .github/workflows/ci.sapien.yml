@@ -1,0 +1,42 @@
+name: SAPIEN3 CI Checks on GitHub
+
+on: [push]
+
+jobs:
+  integration-tests:
+    runs-on: codebuild-Tmp2-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+        - uses: actions/checkout@v4
+        - run: nvidia-smi
+        - run: docker build -f ci/docker/Dockerfile.lightweight -t ci.lightweight .
+        - run: docker run -d --runtime=nvidia --privileged=true --ipc=host --gpus=all -v .:/root/RoboVerse -it --name ci.lightweight ci.lightweight
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            nvidia-smi
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            CUDA_VISIBLE_DEVICES=0 python -c "import torch; print(torch.__version__); print(torch.__path__); print(torch.cuda.is_available()); print(torch.cuda.get_arch_list()); print(torch.version.cuda); torch.cuda.get_device_name(0)"
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            CUDA_VISIBLE_DEVICES=0 python metasim/test/state_consistency.py --sim=sapien3
+          continue-on-error: true
+        # - run: >
+        #     docker exec ci.lightweight
+        #     conda run --no-capture-output -n metasim
+        #     python metasim/test/state_consistency.py --sim=pybullet
+        #   continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python metasim/test/state_consistency.py --sim=mujoco
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python metasim/test/state_consistency.py --sim=genesis
+          continue-on-error: true
