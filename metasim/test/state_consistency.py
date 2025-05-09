@@ -18,7 +18,6 @@ from rich.logging import RichHandler
 
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_env_class
@@ -50,9 +49,6 @@ scenario = ScenarioCfg(
     headless=args.headless,
     num_envs=args.num_envs,
 )
-
-# add cameras
-scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
 
 # add objects
 scenario.objects = [
