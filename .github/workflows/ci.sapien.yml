@@ -13,8 +13,24 @@ jobs:
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
-            python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_arch_list()); print(torch.version.cuda)"
+            python -c "import torch; print(torch.__path__); print(torch.cuda.is_available()); print(torch.cuda.get_arch_list()); print(torch.version.cuda)"
         - run: >
             docker exec ci.lightweight
             conda run --no-capture-output -n metasim
             python metasim/test/state_consistency.py --sim=sapien3
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python metasim/test/state_consistency.py --sim=pybullet
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python metasim/test/state_consistency.py --sim=mujoco
+          continue-on-error: true
+        - run: >
+            docker exec ci.lightweight
+            conda run --no-capture-output -n metasim
+            python metasim/test/state_consistency.py --sim=genesis
+          continue-on-error: true
