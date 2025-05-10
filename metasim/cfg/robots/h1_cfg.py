@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from metasim.utils import configclass
 
 from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
@@ -81,4 +83,26 @@ class H1Cfg(BaseRobotCfg):
         "right_shoulder_roll": 0.0,
         "right_shoulder_yaw": 0.0,
         "right_elbow": 0.0,
+    }
+
+    control_type: dict[str, Literal["pos", "effort"]] = {
+        "left_hip_yaw": "effort",
+        "left_hip_roll": "effort",
+        "left_hip_pitch": "effort",
+        "left_knee": "effort",
+        "left_ankle": "effort",
+        "right_hip_yaw": "effort",
+        "right_hip_roll": "effort",
+        "right_hip_pitch": "effort",
+        "right_knee": "effort",
+        "right_ankle": "effort",
+        "torso": "effort",
+        "left_shoulder_pitch": "effort",
+        "left_shoulder_roll": "effort",
+        "left_shoulder_yaw": "effort",
+        "left_elbow": "effort",
+        "right_shoulder_pitch": "effort",
+        "right_shoulder_roll": "effort",
+        "right_shoulder_yaw": "effort",
+        "right_elbow": "effort",
     }

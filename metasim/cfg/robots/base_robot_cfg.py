@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING
+from typing import Literal
 
 from metasim.cfg.objects import ArticulationObjCfg
 from metasim.utils import configclass
@@ -35,6 +36,10 @@ class BaseRobotCfg(ArticulationObjCfg):
     default_joint_positions: dict[str, float] = {}
     default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
     default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
+    control_type: dict[
+        str, Literal["position", "effort"]
+    ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
+
     """
     Joint limits in the format of `{joint_name: (lower_limit, upper_limit)}`.
     Note that different simulators may have different order of joints, so you should not use the order in this dict!

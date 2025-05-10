@@ -69,8 +69,8 @@ class IsaacgymHandler(BaseSimHandler):
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
         self._default_dof_pos: torch.Tensor | None = None
-        self._gripper_dof_dix = []  # gripper joint index in robot's dof configuration
-        self._effort_mode: bool = False
+        self._pos_ctrl_dof_dix = []  # built-in position control joint index in dof state
+        self._effort_joint_exist: bool = False  # turn on maunual pd controller if effort joint exist
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -237,22 +237,16 @@ class IsaacgymHandler(BaseSimHandler):
 
         self._action_scale = torch.tensor(self.scenario.control.action_scale, device=self.device)
         self._action_offset = self.scenario.control.action_offset
-        self._effort_mode = (
-            True if self.scenario.control.control_type == "effort" else False
-        )  # FIXME acuation mode type not complete for all task
-        if self._effort_mode:
-            # manually pd control params
-            self._p_gains = torch.zeros(
-                self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-            )
-            self._d_gains = torch.zeros(
-                self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-            )
-            self._torque_limits = torch.zeros(
-                self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-            )
 
-        # TODO combability for passive joint
+        self._p_gains = torch.zeros(
+            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self._d_gains = torch.zeros(
+            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self._torque_limits = torch.zeros(
+            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
+        )
 
         robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
         robot_lower_limits = robot_dof_props["lower"]
@@ -263,44 +257,53 @@ class IsaacgymHandler(BaseSimHandler):
         default_dof_pos = []
         dof_names = self.gym.get_asset_dof_names(robot_asset)
 
-        for i in range(len(dof_names)):
-            actuator_cfg = self._robot.actuators[dof_names[i]]
-            if not actuator_cfg.is_ee:
+        for i, dof_name in enumerate(dof_names):
+            # get config
+            i_actuator_cfg = self._robot.actuators[dof_name]
+            i_stiffness = i_actuator_cfg.stiffness
+            i_damping = i_actuator_cfg.damping
+            i_control_mode = (
+                self._robot.control_type[dof_name] if self._robot.control_type[dof_name] is not None else "position"
+            )
+
+            # task default position from cfg if exist, otherwise use 0.3*(uppper + lower) as default
+            if not i_actuator_cfg.is_ee:
                 default_dof_pos_i = (
-                    self._robot.default_joint_positions[dof_names[i]]
-                    if self._robot.default_joint_positions[dof_names[i]] is not None
+                    self._robot.default_joint_positions[dof_name]
+                    if self._robot.default_joint_positions[dof_name] is not None
                     else robot_mids[i]
                 )
                 default_dof_pos.append(default_dof_pos_i)
-                if self._effort_mode:
-                    # use pd controller to get force/torque
-                    self._p_gains[:, i] = actuator_cfg.stiffness
-                    self._d_gains[:, i] = actuator_cfg.damping
-
-                    torque_limit = (
-                        actuator_cfg.torque_limit
-                        if actuator_cfg.torque_limit is not None
-                        else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
-                    )
-                    self._torque_limits[:, i] = self.scenario.control.torque_limit_scale * torque_limit
-
-                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                    robot_dof_props["stiffness"][i] = 0.0
-                    robot_dof_props["damping"][i] = 0.0
-                else:
-                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
-                    robot_dof_props["stiffness"][i] = 400.0
-                    robot_dof_props["damping"][i] = 40.0
-            # for end effector joint, use built-in pos contorl
+            # for end effector, always use open as default position
             else:
                 default_dof_pos.append(robot_upper_limits[i])
-                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
-                robot_dof_props["stiffness"][i] = 800.0
-                robot_dof_props["damping"][i] = 40.0
-                # gripper index offset:_obj_num_dof
-                self._gripper_dof_dix.append(i + self._obj_num_dof)
 
-            if actuator_cfg.actionable:
+            # pd control effort mode
+            if i_control_mode == "effort":
+                self._effort_joint_exist = True
+                self._p_gains[:, i] = i_stiffness
+                self._d_gains[:, i] = i_damping
+                torque_limit = (
+                    i_actuator_cfg.torque_limit
+                    if i_actuator_cfg.torque_limit is not None
+                    else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
+                )
+                self._torque_limits[:, i] = self.scenario.control.torque_limit_scale * torque_limit
+                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
+                robot_dof_props["stiffness"][i] = 0.0
+                robot_dof_props["damping"][i] = 0.0
+
+            # built-in position mode
+            elif i_control_mode == "position":
+                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
+                robot_dof_props["stiffness"][i] = i_stiffness
+                robot_dof_props["damping"][i] = i_damping
+                self._pos_ctrl_dof_dix.append(i + self._obj_num_dof)
+            else:
+                log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
+                raise ValueError
+
+            if i_actuator_cfg.actionable:
                 num_actions += 1
 
         self._default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)
@@ -518,7 +521,7 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
-                joint_effort_target=self._effort if self._effort_mode else None,
+                joint_effort_target=self._effort if self._effort_joint_exist else None,
             )
             robot_states[robot.name] = state
 
@@ -572,7 +575,7 @@ class IsaacgymHandler(BaseSimHandler):
         ]
         action_input[robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
-        if self._effort_mode:
+        if self._effort_joint_exist:
             # use manual pd controller
             self.actions = action_input.view(self._num_envs, self._robot_num_dof + self._obj_num_dof)[
                 :, self._obj_num_dof :
@@ -594,7 +597,7 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.draw_viewer(self.viewer, self.sim, False)
 
     def _simulate_one_physics_step(self, action):
-        if self._effort_mode:
+        if self._effort_joint_exist:
             # at effort contorl mode, update torque on every each step
             self._apply_action(action)
             self.gym.simulate(self.sim)
@@ -609,7 +612,7 @@ class IsaacgymHandler(BaseSimHandler):
         for _ in range(self.scenario.decimation):
             self._simulate_one_physics_step(self.actions)
         # Refresh tensors
-        if not self._effort_mode:
+        if not self._effort_joint_exist:
             self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -649,14 +652,13 @@ class IsaacgymHandler(BaseSimHandler):
 
         if self._obj_num_dof > 0:
             obj_force_placeholder = torch.zeros((self._num_envs, self._obj_num_dof), device=self.device)
-            # NOTE: effort passed set_dof_actuation_force_tensor() must have the same dimension as the number of DOFs, even if some DOFs are not actuated.
+            # NOTE: effort passed set_dof_actuation_force_tensor() must have the same dimension as the number of DOFs, even if some DOFs are not actionable.
             effort = torch.cat((obj_force_placeholder, effort), dim=1)
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
 
-        # for gripper. always use built-in position controller for gripper. Referene:https://github.com/isaac-sim/IsaacGymEnvs/blob/main/isaacgymenvs/tasks/franka_cube_stack.py
-        if len(self._gripper_dof_dix) > 0:
+        if len(self._pos_ctrl_dof_dix) > 0:
             pos_action = torch.zeros_like(effort, device=self.device, dtype=torch.float32)
-            for i in self._gripper_dof_dix:
+            for i in self._pos_ctrl_dof_dix:
                 pos_action[:, i] = self.actions[:, i - self._obj_num_dof]
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(pos_action))
 

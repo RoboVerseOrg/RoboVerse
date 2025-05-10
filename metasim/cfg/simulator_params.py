@@ -16,7 +16,7 @@ class SimParamCfg:
     Reference for IsaacGym: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams
     """
 
-    # TODO: Currently supports only isaacgym; add compatibility cfgs for other simulators.
+    # TODO: currently only support isaacgym; add compatibility cfgs for other simulators.
     timestep: float = 1.0 / 60.0
     substeps: int = 2
     contact_offset: float = 0.001

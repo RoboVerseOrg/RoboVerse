@@ -56,7 +56,7 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
         bounce_threshold_velocity=0.5,
         replace_cylinder_with_capsule=True,
     )
-    control = ControlCfg(control_type="effort", action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
+    control = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
 
     @staticmethod
     def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
