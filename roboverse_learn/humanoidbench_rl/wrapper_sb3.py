@@ -37,6 +37,7 @@ class Sb3EnvWrapper(VecEnv):
         else:
             self.init_states = self.init_states[: self.num_envs]
 
+        # FIXME action limit differs with joint limit in locomotion configuration(desire pos = scale*action + default pos)
         # Set up action space based on robot joint limits
         joint_limits = self.robot.joint_limits
         action_low = []
