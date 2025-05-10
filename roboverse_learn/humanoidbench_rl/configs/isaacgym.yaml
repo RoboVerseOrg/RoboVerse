@@ -31,7 +31,7 @@ lr_schedule_type: linear  # Optional: linear, constant, cosine
 final_lr_fraction: 0.1    # Optional: final learning rate is 10% of initial learning rate
 
 # Wandb settings
-use_wandb: false
+use_wandb: true
 wandb_project: humanoidbench_rl_training
 
 # visualization

@@ -60,13 +60,13 @@ class FrankaCfg(BaseRobotCfg):
         "panda_finger_joint2": 0.04,
     }
     control_type: dict[str, Literal["position", "effort"]] = {
-        "panda_joint1": "effort",
-        "panda_joint2": "effort",
-        "panda_joint3": "effort",
-        "panda_joint4": "effort",
-        "panda_joint5": "effort",
-        "panda_joint6": "effort",
-        "panda_joint7": "effort",
+        "panda_joint1": "position",
+        "panda_joint2": "position",
+        "panda_joint3": "position",
+        "panda_joint4": "position",
+        "panda_joint5": "position",
+        "panda_joint6": "position",
+        "panda_joint7": "position",
         "panda_finger_joint1": "position",
         "panda_finger_joint2": "position",
     }
