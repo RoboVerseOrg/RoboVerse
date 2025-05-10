@@ -39,15 +39,15 @@ wandb login
     ```bash
     python roboverse_learn/humanoidbench_rl/train_sb3.py isaacgym
     ```
-    After training around 5k steps, you can see result like this
+    After training around 4~6k steps, you can see result like this
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
-            <img src="humanoid_bench_rl_isaacgym.png" alt="IsaacGym Training" style="width: 48%;">
+            <img src="https://roboverse.wiki/_static/standard_output/humanoid_bench/humanoid_bench_rl_isaacgym.png" alt="IsaacGym Training" style="width: 48%;">
             <!-- <p style="margin-top: 5px;">Isaac Gym</p> -->
         </div>
         <div style="width: 48%; text-align: center;">
-            <img src="humanoid_bench_rl_isaacgym_curve.png" alt="IsaacGym Training Curve" style="width: 48%;">
+            <img src="https://roboverse.wiki/_static/standard_output/humanoid_bench/humanoid_bench_rl_isaacgym_curve.png" alt="IsaacGym Training Curve" style="width: 48%;">
             <!-- <p style="margin-top: 5px;">Isaac Lab</p> -->
         </div>
     </div>
