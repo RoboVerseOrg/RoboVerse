@@ -64,16 +64,16 @@ class IsaacgymHandler(BaseSimHandler):
         self._obj_num_dof: int = 0  # number of object dof
         self._actions: torch.Tensor | None = None
         self._action_scale: torch.Tensor | None = (
-            None  # for the configuration: desire_pos = action_scale * action + default_pos
+            None  # for configuration: desire_pos = action_scale * action + default_pos
         )
-        self._action_offset: bool = False  # for the configuration: desire_pos = action_scale * action + default_pos
-        self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
-        self._d_gains: torch.Tensor | None = None
-        self._torque_limits: torch.Tensor | None = None
         self._default_dof_pos: torch.Tensor | None = (
             None  # for the configuration: desire_pos = action_scale * action + default_pos
         )
-        self._pos_ctrl_dof_dix = []  # built-in position control joint index in dof state
+        self._action_offset: bool = False  # for configuration: desire_pos = action_scale * action + default_pos
+        self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
+        self._d_gains: torch.Tensor | None = None
+        self._torque_limits: torch.Tensor | None = None
+        self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
         self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
 
     def launch(self) -> None:
@@ -253,14 +253,15 @@ class IsaacgymHandler(BaseSimHandler):
         )
 
         robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
+
         robot_lower_limits = robot_dof_props["lower"]
         robot_upper_limits = robot_dof_props["upper"]
         robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
-
         num_actions = 0
         default_dof_pos = []
-        dof_names = self.gym.get_asset_dof_names(robot_asset)
+        self._manual_pd_on = any(mode == "effort" for mode in self._robot.control_type.values())
 
+        dof_names = self.gym.get_asset_dof_names(robot_asset)
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self._robot.actuators[dof_name]
@@ -284,7 +285,6 @@ class IsaacgymHandler(BaseSimHandler):
 
             # pd control effort mode
             if i_control_mode == "effort":
-                self._manual_pd_on = True
                 self._p_gains[:, i] = i_stiffness
                 self._d_gains[:, i] = i_damping
                 torque_limit = (
@@ -641,7 +641,6 @@ class IsaacgymHandler(BaseSimHandler):
         action_scaled = self._action_scale * actions
         robot_dof_pos = self._robot_dof_state[..., 0]
         robot_dof_vel = self._robot_dof_state[..., 1]
-        #
         if self._action_offset:
             _effort = (
                 self._p_gains * (action_scaled + self._default_dof_pos - robot_dof_pos) - self._d_gains * robot_dof_vel
