@@ -60,17 +60,21 @@ class IsaacgymHandler(BaseSimHandler):
         self._robot_dof_state: torch.Tensor | None = None
 
         # control related
-        self._robot_num_dof: int  # TODO robots which have passive joint may not compatible
-        self._obj_num_dof: int = 0
+        self._robot_num_dof: int  # number of robot dof
+        self._obj_num_dof: int = 0  # number of object dof
         self._actions: torch.Tensor | None = None
-        self._action_scale: torch.Tensor | None = None
-        self._action_offset: bool = False
-        self._p_gains: torch.Tensor | None = None
+        self._action_scale: torch.Tensor | None = (
+            None  # for the configuration: desire_pos = action_scale * action + default_pos
+        )
+        self._action_offset: bool = False  # for the configuration: desire_pos = action_scale * action + default_pos
+        self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
-        self._default_dof_pos: torch.Tensor | None = None
+        self._default_dof_pos: torch.Tensor | None = (
+            None  # for the configuration: desire_pos = action_scale * action + default_pos
+        )
         self._pos_ctrl_dof_dix = []  # built-in position control joint index in dof state
-        self._effort_joint_exist: bool = False  # turn on maunual pd controller if effort joint exist
+        self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -280,7 +284,7 @@ class IsaacgymHandler(BaseSimHandler):
 
             # pd control effort mode
             if i_control_mode == "effort":
-                self._effort_joint_exist = True
+                self._manual_pd_on = True
                 self._p_gains[:, i] = i_stiffness
                 self._d_gains[:, i] = i_damping
                 torque_limit = (
@@ -521,7 +525,7 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
-                joint_effort_target=self._effort if self._effort_joint_exist else None,
+                joint_effort_target=self._effort if self._manual_pd_on else None,
             )
             robot_states[robot.name] = state
 
@@ -575,13 +579,16 @@ class IsaacgymHandler(BaseSimHandler):
         ]
         action_input[robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
-        if self._effort_joint_exist:
-            # use manual pd controller
-            self.actions = action_input.view(self._num_envs, self._robot_num_dof + self._obj_num_dof)[
-                :, self._obj_num_dof :
-            ]
+        # if any effort joint exist, set pd controller's target position for later effort calculation
+        if self._manual_pd_on:
+            actions_reshape = action_input.view(self._num_envs, self._obj_num_dof + self._robot_num_dof)
+            self.actions = actions_reshape[:, self._obj_num_dof :]
+            # and set position target for position actuator if any exist
+            if len(self._pos_ctrl_dof_dix) > 0:
+                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
+
+        # directly set position target
         else:
-            # use built-in position controller, directly set position target
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
     def refresh_render(self) -> None:
@@ -597,12 +604,13 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.draw_viewer(self.viewer, self.sim, False)
 
     def _simulate_one_physics_step(self, action):
-        if self._effort_joint_exist:
-            # at effort contorl mode, update torque on every each step
-            self._apply_action(action)
+        # for pd control joints by effort api, update torque and step the physics
+        if self._manual_pd_on:
+            self._apply_pd_control(action)
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
             self.gym.refresh_dof_state_tensor(self.sim)
+        # for position control joints, just step the physics
         else:
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
@@ -612,7 +620,7 @@ class IsaacgymHandler(BaseSimHandler):
         for _ in range(self.scenario.decimation):
             self._simulate_one_physics_step(self.actions)
         # Refresh tensors
-        if not self._effort_joint_exist:
+        if not self._manual_pd_on:
             self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -629,11 +637,11 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _compute_effort(self, actions):
         """Compute effort from actions"""
+        # scale the actions (generally output from policy)
         action_scaled = self._action_scale * actions
-        # effort actions
         robot_dof_pos = self._robot_dof_state[..., 0]
         robot_dof_vel = self._robot_dof_state[..., 1]
-        # desire pos = action_scale * action + default pos
+        #
         if self._action_offset:
             _effort = (
                 self._p_gains * (action_scaled + self._default_dof_pos - robot_dof_pos) - self._d_gains * robot_dof_vel
@@ -644,23 +652,17 @@ class IsaacgymHandler(BaseSimHandler):
         effort = self._effort.to(torch.float32)
         return effort
 
-    def _apply_action(self, actions):
+    def _apply_pd_control(self, actions):
         """
-        Compute torque using pd controller for effort actuator and set desire postion for position actuator given action.
+        Compute torque using pd controller for effort actuator and set torque.
         """
         effort = self._compute_effort(actions)
 
+        # NOTE: effort passed set_dof_actuation_force_tensor() must have the same dimension as the number of DOFs, even if some DOFs are not actionable.
         if self._obj_num_dof > 0:
             obj_force_placeholder = torch.zeros((self._num_envs, self._obj_num_dof), device=self.device)
-            # NOTE: effort passed set_dof_actuation_force_tensor() must have the same dimension as the number of DOFs, even if some DOFs are not actionable.
             effort = torch.cat((obj_force_placeholder, effort), dim=1)
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
-
-        if len(self._pos_ctrl_dof_dix) > 0:
-            pos_action = torch.zeros_like(effort, device=self.device, dtype=torch.float32)
-            for i in self._pos_ctrl_dof_dix:
-                pos_action[:, i] = self.actions[:, i - self._obj_num_dof]
-            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(pos_action))
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids
