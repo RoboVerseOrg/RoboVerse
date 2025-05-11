@@ -16,8 +16,8 @@ class SimParamCfg:
     Reference for IsaacGym: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams
     """
 
-    # TODO: currently only support isaacgym; add compatibility cfgs for other simulators.
-    timestep: float = 1.0 / 60.0
+    ## Simulation
+    dt: float = 1.0 / 60.0
 
     ## Physics
     bounce_threshold_velocity: float = 0.2
