@@ -32,11 +32,12 @@ class EmptyEnvCfg(DirectRLEnvCfg):
         env_spacing=4.0,
     )
     sim: SimulationCfg = SimulationCfg(
-        device="cuda:0",  # same as IsaacLab default
+        device="cpu",  # same as IsaacLab default
         dt=1 / 60,  # same as IsaacLab default
         render_interval=decimation,
         gravity=(0.0, 0.0, -9.81),  # same as IsaacLab default
         physx=PhysxCfg(),
+        use_fabric=False,
     )
 
 
