@@ -98,7 +98,7 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.up_axis = gymapi.UP_AXIS_Z
         sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.8)
         sim_params.dt = self.scenario.sim_params.timestep
-        sim_params.substeps = self.scenario.sim_params.substeps
+        sim_params.substeps = self.scenario.decimation
         sim_params.use_gpu_pipeline = self.scenario.sim_params.use_gpu_pipeline
         sim_params.physx.solver_type = self.scenario.sim_params.solver_type
         sim_params.physx.num_position_iterations = self.scenario.sim_params.num_position_iterations
@@ -617,8 +617,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def simulate(self) -> None:
         # Step the physics
-        for _ in range(self.scenario.decimation):
-            self._simulate_one_physics_step(self.actions)
+        self._simulate_one_physics_step(self.actions)
         # Refresh tensors
         if not self._manual_pd_on:
             self.gym.refresh_dof_state_tensor(self.sim)
