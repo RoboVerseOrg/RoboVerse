@@ -89,6 +89,7 @@ class IsaaclabHandler(BaseSimHandler):
         env_cfg.sim.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
         env_cfg.sim.physx.friction_offset_threshold = self.scenario.sim_params.friction_offset_threshold
         env_cfg.sim.physx.friction_correlation_distance = self.scenario.sim_params.friction_correlation_distance
+        env_cfg.sim.physx.solver_type = self.scenario.sim_params.solver_type
 
         self.env: EmptyEnv = gym.make("MetaSimEmptyTaskEnv", cfg=env_cfg)
 
