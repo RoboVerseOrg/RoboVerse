@@ -85,7 +85,7 @@ class H1Cfg(BaseRobotCfg):
         "right_elbow": 0.0,
     }
 
-    control_type: dict[str, Literal["pos", "effort"]] = {
+    control_type: dict[str, Literal["position", "effort"]] = {
         "left_hip_yaw": "effort",
         "left_hip_roll": "effort",
         "left_hip_pitch": "effort",
