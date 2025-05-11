@@ -20,21 +20,21 @@ The following table shows the parameters that can be set for the physics engine 
      - SAPIEN v3
      - PyBullet
    * - ``friction_offset_threshold``
-     - `✓ <https://isaac-sim.github.io/IsaacLab/v2.0.2/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.friction_offset_threshold>`_
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.friction_offset_threshold>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=friction_correlation_distance#isaacgym.gymapi.PhysXParams.friction_offset_threshold>`_
      -
      -
      -
      -
    * - ``friction_correlation_distance``
-     - `✓ <https://isaac-sim.github.io/IsaacLab/v2.0.2/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.friction_correlation_distance>`_
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.friction_correlation_distance>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=friction_correlation_distance#isaacgym.gymapi.PhysXParams.friction_correlation_distance>`_
      -
      -
      -
      -
    * - ``bounce_threshold_velocity``
-     - `✓ <https://isaac-sim.github.io/IsaacLab/v2.0.2/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.bounce_threshold_velocity>`_
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.bounce_threshold_velocity>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=bounce_threshold_velocity#isaacgym.gymapi.PhysXParams.bounce_threshold_velocity>`_
      -
      -
