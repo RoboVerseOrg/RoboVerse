@@ -26,7 +26,7 @@ class ReachOriginCfg(BaseTaskCfg):
     can_tabletop = True
     episode_length = 100
     objects = []
-    traj_filepath = "roboverse_data/trajs/debug/reach_origin/franka_v2.json"
+    traj_filepath = "metasim/cfg/tasks/debug/reach_v2.json"
     reward_functions = [negative_distance]
     reward_weights = [1.0]
     ## TODO: add a empty checker to suppress warning
@@ -39,7 +39,7 @@ class ReachFarAwayCfg(BaseTaskCfg):
     can_tabletop = True
     episode_length = 100
     objects = []
-    traj_filepath = "roboverse_data/trajs/debug/reach_origin/franka_v2.json"
+    traj_filepath = "metasim/cfg/tasks/debug/reach_v2.json"
     reward_functions = [x_distance]
     reward_weights = [1.0]
     ## TODO: add a empty checker to suppress warning

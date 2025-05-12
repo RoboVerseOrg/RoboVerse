@@ -1,0 +1,32 @@
+{
+    "franka": [
+        {
+            "init_state": {
+                "franka": {
+                    "dof_pos": {
+                        "panda_joint1": 0.0,
+                        "panda_joint2": 0.0,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": 0.0,
+                        "panda_joint5": 0.0,
+                        "panda_joint6": 0.0,
+                        "panda_joint7": 0.0,
+                        "panda_finger_joint1": 0.0,
+                        "panda_finger_joint2": 0.0
+                    },
+                    "pos": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rot": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                }
+            }
+        }
+    ]
+}
