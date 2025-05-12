@@ -21,8 +21,8 @@ from .utils.custom_direct_rl_env import CustomDirectRLEnv
 
 @configclass
 class EmptyEnvCfg(DirectRLEnvCfg):
-    decimation: int = 3
-    episode_length_s: float = 200 * (1 / 60) * decimation  # 200 steps
+    decimation: int = 3  # just a placeholder, value overwritten in isaaclab.py
+    episode_length_s: float = 200 * (1 / 60) * decimation  # just a placeholder, value overwritten in isaaclab.py
     observation_space: int = 0  # no use, but must be initialized
     action_space: int = 0  # no use, but must be initialized
     state_space: int = 0  # no use, but must be initialized
