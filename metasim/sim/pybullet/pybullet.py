@@ -40,7 +40,10 @@ class SinglePybulletHandler(BaseSimHandler):
 
     def _build_pybullet(self):
         self.client = p.connect(p.GUI)
-        p.setPhysicsEngineParameter(fixedTimeStep=1 / 60.0, numSolverIterations=300)
+        p.setPhysicsEngineParameter(
+            fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
+            numSolverIterations=300,
+        )
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
 

@@ -17,7 +17,13 @@ class SimParamCfg:
     """
 
     ## Simulation
-    dt: float = 1.0 / 60.0
+    dt: float | None = None
+    """The time-step of the simulation. If None, the default value in the original simulator will be used. The default value for each simulator is:
+    - IsaacGym: 1/60
+    - IsaacLab: 1/60
+    - MuJoCo: 1/500
+    - PyBullet: 1/240
+    """
 
     ## Physics
     bounce_threshold_velocity: float = 0.2

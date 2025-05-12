@@ -49,7 +49,7 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     objects = []
     reward_weights = [1.0]
     sim_params = SimParamCfg(
-        timestep=0.001,
+        dt=0.001,
         contact_offset=0.01,
         num_position_iterations=8,
         num_velocity_iterations=0,

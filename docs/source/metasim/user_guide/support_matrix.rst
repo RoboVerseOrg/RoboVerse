@@ -3,6 +3,37 @@ Support Matrix
 
 This page provides a matrix of the support for different simulators in MetaSim.
 
+Simulation Parameters
+---------------------
+
+The following table shows the parameters that can be set for the simulation in each simulator. ``✓`` means the parameter is supported. Empty cell means the parameter is not supported. Other values means the default value in the original simulator.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 20 20 20 20 20
+
+   * - Parameter
+     - IsaacLab
+     - IsaacGym
+     - MuJoCo
+     - Genesis
+     - SAPIEN v3
+     - PyBullet
+   * - ``dt``
+     - `1/60 <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.SimulationCfg.dt>`_
+     - `1/60 <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=substeps#isaacgym.gymapi.SimParams.substeps>`_
+     - `1/500 <https://mujoco.readthedocs.io/en/stable/XMLreference.html#option>`_
+     -
+     -
+     - `1/240 <https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit?tab=t.0#heading=h.kyqqrtg5v8nc>`_
+   * - ``solver_type``
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.solver_type>`_
+     - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams.solver_type>`_
+     -
+     -
+     -
+     -
+
 Physics Engine Parameters
 -------------------------
 
@@ -64,13 +95,6 @@ The following table shows the parameters that can be set for the physics engine 
    * - ``rest_offset``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=rest_offset#isaacgym.gymapi.RigidShapeProperties.rest_offset>`_
-     -
-     -
-     -
-     -
-   * - ``solver_type``
-     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.solver_type>`_
-     - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams.solver_type>`_
      -
      -
      -

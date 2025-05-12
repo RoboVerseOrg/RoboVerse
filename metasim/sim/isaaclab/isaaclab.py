@@ -80,7 +80,8 @@ class IsaaclabHandler(BaseSimHandler):
             from isaaclab_tasks.utils import parse_env_cfg
 
         env_cfg = parse_env_cfg("MetaSimEmptyTaskEnv")
-        env_cfg.sim.dt = self.scenario.sim_params.dt
+        if self.scenario.sim_params.dt is not None:
+            env_cfg.sim.dt = self.scenario.sim_params.dt
         env_cfg.sim.render_interval = self.scenario.decimation
         env_cfg.scene.num_envs = self.num_envs
         env_cfg.decimation = self.scenario.decimation
