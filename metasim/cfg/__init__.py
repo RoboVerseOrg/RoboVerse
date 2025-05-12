@@ -1,1 +1,1 @@
-"""Sapien configuration packages."""
+"""MetaSim configurations."""
