@@ -23,8 +23,8 @@ The following table shows the parameters that can be set for the simulation in e
      - `1/60 <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.SimulationCfg.dt>`_
      - `1/60 <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=substeps#isaacgym.gymapi.SimParams.substeps>`_
      - `1/500 <https://mujoco.readthedocs.io/en/stable/XMLreference.html#option>`_
-     -
-     -
+     - `1/100 <https://genesis-world.readthedocs.io/en/latest/api_reference/scene/simulator.html#genesis.engine.simulator.Simulator.dt>`_
+     - 1/100
      - `1/240 <https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit?tab=t.0#heading=h.kyqqrtg5v8nc>`_
    * - ``solver_type``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.solver_type>`_

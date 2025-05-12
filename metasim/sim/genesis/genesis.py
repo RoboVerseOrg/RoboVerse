@@ -24,7 +24,10 @@ class GenesisHandler(BaseSimHandler):
     def launch(self) -> None:
         gs.init(backend=gs.gpu)  # TODO: add option for cpu
         self.scene_inst = gs.Scene(
-            sim_options=gs.options.SimOptions(substeps=1),  # TODO: substeps > 1 doesn't work
+            sim_options=gs.options.SimOptions(
+                dt=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100,
+                substeps=1,
+            ),  # TODO: substeps > 1 doesn't work
             vis_options=gs.options.VisOptions(n_rendered_envs=self.scenario.num_envs),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos=(3.5, 0.0, 2.5),
