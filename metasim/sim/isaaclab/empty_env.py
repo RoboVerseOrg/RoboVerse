@@ -33,7 +33,6 @@ class EmptyEnvCfg(DirectRLEnvCfg):
     )
     sim: SimulationCfg = SimulationCfg(
         device="cuda:0",  # same as IsaacLab default
-        dt=1 / 60,  # same as IsaacLab default
         gravity=(0.0, 0.0, -9.81),  # same as IsaacLab default
         physx=PhysxCfg(),
     )
