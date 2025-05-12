@@ -27,7 +27,7 @@ get_started/rl_example/index
 :maxdepth: 2
 :titlesonly:
 
-
+user_guide/support_matrix
 user_guide/replay_demo
 user_guide/collect_demo
 user_guide/render

@@ -97,6 +97,8 @@ class MujocoHandler(BaseSimHandler):
 
     def _init_mujoco(self) -> mjcf.RootElement:
         mjcf_model = mjcf.RootElement()
+        if self.scenario.sim_params.dt is not None:
+            mjcf_model.option.timestep = self.scenario.sim_params.dt
 
         ## Optional: Add ground grid
         # mjcf_model.asset.add('texture', name="texplane", type="2d", builtin="checker", width=512, height=512, rgb1=[0.2, 0.3, 0.4], rgb2=[0.1, 0.2, 0.3])

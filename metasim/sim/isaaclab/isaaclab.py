@@ -80,9 +80,18 @@ class IsaaclabHandler(BaseSimHandler):
             from isaaclab_tasks.utils import parse_env_cfg
 
         env_cfg = parse_env_cfg("MetaSimEmptyTaskEnv")
+        if self.scenario.sim_params.dt is not None:
+            env_cfg.sim.dt = self.scenario.sim_params.dt
+        env_cfg.sim.render_interval = self.scenario.decimation
         env_cfg.scene.num_envs = self.num_envs
         env_cfg.decimation = self.scenario.decimation
-        env_cfg.episode_length_s = self.scenario.episode_length * (1 / 60) * self.scenario.decimation
+        env_cfg.episode_length_s = self.scenario.episode_length * self.scenario.sim_params.dt * self.scenario.decimation
+
+        ## Physx settings
+        env_cfg.sim.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
+        env_cfg.sim.physx.friction_offset_threshold = self.scenario.sim_params.friction_offset_threshold
+        env_cfg.sim.physx.friction_correlation_distance = self.scenario.sim_params.friction_correlation_distance
+        env_cfg.sim.physx.solver_type = self.scenario.sim_params.solver_type
 
         self.env: EmptyEnv = gym.make("MetaSimEmptyTaskEnv", cfg=env_cfg)
 
