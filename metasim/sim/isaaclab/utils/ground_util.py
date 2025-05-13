@@ -1,7 +1,7 @@
 import omni
 from pxr import Sdf, UsdShade
 
-from .material_util import apply_mdl_to_prim
+# from .material_util import apply_mdl_to_prim
 
 try:
     import omni.isaac.core.utils.prims as prim_utils
@@ -23,6 +23,7 @@ def create_ground():
 
 
 def set_ground_material_scale(scale: float):
+    return
     ground_prim = prim_utils.get_prim_at_path(GROUND_PRIM_PATH)
     material = UsdShade.MaterialBindingAPI(ground_prim).GetDirectBinding().GetMaterial()
     shader = UsdShade.Shader(omni.usd.get_shader_from_material(material, get_prim=True))
@@ -31,4 +32,5 @@ def set_ground_material_scale(scale: float):
 
 
 def set_ground_material(material_mdl_path: str):
-    apply_mdl_to_prim(material_mdl_path, GROUND_PRIM_PATH)
+    pass
+    # apply_mdl_to_prim(material_mdl_path, GROUND_PRIM_PATH)
