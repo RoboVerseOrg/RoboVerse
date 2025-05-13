@@ -85,7 +85,7 @@ class IsaaclabHandler(BaseSimHandler):
         env_cfg.sim.render_interval = self.scenario.decimation
         env_cfg.scene.num_envs = self.num_envs
         env_cfg.decimation = self.scenario.decimation
-        env_cfg.episode_length_s = self.scenario.episode_length * self.scenario.sim_params.dt * self.scenario.decimation
+        env_cfg.episode_length_s = self.scenario.episode_length * env_cfg.sim.dt * self.scenario.decimation
 
         ## Physx settings
         env_cfg.sim.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
