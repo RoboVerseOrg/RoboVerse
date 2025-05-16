@@ -155,6 +155,43 @@ def robot_local_velocity_tensor(envstate, robot_name: str):
     return local_xy_velocity
 
 
+# @torch.jit.script
+# def get_euler_xyz(q):
+#     qx, qy, qz, qw = 0, 1, 2, 3
+#     # roll (x-axis rotation)
+#     sinr_cosp = 2.0 * (q[:, qw] * q[:, qx] + q[:, qy] * q[:, qz])
+#     cosr_cosp = q[:, qw] * q[:, qw] - q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] + q[:, qz] * q[:, qz]
+#     roll = torch.atan2(sinr_cosp, cosr_cosp)
+
+#     # pitch (y-axis rotation)
+#     sinp = 2.0 * (q[:, qw] * q[:, qy] - q[:, qz] * q[:, qx])
+#     pitch = torch.where(torch.abs(sinp) >= 1, copysign(np.pi / 2.0, sinp), torch.asin(sinp))
+
+#     # yaw (z-axis rotation)
+#     siny_cosp = 2.0 * (q[:, qw] * q[:, qz] + q[:, qx] * q[:, qy])
+#     cosy_cosp = q[:, qw] * q[:, qw] + q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] - q[:, qz] * q[:, qz]
+#     yaw = torch.atan2(siny_cosp, cosy_cosp)
+
+#     return roll % (2 * np.pi), pitch % (2 * np.pi), yaw % (2 * np.pi)
+
+# @torch.jit.script
+# def quat_rotate_inverse(q, v):
+#     shape = q.shape
+#     q_w = q[:, -1]
+#     q_vec = q[:, :3]
+#     a = v * (2.0 * q_w**2 - 1.0).unsqueeze(-1)
+#     b = torch.cross(q_vec, v, dim=-1) * q_w.unsqueeze(-1) * 2.0
+#     c = q_vec * torch.bmm(q_vec.view(shape[0], 1, 3), v.view(shape[0], 3, 1)).squeeze(-1) * 2.0
+#     return a - b + c
+
+# def get_euler_xyz_tensor(quat):
+#     r, p, w = get_euler_xyz(quat)
+#     # stack r, p, w in dim1
+#     euler_xyz = torch.stack((r, p, w), dim=1)
+#     euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
+#     return euler_xyz
+
+
 def robot_rotation(envstate, robot_name: str):
     """Returns the rotation of the robot."""
     return envstate["robots"][robot_name]["rot"]
@@ -178,6 +215,47 @@ def torso_vertical_orientation(envstate, robot_name: str):
     quat = envstate["robots"][robot_name]["body"]["pelvis"]["rot"]  # (4,)
     xmat = matrix_from_quat(torch.tensor(quat).unsqueeze(0))[0]  # (3, 3)
     return xmat[2, :]
+
+
+def actuator_pos_tensor(envstate, robot_name: str):
+    """Returns a copy of the pos."""
+    return (
+        envstate.robots[robot_name].joint_pos
+        if envstate.robots[robot_name].joint_pos is not None
+        else torch.zeros_like(envstate.robots[robot_name].joint_pos)
+    )
+
+
+def feet_pos_tensor(envstate, robot_name: str):
+    """Returns a copy of the feet pos."""
+    feet_pos = envstate.robots[robot_name].extras["foot_states"][:, :, :2]
+    if feet_pos is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return feet_pos
+
+
+def feet_xy_velocity_tensor(envstate, robot_name: str):
+    """Returns a copy of the feet pos."""
+    feet_pos = envstate.robots[robot_name].extras["foot_states"][:, :, 10:12]
+    if feet_pos is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return feet_pos
+
+
+def actuator_knee_pos_tensor(envstate, robot_name: str):
+    """Returns a copy of the knee pos."""
+    knee_pos = envstate.robots[robot_name].extras["knee_states"][:, :, :2]
+    if knee_pos is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return knee_pos
+
+
+def contact_force_tensor(envstate, robot_name: str):
+    """Returns a copy of the knee pos."""
+    contact_force = envstate.robots[robot_name].extras["contact_force"]
+    if contact_force is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return contact_force
 
 
 def actuator_forces(envstate, robot_name: str):

@@ -20,4 +20,7 @@ python metasim/scripts/random_action_pure.py --sim=isaacgym --num_envs=1 --robot
 
 ```bash
 python metasim/scripts/random_action_pure.py --sim=mujoco --num_envs=1 --robot=h1 --task=humanoidbench:Walk
+
+```bash
+
 ```

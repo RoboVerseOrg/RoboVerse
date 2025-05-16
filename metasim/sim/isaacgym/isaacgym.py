@@ -64,6 +64,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._root_states: torch.Tensor | None = None
         self._dof_states: torch.Tensor | None = None
         self._rigid_body_states: torch.Tensor | None = None
+        self._net_contact_forces: torch.Tensor | None = None
         self._robot_dof_state: torch.Tensor | None = None
 
         # control related
@@ -77,11 +78,16 @@ class IsaacgymHandler(BaseSimHandler):
             None  # for the configuration: desire_pos = action_scale * action + default_pos
         )
         self._action_offset: bool = False  # for configuration: desire_pos = action_scale * action + default_pos
+        # TODO check if we can move manual pd controller to the legged_robot layer
         self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
         self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
         self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
+
+        # FIXME to get from name
+        self.robot_rigid_feet_idx = torch.tensor([5, 10], device=self.device)
+        self.robot_rigid_knee_idx = torch.tensor([4, 9], device=self.device)
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -90,10 +96,12 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_up_camera()
         # ==== prepare tensors =====
         # from now on, we will use the tensor API that can run on CPU or GPU
+        # TODO reshape here is better for code clean
         self.gym.prepare_sim(self.sim)
         self._root_states = gymtorch.wrap_tensor(self.gym.acquire_actor_root_state_tensor(self.sim))
         self._dof_states = gymtorch.wrap_tensor(self.gym.acquire_dof_state_tensor(self.sim))
         self._rigid_body_states = gymtorch.wrap_tensor(self.gym.acquire_rigid_body_state_tensor(self.sim))
+        self._net_contact_forces = gymtorch.wrap_tensor(self.gym.acquire_net_contact_force_tensor(self.sim))
         self._robot_dof_state = self._dof_states.view(self._num_envs, -1, 2)[:, self._obj_num_dof :]
 
     def _init_gym(self) -> None:
@@ -534,6 +542,14 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_vel_target=None,  # TODO
                 joint_effort_target=self._effort if self._manual_pd_on else None,
             )
+            # TODO given name and indices, then read from cfg
+            foot_states = self._rigid_body_states.view(self.num_envs, -1, 13)[:, self.robot_rigid_feet_idx, :]
+            knee_states = self._rigid_body_states.view(self.num_envs, -1, 13)[:, self.robot_rigid_knee_idx, :]
+            contact_force = self._net_contact_forces.view(self.num_envs, -1, 3)[:, self.robot_rigid_feet_idx, :2]
+            extras = {"foot_states": foot_states, "knee_states": knee_states, "contact_force": contact_force}
+
+            state.optional = None
+
             robot_states[robot.name] = state
 
         camera_states = {}
@@ -635,6 +651,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_mass_matrix_tensors(self.sim)
+        self.gym.refresh_net_contact_force_tensor(self.sim)
 
         # Refresh cameras and viewer
         self.gym.step_graphics(self.sim)

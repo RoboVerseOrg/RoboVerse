@@ -130,7 +130,7 @@ class Sb3EnvWrapper(VecEnv):
         # joint_names (list[str]): List of joint names for the robot.
         joint_names = list(self.robot.joint_limits.keys())
         # unnormalized_actions (torch.Tensor, shape=(num_envs, action_dim)): Actions unnormalized to the robot's joint limits.
-        unnormalized_actions = self.unnormalize_action(self._async_actions)
+        # unnormalized_actions = self.unnormalize_action(self._async_actions)
 
         # action_dict (list[Action]): List of action dictionaries for each environment.
         action_dict = [
@@ -139,7 +139,7 @@ class Sb3EnvWrapper(VecEnv):
                     # joint_name (str): Name of the joint.
                     # pos (float): Target position for the joint.
                     joint_name: float(pos)
-                    for joint_name, pos in zip(joint_names, unnormalized_actions[env_id])
+                    for joint_name, pos in zip(joint_names, self._async_actions[env_id])
                 }
             }
             for env_id in range(self.num_envs)

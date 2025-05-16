@@ -103,7 +103,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self.handler.set_dof_targets(self.handler.robot.name, actions)
             self.handler.simulate()
             reward = None
-            success = self.handler.checker.check(self.handler)
+            success = self.handler.checker.check(self.handler)  #
             states = self.handler.get_states()
             time_out = self._episode_length_buf >= self.handler.scenario.episode_length
             return states, reward, success, time_out, None
