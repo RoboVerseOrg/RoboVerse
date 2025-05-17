@@ -37,9 +37,9 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender" ,"mjx"] = (
-        "mjx"
-    )
+    sim: Literal[
+        "isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender", "mjx"
+    ] = "isaaclab"
 
     ## Others
     num_envs: int = 1
@@ -144,17 +144,4 @@ obs, extras = env.reset(states=init_states)
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/0_static_scene_{args.sim}.png"
 log.info(f"Saving image to {save_path}")
-cam = next(iter(obs.cameras.values()))        # CameraState
-rgb = cam.rgb[0]                              # (H, W, 3/4)  Torch tensor
-
-print("[DEBUG] rgb.shape :", rgb.shape)
-print("[DEBUG] rgb.dtype :", rgb.dtype)
-print("[DEBUG] rgb.min() :", rgb.min().item(),  "  max() :", rgb.max().item())
-print("[DEBUG] few values:", rgb.flatten()[:10])  
-
-if cam.depth is not None:
-    depth = cam.depth[0]
-    print("[DEBUG] depth.shape :", depth.shape)
-    print("[DEBUG] depth.dtype :", depth.dtype)
-    print("[DEBUG] depth.min/max :", depth.min().item(), depth.max().item())
-imageio.imwrite(save_path, rgb.cpu().numpy())
+imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())

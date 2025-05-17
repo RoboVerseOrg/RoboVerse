@@ -46,7 +46,17 @@ class Args:
 
     ## Handlers
     sim: Literal[
-        "isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien2", "sapien3", "mujoco", "blender","mjx"
+        "isaaclab",
+        "isaacgym",
+        "genesis",
+        "pyrep",
+        "pybullet",
+        "sapien",
+        "sapien2",
+        "sapien3",
+        "mujoco",
+        "blender",
+        "mjx",
     ] = "isaaclab"
     renderer: (
         Literal[
