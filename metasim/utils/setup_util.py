@@ -103,6 +103,14 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("Blender is not installed, please install it first")
             raise e
+    elif sim == SimType.Playground:
+        try:
+            from mujoco_playground import wrapper
+
+            return wrapper
+        except ImportError as e:
+            log.error("Playground is not installed, please install it first")
+            raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")
 
@@ -187,6 +195,14 @@ def get_sim_env_class(sim: SimType):
             return Sapien3Env
         except ImportError as e:
             log.error("Sapien3 is not installed, please install it first")
+            raise e
+    elif sim == SimType.MJX:
+        try:
+            from metasim.sim.mjx import MJXEnv
+
+            return MJXEnv
+        except ImportError as e:
+            log.error("mjx is not installed, please install it first")
             raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")

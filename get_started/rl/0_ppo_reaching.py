@@ -41,7 +41,7 @@ class Args(ScenarioCfg):
     task: str = "debug:reach_far_away"
     robot: str = "franka"
     num_envs: int = 16
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaaclab"
 
 
 args = tyro.cli(Args)

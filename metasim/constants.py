@@ -43,7 +43,7 @@ class BenchmarkType(enum.Enum):
     RLAOPENDOOR = "RLAffordOpenDoor"
 
     ## SimplerEnv
-    SIMPLERENV = "SimperEnv"
+    SIMPLERENVGRASPSINGLEOPENEDCOKECAN = "SimplerEnvGraspSingleOpenedCokeCan"
 
     ## humanoid
     HUMANOIDBENCH = "HumanoidBench"
@@ -76,6 +76,7 @@ class SimType(enum.Enum):
     SAPIEN2 = "sapien2"
     SAPIEN3 = "sapien3"
     BLENDER = "blender"
+    MJX = "mjx"
 
 
 class RobotType(enum.Enum):

@@ -16,9 +16,9 @@ class BaseCameraCfg:
     """Name of the camera. Defaults to "camera0". Different cameras should have different names, so if you add multiple cameras, make sure to give them unique names."""
     data_types: list[Literal["rgb", "depth"]] = ["rgb", "depth"]
     """List of sensor types to enable for the camera. Defaults to ["rgb", "depth"]."""
-    width: int = 256
+    width: int = 1024
     """Width of the image in pixels. Defaults to 256."""
-    height: int = 256
+    height: int = 1024
     """Height of the image in pixels. Defaults to 256."""
     pos: tuple[float, float, float] = (0.0, 0.0, 1.0)
     """Position of the camera in the world frame. Defaults to (0.0, 0.0, 1.0)."""
