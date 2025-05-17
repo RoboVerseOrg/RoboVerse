@@ -4,18 +4,17 @@ import os
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
-import re
 import tempfile
 from pathlib import Path
-
-import jax
-import jax.numpy as jnp
 import mujoco
 import numpy as np
 import torch
 from dm_control import mjcf
 from loguru import logger as log
-from mujoco import mjx
+from mujoco import mjtJoint, mjx
+import jax
+import jax.numpy as jnp
+
 
 from metasim.cfg.objects import (
     ArticulationObjCfg,
@@ -23,7 +22,6 @@ from metasim.cfg.objects import (
     PrimitiveCylinderCfg,
     PrimitiveSphereCfg,
 )
-from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
@@ -40,32 +38,34 @@ def _j2t(arr: jax.Array, device: str | torch.device | None = "cuda") -> torch.Te
     t = torch.from_dlpack(jax.dlpack.to_dlpack(arr))
     return t
 
-
 def _t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.ndarray:
     if device is not None and arr.device != torch.device(device):
         arr = arr.to(device, non_blocking=True)
     x = jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
     return x
 
-
 class MJXHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, *, seed: int | None = None):
         super().__init__(scenario)
 
         self._scenario = scenario
-        self._seed = seed or 0
-        self._mjx_model = None
-        self._robot = scenario.robot
+        self._seed     = seed or 0
+        self._mjx_model  = None
+        self._robot      = scenario.robot
         self._robot_path = self._robot.mjcf_path
         self.cameras = []
         for camera in scenario.cameras:
             self.cameras.append(camera)
 
-        self._renderer = None
+        self._renderer     = None
 
         self._episode_length_buf = torch.zeros(self.num_envs, dtype=torch.int32)
-        self.replay_traj = False
-        self.use_taskdecimation = False
+        self.replay_traj         = False
+        self.use_taskdecimation  = False
+        self._object_root_path_cache: dict[str, str] = {}
+        self._object_root_bid_cache: dict[str, int] = {}
+        self._fix_path_cache: dict[str, int] = {}
+        self._gravity_compensation = not self._robot.enabled_gravity
 
         if self.use_taskdecimation:
             self.decimation = self.scenario.decimation
@@ -79,285 +79,372 @@ class MJXHandler(BaseSimHandler):
             self.decimation = 25
 
     def launch(self) -> None:
-        self._mj_model = self._init_mujoco()
-        for geom in self._mj_model.find_all("geom"):
-            if geom.mesh is not None:
-                geom.contype = 0
-                geom.conaffinity = 0
+        mjcf_root = self._init_mujoco()
 
-        self._physics = mjcf.Physics.from_mjcf_model(self._mj_model)
+        tmp_dir  = tempfile.mkdtemp()
+        mjcf.export_with_assets(mjcf_root, tmp_dir)
+        xml_path = next(Path(tmp_dir).glob("*.xml"))
+        self._mj_model = mujoco.MjModel.from_xml_path(str(xml_path))
 
-        self.body_names = [self._physics.model.body(i).name for i in range(self._physics.model.nbody)]
+        self.body_names = [
+            mujoco.mj_id2name(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, i)
+            for i in range(self._mj_model.nbody)
+        ]
         self.robot_body_names = [
-            body_name for body_name in self.body_names if body_name.startswith(self._mujoco_robot_name)
+            n for n in self.body_names if n.startswith(self._mujoco_robot_name)
         ]
 
-        self._mjx_model = self._make_mjx_model()
 
-        pool = self._mjx_model.names
-        adr = self._mjx_model.name_jntadr
+        if self.cameras:
+            max_w = max(c.width  for c in self.cameras)
+            max_h = max(c.height for c in self.cameras)
+            self._renderer    = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
+            self._render_data = mujoco.MjData(self._mj_model)
 
-        robot_prefix = self._scenario.robot.name
-
-        self._joint_name2id = {}
-        for i, a in enumerate(adr):
-            raw = pool[int(a) : pool.find(b"\0", int(a))].decode()
-            self._joint_name2id[raw] = i
-            short = raw.split("/")[-1]
-            self._joint_name2id[short] = i
-
-            if "/" not in raw:
-                self._joint_name2id[f"{robot_prefix}/{raw}"] = i
-
-        data = mjx.make_data(self._mjx_model)
-
-        def broadcast_tree(x, N):
-            return jax.tree_util.tree_map(lambda y: jnp.broadcast_to(y, (N, *y.shape)), x)
-
-        # batch data
-        self._data = broadcast_tree(data, self.num_envs)
-        self._robot_joint_ids: dict[str, list[int]] = {}
-
-        self._substep = self._make_substep(self.decimation)
-        if self._scenario.cameras:
-            from madrona_mjx.renderer import BatchRenderer
-
-            ref_w, ref_h = self._scenario.cameras[0].width, self._scenario.cameras[0].height
-
-            # Assert all cameras share same resolution
-            for cam in self._scenario.cameras[1:]:
-                if cam.width != ref_w or cam.height != ref_h:
-                    log.warning(
-                        f"Camera {cam.name} has different resolution than the first camera. "
-                        f"Using the first camera's resolution for rendering."
-                    )
-
-            # TODO multi renderer for different cameras
-            self._renderer = BatchRenderer(
-                m=self._mjx_model,
-                gpu_id=0,  # TODO choose GPU
-                num_worlds=self.num_envs,
-                # cameras should have same resolution
-                batch_render_view_width=self._scenario.cameras[0].width,
-                batch_render_view_height=self._scenario.cameras[0].height,
-                enabled_geom_groups=np.array([0, 1, 2, 3, 4, 5], dtype=np.int32),
-                enabled_cameras=np.arange(len(self.cameras), dtype=np.int32),
-                use_rasterizer=False,
-                add_cam_debug_geo=False,
-                viz_gpu_hdls=None,
-            )
-            self._render_tokens = self._renderer.init(self._data, self._mjx_model)
-        # create env
         log.info(f"MJXHandler launched · envs={self.num_envs}")
 
     def simulate(self) -> None:
+        if self._gravity_compensation:
+            self._disable_robotgravity()
         self._data = self._substep(self._mjx_model, self._data)
 
-    def get_states(self) -> TensorState:
-        data = self._data
-        N = data.qpos.shape[0]
-        robots, objects = {}, {}
-        # ---------------------- Robot -------------------------------------------
-        r_cfg = self._scenario.robot
+
+    def get_states(self, env_ids: list[int] | None = None):
+
+        data   = self._data                       # mjx_env.Data, shape (N, …)
+        N      = data.qpos.shape[0]
+        idx_np = np.arange(N) if env_ids is None else np.asarray(env_ids, dtype=int)
+        idx    = jnp.asarray(idx_np, dtype=jnp.int32)   # jax array for slicing
+        B      = idx.shape[0]                     # batch size actually returned
+
+        robots  : dict[str, RobotState]  = {}
+        objects : dict[str, ObjectState] = {}
+
+        # ===================== Robot =====================================
+        r_cfg  = self._scenario.robot
         prefix = f"{r_cfg.name}/"
 
-        qadr_r, vadr_r, jnames_r = self._sorted_joint_info(prefix)
-        aid_r = self._sorted_actuator_ids(prefix)
-        bid_r, bnames_r = self._sorted_body_ids(prefix)
-        root_id_r = bid_r[0]
+        qadr_r, vadr_r, _ = self._sorted_joint_info(prefix)
+        aid_r             = self._sorted_actuator_ids(prefix)
 
-        root_state_r = jnp.concatenate(
-            [
-                data.xpos[:, root_id_r],  # (N,3)
-                data.xquat[:, root_id_r],  # (N,4)
-                data.cvel[:, root_id_r],  # (N,6)
-            ],
-            axis=-1,
-        )  # (N,13)
-
-        body_state_r = jnp.concatenate(
-            [
-                data.xpos[:, bid_r],  # (N,B,3)
-                data.xquat[:, bid_r],  # (N,B,4)
-                data.cvel[:, bid_r],  # (N,B,6)
-            ],
-            axis=-1,
-        )  # (N,B,13)
-
-        joint_pos = _j2t(data.qpos[:, qadr_r])
-        robots[r_cfg.name] = RobotState(
-            root_state=_j2t(root_state_r),
-            body_names=bnames_r,
-            body_state=_j2t(body_state_r),
-            joint_pos=_j2t(data.qpos[:, qadr_r]),  # (N,J)
-            joint_vel=_j2t(data.qvel[:, vadr_r]),  # (N,J)
-            joint_pos_target=_j2t(data.ctrl[:, aid_r]),  # (N,J)
-            joint_vel_target=None,
-            joint_effort_target=_j2t(data.actuator_force[:, aid_r]),  # (N,J)
+        root_bid_r = self._object_root_bid_cache.get(
+            r_cfg.name,
+            self._sorted_body_ids(prefix)[0][0],
         )
 
-        # ---------------------- Objects -----------------------------------------
+        bid_r, bnames_r = self._sorted_body_ids(prefix)
+        if root_bid_r not in bid_r:
+            bid_r.insert(0, root_bid_r)
+            bnames_r.insert(0, self.mj_objects[r_cfg.name].full_identifier)
+
+        root_state_r = jnp.concatenate(
+            [data.xpos[idx, root_bid_r],
+            data.xquat[idx, root_bid_r],
+            data.cvel[idx, root_bid_r]],
+            axis=-1,                              # (B, 13)
+        )
+        body_state_r = jnp.concatenate(
+            [data.xpos[idx[:, None], bid_r],
+            data.xquat[idx[:, None], bid_r],
+            data.cvel[idx[:, None], bid_r]],
+            axis=-1,                              # (B, Bbody, 13)
+        )
+
+        robots[r_cfg.name] = RobotState(
+            root_state          = _j2t(root_state_r),
+            body_names          = bnames_r,
+            body_state          = _j2t(body_state_r),
+            joint_pos           = _j2t(data.qpos[idx[:, None], qadr_r]),
+            joint_vel           = _j2t(data.qvel[idx[:, None], vadr_r]),
+            joint_pos_target    = _j2t(data.ctrl[idx[:, None], aid_r]),
+            joint_vel_target    = None,
+            joint_effort_target = _j2t(data.actuator_force[idx[:, None], aid_r]),
+        )
+
+        # ===================== Objects ===================================
         for obj in self._scenario.objects:
             prefix = f"{obj.name}/"
+
+            root_bid_o = self._object_root_bid_cache[obj.name]
             bid_o, bnames_o = self._sorted_body_ids(prefix)
-            root_id_o = bid_o[0]
+            if root_bid_o not in bid_o:
+                bid_o.insert(0, root_bid_o)
+                bnames_o.insert(0, self.mj_objects[obj.name].full_identifier)
 
             root_state_o = jnp.concatenate(
-                [data.xpos[:, root_id_o], data.xquat[:, root_id_o], data.cvel[:, root_id_o]], axis=-1
-            )  # (N,13)
-
-            if isinstance(obj, BaseRobotCfg):  # articulated
-                qadr_o, vadr_o, jnames_o = self._sorted_joint_info(prefix)
-                body_state_o = jnp.concatenate(
-                    [data.xpos[:, bid_o], data.xquat[:, bid_o], data.cvel[:, bid_o]], axis=-1
-                )  # (N,B,13)
-                joint_pos = _j2t(data.qpos[:, qadr_o])
-                joint_vel = _j2t(data.qvel[:, vadr_o])
-            else:
-                body_state_o = joint_pos = joint_vel = None
-
-            objects[obj.name] = ObjectState(
-                root_state=_j2t(root_state_o),
-                body_names=bnames_o if body_state_o is not None else None,
-                body_state=_j2t(body_state_o) if body_state_o is not None else None,
-                joint_pos=joint_pos,
-                joint_vel=joint_vel,
+                [data.xpos[idx, root_bid_o],
+                data.xquat[idx, root_bid_o],
+                data.cvel[idx, root_bid_o]],
+                axis=-1,                          # (B, 13)
             )
 
-        # ---------------------- Cameras -----------------------------
-        if self._renderer is not None:
-            rgb_batch, depth_batch = self.render_batch(data)
-            rgb_batch = _j2t(rgb_batch)  # (N,K,H,W,4)
-            depth_batch = _j2t(depth_batch)  # (N,K,H,W,1)
-        cameras = {}
-        for cam_i, cam_cfg in enumerate(self.cameras):
-            rgb = depth = None
-            if "rgb" in cam_cfg.data_types and rgb_batch is not None:
-                rgb = rgb_batch[:, cam_i, ..., :3]  # (N,H,W,3)
-            if "depth" in cam_cfg.data_types and depth_batch is not None:
-                depth = depth_batch[:, cam_i, ...]  # (N,H,W,1)
-            cameras[cam_cfg.name] = CameraState(rgb=rgb, depth=depth)
+            if isinstance(obj, ArticulationObjCfg):
+                qadr_o, vadr_o, _ = self._sorted_joint_info(prefix)
+                body_state_o = jnp.concatenate(
+                    [data.xpos[idx[:, None], bid_o],
+                    data.xquat[idx[:, None], bid_o],
+                    data.cvel[idx[:, None], bid_o]],
+                    axis=-1,                      # (B, Bbody, 13)
+                )
+                objects[obj.name] = ObjectState(
+                    root_state = _j2t(root_state_o),
+                    body_names = bnames_o,
+                    body_state = _j2t(body_state_o),
+                    joint_pos  = _j2t(data.qpos[idx[:, None], qadr_o]),
+                    joint_vel  = _j2t(data.qvel[idx[:, None], vadr_o]),
+                )
+            else:  # rigid object without joints
+                objects[obj.name] = ObjectState(
+                    root_state = _j2t(root_state_o),
+                )
 
-        return TensorState(objects=objects, robots=robots, cameras=cameras, sensors={})
+        # ===================== Cameras ===================================
+        camera_states = {}
+        want_any_rgb = any("rgb"   in cam.data_types for cam in self.cameras)
+        want_any_dep = any("depth" in cam.data_types for cam in self.cameras)
 
-    def render_batch(self, data: mjx.Data):
-        if self._renderer is None or self.render_tokens is None:
-            return None, None
-        # rgb  : (N, K, H, W, 4)  (RGBA)
-        # depth: (N, K, H, W, 1)
-        tokens, rgb, depth = self._renderer.render(self._render_tokens, data)
-        self._render_tokens = tokens
-        return rgb, depth
+        if want_any_rgb or want_any_dep:
+            for cam in self.cameras:
+                cam_id   = f"{cam.name}_custom"
+                want_rgb = "rgb"   in cam.data_types
+                want_dep = "depth" in cam.data_types
+
+                rgb_frames, dep_frames = [], []
+
+                for env_id in idx_np:
+                    slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)
+                    mjx.get_data_into(self._render_data, self._mj_model, slice_data)
+                    mujoco.mj_forward(self._mj_model, self._render_data)
+
+                    if want_rgb:
+                        self._renderer.disable_depth_rendering()
+                        self._renderer.update_scene(self._render_data, camera=cam_id)
+                        rgb = self._renderer.render()
+                        rgb_frames.append(torch.from_numpy(rgb.copy()))
+
+                    if want_dep:
+                        self._renderer.enable_depth_rendering()
+                        self._renderer.update_scene(self._render_data, camera=cam_id)
+                        depth = self._renderer.render()
+                        dep_frames.append(torch.from_numpy(depth.copy()))
+
+                def _stk(frames):
+                    return None if not frames else torch.stack(frames, dim=0)
+
+                camera_states[cam.name] = CameraState(
+                    rgb   = _stk(rgb_frames) if want_rgb else None,
+                    depth = _stk(dep_frames) if want_dep else None,
+                )
+
+        return TensorState(objects=objects, robots=robots,cameras=camera_states, sensors={})
+
+
 
     def set_states(
         self,
         ts: TensorState,
         env_ids: list[int] | None = None,
+        *,
         zero_vel: bool = True,
     ) -> None:
-        ts = list_state_to_tensor(self, ts)  # convert back to nested dict
 
-        data = self._data
+        ts    = list_state_to_tensor(self, ts)
+        self._init_mjx_once(ts)
+
+        data  = self._data
         model = self._mjx_model
-        N = data.qpos.shape[0]
 
-        idx = jnp.arange(N, dtype=int) if env_ids is None else jnp.array(env_ids, dtype=int)
+        N   = data.qpos.shape[0]
+        idx = (
+            jnp.arange(N, dtype=jnp.int32)
+            if env_ids is None else jnp.asarray(env_ids, dtype=jnp.int32)
+        )
+        self._ensure_id_cache(ts)
 
         qpos, qvel, ctrl = data.qpos, data.qvel, data.ctrl
 
-        capi = self._mj_model
+        def _write_root_free(qpos, qvel, root_jid, root_state):
+            jtype = model.jnt_type[root_jid]
+            qadr  = model.jnt_qposadr[root_jid]
+            vadr  = model.jnt_dofadr [root_jid]
 
-        self._robot_joint_ids = {}
-        for rname in ts.robots.keys():
-            jnames = self.get_joint_names(rname, sort=True)
-            self._robot_joint_ids[rname] = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, jn) for jn in jnames]
-        self._object_joint_ids = {}
-        for oname in ts.objects.keys():
-            jnames = self.get_joint_names(oname, sort=True)
-            full = [f"{oname}/{jn}" for jn in jnames]
-            self._object_joint_ids[oname] = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, fn) for fn in full]
-
-        def _scatter_root(qpos, qvel, root_t):
-            qpos = qpos.at[idx, :3].set(root_t[:, :3])
-            qpos = qpos.at[idx, 3:7].set(root_t[:, 3:7])
-            if zero_vel:
-                qvel = qvel.at[idx, :6].set(0.0)
-            else:
-                qvel = qvel.at[idx, :3].set(root_t[:, 7:10])
-                qvel = qvel.at[idx, 3:6].set(root_t[:, 10:13])
+            if jtype == mjtJoint.mjJNT_FREE:
+                qpos_ = _t2j(root_state[:, :7])
+                qpos  = qpos.at[idx, qadr : qadr + 7].set(qpos_)
+                if zero_vel:
+                    qvel = qvel.at[idx, vadr : vadr + 6].set(0.0)
+                else:
+                    qvel_ = _t2j(root_state[:, 7:13])
+                    qvel  = qvel.at[idx, vadr : vadr + 6].set(qvel_)
+            elif jtype in (mjtJoint.mjJNT_HINGE, mjtJoint.mjJNT_SLIDE):
+                qpos = qpos.at[idx, qadr].set(_t2j(root_state[:, 0]))
+                qvel = qvel.at[idx, vadr].set(0.0 if zero_vel else _t2j(root_state[:, 7]))
             return qpos, qvel
 
-        # ------------------------ ROBOTS --------------------------------------
-        for name, r in ts.robots.items():
-            j_names = self.get_joint_names(name, sort=True)
-            j_ids = jnp.array(self._robot_joint_ids[name], dtype=int)
+        def _write_joints_ctrl(qpos, qvel, ctrl,
+                            j_ids, a_ids,
+                            joint_pos, joint_vel, target):
+            if j_ids.size == 0 or joint_pos is None:
+                return qpos, qvel, ctrl
+
             qadr = model.jnt_qposadr[j_ids]
-            vadr = model.jnt_dofadr[j_ids]
+            vadr = model.jnt_dofadr [j_ids]
+            qpos = qpos.at[idx[:, None], qadr].set(_t2j(joint_pos))
+            qvel = qvel.at[idx[:, None], vadr].set(
+                jnp.zeros_like(_t2j(joint_vel)) if zero_vel else _t2j(joint_vel)
+            )
+            if a_ids is not None and target is not None:
+                ctrl = ctrl.at[idx[:, None], a_ids].set(_t2j(target))
+            return qpos, qvel, ctrl
 
-            qpos, qvel = _scatter_root(qpos, qvel, r.root_state)
-            if r.joint_pos is not None:
-                qpos = qpos.at[idx[:, None], qadr].set(_t2j(r.joint_pos))
-            qvel = qvel.at[idx[:, None], vadr].set(jnp.zeros_like(_t2j(r.joint_vel)) if zero_vel else _t2j(r.joint_vel))
-            ctrl = ctrl.at[idx[:, None], vadr].set(_t2j(r.joint_pos_target))
+        def _process_entity(qpos, qvel, ctrl,
+                            name, st,
+                            j_map, a_map):
+            fixed_root = name in self._fix_path_cache
+            j_ids      = j_map.get(name)
 
-        # ------------------------ OBJECTS ------------------------------------
-        for name, o in ts.objects.items():
-            qpos, qvel = _scatter_root(qpos, qvel, o.root_state)
+            if fixed_root:
+                non_root_jids = j_ids
+            else:
+                root_jid      = int(j_ids[0])
+                qpos, qvel    = _write_root_free(qpos, qvel, root_jid, st.root_state)
+                non_root_jids = j_ids[1:] if j_ids.size > 1 else jnp.empty(0, int)
 
-            if o.joint_pos is not None:
-                j_names = self.get_joint_names(name, sort=True)
-                # use name2id for object joints too
-                j_ids = jnp.array(self._object_joint_ids[name], dtype=int)
-                qadr = model.jnt_qposadr[j_ids]
-                vadr = model.jnt_dofadr[j_ids]
-
-                qpos = qpos.at[idx[:, None], qadr].set(_t2j(o.joint_pos))
-                qvel = qvel.at[idx[:, None], vadr].set(
-                    jnp.zeros_like(_t2j(o.joint_vel)) if zero_vel else _t2j(o.joint_vel)
+            if st.joint_pos is not None and non_root_jids.size > 0:
+                qpos, qvel, ctrl = _write_joints_ctrl(
+                    qpos, qvel, ctrl,
+                    non_root_jids, a_map.get(name),
+                    st.joint_pos, st.joint_vel,
+                    getattr(st, "joint_pos_target", None)
                 )
+            return qpos, qvel, ctrl
 
-        self._data = self._data.replace(qpos=qpos, qvel=qvel)
-        self._data = self._data.replace(ctrl=ctrl)  # (N,nv)
+        for n, r in ts.robots.items():
+            qpos, qvel, ctrl = _process_entity(
+                qpos, qvel, ctrl,
+                n, r,
+                self._robot_joint_ids, self._robot_act_ids
+            )
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        for n, o in ts.objects.items():
+            qpos, qvel, ctrl = _process_entity(
+                qpos, qvel, ctrl,
+                n, o,
+                self._object_joint_ids, self._object_act_ids
+            )
+
+        self._data = self._data.replace(qpos=qpos, qvel=qvel, ctrl=ctrl)
+
+        self._data  = jax.vmap(lambda d: mjx.forward(self._mjx_model, d))(self._data)
+
+    def _ensure_id_cache(self, ts: TensorState):
+        if hasattr(self, "_robot_joint_ids"):
+            return
+
+        capi = self._mj_model
+
+        self._robot_joint_ids, self._robot_act_ids = {}, {}
+        for rname in ts.robots:
+            jfull = [f"{rname}/{jn}" for jn in self._get_jnames(rname, sort=True)]
+            jids  = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, n) for n in jfull]
+            aids  = self._sorted_actuator_ids(f"{rname}/")
+            self._robot_joint_ids[rname] = jnp.asarray(jids, dtype=jnp.int32)
+            self._robot_act_ids [rname]  = jnp.asarray(aids, dtype=jnp.int32)
+
+        self._object_joint_ids, self._object_act_ids = {}, {}
+        for oname in ts.objects:
+            jfull = [f"{oname}/{jn}" for jn in self._get_jnames(oname, sort=True)]
+            jids  = [mujoco.mj_name2id(capi, mujoco.mjtObj.mjOBJ_JOINT, n) for n in jfull]
+            aids  = self._sorted_actuator_ids(f"{oname}/")
+            self._object_joint_ids[oname] = jnp.asarray(jids, dtype=jnp.int32)
+            self._object_act_ids [oname]  = jnp.asarray(aids, dtype=jnp.int32)
+
+
+    def _disable_robotgravity(self):
+        model = self._mjx_model
+        data  = self._data
+
+        g      = jnp.array([0.0, 0.0, -9.81])
+        ids    = jnp.asarray([
+            mujoco.mj_name2id(self._mj_model,
+                            mujoco.mjtObj.mjOBJ_BODY,
+                            name)
+            for name in self.robot_body_names
+        ])
+        mass   = model.body_mass[ids]
+        force  = (-g * mass[:, None])
+        xfrc   = data.xfrc_applied.at[:, :, :].set(0.0)
+        xfrc   = xfrc.at[:, ids, 0:3].set(force)
+
+        self._data = data.replace(xfrc_applied=xfrc)
+
+    def _init_mjx_once(self, ts: TensorState) -> None:
+        if getattr(self, "_mjx_done", False):
+            return
+
+        def _write_fixed_body(name, root_state):
+            pos  = root_state[0, :3].cpu().numpy()
+            quat = root_state[0, 3:7].cpu().numpy()
+            full = self._fix_path_cache[name]
+            bid  = mujoco.mj_name2id(
+                self._mj_model, mujoco.mjtObj.mjOBJ_BODY, full
+            )
+            self._mj_model.body_pos [bid] = pos
+            self._mj_model.body_quat[bid] = quat
+
+        for n in self._fix_path_cache:
+            if n in ts.objects:
+                _write_fixed_body(n, ts.objects[n].root_state)
+            elif n in ts.robots:
+                _write_fixed_body(n, ts.robots[n].root_state)
+        self._init_mjx()
+        self._mjx_done = True
+
+
+    def set_dof_targets(
+        self,
+        obj_name: str,
+        actions: list[Action],
+    ) -> None:
         """
-        Normal mode → write targets into Data.ctrl             (N,J)→(N,nv)
-        Replay mode → overwrite qpos directly (teleport)       (N,J)→(N,nq)
+        replay_traj = False → targets go to Data.ctrl
+        replay_traj = True  → qpos is overwritten (teleport)
         """
         self._actions_cache = actions
-        N = self.num_envs
 
+        # -------- build (N, J) tensor ---------------------------------
         jnames_local = self.get_joint_names(obj_name, sort=True)
-
-        # ---------- (N, J) torch tensor ----------
         tgt_torch = torch.stack(
             [
-                torch.tensor([actions[e]["dof_pos_target"][jn] for jn in jnames_local], dtype=torch.float32)
-                for e in range(N)
+                torch.tensor(
+                    [actions[e]["dof_pos_target"][jn] for jn in jnames_local],
+                    dtype=torch.float32,
+                )
+                for e in range(self.num_envs)
             ],
             dim=0,
-        )
-        tgt_jax = _t2j(tgt_torch)  # (N, J)
+        )                                           # (N, J)
+        tgt_jax = _t2j(tgt_torch)
 
-        # ----------  joint ids ----------
+        # -------- id maps ---------------------------------------------
         if obj_name == self._scenario.robot.name:
-            full_names = jnames_local
+            j_ids = self._robot_joint_ids[obj_name]
+            a_ids = self._robot_act_ids.get(obj_name)
         else:
-            full_names = [f"{obj_name}/{jn}" for jn in jnames_local]
-
-        j_ids = [self._joint_name2id[n] for n in full_names]
+            j_ids = self._object_joint_ids[obj_name]
+            a_ids = self._object_act_ids.get(obj_name)
 
         model = self._mjx_model
-        vadr = model.jnt_dofadr[j_ids]  # (J,)
-        qadr = model.jnt_qposadr[j_ids]  # (J,)
+        qadr  = model.jnt_qposadr[j_ids]            # (J,)
 
         data = self._data
         if self.replay_traj:
-            qpos = data.qpos.at[:, qadr].set(tgt_jax)
-            self._data = data.replace(qpos=qpos, qvel=data.qvel)
+            new_qpos = data.qpos.at[:, qadr].set(tgt_jax)
+            self._data = data.replace(qpos=new_qpos)
         else:
-            ctrl = data.ctrl.at[:, vadr].set(tgt_jax)
-            self._data = data.replace(ctrl=ctrl)
+            new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
+            self._data = data.replace(ctrl=new_ctrl)
+
 
     def close(self):
         pass
@@ -395,6 +482,7 @@ class MJXHandler(BaseSimHandler):
                 "resolution": f"{camera.width} {camera.height}",
             }
             mjcf_model.worldbody.add("camera", name=f"{camera.name}_custom", **camera_params)
+
             camera_max_width = max(camera_max_width, camera.width)
             camera_max_height = max(camera_max_height, camera.height)
 
@@ -427,31 +515,47 @@ class MJXHandler(BaseSimHandler):
             conaffinity="15",
             material="matplane",
         )
+
+
         self.object_body_names = []
         self.mj_objects = {}
         object_paths = []
         for obj in self.objects:
             object_paths.append(obj.mjcf_path)
-        for i, (obj, obj_path) in enumerate(zip(self.objects, object_paths)):
+
+        for obj, obj_path in zip(self.objects, object_paths):
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
-                xml_str = self._create_primitive_xml(obj)
-                obj_mjcf = mjcf.from_xml_string(xml_str)
+                obj_mjcf = mjcf.from_xml_string(self._create_primitive_xml(obj))
             else:
                 obj_mjcf = mjcf.from_path(obj_path)
-            obj_attached = mjcf_model.attach(obj_mjcf)
-            if not obj.fix_base_link:
-                obj_attached.add("freejoint")
-            self.object_body_names.append(obj_attached.full_identifier)
-            self.mj_objects[obj.name] = obj_mjcf
+            obj_mjcf.model = obj.name
 
+            if obj.fix_base_link:
+                obj_attached = mjcf_model.attach(obj_mjcf)
+                self._fix_path_cache[obj.name] = obj_attached.full_identifier
+            else:
+                obj_attached = mjcf_model.attach(obj_mjcf)
+                obj_attached.add('freejoint')
+            full_path = obj_attached.full_identifier
+            self.object_body_names.append(full_path)
+            self._object_root_path_cache[obj.name] = full_path
+            self.mj_objects[obj.name] = obj_attached
         robot_xml = mjcf.from_path(self._robot_path)
-        robot_attached = mjcf_model.attach(robot_xml)
-        if not self._robot.fix_base_link:
-            robot_attached.add("freejoint")
-        self.robot_attached = robot_attached
-        self.mj_objects[self._robot.name] = robot_xml
-        self._mujoco_robot_name = robot_xml.full_identifier
+
+        if self._robot.fix_base_link:
+            robot_attached = mjcf_model.attach(robot_xml)
+            self._fix_path_cache[self._robot.name] = robot_attached.full_identifier
+        else:
+            robot_attached = mjcf_model.attach(robot_xml)
+            robot_attached.add('freejoint')
+
+        full_path = robot_attached.full_identifier
+        self._robot_root_path_cache = {self._robot.name: full_path}
+        self.mj_objects[self._robot.name] = robot_attached
+        self._mujoco_robot_name = full_path
+
         return mjcf_model
+
 
     ############################################################
     ## Misc
@@ -459,9 +563,10 @@ class MJXHandler(BaseSimHandler):
     def refresh_render(self) -> None:
         pass
 
+
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            m = self._mj_model
+            m=self._mj_model
             names = [self._mj_model.body(i).name for i in range(self._mj_model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
             names = [name for name in names if name != ""]
@@ -486,58 +591,103 @@ class MJXHandler(BaseSimHandler):
         else:
             return []
 
-    def _make_mjx_model(self) -> mjcf.RootElement:
-        robot_dir = Path(self._scenario.robot.mjcf_path).parent
-        asset_dir = robot_dir / "assets"
+    def _get_jnames(self, obj_name: str, sort: bool = True) -> list[str]:
 
-        xml_str = self._mj_model.to_xml_string()
-        xml_str = re.sub(r"-[0-9a-f]{40}\.(stl|obj|dae)", r".\1", xml_str)
+        joint_names = [
+            self._mj_model.joint(joint_id).name
+            for joint_id in range(self._mj_model.njnt)
+            if self._mj_model.joint(joint_id).name.startswith(obj_name + "/")
+        ]
+        joint_names = [name.split("/")[-1] for name in joint_names]
+        if sort:
+            joint_names.sort()
+        return joint_names
 
-        tmp_xml = Path(tempfile.mktemp(suffix=".xml", dir=asset_dir))
-        tmp_xml.write_text(xml_str)
 
-        self._mj_model = mujoco.MjModel.from_xml_path(str(tmp_xml))
-        tmp_xml.unlink(missing_ok=True)
-        return mjx.put_model(self._mj_model)
+    # ------------------------------------------------------------
+    #  MJX helpers
+    # ------------------------------------------------------------
+    def _build_joint_name_map(self) -> None:
+        pool = self._mjx_model.names
+        adr  = self._mjx_model.name_jntadr
+        robot_prefix = self._scenario.robot.name
+        self._joint_name2id = {}
+
+        for jid, a in enumerate(adr):
+            raw = pool[int(a): pool.find(b"\0", int(a))].decode()
+            self._joint_name2id[raw] = jid
+            self._joint_name2id[raw.split("/")[-1]] = jid
+            if "/" not in raw:
+                self._joint_name2id[f"{robot_prefix}/{raw}"] = jid
+
+
+    def _build_root_bid_cache(self) -> None:
+        for name, mjcf_body in self.mj_objects.items():
+            full = mjcf_body.full_identifier
+            bid  = mujoco.mj_name2id(self._mj_model,
+                                    mujoco.mjtObj.mjOBJ_BODY,
+                                    full)
+            self._object_root_bid_cache[name] = bid
+
+
+    def _init_mjx(self) -> None:
+        if self._mj_model.opt.solver == mujoco.mjtSolver.mjSOL_PGS:
+            self._mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
+        self._mjx_model = mjx.put_model(self._mj_model)
+        self._build_joint_name_map()
+        self._build_root_bid_cache()
+
+        # batched empty data
+        data_single = mjx.make_data(self._mjx_model)
+        def _broadcast(x):
+            return jax.tree_util.tree_map(
+                lambda y: jnp.broadcast_to(y, (self.num_envs, *y.shape)), x)
+        self._data = _broadcast(data_single)
+
+        # sub-step kernel
+        self._substep = self._make_substep(self.decimation)
 
     def _make_substep(self, n_sub: int):
         def _one_env(model, data):
             def body(d, _):
-                return mjx.step(model, d), None
-
-            data, _ = jax.lax.scan(body, data, None, length=n_sub)
+                d = mjx.step(model, d)
+                return d, None
+            data, _ = jax.lax.scan(body, data, None, length=100)
             return data
-
         batched = jax.vmap(_one_env, in_axes=(None, 0))
-        return jax.jit(batched, donate_argnums=(1,))
+        return jax.jit(batched)
 
-    def _create_primitive_xml(self, obj) -> str:
-        """Generate a minimal MJCF string for primitive objects."""
+    def _create_primitive_xml(self, obj):
         if isinstance(obj, PrimitiveCubeCfg):
-            size, gtype = (
-                f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}",
-                "box",
-            )
+            size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
+            type_str = "box"
         elif isinstance(obj, PrimitiveCylinderCfg):
-            size, gtype = f"{obj.radius} {obj.height}", "cylinder"
+            size_str = f"{obj.radius} {obj.height}"
+            type_str = "cylinder"
         elif isinstance(obj, PrimitiveSphereCfg):
-            size, gtype = f"{obj.radius}", "sphere"
+            size_str = f"{obj.radius}"
+            type_str = "sphere"
         else:
             raise ValueError("Unknown primitive type")
 
-        rgba = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-        return (
-            f'<mujoco model="{obj.name}_model">'
-            f'<worldbody><body name="{gtype}_body" pos="0 0 0">'
-            f'<geom type="{gtype}" size="{size}" rgba="{rgba}"/>'
-            f"</body></worldbody></mujoco>"
-        )
+        rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
+        xml = f"""
+        <mujoco model="{obj.name}_model">
+        <worldbody>
+            <body name="{type_str}_body" pos="{0} {0} {0}">
+            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
+            </body>
+        </worldbody>
+        </mujoco>
+        """
+        return xml.strip()
 
     _KIND_META = {
-        "joint": ("njnt", "name_jntadr"),
-        "actuator": ("nu", "name_actuatoradr"),
-        "body": ("nbody", "name_bodyadr"),
+        "joint"    : ("njnt" , "name_jntadr"),
+        "actuator" : ("nu"   , "name_actuatoradr"),
+        "body"     : ("nbody", "name_bodyadr"),
     }
+
 
     def _decode_name(self, pool: bytes, adr: int) -> str:
         end = pool.find(b"\x00", adr)
@@ -546,11 +696,11 @@ class MJXHandler(BaseSimHandler):
     def _names_ids_mjx(self, kind: str):
         model = self._mjx_model
         size_attr, adr_attr = self._KIND_META[kind]
-        size = int(getattr(model, size_attr))
-        adr_arr = getattr(model, adr_attr)
-        pool = model.names
-        names = [self._decode_name(pool, int(adr_arr[i])) for i in range(size)]
-        ids = list(range(size))
+        size   = int(getattr(model, size_attr))
+        adr_arr= getattr(model, adr_attr)
+        pool   = model.names
+        names  = [self._decode_name(pool, int(adr_arr[i])) for i in range(size)]
+        ids    = list(range(size))
         return names, ids
 
     def _sorted_joint_info(self, prefix: str):
@@ -562,21 +712,33 @@ class MJXHandler(BaseSimHandler):
         names_sorted, j_ids = zip(*filt)
 
         model = self._mjx_model
-        qadr = model.jnt_qposadr[list(j_ids)]
-        vadr = model.jnt_dofadr[list(j_ids)]
+        qadr  = model.jnt_qposadr[list(j_ids)]
+        vadr  = model.jnt_dofadr[list(j_ids)]
         local = [n.split("/")[-1] for n in names_sorted]
         return jnp.asarray(qadr), jnp.asarray(vadr), local
 
-    def _sorted_actuator_ids(self, prefix: str):
-        names, ids = self._names_ids_mjx("actuator")
-        filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
-        return [i for n, i in sorted(filt, key=lambda t: t[0])]
+    def _sorted_actuator_ids(self, prefix: str) -> list[int]:
+        """
+        Return actuator ids whose *name* starts with `prefix`,
+        ordered by **lexicographical order of actuator names**,
+        exactly一致 with _get_actuator_reindex on MuJoCo-CPU.
+        """
+        names, ids = self._names_ids_mjx("actuator")      # parallel lists
+
+        # pick actuators under the given prefix
+        selected = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
+
+        # sort by name, keep the original aid
+        selected.sort(key=lambda t: t[0])
+
+        return [aid for _, aid in selected]
 
     def _sorted_body_ids(self, prefix: str):
         names, ids = self._names_ids_mjx("body")
-        filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
+        filt = [(n, i) for n, i in zip(names, ids)
+                if n.startswith(prefix) and n != prefix]
         filt.sort(key=lambda t: t[0])
-        body_ids = [i for _, i in filt]
+        body_ids    = [i for _, i in filt]
         local_names = [n.split("/")[-1] for n, _ in filt]
         return body_ids, local_names
 
@@ -595,6 +757,4 @@ class MJXHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 MJXEnv: type[EnvWrapper[MJXHandler]] = GymEnvWrapper(MJXHandler)
