@@ -7,10 +7,7 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 @configclass
 class UnitreeDex31Cfg(BaseRobotCfg):
-    """Cfg for the Unitree Dexterous Hand 3-1 robot.
-    Args:
-        BaseRobotCfg (_type_): _description_
-    """
+    """Cfg for the Unitree Dexterous Hand 3-1 robot."""
 
     name: str = "unitree_dex3_1"
 
