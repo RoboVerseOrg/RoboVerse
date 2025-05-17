@@ -25,9 +25,8 @@ class BaseActuatorCfg:
 
 @configclass
 class BaseRobotCfg(ArticulationObjCfg):
-    """Base Cfg class for robots."""
+    """Base configuration class for robots."""
 
-    # Articulation
     num_joints: int = MISSING
     actuators: dict[str, BaseActuatorCfg] = {}
     ee_body_name: str | None = None
@@ -40,11 +39,6 @@ class BaseRobotCfg(ArticulationObjCfg):
         str, Literal["position", "effort"]
     ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
 
-    """
-    Joint limits in the format of `{joint_name: (lower_limit, upper_limit)}`.
-    Note that different simulators may have different order of joints, so you should not use the order in this dict!
-    """
-
     gripper_release_q: list[float] = MISSING
     gripper_actuate_q: list[float] = MISSING
 
@@ -53,9 +47,18 @@ class BaseRobotCfg(ArticulationObjCfg):
     curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
     curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
 
-    # Simulation
     enabled_gravity: bool = True
-    """Whether to enable gravity in the simulation."""
+    """Whether to enable gravity. Default to True."""
+
     enabled_self_collisions: bool = True
+    """Whether to enable self collisions. Default to True."""
+
     isaacgym_flip_visual_attachments: bool = True
+    """Whether to flip visual attachments when loading the URDF in IsaacGym. Default to True. For more details, see
+    - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.flip_visual_attachments"""
+
     collapse_fixed_joints: bool = False
+    """Whether to collapse fixed joints when loading the URDF in IsaacGym or Genesis. Default to False. For more details, see
+    - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.collapse_fixed_joints
+    - Genesis doc: https://genesis-world.readthedocs.io/en/latest/api_reference/options/morph/file_morph/urdf.html
+    """
