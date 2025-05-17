@@ -33,8 +33,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     fix_base_link: bool = True
     joint_limits: dict[str, tuple[float, float]] = {}
     default_joint_positions: dict[str, float] = {}
-    default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
+
     control_type: dict[
         str, Literal["position", "effort"]
     ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
