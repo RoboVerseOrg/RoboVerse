@@ -34,18 +34,6 @@ class BaseRobotCfg(ArticulationObjCfg):
     joint_limits: dict[str, tuple[float, float]] = {}
     default_joint_positions: dict[str, float] = {}
 
-    control_type: dict[
-        str, Literal["position", "effort"]
-    ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
-
-    gripper_release_q: list[float] = MISSING
-    gripper_actuate_q: list[float] = MISSING
-
-    # cuRobo Configs
-    curobo_ref_cfg_name: str = MISSING
-    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
-    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
-
     enabled_gravity: bool = True
     """Whether to enable gravity. Default to True."""
 
@@ -60,4 +48,26 @@ class BaseRobotCfg(ArticulationObjCfg):
     """Whether to collapse fixed joints when loading the URDF in IsaacGym or Genesis. Default to False. For more details, see
     - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.collapse_fixed_joints
     - Genesis doc: https://genesis-world.readthedocs.io/en/latest/api_reference/options/morph/file_morph/urdf.html
+    """
+
+    ############################################################
+    ## For motion planning and retargetting using cuRobo
+    ############################################################
+
+    gripper_release_q: list[float] = MISSING
+    gripper_actuate_q: list[float] = MISSING
+    curobo_ref_cfg_name: str = MISSING
+    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
+    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
+
+    ############################################################
+    ## Experimental
+    ############################################################
+
+    control_type: dict[
+        str, Literal["position", "effort"]
+    ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
+    """WARNING: This is experimental and subject to change.
+
+    Control type for each joint.
     """
