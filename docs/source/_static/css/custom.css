@@ -120,3 +120,43 @@ a {
     left: 0;
     color: #000; /* Set your desired color */
 }
+
+
+/* ========== Benchmark-Only ========== */
+
+.bd-content table.benchmark {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin-bottom: 1.5em;
+}
+
+.bd-content table.benchmark thead th {
+  border: 1px solid var(--pst-color-border) !important;
+  border-bottom: 2px solid var(--pst-color-primary) !important;
+  padding: 0.75em 1em !important;
+  text-align: left !important;
+}
+
+.bd-content table.benchmark thead th:first-child {
+  border-left: 1px solid var(--pst-color-border) !important;
+}
+.bd-content table.benchmark thead th:last-child {
+  border-right: 1px solid var(--pst-color-border) !important;
+}
+
+.bd-content table.benchmark th,
+.bd-content table.benchmark td {
+  border: 1px solid var(--pst-color-border) !important;
+  padding: 0.5em 1em !important;
+}
+
+.bd-content table.benchmark tbody tr:nth-child(odd) {
+  background-color: var(--pst-color-surface) !important;
+}
+.bd-content table.benchmark tbody tr:nth-child(even) {
+  background-color: var(--pst-color-background) !important;
+}
+
+.bd-content table.benchmark tbody tr:hover {
+  background-color: var(--pst-color-table-row-hover-bg) !important;
+}
