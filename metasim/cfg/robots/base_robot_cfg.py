@@ -9,6 +9,8 @@ from metasim.utils import configclass
 
 @configclass
 class BaseActuatorCfg:
+    """Base configuration class for actuators."""
+
     velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?
     is_ee: bool = False
     damping: float | None = None
