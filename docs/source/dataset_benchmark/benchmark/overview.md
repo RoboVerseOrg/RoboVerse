@@ -10,4 +10,3 @@ models.
 
 The generalization benchmark is based on randomization options that automatically applied to any task. We implemented it as an environment wrapper.
 
-Currently RoboVerse Benchmark is only supported with manipulation tasks in IsaacLab, which is implemented in `metasim.sim.isaaclab.env_overwritter.IsaaclabEnvOverwriter`.
