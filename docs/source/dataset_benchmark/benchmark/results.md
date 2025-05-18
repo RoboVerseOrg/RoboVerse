@@ -7,9 +7,9 @@
   <thead>
     <tr>
       <th rowspan="2">Task name</th>
-      <th>RGB</th>
+      <th><center>RGB</center></th>
       <th colspan="3"><center>RGBD</center></th>
-      <th colspan="2">PointCloud</th>
+      <th colspan="2"><center>PointCloud</center></th>
     </tr>
     <tr>
       <th>resnet18</th>
@@ -84,9 +84,9 @@
   <thead>
     <tr>
       <th rowspan="2">Task name</th>
-      <th>RGB</th>
+      <th><center>RGB</center></th>
       <th colspan="3"><center>RGBD</center></th>
-      <th colspan="2">PointCloud</th>
+      <th colspan="2"><center>PointCloud</center></th>
     </tr>
     <tr>
       <th>resnet18</th>
