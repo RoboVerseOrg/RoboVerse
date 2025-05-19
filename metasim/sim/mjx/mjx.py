@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 
+# Disable JAX GPU memory preallocation to avoid conflicts with MuJoCo rendering.
+# Docs: https://jax.readthedocs.io/en/latest/gpu_memory_allocation.html
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 import tempfile
@@ -120,7 +122,7 @@ class MJXHandler(BaseSimHandler):
         r_cfg = self._scenario.robot
         prefix = f"{r_cfg.name}/"
 
-        qadr_r, vadr_r, _ = self._sorted_joint_info(prefix)
+        qadr_r, vadr_r = self._sorted_joint_info(prefix)
         aid_r = self._sorted_actuator_ids(prefix)
 
         root_bid_r = self._object_root_bid_cache.get(
@@ -169,7 +171,7 @@ class MJXHandler(BaseSimHandler):
             )
 
             if isinstance(obj, ArticulationObjCfg):
-                qadr_o, vadr_o, _ = self._sorted_joint_info(prefix)
+                qadr_o, vadr_o = self._sorted_joint_info(prefix)
                 body_state_o = jnp.concatenate(
                     [data.xpos[idx[:, None], bid_o], data.xquat[idx[:, None], bid_o], data.cvel[idx[:, None], bid_o]],
                     axis=-1,  # (B, Bbody, 13)
@@ -661,36 +663,57 @@ class MJXHandler(BaseSimHandler):
         return names, ids
 
     def _sorted_joint_info(self, prefix: str):
+        """
+        Get qpos and dof indices of joints whose names start with the given prefix, sorted alphabetically.
+
+        Args:
+            prefix (str): Joint name prefix, e.g., "franka/panda_joint".
+
+        Returns:
+            Tuple[jnp.ndarray, jnp.ndarray]: qpos and dof address arrays.
+        """
         names, ids = self._names_ids_mjx("joint")
         filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
         if not filt:
             raise ValueError(f"No joints start with '{prefix}'")
         filt.sort(key=lambda t: t[0])
-        names_sorted, j_ids = zip(*filt)
+        _, j_ids = zip(*filt)
 
         model = self._mjx_model
         qadr = model.jnt_qposadr[list(j_ids)]
         vadr = model.jnt_dofadr[list(j_ids)]
-        local = [n.split("/")[-1] for n in names_sorted]
-        return jnp.asarray(qadr), jnp.asarray(vadr), local
+        return jnp.asarray(qadr), jnp.asarray(vadr)
+
 
     def _sorted_actuator_ids(self, prefix: str) -> list[int]:
         """
-        Return actuator ids whose *name* starts with `prefix`,
-        ordered by **lexicographical order of actuator names**,
-        exactly一致 with _get_actuator_reindex on MuJoCo-CPU.
+        Get actuator IDs whose names start with the given prefix, sorted alphabetically.
+
+        Args:
+            prefix (str): Actuator name prefix, e.g., "franka/".
+
+        Returns:
+            list[int]: Sorted list of actuator IDs matching the prefix.
         """
-        names, ids = self._names_ids_mjx("actuator")  # parallel lists
-
-        # pick actuators under the given prefix
+        names, ids = self._names_ids_mjx("actuator")
         selected = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
-
-        # sort by name, keep the original aid
         selected.sort(key=lambda t: t[0])
 
         return [aid for _, aid in selected]
 
+
     def _sorted_body_ids(self, prefix: str):
+        """
+        Get body IDs and local names for all bodies under the given prefix, sorted by name.
+
+        Args:
+            prefix (str): Body name prefix, e.g., "franka".
+
+        Returns:
+            Tuple[list[int], list[str]]:
+                - body_ids: Sorted body ID list (excluding the prefix itself)
+                - local_names: Corresponding local names (suffix after '/')
+        """
         names, ids = self._names_ids_mjx("body")
         filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
         filt.sort(key=lambda t: t[0])
