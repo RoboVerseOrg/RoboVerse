@@ -149,6 +149,8 @@ class FileDownloader:
             self._add(obj.urdf_path)
         elif self.scenario.sim in ["mujoco"]:
             self._add(obj.mjcf_path)
+        elif self.scenario.sim in ["mjx"]:
+            self._add(obj.mjx_mjcf_path)
 
     def _add(self, filepath: str):
         self.files_to_download.append(filepath)
