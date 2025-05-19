@@ -41,16 +41,8 @@ class MujocoHandler(BaseSimHandler):
             self.cameras.append(camera)
         self._episode_length_buf = 0
 
-        self.replay_traj = False
-        self.use_task_decimation = False
-
         # FIXME: hard code decimation for now
-        if self.use_task_decimation:
-            self.decimation = self.scenario.decimation
-        elif self.replay_traj:
-            log.warning("Warning: hard coding decimation to 1 for object states")
-            self.decimation = 1
-        elif self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
+        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
@@ -367,15 +359,9 @@ class MujocoHandler(BaseSimHandler):
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
         joint_targets = actions[0]["dof_pos_target"]
-
-        if self.replay_traj:
-            for joint_name, target_pos in joint_targets.items():
-                joint = self.physics.data.joint(f"{self._mujoco_robot_name}{joint_name}")
-                joint.qpos = target_pos
-        else:
-            for joint_name, target_pos in joint_targets.items():
-                actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
-                actuator.ctrl = target_pos
+        for joint_name, target_pos in joint_targets.items():
+            actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
+            actuator.ctrl = target_pos
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
