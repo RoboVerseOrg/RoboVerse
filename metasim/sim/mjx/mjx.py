@@ -18,26 +18,14 @@ from dm_control import mjcf
 from loguru import logger as log
 from mujoco import mjx
 
-from metasim.cfg.objects import (
-    ArticulationObjCfg,
-    PrimitiveCubeCfg,
-    PrimitiveCylinderCfg,
-    PrimitiveSphereCfg,
-)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
-from .mjx_helper import (
-    j2t,
-    process_entity,
-    sorted_actuator_ids,
-    sorted_body_ids,
-    sorted_joint_info,
-    t2j,
-)
+from .mjx_helper import j2t, process_entity, sorted_actuator_ids, sorted_body_ids, sorted_joint_info, t2j
 
 
 class MJXHandler(BaseSimHandler):
