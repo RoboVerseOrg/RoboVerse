@@ -8,18 +8,6 @@ from mujoco import mjtJoint
 
 from metasim.types import ObjectState, RobotState
 
-__all__: list[str] = [
-    "j2t",
-    # state-writing core
-    "process_entity",
-    "sorted_actuator_ids",
-    "sorted_body_ids",
-    # name/ID utilities
-    "sorted_joint_info",
-    # tensor bridges
-    "t2j",
-]
-
 
 def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.ndarray:
     """Torch → JAX (keeps data on the requested device)."""
@@ -27,6 +15,8 @@ def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.nd
         arr = arr.to(device, non_blocking=True)
     x = jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
     return x
+
+
 
 def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
     """JAX → Torch (keeps data on the requested device)."""
@@ -52,7 +42,7 @@ def _write_root_joint(
     zero_vel: bool = True,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     """
-    Copy a **free / hinge / slide** root joint from *root_state* into the
+    Copy a free / hinge / slide root joint from *root_state* into the
     batched MJX buffers.
 
     * free  joint  ➜ 7-DoF pose  +  6-DoF vel
@@ -61,12 +51,12 @@ def _write_root_joint(
     If *zero_vel* is True, velocities are zeroed regardless of input.
     """
     jtype = model.jnt_type[root_jid]
-    qadr  = model.jnt_qposadr[root_jid]
-    vadr  = model.jnt_dofadr[root_jid]
+    qadr = model.jnt_qposadr[root_jid]
+    vadr = model.jnt_dofadr[root_jid]
 
     # -------- free joint (quat + pos) --------------------------------
     if jtype == mjtJoint.mjJNT_FREE:
-        qpos_vals = t2j(root_state[:, :7])               # (N,7)
+        qpos_vals = t2j(root_state[:, :7])  # (N,7)
         qpos = qpos.at[idx, qadr : qadr + 7].set(qpos_vals)
 
         vel_vals = 0.0 if zero_vel else t2j(root_state[:, 7:13])  # (N,6)
@@ -109,8 +99,8 @@ def _write_articulated_block(
         return qpos, qvel, ctrl
 
     # Vectorised address lookup for these joints
-    qadr = model.jnt_qposadr[joint_ids]      # (J,)
-    vadr = model.jnt_dofadr[joint_ids]       # (J,)
+    qadr = model.jnt_qposadr[joint_ids]  # (J,)
+    vadr = model.jnt_dofadr[joint_ids]  # (J,)
 
     # --- qpos ---------------------------------------------------------
     qpos = qpos.at[idx[:, None], qadr].set(t2j(joint_pos))
@@ -124,8 +114,6 @@ def _write_articulated_block(
         ctrl = ctrl.at[idx[:, None], actuator_ids].set(t2j(joint_target))
 
     return qpos, qvel, ctrl
-
-
 
 
 def process_entity(
@@ -173,23 +161,22 @@ def process_entity(
     return qpos, qvel, ctrl
 
 
-
-_KIND_META = {          # (size-field, adr-field) for each name-pool category
-    "joint":    ("njnt", "name_jntadr"),
-    "actuator": ("nu",   "name_actuatoradr"),
-    "body":     ("nbody","name_bodyadr"),
+_KIND_META = {  # (size-field, adr-field) for each name-pool category
+    "joint": ("njnt", "name_jntadr"),
+    "actuator": ("nu", "name_actuatoradr"),
+    "body": ("nbody", "name_bodyadr"),
 }
 
 
 def _decode_name(pool: bytes, adr: int) -> str:
     """Return the C-string at `adr` inside MuJoCo name pool `pool`."""
-    end = pool.find(b"\x00", adr)        # names are null-terminated
+    end = pool.find(b"\x00", adr)  # names are null-terminated
     return pool[adr:end].decode()
 
 
 def _names_ids_mjx(model, kind: str):
     """
-    Fetch **all** names (strings) and their indices (ints) for a given `kind`
+    Fetch all names (strings) and their indices (ints) for a given `kind`
     from an mjx model.  `kind` ∈ {"joint", "actuator", "body"}.
     """
     size_attr, adr_attr = _KIND_META[kind]
@@ -204,16 +191,25 @@ def _names_ids_mjx(model, kind: str):
 
 def sorted_joint_info(model, prefix: str):
     """
-    Return qpos / dof address arrays (jax) for **all joints** whose name
-    starts with `prefix`, sorted alphabetically.
+    Return (qadr, vadr) address arrays for all joints whose full name starts
+    with ``prefix``, sorted alphabetically.
+
+    Example
+    -------
+    Joints:
+        panda_joint1
+        panda_joint2
+        panda_joint_finger1
+
+    After sorting::
+        panda_joint1 → panda_joint2 → panda_joint_finger1
     """
-    names, ids  = _names_ids_mjx(model, "joint")
-    matches     = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
+    names, ids = _names_ids_mjx(model, "joint")
+    matches = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
     if not matches:
         raise ValueError(f"No joints begin with '{prefix}'")
     matches.sort(key=lambda t: t[0])      # alpha order by full name
     _, j_ids = zip(*matches)
-
     qadr = model.jnt_qposadr[list(j_ids)]
     vadr = model.jnt_dofadr[list(j_ids)]
     return jnp.asarray(qadr), jnp.asarray(vadr)
@@ -229,13 +225,23 @@ def sorted_actuator_ids(model, prefix: str):
 
 def sorted_body_ids(model, prefix: str):
     """
-    Return (body_ids, local_names) for **all bodies below** the path `prefix/…`,
-    sorted by their full name (alphabetical).
+    Return ``(body_ids, local_names)`` for every body whose full name starts
+    with ``prefix/`` (excluding the root ``prefix`` body itself), sorted
+    alphabetically by full name.
+
+    Example
+    -------
+    Bodies:
+        panda_link0
+        panda_link3
+        panda_left_finger
+
+    After sorting::
+        panda_link0  → panda_ink3 → panda_left_finger
     """
-    names, ids  = _names_ids_mjx(model, "body")
-    filt        = [(n, i) for n, i in zip(names, ids)
-                   if n.startswith(prefix) and n != prefix]
+    names, ids = _names_ids_mjx(model, "body")
+    filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
     filt.sort(key=lambda t: t[0])
-    body_ids    = [i for _, i in filt]
+    body_ids = [i for _, i in filt]
     local_names = [n.split("/")[-1] for n, _ in filt]
     return body_ids, local_names

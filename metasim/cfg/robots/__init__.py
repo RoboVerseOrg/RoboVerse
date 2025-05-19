@@ -5,7 +5,6 @@ from .ant_cfg import AntCfg
 from .base_robot_cfg import BaseRobotCfg
 from .fetch_cfg import FetchCfg
 from .franka_cfg import FrankaCfg
-from .franka_mjx_cfg import FrankaMjxCfg
 from .franka_slide_urdf_cfg import FrankaSlideUrdfCfg
 from .franka_slide_urdf_sapien_cfg import FrankaSlideUrdfSapienCfg
 from .franka_urdf_cfg import FrankaUrdfCfg

@@ -44,6 +44,8 @@ class RigidObjCfg(BaseObjCfg):
     usd_path: str | None = None
     urdf_path: str | None = None
     mjcf_path: str | None = None
+    mjx_mjcf_path: str | None = None
+    """Path to the MJCF file only used for MJX. If not specified, it will be the same as mjcf_path."""
     mesh_path: str | None = None
     collision_enabled: bool = True
     physics: PhysicStateType | None = None
@@ -72,6 +74,10 @@ class RigidObjCfg(BaseObjCfg):
         ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
         if isinstance(self.scale, float):
             self.scale = (self.scale, self.scale, self.scale)
+
+        ## Set the mjx_mjcf_path if it is not specified.
+        if self.mjx_mjcf_path is None:
+            self.mjx_mjcf_path = self.mjcf_path
 
 
 @configclass

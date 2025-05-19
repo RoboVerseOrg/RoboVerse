@@ -18,6 +18,7 @@ class FrankaCfg(BaseRobotCfg):
     fix_base_link: bool = True
     usd_path: str = "roboverse_data/robots/franka/usd/franka_v2.usd"
     mjcf_path: str = "roboverse_data/robots/franka/mjcf/panda.xml"
+    mjx_mjcf_path: str = "roboverse_data/robots/franka/mjcf/mjx_panda.xml"
     # urdf_path: str = "roboverse_data/robots/franka/urdf/panda.urdf"  # work for pybullet and sapien
     urdf_path: str = "roboverse_data/robots/franka/urdf/franka_panda.urdf"  # work for isaacgym
     enabled_gravity: bool = False
