@@ -56,19 +56,12 @@ class MJXHandler(BaseSimHandler):
         self._renderer = None
 
         self._episode_length_buf = torch.zeros(self.num_envs, dtype=torch.int32)
-        self.replay_traj = False
-        self.use_taskdecimation = False
         self._object_root_path_cache: dict[str, str] = {}
         self._object_root_bid_cache: dict[str, int] = {}
         self._fix_path_cache: dict[str, int] = {}
         self._gravity_compensation = not self._robot.enabled_gravity
 
-        if self.use_taskdecimation:
-            self.decimation = self.scenario.decimation
-        elif self.replay_traj:
-            log.warning("Warning: hard coding decimation to 1 for object states")
-            self.decimation = 1
-        elif self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
+        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
@@ -341,10 +334,6 @@ class MJXHandler(BaseSimHandler):
         obj_name: str,
         actions: list[Action],
     ) -> None:
-        """
-        replay_traj = False → targets go to Data.ctrl
-        replay_traj = True  → qpos is overwritten (teleport)
-        """
         self._actions_cache = actions
 
         # -------- build (N, J) tensor ---------------------------------
@@ -373,12 +362,8 @@ class MJXHandler(BaseSimHandler):
         qadr = model.jnt_qposadr[j_ids]  # (J,)
 
         data = self._data
-        if self.replay_traj:
-            new_qpos = data.qpos.at[:, qadr].set(tgt_jax)
-            self._data = data.replace(qpos=new_qpos)
-        else:
-            new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
-            self._data = data.replace(ctrl=new_ctrl)
+        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
+        self._data = data.replace(ctrl=new_ctrl)
 
     def close(self):
         pass
