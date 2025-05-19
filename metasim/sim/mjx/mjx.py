@@ -352,14 +352,9 @@ class MJXHandler(BaseSimHandler):
 
         # -------- id maps ---------------------------------------------
         if obj_name == self._scenario.robot.name:
-            j_ids = self._robot_joint_ids[obj_name]
             a_ids = self._robot_act_ids.get(obj_name)
         else:
-            j_ids = self._object_joint_ids[obj_name]
             a_ids = self._object_act_ids.get(obj_name)
-
-        model = self._mjx_model
-        qadr = model.jnt_qposadr[j_ids]  # (J,)
 
         data = self._data
         new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
@@ -468,7 +463,6 @@ class MJXHandler(BaseSimHandler):
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            m = self._mj_model
             names = [self._mj_model.body(i).name for i in range(self._mj_model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
             names = [name for name in names if name != ""]
