@@ -35,12 +35,11 @@ class BaseActuatorCfg:
     If None, use the value specified in the asset file and interpreted by the simulator.
     """
 
-    actionable: bool = True
-    """Whether the actuator is actionable, i.e. can be driven by a motor.
+    fully_actuated: bool = True
+    """Whether the actuator is fully actuated.
 
     Example:
-        Most actuators are actionable, but some are not, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper.
-        See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
+        Some actuators are fully actuated. Otherwise, they are underactuated, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper. See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
     """
 
     ############################################################

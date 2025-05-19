@@ -306,7 +306,7 @@ class IsaacgymHandler(BaseSimHandler):
                 log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
                 raise ValueError
 
-            if i_actuator_cfg.actionable:
+            if i_actuator_cfg.fully_actuated:
                 num_actions += 1
 
         self._default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)

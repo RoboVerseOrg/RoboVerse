@@ -26,8 +26,8 @@ class KinovaGen3Robotiq2f85Cfg(BaseRobotCfg):
         "joint_6": BaseActuatorCfg(),
         "joint_7": BaseActuatorCfg(),
         "finger_joint": BaseActuatorCfg(),
-        "left_outer_finger_joint": BaseActuatorCfg(actionable=False),
-        "right_outer_finger_joint": BaseActuatorCfg(actionable=False),
+        "left_outer_finger_joint": BaseActuatorCfg(fully_actuated=False),
+        "right_outer_finger_joint": BaseActuatorCfg(fully_actuated=False),
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "joint_1": (-math.pi, math.pi),  # actually is -inf to +inf
