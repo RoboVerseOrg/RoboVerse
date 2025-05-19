@@ -103,13 +103,13 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("Blender is not installed, please install it first")
             raise e
-    elif sim == SimType.Playground:
+    elif sim == SimType.MJX:
         try:
-            from mujoco_playground import wrapper
+            from metasim.sim.mjx import MJXHandler
 
-            return wrapper
+            return MJXHandler
         except ImportError as e:
-            log.error("Playground is not installed, please install it first")
+            log.error("MJX is not installed, please install it first")
             raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")
