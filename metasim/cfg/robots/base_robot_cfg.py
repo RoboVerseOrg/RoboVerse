@@ -39,7 +39,7 @@ class BaseActuatorCfg:
     """Whether the actuator is fully actuated.
 
     Example:
-        Some actuators are fully actuated. Otherwise, they are underactuated, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper. See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
+        Most actuators are fully actuated. Otherwise, they are underactuated, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper. See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
     """
 
     ############################################################
