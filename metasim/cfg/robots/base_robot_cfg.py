@@ -11,17 +11,45 @@ from metasim.utils import configclass
 class BaseActuatorCfg:
     """Base configuration class for actuators."""
 
-    velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?
-    is_ee: bool = False
-    damping: float | None = None
-    stiffness: float | None = None
+    velocity_limit: float | None = None
+    """Velocity limit of the actuator.
+
+    If None, use the value specified in the asset file and interpreted by the simulator.
+    """
+
     torque_limit: float | None = None
+    """Torque limit of the actuator.
+
+    If None, use the value specified in the asset file and interpreted by the simulator.
+    """
+
+    damping: float | None = None
+    """Damping of the actuator.
+
+    If None, use the value specified in the asset file and interpreted by the simulator.
+    """
+
+    stiffness: float | None = None
+    """Stiffness of the actuator.
+
+    If None, use the value specified in the asset file and interpreted by the simulator.
+    """
+
     actionable: bool = True
     """Whether the actuator is actionable, i.e. can be driven by a motor.
 
     Example:
         Most actuators are actionable, but some are not, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper.
         See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
+    """
+
+    ############################################################
+    ## For motion planning and retargetting using cuRobo
+    ############################################################
+    is_ee: bool = False
+    """Whether the actuator is an end effector.
+
+    If True, the actuator will be treated as a part of the end effector for motion planning and retargetting. This configuration may not be used for other purposes.
     """
 
 
