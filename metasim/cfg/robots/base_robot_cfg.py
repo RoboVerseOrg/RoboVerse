@@ -48,7 +48,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     """Actuators in the robots. The keys are the names of the actuators, and the values are the configurations of the actuators. The names should be consistent with the names in the asset file."""
 
     ee_body_name: str | None = None
-    """Name of the end effector body. Default to None."""
+    """Name of the end effector body, which should be consistent with the name in the asset file. This is used for end-effector control."""
 
     fix_base_link: bool = True
     """Whether to fix the base link. Default to True."""
@@ -60,10 +60,10 @@ class BaseRobotCfg(ArticulationObjCfg):
     """Default joint positions of the robots. The keys are the names of the joints, and the values are the default positions of the joints. The names should be consistent with the names in the asset file."""
 
     enabled_gravity: bool = True
-    """Whether to enable gravity. Default to True."""
+    """Whether to enable gravity. Default to True. If False, the robot will not be affected by gravity."""
 
     enabled_self_collisions: bool = True
-    """Whether to enable self collisions. Default to True."""
+    """Whether to enable self collisions. Default to True. If False, the robot will not collide with itself."""
 
     isaacgym_flip_visual_attachments: bool = True
     """Whether to flip visual attachments when loading the URDF in IsaacGym. Default to True. For more details, see
