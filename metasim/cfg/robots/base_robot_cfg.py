@@ -12,28 +12,16 @@ class BaseActuatorCfg:
     """Base configuration class for actuators."""
 
     velocity_limit: float | None = None
-    """Velocity limit of the actuator.
-
-    If None, use the value specified in the asset file and interpreted by the simulator.
-    """
+    """Velocity limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
     torque_limit: float | None = None
-    """Torque limit of the actuator.
-
-    If None, use the value specified in the asset file and interpreted by the simulator.
-    """
+    """Torque limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
     damping: float | None = None
-    """Damping of the actuator.
-
-    If None, use the value specified in the asset file and interpreted by the simulator.
-    """
+    """Damping of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
     stiffness: float | None = None
-    """Stiffness of the actuator.
-
-    If None, use the value specified in the asset file and interpreted by the simulator.
-    """
+    """Stiffness of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
     fully_actuated: bool = True
     """Whether the actuator is fully actuated. Default to True.
@@ -46,10 +34,7 @@ class BaseActuatorCfg:
     ## For motion planning and retargetting using cuRobo
     ############################################################
     is_ee: bool = False
-    """Whether the actuator is an end effector.
-
-    If True, the actuator will be treated as a part of the end effector for motion planning and retargetting. This configuration may not be used for other purposes.
-    """
+    """Whether the actuator is an end effector. Default to False. If True, the actuator will be treated as a part of the end effector for motion planning and retargetting. This configuration may not be used for other purposes."""
 
 
 @configclass
@@ -57,11 +42,22 @@ class BaseRobotCfg(ArticulationObjCfg):
     """Base configuration class for robots."""
 
     num_joints: int = MISSING
+    """Number of joints in the robots."""
+
     actuators: dict[str, BaseActuatorCfg] = {}
+    """Actuators in the robots. The keys are the names of the actuators, and the values are the configurations of the actuators. The names should be consistent with the names in the asset file."""
+
     ee_body_name: str | None = None
+    """Name of the end effector body. Default to None."""
+
     fix_base_link: bool = True
+    """Whether to fix the base link. Default to True."""
+
     joint_limits: dict[str, tuple[float, float]] = {}
+    """Joint limits of the robots. The keys are the names of the joints, and the values are the limits of the joints. The names should be consistent with the names in the asset file."""
+
     default_joint_positions: dict[str, float] = {}
+    """Default joint positions of the robots. The keys are the names of the joints, and the values are the default positions of the joints. The names should be consistent with the names in the asset file."""
 
     enabled_gravity: bool = True
     """Whether to enable gravity. Default to True."""
