@@ -1,7 +1,7 @@
 [project]
 name = "roboverse-py"
 version = "0.1.17"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.8"
 dependencies = [
     "gymnasium",
     "huggingface-hub",
@@ -37,7 +37,7 @@ isaacgym = [
     "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco", "dm-control"]
-mjx = ["mujoco-mjx", "dm-control", "jax[cuda]"]
+mjx = ["mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]"]
 sapien2 = ["mani-skill2 @ git+https://github.com/haosulab/ManiSkill.git@v0.5.3"]
 sapien3 = ["sapien>=3.0.0.b1"]
 pybullet = ["numpy<2", "pybullet"]

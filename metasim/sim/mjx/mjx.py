@@ -101,7 +101,7 @@ class MJXHandler(BaseSimHandler):
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
             self._render_data = mujoco.MjData(self._mj_model)
 
-        log.info(f"MJXHandler launched · envs={self.num_envs}")
+        log.info(f"MJXHandler launched with envs={self.num_envs}")
 
     def simulate(self) -> None:
         if self._gravity_compensation:
