@@ -17,7 +17,6 @@ def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.nd
     return x
 
 
-
 def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
     """JAX → Torch (keeps data on the requested device)."""
     if device:
@@ -180,13 +179,13 @@ def _names_ids_mjx(model, kind: str):
     from an mjx model.  `kind` ∈ {"joint", "actuator", "body"}.
     """
     size_attr, adr_attr = _KIND_META[kind]
-    size     = int(getattr(model, size_attr))
-    adr_arr  = getattr(model, adr_attr)   # pointer array into the name-pool
-    pool     = model.names
+    size = int(getattr(model, size_attr))
+    adr_arr = getattr(model, adr_attr)  # pointer array into the name-pool
+    pool = model.names
 
     names = [_decode_name(pool, int(adr_arr[i])) for i in range(size)]
-    ids   = list(range(size))
-    return names, ids                     # parallel lists
+    ids = list(range(size))
+    return names, ids  # parallel lists
 
 
 def sorted_joint_info(model, prefix: str):
@@ -208,7 +207,7 @@ def sorted_joint_info(model, prefix: str):
     matches = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
     if not matches:
         raise ValueError(f"No joints begin with '{prefix}'")
-    matches.sort(key=lambda t: t[0])      # alpha order by full name
+    matches.sort(key=lambda t: t[0])  # alpha order by full name
     _, j_ids = zip(*matches)
     qadr = model.jnt_qposadr[list(j_ids)]
     vadr = model.jnt_dofadr[list(j_ids)]
@@ -217,8 +216,8 @@ def sorted_joint_info(model, prefix: str):
 
 def sorted_actuator_ids(model, prefix: str):
     """Return **sorted** actuator IDs whose name begins with `prefix`."""
-    names, ids  = _names_ids_mjx(model, "actuator")
-    sel         = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
+    names, ids = _names_ids_mjx(model, "actuator")
+    sel = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
     sel.sort(key=lambda t: t[0])
     return [i for _, i in sel]
 
