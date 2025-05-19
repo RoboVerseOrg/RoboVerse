@@ -7,6 +7,7 @@ MetaSim supports multiple simulators, but you only need to install the ones you 
 :titlesonly:
 
 curobo
+mjx
 blender
 pyrep
 gsnet
