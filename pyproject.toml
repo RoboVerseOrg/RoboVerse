@@ -9,6 +9,7 @@ dependencies = [
     "loguru",
     "opencv-python",
     "rich",
+    "rootutils",
     "torch",
     "torchvision",
     "tqdm",
@@ -156,14 +157,7 @@ include = ["metasim*"]
 "metasim/cfg/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
 "metasim/cfg/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
 "metasim/cfg/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
-"metasim/double_sim/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/blender/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/genesis/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/sim/isaacgym/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/sim/mujoco/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"metasim/sim/pyrep/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/gym_env.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/*.py" = ["D"]  # FIXME: Feishi add docstring and remove this
+"metasim/sim/**.py" = ["D"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 
 [tool.ruff.lint.isort]

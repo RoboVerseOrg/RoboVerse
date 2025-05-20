@@ -1,7 +1,7 @@
 """Implemention of Sapien Handler.
 
-This file contains the implementation of SapienHandler, which is a subclass of BaseSimHandler.
-SapienHandler is used to handle the simulation environment using Sapien.
+This file contains the implementation of Sapien2Handler, which is a subclass of BaseSimHandler.
+Sapien2Handler is used to handle the simulation environment using Sapien.
 Currently using Sapien 2.2
 """
 
@@ -27,22 +27,15 @@ from metasim.cfg.objects import (
 )
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import EnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
-class SingleSapienHandler(BaseSimHandler):
-    """Sapien Handler class."""
+class Sapien2Handler(BaseSimHandler):
+    """Sapien2 Handler class."""
 
     def __init__(self, scenario):
-        """Initialize the Sapien Handler.
-
-        Args:
-            scenario: The scenario configuration
-            num_envs: Number of environments
-        """
         assert parse_version(sapien.__version__) >= parse_version("2.0.0"), "Sapien version should be 2.0.0 or higher"
         assert parse_version(sapien.__version__) < parse_version("3.0.0a0"), "Sapien version should be lower than 3.0.0"
         super().__init__(scenario)
@@ -319,12 +312,6 @@ class SingleSapienHandler(BaseSimHandler):
             instance.set_drive_velocity_target(vel_action)
 
     def set_dof_targets(self, obj_name, target):
-        """Set the dof targets of the object.
-
-        Args:
-            obj_name (str): The name of the object
-            target (dict): The target values for the object
-        """
         instance = self.object_ids[obj_name]
         if isinstance(instance, sapien_core.Articulation):
             action = target[0]
@@ -343,7 +330,6 @@ class SingleSapienHandler(BaseSimHandler):
             self._apply_action(instance, pos_target, vel_target)
 
     def simulate(self):
-        """Step the simulation."""
         for i in range(self.scenario.decimation):
             self.scene.step()
             self.scene.update_render()
@@ -353,7 +339,6 @@ class SingleSapienHandler(BaseSimHandler):
             camera_id.take_picture()
 
     def refresh_render(self):
-        """Refresh the render."""
         self.scene.update_render()
         if not self.headless:
             self.viewer.render()
@@ -361,11 +346,9 @@ class SingleSapienHandler(BaseSimHandler):
             camera_id.take_picture()
 
     def launch(self) -> None:
-        """Launch the simulation."""
         self._build_sapien()
 
     def close(self):
-        """Close the simulation."""
         if not self.headless:
             self.viewer.close()
         self.scene = None
@@ -390,15 +373,6 @@ class SingleSapienHandler(BaseSimHandler):
         return link_name_list, link_state_tensor
 
     def get_states(self, env_ids=None) -> list[EnvState]:
-        """Get the states of the environment.
-
-        Args:
-            env_ids: List of environment ids to get the states from. If None, get the states of all environments.
-
-        Returns:
-            dict: A dictionary containing the states of the environment
-        """
-
         object_states = {}
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
@@ -485,12 +459,6 @@ class SingleSapienHandler(BaseSimHandler):
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
     def set_states(self, states, env_ids=None):
-        """Set the states of the environment.
-
-        Args:
-            states (dict): A dictionary containing the states of the environment
-            env_ids (list[int]): List of environment ids to set the states. If None, set the states of all environments
-        """
         states_flat = [state["objects"] | state["robots"] for state in states]
         for name, val in states_flat[0].items():
             if name not in self.object_ids:
@@ -525,16 +493,6 @@ class SingleSapienHandler(BaseSimHandler):
             return []
 
     def get_body_names(self, obj_name, sort=True):
-        """Get the names of links of an object by obj_name
-
-        Args:
-            obj_name: the name of the object to get link names.
-            sort: if sort the link names by lexical order.
-
-        Returns:
-            list: the list of link names.
-        """
-
         body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
         if sort:
             return sorted(body_names)
@@ -542,7 +500,4 @@ class SingleSapienHandler(BaseSimHandler):
             return deepcopy(body_names)
 
 
-SapienHandler = ParallelSimWrapper(SingleSapienHandler)
-"""SAPIEN2 Handler"""
-
-SapienEnv: type[EnvWrapper[SapienHandler]] = GymEnvWrapper(SapienHandler)  # type: ignore
+Sapien2Env: type[EnvWrapper[Sapien2Handler]] = GymEnvWrapper(Sapien2Handler)

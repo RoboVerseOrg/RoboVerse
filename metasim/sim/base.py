@@ -34,6 +34,7 @@ class BaseSimHandler:
         """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
 
     def launch(self) -> None:
+        """Launch the simulation."""
         raise NotImplementedError
 
     ############################################################
@@ -43,8 +44,7 @@ class BaseSimHandler:
         raise NotImplementedError
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[TensorState, Extra]:
-        """
-        Reset the environment.
+        """Reset the environment.
 
         Args:
             env_ids: The indices of the environments to reset. If None, all environments are reset.
@@ -59,15 +59,28 @@ class BaseSimHandler:
         raise NotImplementedError
 
     def close(self) -> None:
+        """Close the simulation."""
         raise NotImplementedError
 
     ############################################################
     ## Set states
     ############################################################
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+        """Set the states of the environment.
+
+        Args:
+            states (dict): A dictionary containing the states of the environment
+            env_ids (list[int]): List of environment ids to set the states. If None, set the states of all environments
+        """
         raise NotImplementedError
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        """Set the dof targets of the robot.
+
+        Args:
+            obj_name (str): The name of the robot
+            actions (list[Action]): The target actions for the robot
+        """
         raise NotImplementedError
 
     def set_pose(self, obj_name: str, pos: torch.Tensor, rot: torch.Tensor, env_ids: list[int] | None = None) -> None:
@@ -78,6 +91,14 @@ class BaseSimHandler:
     ## Get states
     ############################################################
     def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+        """Get the states of the environment.
+
+        Args:
+            env_ids: List of environment ids to get the states from. If None, get the states of all environments.
+
+        Returns:
+            dict: A dictionary containing the states of the environment
+        """
         raise NotImplementedError
 
     def get_vel(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
@@ -150,12 +171,14 @@ class BaseSimHandler:
     ## Simulate
     ############################################################
     def simulate(self):
+        """Step the simulation."""
         raise NotImplementedError
 
     ############################################################
     ## Utils
     ############################################################
     def refresh_render(self) -> None:
+        """Refresh the render."""
         raise NotImplementedError
 
     ############################################################
@@ -259,16 +282,12 @@ class BaseSimHandler:
 
     @property
     def episode_length_buf(self) -> list[int]:
-        """
-        The timestep of each environment, restart from 0 when reset, plus 1 at each step.
-        """
+        """The timestep of each environment, restart from 0 when reset, plus 1 at each step."""
         raise NotImplementedError
 
     @property
     def actions_cache(self) -> list[Action]:
-        """
-        Cache of actions.
-        """
+        """Cache of actions."""
         raise NotImplementedError
 
     @property
