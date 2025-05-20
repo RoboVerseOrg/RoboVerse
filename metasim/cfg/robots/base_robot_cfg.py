@@ -33,6 +33,7 @@ class BaseActuatorCfg:
     ############################################################
     ## For motion planning and retargetting using cuRobo
     ############################################################
+
     is_ee: bool = False
     """Whether the actuator is an end effector. Default to False. If True, the actuator will be treated as a part of the end effector for motion planning and retargetting. This configuration may not be used for other purposes."""
 
@@ -95,6 +96,7 @@ class BaseRobotCfg(ArticulationObjCfg):
 
     curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
     """Relative rotation of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
+
     ############################################################
     ## Experimental
     ############################################################
@@ -102,7 +104,8 @@ class BaseRobotCfg(ArticulationObjCfg):
     control_type: dict[
         str, Literal["position", "effort"]
     ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
-    """[WARNING] This is experimental and subject to change.
+    """Control type for each joint.
 
-    Control type for each joint.
+    .. warning::
+        This is experimental and subject to change.
     """
