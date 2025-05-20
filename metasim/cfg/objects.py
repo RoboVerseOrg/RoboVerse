@@ -1,7 +1,7 @@
 """Configuration classes for various types of objects.
 
 Dependency graph:
-```mermaid
+```{mermaid}
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart LR
     N0[BaseObjCfg]
