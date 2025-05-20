@@ -4,6 +4,7 @@
 Dependency graph:
 
 .. mermaid::
+
    %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
    flowchart LR
       N0[BaseObjCfg]
