@@ -1,7 +1,37 @@
-"""Configuration classes for various types of objects used in the simulation.
+"""Configuration classes for various types of objects.
 
-Configurations include the object name, source file, geometries (scaling, radius, etc.),
-and physics (mass, density, etc.).
+Dependency graph:
+```mermaid
+%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
+flowchart LR
+    N0[BaseObjCfg]
+    N11[BaseRigidObjCfg]
+    N12[BaseArticulationObjCfg]
+
+    subgraph "Level 0"
+        N0
+    end
+    subgraph "Level 1"
+        N11
+        N12
+    end
+    subgraph "Level 2"
+        RigidObjCfg
+        ArticulationObjCfg
+        PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
+    end
+    subgraph "Mixins"
+        direction LR
+        FileBasedMixin
+        PrimitiveMixin
+    end
+
+    N0 --> N11 & N12
+    N11 & FileBasedMixin ---> RigidObjCfg
+    N12 & FileBasedMixin ---> ArticulationObjCfg
+    N11 & PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
+```
+
 """
 
 from __future__ import annotations
@@ -12,6 +42,70 @@ from dataclasses import MISSING
 from metasim.constants import PhysicStateType
 from metasim.utils import configclass
 
+##################################################
+# Mixins: File-based or Primitive
+##################################################
+
+
+@configclass
+class FileBasedMixin:
+    """File-based mixin."""
+
+    mesh_path: str | None = None
+    """Path to the mesh file."""
+
+    usd_path: str | None = None
+    """Path to the USD file."""
+
+    urdf_path: str | None = None
+    """Path to the URDF file."""
+
+    mjcf_path: str | None = None
+    """Path to the MJCF file."""
+
+    mjx_mjcf_path: str | None = None
+    """Path to the MJCF file only used for MJX. If not specified, it will be the same as mjcf_path."""
+
+    scale: float | tuple[float, float, float] = 1.0
+    """Object scaling (in scalar) for the object, default is 1.0"""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
+        if isinstance(self.scale, float):
+            self.scale = (self.scale, self.scale, self.scale)
+
+        ## Set the mjx_mjcf_path if it is not specified.
+        if self.mjx_mjcf_path is None:
+            self.mjx_mjcf_path = self.mjcf_path
+
+
+@configclass
+class PrimitiveMixin:
+    """Primitive mixin."""
+
+    mass: float = 0.1
+    """Mass of the object (in kg), default is 0.1 kg"""
+
+    color: list[float] = MISSING
+    """Color of the object in RGB"""
+
+    @property
+    def volume(self) -> float:
+        """Volume of the object."""
+        raise NotImplementedError
+
+    @property
+    def density(self) -> float:
+        """Density of the object."""
+        return self.mass / self.volume
+
+
+##################################################
+# Level 0: Base
+##################################################
+
 
 @configclass
 class BaseObjCfg:
@@ -19,45 +113,36 @@ class BaseObjCfg:
 
     name: str = MISSING
     """Object name"""
+
     default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """Default position of the object, default is (0.0, 0.0, 0.0)"""
+
     default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
     """Default orientation of the object, default is (1.0, 0.0, 0.0, 0.0)"""
 
-
-# File-based object
-@configclass
-class RigidObjCfg(BaseObjCfg):
-    """Rigid object cfg.
-
-    The file source should be specified, from a USD, URDF, MJCF, or mesh file,
-    with the path specified by the members below.
-
-    Attributes:
-        usd_path: Path to the USD file
-        urdf_path: Path to the URDF file
-        mjcf_path: Path to the MJCF file
-        mesh_path: Path to the Mesh file
-        physics: Specify the physics APIs applied on the object
-    """
-
-    usd_path: str | None = None
-    urdf_path: str | None = None
-    mjcf_path: str | None = None
-    mjx_mjcf_path: str | None = None
-    """Path to the MJCF file only used for MJX. If not specified, it will be the same as mjcf_path."""
-    mesh_path: str | None = None
-    collision_enabled: bool = True
-    physics: PhysicStateType | None = None
     fix_base_link: bool = False
     """Whether to fix the base link of the object, default is False"""
-    scale: float | tuple[float, float, float] = 1.0
-    """Object scaling (in scalar) for the object, default is 1.0"""
+
+
+##################################################
+# Level 1: Base rigid object and base articulation object
+##################################################
+
+
+@configclass
+class BaseRigidObjCfg(BaseObjCfg):
+    """Base rigid object cfg."""
+
+    collision_enabled: bool = True
+    """Whether to enable collision."""
+
+    physics: PhysicStateType | None = None
+    """IsaacSim's convention for collision and gravity state. Default to None. If specified, it will be translated to :attr:`collision_enabled` and :attr:`fix_base_link`."""
 
     def __post_init__(self):
         super().__post_init__()
 
-        ## Parse the physics state to the enabled and fix_base_link.
+        ## Parse physics to collision_enabled and fix_base_link.
         if self.physics is not None:
             if self.physics == PhysicStateType.XFORM:
                 self.collision_enabled = False
@@ -71,61 +156,33 @@ class RigidObjCfg(BaseObjCfg):
             else:
                 raise ValueError(f"Invalid physics type: {self.physics}")
 
-        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
-        if isinstance(self.scale, float):
-            self.scale = (self.scale, self.scale, self.scale)
 
-        ## Set the mjx_mjcf_path if it is not specified.
-        if self.mjx_mjcf_path is None:
-            self.mjx_mjcf_path = self.mjcf_path
+@configclass
+class BaseArticulationObjCfg(BaseObjCfg):
+    """Base articulation object cfg."""
+
+
+##################################################
+# Level 2: Concrete object
+##################################################
 
 
 @configclass
-class NonConvexRigidObjCfg(RigidObjCfg):
-    """Non-convex rigid object class."""
-
-    mesh_pose: list[float] = MISSING
+class RigidObjCfg(FileBasedMixin, BaseRigidObjCfg):
+    """Rigid object cfg."""
 
 
 @configclass
-class ArticulationObjCfg(BaseObjCfg):
+class ArticulationObjCfg(FileBasedMixin, BaseArticulationObjCfg):
     """Articulation object cfg."""
 
-    usd_path: str | None = None
-    urdf_path: str | None = None
-    mjcf_path: str | None = None
-    mjx_mjcf_path: str | None = None
-    """Path to the MJCF file only used for MJX. If not specified, it will be the same as mjcf_path."""
-    fix_base_link: bool = False
-    """Whether to fix the base link of the object, default is False"""
-    scale: float | tuple[float, float, float] = 1.0
-    """Object scaling (in scalar) for the object, default is 1.0"""
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
-        if isinstance(self.scale, float):
-            self.scale = (self.scale, self.scale, self.scale)
-
-        ## Set the mjx_mjcf_path if it is not specified.
-        if self.mjx_mjcf_path is None:
-            self.mjx_mjcf_path = self.mjcf_path
-
-
-# Primitive object are all rigid objects
 @configclass
-class PrimitiveCubeCfg(RigidObjCfg):
+class PrimitiveCubeCfg(PrimitiveMixin, BaseRigidObjCfg):
     """Primitive cube object cfg."""
 
-    mass: float = 0.1
-    """Mass of the object (in kg), default is 0.1 kg"""
-    color: list[float] = MISSING
-    """Color of the object in RGB"""
     size: list[float] = MISSING
-    """Size of the object (in m)"""
-    physics: PhysicStateType = MISSING
-    """Physics state of the object"""
+    """Size of the object (in m)."""
 
     @property
     def half_size(self) -> list[float]:
@@ -133,34 +190,54 @@ class PrimitiveCubeCfg(RigidObjCfg):
         return [size / 2 for size in self.size]
 
     @property
-    def density(self) -> float:
-        """Object density, for SAPIEN usage."""
-        return self.mass / (self.size[0] * self.size[1] * self.size[2])
+    def volume(self) -> float:
+        """Volume of the cube."""
+        return self.size[0] * self.size[1] * self.size[2]
 
 
 @configclass
-class PrimitiveSphereCfg(RigidObjCfg):
+class PrimitiveSphereCfg(PrimitiveMixin, BaseRigidObjCfg):
     """Primitive sphere object cfg."""
 
-    mass: float = 0.1
-    color: list[float] = MISSING
     radius: float = MISSING
-    physics: PhysicStateType = MISSING
+    """Radius of the sphere (in m)."""
 
     @property
-    def density(self) -> float:
-        """For SAPIEN usage."""
-        return self.mass / (4 / 3 * math.pi * self.radius**3)
+    def volume(self) -> float:
+        """Volume of the sphere."""
+        return 4 / 3 * math.pi * self.radius**3
+
+
+@configclass
+class PrimitiveCylinderCfg(PrimitiveMixin, BaseRigidObjCfg):
+    """Primitive cylinder object cfg."""
+
+    radius: float = MISSING
+    """Radius of the cylinder (in m)."""
+
+    height: float = MISSING
+    """Height of the cylinder (in m)."""
+
+    @property
+    def volume(self) -> float:
+        """Volume of the cylinder."""
+        return math.pi * self.radius**2 * self.height
+
+
+##################################################
+# Other objects
+##################################################
 
 
 @configclass
 class PrimitiveFrameCfg(RigidObjCfg):
-    """Primitive coordinate frame cfg."""
+    """Primitive coordinate frame cfg.
+
+    .. warning::
+        This class is experimental and subject to change.
+    """
 
     # TODO: This is object shouldn't inherit from RigidObjCfg?
-    name: str = MISSING
-    scale: float = 1.0
-    """Scale of the frame"""
     base_link: str | tuple[str, str] | None = None
     """Base link to attach the frame.
         If ``None``, the frame will be attached to the world origin.
@@ -170,16 +247,12 @@ class PrimitiveFrameCfg(RigidObjCfg):
 
 
 @configclass
-class PrimitiveCylinderCfg(RigidObjCfg):
-    """Primitive cylinder object cfg."""
+class NonConvexRigidObjCfg(RigidObjCfg):
+    """Non-convex rigid object class.
 
-    mass: float = 0.1
-    color: list[float] = MISSING
-    radius: float = MISSING
-    height: float = MISSING
-    physics: PhysicStateType = MISSING
+    .. warning::
+        This class is deprecated and will be removed in the future.
+    """
 
-    @property
-    def density(self) -> float:
-        """For SAPIEN usage."""
-        return self.mass / (math.pi * self.radius**2 * self.height)
+    # TODO: remove this
+    mesh_pose: list[float] = MISSING
