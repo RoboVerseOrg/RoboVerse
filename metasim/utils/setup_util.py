@@ -65,9 +65,9 @@ def get_sim_handler_class(sim: SimType):
             raise e
     elif sim == SimType.SAPIEN2:
         try:
-            from metasim.sim.sapien import SapienHandler
+            from metasim.sim.sapien import Sapien2Handler
 
-            return SapienHandler
+            return Sapien2Handler
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
@@ -158,9 +158,9 @@ def get_sim_env_class(sim: SimType):
             raise e
     elif sim == SimType.SAPIEN2:
         try:
-            from metasim.sim.sapien import SapienEnv
+            from metasim.sim.sapien import Sapien2Env
 
-            return SapienEnv
+            return Sapien2Env
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
