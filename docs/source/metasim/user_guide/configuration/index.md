@@ -24,8 +24,8 @@ class ScenarioCfg:
     random: RandomizationCfg = RandomizationCfg()
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"] = "isaaclab"
-    renderer: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"] | None = None
+    sim: Literal["isaaclab", "isaacgym", "pybullet", "mujoco"] = "isaaclab"
+    renderer: Literal["isaaclab", "isaacgym", "pybullet", "mujoco"] | None = None
 
     ## Others
     num_envs: int = 1

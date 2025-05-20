@@ -19,7 +19,7 @@ To install ``uv``, please refer to the `official guide <https://docs.astral.sh/u
 Installation Commands
 ---------------------
 
-MuJoCo, SAPIEN v2/3, Genesis, and PyBullet can be installed directly via ``uv pip install -e ".[<simulator>]"``. However, IsaacLab and IsaacGym must be installed manually.
+MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``uv pip install -e ".[<simulator>]"``. However, IsaacLab and IsaacGym must be installed manually.
 
 .. list-table::
    :header-rows: 1
@@ -33,11 +33,11 @@ MuJoCo, SAPIEN v2/3, Genesis, and PyBullet can be installed directly via ``uv pi
      - ``uv pip install -e ".[mujoco]"``
      - 3.9-3.13
      - 3.10
-   * - SAPIEN v2
+   * - SAPIEN2
      - ``uv pip install -e ".[sapien2]"``
      - 3.7-3.11
      - 3.10
-   * - SAPIEN v3
+   * - SAPIEN3
      - ``uv pip install -e ".[sapien3]"``
      - 3.8-3.12
      - 3.10
@@ -146,7 +146,7 @@ Feel free to combine the above commands. For example, if you want to install MuJ
     ./isaaclab.sh -i
 
 .. note::
-   Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, if you want to install MuJoCo, SAPIEN v3, and Genesis at the same time, you should run:
+   Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, if you want to install MuJoCo, SAPIEN3, and Genesis at the same time, you should run:
 
    .. code-block:: bash
 

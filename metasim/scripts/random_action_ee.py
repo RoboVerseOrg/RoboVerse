@@ -8,7 +8,7 @@ import tyro
 class Args:
     robot: str = "franka"
     num_envs: int = 1
-    sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaaclab"
     decimation: int = 40
 
 

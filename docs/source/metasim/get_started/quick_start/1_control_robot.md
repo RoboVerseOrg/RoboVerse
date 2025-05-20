@@ -37,7 +37,7 @@ Note that we find the `headless` mode of Genesis is not stable. So we recommend 
 
 #### Sapien
 ```bash
-python get_started/1_control_robot.py  --sim sapien
+python get_started/1_control_robot.py  --sim sapien3
 ```
 
 #### Pybullet

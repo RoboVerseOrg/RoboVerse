@@ -39,7 +39,7 @@ Note that we find the `headless` mode of Genesis is not stable. So we recommend 
 
 #### Sapien
 ```bash
-python get_started/4_motion_planning.py  --sim sapien
+python get_started/4_motion_planning.py  --sim sapien3
 ```
 
 #### Pybullet

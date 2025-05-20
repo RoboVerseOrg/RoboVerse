@@ -33,11 +33,11 @@ If you only want to try MetaSim, you can [directly install](./installation.rst) 
 
 You may choose one or more of the following simulators, according to your operating system.
 
-| OS      | IsaacLab v1.4 | IsaacLab v2 | IsaacGym | MuJoCo | SAPIEN v2 | SAPIEN v3 | Genesis | PyBullet |
-|---------|---------------|-------------|----------|--------|-----------|-----------|---------|----------|
-| MacOS   |               |             |          | ✓      |           | ✓         | ✓       |          |
-| Windows | ✓             | ✓           |          | ✓      |           | ✓         | ✓       |          |
-| Ubuntu  | ✓             | ✓           | ✓        | ✓      | ✓         | ✓         | ✓       | ✓        |
+| OS      | IsaacLab v1.4 | IsaacLab v2 | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet |
+|---------|---------------|-------------|----------|--------|---------|---------|---------|----------|
+| MacOS   |               |             |          | ✓      |         | ✓       | ✓       |          |
+| Windows | ✓             | ✓           |          | ✓      |         | ✓       | ✓       |          |
+| Ubuntu  | ✓             | ✓           | ✓        | ✓      | ✓       | ✓       | ✓       | ✓        |
 
 ```{note}
 RoboVerse team hasn't got the chance to fully test MetaSim on MacOS and Windows. Please let us know if you have any issues.

@@ -23,7 +23,7 @@ class Args:
     js: bool = False
     """Directly generate joint space random actions."""
     num_envs: int = 1
-    sim: Literal["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaaclab"
 
 
 args = tyro.cli(Args)
