@@ -10,10 +10,10 @@ from loguru import logger as log
 from metasim.cfg.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
-    FileBasedMixin,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
+    _FileBasedMixin,
 )
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
@@ -435,7 +435,7 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), 0)
                 obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0)
 
-                if isinstance(self.objects[obj_i], FileBasedMixin):
+                if isinstance(self.objects[obj_i], _FileBasedMixin):
                     self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])
                 elif isinstance(self.objects[obj_i], PrimitiveCubeCfg):
                     color = gymapi.Vec3(

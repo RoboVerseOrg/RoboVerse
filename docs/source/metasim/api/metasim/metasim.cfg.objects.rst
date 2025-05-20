@@ -25,14 +25,14 @@ Dependency graph:
    end
    subgraph "Mixins"
       direction LR
-      FileBasedMixin
-      PrimitiveMixin
+      _FileBasedMixin
+      _PrimitiveMixin
    end
 
    N0 --> N11 & N12
-   N11 & FileBasedMixin ---> RigidObjCfg
-   N12 & FileBasedMixin ---> ArticulationObjCfg
-   N11 & PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
+   N11 & _FileBasedMixin ---> RigidObjCfg
+   N12 & _FileBasedMixin ---> ArticulationObjCfg
+   N11 & _PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
 
 
 .. automodule:: metasim.cfg.objects

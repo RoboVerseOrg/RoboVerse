@@ -7,7 +7,7 @@ from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
 from genesis.vis.camera import Camera
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, FileBasedMixin, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg, _FileBasedMixin
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, GymEnvWrapper
 from metasim.types import Action, EnvState
@@ -54,7 +54,7 @@ class GenesisHandler(BaseSimHandler):
 
         ## Add objects
         for obj in self.scenario.objects:
-            if isinstance(obj, FileBasedMixin):
+            if isinstance(obj, _FileBasedMixin):
                 if isinstance(obj.scale, tuple) or isinstance(obj.scale, list):
                     obj.scale = obj.scale[0]
                     log.warning(

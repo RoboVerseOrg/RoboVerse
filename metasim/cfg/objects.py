@@ -14,7 +14,7 @@ from metasim.utils import configclass
 
 
 @configclass
-class FileBasedMixin:
+class _FileBasedMixin:
     """File-based mixin."""
 
     mesh_path: str | None = None
@@ -48,7 +48,7 @@ class FileBasedMixin:
 
 
 @configclass
-class PrimitiveMixin:
+class _PrimitiveMixin:
     """Primitive mixin."""
 
     mass: float = 0.1
@@ -134,17 +134,17 @@ class BaseArticulationObjCfg(BaseObjCfg):
 
 
 @configclass
-class RigidObjCfg(FileBasedMixin, BaseRigidObjCfg):
+class RigidObjCfg(_FileBasedMixin, BaseRigidObjCfg):
     """Rigid object cfg."""
 
 
 @configclass
-class ArticulationObjCfg(FileBasedMixin, BaseArticulationObjCfg):
+class ArticulationObjCfg(_FileBasedMixin, BaseArticulationObjCfg):
     """Articulation object cfg."""
 
 
 @configclass
-class PrimitiveCubeCfg(PrimitiveMixin, BaseRigidObjCfg):
+class PrimitiveCubeCfg(_PrimitiveMixin, BaseRigidObjCfg):
     """Primitive cube object cfg."""
 
     size: list[float] = MISSING
@@ -162,7 +162,7 @@ class PrimitiveCubeCfg(PrimitiveMixin, BaseRigidObjCfg):
 
 
 @configclass
-class PrimitiveSphereCfg(PrimitiveMixin, BaseRigidObjCfg):
+class PrimitiveSphereCfg(_PrimitiveMixin, BaseRigidObjCfg):
     """Primitive sphere object cfg."""
 
     radius: float = MISSING
@@ -175,7 +175,7 @@ class PrimitiveSphereCfg(PrimitiveMixin, BaseRigidObjCfg):
 
 
 @configclass
-class PrimitiveCylinderCfg(PrimitiveMixin, BaseRigidObjCfg):
+class PrimitiveCylinderCfg(_PrimitiveMixin, BaseRigidObjCfg):
     """Primitive cylinder object cfg."""
 
     radius: float = MISSING
