@@ -1,12 +1,28 @@
 Support Matrix
 ==============
 
-This page provides a matrix of the support for different simulators in MetaSim.
+This page provides an overview of the support for different simulators in MetaSim.
 
-Simulation Parameters
----------------------
 
-The following table shows the parameters that can be set for the simulation in each simulator. ``✓`` means the parameter is supported. Empty cell means the parameter is not supported. Other values means the default value in the original simulator.
+Supported Simulators
+--------------------
+
+There are 3 levels of supportance for each simulator:
+
+- **Actively supported**: ``isaaclab``, ``isaacgym``, ``mujoco``, ``sapien2``, ``sapien3``, ``pybullet``, ``genesis``. These simulators should always be guaranteed to work on the main branch.
+- **Inactively supported**: ``pyrep``, ``blender``. These simulators won't be actively supported. They will only be guaranteed to work when a major version is released.
+- **Experimental**: ``mjx``. This simulator is still in experimental stage and will be added to "actively supported" list in the future.
+
+
+Supported Features
+------------------
+
+The following tables show the configuration that can be set for the simulation in each simulator. ``✓`` means the parameter is supported. Empty cell means the parameter is not supported. Other values means the default value in the original simulator.
+
+
+Simulation Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 .. list-table::
    :header-rows: 1
@@ -34,10 +50,8 @@ The following table shows the parameters that can be set for the simulation in e
      -
      -
 
-Physics Engine Parameters
--------------------------
-
-The following table shows the parameters that can be set for the physics engine in each simulator.
+Physics Engine Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -100,10 +114,8 @@ The following table shows the parameters that can be set for the physics engine 
      -
      -
 
-Resource Parameters
---------------------
-
-The following table shows the parameters related to resource management in each simulator.
+Resource Management Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -124,10 +136,8 @@ The following table shows the parameters related to resource management in each 
      -
      -
 
-Misc Parameters
----------------
-
-The following table shows the parameters that are not categorized in the above tables in each simulator.
+Misc Configuration
+~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
