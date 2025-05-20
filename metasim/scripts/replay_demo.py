@@ -43,25 +43,8 @@ class Args:
     random: RandomizationCfg = RandomizationCfg()
 
     ## Handlers
-    sim: Literal[
-        "isaaclab",
-        "isaacgym",
-        "genesis",
-        "pyrep",
-        "pybullet",
-        "sapien",
-        "sapien2",
-        "sapien3",
-        "mujoco",
-        "blender",
-        "mjx",
-    ] = "isaaclab"
-    renderer: (
-        Literal[
-            "isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien2", "sapien3", "mujoco", "blender"
-        ]
-        | None
-    ) = None
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
+    renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
     num_envs: int = 1

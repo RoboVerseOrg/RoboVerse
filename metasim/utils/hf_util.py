@@ -145,7 +145,7 @@ class FileDownloader:
 
         if self.scenario.sim in ["isaaclab"]:
             self._add(obj.usd_path)
-        elif self.scenario.sim in ["isaacgym", "pybullet", "sapien", "sapien3", "genesis"]:
+        elif self.scenario.sim in ["isaacgym", "pybullet", "sapien2", "sapien3", "genesis"]:
             self._add(obj.urdf_path)
         elif self.scenario.sim in ["mujoco"]:
             self._add(obj.mjcf_path)

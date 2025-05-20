@@ -41,9 +41,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien2", "sapien3"] = (
-        "isaaclab"
-    )
+    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaaclab"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""

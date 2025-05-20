@@ -30,9 +30,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 @configclass
 class Args:
     robot: str = "franka"
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender"] = (
-        "isaaclab"
-    )
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaaclab"
     num_envs: int = 1
     headless: bool = True
 
