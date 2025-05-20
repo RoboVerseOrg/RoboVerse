@@ -9,53 +9,103 @@ from metasim.utils import configclass
 
 @configclass
 class BaseActuatorCfg:
-    velocity_limit: float | None = None  # TODO: None means use the default value (USD joint prim value) or no limit?
-    is_ee: bool = False
-    damping: float | None = None
-    stiffness: float | None = None
+    """Base configuration class for actuators."""
+
+    velocity_limit: float | None = None
+    """Velocity limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+
     torque_limit: float | None = None
-    actionable: bool = True
-    """Whether the actuator is actionable, i.e. can be driven by a motor.
+    """Torque limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+
+    damping: float | None = None
+    """Damping of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+
+    stiffness: float | None = None
+    """Stiffness of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+
+    fully_actuated: bool = True
+    """Whether the actuator is fully actuated. Default to True.
 
     Example:
-        Most actuators are actionable, but some are not, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper.
-        See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
+        Most actuators are fully actuated. Otherwise, they are underactuated, e.g. the "left_outer_finger_joint" and "right_outer_finger_joint" of the Robotiq 2F-85 gripper. See https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/rig_closed_loop_structures.html for more details.
     """
+
+    ############################################################
+    ## For motion planning and retargetting using cuRobo
+    ############################################################
+
+    is_ee: bool = False
+    """Whether the actuator is an end effector. Default to False. If True, the actuator will be treated as a part of the end effector for motion planning and retargetting. This configuration may not be used for other purposes."""
 
 
 @configclass
 class BaseRobotCfg(ArticulationObjCfg):
-    """Base Cfg class for robots."""
+    """Base configuration class for robots."""
 
-    # Articulation
     num_joints: int = MISSING
+    """Number of joints in the robots."""
+
     actuators: dict[str, BaseActuatorCfg] = {}
+    """Actuators in the robots. The keys are the names of the actuators, and the values are the configurations of the actuators. The names should be consistent with the names in the asset file."""
+
     ee_body_name: str | None = None
+    """Name of the end effector body, which should be consistent with the name in the asset file. This is used for end-effector control."""
+
     fix_base_link: bool = True
+    """Whether to fix the base link. Default to True."""
+
     joint_limits: dict[str, tuple[float, float]] = {}
+    """Joint limits of the robots. The keys are the names of the joints, and the values are the limits of the joints. The names should be consistent with the names in the asset file."""
+
     default_joint_positions: dict[str, float] = {}
-    default_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
+    """Default joint positions of the robots. The keys are the names of the joints, and the values are the default positions of the joints. The names should be consistent with the names in the asset file."""
+
+    enabled_gravity: bool = True
+    """Whether to enable gravity. Default to True. If False, the robot will not be affected by gravity."""
+
+    enabled_self_collisions: bool = True
+    """Whether to enable self collisions. Default to True. If False, the robot will not collide with itself."""
+
+    isaacgym_flip_visual_attachments: bool = True
+    """Whether to flip visual attachments when loading the URDF in IsaacGym. Default to True. For more details, see
+
+    - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.flip_visual_attachments"""
+
+    collapse_fixed_joints: bool = False
+    """Whether to collapse fixed joints when loading the URDF in IsaacGym or Genesis. Default to False. For more details, see
+
+    - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.collapse_fixed_joints
+    - Genesis doc: https://genesis-world.readthedocs.io/en/latest/api_reference/options/morph/file_morph/urdf.html
+    """
+
+    ############################################################
+    ## For motion planning and retargetting using cuRobo
+    ############################################################
+
+    gripper_open_q: list[float] = MISSING
+    """Joint positions of the gripper when the gripper is open. This is used for motion planning and retargetting using cuRobo."""
+
+    gripper_close_q: list[float] = MISSING
+    """Joint positions of the gripper when the gripper is closed. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_ref_cfg_name: str = MISSING
+    """Name of the configuration file for cuRobo. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
+    """Relative position of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
+    """Relative rotation of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
+
+    ############################################################
+    ## Experimental
+    ############################################################
+
     control_type: dict[
         str, Literal["position", "effort"]
     ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
+    """Control type for each joint.
 
+    .. warning::
+        This is experimental and subject to change.
     """
-    Joint limits in the format of `{joint_name: (lower_limit, upper_limit)}`.
-    Note that different simulators may have different order of joints, so you should not use the order in this dict!
-    """
-
-    gripper_release_q: list[float] = MISSING
-    gripper_actuate_q: list[float] = MISSING
-
-    # cuRobo Configs
-    curobo_ref_cfg_name: str = MISSING
-    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
-    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
-
-    # Simulation
-    enabled_gravity: bool = True
-    """Whether to enable gravity in the simulation."""
-    enabled_self_collisions: bool = True
-    isaacgym_flip_visual_attachments: bool = True
-    collapse_fixed_joints: bool = False

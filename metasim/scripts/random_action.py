@@ -72,7 +72,7 @@ def main():
     if not args.js:
         *_, robot_ik = get_curobo_models(robot)
         curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-        ee_n_dof = len(robot.gripper_release_q)
+        ee_n_dof = len(robot.gripper_open_q)
 
         if args.sim == "isaaclab":
             FixedSphere(
@@ -101,9 +101,9 @@ def main():
 
         else:
             # Generate random actions
-            random_gripper_widths = torch.rand((num_envs, len(robot.gripper_release_q)))
-            random_gripper_widths = torch.tensor(robot.gripper_release_q) + random_gripper_widths * (
-                torch.tensor(robot.gripper_actuate_q) - torch.tensor(robot.gripper_release_q)
+            random_gripper_widths = torch.rand((num_envs, len(robot.gripper_open_q)))
+            random_gripper_widths = torch.tensor(robot.gripper_open_q) + random_gripper_widths * (
+                torch.tensor(robot.gripper_close_q) - torch.tensor(robot.gripper_open_q)
             )
 
             ee_rot_target = torch.rand((num_envs, 3), device="cuda:0") * torch.pi

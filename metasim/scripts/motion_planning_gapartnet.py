@@ -187,7 +187,7 @@ def main():
     robot = get_robot(args.robot)
     *_, robot_ik = get_curobo_models(robot)
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_release_q)
+    ee_n_dof = len(robot.gripper_open_q)
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_env_class(SimType(args.sim))
@@ -231,7 +231,7 @@ def main():
     init_position = all_bbox_center_front_face[bbox_id]
     handle_out_ = handle_out[bbox_id]
 
-    gripper_widths = torch.tensor(robot.gripper_release_q).to("cuda:0")
+    gripper_widths = torch.tensor(robot.gripper_open_q).to("cuda:0")
 
     rotation_transform_for_franka = torch.tensor(
         [
@@ -296,7 +296,7 @@ def main():
     # close the gripper
     log.info("close the gripper")
 
-    gripper_widths = torch.tensor(robot.gripper_release_q)
+    gripper_widths = torch.tensor(robot.gripper_open_q)
     gripper_widths[:] = 0.0
     actions[0]["dof_pos_target"]["panda_finger_joint1"] = 0.0
     actions[0]["dof_pos_target"]["panda_finger_joint2"] = 0.0

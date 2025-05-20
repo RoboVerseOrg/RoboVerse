@@ -36,8 +36,8 @@ class FrankaWithGripperExtensionCfg(BaseRobotCfg):
         "panda_finger_joint2": (0.0, 0.04),  # 0.0 close, 0.04 open
     }
     ee_body_name: str = "panda_hand"
-    gripper_release_q = [0.04, 0.04]
-    gripper_actuate_q = [0.0, 0.0]
+    gripper_open_q = [0.04, 0.04]
+    gripper_close_q = [0.0, 0.0]
 
     curobo_ref_cfg_name: str = "franka.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.13312]

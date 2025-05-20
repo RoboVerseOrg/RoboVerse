@@ -37,8 +37,8 @@ class KinovaGen3Cfg(BaseRobotCfg):
     }
     ee_body_name: str = "end_effector_link"
 
-    gripper_release_q = [0.04, 0.04]  # TODO
-    gripper_actuate_q = [0.0, 0.0]  # TODO
+    gripper_open_q = [0.04, 0.04]  # TODO
+    gripper_close_q = [0.0, 0.0]  # TODO
 
     curobo_ref_cfg_name: str = "franka.yml"  # TODO
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]  # TODO

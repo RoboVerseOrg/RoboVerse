@@ -21,8 +21,8 @@ class BaseRobotCfg(ArticulationObjCfg):
     """
 
     """Need a more elegant implementation!"""
-    gripper_release_q: list[float] = MISSING
-    gripper_actuate_q: list[float] = MISSING
+    gripper_open_q: list[float] = MISSING
+    gripper_close_q: list[float] = MISSING
 
     # cuRobo Configs
     curobo_ref_cfg_name: str = MISSING
@@ -92,8 +92,8 @@ class FrankaCfg(BaseRobotCfg):
         "panda_finger_joint2": 0.0,
     }
 
-    gripper_release_q = [0.04, 0.04]
-    gripper_actuate_q = [0.0, 0.0]
+    gripper_open_q = [0.04, 0.04]
+    gripper_close_q = [0.0, 0.0]
 
     curobo_ref_cfg_name: str = "franka.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]

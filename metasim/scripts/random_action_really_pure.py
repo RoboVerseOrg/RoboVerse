@@ -51,7 +51,7 @@ def main():
                 "dof_pos_target": {
                     jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
                     for jn in scenario.robot.actuators.keys()
-                    if scenario.robot.actuators[jn].actionable
+                    if scenario.robot.actuators[jn].fully_actuated
                 }
             }
             for _ in range(scenario.num_envs)

@@ -74,11 +74,11 @@ def main():
     # cuRobo IKSysFont()
     *_, robot_ik = get_curobo_models(robot)
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_release_q)
+    ee_n_dof = len(robot.gripper_open_q)
 
     keyboard_client = PygameKeyboardClient(width=670, height=870, title="Keyboard Control")
-    gripper_actuate_tensor = torch.tensor(robot.gripper_actuate_q, dtype=torch.float32, device=device)
-    gripper_release_tensor = torch.tensor(robot.gripper_release_q, dtype=torch.float32, device=device)
+    gripper_actuate_tensor = torch.tensor(robot.gripper_close_q, dtype=torch.float32, device=device)
+    gripper_release_tensor = torch.tensor(robot.gripper_open_q, dtype=torch.float32, device=device)
 
     for line, instruction in enumerate(keyboard_client.instructions):
         log.info(f"{line:2d}: {instruction}")
