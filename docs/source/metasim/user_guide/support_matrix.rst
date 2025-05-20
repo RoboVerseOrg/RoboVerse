@@ -10,8 +10,8 @@ Supported Simulators
 There are 3 levels of supportance for each simulator:
 
 - **Actively supported**: ``isaaclab``, ``isaacgym``, ``mujoco``, ``sapien2``, ``sapien3``, ``pybullet``, ``genesis``. These simulators should always be guaranteed to work on the main branch. Note that ``sapien2`` will be deprecated when ``sapien3`` exits `beta <https://github.com/haosulab/SAPIEN/releases>`_.
-- **Inactively supported**: ``pyrep``, ``blender``. These simulators won't be actively supported. They will only be guaranteed to work when a major version is released.
-- **Experimental**: ``mjx``. This simulator is still in experimental stage and will be added to "actively supported" list in the future.
+- **Inactively supported**: ``pyrep``. These simulators won't be actively supported. They will only be guaranteed to work when a major version is released.
+- **Experimental**: ``mjx``, ``blender``. These simulators are still in experimental stage and will be added to "actively supported" list in the future.
 
 
 Supported Features
