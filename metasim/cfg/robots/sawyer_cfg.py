@@ -37,8 +37,8 @@ class SawyerCfg(BaseRobotCfg):
         "right_gripper_r_finger_joint": (-0.020833, 0),
     }
     ee_body_name: str = "sawyer_right_hand"
-    gripper_release_q = [0.020833, -0.020833]
-    gripper_actuate_q = [0.0, 0.0]
+    gripper_open_q = [0.020833, -0.020833]
+    gripper_close_q = [0.0, 0.0]
 
     curobo_ref_cfg_name: str = "sawyer.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.105]

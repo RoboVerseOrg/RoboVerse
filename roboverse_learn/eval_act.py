@@ -198,7 +198,7 @@ def main():
     ## cuRobo controller
     *_, robot_ik = get_curobo_models(scenario.robot)
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(scenario.robot.gripper_release_q)
+    ee_n_dof = len(scenario.robot.gripper_open_q)
 
     ## Reset before first step
     TotalSuccess = 0

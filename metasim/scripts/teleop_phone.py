@@ -79,7 +79,7 @@ def main():
     # cuRobo IKSysFont()
     *_, robot_ik = get_curobo_models(robot)
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_release_q)
+    ee_n_dof = len(robot.gripper_open_q)
 
     sensor_server = PhoneServer(translation_step=0.01, host="0.0.0.0", port=8765, update_dt=1 / 30)
     sensor_server.start_server()
@@ -87,8 +87,8 @@ def main():
     obs = env.handler.get_observation()
     robot_ee_state = obs["robot_ee_state"].cuda()
 
-    gripper_actuate_tensor = torch.tensor(robot.gripper_actuate_q, dtype=torch.float32, device=device)
-    gripper_release_tensor = torch.tensor(robot.gripper_release_q, dtype=torch.float32, device=device)
+    gripper_actuate_tensor = torch.tensor(robot.gripper_close_q, dtype=torch.float32, device=device)
+    gripper_release_tensor = torch.tensor(robot.gripper_open_q, dtype=torch.float32, device=device)
 
     # todo: add mobile phone teleopration instructions
 

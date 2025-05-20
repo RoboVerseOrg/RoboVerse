@@ -48,8 +48,8 @@ class KinovaGen3Robotiq2f85Cfg(BaseRobotCfg):
     }
     ee_body_name: str = "end_effector_link"
 
-    gripper_release_q = [0.0]
-    gripper_actuate_q = [0.7854]
+    gripper_open_q = [0.0]
+    gripper_close_q = [0.7854]
     curobo_ref_cfg_name: str = "kinova_gen3.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.125]
     curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]

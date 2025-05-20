@@ -73,8 +73,8 @@ class FrankaCfg(BaseRobotCfg):
     }
 
     # TODO: Make it more elegant
-    gripper_release_q = [0.04, 0.04]
-    gripper_actuate_q = [0.0, 0.0]
+    gripper_open_q = [0.04, 0.04]
+    gripper_close_q = [0.0, 0.0]
 
     curobo_ref_cfg_name: str = "franka.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]

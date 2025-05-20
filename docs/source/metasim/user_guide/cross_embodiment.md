@@ -17,7 +17,7 @@ You need to go over:
 - [Get Started / Installation / cuRobo Installation] for cuRobo
 - Review [Data format v2](https://roboverse.wiki/metasim/developer_guide/new_task#data-format-v2) for the data format
 - Make sure that the following items are carefully set in the robots' meta configs:
-  - `gripper_release_q` / `gripper_actuate_q`: A list specifying the gripper's joint positions when it releases / grasps the object
+  - `gripper_open_q` / `gripper_close_q`: A list specifying the gripper's joint positions when it releases / grasps the object
   - `curobo_ref_cfg_name`: cuRobo config file for the robot
   - `curobo_tcp_rel_pos` / `curobo_tcp_rel_rot`: Relative transformation from the TCP frame to the EE frame
     - The "EE frame" here is the `ee_link` specified by the cuRobo config
@@ -27,8 +27,8 @@ You need to go over:
 class BaseRobotMetaCfg(ArticulationObjMetaCfg):
     # ...
 
-    gripper_release_q: list[float] = MISSING
-    gripper_actuate_q: list[float] = MISSING
+    gripper_open_q: list[float] = MISSING
+    gripper_close_q: list[float] = MISSING
 
     # cuRobo Configs
     curobo_ref_cfg_name: str = MISSING

@@ -81,11 +81,11 @@ class BaseRobotCfg(ArticulationObjCfg):
     ## For motion planning and retargetting using cuRobo
     ############################################################
 
-    gripper_release_q: list[float] = MISSING
-    """Joint positions of the gripper when the gripper is released. This is used for motion planning and retargetting using cuRobo."""
+    gripper_open_q: list[float] = MISSING
+    """Joint positions of the gripper when the gripper is open. This is used for motion planning and retargetting using cuRobo."""
 
-    gripper_actuate_q: list[float] = MISSING
-    """Joint positions of the gripper when the gripper is actuated. This is used for motion planning and retargetting using cuRobo."""
+    gripper_close_q: list[float] = MISSING
+    """Joint positions of the gripper when the gripper is closed. This is used for motion planning and retargetting using cuRobo."""
 
     curobo_ref_cfg_name: str = MISSING
     """Name of the configuration file for cuRobo. This is used for motion planning and retargetting using cuRobo."""

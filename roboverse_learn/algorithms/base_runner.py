@@ -41,7 +41,7 @@ class PolicyRunner:
         if self.policy_cfg.action_config.action_type == "ee":
             *_, self.robot_ik = get_curobo_models(self.scenario.robot)
             self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
-            self.ee_n_dof = len(self.scenario.robot.gripper_release_q)
+            self.ee_n_dof = len(self.scenario.robot.gripper_open_q)
 
         if self.policy_cfg.action_config.temporal_agg:
             self.all_time_actions = torch.zeros(
@@ -210,9 +210,9 @@ class PolicyRunner:
             gripper_widths = torch.zeros(self.num_envs, self.ee_n_dof, device=self.device)
             for i in range(self.num_envs):
                 if gripper_pos[i] < 0.5:
-                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_actuate_q, device=self.device)
+                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_close_q, device=self.device)
                 else:
-                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_release_q, device=self.device)
+                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_open_q, device=self.device)
         else:
             gripper_widths = action[:, -self.ee_n_dof :]
 
