@@ -63,14 +63,6 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e
-    elif sim == SimType.SAPIEN:
-        try:
-            from metasim.sim.sapien import SapienHandler
-
-            return SapienHandler
-        except ImportError as e:
-            log.error("Sapien is not installed, please install it first")
-            raise e
     elif sim == SimType.SAPIEN2:
         try:
             from metasim.sim.sapien import SapienHandler
@@ -164,7 +156,7 @@ def get_sim_env_class(sim: SimType):
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e
-    elif sim == SimType.SAPIEN or sim == SimType.SAPIEN2:
+    elif sim == SimType.SAPIEN2:
         try:
             from metasim.sim.sapien import SapienEnv
 
