@@ -152,15 +152,12 @@ class MujocoHandler(BaseSimHandler):
         )
         self.object_body_names = []
         self.mj_objects = {}
-        object_paths = []
         for obj in self.objects:
-            object_paths.append(obj.mjcf_path)
-        for i, (obj, obj_path) in enumerate(zip(self.objects, object_paths)):
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
                 xml_str = self._create_primitive_xml(obj)
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
-                obj_mjcf = mjcf.from_path(obj_path)
+                obj_mjcf = mjcf.from_path(obj.mjcf_path)
             obj_attached = mjcf_model.attach(obj_mjcf)
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")

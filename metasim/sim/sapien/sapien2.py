@@ -152,12 +152,12 @@ class Sapien2Handler(BaseSimHandler):
                 actor_builder = self.scene.create_actor_builder()
                 # material = get_material(self.scene, agent.rigid_shape_property)
                 actor_builder.add_box_collision(
-                    half_size=[x * s for x, s in zip(object.half_size, object.scale)],
+                    half_size=object.half_size,
                     density=object.density,
                     # material=material,
                 )
                 actor_builder.add_box_visual(
-                    half_size=[x * s for x, s in zip(object.half_size, object.scale)],
+                    half_size=object.half_size,
                     color=object.color if object.color else [1.0, 1.0, 0.0],
                 )
                 box = actor_builder.build(name="box")  # Add a box
@@ -179,7 +179,7 @@ class Sapien2Handler(BaseSimHandler):
                 # material = get_material(self.scene, agent.rigid_shape_property)
                 actor_builder.add_sphere_collision(radius=object.radius, density=object.density)
                 actor_builder.add_sphere_visual(
-                    radius=object.radius * object.scale[0], color=object.color if object.color else [1.0, 1.0, 0.0]
+                    radius=object.radius, color=object.color if object.color else [1.0, 1.0, 0.0]
                 )
                 sphere = actor_builder.build(name="sphere")  # Add a sphere
                 sphere.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))

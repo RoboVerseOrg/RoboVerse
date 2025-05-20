@@ -17,26 +17,23 @@ class SceneB(BaseTaskCfg):
         PrimitiveCubeCfg(
             name="block_red",
             mass=0.1,  # origin is 1, smaller mass is easier to grasp
-            size=(0.05, 0.05, 0.05),  # block_red_small
+            size=(0.04, 0.04, 0.04),  # block_red_small
             color=(1.0, 0.0, 0.0),
             physics=PhysicStateType.RIGIDBODY,
-            scale=0.8,
         ),
         PrimitiveCubeCfg(
             name="block_blue",
             mass=0.1,  # origin is 1, smaller mass is easier to grasp
-            size=(0.1, 0.05, 0.05),  # block_blue_big
+            size=(0.08, 0.04, 0.04),  # block_blue_big
             color=(0.0, 0.0, 1.0),
             physics=PhysicStateType.RIGIDBODY,
-            scale=0.8,
         ),
         PrimitiveCubeCfg(
             name="block_pink",
             mass=0.1,  # origin is 1, smaller mass is easier to grasp
-            size=(0.07, 0.05, 0.05),  # block_pink_middle
+            size=(0.056, 0.04, 0.04),  # block_pink_middle
             color=(1.0, 0.0, 1.0),
             physics=PhysicStateType.RIGIDBODY,
-            scale=0.8,
         ),
     ]
 

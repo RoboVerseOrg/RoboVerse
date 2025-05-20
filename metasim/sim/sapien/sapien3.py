@@ -152,12 +152,12 @@ class Sapien3Handler(BaseSimHandler):
                 actor_builder = self.scene.create_actor_builder()
                 # material = get_material(self.scene, agent.rigid_shape_property)
                 actor_builder.add_box_collision(
-                    half_size=[x * s for x, s in zip(object.half_size, object.scale)],
+                    half_size=object.half_size,
                     density=object.density,
                     # material=material,
                 )
                 actor_builder.add_box_visual(
-                    half_size=[x * s for x, s in zip(object.half_size, object.scale)],
+                    half_size=object.half_size,
                     # color=object.color if object.color else [1.0, 1.0, 0.0],
                     material=sapien_core.render.RenderMaterial(
                         base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
@@ -182,7 +182,7 @@ class Sapien3Handler(BaseSimHandler):
                 # material = get_material(self.scene, agent.rigid_shape_property)
                 actor_builder.add_sphere_collision(radius=object.radius, density=object.density)
                 actor_builder.add_sphere_visual(
-                    radius=object.radius * object.scale[0],
+                    radius=object.radius,
                     material=sapien_core.render.RenderMaterial(
                         base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),

@@ -7,7 +7,13 @@ import gymnasium as gym
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveFrameCfg, RigidObjCfg
+from metasim.cfg.objects import (
+    ArticulationObjCfg,
+    BaseArticulationObjCfg,
+    BaseObjCfg,
+    BaseRigidObjCfg,
+    PrimitiveFrameCfg,
+)
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import ContactForceSensorCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
@@ -234,9 +240,9 @@ class IsaaclabHandler(BaseSimHandler):
         assert position.shape == (len(env_ids), 3)
         assert rotation.shape == (len(env_ids), 4)
 
-        if isinstance(object, ArticulationObjCfg):
+        if isinstance(object, BaseArticulationObjCfg):
             obj_inst = self.env.scene.articulations[object.name]
-        elif isinstance(object, RigidObjCfg):
+        elif isinstance(object, BaseRigidObjCfg):
             obj_inst = self.env.scene.rigid_objects[object.name]
         else:
             raise ValueError(f"Invalid object type: {type(object)}")
