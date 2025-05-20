@@ -7,32 +7,32 @@ Dependency graph:
 
    %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
    flowchart LR
-      N0[BaseObjCfg]
-      N11[BaseRigidObjCfg]
-      N12[BaseArticulationObjCfg]
+   N0[BaseObjCfg]
+   N11[BaseRigidObjCfg]
+   N12[BaseArticulationObjCfg]
 
-      subgraph "Level 0"
-         N0
-      end
-      subgraph "Level 1"
-         N11
-         N12
-      end
-      subgraph "Level 2"
-         RigidObjCfg
-         ArticulationObjCfg
-         PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
-      end
-      subgraph "Mixins"
-         direction LR
-         FileBasedMixin
-         PrimitiveMixin
-      end
+   subgraph "Level 0"
+      N0
+   end
+   subgraph "Level 1"
+      N11
+      N12
+   end
+   subgraph "Level 2"
+      RigidObjCfg
+      ArticulationObjCfg
+      PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
+   end
+   subgraph "Mixins"
+      direction LR
+      FileBasedMixin
+      PrimitiveMixin
+   end
 
-      N0 --> N11 & N12
-      N11 & FileBasedMixin ---> RigidObjCfg
-      N12 & FileBasedMixin ---> ArticulationObjCfg
-      N11 & PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg &PrimitiveCylinderCfg
+   N0 --> N11 & N12
+   N11 & FileBasedMixin ---> RigidObjCfg
+   N12 & FileBasedMixin ---> ArticulationObjCfg
+   N11 & PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
 
 
 .. automodule:: metasim.cfg.objects
