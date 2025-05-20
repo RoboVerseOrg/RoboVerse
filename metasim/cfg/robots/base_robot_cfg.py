@@ -82,11 +82,19 @@ class BaseRobotCfg(ArticulationObjCfg):
     ############################################################
 
     gripper_release_q: list[float] = MISSING
-    gripper_actuate_q: list[float] = MISSING
-    curobo_ref_cfg_name: str = MISSING
-    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
-    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
+    """Joint positions of the gripper when the gripper is released. This is used for motion planning and retargetting using cuRobo."""
 
+    gripper_actuate_q: list[float] = MISSING
+    """Joint positions of the gripper when the gripper is actuated. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_ref_cfg_name: str = MISSING
+    """Name of the configuration file for cuRobo. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_tcp_rel_pos: tuple[float, float, float] = MISSING
+    """Relative position of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
+
+    curobo_tcp_rel_rot: tuple[float, float, float] = MISSING
+    """Relative rotation of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
     ############################################################
     ## Experimental
     ############################################################
