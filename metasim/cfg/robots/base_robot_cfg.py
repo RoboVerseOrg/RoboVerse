@@ -67,10 +67,12 @@ class BaseRobotCfg(ArticulationObjCfg):
 
     isaacgym_flip_visual_attachments: bool = True
     """Whether to flip visual attachments when loading the URDF in IsaacGym. Default to True. For more details, see
+
     - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.flip_visual_attachments"""
 
     collapse_fixed_joints: bool = False
     """Whether to collapse fixed joints when loading the URDF in IsaacGym or Genesis. Default to False. For more details, see
+
     - IsaacGym doc: https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.collapse_fixed_joints
     - Genesis doc: https://genesis-world.readthedocs.io/en/latest/api_reference/options/morph/file_morph/urdf.html
     """
@@ -92,7 +94,7 @@ class BaseRobotCfg(ArticulationObjCfg):
     control_type: dict[
         str, Literal["position", "effort"]
     ] = {}  # TODO support more controltype, for example, velocity control. Note that effort means use manual pd position controller to get torque and set torque using isaacgym API.
-    """WARNING: This is experimental and subject to change.
+    """[WARNING] This is experimental and subject to change.
 
     Control type for each joint.
     """
