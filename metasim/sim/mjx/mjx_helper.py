@@ -49,23 +49,23 @@ def _write_root_joint(
 
     If *zero_vel* is True, velocities are zeroed regardless of input.
     """
+    idx_list = idx.tolist()
+
     jtype = model.jnt_type[root_jid]
     qadr = model.jnt_qposadr[root_jid]
     vadr = model.jnt_dofadr[root_jid]
 
-    # -------- free joint (quat + pos) --------------------------------
-    if jtype == mjtJoint.mjJNT_FREE:
-        qpos_vals = t2j(root_state[:, :7])  # (N,7)
+    if jtype == mjtJoint.mjJNT_FREE:  # 6-DOF base
+        qpos_vals = t2j(root_state[idx_list, :7])  # (N,7)
         qpos = qpos.at[idx, qadr : qadr + 7].set(qpos_vals)
 
-        vel_vals = 0.0 if zero_vel else t2j(root_state[:, 7:13])  # (N,6)
+        vel_vals = 0.0 if zero_vel else t2j(root_state[idx_list, 7:13])
         qvel = qvel.at[idx, vadr : vadr + 6].set(vel_vals)
 
-    # -------- hinge / slide (scalar) ---------------------------------
     elif jtype in (mjtJoint.mjJNT_HINGE, mjtJoint.mjJNT_SLIDE):
-        qpos = qpos.at[idx, qadr].set(t2j(root_state[:, 0]))
+        qpos = qpos.at[idx, qadr].set(t2j(root_state[idx_list, 0]))
 
-        vel_val = 0.0 if zero_vel else t2j(root_state[:, 7])
+        vel_val = 0.0 if zero_vel else t2j(root_state[idx_list, 7])
         qvel = qvel.at[idx, vadr].set(vel_val)
 
     return qpos, qvel
@@ -101,16 +101,21 @@ def _write_articulated_block(
     qadr = model.jnt_qposadr[joint_ids]  # (J,)
     vadr = model.jnt_dofadr[joint_ids]  # (J,)
 
+    # Torch tensors must be sliced with a Python list
+    idx_list = idx.tolist()  # e.g. [0, 2, 5]
+
     # --- qpos ---------------------------------------------------------
-    qpos = qpos.at[idx[:, None], qadr].set(t2j(joint_pos))
+    qpos_vals = t2j(joint_pos[idx_list])  # (N,J)
+    qpos = qpos.at[idx[:, None], qadr].set(qpos_vals)
 
     # --- qvel ---------------------------------------------------------
-    vel_val = jnp.zeros_like(t2j(joint_vel)) if zero_vel else t2j(joint_vel)
-    qvel = qvel.at[idx[:, None], vadr].set(vel_val)
+    vel_vals = jnp.zeros_like(t2j(joint_vel[idx_list])) if zero_vel else t2j(joint_vel[idx_list])
+    qvel = qvel.at[idx[:, None], vadr].set(vel_vals)
 
     # --- ctrl targets -------------------------------------------------
     if actuator_ids is not None and joint_target is not None:
-        ctrl = ctrl.at[idx[:, None], actuator_ids].set(t2j(joint_target))
+        tgt_vals = t2j(joint_target[idx_list])
+        ctrl = ctrl.at[idx[:, None], actuator_ids].set(tgt_vals)
 
     return qpos, qvel, ctrl
 
@@ -236,7 +241,7 @@ def sorted_body_ids(model, prefix: str):
         panda_left_finger
 
     After sorting::
-        panda_link0  → panda_ink3 → panda_left_finger
+        panda_link0  → panda_link3 → panda_left_finger
     """
     names, ids = _names_ids_mjx(model, "body")
     filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
