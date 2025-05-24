@@ -207,14 +207,27 @@ class MujocoHandler(BaseSimHandler):
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                        torch.from_numpy(
+                            np.concatenate([
+                                self.physics.data.cvel[obj_body_id][3:6],  # vx vy vz
+                                self.physics.data.cvel[obj_body_id][0:3],  # wx wy wz
+                            ])
+                        ).float(),  # (6,)
                     ]).unsqueeze(0),
                     body_names=self.get_body_names(obj.name),
                     body_state=torch.concat(
                         [
                             torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
                             torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
-                            torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
+                            torch.from_numpy(
+                                np.concatenate(
+                                    [
+                                        self.physics.data.cvel[body_ids_reindex][:, 3:6],  # vx vy vz
+                                        self.physics.data.cvel[body_ids_reindex][:, 0:3],  # wx wy wz
+                                    ],
+                                    axis=1,
+                                )
+                            ).float(),  # (n_body, 6)
                         ],
                         dim=1,
                     ).unsqueeze(0),
@@ -230,7 +243,12 @@ class MujocoHandler(BaseSimHandler):
                     root_state=torch.concat([
                         torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                         torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                        torch.from_numpy(
+                            np.concatenate([
+                                self.physics.data.cvel[obj_body_id][3:6],  # vx vy vz
+                                self.physics.data.cvel[obj_body_id][0:3],  # wx wy wz
+                            ])
+                        ).float(),  # (6,)
                     ]).unsqueeze(0),
                 )
             object_states[obj.name] = state
@@ -247,13 +265,26 @@ class MujocoHandler(BaseSimHandler):
                 root_state=torch.concat([
                     torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
                     torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                    torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
+                    torch.from_numpy(
+                        np.concatenate([
+                            self.physics.data.cvel[obj_body_id][3:6],  # vx vy vz
+                            self.physics.data.cvel[obj_body_id][0:3],  # wx wy wz
+                        ])
+                    ).float(),  # (6,)
                 ]).unsqueeze(0),
                 body_state=torch.concat(
                     [
                         torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
                         torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
-                        torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
+                        torch.from_numpy(
+                            np.concatenate(
+                                [
+                                    self.physics.data.cvel[body_ids_reindex][:, 3:6],  # vx vy vz
+                                    self.physics.data.cvel[body_ids_reindex][:, 0:3],  # wx wy wz
+                                ],
+                                axis=1,
+                            )
+                        ).float(),  # (n_body, 6)
                     ],
                     dim=1,
                 ).unsqueeze(0),
