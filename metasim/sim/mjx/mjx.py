@@ -23,7 +23,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
-from metasim.utils.state import ObjectState, RobotState, TensorState, list_state_to_tensor
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
 from .mjx_helper import j2t, process_entity, sorted_actuator_ids, sorted_body_ids, sorted_joint_info, t2j
 
@@ -107,25 +107,14 @@ class MJXHandler(BaseSimHandler):
             bid_r.insert(0, root_bid_r)
             bnames_r.insert(0, self.mj_objects[r_cfg.name].full_identifier)
 
-            root_state_r = jnp.concatenate(
-                [
-                    data.xpos[idx, root_bid_r],  # (N, 3)
-                    data.xquat[idx, root_bid_r],  # (N, 4)
-                    data.cvel[idx, root_bid_r, 3:6],  # vx vy vz
-                    data.cvel[idx, root_bid_r, 0:3],  # wx wy wz
-                ],
-                axis=-1,
-            )  # (N, 13)
+        # collect per-robot arrays ----------------------------------------------
+        root_state_r = jnp.concatenate(
+            [data.xpos[idx, root_bid_r], data.xquat[idx, root_bid_r], data.cvel[idx, root_bid_r]], axis=-1
+        )  # (N, 13)
 
-            body_state_r = jnp.concatenate(
-                [
-                    data.xpos[idx[:, None], bid_r],  # (N, 3)
-                    data.xquat[idx[:, None], bid_r],  # (N, 4)
-                    data.cvel[idx[:, None], bid_r, 3:6],  # vx vy vz
-                    data.cvel[idx[:, None], bid_r, 0:3],  # wx wy wz
-                ],
-                axis=-1,
-            )  # (N, 13)
+        body_state_r = jnp.concatenate(
+            [data.xpos[idx[:, None], bid_r], data.xquat[idx[:, None], bid_r], data.cvel[idx[:, None], bid_r]], axis=-1
+        )  # (N, Nbody, 13)
 
         robots[r_cfg.name] = RobotState(
             root_state=j2t(root_state_r),
@@ -149,26 +138,15 @@ class MJXHandler(BaseSimHandler):
                 bnames_o.insert(0, self.mj_objects[obj.name].full_identifier)
 
             root_state_o = jnp.concatenate(
-                [
-                    data.xpos[idx, root_bid_o],  # (N, 3)
-                    data.xquat[idx, root_bid_o],  # (N, 4)
-                    data.cvel[idx, root_bid_o, 3:6],  # vx vy vz
-                    data.cvel[idx, root_bid_o, 0:3],  # wx wy wz
-                ],
-                axis=-1,
-            )  # (N, 13)
+                [data.xpos[idx, root_bid_o], data.xquat[idx, root_bid_o], data.cvel[idx, root_bid_o]], axis=-1
+            )
 
             if isinstance(obj, ArticulationObjCfg):  # articulated
                 qadr_o, vadr_o = sorted_joint_info(self._mjx_model, prefix)
                 body_state_o = jnp.concatenate(
-                    [
-                        data.xpos[idx[:, None], bid_o],  # (N, 3)
-                        data.xquat[idx[:, None], bid_o],  # (N, 4)
-                        data.cvel[idx[:, None], bid_o, 3:6],  # vx vy vz
-                        data.cvel[idx[:, None], bid_o, 0:3],  # wx wy wz
-                    ],
+                    [data.xpos[idx[:, None], bid_o], data.xquat[idx[:, None], bid_o], data.cvel[idx[:, None], bid_o]],
                     axis=-1,
-                )  # (N, 13)
+                )
                 objects[obj.name] = ObjectState(
                     root_state=j2t(root_state_o),
                     body_names=bnames_o,
@@ -183,41 +161,41 @@ class MJXHandler(BaseSimHandler):
 
         # ===================== Cameras ===================================
         camera_states = {}
-        # want_any_rgb = any("rgb" in cam.data_types for cam in self.cameras)
-        # want_any_dep = any("depth" in cam.data_types for cam in self.cameras)
+        want_any_rgb = any("rgb" in cam.data_types for cam in self.cameras)
+        want_any_dep = any("depth" in cam.data_types for cam in self.cameras)
 
-        # if want_any_rgb or want_any_dep:
-        #     for cam in self.cameras:
-        #         cam_id = f"{cam.name}_custom"
-        #         want_rgb = "rgb" in cam.data_types
-        #         want_dep = "depth" in cam.data_types
+        if want_any_rgb or want_any_dep:
+            for cam in self.cameras:
+                cam_id = f"{cam.name}_custom"
+                want_rgb = "rgb" in cam.data_types
+                want_dep = "depth" in cam.data_types
 
-        #         rgb_frames, dep_frames = [], []
+                rgb_frames, dep_frames = [], []
 
-        #         for env_id in idx_np:
-        #             slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)
-        #             mjx.get_data_into(self._render_data, self._mj_model, slice_data)
-        #             mujoco.mj_forward(self._mj_model, self._render_data)
+                for env_id in idx_np:
+                    slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)  # noqa: B023
+                    mjx.get_data_into(self._render_data, self._mj_model, slice_data)
+                    mujoco.mj_forward(self._mj_model, self._render_data)
 
-        # if want_rgb:
-        #     self._renderer.disable_depth_rendering()
-        #     self._renderer.update_scene(self._render_data, camera=cam_id)
-        #     rgb = self._renderer.render()
-        #     rgb_frames.append(torch.from_numpy(rgb.copy()))
+                    if want_rgb:
+                        self._renderer.disable_depth_rendering()
+                        self._renderer.update_scene(self._render_data, camera=cam_id)
+                        rgb = self._renderer.render()
+                        rgb_frames.append(torch.from_numpy(rgb.copy()))
 
-        # if want_dep:
-        #     self._renderer.enable_depth_rendering()
-        #         self._renderer.update_scene(self._render_data, camera=cam_id)
-        #         depth = self._renderer.render()
-        #         dep_frames.append(torch.from_numpy(depth.copy()))
+                    if want_dep:
+                        self._renderer.enable_depth_rendering()
+                        self._renderer.update_scene(self._render_data, camera=cam_id)
+                        depth = self._renderer.render()
+                        dep_frames.append(torch.from_numpy(depth.copy()))
 
-        # def _stk(frames):
-        #     return None if not frames else torch.stack(frames, dim=0)
+                def _stk(frames):
+                    return None if not frames else torch.stack(frames, dim=0)
 
-        # camera_states[cam.name] = CameraState(
-        #     rgb=_stk(rgb_frames) if want_rgb else None,
-        #     depth=_stk(dep_frames) if want_dep else None,
-        # )
+                camera_states[cam.name] = CameraState(
+                    rgb=_stk(rgb_frames) if want_rgb else None,
+                    depth=_stk(dep_frames) if want_dep else None,
+                )
 
         return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors={})
 
@@ -274,7 +252,7 @@ class MJXHandler(BaseSimHandler):
 
         self._data = self._data.replace(qpos=qpos, qvel=qvel, ctrl=ctrl)
 
-        # self._data = jax.vmap(lambda d: mjx.forward(self._mjx_model, d))(self._data)
+        self._data = jax.vmap(lambda d: mjx.forward(self._mjx_model, d))(self._data)
 
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""
@@ -379,8 +357,6 @@ class MJXHandler(BaseSimHandler):
     def _init_mujoco(self) -> mjcf.RootElement:
         """Construct a self-contained MJCF tree (one robot + objects + cameras)."""
         mjcf_model = mjcf.RootElement()
-        if self.scenario.sim_params.dt is not None:
-            mjcf_model.option.timestep = self.scenario.sim_params.dt
 
         # -------------------- cameras ------------------------------------
         cam_w, cam_h = 640, 480
