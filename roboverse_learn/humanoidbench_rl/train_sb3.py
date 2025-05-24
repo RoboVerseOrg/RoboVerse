@@ -140,6 +140,8 @@ def main():
         env = Sb3EnvWrapper(scenario=scenario)
     elif config.get("sim") == "isaaclab":
         env = Sb3EnvWrapper(scenario=scenario)
+    elif config.get("sim") == "mjx":
+        env = Sb3EnvWrapper(scenario=scenario)
     else:
         raise ValueError(f"Invalid sim type: {config.get('sim')}")
 
