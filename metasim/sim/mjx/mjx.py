@@ -107,26 +107,25 @@ class MJXHandler(BaseSimHandler):
             bid_r.insert(0, root_bid_r)
             bnames_r.insert(0, self.mj_objects[r_cfg.name].full_identifier)
 
-
             root_state_r = jnp.concatenate(
                 [
-                    data.xpos[idx, root_bid_r],           # (N, 3)
-                    data.xquat[idx, root_bid_r],          # (N, 4)
-                    data.cvel[idx, root_bid_r, 3:6],      # vx vy vz
-                    data.cvel[idx, root_bid_r, 0:3],      # wx wy wz
+                    data.xpos[idx, root_bid_r],  # (N, 3)
+                    data.xquat[idx, root_bid_r],  # (N, 4)
+                    data.cvel[idx, root_bid_r, 3:6],  # vx vy vz
+                    data.cvel[idx, root_bid_r, 0:3],  # wx wy wz
                 ],
                 axis=-1,
-            ) # (N, 13)
+            )  # (N, 13)
 
             body_state_r = jnp.concatenate(
                 [
-                    data.xpos[idx[:, None], bid_r],           # (N, 3)
-                    data.xquat[idx[:, None],bid_r],          # (N, 4)
-                    data.cvel[idx[:, None], bid_r, 3:6],      # vx vy vz
-                    data.cvel[idx[:, None], bid_r, 0:3],      # wx wy wz
+                    data.xpos[idx[:, None], bid_r],  # (N, 3)
+                    data.xquat[idx[:, None], bid_r],  # (N, 4)
+                    data.cvel[idx[:, None], bid_r, 3:6],  # vx vy vz
+                    data.cvel[idx[:, None], bid_r, 0:3],  # wx wy wz
                 ],
                 axis=-1,
-            ) # (N, 13)
+            )  # (N, 13)
 
         robots[r_cfg.name] = RobotState(
             root_state=j2t(root_state_r),
@@ -151,25 +150,25 @@ class MJXHandler(BaseSimHandler):
 
             root_state_o = jnp.concatenate(
                 [
-                    data.xpos[idx, root_bid_o],           # (N, 3)
-                    data.xquat[idx, root_bid_o],          # (N, 4)
-                    data.cvel[idx, root_bid_o, 3:6],      # vx vy vz
-                    data.cvel[idx, root_bid_o, 0:3],      # wx wy wz
+                    data.xpos[idx, root_bid_o],  # (N, 3)
+                    data.xquat[idx, root_bid_o],  # (N, 4)
+                    data.cvel[idx, root_bid_o, 3:6],  # vx vy vz
+                    data.cvel[idx, root_bid_o, 0:3],  # wx wy wz
                 ],
                 axis=-1,
-            ) # (N, 13)
+            )  # (N, 13)
 
             if isinstance(obj, ArticulationObjCfg):  # articulated
                 qadr_o, vadr_o = sorted_joint_info(self._mjx_model, prefix)
                 body_state_o = jnp.concatenate(
                     [
-                        data.xpos[idx[:, None], bid_o],           # (N, 3)
-                        data.xquat[idx[:, None], bid_o],          # (N, 4)
-                        data.cvel[idx[:, None], bid_o, 3:6],      # vx vy vz
-                        data.cvel[idx[:, None], bid_o, 0:3],      # wx wy wz
+                        data.xpos[idx[:, None], bid_o],  # (N, 3)
+                        data.xquat[idx[:, None], bid_o],  # (N, 4)
+                        data.cvel[idx[:, None], bid_o, 3:6],  # vx vy vz
+                        data.cvel[idx[:, None], bid_o, 0:3],  # wx wy wz
                     ],
                     axis=-1,
-                ) # (N, 13)
+                )  # (N, 13)
                 objects[obj.name] = ObjectState(
                     root_state=j2t(root_state_o),
                     body_names=bnames_o,
