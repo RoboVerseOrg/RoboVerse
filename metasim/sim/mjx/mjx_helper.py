@@ -1,6 +1,8 @@
 # helper/state_writer.py
 from __future__ import annotations
 
+from functools import partial
+
 import jax
 import jax.numpy as jnp
 import torch
@@ -244,3 +246,33 @@ def sorted_body_ids(model, prefix: str):
     body_ids = [i for _, i in filt]
     local_names = [n.split("/")[-1] for n, _ in filt]
     return body_ids, local_names
+
+
+def pack_body_state(data, env_idx, body_ids):
+    """
+    Args
+    ----
+    data      : mjx_env.Data          (N, …)
+    env_idx   : jnp.ndarray[int32]    (N,)    environment indices to slice
+    body_ids  : jnp.ndarray[int32]    (B,)    body ids whose state we want
+
+    Returns
+    -------
+    state     : jnp.ndarray           (N, B, 13)
+                [pos(3), quat(4), lin_vel_world(3), ang_vel_world(3)]
+    """
+    # pull raw pieces
+    pos = data.xpos[env_idx[:, None], body_ids]  # (N,B,3)
+    quat = data.xquat[env_idx[:, None], body_ids]  # (N,B,4)
+    w = data.cvel[env_idx[:, None], body_ids, 0:3]  # (N,B,3) ω
+    v_com = data.cvel[env_idx[:, None], body_ids, 3:6]  # (N,B,3) v @ subtree_com
+
+    # v_origin = v_com + ω × (xpos - subtree_com)
+    offset = pos - data.subtree_com[env_idx[:, None], body_ids]  # (N,B,3)
+    v_org = v_com + jnp.cross(w, offset)  # (N,B,3)
+
+    # (N,B,13)
+    return jnp.concatenate([pos, quat, v_org, w], axis=-1)
+
+
+pack_root_state = partial(lambda d, idx, bid: pack_body_state(d, idx, jnp.asarray([bid]))[:, 0])
