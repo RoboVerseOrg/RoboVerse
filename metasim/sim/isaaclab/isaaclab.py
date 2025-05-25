@@ -131,16 +131,20 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         self._actions_cache = action
-        actuator_names = [k for k, v in self.robot.actuators.items() if v.fully_actuated]
-        action_env_tensors = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
-        for env_id in range(self.num_envs):
-            action_env = action[env_id]
-            for i, actuator_name in enumerate(actuator_names):
-                action_env_tensors[env_id, i] = torch.tensor(
-                    action_env["dof_pos_target"][actuator_name], device=self.env.device
-                )
+        action_tensors = []
+        for robot in self.robots:
+            actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+            action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
+            for env_id in range(self.num_envs):
+                action_env = action[env_id]
+                for i, actuator_name in enumerate(actuator_names):
+                    action_tensor[env_id, i] = torch.tensor(
+                        action_env["dof_pos_target"][actuator_name], device=self.env.device
+                    )
+            action_tensors.append(action_tensor)
+        action_tensor_all = torch.cat(action_tensors, dim=-1)
 
-        _, _, _, time_out, extras = self.env.step(action_env_tensors)
+        _, _, _, time_out, extras = self.env.step(action_tensor_all)
         time_out = time_out.cpu()
         success = self.checker.check(self)
         states = self.get_states()
@@ -281,7 +285,7 @@ class IsaaclabHandler(BaseSimHandler):
             env_ids = list(range(self.num_envs))
 
         states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
-        for obj in self.objects + [self.robot] + self.checker.get_debug_viewers():
+        for obj in self.objects + self.robots + self.checker.get_debug_viewers():
             if obj.name not in states_flat[0]:
                 log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
                 pos, rot = get_pose(self.env, obj.name, env_ids=env_ids)
@@ -311,7 +315,7 @@ class IsaaclabHandler(BaseSimHandler):
                             log.warning(f"Missing {joint_name} in {obj.name}, setting its position to zero")
 
                     self._set_object_joint_pos(obj, joint_pos, env_ids=env_ids)
-                    if obj == self.robot:
+                    if obj in self.robots:
                         robot_inst = self.env.scene.articulations[obj.name]
                         robot_inst.set_joint_position_target(
                             joint_pos, env_ids=torch.tensor(env_ids, device=self.env.device)
@@ -352,7 +356,7 @@ class IsaaclabHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for obj in [self.robot]:
+        for obj in self.robots:
             ## TODO: dof_pos_target, dof_vel_target, dof_torque
             obj_inst = self.env.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
