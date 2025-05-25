@@ -17,7 +17,7 @@ There are 3 levels of supportance for each simulator:
 Supported Features
 ------------------
 
-The following tables show the configuration that can be set for the simulation in each simulator. ``✓`` means the parameter is supported. Empty cell means the parameter is not supported. Other values means the default value in the original simulator.
+The following tables show the configuration that can be set for each simulator. Empty cell means the parameter is not supported. ``✓`` means the parameter is supported, and when not specified in the config file, the value read from the asset file or determined by the original simulator is used. Values in the table means the default value to be used when not specified in the config file.
 
 
 Simulation Configuration
@@ -49,6 +49,57 @@ Simulation Configuration
      -
      -
      -
+
+Robot Configuration
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 20 20 20 20 20
+
+   * - Parameter
+     - IsaacLab
+     - IsaacGym
+     - MuJoCo
+     - Genesis
+     - SAPIEN3
+     - PyBullet
+   * - ``stiffness``
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.stiffness>`_
+     - 800.0
+     -
+     -
+     - ✓
+     -
+   * - ``damping``
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.damping>`_
+     - 40.0
+     -
+     -
+     - ✓
+     -
+   * - ``velocity_limit``
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.velocity_limit>`_
+     -
+     -
+     -
+     -
+     -
+   * - ``torque_limit``
+     - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.effort_limit>`_
+     -
+     -
+     -
+     -
+     -
+   * - ``fully_actuated``
+     - ✓
+     - ✓
+     -
+     -
+     -
+     -
+
 
 Physics Engine Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
