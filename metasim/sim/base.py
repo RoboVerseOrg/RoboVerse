@@ -25,12 +25,12 @@ class BaseSimHandler:
 
         ## For quick reference
         self.task = scenario.task
-        self.robot = scenario.robot
+        self.robots = scenario.robots
         self.cameras = scenario.cameras
         self.sensors = scenario.sensors
         self.objects = scenario.objects
         self.checker = scenario.checker
-        self.object_dict = {obj.name: obj for obj in self.objects + [self.robot] + self.checker.get_debug_viewers()}
+        self.object_dict = {obj.name: obj for obj in self.objects + self.robots + self.checker.get_debug_viewers()}
         """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
 
     def launch(self) -> None:
