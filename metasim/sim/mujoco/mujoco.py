@@ -29,11 +29,10 @@ class MujocoHandler(BaseSimHandler):
         if scenario.num_envs > 1:
             raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
 
-        self._robot = scenario.robot
         self._mujoco_robot_name = None
         self._robot_num_dof = None
-        self._robot_path = self._robot.mjcf_path
-        self._gravity_compensation = not self._robot.enabled_gravity
+        self._robot_path = self.robot.mjcf_path
+        self._gravity_compensation = not self.robot.enabled_gravity
 
         self.viewer = None
         self.cameras = []
@@ -166,10 +165,10 @@ class MujocoHandler(BaseSimHandler):
 
         robot_xml = mjcf.from_path(self._robot_path)
         robot_attached = mjcf_model.attach(robot_xml)
-        if not self._robot.fix_base_link:
+        if not self.robot.fix_base_link:
             robot_attached.add("freejoint")
         self.robot_attached = robot_attached
-        self.mj_objects[self._robot.name] = robot_xml
+        self.mj_objects[self.robot.name] = robot_xml
         self._mujoco_robot_name = robot_xml.full_identifier
         return mjcf_model
 
@@ -289,8 +288,8 @@ class MujocoHandler(BaseSimHandler):
         if "pos" not in obj_state and "rot" not in obj_state:
             return
 
-        if obj_name == self._robot.name:
-            if not self._robot.fix_base_link:
+        if obj_name == self.robot.name:
+            if not self.robot.fix_base_link:
                 root_joint = self.physics.data.joint(self._mujoco_robot_name)
                 root_joint.qpos[:3] = obj_state.get("pos", [0, 0, 0])
                 root_joint.qpos[3:7] = obj_state.get("rot", [1, 0, 0, 0])
@@ -322,7 +321,7 @@ class MujocoHandler(BaseSimHandler):
 
         for joint_name, joint_pos in obj_state["dof_pos"].items():
             full_joint_name = (
-                f"{self._mujoco_robot_name}{joint_name}" if obj_name == self._robot.name else f"{obj_name}/{joint_name}"
+                f"{self._mujoco_robot_name}{joint_name}" if obj_name == self.robot.name else f"{obj_name}/{joint_name}"
             )
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
