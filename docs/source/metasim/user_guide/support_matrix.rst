@@ -17,7 +17,7 @@ There are 3 levels of supportance for each simulator:
 Supported Features
 ------------------
 
-The following tables show the configuration that can be set for the simulation in each simulator. ``✓`` means the parameter is supported. Empty cell means the parameter is not supported. Other values means the default value in the original simulator.
+The following tables show the configuration that can be set for each simulator. Empty cell means the parameter is not supported. ``✓`` means the parameter is supported, and when not specified in the config file, the value read from the asset file or determined by the original simulator is used. Values in the table means the default value to be used when not specified in the config file.
 
 
 Simulation Configuration
