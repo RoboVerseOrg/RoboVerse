@@ -12,6 +12,7 @@ from pathlib import Path
 import jax
 import jax.numpy as jnp
 import mujoco
+import mujoco.viewer
 import numpy as np
 import torch
 from dm_control import mjcf
@@ -74,6 +75,8 @@ class MJXHandler(BaseSimHandler):
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
             self._render_data = mujoco.MjData(self._mj_model)
 
+        if not self.headless:
+            self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
         log.info(f"MJXHandler launched · envs={self.num_envs}")
 
     def simulate(self) -> None:
@@ -424,7 +427,6 @@ class MJXHandler(BaseSimHandler):
                 self._fix_path_cache[obj.name] = attached.full_identifier
             else:
                 attached.add("freejoint")
-
             self.object_body_names.append(attached.full_identifier)
             self._object_root_path_cache[obj.name] = attached.full_identifier
             self.mj_objects[obj.name] = attached
@@ -436,7 +438,6 @@ class MJXHandler(BaseSimHandler):
             self._fix_path_cache[self._robot.name] = robot_attached.full_identifier
         else:
             robot_attached.add("freejoint")
-
         self._robot_root_path_cache = {self._robot.name: robot_attached.full_identifier}
         self.mj_objects[self._robot.name] = robot_attached
         self._mujoco_robot_name = robot_attached.full_identifier
@@ -446,8 +447,16 @@ class MJXHandler(BaseSimHandler):
     ############################################################
     ## Misc
     ###########################################################
-    def refresh_render(self) -> None:
-        pass
+    def refresh_render(self):
+        """Sync env-0 to the passive viewer window."""
+        if getattr(self, "_viewer", None) is None:
+            return
+
+        slice_data = jax.tree_util.tree_map(lambda x: x[0], self._data)
+        mjx.get_data_into(self._render_data, self._mj_model, slice_data)
+        mujoco.mj_forward(self._mj_model, self._render_data)
+
+        self._viewer.sync()
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
@@ -532,7 +541,7 @@ class MJXHandler(BaseSimHandler):
                 d = mjx.step(model, d)
                 return d, None
 
-            data, _ = jax.lax.scan(body, data, None, length=100)
+            data, _ = jax.lax.scan(body, data, None, length=n_sub)
             return data
 
         batched = jax.vmap(_one_env, in_axes=(None, 0))
