@@ -50,6 +50,57 @@ Simulation Configuration
      -
      -
 
+Robot Configuration
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 20 20 20 20 20
+
+   * - Parameter
+     - IsaacLab
+     - IsaacGym
+     - MuJoCo
+     - Genesis
+     - SAPIEN3
+     - PyBullet
+   * - ``stiffness``
+     - ✓
+     - 800.0
+     -
+     -
+     - ✓
+     -
+   * - ``damping``
+     - ✓
+     - 40.0
+     -
+     -
+     - ✓
+     -
+   * - ``velocity_limit``
+     - ✓
+     -
+     -
+     -
+     -
+     -
+   * - ``torque_limit``
+     - ✓
+     -
+     -
+     -
+     -
+     -
+   * - ``fully_actuated``
+     - ✓
+     - ✓
+     -
+     -
+     -
+     -
+
+
 Physics Engine Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
