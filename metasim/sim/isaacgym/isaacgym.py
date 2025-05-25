@@ -273,8 +273,8 @@ class IsaacgymHandler(BaseSimHandler):
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self._robot.actuators[dof_name]
-            i_stiffness = i_actuator_cfg.stiffness
-            i_damping = i_actuator_cfg.damping
+            i_stiffness = i_actuator_cfg.stiffness if i_actuator_cfg.stiffness is not None else 800
+            i_damping = i_actuator_cfg.damping if i_actuator_cfg.damping is not None else 40
             i_control_mode = self._robot.control_type[dof_name] if dof_name in self._robot.control_type else "position"
 
             # task default position from cfg if exist, otherwise use 0.3*(uppper + lower) as default
