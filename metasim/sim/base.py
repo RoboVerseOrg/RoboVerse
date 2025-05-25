@@ -74,12 +74,12 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def set_dof_targets(self, obj_names: list[str], actions: list[Action]) -> None:
         """Set the dof targets of the robot.
 
         Args:
-            obj_name (str): The name of the robot
-            actions (list[Action]): The target actions for the robot
+            obj_names (list[str]): The names of the robots
+            actions (list[Action]): The target actions for the robots
         """
         raise NotImplementedError
 

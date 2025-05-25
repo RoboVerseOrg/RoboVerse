@@ -100,7 +100,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
 
         def step(self, actions: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
             self._episode_length_buf += 1
-            self.handler.set_dof_targets(self.handler.robot.name, actions)
+            self.handler.set_dof_targets(self.handler.robots, actions)
             self.handler.simulate()
             reward = None
             success = self.handler.checker.check(self.handler)
