@@ -26,7 +26,16 @@ from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
-from .mjx_helper import j2t, process_entity, sorted_actuator_ids, sorted_body_ids, sorted_joint_info, t2j
+from .mjx_helper import (
+    j2t,
+    pack_body_state,
+    pack_root_state,
+    process_entity,
+    sorted_actuator_ids,
+    sorted_body_ids,
+    sorted_joint_info,
+    t2j,
+)
 
 
 class MJXHandler(BaseSimHandler):
@@ -110,14 +119,8 @@ class MJXHandler(BaseSimHandler):
             bid_r.insert(0, root_bid_r)
             bnames_r.insert(0, self.mj_objects[r_cfg.name].full_identifier)
 
-        # collect per-robot arrays ----------------------------------------------
-        root_state_r = jnp.concatenate(
-            [data.xpos[idx, root_bid_r], data.xquat[idx, root_bid_r], data.cvel[idx, root_bid_r]], axis=-1
-        )  # (N, 13)
-
-        body_state_r = jnp.concatenate(
-            [data.xpos[idx[:, None], bid_r], data.xquat[idx[:, None], bid_r], data.cvel[idx[:, None], bid_r]], axis=-1
-        )  # (N, Nbody, 13)
+            root_state_r = pack_root_state(data, idx, root_bid_r)  # (N,13)
+            body_state_r = pack_body_state(data, idx, jnp.asarray(bid_r))  # (N,B,13)
 
         robots[r_cfg.name] = RobotState(
             root_state=j2t(root_state_r),
@@ -140,16 +143,11 @@ class MJXHandler(BaseSimHandler):
                 bid_o.insert(0, root_bid_o)
                 bnames_o.insert(0, self.mj_objects[obj.name].full_identifier)
 
-            root_state_o = jnp.concatenate(
-                [data.xpos[idx, root_bid_o], data.xquat[idx, root_bid_o], data.cvel[idx, root_bid_o]], axis=-1
-            )
+            root_state_o = pack_root_state(data, idx, root_bid_o)  # (N, 13)
 
             if isinstance(obj, ArticulationObjCfg):  # articulated
                 qadr_o, vadr_o = sorted_joint_info(self._mjx_model, prefix)
-                body_state_o = jnp.concatenate(
-                    [data.xpos[idx[:, None], bid_o], data.xquat[idx[:, None], bid_o], data.cvel[idx[:, None], bid_o]],
-                    axis=-1,
-                )
+                body_state_o = pack_body_state(data, idx, jnp.asarray(bid_o))  # (N,Nbody,13)
                 objects[obj.name] = ObjectState(
                     root_state=j2t(root_state_o),
                     body_names=bnames_o,
