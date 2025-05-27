@@ -6,10 +6,10 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class UnitreeDex31Cfg(BaseRobotCfg):
+class UnitreeDex31LeftCfg(BaseRobotCfg):
     """Cfg for the Unitree Dexterous Hand 3-1 robot."""
 
-    name: str = "unitree_dex3_1"
+    name: str = "unitree_dex3_1_left"
 
     num_joints: int = 7
     fix_base_link: bool = True
