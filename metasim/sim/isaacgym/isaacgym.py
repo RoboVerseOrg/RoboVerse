@@ -207,7 +207,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
         elif isinstance(object, ArticulationObjCfg):
-            asset_path = object.urdf_path
+            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = True
@@ -217,7 +217,7 @@ class IsaacgymHandler(BaseSimHandler):
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)
             self._articulated_joint_dict_dict[object.name] = self.gym.get_asset_dof_dict(asset)
         elif isinstance(object, RigidObjCfg):
-            asset_path = object.urdf_path
+            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = object.fix_base_link
@@ -232,7 +232,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _load_robot_assets(self) -> None:
         asset_root = "."
-        robot_asset_file = self.robot.urdf_path
+        robot_asset_file = self.robot.mjcf_path if self.robot.isaacgym_read_mjcf else self.robot.urdf_path
         asset_options = gymapi.AssetOptions()
         asset_options.armature = 0.01
         asset_options.fix_base_link = self.robot.fix_base_link
@@ -561,7 +561,10 @@ class IsaacgymHandler(BaseSimHandler):
         for action_data in actions:
             flat_vals = []
             for joint_i, joint_name in enumerate(self._joint_info[self.robot.name]["names"]):
-                flat_vals.append(action_data["dof_pos_target"][joint_name])  # TODO: support other actions
+                if self.robot.actuators[joint_name].fully_actuated:
+                    flat_vals.append(action_data["dof_pos_target"][joint_name])  # TODO: support other actions
+                else:
+                    flat_vals.append(0.0)  # place holder for under-actuated joints
 
             action_array = torch.tensor(flat_vals, dtype=torch.float32, device=self.device).unsqueeze(0)
 

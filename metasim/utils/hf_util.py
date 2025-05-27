@@ -145,9 +145,11 @@ class FileDownloader:
 
         if self.scenario.sim in ["isaaclab"]:
             self._add(obj.usd_path)
-        elif self.scenario.sim in ["isaacgym", "pybullet", "sapien2", "sapien3", "genesis"]:
+        elif self.scenario.sim in ["pybullet", "sapien2", "sapien3", "genesis"] or (
+            self.scenario.sim == "isaacgym" and not obj.isaacgym_read_mjcf
+        ):
             self._add(obj.urdf_path)
-        elif self.scenario.sim in ["mujoco"]:
+        elif self.scenario.sim in ["mujoco"] or (self.scenario.sim == "isaacgym" and obj.isaacgym_read_mjcf):
             self._add(obj.mjcf_path)
         elif self.scenario.sim in ["mjx"]:
             self._add(obj.mjx_mjcf_path)
