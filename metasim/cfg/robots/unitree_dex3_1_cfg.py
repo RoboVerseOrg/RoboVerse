@@ -13,7 +13,7 @@ class UnitreeDex31Cfg(BaseRobotCfg):
 
     num_joints: int = 7
     fix_base_link: bool = True
-    urdf_path: str = "roboverse_data/robots/unitree_hand/urdf/unitree_dex3_left.urdf"
+    urdf_path: str = "roboverse_data/robots/unitree_dex3-1/urdf/unitree_dex3_left.urdf"
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {
