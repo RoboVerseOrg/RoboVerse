@@ -8,12 +8,19 @@ import numpy as np
 import omni
 import yaml
 from loguru import logger as log
-from omni.kit.material.library import get_material_prim_path
+
+try:
+    from omni.kit.material.library import get_material_prim_path
+except:
+    pass
 from pxr import Gf, Sdf, Usd, UsdShade
 
 from metasim.utils.hf_util import check_and_download_recursive
 
-from .material_util import apply_mdl_to_prim
+try:
+    from .material_util import apply_mdl_to_prim
+except:
+    pass
 
 try:
     import omni.isaac.core.utils.prims as prim_utils
