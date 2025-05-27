@@ -66,14 +66,14 @@ Robot Configuration
      - PyBullet
    * - ``stiffness``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.stiffness>`_
-     - 800.0
+     - ✓
      -
      -
      - ✓
      -
    * - ``damping``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.damping>`_
-     - 40.0
+     - ✓
      -
      -
      - ✓
