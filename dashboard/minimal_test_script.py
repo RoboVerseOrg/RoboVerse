@@ -63,14 +63,14 @@ def main():
 
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         cameras=[camera],
         sim=args.sim,
         headless=True,
     )
     env_class = get_sim_env_class(SimType(args.sim))
     env = env_class(scenario)
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot, env.handler)
+    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
     obs, _ = env.reset(states=init_states[: scenario.num_envs])
     save_obs(obs, f"{args.save_dir}/rgb_{0:04d}.png")
     for i in range(1):

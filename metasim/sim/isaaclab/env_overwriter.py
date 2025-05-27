@@ -31,7 +31,7 @@ class IsaaclabEnvOverwriter:
     def __init__(self, scenario: ScenarioCfg):
         self.scenario = scenario
         self.task = scenario.task
-        self.robot = scenario.robot
+        self.robots = scenario.robots
         self.cameras = scenario.cameras
         self.sensors = scenario.sensors
         self.objects = scenario.objects
@@ -67,7 +67,7 @@ class IsaaclabEnvOverwriter:
                 obj_pos = obj_pos[0]  # FIXME: only support one environment
 
                 ## Get robot
-                robot_pos, robot_quat = get_pose(env, self.robot.name)
+                robot_pos, robot_quat = get_pose(env, self.robots[0].name)
                 robot_quat = robot_quat[0]  # FIXME: only support one environment
 
                 camera = randomize_camera_pose(camera, obj_pos.tolist(), robot_quat.tolist(), "front_select", self.task)
@@ -204,7 +204,9 @@ class IsaaclabEnvOverwriter:
             ShaderFixer(scene_cfg_dict["filepath"], SCENE_PRIM_PATH).fix_all()
             use_scene = True
 
-        add_robot(env, self.robot)
+        ## TODO: use add_robots
+        for robot in self.robots:
+            add_robot(env, robot)
         add_objects(env, self.objects + self.checker_debug_viewers[:1])  # TODO: now only support one checker viewer
 
         ## Fix shader texture map path
@@ -340,12 +342,17 @@ class IsaaclabEnvOverwriter:
         env.actions = actions
 
     def _apply_action(self, env: "EmptyEnv") -> None:
-        actionable_joint_ids = [
-            env.scene.articulations[self.robot.name].joint_names.index(jn)
-            for jn in self.robot.actuators
-            if self.robot.actuators[jn].fully_actuated
-        ]
-        env.robot.set_joint_position_target(env.actions, joint_ids=actionable_joint_ids)
+        start_idx = 0
+        for robot in self.robots:
+            actionable_joint_ids = [
+                env.scene.articulations[robot.name].joint_names.index(jn)
+                for jn in robot.actuators
+                if robot.actuators[jn].fully_actuated
+            ]
+            env.robot.set_joint_position_target(
+                env.actions[:, start_idx : start_idx + len(actionable_joint_ids)], joint_ids=actionable_joint_ids
+            )
+            start_idx += len(actionable_joint_ids)
 
     def _get_observations(self, env: "EmptyEnv") -> None:
         pass

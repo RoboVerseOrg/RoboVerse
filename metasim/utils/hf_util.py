@@ -116,7 +116,8 @@ class FileDownloader:
 
         for obj in objects:
             self._add_from_object(obj)
-        self._add_from_object(self.scenario.robot)
+        for robot in self.scenario.robots:
+            self._add_from_object(robot)
         if self.scenario.scene is not None:
             self._add_from_object(self.scenario.scene)
         if self.scenario.task is not None:
@@ -131,7 +132,7 @@ class FileDownloader:
                 and traj_filepath.find(".yaml") == -1
                 and traj_filepath.find(".yml") == -1
             ):
-                traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robot.name}_v2.pkl.gz")
+                traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
             self._add(traj_filepath)
 
     def _add_from_object(self, obj: BaseObjCfg):
