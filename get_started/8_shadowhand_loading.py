@@ -21,9 +21,10 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
+from metasim.cfg.objects import RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
-from metasim.constants import SimType
+from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_env_class
 
@@ -61,7 +62,18 @@ scenario = ScenarioCfg(
 )
 
 # add cameras
-scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, -0.2, 0.0))]
+
+scenario.objects = [
+    RigidObjCfg(
+        name="cube",
+        scale=(1, 1, 1),
+        physics=PhysicStateType.RIGIDBODY,
+        # usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="roboverse_data/assets/bidex/objects/cube_multicolor.urdf",
+        # mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+    ),
+]
 
 
 log.info(f"Using simulator: {args.sim}")
@@ -70,11 +82,16 @@ env = env_class(scenario)
 
 init_states = [
     {
-        "objects": {},
+        "objects": {
+            "cube": {
+                "pos": torch.tensor([0.0, -0.39, 0.54]),
+                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            },
+        },
         "robots": {
             "shadow_hand": {
                 "pos": torch.tensor([0.0, 0.0, 0.5]),
-                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                "rot": torch.tensor([0.0, 0.0, -0.707, 0.707]),
                 "dof_pos": {
                     "robot0_WRJ1": 0.0,
                     "robot0_WRJ0": 0.0,
@@ -124,7 +141,7 @@ for _ in range(100):
                     + robot_joint_limits[joint_name][0]
                 )
                 for joint_name in robot_joint_limits.keys()
-                if scenario.robot.actuators[joint_name].actionable
+                if scenario.robot.actuators[joint_name].fully_actuated
             }
         }
         for _ in range(scenario.num_envs)
