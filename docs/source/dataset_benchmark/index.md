@@ -22,5 +22,7 @@ dataset/scenes
 :caption: RoboVerse Benchmark
 :titlesonly:
 
-benchmark
+benchmark/overview
+benchmark/results
+benchmark/usage
 ```
