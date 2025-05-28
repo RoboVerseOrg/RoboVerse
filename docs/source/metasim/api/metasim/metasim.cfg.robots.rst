@@ -30,3 +30,10 @@
       SawyerMujocoCfg
       Ur5E2F85Cfg
       WalkerCfg
+
+BaseRobotCfg
+------------
+
+.. autoclass:: BaseRobotCfg
+   :members:
+   :show-inheritance:

@@ -63,19 +63,11 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e
-    elif sim == SimType.SAPIEN:
-        try:
-            from metasim.sim.sapien import SapienHandler
-
-            return SapienHandler
-        except ImportError as e:
-            log.error("Sapien is not installed, please install it first")
-            raise e
     elif sim == SimType.SAPIEN2:
         try:
-            from metasim.sim.sapien import SapienHandler
+            from metasim.sim.sapien import Sapien2Handler
 
-            return SapienHandler
+            return Sapien2Handler
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
@@ -102,6 +94,14 @@ def get_sim_handler_class(sim: SimType):
             return BlenderHandler
         except ImportError as e:
             log.error("Blender is not installed, please install it first")
+            raise e
+    elif sim == SimType.MJX:
+        try:
+            from metasim.sim.mjx import MJXHandler
+
+            return MJXHandler
+        except ImportError as e:
+            log.error("MJX is not installed, please install it first")
             raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")
@@ -156,11 +156,11 @@ def get_sim_env_class(sim: SimType):
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e
-    elif sim == SimType.SAPIEN or sim == SimType.SAPIEN2:
+    elif sim == SimType.SAPIEN2:
         try:
-            from metasim.sim.sapien import SapienEnv
+            from metasim.sim.sapien import Sapien2Env
 
-            return SapienEnv
+            return Sapien2Env
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
@@ -187,6 +187,14 @@ def get_sim_env_class(sim: SimType):
             return Sapien3Env
         except ImportError as e:
             log.error("Sapien3 is not installed, please install it first")
+            raise e
+    elif sim == SimType.MJX:
+        try:
+            from metasim.sim.mjx import MJXEnv
+
+            return MJXEnv
+        except ImportError as e:
+            log.error("mjx is not installed, please install it first")
             raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")

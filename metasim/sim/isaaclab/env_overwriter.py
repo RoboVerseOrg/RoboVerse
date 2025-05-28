@@ -343,7 +343,7 @@ class IsaaclabEnvOverwriter:
         actionable_joint_ids = [
             env.scene.articulations[self.robot.name].joint_names.index(jn)
             for jn in self.robot.actuators
-            if self.robot.actuators[jn].actionable
+            if self.robot.actuators[jn].fully_actuated
         ]
         env.robot.set_joint_position_target(env.actions, joint_ids=actionable_joint_ids)
 

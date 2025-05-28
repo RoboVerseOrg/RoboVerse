@@ -14,6 +14,7 @@ class H1Cfg(BaseRobotCfg):
     usd_path: str = "roboverse_data/robots/h1/usd/h1.usd"
     mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
     urdf_path: str = "roboverse_data/robots/h1/urdf/h1.urdf"
+    mjx_mjcf_path: str = "roboverse_data/robots/h1/mjcf/mjx_h1.xml"
     enabled_gravity: bool = True
     fix_base_link: bool = False
     enabled_self_collisions: bool = False

@@ -46,7 +46,7 @@ def parse_args():
         "--sim",
         type=str,
         default="isaaclab",
-        choices=["isaaclab", "isaacgym", "pyrep", "pybullet", "sapien", "mujoco"],
+        choices=["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"],
     )
     parser.add_argument(
         "--algo",
@@ -154,7 +154,7 @@ def main():
 
     *_, robot_ik = get_curobo_models(scenario.robot)
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(scenario.robot.gripper_release_q)
+    ee_n_dof = len(scenario.robot.gripper_open_q)
 
     step = 0
     MaxStep = 800

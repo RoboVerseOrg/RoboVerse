@@ -33,93 +33,6 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
 
     assert isinstance(obj, BaseObjCfg)
     prim_path = f"/World/envs/env_.*/{obj.name}"
-    ## Rigid object
-    if isinstance(obj, RigidObjCfg):
-        if obj.fix_base_link:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
-        else:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg()
-        if obj.collision_enabled:
-            collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-        else:
-            collision_props = None
-
-        ## Primitive object
-        if isinstance(obj, PrimitiveCubeCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(
-                RigidObjectCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.MeshCuboidCfg(
-                        size=tuple([x * s for x, s in zip(obj.size, obj.scale)]),
-                        mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
-                        visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
-                        ),
-                        rigid_props=rigid_props,
-                        collision_props=collision_props,
-                    ),
-                )
-            )
-            return
-        if isinstance(obj, PrimitiveSphereCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(
-                RigidObjectCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.MeshSphereCfg(
-                        radius=obj.radius,
-                        mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
-                        visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
-                        ),
-                        rigid_props=rigid_props,
-                        collision_props=collision_props,
-                    ),
-                )
-            )
-            return
-        if isinstance(obj, PrimitiveCylinderCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(
-                RigidObjectCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.MeshCylinderCfg(
-                        radius=obj.radius,
-                        height=obj.height,
-                        mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
-                        visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
-                        ),
-                        rigid_props=rigid_props,
-                        collision_props=collision_props,
-                    ),
-                )
-            )
-            return
-        if isinstance(obj, PrimitiveFrameCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(
-                RigidObjectCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.UsdFileCfg(
-                        usd_path="metasim/data/quick_start/assets/COMMON/frame/usd/frame.usd",
-                        rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                            disable_gravity=True, kinematic_enabled=True
-                        ),  # fixed
-                        collision_props=None,  # no collision
-                        scale=obj.scale,
-                    ),
-                )
-            )
-            return
-
-        ## File-based object
-        usd_file_cfg = sim_utils.UsdFileCfg(
-            usd_path=obj.usd_path,
-            rigid_props=rigid_props,
-            collision_props=collision_props,
-            scale=obj.scale,
-        )
-        if isinstance(obj, RigidObjCfg):
-            env.scene.rigid_objects[obj.name] = RigidObject(RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg))
-            return
 
     ## Articulation object
     if isinstance(obj, ArticulationObjCfg):
@@ -131,6 +44,92 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
             )
         )
         return
+
+    if obj.fix_base_link:
+        rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
+    else:
+        rigid_props = sim_utils.RigidBodyPropertiesCfg()
+    if obj.collision_enabled:
+        collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+    else:
+        collision_props = None
+
+    ## Primitive object
+    if isinstance(obj, PrimitiveCubeCfg):
+        env.scene.rigid_objects[obj.name] = RigidObject(
+            RigidObjectCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.MeshCuboidCfg(
+                    size=obj.size,
+                    mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                    ),
+                    rigid_props=rigid_props,
+                    collision_props=collision_props,
+                ),
+            )
+        )
+        return
+    if isinstance(obj, PrimitiveSphereCfg):
+        env.scene.rigid_objects[obj.name] = RigidObject(
+            RigidObjectCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.MeshSphereCfg(
+                    radius=obj.radius,
+                    mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                    ),
+                    rigid_props=rigid_props,
+                    collision_props=collision_props,
+                ),
+            )
+        )
+        return
+    if isinstance(obj, PrimitiveCylinderCfg):
+        env.scene.rigid_objects[obj.name] = RigidObject(
+            RigidObjectCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.MeshCylinderCfg(
+                    radius=obj.radius,
+                    height=obj.height,
+                    mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                    ),
+                    rigid_props=rigid_props,
+                    collision_props=collision_props,
+                ),
+            )
+        )
+        return
+    if isinstance(obj, PrimitiveFrameCfg):
+        env.scene.rigid_objects[obj.name] = RigidObject(
+            RigidObjectCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.UsdFileCfg(
+                    usd_path="metasim/data/quick_start/assets/COMMON/frame/usd/frame.usd",
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True),  # fixed
+                    collision_props=None,  # no collision
+                    scale=obj.scale,
+                ),
+            )
+        )
+        return
+
+    ## Rigid object
+    if isinstance(obj, RigidObjCfg):
+        usd_file_cfg = sim_utils.UsdFileCfg(
+            usd_path=obj.usd_path,
+            rigid_props=rigid_props,
+            collision_props=collision_props,
+            scale=obj.scale,
+        )
+        if isinstance(obj, RigidObjCfg):
+            env.scene.rigid_objects[obj.name] = RigidObject(RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg))
+            return
+
     raise ValueError(f"Unsupported object type: {type(obj)}")
 
 
@@ -155,6 +154,8 @@ def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
             activate_contact_sensors=True,  # TODO: only activate when contact sensor is added
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(),
+            joint_drive_props=sim_utils.JointDrivePropertiesCfg(),
+            # fixed_tendons_props=sim_utils.FixedTendonPropertiesCfg(limit_stiffness=30.0, damping=0.1),
         ),
         actuators={
             jn: ImplicitActuatorCfg(

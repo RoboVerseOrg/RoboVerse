@@ -7,7 +7,14 @@ import torch
 from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, BaseObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.cfg.objects import (
+    ArticulationObjCfg,
+    BaseObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+    _FileBasedMixin,
+)
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
@@ -200,7 +207,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
         elif isinstance(object, ArticulationObjCfg):
-            asset_path = object.urdf_path
+            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = True
@@ -210,7 +217,7 @@ class IsaacgymHandler(BaseSimHandler):
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)
             self._articulated_joint_dict_dict[object.name] = self.gym.get_asset_dof_dict(asset)
         elif isinstance(object, RigidObjCfg):
-            asset_path = object.urdf_path
+            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = object.fix_base_link
@@ -225,7 +232,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _load_robot_assets(self) -> None:
         asset_root = "."
-        robot_asset_file = self.robot.urdf_path
+        robot_asset_file = self.robot.mjcf_path if self.robot.isaacgym_read_mjcf else self.robot.urdf_path
         asset_options = gymapi.AssetOptions()
         asset_options.armature = 0.01
         asset_options.fix_base_link = self.robot.fix_base_link
@@ -266,8 +273,6 @@ class IsaacgymHandler(BaseSimHandler):
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self._robot.actuators[dof_name]
-            i_stiffness = i_actuator_cfg.stiffness
-            i_damping = i_actuator_cfg.damping
             i_control_mode = self._robot.control_type[dof_name] if dof_name in self._robot.control_type else "position"
 
             # task default position from cfg if exist, otherwise use 0.3*(uppper + lower) as default
@@ -284,8 +289,8 @@ class IsaacgymHandler(BaseSimHandler):
 
             # pd control effort mode
             if i_control_mode == "effort":
-                self._p_gains[:, i] = i_stiffness
-                self._d_gains[:, i] = i_damping
+                self._p_gains[:, i] = i_actuator_cfg.stiffness
+                self._d_gains[:, i] = i_actuator_cfg.damping
                 torque_limit = (
                     i_actuator_cfg.torque_limit
                     if i_actuator_cfg.torque_limit is not None
@@ -299,14 +304,16 @@ class IsaacgymHandler(BaseSimHandler):
             # built-in position mode
             elif i_control_mode == "position":
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
-                robot_dof_props["stiffness"][i] = i_stiffness
-                robot_dof_props["damping"][i] = i_damping
+                if i_actuator_cfg.stiffness is not None:
+                    robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
+                if i_actuator_cfg.damping is not None:
+                    robot_dof_props["damping"][i] = i_actuator_cfg.damping
                 self._pos_ctrl_dof_dix.append(i + self._obj_num_dof)
             else:
                 log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
                 raise ValueError
 
-            if i_actuator_cfg.actionable:
+            if i_actuator_cfg.fully_actuated:
                 num_actions += 1
 
         self._default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)
@@ -428,8 +435,9 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), 0)
                 obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0)
 
-                self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])
-                if isinstance(self.objects[obj_i], PrimitiveCubeCfg):
+                if isinstance(self.objects[obj_i], _FileBasedMixin):
+                    self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])
+                elif isinstance(self.objects[obj_i], PrimitiveCubeCfg):
                     color = gymapi.Vec3(
                         self.objects[obj_i].color[0],
                         self.objects[obj_i].color[1],
@@ -553,7 +561,10 @@ class IsaacgymHandler(BaseSimHandler):
         for action_data in actions:
             flat_vals = []
             for joint_i, joint_name in enumerate(self._joint_info[self.robot.name]["names"]):
-                flat_vals.append(action_data["dof_pos_target"][joint_name])  # TODO: support other actions
+                if self.robot.actuators[joint_name].fully_actuated:
+                    flat_vals.append(action_data["dof_pos_target"][joint_name])  # TODO: support other actions
+                else:
+                    flat_vals.append(0.0)  # place holder for under-actuated joints
 
             action_array = torch.tensor(flat_vals, dtype=torch.float32, device=self.device).unsqueeze(0)
 

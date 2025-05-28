@@ -148,7 +148,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 # p.resetBasePositionAndOrientation(agent.instance, pos, wxyz_to_xyzw(rot))
 
             elif isinstance(object, PrimitiveCubeCfg):
-                box_dimensions = [x * s for x, s in zip(object.half_size, object.scale)]
+                box_dimensions = object.half_size
                 pos = np.array([0, 0, 0])
                 rot = np.array([1, 0, 0, 0])
                 box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=box_dimensions)
@@ -162,7 +162,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 self.object_joint_order[object.name] = []
 
             elif isinstance(object, PrimitiveSphereCfg):
-                radius = object.radius * object.scale[0]
+                radius = object.radius
                 pos = np.array([0, 0, 0])
                 rot = np.array([1, 0, 0, 0])
                 sphere_id = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)

@@ -184,6 +184,8 @@ autodoc_mock_imports = [
     ## Blender
     "bpy",
     "mathutils",
+    ## GSNet
+    "MinkowskiEngine",
     ## MetaSim dependencies
     "numpy",
     "torch",

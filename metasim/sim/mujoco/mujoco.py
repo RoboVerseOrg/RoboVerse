@@ -41,16 +41,8 @@ class MujocoHandler(BaseSimHandler):
             self.cameras.append(camera)
         self._episode_length_buf = 0
 
-        self.replay_traj = False
-        self.use_task_decimation = False
-
         # FIXME: hard code decimation for now
-        if self.use_task_decimation:
-            self.decimation = self.scenario.decimation
-        elif self.replay_traj:
-            log.warning("Warning: hard coding decimation to 1 for object states")
-            self.decimation = 1
-        elif self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
+        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
@@ -160,15 +152,12 @@ class MujocoHandler(BaseSimHandler):
         )
         self.object_body_names = []
         self.mj_objects = {}
-        object_paths = []
         for obj in self.objects:
-            object_paths.append(obj.mjcf_path)
-        for i, (obj, obj_path) in enumerate(zip(self.objects, object_paths)):
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
                 xml_str = self._create_primitive_xml(obj)
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
-                obj_mjcf = mjcf.from_path(obj_path)
+                obj_mjcf = mjcf.from_path(obj.mjcf_path)
             obj_attached = mjcf_model.attach(obj_mjcf)
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")
@@ -205,6 +194,33 @@ class MujocoHandler(BaseSimHandler):
 
         return actuator_states
 
+    def _pack_state(self, body_ids: list[int]):
+        """
+        Pack pos(3), quat(4), lin_vel_world(3), ang_vel(3) for one-env MuJoCo.
+
+        Args:
+            body_ids: list of body IDs, e.g. [root_id] or [root_id] + body_ids_reindex
+
+        Returns:
+            root_np: numpy (13,)      — the first body
+            body_np: numpy (n_body,13)     — n_body bodies
+        """
+        data = self.physics.data
+        pos = data.xpos[body_ids]
+        quat = data.xquat[body_ids]
+
+        # angular ω (world) & v @ subtree_com
+        w = data.cvel[body_ids, 0:3]
+        v = data.cvel[body_ids, 3:6]
+
+        # compute world‐frame linear velocity at body origin
+        offset = data.xpos[body_ids] - data.subtree_com[body_ids]
+        lin_world = v + np.cross(w, offset)
+
+        full = np.concatenate([pos, quat, lin_world, w], axis=1)
+        root_np = full[0]
+        return root_np, full  # root, bodies
+
     def get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         object_states = {}
         for obj in self.objects:
@@ -214,21 +230,13 @@ class MujocoHandler(BaseSimHandler):
             if isinstance(obj, ArticulationObjCfg):
                 joint_names = self.get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
+
+                root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+
                 state = ObjectState(
-                    root_state=torch.concat([
-                        torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
-                        torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
-                    ]).unsqueeze(0),
+                    root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                     body_names=self.get_body_names(obj.name),
-                    body_state=torch.concat(
-                        [
-                            torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
-                            torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
-                            torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
-                        ],
-                        dim=1,
-                    ).unsqueeze(0),
+                    body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                     ]).unsqueeze(0),
@@ -237,12 +245,10 @@ class MujocoHandler(BaseSimHandler):
                     ]).unsqueeze(0),
                 )
             else:
+                root_np, _ = self._pack_state([obj_body_id])
+
                 state = ObjectState(
-                    root_state=torch.concat([
-                        torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
-                        torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                        torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
-                    ]).unsqueeze(0),
+                    root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                 )
             object_states[obj.name] = state
 
@@ -253,21 +259,13 @@ class MujocoHandler(BaseSimHandler):
             joint_names = self.get_joint_names(robot.name, sort=True)
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
+
+            root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+
             state = RobotState(
                 body_names=self.get_body_names(robot.name),
-                root_state=torch.concat([
-                    torch.from_numpy(self.physics.data.xpos[obj_body_id]).float(),  # (3,)
-                    torch.from_numpy(self.physics.data.xquat[obj_body_id]).float(),  # (4,)
-                    torch.from_numpy(self.physics.data.cvel[obj_body_id]).float(),  # (6,)
-                ]).unsqueeze(0),
-                body_state=torch.concat(
-                    [
-                        torch.from_numpy(self.physics.data.xpos[body_ids_reindex]).float(),  # (n_body, 3)
-                        torch.from_numpy(self.physics.data.xquat[body_ids_reindex]).float(),  # (n_body, 4)
-                        torch.from_numpy(self.physics.data.cvel[body_ids_reindex]).float(),  # (n_body, 6)
-                    ],
-                    dim=1,
-                ).unsqueeze(0),
+                root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
+                body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                 joint_pos=torch.tensor([
                     self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
                 ]).unsqueeze(0),
@@ -367,15 +365,9 @@ class MujocoHandler(BaseSimHandler):
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
         joint_targets = actions[0]["dof_pos_target"]
-
-        if self.replay_traj:
-            for joint_name, target_pos in joint_targets.items():
-                joint = self.physics.data.joint(f"{self._mujoco_robot_name}{joint_name}")
-                joint.qpos = target_pos
-        else:
-            for joint_name, target_pos in joint_targets.items():
-                actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
-                actuator.ctrl = target_pos
+        for joint_name, target_pos in joint_targets.items():
+            actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
+            actuator.ctrl = target_pos
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.

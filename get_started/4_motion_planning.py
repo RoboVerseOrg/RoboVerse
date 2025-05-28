@@ -39,9 +39,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender"] = (
-        "isaaclab"
-    )
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
 
     ## Others
     num_envs: int = 1
@@ -162,7 +160,7 @@ init_states = [
 robot = scenario.robot
 *_, robot_ik = get_curobo_models(robot)
 curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-ee_n_dof = len(robot.gripper_release_q)
+ee_n_dof = len(robot.gripper_open_q)
 
 obs, extras = env.reset(states=init_states)
 os.makedirs("get_started/output", exist_ok=True)

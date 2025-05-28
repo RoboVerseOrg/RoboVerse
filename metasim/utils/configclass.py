@@ -393,7 +393,7 @@ def _custom_post_init(obj):
         # get data member
         value = getattr(obj, key)
         # check annotation
-        ann = obj.__class__.__dict__.get(key)
+        ann = inspect.getattr_static(obj.__class__, key, None)
         # duplicate data members that are mutable
         if not callable(value) and not isinstance(ann, property):
             setattr(obj, key, deepcopy(value))

@@ -9,7 +9,7 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class H12WithoutHandCfg(BaseRobotCfg):
     name: str = "h1_2_without_hand"
     num_joints: int = 27
-    usd_path: str = "data_isaaclab/robots/unitree/H1-2_without_hand.usd"
+    usd_path: str = "roboverse_data_release/robots/h1_2_without_hand/usd/h1_2_without_hand.usd"
     enabled_gravity: bool = True  # ! critical
     fix_base_link: bool = False
     enabled_self_collisions: bool = False

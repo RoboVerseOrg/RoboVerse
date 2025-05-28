@@ -1,7 +1,7 @@
 [project]
 name = "roboverse-py"
 version = "0.1.17"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.8"
 dependencies = [
     "gymnasium",
     "huggingface-hub",
@@ -9,6 +9,7 @@ dependencies = [
     "loguru",
     "opencv-python",
     "rich",
+    "rootutils",
     "torch",
     "torchvision",
     "tqdm",
@@ -36,6 +37,7 @@ isaacgym = [
     "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco", "dm-control"]
+mjx = ["mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]"]
 sapien2 = ["mani-skill2 @ git+https://github.com/haosulab/ManiSkill.git@v0.5.3"]
 sapien3 = ["sapien>=3.0.0.b1"]
 pybullet = ["numpy<2", "pybullet"]
@@ -155,14 +157,7 @@ include = ["metasim*"]
 "metasim/cfg/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
 "metasim/cfg/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
 "metasim/cfg/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
-"metasim/double_sim/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/blender/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/genesis/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/sim/isaacgym/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/sim/mujoco/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"metasim/sim/pyrep/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/gym_env.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/sim/*.py" = ["D"]  # FIXME: Feishi add docstring and remove this
+"metasim/sim/**.py" = ["D"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 
 [tool.ruff.lint.isort]

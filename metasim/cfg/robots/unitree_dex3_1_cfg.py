@@ -6,6 +6,7 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
+<<<<<<< HEAD
 class UnitreeDex31Cfg(BaseRobotCfg):
     """Cfg for the Unitree Dexterous Hand 3-1 robot."""
 
@@ -14,6 +15,16 @@ class UnitreeDex31Cfg(BaseRobotCfg):
     num_joints: int = 7
     fix_base_link: bool = True
     urdf_path: str = "roboverse_data/robots/unitree_hand/urdf/unitree_dex3_left.urdf"
+=======
+class UnitreeDex31LeftCfg(BaseRobotCfg):
+    """Cfg for the Unitree Dexterous Hand 3-1 robot."""
+
+    name: str = "unitree_dex3_1_left"
+
+    num_joints: int = 7
+    fix_base_link: bool = True
+    urdf_path: str = "roboverse_data/robots/unitree_dex3-1/urdf/unitree_dex3_left.urdf"
+>>>>>>> origin/main
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {

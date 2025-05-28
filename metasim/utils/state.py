@@ -210,3 +210,150 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
         env_states.append(env_state)
 
     return env_states
+
+
+def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | None = None, device="gpu"):
+    root = torch.zeros((n_env, 13), device=device)
+
+    n_body = n_body or 0
+    body = torch.zeros((n_env, n_body, 13), device=device) if n_body else None
+
+    n_jnt = n_jnt or 0
+    jpos = torch.zeros((n_env, n_jnt), device=device) if n_jnt else None
+    jvel = torch.zeros_like(jpos) if jpos is not None else None
+    return root, body, jpos, jvel
+
+
+def list_state_to_tensor(
+    handler: BaseSimHandler,
+    env_states: list[dict],
+    device: torch.device | str = "cpu",
+) -> TensorState:
+    """Convert nested python list-states to a batched TensorState."""
+    obj_names = sorted({n for es in env_states for n in es["objects"].keys()})
+    robot_names = sorted({n for es in env_states for n in es["robots"].keys()})
+    cam_names = sorted({n for es in env_states if "cameras" in es for n in es["cameras"].keys()})
+
+    n_env = len(env_states)
+    dev = device
+
+    objects: dict[str, ObjectState] = {}
+    robots: dict[str, RobotState] = {}
+    cameras: dict[str, CameraState] = {}
+
+    # -------- objects --------------------------------------------------
+    for name in obj_names:
+        bnames = handler.get_body_names(name)
+        jnames = handler.get_joint_names(name)
+
+        root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
+
+        for e, es in enumerate(env_states):
+            if name not in es["objects"]:
+                continue
+            s = es["objects"][name]
+
+            vel = s.get("vel", torch.zeros(3, device=dev))
+            ang_vel = s.get("ang_vel", torch.zeros(3, device=dev))
+
+            root[e, :3] = s["pos"]
+            root[e, 3:7] = s["rot"]
+            root[e, 7:10] = vel
+            root[e, 10:13] = ang_vel
+
+            if body is not None and "body" in s:
+                for i, bn in enumerate(sorted(bnames)):
+                    if bn not in s["body"]:
+                        continue
+                    bi = s["body"][bn]
+                    body[e, i, :3], body[e, i, 3:7] = bi["pos"], bi["rot"]
+                    body[e, i, 7:10], body[e, i, 10:13] = bi["vel"], bi["ang_vel"]
+
+            if jpos is not None and "dof_pos" in s:
+                for i, jn in enumerate(sorted(jnames)):
+                    if jn in s["dof_pos"]:
+                        jpos[e, i] = s["dof_pos"][jn]
+            if jvel is not None and "dof_vel" in s:
+                for i, jn in enumerate(sorted(jnames)):
+                    if jn in s["dof_vel"]:
+                        jvel[e, i] = s["dof_vel"][jn]
+
+        objects[name] = ObjectState(root_state=root, body_state=body, joint_pos=jpos, joint_vel=jvel)
+
+    # -------- robots ---------------------------------------------------
+    for name in robot_names:
+        jnames = handler.get_joint_names(name)
+        bnames = handler.get_body_names(name)
+
+        root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
+        jpos_t, jvel_t, jeff_t = (
+            torch.zeros_like(jpos) if jpos is not None else None,
+            torch.zeros_like(jvel) if jvel is not None else None,
+            torch.zeros_like(jvel) if jvel is not None else None,
+        )
+
+        for e, es in enumerate(env_states):
+            if name not in es["robots"]:
+                continue
+            s = es["robots"][name]
+
+            pos = s["pos"]
+            rot = s["rot"]
+            vel = s.get("vel", torch.zeros(3, device=dev))
+            ang_vel = s.get("ang_vel", torch.zeros(3, device=dev))
+
+            root[e, :3] = pos
+            root[e, 3:7] = rot
+            root[e, 7:10] = vel
+            root[e, 10:13] = ang_vel
+            for i, jn in enumerate(sorted(jnames)):
+                if "dof_pos" in s and jn in s["dof_pos"]:
+                    jpos[e, i] = s["dof_pos"][jn]
+                if "dof_vel" in s and jn in s["dof_vel"]:
+                    jvel[e, i] = s["dof_vel"][jn]
+                if "dof_pos_target" in s and jn in s["dof_pos_target"]:
+                    jpos_t[e, i] = s["dof_pos_target"][jn]
+                if "dof_vel_target" in s and jn in s["dof_vel_target"]:
+                    jvel_t[e, i] = s["dof_vel_target"][jn]
+                if "dof_torque" in s and jn in s["dof_torque"]:
+                    jeff_t[e, i] = s["dof_torque"][jn]
+
+            if body is not None and "body" in s:
+                for i, bn in enumerate(sorted(bnames)):
+                    if bn not in s["body"]:
+                        continue
+                    bi = s["body"][bn]
+                    body[e, i, :3], body[e, i, 3:7], body[e, i, 7:10], body[e, i, 10:13] = (
+                        bi["pos"],
+                        bi["rot"],
+                        bi["vel"],
+                        bi["ang_vel"],
+                    )
+
+        robots[name] = RobotState(
+            root_state=root,
+            body_names=bnames,
+            body_state=body,
+            joint_pos=jpos,
+            joint_vel=jvel,
+            joint_pos_target=jpos_t,
+            joint_vel_target=jvel_t,
+            joint_effort_target=jeff_t,
+        )
+
+    # -------- cameras ---------------------------------------------
+    for cam in cam_names:
+        rgb = torch.stack(
+            [es["cameras"][cam]["rgb"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
+        ).to(dev)
+        depth = torch.stack(
+            [es["cameras"][cam]["depth"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
+        ).to(dev)
+        cameras[cam] = CameraState(rgb=rgb, depth=depth)
+
+    return TensorState(
+        objects=objects,
+        robots=robots,
+        cameras=cameras,
+        sensors={},
+    )

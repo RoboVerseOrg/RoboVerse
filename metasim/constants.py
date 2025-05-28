@@ -72,10 +72,10 @@ class SimType(enum.Enum):
     PYREP = "pyrep"
     MUJOCO = "mujoco"
     PYBULLET = "pybullet"
-    SAPIEN = "sapien"
     SAPIEN2 = "sapien2"
     SAPIEN3 = "sapien3"
     BLENDER = "blender"
+    MJX = "mjx"
 
 
 class RobotType(enum.Enum):

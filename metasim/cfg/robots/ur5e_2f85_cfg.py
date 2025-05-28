@@ -41,8 +41,8 @@ class Ur5E2F85Cfg(BaseRobotCfg):
         # "right_outer_knuckle_joint": (0.0, 0.785398),
     }
     ee_body_name: str = "wrist_3_link"
-    gripper_release_q = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    gripper_actuate_q = [0.785398, 0.785398, 0.785398, 0.785398, 0.785398, 0.785398]
+    gripper_open_q = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    gripper_close_q = [0.785398, 0.785398, 0.785398, 0.785398, 0.785398, 0.785398]
     curobo_ref_cfg_name: str = "ur5e_robotiq_2f_140.yml"
     curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, -0.0635]
     curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]

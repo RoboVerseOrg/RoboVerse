@@ -16,7 +16,7 @@
       mujoco.MujocoHandler
       pybullet.PybulletHandler
       genesis.GenesisHandler
-      sapien.sapien2.SapienHandler
+      sapien.sapien2.Sapien2Handler
       sapien.sapien3.Sapien3Handler
 
 Base Handler
