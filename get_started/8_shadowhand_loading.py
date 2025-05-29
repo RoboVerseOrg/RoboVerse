@@ -33,8 +33,6 @@ from metasim.utils.setup_util import get_sim_env_class
 class Args:
     """Arguments for the static scene."""
 
-    robot: str = "franka"
-
     ## Handlers
     # TODO currently, only support for isaacgym. Adding support for other simulators.
     sim: Literal["isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender"] = (
@@ -54,7 +52,7 @@ args = tyro.cli(Args)
 
 # initialize scenario
 scenario = ScenarioCfg(
-    robot=args.robot,
+    robots=["shadow_hand", "shadow_hand_1"],
     try_add_table=False,
     sim=args.sim,
     headless=args.headless,
@@ -119,6 +117,36 @@ init_states = [
                     "robot0_THJ0": 0.0,
                 },
             },
+            "shadow_hand_1": {
+                "pos": torch.tensor([0.0, -1.0, 0.5]),
+                "rot": torch.tensor([-0.707, 0.707, 0.0, 0.0]),
+                "dof_pos": {
+                    "robot1_WRJ1": 0.0,
+                    "robot1_WRJ0": 0.0,
+                    "robot1_FFJ3": 0.0,
+                    "robot1_FFJ2": 0.0,
+                    "robot1_FFJ1": 0.0,
+                    "robot1_FFJ0": 0.0,
+                    "robot1_MFJ3": 0.0,
+                    "robot1_MFJ2": 0.0,
+                    "robot1_MFJ1": 0.0,
+                    "robot1_MFJ0": 0.0,
+                    "robot1_RFJ3": 0.0,
+                    "robot1_RFJ2": 0.0,
+                    "robot1_RFJ1": 0.0,
+                    "robot1_RFJ0": 0.0,
+                    "robot1_LFJ4": 0.0,
+                    "robot1_LFJ3": 0.0,
+                    "robot1_LFJ2": 0.0,
+                    "robot1_LFJ1": 0.0,
+                    "robot1_LFJ0": 0.0,
+                    "robot1_THJ4": 0.0,
+                    "robot1_THJ3": 0.0,
+                    "robot1_THJ2": 0.0,
+                    "robot1_THJ1": 0.0,
+                    "robot1_THJ0": 0.0,
+                },
+            },
         },
     }
 ]
@@ -130,7 +158,10 @@ obs_saver = ObsSaver(video_path=f"get_started/output/8_shadowhand_loading_{args.
 obs_saver.add(obs)
 
 step = 0
-robot_joint_limits = scenario.robot.joint_limits
+robot_joint_limits = {}
+for robot in scenario.robots:
+    robot_joint_limits.update(robot.joint_limits)
+print(f"Robot joint limits: {robot_joint_limits}")
 for _ in range(100):
     log.debug(f"Step {step}")
     actions = [
@@ -141,7 +172,7 @@ for _ in range(100):
                     + robot_joint_limits[joint_name][0]
                 )
                 for joint_name in robot_joint_limits.keys()
-                if scenario.robot.actuators[joint_name].fully_actuated
+                # if scenario.robot.actuators[joint_name].fully_actuated
             }
         }
         for _ in range(scenario.num_envs)

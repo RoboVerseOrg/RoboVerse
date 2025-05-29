@@ -25,12 +25,12 @@ class BaseSimHandler:
 
         ## For quick reference
         self.task = scenario.task
-        self.robot = scenario.robot
+        self.robots = scenario.robots
         self.cameras = scenario.cameras
         self.sensors = scenario.sensors
         self.objects = scenario.objects
         self.checker = scenario.checker
-        self.object_dict = {obj.name: obj for obj in self.objects + [self.robot] + self.checker.get_debug_viewers()}
+        self.object_dict = {obj.name: obj for obj in self.objects + self.robots + self.checker.get_debug_viewers()}
         """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
 
     def launch(self) -> None:
@@ -74,12 +74,12 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def set_dof_targets(self, obj_names: list[str], actions: list[Action]) -> None:
         """Set the dof targets of the robot.
 
         Args:
-            obj_name (str): The name of the robot
-            actions (list[Action]): The target actions for the robot
+            obj_names (list[str]): The names of the robots
+            actions (list[Action]): The target actions for the robots
         """
         raise NotImplementedError
 

@@ -134,7 +134,7 @@ def main():
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
         random=args.random,
@@ -170,7 +170,9 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot, env.handler)
+    init_states, all_actions, all_states = get_traj(
+        scenario.task, scenario.robots[0], env.handler
+    )  # XXX: only support one robot
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
