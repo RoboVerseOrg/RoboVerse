@@ -249,10 +249,10 @@ class IsaacgymHandler(BaseSimHandler):
             # configure robot dofs
             robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
             self._robot_num_dof += robot_num_dofs
-            
+
             self._action_scale = torch.tensor(self.scenario.control.action_scale, device=self.device)
             self._action_offset = self.scenario.control.action_offset
-            
+
             p_gains = torch.zeros(
                 self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
             )
