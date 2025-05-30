@@ -10,7 +10,7 @@ class TapwaterScene152Cfg(SceneCfg):
     """Config class for tapwater scene"""
 
     name: str = "tapwater_152"
-    usd_path: str = "roboverse_data/scenes/arnold/152/layout.usd"
+    usd_path: str = "roboverse_data/scenes/arnold/tapwater_scene_152/usd/layout.usd"
     positions: list[tuple[float, float, float]] = [
         (-3.6135, 2.12884, -0.87274),
         (-1.04886, 3.53126, 0.00084),
