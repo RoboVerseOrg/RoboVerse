@@ -204,9 +204,9 @@ class IsaaclabEnvOverwriter:
             ShaderFixer(scene_cfg_dict["filepath"], SCENE_PRIM_PATH).fix_all()
             use_scene = True
 
+        ## TODO: use add_robots
         for robot in self.robots:
             add_robot(env, robot)
-
         add_objects(env, self.objects + self.checker_debug_viewers[:1])  # TODO: now only support one checker viewer
 
         ## Fix shader texture map path
@@ -353,7 +353,6 @@ class IsaaclabEnvOverwriter:
                 env.actions[:, start_idx : start_idx + len(actionable_joint_ids)], joint_ids=actionable_joint_ids
             )
             start_idx += len(actionable_joint_ids)
-
 
     def _get_observations(self, env: "EmptyEnv") -> None:
         pass

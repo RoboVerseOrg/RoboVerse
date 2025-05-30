@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 from loguru import logger as log
 
+from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.state import TensorState, state_tensor_to_nested
@@ -293,3 +294,14 @@ class BaseSimHandler:
     @property
     def device(self) -> torch.device:
         raise NotImplementedError
+
+    ############################################################
+    ## Temporary
+    ############################################################
+
+    @property
+    def robot(self) -> BaseRobotCfg:
+        """The robot in the scenario. This is only for temporary use, we should remove this property in the future."""
+        if len(self.robots) > 1:
+            log.warning("Only the first robot is used for now, the others are ignored")
+        return self.robots[0]
