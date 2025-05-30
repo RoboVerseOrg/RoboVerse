@@ -161,7 +161,6 @@ step = 0
 robot_joint_limits = {}
 for robot in scenario.robots:
     robot_joint_limits.update(robot.joint_limits)
-print(f"Robot joint limits: {robot_joint_limits}")
 for _ in range(100):
     log.debug(f"Step {step}")
     actions = [
