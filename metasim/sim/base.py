@@ -292,8 +292,6 @@ class BaseSimHandler:
         """
         raise NotImplementedError
 
-
-
     @property
     def num_envs(self) -> int:
         return self._num_envs
@@ -302,7 +300,6 @@ class BaseSimHandler:
     def episode_length_buf(self) -> list[int]:
         """The timestep of each environment, restart from 0 when reset, plus 1 at each step."""
         raise NotImplementedError
-
 
     @property
     def actions_cache(self) -> list[Action]:

@@ -81,12 +81,8 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
         def __init__(self, *args, **kwargs):
             self.handler = cls(*args, **kwargs)
             self.handler.launch()
-            self._episode_length_buf = torch.zeros(
-                self.handler.num_envs, dtype=torch.int32, device=self.handler.device
-            )  
-            self.handler.set_episode_length_buf(
-                self._episode_length_buf
-            )  # sync episode length buffer with handler
+            self._episode_length_buf = torch.zeros(self.handler.num_envs, dtype=torch.int32, device=self.handler.device)
+            self.handler.set_episode_length_buf(self._episode_length_buf)  # sync episode length buffer with handler
 
         def reset(self, states: list[EnvState] | None = None, env_ids: list[int] | None = None) -> tuple[Obs, Extra]:
             if env_ids is None:

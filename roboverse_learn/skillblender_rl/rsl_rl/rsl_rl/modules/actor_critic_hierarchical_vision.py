@@ -31,12 +31,10 @@
 import os
 from copy import deepcopy
 
-import numpy as np
 import torch
 import torch.nn as nn
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from torch.distributions import Normal
-from torch.nn.modules import rnn
 
 from metasim.utils.dict import class_to_dict
 

@@ -62,6 +62,7 @@ def class_to_dict(obj: object) -> dict[str, Any]:
             data[key] = value
     return data
 
+
 # FIXME remove redundant.
 def rsl_rl_class_to_dict(obj) -> dict:
     if not hasattr(obj, "__dict__"):

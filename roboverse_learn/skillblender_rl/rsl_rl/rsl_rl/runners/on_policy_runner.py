@@ -40,7 +40,6 @@ import numpy as np
 # from torch.utils.tensorboard import SummaryWriter
 import torch
 
-from rsl_rl.algorithms import PPO
 from rsl_rl.modules import *
 
 e = IPython.embed
@@ -194,20 +193,20 @@ class OnPolicyRunner:
             if self.log_dir is not None:
                 self.log(locals())
             if it % self.save_interval == 0:
-                self.save(os.path.join(self.log_dir, "model_{}.pt".format(it)))
+                self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
             ep_infos.clear()
             ep_metrics.clear()
 
             self.current_learning_iteration += 1
 
-        self.save(os.path.join(self.log_dir, "model_{}.pt".format(self.current_learning_iteration)))
+        self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
 
     def log(self, locs, width=80, pad=35):
         self.tot_timesteps += self.num_steps_per_env * self.env.num_envs
         self.tot_time += locs["collection_time"] + locs["learn_time"]
         iteration_time = locs["collection_time"] + locs["learn_time"]
 
-        ep_string = f""
+        ep_string = ""
         wandb_dict = {}
         if locs["ep_infos"]:
             for key in locs["ep_infos"][0]:
