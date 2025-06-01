@@ -200,22 +200,6 @@ def ref_dof_pos_tensor(envstates, robot_name: str):
     return envstates.robots[robot_name].extra["ref_dof_pos"]
 
 
-@torch.jit.script
-def copysign(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """Returns a tensor with the absolute value of `a` and the sign of `b`.
-
-    Args:
-        a (torch.Tensor): Input tensor whose absolute value is used.
-        b (torch.Tensor): Input tensor whose sign is used.
-
-    Returns:
-        torch.Tensor: A tensor with the absolute value of `a` and the sign of `b`.
-    """
-    # type: (float, Tensor) -> Tensor
-    a = torch.tensor(a, device=b.device, dtype=torch.float).repeat(b.shape[0])
-    return torch.abs(a) * torch.sign(b)
-
-
 def get_euler_xyz_tensor(quat):
     """Convert quaternion to Euler angles (roll, pitch, yaw) in radians for a batch of quaternions.
 
