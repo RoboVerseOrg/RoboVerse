@@ -31,7 +31,6 @@ def _check_and_download_single(filepath: str):
     Args:
         filepath: the filepath to check and download.
     """
-    return
     local_exists = os.path.exists(filepath)
     hf_exists = hf_fs.exists(os.path.join("datasets", REPO_ID, os.path.relpath(filepath, LOCAL_DIR)))
 

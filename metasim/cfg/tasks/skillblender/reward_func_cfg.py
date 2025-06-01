@@ -62,10 +62,7 @@ def reward_dof_acc(states: EnvState, robot_name: str, cfg) -> torch.Tensor:
     Penalize high DOF accelerations.
     """
     return torch.sum(
-        torch.square(
-            (states.robots[robot_name].extra["last_dof_vel"] - states.robots[robot_name].joint_vel)
-            / cfg.dt
-        ),
+        torch.square((states.robots[robot_name].extra["last_dof_vel"] - states.robots[robot_name].joint_vel) / cfg.dt),
         dim=1,
     )
 

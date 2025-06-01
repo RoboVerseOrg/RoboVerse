@@ -32,6 +32,7 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     elbow_indices: indices of the elbows joints
     contact_indices: indices of the contact joints
     """
+
     task_name: str = "skillblender_humanoid_task"
     humand: HumanoidExtraCfg = HumanoidExtraCfg()
 

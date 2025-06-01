@@ -359,7 +359,7 @@ def base_euler_xyz_tensor(envstate, robot_name: str):
 
 
 def command_tensor(envstate, robot_name: str):
-    """returns the command"""
+    """Returns the command"""
     return envstate.robots[robot_name].extra["commnad"]
 
 
@@ -434,15 +434,15 @@ def right_hand_orientation(envstate, robot_name: str):
 
 
 def actions_tensor(envstate, robot_name: str):
-    """return actions tensor"""
+    """Return actions tensor"""
     return envstate.robots[robot_name].extra["actions"]
 
 
 def last_actions_tensor(envstate, robot_name: str):
-    """return last actions tensor"""
+    """Return last actions tensor"""
     return envstate.robots[robot_name].extra["last_actions"]
 
 
 def last_actions_tensor(envstate, robot_name: str):
-    """return last actions tensor"""
+    """Return last actions tensor"""
     return envstate.robots[robot_name].extra["last_actions"]

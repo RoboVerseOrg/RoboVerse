@@ -10,11 +10,26 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.demo_util import get_traj
-from metasim.utils.dict import rsl_rl_class_to_dict
 from metasim.utils.setup_util import get_sim_env_class
 
-# TODO
-# log metric visualization
+
+# TODO: move this to .utils
+def rsl_rl_class_to_dict(obj) -> dict:
+    if not hasattr(obj, "__dict__"):
+        return obj
+    result = {}
+    for key in dir(obj):
+        if key.startswith("_"):
+            continue
+        element = []
+        val = getattr(obj, key)
+        if isinstance(val, list):
+            for item in val:
+                element.append(rsl_rl_class_to_dict(item))
+        else:
+            element = rsl_rl_class_to_dict(val)
+        result[key] = element
+    return result
 
 
 class RslRlWrapper(VecEnv):

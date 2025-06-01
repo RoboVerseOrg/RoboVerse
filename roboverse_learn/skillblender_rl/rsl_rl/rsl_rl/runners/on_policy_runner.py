@@ -40,7 +40,7 @@ import numpy as np
 # from torch.utils.tensorboard import SummaryWriter
 import torch
 
-from rsl_rl.algorithms import PPO
+from rsl_rl.algorithms import PPO  # noqa: F401
 from rsl_rl.modules import *
 
 e = IPython.embed
