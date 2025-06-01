@@ -351,6 +351,7 @@ class MujocoHandler(BaseSimHandler):
         for obj_name, obj_state in states_flat[0].items():
             self._set_root_state(obj_name, obj_state, zero_vel)
             self._set_joint_state(obj_name, obj_state, zero_vel)
+        self.physics.forward()
 
     def _disable_robotgravity(self):
         gravity_vec = np.array([0.0, 0.0, -9.81])
