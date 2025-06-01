@@ -64,8 +64,6 @@ class RobotState:
     """Joint velocities target. Shape is (num_envs, num_joints)."""
     joint_effort_target: torch.Tensor
     """Joint effort targets. Shape is (num_envs, num_joints)."""
-    # extras: dict[str, torch.Tensor]
-    # """Extra robotstate. For example, feet pos of a leggedrobot."""
 
 
 @dataclass

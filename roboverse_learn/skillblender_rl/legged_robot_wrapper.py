@@ -7,6 +7,11 @@ from typing import Callable
 
 import torch
 
+try:
+    from isaacgym.torch_utils import quat_rotate_inverse, torch_rand_float
+except ImportError:
+    pass
+
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.demo_util import get_traj

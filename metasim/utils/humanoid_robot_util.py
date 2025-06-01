@@ -1,7 +1,15 @@
 """Helper functions for humanoid robots, including h1 and h1_simple_hand."""
 
+from __future__ import annotations
+
 import numpy as np
 import torch
+
+try:
+    from isaacgym.torch_utils import get_euler_xyz
+except ImportError:
+    pass
+
 
 from metasim.utils.math import axis_angle_from_quat, matrix_from_quat, quat_from_angle_axis, quat_mul
 
@@ -187,79 +195,36 @@ def default_dof_pos_tensor(envstates, robot_name: str):
     return envstates.robots[robot_name].extra["default_pos"]
 
 
-# copy from isaacgym
-@torch.jit.script
-def torch_rand_float(lower, upper, shape, device):
-    # type: (float, float, Tuple[int, int], str) -> Tensor
-    return (upper - lower) * torch.rand(*shape, device=device) + lower
-
-
 def ref_dof_pos_tensor(envstates, robot_name: str):
     """Return the default ref dof pos."""
     return envstates.robots[robot_name].extra["ref_dof_pos"]
 
 
-# @torch.jit.script
-def get_euler_xyz(q):
-    qx, qy, qz, qw = 0, 1, 2, 3
-    # roll (x-axis rotation)
-    sinr_cosp = 2.0 * (q[:, qw] * q[:, qx] + q[:, qy] * q[:, qz])
-    cosr_cosp = q[:, qw] * q[:, qw] - q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] + q[:, qz] * q[:, qz]
-    roll = torch.atan2(sinr_cosp, cosr_cosp)
-
-
-#     # pitch (y-axis rotation)
-#     sinp = 2.0 * (q[:, qw] * q[:, qy] - q[:, qz] * q[:, qx])
-#     pitch = torch.where(torch.abs(sinp) >= 1, copysign(np.pi / 2.0, sinp), torch.asin(sinp))
-
-#     # yaw (z-axis rotation)
-#     siny_cosp = 2.0 * (q[:, qw] * q[:, qz] + q[:, qx] * q[:, qy])
-#     cosy_cosp = q[:, qw] * q[:, qw] + q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] - q[:, qz] * q[:, qz]
-#     yaw = torch.atan2(siny_cosp, cosy_cosp)
-
-#     return roll % (2 * np.pi), pitch % (2 * np.pi), yaw % (2 * np.pi)
-
-
-@torch.jit.script
-def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-    """Rotate a vector `v` by the inverse of quaternion `q`."""
-    shape = q.shape
-    q_w = q[:, -1]
-    q_vec = q[:, :3]
-    a = v * (2.0 * q_w**2 - 1.0).unsqueeze(-1)
-    b = torch.cross(q_vec, v, dim=-1) * q_w.unsqueeze(-1) * 2.0
-    c = q_vec * torch.bmm(q_vec.view(shape[0], 1, 3), v.view(shape[0], 3, 1)).squeeze(-1) * 2.0
-    return a - b + c
-
-
 @torch.jit.script
 def copysign(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Returns a tensor with the absolute value of `a` and the sign of `b`.
+
+    Args:
+        a (torch.Tensor): Input tensor whose absolute value is used.
+        b (torch.Tensor): Input tensor whose sign is used.
+
+    Returns:
+        torch.Tensor: A tensor with the absolute value of `a` and the sign of `b`.
+    """
     # type: (float, Tensor) -> Tensor
     a = torch.tensor(a, device=b.device, dtype=torch.float).repeat(b.shape[0])
     return torch.abs(a) * torch.sign(b)
 
 
-@torch.jit.script
-def get_euler_xyz(q):
-    qx, qy, qz, qw = 0, 1, 2, 3
-    # roll (x-axis rotation)
-    sinr_cosp = 2.0 * (q[:, qw] * q[:, qx] + q[:, qy] * q[:, qz])
-    cosr_cosp = q[:, qw] * q[:, qw] - q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] + q[:, qz] * q[:, qz]
-    roll = torch.atan2(sinr_cosp, cosr_cosp)
-
-    # pitch (y-axis rotation)
-    sinp = 2.0 * (q[:, qw] * q[:, qy] - q[:, qz] * q[:, qx])
-    pitch = torch.where(torch.abs(sinp) >= 1, copysign(np.pi / 2.0, sinp), torch.asin(sinp))
-
-    # yaw (z-axis rotation)
-    siny_cosp = 2.0 * (q[:, qw] * q[:, qz] + q[:, qx] * q[:, qy])
-    cosy_cosp = q[:, qw] * q[:, qw] + q[:, qx] * q[:, qx] - q[:, qy] * q[:, qy] - q[:, qz] * q[:, qz]
-    yaw = torch.atan2(siny_cosp, cosy_cosp)
-
-    return roll % (2 * np.pi), pitch % (2 * np.pi), yaw % (2 * np.pi)
-
-
 def get_euler_xyz_tensor(quat):
+    """Convert quaternion to Euler angles (roll, pitch, yaw) in radians for a batch of quaternions.
+
+    Args:
+        quat (torch.Tensor): Quaternion tensor of shape (N, 4) where N is the batch size.
+
+    Returns:
+        torch.Tensor: Euler angles tensor of shape (N, 3) where each row contains (roll, pitch, yaw).
+    """
     r, p, w = get_euler_xyz(quat)
     # stack r, p, w in dim1
     euler_xyz = torch.stack((r, p, w), dim=1)
@@ -389,7 +354,7 @@ def actuator_forces(envstate, robot_name: str):
 
 
 def actuator_forces_tensor(envstate, robot_name: str):
-    """Returns  the forces applied by the actuators."""
+    """Returns the forces applied by the actuators."""
     return (
         envstate.robots[robot_name].joint_effort_target
         if envstate.robots[robot_name].joint_effort_target is not None
