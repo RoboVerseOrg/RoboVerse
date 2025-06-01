@@ -546,9 +546,7 @@ class IsaacgymHandler(BaseSimHandler):
             # TODO given name and indices, then read from cfg
             extra = {
                 # FIXME here is redundant, can be directly read from body_state
-                "rigid_body_states": self._rigid_body_states.view(
-                    self.num_envs, -1, 13
-                ),
+                "rigid_body_states": self._rigid_body_states.view(self.num_envs, -1, 13),
                 "contact_forces": self.contact_forces,
             }
             state.extra = extra
