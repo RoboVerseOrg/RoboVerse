@@ -7,7 +7,43 @@ from typing import Callable
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
-from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
+from metasim.cfg.tasks.skillblender.reward_func_cfg import (
+    reward_action_rate,
+    reward_action_smoothness,
+    reward_ang_vel_xy,
+    reward_base_acc,
+    reward_base_height,
+    reward_collision,
+    reward_default_joint_pos,
+    reward_dof_acc,
+    reward_dof_pos_limits,
+    reward_dof_vel,
+    reward_dof_vel_limits,
+    reward_elbow_distance,
+    reward_feet_air_time,
+    reward_feet_clearance,
+    reward_feet_contact_forces,
+    reward_feet_contact_number,
+    reward_feet_distance,
+    reward_foot_slip,
+    reward_joint_pos,
+    reward_knee_distance,
+    reward_lin_vel_z,
+    reward_low_speed,
+    reward_orientation,
+    reward_stand_still,
+    reward_stumble,
+    reward_termination,
+    reward_torque_limits,
+    reward_torques,
+    reward_track_vel_hard,
+    reward_tracking_ang_vel,
+    reward_tracking_lin_vel,
+    reward_upper_body_pos,
+    reward_vel_mismatch_exp,
+)
+
+# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import *
 
@@ -176,7 +212,8 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_action_smoothness,
     ]
 
-    # skillblender version
+    # TODO: check why this configuration not work as well as the original one
+    # skillblender original version
     # reward_weights: dict[str, float] = {
     #     "termination": -0.0,
     #     "lin_vel_z": -0.0,
