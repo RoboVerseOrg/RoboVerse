@@ -222,7 +222,7 @@ def robot_rotation(envstate, robot_name: str):
 
 
 def robot_rotation_tensor(envstate, robot_name: str):
-    """Returns the rotation of the robot"""
+    """Returns the rotation of the robot."""
     return envstate.robots[robot_name].root_state[:, 3:7]
 
 
@@ -242,7 +242,7 @@ def torso_vertical_orientation(envstate, robot_name: str):
 
 
 def dof_pos_tensor(envstate, robot_name: str):
-    """Returns  the pos."""
+    """Returns the pos."""
     return (
         envstate.robots[robot_name].joint_pos
         if envstate.robots[robot_name].joint_pos is not None
@@ -260,55 +260,52 @@ def dof_vel_tensor(envstate, robot_name: str):
 
 
 def last_dof_vel_tensor(envstate, robot_name: str):
-    """Returns  the pos."""
+    """Returns last dof velocity."""
     return envstate.robots[robot_name].extra["last_dof_vel"]
 
 
 def ref_dof_pos_tenosr(envstate, robot_name: str):
-    """Returns the dev pos"""
+    """Returns the dof pos."""
     return envstate.robots[robot_name].extra["ref_dof_pos"]
 
 
 def last_foot_pos_tensor(envstate, robot_name: str):
-    """Returns last foot pos"""
+    """Returns last foot pos."""
     return envstate.robots[robot_name].extra["last_foot_pos"]
 
 
 def foot_vel_tensor(envstate, robot_name: str):
-    """Returns  the foot vel"""
+    """Returns the foot vel."""
     return envstate.robots[robot_name].extra["foot_vel"]
 
 
 def knee_pos_tensor(envstate, robot_name: str):
-    """Returns  the knee pos"""
+    """Returns the knee pos."""
     return envstate.robots[robot_name].extra["knee_pos"]
 
 
 def elbow_pos_tensor(envstate, robot_name: str):
-    """Returns  the elbow pos"""
+    """Returns  the elbow pos."""
     return envstate.robots[robot_name].extra["elbow_pos"]
 
 
 def contact_forces_tensor(envstate, robot_name: str):
-    """Returns  the contact forces"""
+    """Returns the contact forces."""
     return envstate.robots[robot_name].extra["contact_forces"]
 
 
 def gait_phase_tensor(envstate, robot_name: str):
-    """Returns  gait phase"""
+    """Returns gait phase."""
     return envstate.robots[robot_name].extra["gait_phase"]
 
 
 def foot_air_time_tensor(envstate, robot_name: str):
+    """Returns the foot air time."""
     return envstate.robots[robot_name].extra["foot_air_time"]
 
 
-def base_euler_xyz_tensor(envstate, robot_name: str):
-    return envstate.robots[robot_name].extra["base_euler_xyz"]
-
-
 def command_tensor(envstate, robot_name: str):
-    """Returns the command"""
+    """Returns the command."""
     return envstate.robots[robot_name].extra["commnad"]
 
 
@@ -383,15 +380,10 @@ def right_hand_orientation(envstate, robot_name: str):
 
 
 def actions_tensor(envstate, robot_name: str):
-    """Return actions tensor"""
+    """Return actions tensor."""
     return envstate.robots[robot_name].extra["actions"]
 
 
 def last_actions_tensor(envstate, robot_name: str):
-    """Return last actions tensor"""
-    return envstate.robots[robot_name].extra["last_actions"]
-
-
-def last_actions_tensor(envstate, robot_name: str):
-    """Return last actions tensor"""
+    """Return last actions tensor."""
     return envstate.robots[robot_name].extra["last_actions"]

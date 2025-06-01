@@ -10,7 +10,27 @@ from metasim.cfg.checkers.base_checker import BaseChecker
 from metasim.cfg.control import ControlCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
+from metasim.cfg.tasks.skillblender.reward_func_cfg import (
+    reward_action_rate,
+    reward_ang_vel_xy,
+    reward_base_height,
+    reward_collision,
+    reward_dof_acc,
+    reward_dof_pos_limits,
+    reward_dof_vel,
+    reward_dof_vel_limits,
+    reward_feet_air_time,
+    reward_feet_contact_forces,
+    reward_lin_vel_z,
+    reward_orientation,
+    reward_stand_still,
+    reward_stumble,
+    reward_termination,
+    reward_torque_limits,
+    reward_torques,
+    reward_tracking_ang_vel,
+    reward_tracking_lin_vel,
+)
 from metasim.sim import BaseSimHandler
 from metasim.utils import configclass
 
@@ -78,6 +98,7 @@ class CommandsConfig:
     heading_command: bool = True
 
 
+# FIXME align config in with @configclass
 class BaseConfig:
     def __init__(self) -> None:
         """Initializes all member classes recursively. Ignores all namse starting with '__' (buit-in methods)."""
@@ -103,7 +124,7 @@ class BaseConfig:
                 BaseConfig.init_member_classes(i_var)
 
 
-# FIXME align config
+# FIXME align config in with @configclass
 class LeggedRobotCfgPPO(BaseConfig):
     seed = 1
     runner_class_name = "OnPolicyRunner"
