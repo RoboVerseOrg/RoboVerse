@@ -90,7 +90,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf[env_ids] = 0
             if states is not None:
                 self.handler.set_states(states, env_ids=env_ids)
-            if self.handler.scenario.sim in ["mujoco", "isaacgym"]:
+            if self.handler.scenario.sim in ["isaacgym"]:
                 ## HACK
                 self.handler.simulate()
             self.handler.checker.reset(self.handler, env_ids=env_ids)
