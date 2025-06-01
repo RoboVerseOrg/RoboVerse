@@ -16,7 +16,7 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train.py "--task" "skillblender:Walking" "--sim" isaacgym "--num_envs"  124 "--run_name" "humanoid_skillblender"
+    python3 roboverse_learn/skillblender_rl/train.py --task "skillblender:Walking" --sim "isaacgym" --num_envs  124 --run_name "humanoid_skillblender" --use_wandb
    ```
 
 
