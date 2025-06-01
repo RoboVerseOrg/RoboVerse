@@ -72,7 +72,7 @@ class LeggedRobotWrapper(RslRlWrapper):
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
-        self.dt = scenario.decimation * scenario.sim_params.timestep
+        self.dt = scenario.decimation * scenario.sim_params.dt
         self.num_commands = scenario.task.command_dim
 
     def _get_init_states(self, scenario):
@@ -551,9 +551,8 @@ class LeggedRobotWrapper(RslRlWrapper):
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
-        # FIXME return code back
-        # action_dict = self.wrap_action_as_dict(clipped_actions)
-        return self.actions
+        action_dict = self.wrap_action_as_dict(clipped_actions)
+        return action_dict
 
     def _physics_step(self, action_dict):
         """
@@ -568,10 +567,8 @@ class LeggedRobotWrapper(RslRlWrapper):
         Output: obs, privileged_obs, rewards, dones, infos
         """
         # FIXME return code back
-        # action_dict = self._pre_physics_step(actions)
-        # env_states = self._physics_step(action_dict)
-        actions_ = self._pre_physics_step(actions)
-        env_states = self._physics_step(actions_)
+        action_dict = self._pre_physics_step(actions)
+        env_states = self._physics_step(action_dict)
         obs, privileged_obs, rewards = self._post_physics_step(env_states)
         return obs, privileged_obs, rewards, self.reset_buf, self.extras
 

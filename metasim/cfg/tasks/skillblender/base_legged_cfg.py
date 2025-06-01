@@ -195,13 +195,14 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     penalised_contact_indices: torch.Tensor | None = None
     termination_contact_indices: torch.Tensor | None = None
     sim_params = SimParamCfg(
-        timestep=0.001,
+        dt=0.001,
         contact_offset=0.01,
         num_position_iterations=8,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.5,
         replace_cylinder_with_capsule=True,
     )
+    dt = decimation * sim_params.dt  # simulation time step
     objects = []
     traj_filepath: str | None = None
 

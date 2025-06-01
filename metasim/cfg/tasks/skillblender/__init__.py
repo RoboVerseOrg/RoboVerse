@@ -2,4 +2,4 @@
 
 # ruff: noqa: F401
 
-from .h1_walking_cfg import WalkingCfg
+from .walking_cfg import WalkingCfg
