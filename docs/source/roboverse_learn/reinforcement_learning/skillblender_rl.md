@@ -16,11 +16,30 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train.py "--sim" isaacgym "--num_envs"  124 "--run_name" "skillblender_walking"
+    python3 roboverse_learn/skillblender_rl/train.py "--task" "skillblender:Walking" "--sim" isaacgym "--num_envs"  124 "--run_name" "humanoid_skillblender"
    ```
+
+
+
+## Task list
+> 4 Goal-Conditional Skills
+- [√] Walking
+- [ ] Reaching
+- [ ] Squatting
+- [ ] Stepping
+> 8 Loco-Manipulation Tasks
+- [ ] FarReach
+- [ ] ButtonPress
+- [ ] CabinetClose
+- [ ] FootballShoot
+- [ ] BoxPush
+- [ ] PackageLift
+- [ ] BoxTransfer
+- [ ] PackageCarry
 
 ## References and Acknowledgements
 We implement SkillBench based on and inspired by the following projects:
+- SkillBlender: Towards Versatile Humanoid Whole-Body Control via Skill Blending.
 - [Legged_gym](https://github.com/leggedrobotics/legged_gym)
 - [rsl_rl](https://github.com/leggedrobotics/rsl_rl)
 - [HumanoidVerse](https://github.com/LeCAR-Lab/HumanoidVerse/tree/master)

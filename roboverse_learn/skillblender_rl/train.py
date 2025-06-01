@@ -26,9 +26,11 @@ from metasim.cfg.scenario import ScenarioCfg
 from roboverse_learn.skillblender_rl.legged_robot_wrapper import LeggedRobotWrapper
 
 
-def parse_arguments(
-    description="humanoid rl task arguments", headless=False, no_graphics=False, custom_parameters=None
-):
+def parse_arguments(description="humanoid rl task arguments", custom_parameters=None):
+    """Parse arguments.
+
+    Args:
+    """
     if custom_parameters is None:
         custom_parameters = []
     """Parse command line arguments."""
@@ -57,7 +59,12 @@ def parse_arguments(
     return parser.parse_args()
 
 
+# TODO
+# 1. add resume training from checkpoint
+
+
 def get_args(test=False):
+    """Get the command line arguments."""
     custom_parameters = [
         {
             "name": "--task",
@@ -85,27 +92,16 @@ def get_args(test=False):
         },
         {"name": "--resume", "action": "store_true", "default": False, "help": "Resume training from a checkpoint"},
         {
-            "name": "--resume_stop_at_max",
-            "action": "store_true",
-            "default": False,
-            "help": "If resume, will stop at max_iterations as in config",
-        },
-        {
-            "name": "--experiment_name",
-            "type": str,
-            "help": "Name of the experiment to run or load. Overrides config file if provided.",
-        },
-        {
             "name": "--run_name",
             "type": str,
             "required": True if not test else False,
             "help": "Name of the run. Overrides config file if provided.",
         },
         {
-            "name": "--load_run",
-            "type": str,
-            "default": "",
-            "help": "Name of the run to load when resume=True. If -1: will load the last run. Overrides config file if provided.",
+            "name": "--learning_iterations",
+            "type": int,
+            "default": 15000,
+            "help": "Path to the config file. If provided, will override command line arguments.",
         },
         {
             "name": "--checkpoint",
@@ -114,19 +110,9 @@ def get_args(test=False):
             "help": "Saved model checkpoint number. If -1: will load the last checkpoint. Overrides config file if provided.",
         },
         {"name": "--headless", "action": "store_true", "default": True, "help": "Force display off at all times"},
-        {
-            "name": "--rl_device",
-            "type": str,
-            "default": "cuda:0",
-            "help": "Device used by the RL algorithm, (cpu, gpu, cuda:0, cuda:1 etc..)",
-        },
-        {"name": "--use_jit", "action": "store_true", "default": False, "help": "Use jit to play"},
         {"name": "--use_wandb", "action": "store_true", "default": True, "help": "Use wandb for logging"},
         {"name": "--wandb", "type": str, "default": "h1_walking", "help": "Wandb project name"},
-        {"name": "--visualize", "action": "store_true", "default": False, "help": "Only show one environment"},
-        {"name": "--baseline", "type": str, "default": "None", "help": "Baseline name (e.g. H2O, ExBody)"},
     ]
-    # parse arguments
     args = parse_arguments(custom_parameters=custom_parameters)
     return args
 
@@ -164,7 +150,7 @@ def train(args):
         wandb=use_wandb,
         args=args,
     )
-    ppo_runner.learn(num_learning_iterations=20000)  # TODO fix hard coding
+    ppo_runner.learn(num_learning_iterations=args.learning_iterations)
 
 
 # TODO expose algorithm api to let user define their own nerual network
