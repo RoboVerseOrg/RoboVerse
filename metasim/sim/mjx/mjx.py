@@ -65,10 +65,10 @@ class MJXHandler(BaseSimHandler):
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
             self.decimation = 25
 
-
     def launch(self) -> None:
         mjcf_root = self._init_mujoco()
 
+        # set timestep
         if self.scenario.sim_params.dt is not None:
             mjcf_root.option.timestep = self.scenario.sim_params.dt
 
@@ -170,8 +170,9 @@ class MJXHandler(BaseSimHandler):
         want_any_rgb = any("rgb" in cam.data_types for cam in self.cameras)
         want_any_dep = any("depth" in cam.data_types for cam in self.cameras)
 
+        # TODO : support multiple env_ids for rendering
         if want_any_rgb or want_any_dep:
-            env_id = 0
+            env_id = 0  # only env_id=0 is supported for rendering
             slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)
             mjx.get_data_into(self._render_data, self._mj_model, slice_data)
             mujoco.mj_forward(self._mj_model, self._render_data)
@@ -530,7 +531,7 @@ class MJXHandler(BaseSimHandler):
 
         self._data = _broadcast(data_single)
 
-        # sub-step&forward kernel
+        # sub-step & forward kernel
         self._substep = self._make_substep(self.decimation)
         self._forward = jax.jit(jax.vmap(mjx.forward, in_axes=(None, 0)))
 
@@ -545,9 +546,6 @@ class MJXHandler(BaseSimHandler):
 
         batched = jax.vmap(_one_env, in_axes=(None, 0))
         return jax.jit(batched)
-
-
-
 
     def _create_primitive_xml(self, obj):
         if isinstance(obj, PrimitiveCubeCfg):
