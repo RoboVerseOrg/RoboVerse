@@ -65,8 +65,12 @@ class MJXHandler(BaseSimHandler):
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
             self.decimation = 25
 
+
     def launch(self) -> None:
         mjcf_root = self._init_mujoco()
+
+        if self.scenario.sim_params.dt is not None:
+            mjcf_root.option.timestep = self.scenario.sim_params.dt
 
         tmp_dir = tempfile.mkdtemp()
         mjcf.export_with_assets(mjcf_root, tmp_dir)
@@ -87,6 +91,7 @@ class MJXHandler(BaseSimHandler):
         if not self.headless:
             self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
         log.info(f"MJXHandler launched · envs={self.num_envs}")
+        log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
 
     def simulate(self) -> None:
         if self._gravity_compensation:
@@ -166,38 +171,34 @@ class MJXHandler(BaseSimHandler):
         want_any_dep = any("depth" in cam.data_types for cam in self.cameras)
 
         if want_any_rgb or want_any_dep:
+            env_id = 0
+            slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)
+            mjx.get_data_into(self._render_data, self._mj_model, slice_data)
+            mujoco.mj_forward(self._mj_model, self._render_data)
+
             for cam in self.cameras:
                 cam_id = f"{cam.name}_custom"
                 want_rgb = "rgb" in cam.data_types
                 want_dep = "depth" in cam.data_types
 
-                rgb_frames, dep_frames = [], []
+                rgb_tensor, dep_tensor = None, None
 
-                for env_id in idx_np:
-                    slice_data = jax.tree_util.tree_map(lambda x: x[env_id], data)  # noqa: B023
-                    mjx.get_data_into(self._render_data, self._mj_model, slice_data)
-                    mujoco.mj_forward(self._mj_model, self._render_data)
+                if want_rgb:
+                    self._renderer.disable_depth_rendering()
+                    self._renderer.update_scene(self._render_data, camera=cam_id)
+                    rgb = self._renderer.render()
+                    rgb_tensor = torch.from_numpy(rgb.copy()).unsqueeze(0)  # shape: (1, H, W, 3)
 
-                    if want_rgb:
-                        self._renderer.disable_depth_rendering()
-                        self._renderer.update_scene(self._render_data, camera=cam_id)
-                        rgb = self._renderer.render()
-                        rgb_frames.append(torch.from_numpy(rgb.copy()))
-
-                    if want_dep:
-                        self._renderer.enable_depth_rendering()
-                        self._renderer.update_scene(self._render_data, camera=cam_id)
-                        depth = self._renderer.render()
-                        dep_frames.append(torch.from_numpy(depth.copy()))
-
-                def _stk(frames):
-                    return None if not frames else torch.stack(frames, dim=0)
+                if want_dep:
+                    self._renderer.enable_depth_rendering()
+                    self._renderer.update_scene(self._render_data, camera=cam_id)
+                    depth = self._renderer.render()
+                    dep_tensor = torch.from_numpy(depth.copy()).unsqueeze(0)  # shape: (1, H, W)
 
                 camera_states[cam.name] = CameraState(
-                    rgb=_stk(rgb_frames) if want_rgb else None,
-                    depth=_stk(dep_frames) if want_dep else None,
+                    rgb=rgb_tensor if want_rgb else None,
+                    depth=dep_tensor if want_dep else None,
                 )
-
         return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors={})
 
     def set_states(
@@ -252,8 +253,7 @@ class MJXHandler(BaseSimHandler):
             )
 
         self._data = self._data.replace(qpos=qpos, qvel=qvel, ctrl=ctrl)
-
-        self._data = jax.vmap(lambda d: mjx.forward(self._mjx_model, d))(self._data)
+        self._data = self._forward(self._mjx_model, self._data)
 
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""
@@ -530,8 +530,9 @@ class MJXHandler(BaseSimHandler):
 
         self._data = _broadcast(data_single)
 
-        # sub-step kernel
+        # sub-step&forward kernel
         self._substep = self._make_substep(self.decimation)
+        self._forward = jax.jit(jax.vmap(mjx.forward, in_axes=(None, 0)))
 
     def _make_substep(self, n_sub: int):
         def _one_env(model, data):
@@ -544,6 +545,9 @@ class MJXHandler(BaseSimHandler):
 
         batched = jax.vmap(_one_env, in_axes=(None, 0))
         return jax.jit(batched)
+
+
+
 
     def _create_primitive_xml(self, obj):
         if isinstance(obj, PrimitiveCubeCfg):
