@@ -1,6 +1,15 @@
 """Helper functions for humanoid robots, including h1 and h1_simple_hand."""
 
+from __future__ import annotations
+
+import numpy as np
 import torch
+
+try:
+    from isaacgym.torch_utils import get_euler_xyz
+except ImportError:
+    pass
+
 
 from metasim.utils.math import axis_angle_from_quat, matrix_from_quat, quat_from_angle_axis, quat_mul
 
@@ -88,9 +97,34 @@ def robot_velocity(envstate, robot_name: str):
     return envstate["robots"][robot_name]["vel"]
 
 
+def robot_root_state_tensor(envstate, robot_name: str):
+    """Returns the velocity of the robot."""
+    return envstate.robots[robot_name].root_state
+
+
 def robot_velocity_tensor(envstate, robot_name: str):
     """Returns the velocity of the robot."""
     return envstate.robots[robot_name].root_state[:, 7:10]
+
+
+def robot_ang_velocity_tensor(envstate, robot_name: str):
+    """Returns the angluar velocity of the robot."""
+    return envstate.robots[robot_name].root_state[:, 10:13]
+
+
+def robot_local_lin_vel_tensor(envstate, robot_name: str):
+    """Returns the local frame velocity of the robot."""
+    return envstate.robots[robot_name].extra["base_lin_vel"]
+
+
+def robot_local_ang_vel_tensor(envstate, robot_name: str):
+    """Returns the local frame velocity of the robot."""
+    return envstate.robots[robot_name].extra["base_ang_vel"]
+
+
+def last_robot_velocity_tensor(envstate, robot_name: str):
+    """Returns the velocity of the robot."""
+    return envstate.robots[robot_name].extra["last_robot_velocity"]
 
 
 def robot_local_velocity_tensor(envstate, robot_name: str):
@@ -107,6 +141,7 @@ def robot_local_velocity_tensor(envstate, robot_name: str):
     world_rotation = robot_rotation_tensor(envstate, robot_name)
 
     # Extract yaw (rotation around z-axis) from the full rotation matrices
+    # TODO check if this is inefficiency
     def decompose_rotation_with_zaxis(rot_quat):
         """Decompose a rotation quaternion into a z angle and a xy rotation. R = Rz * Rxy.
 
@@ -155,6 +190,32 @@ def robot_local_velocity_tensor(envstate, robot_name: str):
     return local_xy_velocity
 
 
+def default_dof_pos_tensor(envstates, robot_name: str):
+    """Return the default pos of the robot."""
+    return envstates.robots[robot_name].extra["default_pos"]
+
+
+def ref_dof_pos_tensor(envstates, robot_name: str):
+    """Return the default ref dof pos."""
+    return envstates.robots[robot_name].extra["ref_dof_pos"]
+
+
+def get_euler_xyz_tensor(quat):
+    """Convert quaternion to Euler angles (roll, pitch, yaw) in radians for a batch of quaternions.
+
+    Args:
+        quat (torch.Tensor): Quaternion tensor of shape (N, 4) where N is the batch size.
+
+    Returns:
+        torch.Tensor: Euler angles tensor of shape (N, 3) where each row contains (roll, pitch, yaw).
+    """
+    r, p, w = get_euler_xyz(quat)
+    # stack r, p, w in dim1
+    euler_xyz = torch.stack((r, p, w), dim=1)
+    euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
+    return euler_xyz
+
+
 def robot_rotation(envstate, robot_name: str):
     """Returns the rotation of the robot."""
     return envstate["robots"][robot_name]["rot"]
@@ -180,8 +241,92 @@ def torso_vertical_orientation(envstate, robot_name: str):
     return xmat[2, :]
 
 
+def dof_pos_tensor(envstate, robot_name: str):
+    """Returns the pos."""
+    return (
+        envstate.robots[robot_name].joint_pos
+        if envstate.robots[robot_name].joint_pos is not None
+        else torch.zeros_like(envstate.robots[robot_name].joint_pos)
+    )
+
+
+def dof_vel_tensor(envstate, robot_name: str):
+    """Returns  the pos."""
+    return (
+        envstate.robots[robot_name].joint_vel
+        if envstate.robots[robot_name].joint_vel is not None
+        else torch.zeros_like(envstate.robots[robot_name].joint_vel)
+    )
+
+
+def last_dof_vel_tensor(envstate, robot_name: str):
+    """Returns last dof velocity."""
+    return envstate.robots[robot_name].extra["last_dof_vel"]
+
+
+def ref_dof_pos_tenosr(envstate, robot_name: str):
+    """Returns the dof pos."""
+    return envstate.robots[robot_name].extra["ref_dof_pos"]
+
+
+def last_foot_pos_tensor(envstate, robot_name: str):
+    """Returns last foot pos."""
+    return envstate.robots[robot_name].extra["last_foot_pos"]
+
+
+def foot_vel_tensor(envstate, robot_name: str):
+    """Returns the foot vel."""
+    return envstate.robots[robot_name].extra["foot_vel"]
+
+
+def knee_pos_tensor(envstate, robot_name: str):
+    """Returns the knee pos."""
+    return envstate.robots[robot_name].extra["knee_pos"]
+
+
+def elbow_pos_tensor(envstate, robot_name: str):
+    """Returns  the elbow pos."""
+    return envstate.robots[robot_name].extra["elbow_pos"]
+
+
+def contact_forces_tensor(envstate, robot_name: str):
+    """Returns the contact forces."""
+    return envstate.robots[robot_name].extra["contact_forces"]
+
+
+def gait_phase_tensor(envstate, robot_name: str):
+    """Returns gait phase."""
+    return envstate.robots[robot_name].extra["gait_phase"]
+
+
+def foot_air_time_tensor(envstate, robot_name: str):
+    """Returns the foot air time."""
+    return envstate.robots[robot_name].extra["foot_air_time"]
+
+
+def command_tensor(envstate, robot_name: str):
+    """Returns the command."""
+    return envstate.robots[robot_name].extra["commnad"]
+
+
+def actuator_knee_pos_tensor(envstate, robot_name: str):
+    """Returns  the knee pos."""
+    knee_pos = envstate.robots[robot_name].extra["knee_states"][:, :, :2]
+    if knee_pos is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return knee_pos
+
+
+def contact_force_tensor(envstate, robot_name: str):
+    """Returns  the knee pos."""
+    contact_force = envstate.robots[robot_name].extra["contact_forces"]
+    if contact_force is None:
+        raise ValueError(f"feet_pos is None for robot {robot_name}")
+    return contact_force
+
+
 def actuator_forces(envstate, robot_name: str):
-    """Returns a copy of the forces applied by the actuators."""
+    """Returns  the forces applied by the actuators."""
     return (
         torch.tensor([x for x in envstate["robots"][robot_name]["dof_torque"].values()])
         if envstate["robots"][robot_name].get("dof_torque", None) is not None
@@ -190,7 +335,7 @@ def actuator_forces(envstate, robot_name: str):
 
 
 def actuator_forces_tensor(envstate, robot_name: str):
-    """Returns a copy of the forces applied by the actuators."""
+    """Returns the forces applied by the actuators."""
     return (
         envstate.robots[robot_name].joint_effort_target
         if envstate.robots[robot_name].joint_effort_target is not None
@@ -232,3 +377,13 @@ def right_hand_orientation(envstate, robot_name: str):
     """Returns the orientation of the right hand."""
     # return envstate[f"{_METASIM_SITE_PREFIX}right_hand"]["rot"] # Only for mujoco
     return envstate["robots"][robot_name]["body"]["right_elbow_link"]["rot"]
+
+
+def actions_tensor(envstate, robot_name: str):
+    """Return actions tensor."""
+    return envstate.robots[robot_name].extra["actions"]
+
+
+def last_actions_tensor(envstate, robot_name: str):
+    """Return last actions tensor."""
+    return envstate.robots[robot_name].extra["last_actions"]

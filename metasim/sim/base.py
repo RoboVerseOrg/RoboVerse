@@ -276,6 +276,22 @@ class BaseSimHandler:
 
         return self._body_reindex_cache[obj_name]
 
+    def set_episode_length_buf(self, set_episode_length_buf):
+        """
+        set timestep of each environment
+        """
+        pass
+
+    def get_robot_rigid_body_index(self, body_name: str) -> int:
+        """
+        Get the index of a rigid body in the robot.
+        Args:
+            body_name (str): The name of the rigid body.
+        Returns:
+            int: The index of the rigid body in the robot.
+        """
+        raise NotImplementedError
+
     @property
     def num_envs(self) -> int:
         return self._num_envs
