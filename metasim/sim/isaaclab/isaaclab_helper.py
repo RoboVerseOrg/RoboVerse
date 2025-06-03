@@ -154,6 +154,7 @@ def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
             activate_contact_sensors=True,  # TODO: only activate when contact sensor is added
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(),
+            joint_drive_props=sim_utils.JointDrivePropertiesCfg(),
         ),
         actuators={
             jn: ImplicitActuatorCfg(
