@@ -102,14 +102,15 @@ class PolicyRunner:
         obs_dict = {k: v for k, v in obs_dict.items() if k in self.policy_cfg.obs_config.obs_keys}
         return obs_dict
 
-    def action_to_dict(self, curr_action):
+    def action_to_dict(self, curr_action: torch.Tensor):
         """
         Converts action tensor to dict with joint keys
         """
+        action_nested_list = curr_action.tolist() # bulk GPU-> CPU transfer; elements of Action must be python float
         actions = [
             {
                 "dof_pos_target": {
-                    joint_name: curr_action[i, index]
+                    joint_name: action_nested_list[i][index]
                     for index, joint_name in enumerate(sorted(self.scenario.robot.joint_limits.keys()))
                 }
             }
