@@ -118,6 +118,92 @@ class TensorState:
     """States of all sensors."""
 
 
+def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
+    """Join a list of tensor states with num_envs = 1 into a single tensor state."""
+    rst = TensorState(objects={}, robots={}, cameras={}, sensors={})
+
+    if not tensor_states:
+        return rst
+
+    # Get all unique keys from each category
+    all_object_keys = set()
+    all_robot_keys = set()
+    all_camera_keys = set()
+    all_sensor_keys = set()
+
+    for state in tensor_states:
+        all_object_keys.update(state.objects.keys())
+        all_robot_keys.update(state.robots.keys())
+        all_camera_keys.update(state.cameras.keys())
+        all_sensor_keys.update(state.sensors.keys())
+
+    # Join objects
+    for key in all_object_keys:
+        object_states = [state.objects[key] for state in tensor_states if key in state.objects]
+        if object_states:
+            rst.objects[key] = ObjectState(
+                root_state=torch.cat([obj.root_state for obj in object_states], dim=0),
+                body_names=object_states[0].body_names,
+                body_state=torch.cat([obj.body_state for obj in object_states], dim=0)
+                if object_states[0].body_state is not None
+                else None,
+                joint_pos=torch.cat([obj.joint_pos for obj in object_states], dim=0)
+                if object_states[0].joint_pos is not None
+                else None,
+                joint_vel=torch.cat([obj.joint_vel for obj in object_states], dim=0)
+                if object_states[0].joint_vel is not None
+                else None,
+            )
+
+    # Join robots
+    for key in all_robot_keys:
+        robot_states = [state.robots[key] for state in tensor_states if key in state.robots]
+        if robot_states:
+            rst.robots[key] = RobotState(
+                root_state=torch.cat([robot.root_state for robot in robot_states], dim=0),
+                body_names=robot_states[0].body_names,
+                body_state=torch.cat([robot.body_state for robot in robot_states], dim=0),
+                joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0),
+                joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0),
+                joint_pos_target=torch.cat([robot.joint_pos_target for robot in robot_states], dim=0)
+                if robot_states[0].joint_pos_target is not None
+                else None,
+                joint_vel_target=torch.cat([robot.joint_vel_target for robot in robot_states], dim=0)
+                if robot_states[0].joint_vel_target is not None
+                else None,
+                joint_effort_target=torch.cat([robot.joint_effort_target for robot in robot_states], dim=0)
+                if robot_states[0].joint_effort_target is not None
+                else None,
+            )
+
+    # Join cameras
+    for key in all_camera_keys:
+        camera_states = [state.cameras[key] for state in tensor_states if key in state.cameras]
+        if camera_states:
+            rst.cameras[key] = CameraState(
+                rgb=torch.cat([cam.rgb for cam in camera_states], dim=0) if camera_states[0].rgb is not None else None,
+                depth=torch.cat([cam.depth for cam in camera_states], dim=0)
+                if camera_states[0].depth is not None
+                else None,
+                pos=torch.cat([cam.pos for cam in camera_states], dim=0) if camera_states[0].pos is not None else None,
+                quat_world=torch.cat([cam.quat_world for cam in camera_states], dim=0)
+                if camera_states[0].quat_world is not None
+                else None,
+                intrinsics=torch.cat([cam.intrinsics for cam in camera_states], dim=0)
+                if camera_states[0].intrinsics is not None
+                else None,
+            )
+
+    # Join sensors (assuming similar structure to objects)
+    for key in all_sensor_keys:
+        sensor_states = [state.sensors[key] for state in tensor_states if key in state.sensors]
+        if sensor_states:
+            # Note: SensorState structure is not defined, so this is a placeholder
+            rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
+
+    return rst
+
+
 def _dof_tensor_to_dict(dof_tensor: torch.Tensor, joint_names: list[str]) -> dict[str, float]:
     """Convert a DOF tensor to a dictionary of joint positions."""
     joint_names = sorted(joint_names)
