@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import multiprocessing as mp
-import os
 import sys
 import time
 import traceback
@@ -27,12 +26,6 @@ def _worker(
     error_queue: mp.Queue,
     handler_class: type[BaseSimHandler],
 ):
-    # NOTE(jigu): Set environment variables for ManiSkill2
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["MKL_NUM_THREADS"] = "1"
-    os.environ["NUMEXPR_NUM_THREADS"] = "1"
-    os.environ["OMP_NUM_THREADS"] = "1"
-
     parent_remote.close()
 
     try:
@@ -73,8 +66,7 @@ def _worker(
                 names = env.get_body_names(data[0])
                 remote.send(names)
             elif cmd == "handshake":
-                # This is used to make sure that the environment is initialized
-                # before sending any commands
+                # This is used to make sure that the environment is initialized before sending any commands
                 remote.send("handshake")
             elif cmd == "device":
                 remote.send(env.device)
