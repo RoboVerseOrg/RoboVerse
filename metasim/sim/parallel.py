@@ -219,7 +219,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             tic = time.time()
             concat_states = join_tensor_states(states_list)
             toc = time.time()
-            log.trace(f"Time taken to concatenate states: {toc - tic}s")
+            log.trace(f"Time taken to concatenate states: {toc - tic:.4f}s")
             return concat_states
 
         def simulate(self):
