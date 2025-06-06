@@ -1,7 +1,7 @@
 # SkillBench RL
 We provide implementent [SkillBench](https://www.google.com/) into our framework.
 
-RL algorithm: `PPO` by [rsl_rl](https://github.com/leggedrobotics/rsl_rl) v1.0.2
+RL algorithm: `PPO` by [rsl_rl](https://github.com/leggedrobotics/rsl_rl) `v1.0.2`
 
 RL learning framework: `hierarchical RL`
 
