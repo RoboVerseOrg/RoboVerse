@@ -235,12 +235,12 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def get_joint_names(self, obj_name: str) -> list[str]:
             self.remotes[0].send(("get_joint_names", (obj_name,)))
             names = self.remotes[0].recv()
-            return names[0]
+            return names
 
         def get_body_names(self, obj_name: str) -> list[str]:
             self.remotes[0].send(("get_body_names", (obj_name,)))
             names = self.remotes[0].recv()
-            return names[0]
+            return names
 
         @property
         def device(self) -> torch.device:
