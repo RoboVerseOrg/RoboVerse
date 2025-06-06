@@ -5,6 +5,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import os
 import sys
+import time
 import traceback
 from copy import deepcopy
 from functools import partial
@@ -16,6 +17,7 @@ from loguru import logger as log
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim.base import BaseSimHandler
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success
+from metasim.utils.state import join_tensor_states
 
 
 def _worker(
@@ -59,18 +61,6 @@ def _worker(
             elif cmd == "get_states":
                 states = env.get_states()
                 remote.send(states)
-            # elif cmd == "get_vel":
-            #     states = env.get_vel(data[0])
-            #     remote.send(states)
-            # elif cmd == "get_pos":
-            #     states = env.get_pos(data[0])
-            #     remote.send(states)
-            # elif cmd == "get_rot":
-            #     states = env.get_rot(data[0])
-            #     remote.send(states)
-            # elif cmd == "get_dof_pos":
-            #     states = env.get_dof_pos(data[0], data[1])
-            #     remote.send(states)
             elif cmd == "simulate":
                 env.simulate()
             elif cmd == "get_reward":
@@ -79,10 +69,15 @@ def _worker(
             elif cmd == "get_joint_names":
                 names = env.get_joint_names(data[0])
                 remote.send(names)
+            elif cmd == "get_body_names":
+                names = env.get_body_names(data[0])
+                remote.send(names)
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized
                 # before sending any commands
                 remote.send("handshake")
+            elif cmd == "device":
+                remote.send(env.device)
             else:
                 raise NotImplementedError(f"Command {cmd} not implemented")
     except KeyboardInterrupt:
@@ -228,70 +223,12 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             states_list = []
             for i in env_ids:
                 states = self.remotes[i].recv()
-                states_list.append(states[0])
-            return states_list
-
-        # def get_vel(self, obj_name: str, env_ids: list[int] | None = None) -> list[EnvState]:
-        #     if env_ids is None:
-        #         env_ids = list(range(self.num_envs))
-
-        #     for i in env_ids:
-        #         self.remotes[i].send(("get_vel", (obj_name,)))
-
-        #     states_list = []
-        #     for i in env_ids:
-        #         states = self.remotes[i].recv()
-        #         states_list.append(states[0])
-        #     return states_list
-
-        # def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> list[EnvState]:
-        #     if env_ids is None:
-        #         env_ids = list(range(self.num_envs))
-
-        #     for i in env_ids:
-        #         self.remotes[i].send(("get_pos", (obj_name,)))
-
-        #     # for i in env_ids:
-        #     #     self.processes[i].join()
-        #     # self._check_error()
-
-        #     states_list = []
-        #     for i in env_ids:
-        #         states = self.remotes[i].recv()
-        #         states_list.append(states[0])
-        #     return states_list
-
-        # def get_rot(self, obj_name: str, env_ids: list[int] | None = None) -> list[EnvState]:
-        #     if env_ids is None:
-        #         env_ids = list(range(self.num_envs))
-
-        #     for i in env_ids:
-        #         self.remotes[i].send(("get_rot", (obj_name,)))
-
-        #     states_list = []
-        #     for i in env_ids:
-        #         states = self.remotes[i].recv()
-        #         states_list.append(states[0])
-        #     return states_list
-
-        # def get_dof_pos(self, obj_name: str, joint_name: list[str], env_ids: list[int] | None = None) -> list[EnvState]:
-        #     if env_ids is None:
-        #         env_ids = list(range(self.num_envs))
-
-        #     for i in env_ids:
-        #         self.remotes[i].send((
-        #             "get_dof_pos",
-        #             (
-        #                 obj_name,
-        #                 joint_name,
-        #             ),
-        #         ))
-
-        #     states_list = []
-        #     for i in env_ids:
-        #         states = self.remotes[i].recv()
-        #         states_list.append(states[0])
-        #     return states_list
+                states_list.append(states)
+            tic = time.time()
+            concat_states = join_tensor_states(states_list)
+            toc = time.time()
+            log.info(f"Time taken to join states: {toc - tic} seconds")
+            return concat_states
 
         def simulate(self):
             for remote in self.remotes:
@@ -307,5 +244,15 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             self.remotes[0].send(("get_joint_names", (obj_name,)))
             names = self.remotes[0].recv()
             return names[0]
+
+        def get_body_names(self, obj_name: str) -> list[str]:
+            self.remotes[0].send(("get_body_names", (obj_name,)))
+            names = self.remotes[0].recv()
+            return names[0]
+
+        @property
+        def device(self) -> torch.device:
+            self.remotes[0].send(("device", (None,)))
+            return self.remotes[0].recv()
 
     return ParallelHandler

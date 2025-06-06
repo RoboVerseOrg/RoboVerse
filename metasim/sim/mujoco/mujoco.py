@@ -490,4 +490,8 @@ class MujocoHandler(BaseSimHandler):
         return torch.device("cpu")
 
 
-MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoHandler)
+from ..parallel import ParallelSimWrapper
+
+MujocoParallelHandler = ParallelSimWrapper(MujocoHandler)
+
+MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoParallelHandler)

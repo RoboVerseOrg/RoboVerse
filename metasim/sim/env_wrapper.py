@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Generic, TypeVar
 
 import gymnasium as gym
@@ -104,7 +105,10 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self.handler.simulate()
             reward = None
             success = self.handler.checker.check(self.handler)
+            tic = time.time()
             states = self.handler.get_states()
+            toc = time.time()
+            log.info(f"get_states() time: {toc - tic}")
             time_out = self._episode_length_buf >= self.handler.scenario.episode_length
             return states, reward, success, time_out, None
 
