@@ -17,6 +17,7 @@ from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -490,8 +491,5 @@ class MujocoHandler(BaseSimHandler):
         return torch.device("cpu")
 
 
-from ..parallel import ParallelSimWrapper
-
 MujocoParallelHandler = ParallelSimWrapper(MujocoHandler)
-
 MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoParallelHandler)
