@@ -35,6 +35,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym = None
         self.sim = None
         self.viewer = None
+        self._enable_viewer_sync: bool = True  # sync viewer flag
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
@@ -128,6 +129,8 @@ class IsaacgymHandler(BaseSimHandler):
             raise Exception("Failed to create sim")
         if not self.headless:
             self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+            # press 'V' to toggle viewer sync
+            self.gym.subscribe_viewer_keyboard_event(self.viewer, gymapi.KEY_V, "toggle_viewer_sync")
             if self.viewer is None:
                 raise Exception("Failed to create viewer")
 
@@ -608,13 +611,7 @@ class IsaacgymHandler(BaseSimHandler):
         # Step the physics
         self.gym.simulate(self.sim)
         self.gym.fetch_results(self.sim, True)
-
-        # Refresh cameras and viewer
-        self.gym.step_graphics(self.sim)
-        self.gym.render_all_camera_sensors(self.sim)
-        # TODO add keyboard callback(mostly likely push v) to stop rendering in render mode
-        if not self.headless:
-            self.gym.draw_viewer(self.viewer, self.sim, False)
+        self._render()
 
     def _simulate_one_physics_step(self, action):
         # for pd control joints by effort api, update torque and step the physics
@@ -628,6 +625,18 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
 
+    def _render(self) -> None:
+        """Listen for keyboard events and render the environmentt"""
+        if not self.headless:
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self._enable_viewer_sync = not self._enable_viewer_sync
+            if self._enable_viewer_sync:
+                self.gym.step_graphics(self.sim)
+                self.gym.draw_viewer(self.viewer, self.sim, False)
+            else:
+                self.gym.poll_viewer_events(self.viewer)
+
     def simulate(self) -> None:
         # Step the physics
         self._simulate_one_physics_step(self.actions)
@@ -640,12 +649,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_mass_matrix_tensors(self.sim)
 
         # Refresh cameras and viewer
-        self.gym.step_graphics(self.sim)
-        self.gym.render_all_camera_sensors(self.sim)
-        if not self.headless:
-            self.gym.draw_viewer(self.viewer, self.sim, False)
-
-        # self.gym.sync_frame_time(self.sim)
+        self._render()
 
     def _compute_effort(self, actions):
         """Compute effort from actions"""
