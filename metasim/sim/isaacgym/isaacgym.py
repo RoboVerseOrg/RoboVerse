@@ -742,6 +742,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
 
+        self.gym.simulate(self.sim)
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -752,49 +753,9 @@ class IsaacgymHandler(BaseSimHandler):
         # reset all env_id action to default
         self.actions[env_ids] = 0.0
 
-    # def _set_actor_root_state(self, position_list, rotation_list, env_ids):
-    #     new_root_states = self._root_states.clone().view(self.num_envs, -1, 13)
-    #     for idx_obj in range(len(self.objects)):
-    #         new_root_states[env_ids, idx_obj, :3] = torch.tensor(
-    #             position_list[env_ids, idx_obj], dtype=torch.float32, device=self.device
-    #         )
-    #         new_root_states[env_ids, idx_obj, 3:7] = torch.tensor(
-    #             rotation_list[env_ids, idx_obj], dtype=torch.float32, device=self.device
-    #         )
-    #         new_root_states[env_ids, idx_obj, 7:13] = torch.zeros(
-    #             (len(env_ids), 6), dtype=torch.float32, device=self.device
-    #         )
-    #     for idx_robot in range(len(self.objects), len(self.objects) + 1):
-    #         new_root_states[env_ids, idx_robot, :3] = torch.tensor(
-    #             position_list[idx_robot], dtype=torch.float32, device=self.device
-    #         )
-    #         new_root_states[env_ids, idx_robot, 3:7] = torch.tensor(
-    #             rotation_list[idx_robot], dtype=torch.float32, device=self.device
-    #         )
-    #         new_root_states[env_ids, idx_robot, 7:13] = torch.zeros(
-    #             (len(env_ids), 6), dtype=torch.float32, device=self.device
-    #         )
-    #     # Convert the new root states to a tensor
-    #     new_root_states_tensor = new_root_states.view(-1, 13)
-    #     # Get the actor indices to update
-    #     actor_indices = []
-    #     for env_id in env_ids:
-    #         env_offset = env_id * (len(self.objects) + 1)
-    #         actor_indices.extend(range(env_offset, env_offset + len(self.objects) + 1))
-    #     # Convert the actor indices to a tensor
-    #     root_reset_actors_indices = torch.tensor(actor_indices, dtype=torch.int32, device=self.device)
-    #     # Use indexed setting to set the root state
-    #     res = self.gym.set_actor_root_state_tensor_indexed(
-    #         self.sim,
-    #         gymtorch.unwrap_tensor(new_root_states_tensor),
-    #         gymtorch.unwrap_tensor(root_reset_actors_indices),
-    #         len(root_reset_actors_indices),
-    #     )
-    #     assert res, "set_dof_state_tensor failed"
-    #     return
-
     def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()
+        actor_indices = []
 
         # Only modify the positions and rotations for the specified env_ids
         for i, env_id in enumerate(env_ids):
@@ -808,11 +769,6 @@ class IsaacgymHandler(BaseSimHandler):
                     rotation_list[i][j], dtype=torch.float32, device=self.device
                 )
                 new_root_states[actor_idx, 7:13] = torch.zeros(6, dtype=torch.float32, device=self.device)
-
-        # Get the actor indices to update
-        actor_indices = []
-        for env_id in env_ids:
-            env_offset = env_id * (len(self.objects) + 1)
             actor_indices.extend(range(env_offset, env_offset + len(self.objects) + 1))
 
         # Convert the actor indices to a tensor
