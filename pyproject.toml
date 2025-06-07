@@ -31,6 +31,7 @@ isaaclab2 = [
     "torch==2.5.1+cu118",
     "torchvision==0.20.1+cu118",
     "isaacsim[all,extscache]==4.5.0",
+    "omniverse-kit",
 ]
 isaacgym = [
     "numpy<2",
@@ -45,6 +46,27 @@ genesis = ["genesis-world"]
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu118", extra = "isaaclab2" },
+]
+torchvision = [
+  { index = "pytorch-cu118", extra = "isaaclab2" },
+]
+omniverse-kit = [
+  { index = "nvidia", extra = "isaaclab2" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com/"
+explicit = true
 
 [tool.uv.pip]
 extra-index-url = [
