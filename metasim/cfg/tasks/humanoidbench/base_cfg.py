@@ -51,10 +51,12 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
-        num_position_iterations=8,
+        num_position_iterations=4,
         num_velocity_iterations=0,
-        bounce_threshold_velocity=0.5,
         replace_cylinder_with_capsule=True,
+        substeps=1,
+        num_threads=10,
+        bounce_threshold_velocity=0.1,
     )
     control = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
 

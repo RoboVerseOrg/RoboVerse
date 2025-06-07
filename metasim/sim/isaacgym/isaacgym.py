@@ -79,6 +79,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._action_offset: bool = False  # for configuration: desire_pos = action_scale * action + default_pos
         self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
         self._d_gains: torch.Tensor | None = None
+        self._effort: torch.Tensor | None = None  # effort, output of pd control
         self._torque_limits: torch.Tensor | None = None
         self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
         self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
@@ -106,8 +107,8 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.8)
         if self.scenario.sim_params.dt is not None:
             sim_params.dt = self.scenario.sim_params.dt
-        sim_params.substeps = self.scenario.sim_params.substeps
         sim_params.use_gpu_pipeline = self.scenario.sim_params.use_gpu_pipeline
+        sim_params.substeps = self.scenario.sim_params.substeps
         sim_params.physx.solver_type = self.scenario.sim_params.solver_type
         sim_params.physx.num_position_iterations = self.scenario.sim_params.num_position_iterations
         sim_params.physx.num_velocity_iterations = self.scenario.sim_params.num_velocity_iterations
@@ -627,7 +628,8 @@ class IsaacgymHandler(BaseSimHandler):
 
     def simulate(self) -> None:
         # Step the physics
-        self._simulate_one_physics_step(self.actions)
+        for _ in range(self.scenario.decimation):
+            self._simulate_one_physics_step(self.actions)
         # Refresh tensors
         if not self._manual_pd_on:
             self.gym.refresh_dof_state_tensor(self.sim)
