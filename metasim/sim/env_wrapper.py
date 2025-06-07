@@ -100,6 +100,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf += 1
             for robot in self.handler.robots:
                 self.handler.set_dof_targets(robot.name, actions)
+            tic = time.time()
             self.handler.simulate()
             toc = time.time()
             log.trace(f"Time taken to handler.simulate(): {toc - tic:.4f}s")
