@@ -38,7 +38,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
-        self._episode_length_buf: torch.Tensor | None = None
+        self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         # asset related
         self._asset_dict_dict: dict = {}  # dict of object link index dict

@@ -317,14 +317,6 @@ def actuator_knee_pos_tensor(envstate, robot_name: str):
     return knee_pos
 
 
-def contact_force_tensor(envstate, robot_name: str):
-    """Returns  the knee pos."""
-    contact_force = envstate.robots[robot_name].extra["contact_forces"]
-    if contact_force is None:
-        raise ValueError(f"feet_pos is None for robot {robot_name}")
-    return contact_force
-
-
 def actuator_forces(envstate, robot_name: str):
     """Returns  the forces applied by the actuators."""
     return (

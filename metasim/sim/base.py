@@ -276,12 +276,6 @@ class BaseSimHandler:
 
         return self._body_reindex_cache[obj_name]
 
-    def set_episode_length_buf(self, set_episode_length_buf):
-        """
-        set timestep of each environment
-        """
-        pass
-
     def get_robot_rigid_body_index(self, body_name: str) -> int:
         """
         Get the index of a rigid body in the robot.

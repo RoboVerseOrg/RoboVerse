@@ -3,13 +3,13 @@ repos:
     rev: v5.0.0
     hooks: #remove rsl_rl here after rsl_rl version upgrade
     -   id: trailing-whitespace
-        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/skillblender_rl/rsl_rl/)'
+        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/rl/rsl_rl/)'
     -   id: end-of-file-fixer
-        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/skillblender_rl/rsl_rl/)'
+        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/rl/rsl_rl/)'
     -   id: check-added-large-files
-        exclude: '^metasim/data/|^roboverse_learn/skillblender_rl/rsl_rl/'
+        exclude: '^metasim/data/|^roboverse_learn/rl/rsl_rl/'
     -   id: debug-statements # check for debugger imports or `breakpoint()`
-        exclude: '^roboverse_learn/|^roboverse_learn/skillblender_rl/rsl_rl/'
+        exclude: '^roboverse_learn/|^roboverse_learn/rl/rsl_rl/'
     -   id: check-yaml
     -   id: check-toml
 -   repo: https://github.com/astral-sh/ruff-pre-commit
@@ -17,6 +17,6 @@ repos:
     hooks:
     -   id: ruff
         args: [ --fix ]
-        exclude: '^roboverse_learn/skillblender_rl/rsl_rl/'
+        exclude: '^roboverse_learn/rl/rsl_rl/'
     -   id: ruff-format
-        exclude: '^roboverse_learn/skillblender_rl/rsl_rl/'
+        exclude: '^roboverse_learn/rl/rsl_rl/'

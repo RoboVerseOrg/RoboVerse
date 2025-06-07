@@ -184,12 +184,18 @@ class Normalization:
 @configclass
 class BaseLeggedRobotChecker(BaseChecker):
     # FIXME I want to get epsiode length which is updated at env_wrapper, but the params handler.
+
     def check(self, handler: BaseSimHandler):
         reset_buf = torch.any(
             torch.norm(handler.contact_forces[:, handler.task.termination_contact_indices, :], dim=-1) > 1.0, dim=1
         )
-        time_out_buf = handler.episode_length_buf > handler.task.max_episode_length  # no terminal reward for time-outs
-        reset_buf |= time_out_buf
+        from metasim.utils.humanoid_robot_util import contact_forces_tensor
+
+        states = handler.get_states()
+        contact_forces = contact_forces_tensor(states, handler.robot.name)
+        reset_buf = torch.any(
+            torch.norm(contact_forces[:, handler.task.termination_contact_indices, :], dim=-1) > 1.0, dim=1
+        )
         return reset_buf
 
 

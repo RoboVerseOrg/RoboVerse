@@ -82,7 +82,6 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self.handler = cls(*args, **kwargs)
             self.handler.launch()
             self._episode_length_buf = torch.zeros(self.handler.num_envs, dtype=torch.int32, device=self.handler.device)
-            self.handler.set_episode_length_buf(self._episode_length_buf)  # sync episode length buffer with handler
 
         def reset(self, states: list[EnvState] | None = None, env_ids: list[int] | None = None) -> tuple[Obs, Extra]:
             if env_ids is None:
@@ -91,9 +90,6 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             self._episode_length_buf[env_ids] = 0
             if states is not None:
                 self.handler.set_states(states, env_ids=env_ids)
-            ## HACK
-            # if self.handler.scenario.sim in ["isaacgym"]:
-            #     self.handler.simulate()
             self.handler.checker.reset(self.handler, env_ids=env_ids)
             self.handler.refresh_render()
             states = self.handler.get_states()
@@ -127,10 +123,6 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
         @property
         def episode_length_buf(self) -> list[int]:
             return self._episode_length_buf.tolist()
-
-        @property
-        def episode_length_buf_tensor(self) -> torch.tensor:
-            return self._episode_length_buf.clone()
 
         @property
         def action_space(self) -> gym.Space:

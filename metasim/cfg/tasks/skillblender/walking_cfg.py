@@ -212,7 +212,7 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_action_smoothness,
     ]
 
-    # TODO: check why this configuration not work as well as the original one
+    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
     # skillblender original version
     # reward_weights: dict[str, float] = {
     #     "termination": -0.0,

@@ -16,7 +16,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.demo_util import get_traj
 from metasim.utils.humanoid_robot_util import *
-from roboverse_learn.skillblender_rl.rsl_rl_wrapper import RslRlWrapper
+from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 
 # TODO 2
 # log metric visualization
@@ -44,7 +44,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         self._init_buffers()
 
         # for debugging
-        # self.debug = True
+        # self.debug = True'
         self.debug = False
         if self.debug:
             self.counter = 0
@@ -563,7 +563,8 @@ class LeggedRobotWrapper(RslRlWrapper):
         """
         input: Tensor
         """
-        env_states, _, self.reset_buf, _, _ = self.env.step(action_dict)
+        env_states, _, terminated, time_out, _ = self.env.step(action_dict)
+        self.reset_buf = terminated | time_out
         return env_states
 
     def step(self, actions):
@@ -588,7 +589,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         if len(env_ids) == 0:
             return
         # reset in the env
-        env_states, _ = self.env.reset(self.init_states, env_ids)
+        _, _ = self.env.reset(self.init_states, env_ids)
 
         self._resample_commands(env_ids)
 
@@ -599,7 +600,11 @@ class LeggedRobotWrapper(RslRlWrapper):
         self.last_dof_vel[env_ids] = 0.0
         self.episode_length_buf[env_ids] = 0
         self.feet_air_time[env_ids] = 0.0
-        self.base_quat[env_ids] = robot_rotation_tensor(env_states, self.robot.name)[env_ids]
+        self.base_quat[env_ids] = (
+            torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device, dtype=torch.float32)
+            .unsqueeze(0)
+            .repeat(len(env_ids), 1)
+        )
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
         self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
 
@@ -609,12 +614,6 @@ class LeggedRobotWrapper(RslRlWrapper):
                 torch.mean(self.episode_sums[key][env_ids]) / self.cfg.max_episode_length_s
             )
             self.episode_sums[key][env_ids] = 0.0
-
-        # resample command
-        # if self.cfg.commands.heading_command:
-        #     forward = self.quat_apply(self.base_quat, self.forward_vec)
-        #     heading = torch.atan2(forward[:, 1], forward[:, 0])
-        #     self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
         # log metrics
         self.extras["episode_metrics"] = deepcopy(self.episode_metrics)
