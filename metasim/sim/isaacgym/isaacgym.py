@@ -33,7 +33,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym = None
         self.sim = None
         self.viewer = None
-        self.enable_viewer_sync: bool = True  # sync viewer flag
+        self._enable_viewer_sync: bool = True  # sync viewer flag
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
@@ -648,8 +648,8 @@ class IsaacgymHandler(BaseSimHandler):
         if not self.headless:
             for evt in self.gym.query_viewer_action_events(self.viewer):
                 if evt.action == "toggle_viewer_sync" and evt.value > 0:
-                    self.enable_viewer_sync = not self.enable_viewer_sync
-            if self.enable_viewer_sync:
+                    self._enable_viewer_sync = not self._enable_viewer_sync
+            if self._enable_viewer_sync:
                 self.gym.step_graphics(self.sim)
                 self.gym.draw_viewer(self.viewer, self.sim, False)
             else:
