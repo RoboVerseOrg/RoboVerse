@@ -49,6 +49,13 @@ Simulation Configuration
      -
      -
      -
+   * - ``substeps``
+     -
+     - ✓
+     -
+     -
+     -
+     -
 
 Robot Configuration
 ~~~~~~~~~~~~~~~~~~~
