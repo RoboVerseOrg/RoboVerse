@@ -526,6 +526,7 @@ class IsaacgymHandler(BaseSimHandler):
             joint_reindex = self.get_joint_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
             state = RobotState(
+                # HACK: robot is always after objects
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :],
                 body_names=self.get_body_names(robot.name),
                 body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
@@ -742,7 +743,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
 
-        self.gym.simulate(self.sim)
+        self.gym.simulate(self.sim)  # FIXME: update the state, but has the side effect of stepping the physics
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
