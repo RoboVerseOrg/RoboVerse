@@ -236,7 +236,7 @@ class PositionShiftChecker(BaseChecker):
 class _JointPosPercentShiftChecker(BaseChecker):
     """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` percent.
 
-    - ``threshold`` is negative for moving towards the negative direction and positive for moving towarrds the positive direction.
+    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
     """
 
     obj_name: str = MISSING

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import mujoco
-
-# import mujoco.viewer
+import mujoco.viewer
 import numpy as np
 import torch
 from dm_control import mjcf
