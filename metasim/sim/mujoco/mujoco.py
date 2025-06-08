@@ -365,7 +365,7 @@ class MujocoHandler(BaseSimHandler):
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
-        joint_targets = actions[0]["dof_pos_target"]
+        joint_targets = actions[0][obj_name]["dof_pos_target"]
         for joint_name, target_pos in joint_targets.items():
             actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
             actuator.ctrl = target_pos

@@ -54,7 +54,7 @@ args = tyro.cli(Args)
 
 # initialize scenario
 scenario = ScenarioCfg(
-    robot=args.robot,
+    robots=[args.robot],
     try_add_table=False,
     sim=args.sim,
     render=args.render,

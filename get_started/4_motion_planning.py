@@ -54,7 +54,7 @@ args = tyro.cli(Args)
 
 # initialize scenario
 scenario = ScenarioCfg(
-    robot=args.robot,
+    robots=[args.robot],
     try_add_table=False,
     sim=args.sim,
     headless=args.headless,
@@ -208,8 +208,10 @@ for step in range(200):
     ik_succ = result.success.squeeze(1)
     q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
     q[:, -ee_n_dof:] = 0.04
+    robot = scenario.robots[0]
     actions = [
-        {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(scenario.num_envs)
+        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+        for i_env in range(scenario.num_envs)
     ]
 
     obs, reward, success, time_out, extras = env.step(actions)
