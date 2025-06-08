@@ -102,6 +102,7 @@ except ImportError:
 import torch
 from tqdm.rich import tqdm_rich as tqdm
 
+from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
@@ -115,13 +116,14 @@ from metasim.utils.tensor_util import tensor_to_cpu
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[int]):
+def get_actions(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[int], robot: BaseRobotCfg):
     action_idxs = env.episode_length_buf
 
     actions = [
         all_actions[demo_idx][action_idx] if action_idx < len(all_actions[demo_idx]) else all_actions[demo_idx][-1]
         for demo_idx, action_idx in zip(demo_idxs, action_idxs)
     ]
+    actions = [{robot.name: action} for action in actions]
 
     return actions
 
@@ -282,7 +284,7 @@ def main():
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=task,
-        robot=robot,
+        robots=[robot],
         scene=args.scene,
         cameras=[camera],
         random=args.random,
@@ -377,7 +379,7 @@ def main():
     ## Main Loop
     while not all(finished):
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
-        actions = get_actions(all_actions, env, demo_idxs)
+        actions = get_actions(all_actions, env, demo_idxs, robot)
         obs, reward, success, time_out, extras = env.step(actions)
         obs = state_tensor_to_nested(env.handler, obs)
         run_out = get_run_out(all_actions, env, demo_idxs)

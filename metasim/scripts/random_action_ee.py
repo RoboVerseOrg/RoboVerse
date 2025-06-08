@@ -42,7 +42,7 @@ def main():
     num_envs: int = args.num_envs
     robot = get_robot(args.robot)
     camera = PinholeCameraCfg(pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = ScenarioCfg(robot=robot, cameras=[camera], sim=args.sim, decimation=args.decimation)
+    scenario = ScenarioCfg(robots=[robot], cameras=[camera], sim=args.sim, decimation=args.decimation)
 
     env_class = get_sim_env_class(SimType(args.sim))
     env = env_class(scenario)
@@ -124,7 +124,8 @@ def main():
         q[:, -ee_n_dof:] = random_gripper_widths
 
         actions = [
-            {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(num_envs)
+            {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+            for i_env in range(num_envs)
         ]
         q_min = torch.min(torch.stack([q_min, q[0]], -1), -1)[0]
         q_max = torch.max(torch.stack([q_max, q[0]], -1), -1)[0]

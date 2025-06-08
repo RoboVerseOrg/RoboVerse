@@ -55,12 +55,10 @@ def main():
     num_envs: int = args.num_envs
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         try_add_table=args.add_table,
         sim=args.sim,
         num_envs=num_envs,
-        # headless=True, # NOTE: uncomment this to run in headless mode with no camera, maximizes performance
-        # cameras=[],
     )
 
     log.info(f"Using simulator: {args.sim}")
@@ -71,25 +69,28 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, _, _ = get_traj(scenario.task, scenario.robot, env.handler)
+    robot = scenario.robots[0]
+    init_states, _, _ = get_traj(scenario.task, robot, env.handler)
     if len(init_states) < num_envs:
         init_states = init_states * (num_envs // len(init_states)) + init_states[: num_envs % len(init_states)]
     else:
         init_states = init_states[:num_envs]
     env.reset(states=init_states)
 
-    robot_joint_limits = scenario.robot.joint_limits
     step = 0
     while True:
         log.debug(f"Step {step}")
         actions = [
             {
-                "dof_pos_target": {
-                    joint_name: (
-                        torch.rand(1).item() * (robot_joint_limits[joint_name][1] - robot_joint_limits[joint_name][0])
-                        + robot_joint_limits[joint_name][0]
-                    )
-                    for joint_name in robot_joint_limits.keys()
+                robot.name: {
+                    "dof_pos_target": {
+                        joint_name: (
+                            torch.rand(1).item()
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                            + robot.joint_limits[joint_name][0]
+                        )
+                        for joint_name in robot.joint_limits.keys()
+                    }
                 }
             }
             for _ in range(num_envs)
