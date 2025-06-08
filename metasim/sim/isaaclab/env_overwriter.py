@@ -4,7 +4,7 @@ from loguru import logger as log
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 
-from .isaaclab_helper import add_cameras, add_lights, add_objects, add_robot, add_sensors, get_pose
+from .isaaclab_helper import add_cameras, add_lights, add_objects, add_robots, add_sensors, get_pose
 
 try:
     from .empty_env import EmptyEnv
@@ -204,11 +204,8 @@ class IsaaclabEnvOverwriter:
             ShaderFixer(scene_cfg_dict["filepath"], SCENE_PRIM_PATH).fix_all()
             use_scene = True
 
-        ## TODO: use add_robots
-        for robot in self.robots:
-            add_robot(env, robot)
+        add_robots(env, self.robots)
         add_objects(env, self.objects + self.checker_debug_viewers[:1])  # TODO: now only support one checker viewer
-
         ## Fix shader texture map path
         for obj in self.objects:
             if isinstance(obj, RigidObjCfg) or isinstance(obj, ArticulationObjCfg):
@@ -343,13 +340,11 @@ class IsaaclabEnvOverwriter:
 
     def _apply_action(self, env: "EmptyEnv") -> None:
         start_idx = 0
-        for robot in self.robots:
+        for robot, robot_inst in zip(self.robots, env.robots):
             actionable_joint_ids = [
-                env.scene.articulations[robot.name].joint_names.index(jn)
-                for jn in robot.actuators
-                if robot.actuators[jn].fully_actuated
+                robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
             ]
-            env.robot.set_joint_position_target(
+            robot_inst.set_joint_position_target(
                 env.actions[:, start_idx : start_idx + len(actionable_joint_ids)], joint_ids=actionable_joint_ids
             )
             start_idx += len(actionable_joint_ids)
