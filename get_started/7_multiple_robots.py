@@ -61,11 +61,14 @@ def main():
         log.debug(f"Step {step}")
         actions = [
             {
-                "dof_pos_target": {
-                    jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
-                    for jn in scenario.robots[0].actuators.keys()
-                    if scenario.robots[0].actuators[jn].fully_actuated
+                robot.name: {
+                    "dof_pos_target": {
+                        jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
+                        for jn in robot.actuators.keys()
+                        if robot.actuators[jn].fully_actuated
+                    }
                 }
+                for robot in scenario.robots
             }
             for _ in range(scenario.num_envs)
         ]
