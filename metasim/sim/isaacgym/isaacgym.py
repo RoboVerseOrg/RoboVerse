@@ -175,6 +175,22 @@ class IsaacgymHandler(BaseSimHandler):
                 camera_props.far_plane = cam_cfg.clipping_range[1]
                 camera_props.enable_tensors = True
                 camera_handle = self.gym.create_camera_sensor(self._envs[i_env], camera_props)
+
+                if cam_cfg.mount_to is not None:
+                    if isinstance(cam_cfg.mount_to, str):
+                        mount_handle = self.gym.find_actor_rigid_body_index(self._envs[i_env], cam_cfg.mount_to)
+                    elif isinstance(cam_cfg.mount_to, tuple):
+                        mount_handle = self.gym.find_actor_rigid_body_index(self._envs[i_env], cam_cfg.mount_to[1])
+                    self.gym.attach_camera_to_body(
+                        camera_handle,
+                        self._envs[i_env],
+                        mount_handle,
+                        gymapi.Vec3(*cam_cfg.mount_pos),
+                        gymapi.Quat(*cam_cfg.mount_quat),
+                        gymapi.FOLLOW_TRANSFORM
+                    )
+
+
                 self._camera_handles.append(camera_handle)
 
                 camera_eye = gymapi.Vec3(*cam_cfg.pos)
