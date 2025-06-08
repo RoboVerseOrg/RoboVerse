@@ -29,6 +29,6 @@ lr_schedule_type: linear  # Option: linear, constant, cosine
 final_lr_fraction: 0.1    # final learning rate is 10% of initial learning rate
 
 # Wandb settings
-use_wandb: false
-wandb_project: humanoidbench_rl_training
-wandb_entity: <wandb entity>
+use_wandb: true
+wandb_project: humanoidbench_rl_training_mujoco
+wandb_entity: zhaomengfei248-southern-university-of-science-technology

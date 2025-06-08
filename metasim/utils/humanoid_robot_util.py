@@ -39,8 +39,10 @@ def torso_upright_tensor(envstate, robot_name: str):
 
 def head_height(envstate, robot_name: str):
     """Returns the height of the head, actually the neck."""
-    raise NotImplementedError("head_height is not implemented for isaacgym and isaaclab")
-    # return envstate["robots"][robot_name]["head"]["pos"][2]  # Good for mujoco, but isaacgym and isaaclab don't have head site
+    # raise NotImplementedError("head_height is not implemented for isaacgym and isaaclab")
+    return envstate["robots"][robot_name]["head"]["pos"][
+        2
+    ]  # Good for mujoco, but isaacgym and isaaclab don't have head site
 
 
 def neck_height(envstate, robot_name: str):
@@ -49,6 +51,14 @@ def neck_height(envstate, robot_name: str):
         envstate["robots"][robot_name]["body"]["left_shoulder_roll_link"]["pos"][2]
         + envstate["robots"][robot_name]["body"]["right_shoulder_roll_link"]["pos"][2]
     ) / 2
+
+
+def head_height_tensor(envstate, robot_name: str):
+    """Returns the height of the neck."""
+    robot_body_name = envstate.robots[robot_name].body_names
+    body_id = robot_body_name.index("head")
+    body_pos = envstate.robots[robot_name].body_state[:, body_id, 2]
+    return body_pos
 
 
 def neck_height_tensor(envstate, robot_name: str):

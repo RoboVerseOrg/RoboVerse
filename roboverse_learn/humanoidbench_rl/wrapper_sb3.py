@@ -39,16 +39,15 @@ class Sb3EnvWrapper(VecEnv):
 
         # FIXME action limit differs with joint limit in locomotion configuration(desire pos = scale*action + default pos)
         # Set up action space based on robot joint limits
-        joint_limits = self.robot.joint_limits
-        action_low = []
-        action_high = []
-        for joint_name in joint_limits.keys():
-            action_low.append(joint_limits[joint_name][0])
-            action_high.append(joint_limits[joint_name][1])
+        limits = self.robot.joint_limits  # dict: {joint_name: (low, high)}
+        self.joint_names = self.env.handler.get_joint_names(self.robot.name)
 
-        self._action_low = torch.tensor(action_low, dtype=torch.float32, device=self.sim_device)
-        self._action_high = torch.tensor(action_high, dtype=torch.float32, device=self.sim_device)
-
+        self._action_low = torch.tensor(
+            [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.sim_device
+        )
+        self._action_high = torch.tensor(
+            [limits[j][1] for j in self.joint_names], dtype=torch.float32, device=self.sim_device
+        )
         # action space is normalized to [-1, 1]
         self.action_space = spaces.Box(low=-1, high=1, shape=self._action_low.shape, dtype=np.float32)
 
@@ -128,25 +127,25 @@ class Sb3EnvWrapper(VecEnv):
         """
         # Convert action format
         # joint_names (list[str]): List of joint names for the robot.
-        joint_names = list(self.robot.joint_limits.keys())
+        # joint_names = list(self.robot.joint_limits.keys())
         # unnormalized_actions (torch.Tensor, shape=(num_envs, action_dim)): Actions unnormalized to the robot's joint limits.
         unnormalized_actions = self.unnormalize_action(self._async_actions)
 
         # action_dict (list[Action]): List of action dictionaries for each environment.
-        action_dict = [
-            {
-                "dof_pos_target": {
-                    # joint_name (str): Name of the joint.
-                    # pos (float): Target position for the joint.
-                    joint_name: float(pos)
-                    for joint_name, pos in zip(joint_names, unnormalized_actions[env_id])
-                }
-            }
-            for env_id in range(self.num_envs)
-        ]
+        # action_dict = [
+        #     {
+        #         "dof_pos_target": {
+        #             # joint_name (str): Name of the joint.
+        #             # pos (float): Target position for the joint.
+        #             joint_name: float(pos)
+        #             for joint_name, pos in zip(joint_names, unnormalized_actions[env_id])
+        #         }
+        #     }
+        #     for env_id in range(self.num_envs)
+        # ]
 
         # Call the step method of the underlying MetaSim environment
-        _, _, terminated_tensor, truncated_tensor, _ = self.env.step(action_dict)
+        _, _, terminated_tensor, truncated_tensor, _ = self.env.step(unnormalized_actions)
 
         # Get formatted observations
         states = self.env.handler.get_states()

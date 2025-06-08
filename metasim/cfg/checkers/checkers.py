@@ -236,7 +236,7 @@ class PositionShiftChecker(BaseChecker):
 class _JointPosPercentShiftChecker(BaseChecker):
     """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` percent.
 
-    - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
+    - ``threshold`` is negative for moving towards the negative direction and positive for moving towarrds the positive direction.
     """
 
     obj_name: str = MISSING
@@ -412,7 +412,9 @@ class _WalkChecker(BaseChecker):
         from metasim.utils.humanoid_robot_util import robot_position_tensor
 
         states = handler.get_states()
-        terminated = robot_position_tensor(states, handler.robot.name)[:, 2] < 0.2
+        x = robot_position_tensor(states, handler.robot.name)[:, 2]
+        # print( robot_position_tensor(states, handler.robot.name)[:, 2] )
+        terminated = x < 0.2
         return terminated
 
 

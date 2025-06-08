@@ -350,6 +350,25 @@ class MJXHandler(BaseSimHandler):
         new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
         self._data = data.replace(ctrl=new_ctrl)
 
+    def set_actions(
+        self,
+        obj_name: str,
+        actions,
+    ) -> None:
+        self._actions_cache = actions
+
+        tgt_jax = t2j(actions)
+
+        # -------- id maps ---------------------------------------------
+        if obj_name == self._scenario.robot.name:
+            a_ids = self._robot_act_ids.get(obj_name)
+        else:
+            a_ids = self._object_act_ids.get(obj_name)
+
+        data = self._data
+        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
+        self._data = data.replace(ctrl=new_ctrl)
+
     def close(self):
         pass
 

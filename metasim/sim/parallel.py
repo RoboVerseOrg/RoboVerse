@@ -49,6 +49,8 @@ def _worker(
                 env.set_states(data[0])
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0], data[1])
+            elif cmd == "set_actions":
+                env.set_actions(data[0], data[1])
             elif cmd == "set_pose":
                 env.set_pose(data[0], data[1], data[2])
             elif cmd == "get_states":

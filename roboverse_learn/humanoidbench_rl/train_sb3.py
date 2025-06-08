@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import math
 import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import sys
 import time
 from typing import Callable
@@ -132,9 +134,9 @@ def main():
     from roboverse_learn.humanoidbench_rl.wrapper_sb3 import Sb3EnvWrapper
 
     if config.get("sim") == "mujoco":
-        if config.get("num_envs") > 1:
-            log.error("Mujoco does not support multiple environments > 1")
-            exit()
+        # if config.get("num_envs") > 1:
+        #     log.error("Mujoco does not support multiple environments > 1")
+        #     exit()
         env = Sb3EnvWrapper(scenario=scenario)
     elif config.get("sim") == "isaacgym":
         env = Sb3EnvWrapper(scenario=scenario)

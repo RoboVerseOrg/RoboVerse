@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import mujoco
-import mujoco.viewer
+
+# import mujoco.viewer
 import numpy as np
 import torch
 from dm_control import mjcf
@@ -370,6 +371,11 @@ class MujocoHandler(BaseSimHandler):
         for joint_name, target_pos in joint_targets.items():
             actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
             actuator.ctrl = target_pos
+
+    def set_actions(self, obj_name: str, actions):
+        self._actions_cache = actions
+        self.physics.data.ctrl[:] = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
+        # Reset all controls to zero
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
