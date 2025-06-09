@@ -725,7 +725,7 @@ class IsaacgymHandler(BaseSimHandler):
                 robot_quat = [rot[1], rot[2], rot[3], rot[0]]
                 rot_list_i.append(robot_quat)
 
-                robot_dof_state_i = np.zeros(robot.num_joints)
+                robot_dof_state_i = np.zeros(len(self._robot_joint_dict))
                 if "dof_pos" in state[robot.name]:
                     for joint_name, joint_idx in self._robot_joint_dict.items():
                         robot_dof_state_i[joint_idx] = state[robot.name]["dof_pos"][joint_name]
@@ -735,7 +735,8 @@ class IsaacgymHandler(BaseSimHandler):
                             robot.joint_limits[joint_name][0] + robot.joint_limits[joint_name][1]
                         ) / 2
 
-            q_list_i.append(robot_dof_state_i)
+                q_list_i.append(robot_dof_state_i)
+
             pos_list.append(pos_list_i)
             rot_list.append(rot_list_i)
             q_list.append(q_list_i)
