@@ -21,6 +21,7 @@ from tyro import MISSING
 
 from metasim.cfg.randomization import RandomizationCfg
 from metasim.cfg.render import RenderCfg
+from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
@@ -68,11 +69,12 @@ args = tyro.cli(Args)
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, action_idx: int, num_envs: int):
+def get_actions(all_actions, action_idx: int, num_envs: int, robot: BaseRobotCfg):
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
     ]
+    actions = [{robot.name: action} for action in actions]
     return actions
 
 
@@ -211,7 +213,7 @@ def main():
                 break
 
         else:
-            actions = get_actions(all_actions, step, num_envs)
+            actions = get_actions(all_actions, step, num_envs, scenario.robots[0])
             obs, reward, success, time_out, extras = env.step(actions)
 
             if success.any():
