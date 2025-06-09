@@ -99,7 +99,7 @@ def main():
     )
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         cameras=[camera],
         sim=args.sim,
         renderer=args.render,
@@ -130,7 +130,7 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot, env.handler)
+    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
@@ -162,7 +162,7 @@ def main():
 
     while step < MaxStep:
         log.debug(f"Step {step}")
-        robot_joint_limits = scenario.robot.joint_limits
+        robot_joint_limits = scenario.robots[0].joint_limits
         # process obs input
         obs_np_dict = dict()
 

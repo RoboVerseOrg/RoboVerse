@@ -71,7 +71,7 @@ args = tyro.cli(Args)
 
 # initialize scenario
 scenario = ScenarioCfg(
-    robot=args.robot,
+    robots=[args.robot],
     try_add_table=False,
     sim=args.sim,
     headless=args.headless,
@@ -131,7 +131,7 @@ init_states = [
 ]
 
 
-robot = scenario.robot
+robot = scenario.robots[0]
 *_, robot_ik = get_curobo_models(robot)
 curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
 ee_n_dof = len(robot.gripper_open_q)
@@ -188,7 +188,7 @@ def move_to_pose(
 
 
 step = 0
-robot_joint_limits = scenario.robot.joint_limits
+robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
     states = env.handler.get_states()

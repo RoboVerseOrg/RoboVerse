@@ -39,9 +39,9 @@ class PolicyRunner:
 
     def __post_init__(self):
         if self.policy_cfg.action_config.action_type == "ee":
-            *_, self.robot_ik = get_curobo_models(self.scenario.robot)
+            *_, self.robot_ik = get_curobo_models(self.scenario.robots[0])
             self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
-            self.ee_n_dof = len(self.scenario.robot.gripper_open_q)
+            self.ee_n_dof = len(self.scenario.robots[0].gripper_open_q)
 
         if self.policy_cfg.action_config.temporal_agg:
             self.all_time_actions = torch.zeros(
@@ -110,7 +110,7 @@ class PolicyRunner:
             {
                 "dof_pos_target": {
                     joint_name: curr_action[i, index]
-                    for index, joint_name in enumerate(sorted(self.scenario.robot.joint_limits.keys()))
+                    for index, joint_name in enumerate(sorted(self.scenario.robots[0].joint_limits.keys()))
                 }
             }
             for i in range(self.num_envs)
@@ -170,8 +170,8 @@ class PolicyRunner:
                 curr_action = self.action_cache.pop(0)
 
         self.step += 1
-        assert curr_action.shape == (self.num_envs, len(self.scenario.robot.joint_limits.keys())), (
-            f"Expected num_envs X n_dof : {self.num_envs} X {len(self.scenario.robot.joint_limits.keys())}, got {curr_action.shape} instead"
+        assert curr_action.shape == (self.num_envs, len(self.scenario.robots[0].joint_limits.keys())), (
+            f"Expected num_envs X n_dof : {self.num_envs} X {len(self.scenario.robots[0].joint_limits.keys())}, got {curr_action.shape} instead"
         )
 
         actions = self.action_to_dict(curr_action)
@@ -210,9 +210,9 @@ class PolicyRunner:
             gripper_widths = torch.zeros(self.num_envs, self.ee_n_dof, device=self.device)
             for i in range(self.num_envs):
                 if gripper_pos[i] < 0.5:
-                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_close_q, device=self.device)
+                    gripper_widths[i] = torch.tensor(self.scenario.robots[0].gripper_close_q, device=self.device)
                 else:
-                    gripper_widths[i] = torch.tensor(self.scenario.robot.gripper_open_q, device=self.device)
+                    gripper_widths[i] = torch.tensor(self.scenario.robots[0].gripper_open_q, device=self.device)
         else:
             gripper_widths = action[:, -self.ee_n_dof :]
 

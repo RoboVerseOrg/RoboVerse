@@ -56,7 +56,7 @@ def main():
     )
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         cameras=[camera],
         sim=args.sim,
         renderer=args.render,

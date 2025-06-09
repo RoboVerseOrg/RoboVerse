@@ -128,7 +128,10 @@ def control_to_pose(
     q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
     q[:, -ee_n_dof:] = gripper_widths
 
-    actions = [{"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(num_envs)]
+    actions = [
+        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+        for i_env in range(num_envs)
+    ]
 
     for i_step in range(steps):
         obs, _, _, _, _ = env.step(actions)
@@ -142,7 +145,7 @@ def main():
     camera = PinholeCameraCfg(pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         try_add_table=args.add_table,
         sim=args.sim,
         cameras=[camera],
@@ -179,7 +182,7 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot)
+    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0])
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
     ##############################################
@@ -298,8 +301,8 @@ def main():
 
     gripper_widths = torch.tensor(robot.gripper_open_q)
     gripper_widths[:] = 0.0
-    actions[0]["dof_pos_target"]["panda_finger_joint1"] = 0.0
-    actions[0]["dof_pos_target"]["panda_finger_joint2"] = 0.0
+    actions[0][robot.name]["dof_pos_target"]["panda_finger_joint1"] = 0.0
+    actions[0][robot.name]["dof_pos_target"]["panda_finger_joint2"] = 0.0
     for i in range(10):
         obs, _, _, _, _ = env.step(actions)
         actions_list.append(actions)

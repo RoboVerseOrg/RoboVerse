@@ -65,10 +65,10 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
         @property
         def action_space(self) -> gym.Space:
             action_low = torch.tensor(
-                [limit[0] for limit in self.handler.scenario.robot.joint_limits.values()], dtype=torch.float32
+                [limit[0] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
             action_high = torch.tensor(
-                [limit[1] for limit in self.handler.scenario.robot.joint_limits.values()], dtype=torch.float32
+                [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
             return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
 
@@ -138,10 +138,10 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
         @property
         def action_space(self) -> gym.Space:
             action_low = torch.tensor(
-                [limit[0] for limit in self.handler.scenario.robot.joint_limits.values()], dtype=torch.float32
+                [limit[0] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
             action_high = torch.tensor(
-                [limit[1] for limit in self.handler.scenario.robot.joint_limits.values()], dtype=torch.float32
+                [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
             return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
 
@@ -150,7 +150,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             observation_space = {}
             for obj in self.handler.scenario.task.observation_space.keys():
                 if obj == "robot":
-                    for joint in self.handler.scenario.robot.joint_names:
+                    for joint in self.handler.scenario.robots[0].joint_names:
                         observation_space[joint] = gym.spaces.Box(
                             low=-torch.inf, high=torch.inf, shape=(1,), dtype=torch.float32
                         )

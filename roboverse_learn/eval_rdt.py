@@ -90,7 +90,7 @@ def main():
     randomization = RandomizationCfg(camera=False, light=False, ground=False, reflection=False)
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         cameras=[camera],
         random=randomization,
         sim=args.sim,
@@ -139,7 +139,7 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot, env.handler)
+    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
@@ -152,9 +152,9 @@ def main():
 
     ## cuRobo controller
 
-    *_, robot_ik = get_curobo_models(scenario.robot)
+    *_, robot_ik = get_curobo_models(scenario.robots[0])
     curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(scenario.robot.gripper_open_q)
+    ee_n_dof = len(scenario.robots[0].gripper_open_q)
 
     step = 0
     MaxStep = 800
@@ -172,7 +172,7 @@ def main():
 
     while step < MaxStep:
         log.debug(f"Step {step}")
-        robot_joint_limits = scenario.robot.joint_limits
+        robot_joint_limits = scenario.robots[0].joint_limits
 
         import imageio
 
@@ -210,7 +210,7 @@ def main():
 
             q = None  # XXX: What is q???
             actions = [
-                {"dof_pos_target": dict(zip(scenario.robot.joint_limits.keys(), q[i_env].tolist()))}
+                {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), q[i_env].tolist()))}
                 for i_env in range(num_envs)
             ]
             obs, reward, success, time_out, extras = env.step(actions)

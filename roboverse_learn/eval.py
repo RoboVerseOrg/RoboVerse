@@ -87,7 +87,7 @@ def main():
     camera = PinholeCameraCfg(pos=(1.5, 0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         cameras=[camera],
         random=args.random,
         sim=args.sim,

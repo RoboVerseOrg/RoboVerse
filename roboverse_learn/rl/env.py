@@ -55,14 +55,14 @@ class RLEnvWrapper:
         states = self.env.handler.get_states()
 
         for state in states:
-            if hasattr(self.scenario.robot, "default_position"):
-                state["robots"][self.scenario.robot.name]["pos"] = self.scenario.robot.default_position
-            if hasattr(self.scenario.robot, "default_orientation"):
-                quat = self.scenario.robot.default_orientation
-                state["robots"][self.scenario.robot.name]["rot"] = self._normalize_quaternion(quat)
-            if hasattr(self.scenario.robot, "default_joint_positions"):
-                for joint_name, joint_pos in self.scenario.robot.default_joint_positions.items():
-                    state["robots"][self.scenario.robot.name]["dof_pos"][joint_name] = joint_pos
+            if hasattr(self.scenario.robots[0], "default_position"):
+                state["robots"][self.scenario.robots[0].name]["pos"] = self.scenario.robots[0].default_position
+            if hasattr(self.scenario.robots[0], "default_orientation"):
+                quat = self.scenario.robots[0].default_orientation
+                state["robots"][self.scenario.robots[0].name]["rot"] = self._normalize_quaternion(quat)
+            if hasattr(self.scenario.robots[0], "default_joint_positions"):
+                for joint_name, joint_pos in self.scenario.robots[0].default_joint_positions.items():
+                    state["robots"][self.scenario.robots[0].name]["dof_pos"][joint_name] = joint_pos
 
             for obj in self.scenario.task.objects:
                 if hasattr(obj, "default_position"):
@@ -85,7 +85,7 @@ class RLEnvWrapper:
                         self.scenario.task.randomize["robot"]["position"]["z"][0],
                         self.scenario.task.randomize["robot"]["position"]["z"][1],
                     )
-                    state["robots"][self.scenario.robot.name]["pos"] = (new_x, new_y, new_z)
+                    state["robots"][self.scenario.robots[0].name]["pos"] = (new_x, new_y, new_z)
                 if "orientation" in self.scenario.task.randomize["robot"]:
                     new_x = random.uniform(
                         self.scenario.task.randomize["robot"]["orientation"]["x"][0],
@@ -104,7 +104,7 @@ class RLEnvWrapper:
                         self.scenario.task.randomize["robot"]["orientation"]["w"][1],
                     )
                     quat = (new_w, new_x, new_y, new_z)
-                    state["robots"][self.scenario.robot.name]["rot"] = self._normalize_quaternion(quat)
+                    state["robots"][self.scenario.robots[0].name]["rot"] = self._normalize_quaternion(quat)
             if "object" in self.scenario.task.randomize:
                 for obj in self.scenario.task.randomize["object"]:
                     if "position" in self.scenario.task.randomize["object"][obj]:
@@ -150,7 +150,7 @@ class RLEnvWrapper:
         self.headless = self.scenario.headless
         self.num_envs = self.handler.num_envs
         self._task = self.scenario.task
-        self._robot = self.scenario.robot
+        self._robot = self.scenario.robots[0]
         self.device = self.handler.device
         self.rgb_observation = len(self.scenario.cameras) > 0
         self.obs_space = self.get_observation_space()

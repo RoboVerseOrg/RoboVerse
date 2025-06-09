@@ -62,7 +62,7 @@ class MetaSimVecEnv(VectorEnv):
         self.scenario = scenario
 
         # Get candidate states
-        self.candidate_init_states, _, _ = get_traj(scenario.task, scenario.robot)
+        self.candidate_init_states, _, _ = get_traj(scenario.task, scenario.robots[0])
 
         # XXX: is the inf space ok?
         self.single_observation_space = spaces.Box(-np.inf, np.inf)
@@ -109,7 +109,7 @@ class MetaSimVecEnv(VectorEnv):
         states = self.env.handler.get_states()
         tot_reward = torch.zeros(self.num_envs, device=self.env.handler.device)
         for reward_fn, weight in zip(self.scenario.task.reward_functions, self.scenario.task.reward_weights):
-            tot_reward += weight * reward_fn(states, self.scenario.robot.name)
+            tot_reward += weight * reward_fn(states, self.scenario.robots[0].name)
         return tot_reward
 
     def _get_default_states(self, seed: int | None = None):
@@ -120,7 +120,7 @@ class MetaSimVecEnv(VectorEnv):
 
 class StableBaseline3VecEnv(VecEnv):
     def __init__(self, env: MetaSimVecEnv):
-        joint_limits = env.scenario.robot.joint_limits
+        joint_limits = env.scenario.robots[0].joint_limits
 
         # TODO: customize action space?
         self.action_space = spaces.Box(
@@ -151,7 +151,7 @@ class StableBaseline3VecEnv(VecEnv):
 
     def step_async(self, actions: np.ndarray) -> None:
         self.action_dicts = [
-            {"dof_pos_target": dict(zip(self.env.scenario.robot.joint_limits.keys(), action))} for action in actions
+            {"dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))} for action in actions
         ]
 
     def step_wait(self):
