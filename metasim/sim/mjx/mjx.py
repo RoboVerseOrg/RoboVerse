@@ -93,12 +93,12 @@ class MJXHandler(BaseSimHandler):
         log.info(f"MJXHandler launched · envs={self.num_envs}")
         log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
 
-    def simulate(self) -> None:
+    def _simulate(self) -> None:
         if self._gravity_compensation:
             self._disable_robotgravity()
         self._data = self._substep(self._mjx_model, self._data)
 
-    def get_states(self, env_ids: list[int] | None = None):
+    def _get_states(self, env_ids: list[int] | None = None):
         """Return a structured snapshot of all robots / objects in the scene."""
         data = self._data  # mjx_env.Data  (N, …)
         N = data.qpos.shape[0]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+
 import torch
 from loguru import logger as log
 
@@ -9,7 +11,7 @@ from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.state import TensorState, state_tensor_to_nested
 
 
-class BaseSimHandler:
+class BaseSimHandler(ABC):
     """Base class for simulation handler."""
 
     def __init__(self, scenario: ScenarioCfg):
@@ -33,6 +35,7 @@ class BaseSimHandler:
         self.checker = scenario.checker
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots + self.checker.get_debug_viewers()}
         """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
+        self._state_cache_expire = True
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -91,7 +94,8 @@ class BaseSimHandler:
     ############################################################
     ## Get states
     ############################################################
-    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    @abstractmethod
+    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         """Get the states of the environment.
 
         Args:
@@ -100,7 +104,13 @@ class BaseSimHandler:
         Returns:
             dict: A dictionary containing the states of the environment
         """
-        raise NotImplementedError
+        pass
+
+    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+        if self._state_cache_expire:
+            self._states = self._get_states(env_ids=env_ids)
+            self._state_cache_expire = False
+        return self._states
 
     def get_vel(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if self.num_envs > 1:
@@ -171,9 +181,14 @@ class BaseSimHandler:
     ############################################################
     ## Simulate
     ############################################################
+    @abstractmethod
+    def _simulate(self):
+        pass
+
     def simulate(self):
-        """Step the simulation."""
-        raise NotImplementedError
+        """Simulate the environment."""
+        self._state_cache_expire = True
+        self._simulate()
 
     ############################################################
     ## Utils

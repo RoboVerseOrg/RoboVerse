@@ -353,7 +353,7 @@ class Sapien3Handler(BaseSimHandler):
             self._previous_dof_vel_target[obj_name] = vel_target_arr
             self._apply_action(instance, pos_target, vel_target)
 
-    def simulate(self):
+    def _simulate(self):
         for i in range(self.scenario.decimation):
             self.scene.step()
             self.scene.update_render()
@@ -389,7 +389,7 @@ class Sapien3Handler(BaseSimHandler):
         link_state_tensor = torch.cat(link_state_list, dim=0)
         return link_name_list, link_state_tensor
 
-    def get_states(self, env_ids=None) -> list[EnvState]:
+    def _get_states(self, env_ids=None) -> list[EnvState]:
         object_states = {}
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]

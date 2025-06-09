@@ -205,7 +205,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for i in env_ids:
                 self.remotes[i].send(("set_pose", (obj_name, [pos[i]], [rot[i]])))
 
-        def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+        def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 
@@ -222,7 +222,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             log.trace(f"Time taken to concatenate states: {toc - tic:.4f}s")
             return concat_states
 
-        def simulate(self):
+        def _simulate(self):
             for remote in self.remotes:
                 remote.send(("simulate", (None,)))
 

@@ -92,7 +92,7 @@ class GenesisHandler(BaseSimHandler):
 
         self.scene_inst.build(n_envs=self.scenario.num_envs, env_spacing=(2, 2))
 
-    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -221,7 +221,7 @@ class GenesisHandler(BaseSimHandler):
                 ],
             )
 
-    def simulate(self):
+    def _simulate(self):
         for _ in range(self.scenario.decimation):
             self.scene_inst.step()
 

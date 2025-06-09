@@ -221,7 +221,7 @@ class MujocoHandler(BaseSimHandler):
         root_np = full[0]
         return root_np, full  # root, bodies
 
-    def get_states(self, env_ids: list[int] | None = None) -> list[dict]:
+    def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         object_states = {}
         for obj in self.objects:
             model_name = self.mj_objects[obj.name].model
@@ -375,7 +375,7 @@ class MujocoHandler(BaseSimHandler):
         if self.viewer is not None:
             self.viewer.sync()
 
-    def simulate(self):
+    def _simulate(self):
         if self._gravity_compensation:
             self._disable_robotgravity()
 
