@@ -21,6 +21,7 @@ from tyro import MISSING
 
 from metasim.cfg.randomization import RandomizationCfg
 from metasim.cfg.render import RenderCfg
+from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
@@ -68,7 +69,7 @@ args = tyro.cli(Args)
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, action_idx: int, num_envs: int):
+def get_actions(all_actions, action_idx: int, num_envs: int, robot: BaseRobotCfg):
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
@@ -134,7 +135,7 @@ def main():
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=args.task,
-        robot=args.robot,
+        robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
         random=args.random,
@@ -170,7 +171,9 @@ def main():
     assert os.path.exists(scenario.task.traj_filepath), (
         f"Trajectory file: {scenario.task.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robot, env.handler)
+    init_states, all_actions, all_states = get_traj(
+        scenario.task, scenario.robots[0], env.handler
+    )  # XXX: only support one robot
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
@@ -209,7 +212,7 @@ def main():
                 break
 
         else:
-            actions = get_actions(all_actions, step, num_envs)
+            actions = get_actions(all_actions, step, num_envs, scenario.robots[0])
             obs, reward, success, time_out, extras = env.step(actions)
 
             if success.any():

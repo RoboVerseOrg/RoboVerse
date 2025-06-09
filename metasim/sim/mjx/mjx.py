@@ -45,7 +45,7 @@ class MJXHandler(BaseSimHandler):
         self._scenario = scenario
         self._seed = seed or 0
         self._mjx_model = None
-        self._robot = scenario.robot
+        self._robot = scenario.robots[0]
         self._robot_path = self._robot.mjx_mjcf_path
         self.cameras = []
         for camera in scenario.cameras:

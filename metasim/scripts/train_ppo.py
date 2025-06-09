@@ -27,7 +27,7 @@ class MetaSimGymEnv(gym.Env):
         self.env: EnvWrapper[BaseSimHandler] = env
 
         # Get joint limits for action space
-        joint_limits = scenario.robot.joint_limits
+        joint_limits = scenario.robots[0].joint_limits
         self.action_space = spaces.Box(
             low=np.array([lim[0] for lim in joint_limits.values()]),
             high=np.array([lim[1] for lim in joint_limits.values()]),

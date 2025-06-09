@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import MISSING
 from typing import Literal
 
 from loguru import logger as log
@@ -30,7 +29,7 @@ class ScenarioCfg:
 
     task: BaseTaskCfg | None = None  # This item should be removed?
     """None means no task specified"""
-    robot: BaseRobotCfg = MISSING
+    robots: list[BaseRobotCfg] = []
     scene: SceneCfg | None = None
     """None means no scene"""
     lights: list[BaseLightCfg] = [DistantLightCfg()]
@@ -75,8 +74,9 @@ class ScenarioCfg:
         ### Parse task and robot
         if isinstance(self.task, str):
             self.task = get_task(self.task)
-        if isinstance(self.robot, str):
-            self.robot = get_robot(self.robot)
+        for i, robot in enumerate(self.robots):
+            if isinstance(robot, str):
+                self.robots[i] = get_robot(robot)
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
 

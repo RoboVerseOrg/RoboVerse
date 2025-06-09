@@ -11,10 +11,13 @@ Dof = Dict[str, float]
 
 
 ## Trajectory types
-class Action(TypedDict):
+class RobotAction(TypedDict):
     """Action of the robot."""
 
     dof_pos_target: Dof
+
+
+Action = Dict[str, RobotAction]
 
 
 class ObjectState(TypedDict):

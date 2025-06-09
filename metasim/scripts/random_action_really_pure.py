@@ -30,28 +30,29 @@ class Args:
 
 def main():
     args = tyro.cli(Args)
-    scenario = ScenarioCfg(robot=args.robot, sim=args.sim, num_envs=args.num_envs, decimation=args.decimation)
+    scenario = ScenarioCfg(robots=[args.robot], sim=args.sim, num_envs=args.num_envs, decimation=args.decimation)
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_env_class(SimType(args.sim))
     env = env_class(scenario)
 
-    init_states = [
-        {"robots": {scenario.robot.name: {"pos": [0.0, 0.0, args.z_pos]}}, "objects": {}}
-    ] * scenario.num_envs
+    robot = scenario.robots[0]
+    init_states = [{"robots": {robot.name: {"pos": [0.0, 0.0, args.z_pos]}}, "objects": {}}] * scenario.num_envs
     env.reset(states=init_states)
 
-    joint_min = {jn: scenario.robot.joint_limits[jn][0] for jn in scenario.robot.joint_limits.keys()}
-    joint_max = {jn: scenario.robot.joint_limits[jn][1] for jn in scenario.robot.joint_limits.keys()}
+    joint_min = {jn: robot.joint_limits[jn][0] for jn in robot.joint_limits.keys()}
+    joint_max = {jn: robot.joint_limits[jn][1] for jn in robot.joint_limits.keys()}
     step = 0
     while True:
         log.debug(f"Step {step}")
         actions = [
             {
-                "dof_pos_target": {
-                    jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
-                    for jn in scenario.robot.actuators.keys()
-                    if scenario.robot.actuators[jn].fully_actuated
+                robot.name: {
+                    "dof_pos_target": {
+                        jn: (torch.rand(1).item() * (joint_max[jn] - joint_min[jn]) + joint_min[jn])
+                        for jn in robot.actuators.keys()
+                        if robot.actuators[jn].fully_actuated
+                    }
                 }
             }
             for _ in range(scenario.num_envs)

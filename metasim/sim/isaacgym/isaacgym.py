@@ -15,7 +15,6 @@ from metasim.cfg.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
@@ -26,8 +25,7 @@ class IsaacgymHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
         self._actions_cache: list[Action] = []
-        self._robot: BaseRobotCfg = scenario.robot
-        self._robot_names = {self._robot.name}
+        self._robot_names = {self.robot.name}
         self._robot_init_pose = self.robot.default_position
         self._robot_init_quat = self.robot.default_orientation
         self._cameras = scenario.cameras
@@ -269,19 +267,19 @@ class IsaacgymHandler(BaseSimHandler):
         robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
         num_actions = 0
         default_dof_pos = []
-        self._manual_pd_on = any(mode == "effort" for mode in self._robot.control_type.values())
+        self._manual_pd_on = any(mode == "effort" for mode in self.robot.control_type.values())
 
         dof_names = self.gym.get_asset_dof_names(robot_asset)
         for i, dof_name in enumerate(dof_names):
             # get config
-            i_actuator_cfg = self._robot.actuators[dof_name]
-            i_control_mode = self._robot.control_type[dof_name] if dof_name in self._robot.control_type else "position"
+            i_actuator_cfg = self.robot.actuators[dof_name]
+            i_control_mode = self.robot.control_type[dof_name] if dof_name in self.robot.control_type else "position"
 
             # task default position from cfg if exist, otherwise use 0.3*(uppper + lower) as default
             if not i_actuator_cfg.is_ee:
                 default_dof_pos_i = (
-                    self._robot.default_joint_positions[dof_name]
-                    if dof_name in self._robot.default_joint_positions
+                    self.robot.default_joint_positions[dof_name]
+                    if dof_name in self.robot.default_joint_positions
                     else robot_mids[i]
                 )
                 default_dof_pos.append(default_dof_pos_i)
@@ -565,7 +563,9 @@ class IsaacgymHandler(BaseSimHandler):
             flat_vals = []
             for joint_i, joint_name in enumerate(self._joint_info[self.robot.name]["names"]):
                 if self.robot.actuators[joint_name].fully_actuated:
-                    flat_vals.append(action_data["dof_pos_target"][joint_name])  # TODO: support other actions
+                    flat_vals.append(
+                        action_data[self.robot.name]["dof_pos_target"][joint_name]
+                    )  # TODO: support other actions
                 else:
                     flat_vals.append(0.0)  # place holder for under-actuated joints
 

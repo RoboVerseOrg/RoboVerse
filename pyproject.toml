@@ -128,6 +128,8 @@ include = ["metasim*"]
 "metasim/cfg/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For long-term-support scripts, allow no docstrings
 "metasim/scripts/**.py" = ["D"]
+## For get_started scripts, allow no docstrings
+"get_started/**.py" = ["D"]
 ## For unit test, allow no docstrings
 "metasim/test/**.py" = ["D"]
 ## For special tasks, allow no docstrings

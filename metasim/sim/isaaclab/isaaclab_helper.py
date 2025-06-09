@@ -138,7 +138,7 @@ def add_objects(env: "EmptyEnv", objects: list[BaseObjCfg]) -> None:
         _add_object(env, obj)
 
 
-def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
+def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
     try:
         import omni.isaac.lab.sim as sim_utils
         from omni.isaac.lab.actuators import ImplicitActuatorCfg
@@ -173,7 +173,13 @@ def add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
 
     robot_inst = Articulation(cfg)
     env.scene.articulations[robot.name] = robot_inst
-    env.robot = robot_inst
+    env.robots.append(robot_inst)
+
+
+def add_robots(env: "EmptyEnv", robots: list[BaseRobotCfg]) -> None:
+    env.robots = []
+    for robot in robots:
+        _add_robot(env, robot)
 
 
 def _add_light(env: "EmptyEnv", light: BaseLightCfg, prim_path: str) -> None:

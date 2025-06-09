@@ -200,7 +200,10 @@ class GenesisHandler(BaseSimHandler):
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
         position = [
-            [actions[env_id]["dof_pos_target"][jn] for jn in self.get_joint_names(obj_name, sort=False)]
+            [
+                actions[env_id][self.robot.name]["dof_pos_target"][jn]
+                for jn in self.get_joint_names(obj_name, sort=False)
+            ]
             for env_id in range(self.num_envs)
         ]
         if self.object_dict[obj_name].fix_base_link:
