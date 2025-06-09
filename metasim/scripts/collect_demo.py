@@ -123,8 +123,6 @@ def get_actions(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[in
         all_actions[demo_idx][action_idx] if action_idx < len(all_actions[demo_idx]) else all_actions[demo_idx][-1]
         for demo_idx, action_idx in zip(demo_idxs, action_idxs)
     ]
-    actions = [{robot.name: action} for action in actions]
-
     return actions
 
 

@@ -74,7 +74,6 @@ def get_actions(all_actions, action_idx: int, num_envs: int, robot: BaseRobotCfg
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
     ]
-    actions = [{robot.name: action} for action in actions]
     return actions
 
 
