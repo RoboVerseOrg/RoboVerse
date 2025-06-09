@@ -250,7 +250,7 @@ class SinglePybulletHandler(BaseSimHandler):
         ])
         self._apply_action(action_arr, self.object_ids[obj_name])
 
-    def simulate(self):
+    def _simulate(self):
         """Step the simulation."""
         # # Rewrite this function for multi-env version
         # action = actions[0]
@@ -309,7 +309,7 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def get_states(self, env_ids=None) -> list[EnvState]:
+    def _get_states(self, env_ids=None) -> list[EnvState]:
         """Get the states of the environment.
 
         Returns:

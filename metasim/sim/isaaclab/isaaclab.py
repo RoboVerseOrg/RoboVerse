@@ -324,7 +324,7 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def get_states(self, env_ids: list[int] | None = None) -> TensorState:
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -430,7 +430,7 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     ## Misc
     ############################################################
-    def simulate(self):
+    def _simulate(self):
         pass
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:

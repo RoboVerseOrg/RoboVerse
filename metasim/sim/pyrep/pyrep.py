@@ -93,5 +93,5 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def get_states(self) -> list[EnvState]:
+    def _get_states(self) -> list[EnvState]:
         pass

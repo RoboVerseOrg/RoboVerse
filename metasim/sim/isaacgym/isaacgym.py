@@ -497,7 +497,7 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.viewer_camera_look_at(self.viewer, middle_env, cam_pos, cam_target)
         ################################
 
-    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -628,7 +628,7 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
 
-    def simulate(self) -> None:
+    def _simulate(self) -> None:
         # Step the physics
         self._simulate_one_physics_step(self.actions)
         # Refresh tensors
