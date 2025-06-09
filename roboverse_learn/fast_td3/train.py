@@ -31,6 +31,7 @@ from tensordict import TensorDict, from_module
 from torch.amp import GradScaler, autocast
 from wrapper import FastTD3EnvWrapper
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.set_float32_matmul_precision("high")
 
 
@@ -491,6 +492,7 @@ def main() -> None:
                 print(f"Saving model at global step {global_step}")
 
         global_step += 1
+        pbar.update(1)
 
 
 if __name__ == "__main__":

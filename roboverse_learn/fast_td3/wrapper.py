@@ -75,7 +75,7 @@ class FastTD3EnvWrapper:
     def step(self, actions: torch.Tensor):
         # ---------- env.step ----------
         real_action = self._unnormalise_action(actions)
-        states, _, terminated, truncated, _ = self.env.step(real_action)
+        states, _, terminated, truncated, _ = self.env.step_actions(real_action)
 
         obs_now = self.get_humanoid_observation(states).to(self.device)
         reward_now = self.get_humanoid_reward(states).to(self.device)
