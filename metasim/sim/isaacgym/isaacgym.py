@@ -566,7 +566,7 @@ class IsaacgymHandler(BaseSimHandler):
             action_tensor = torch.zeros(self.num_envs, robot.num_joints, device=self.device)
             for joint_i, joint_name in enumerate(self._joint_info[robot.name]["names"]):
                 action_tensor[:, joint_i] = torch.tensor(
-                    [actions[env_id]["dof_pos_target"][joint_name] for env_id in range(self.num_envs)],
+                    [actions[env_id][robot.name]["dof_pos_target"][joint_name] for env_id in range(self.num_envs)],
                     device=self.device,
                 )
             action_tensor_list.append(action_tensor)
