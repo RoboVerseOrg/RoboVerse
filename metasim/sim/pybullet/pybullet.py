@@ -245,7 +245,9 @@ class SinglePybulletHandler(BaseSimHandler):
         # For multi-env version, rewrite this function
         self._actions_cache = actions
         action = actions[0]
-        action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
+        action_arr = np.array([
+            action[self.robot.name]["dof_pos_target"][name] for name in self.object_joint_order[obj_name]
+        ])
         self._apply_action(action_arr, self.object_ids[obj_name])
 
     def simulate(self):
