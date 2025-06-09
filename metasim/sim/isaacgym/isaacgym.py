@@ -519,7 +519,6 @@ class IsaacgymHandler(BaseSimHandler):
                 )
             object_states[obj.name] = state
 
-        # FIXME some RL task need joint state as dof_pos - default_dof_pos, not absolute dof_pos. see https://github.com/leggedrobotics/legged_gym/blob/17847702f90d8227cd31cce9c920aa53a739a09a/legged_gym/envs/base/legged_robot.py#L216 for further details
         robot_states = {}
         for robot_id, robot in enumerate([self.robot]):
             joint_reindex = self.get_joint_reindex(robot.name)
@@ -529,8 +528,8 @@ class IsaacgymHandler(BaseSimHandler):
                 root_state=self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :],
                 body_names=self.get_body_names(robot.name),
                 body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
-                joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
-                joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
+                joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, self._obj_num_dof :, :][:, joint_reindex, 0],
+                joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, self._obj_num_dof :, :][:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
                 joint_effort_target=self._effort if self._manual_pd_on else None,
@@ -744,7 +743,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
 
-        self.gym.simulate(self.sim)  # FIXME: update the state, but has the side effect of stepping the physics
+        # self.gym.simulate(self.sim)  # FIXME: update the state, but has the side effect of stepping the physics
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -837,7 +836,12 @@ class IsaacgymHandler(BaseSimHandler):
     ############################################################
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = list(self._joint_info[obj_name]["global_indices"].keys())
+            # read as indiced sorted format
+            joint_names = [
+                name
+                for name, _ in sorted(self._joint_info[obj_name]["global_indices"].items(), key=lambda item: item[1])
+            ]
+            # read asalphabet sorted format
             if sort:
                 joint_names.sort()
             return joint_names

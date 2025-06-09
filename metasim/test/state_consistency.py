@@ -96,7 +96,7 @@ init_states = [
                 "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
             },
             "sphere": {
-                "pos": torch.tensor([0.4, -0.6, 0.05]),
+                "pos": torch.tensor([0.4, -0.6, 0.10]),
                 "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
             },
             "bbq_sauce": {
@@ -129,6 +129,9 @@ init_states = [
     }
 ]
 
+if args.sim == "isaacgym":
+    # In IsaacGym, we need to call gym.simulate before we can effectively get tensor states from physics engine.
+    env.handler.simulate()
 env.handler.set_states(init_states)
 states = state_tensor_to_nested(env.handler, env.handler.get_states())
 
@@ -159,3 +162,5 @@ for i in range(args.num_envs):
             states[i]["robots"]["franka"]["dof_pos"][k],
             init_states[i]["robots"]["franka"]["dof_pos"][k],
         )
+
+log.info("Test passed !!!!!")

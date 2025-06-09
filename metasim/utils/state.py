@@ -241,6 +241,9 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 "vel": obj_state.root_state[env_id, 7:10].cpu(),
                 "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
+            if handler.scenario.sim == "isaacgym":
+                # for IsaacGym,convert quat format: xyzw -> wxyz
+                object_states[obj_name]["rot"] = object_states[obj_name]["rot"][[3, 0, 1, 2]]
             if obj_state.body_state is not None:
                 bns = handler.get_body_names(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
@@ -260,6 +263,9 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 "vel": robot_state.root_state[env_id, 7:10].cpu(),
                 "ang_vel": robot_state.root_state[env_id, 10:13].cpu(),
             }
+            if handler.scenario.sim == "isaacgym":
+                # for IsaacGym,convert quat format: xyzw -> wxyz
+                robot_states[robot_name]["rot"] = robot_states[robot_name]["rot"][[3, 0, 1, 2]]
             robot_states[robot_name]["dof_pos"] = _dof_tensor_to_dict(robot_state.joint_pos[env_id], jns)
             robot_states[robot_name]["dof_vel"] = _dof_tensor_to_dict(robot_state.joint_vel[env_id], jns)
             robot_states[robot_name]["dof_pos_target"] = (
