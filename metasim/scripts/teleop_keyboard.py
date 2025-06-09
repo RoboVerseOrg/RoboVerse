@@ -50,7 +50,7 @@ def main():
     task = get_task(args.task)
     robot = get_robot(args.robot)
     camera = PinholeCameraCfg(pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = ScenarioCfg(task=task, robot=robot, cameras=[camera], num_envs=num_envs)
+    scenario = ScenarioCfg(task=task, robots=[robot], cameras=[camera], num_envs=num_envs)
 
     tic = time.time()
     env_class = get_sim_env_class(SimType(args.sim))
@@ -131,7 +131,8 @@ def main():
 
         # XXX: this may not work for all simulators, since the order of joints may be different
         actions = [
-            {"dof_pos_target": dict(zip(robot.joint_limits.keys(), q[i_env].tolist()))} for i_env in range(num_envs)
+            {robot.name: {"dof_pos_target": dict(zip(robot.joint_limits.keys(), q[i_env].tolist()))}}
+            for i_env in range(num_envs)
         ]
         states, _, _, _, _ = env.step(actions)
 
