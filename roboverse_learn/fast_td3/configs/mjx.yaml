@@ -28,7 +28,7 @@ num_steps: 1
 # -------------------------------------------------------------------------------
 # Replay, Batching, Discounting
 # -------------------------------------------------------------------------------
-buffer_size: 20480
+buffer_size: 51200
 batch_size: 32768
 gamma: 0.99
 tau: 0.1
@@ -87,6 +87,6 @@ wandb_project: fast_td3_mjx128_2048_buffer
 exp_name: fasttd3_mjx128_2048_buffer
 use_wandb: true
 checkpoint_path: null
-eval_interval: 1000
-save_interval: 1000
+eval_interval: 2000
+save_interval: 2000
 render_interval: 0
