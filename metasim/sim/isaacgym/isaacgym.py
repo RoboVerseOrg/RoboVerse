@@ -486,9 +486,7 @@ class IsaacgymHandler(BaseSimHandler):
 
             # carefully set each robot
             env_robot_handles = []
-            for robot, robot_asset, robot_dof_props in zip(
-                self.robots, robot_asset_list, robot_dof_props_list
-            ):
+            for robot, robot_asset, robot_dof_props in zip(self.robots, robot_asset_list, robot_dof_props_list):
                 robot_pose = gymapi.Transform()
                 robot_pose.p = gymapi.Vec3(*robot.default_position)
                 robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 2)
@@ -587,7 +585,9 @@ class IsaacgymHandler(BaseSimHandler):
                 flat_vals = []
                 for joint_i, joint_name in enumerate(self._joint_info[robot.name]["names"]):
                     if robot.actuators[joint_name].fully_actuated:
-                        flat_vals.append(action_data[robot.name]["dof_pos_target"][joint_name])  # TODO: support other actions
+                        flat_vals.append(
+                            action_data[robot.name]["dof_pos_target"][joint_name]
+                        )  # TODO: support other actions
                     else:
                         flat_vals.append(0.0)  # place holder for under-actuated joints
                 action_array = torch.tensor(flat_vals, dtype=torch.float32, device=self.device).unsqueeze(0)
