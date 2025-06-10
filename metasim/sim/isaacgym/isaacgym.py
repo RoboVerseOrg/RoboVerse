@@ -176,8 +176,6 @@ class IsaacgymHandler(BaseSimHandler):
                 camera_props.enable_tensors = True
                 camera_handle = self.gym.create_camera_sensor(self._envs[i_env], camera_props)
 
-
-
                 self._camera_handles.append(camera_handle)
 
                 camera_eye = gymapi.Vec3(*cam_cfg.pos)
@@ -191,13 +189,8 @@ class IsaacgymHandler(BaseSimHandler):
                         mount_handle = self._robot_link_dict[cam_cfg.mount_to[1]]
                     camera_pose = gymapi.Transform(gymapi.Vec3(*cam_cfg.mount_pos), gymapi.Quat(*cam_cfg.mount_quat))
                     self.gym.attach_camera_to_body(
-                        camera_handle,
-                        self._envs[i_env],
-                        mount_handle,
-                        camera_pose,
-                        gymapi.FOLLOW_TRANSFORM
+                        camera_handle, self._envs[i_env], mount_handle, camera_pose, gymapi.FOLLOW_TRANSFORM
                     )
-
 
                 camera_tensor_depth = self.gym.get_camera_image_gpu_tensor(
                     self.sim, self._envs[i_env], camera_handle, gymapi.IMAGE_DEPTH
