@@ -116,10 +116,11 @@ scenario = ScenarioCfg(
 # add cameras
 scenario.cameras = [
     PinholeCameraCfg(
-        width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0),
-        mount_to="box_base",
-        mount_pos=(0.0, 0.0, 0.0),
-        mount_quat=(1.0, 0.0, 0.0, 0.0),
+        width=1024, height=1024,
+        pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0),
+        # mount_to="torso_link",
+        # mount_pos=(0.0, 0.0, 0.0),
+        # mount_quat=(1.0, 0.0, 0.0, 0.0),
     )
 ]
 
