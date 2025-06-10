@@ -113,6 +113,10 @@ scenario = ScenarioCfg(
     num_envs=args.num_envs,
 )
 
+from scipy.spatial.transform import Rotation as R
+quat = R.from_euler('xyz', [0, 60, 0], degrees=True).as_quat()
+translation = (0.1, 0.0, 0.9)
+
 # add cameras
 scenario.cameras = [
     PinholeCameraCfg(
@@ -129,8 +133,8 @@ scenario.cameras = [
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
         mount_to="torso_link",
-        mount_pos=(0.1, 0.0, 0.9),
-        mount_quat=(0.9238795042037964, 0.0, 0.3826834559440613, 0.0),
+        mount_pos=translation,
+        mount_quat=quat,
     ),
 ]
 
@@ -141,6 +145,13 @@ scenario.objects = [
         size=(0.1, 0.1, 0.1),
         color=[1.0, 0.0, 0.0],
         physics=PhysicStateType.RIGIDBODY,
+    ),
+    PrimitiveCubeCfg(
+        name="roof",
+        size=(1.0, 1.0, 0.1),
+        color=[0.0, 0.0, 1.0],
+        physics=PhysicStateType.RIGIDBODY,
+        fix_base_link=True,
     ),
     PrimitiveSphereCfg(
         name="sphere",
@@ -175,6 +186,10 @@ init_states = [
         "objects": {
             "cube": {
                 "pos": torch.tensor([0.3, -0.2, 0.05]),
+                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            },
+            "roof": {
+                "pos": torch.tensor([0.0, 0.0, 1.5]),
                 "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
             },
             "sphere": {

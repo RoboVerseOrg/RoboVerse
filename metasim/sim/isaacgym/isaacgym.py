@@ -181,7 +181,6 @@ class IsaacgymHandler(BaseSimHandler):
                 camera_eye = gymapi.Vec3(*cam_cfg.pos)
                 camera_lookat = gymapi.Vec3(*cam_cfg.look_at)
                 self.gym.set_camera_location(camera_handle, self._envs[i_env], camera_eye, camera_lookat)
-
                 if cam_cfg.mount_to is not None:
                     if isinstance(cam_cfg.mount_to, str):
                         mount_handle = self._robot_link_dict[cam_cfg.mount_to]
@@ -240,7 +239,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = True
+            asset_options.fix_base_link = object.fix_base_link
             asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
