@@ -1,4 +1,0 @@
-server:
-git push local mirror
-local:
-git pull
