@@ -116,15 +116,22 @@ scenario = ScenarioCfg(
 # add cameras
 scenario.cameras = [
     PinholeCameraCfg(
+        name="camera_third_person",
+        width=1024,
+        height=1024,
+        pos=(1.5, -1.5, 1.5),
+        look_at=(0.0, 0.0, 0.0),
+    ),
+    PinholeCameraCfg(
+        name="camera_first_person",
         width=1024,
         height=1024,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
         mount_to="torso_link",
         mount_pos=(0.1, 0.0, 0.9),
-        # mount_quat=(0.9238795042037964, 0.0, 0.3826834559440613, 0.0),
         mount_quat=(0.9238795042037964, 0.0, 0.3826834559440613, 0.0),
-    )
+    ),
 ]
 
 # add objects
@@ -218,7 +225,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/2_add_new_robot_{args.sim}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/7_mount_camera_{args.sim}.mp4")
 obs_saver.add(obs)
 
 step = 0
