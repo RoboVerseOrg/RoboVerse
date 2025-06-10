@@ -22,13 +22,13 @@ class Sb3EnvWrapper(VecEnv):
         if SimType(scenario.sim) == SimType.MUJOCO:
             self.sim_device = torch.device("cpu")
         self.num_envs = scenario.num_envs
-        self.robot = scenario.robot
+        self.robot = scenario.robots[0]
         self.task = scenario.task
 
         env_class = get_sim_env_class(SimType(scenario.sim))
         self.env = env_class(scenario)
 
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
+        self.init_states, _, _ = get_traj(scenario.task, scenario.robots[0], self.env.handler)
         if len(self.init_states) < self.num_envs:
             self.init_states = (
                 self.init_states * (self.num_envs // len(self.init_states))
@@ -39,15 +39,16 @@ class Sb3EnvWrapper(VecEnv):
 
         # FIXME action limit differs with joint limit in locomotion configuration(desire pos = scale*action + default pos)
         # Set up action space based on robot joint limits
-        limits = self.robot.joint_limits  # dict: {joint_name: (low, high)}
-        self.joint_names = self.env.handler.get_joint_names(self.robot.name)
+        joint_limits = self.robot.joint_limits
+        action_low = []
+        action_high = []
+        for joint_name in joint_limits.keys():
+            action_low.append(joint_limits[joint_name][0])
+            action_high.append(joint_limits[joint_name][1])
 
-        self._action_low = torch.tensor(
-            [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.sim_device
-        )
-        self._action_high = torch.tensor(
-            [limits[j][1] for j in self.joint_names], dtype=torch.float32, device=self.sim_device
-        )
+        self._action_low = torch.tensor(action_low, dtype=torch.float32, device=self.sim_device)
+        self._action_high = torch.tensor(action_high, dtype=torch.float32, device=self.sim_device)
+
         # action space is normalized to [-1, 1]
         self.action_space = spaces.Box(low=-1, high=1, shape=self._action_low.shape, dtype=np.float32)
 
@@ -145,7 +146,6 @@ class Sb3EnvWrapper(VecEnv):
         ]
 
         # Call the step method of the underlying MetaSim environment
-        # _, _, terminated_tensor, truncated_tensor, _ = self.env.step_actions(unnormalized_actions)
         _, _, terminated_tensor, truncated_tensor, _ = self.env.step(action_dict)
 
         # Get formatted observations
