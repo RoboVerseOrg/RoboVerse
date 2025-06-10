@@ -412,9 +412,7 @@ class _WalkChecker(BaseChecker):
         from metasim.utils.humanoid_robot_util import robot_position_tensor
 
         states = handler.get_states()
-        x = robot_position_tensor(states, handler.robot.name)[:, 2]
-        # print( robot_position_tensor(states, handler.robot.name)[:, 2] )
-        terminated = x < 0.2
+        terminated = robot_position_tensor(states, handler.robot.name)[:, 2] < 0.2
         return terminated
 
 
