@@ -118,9 +118,10 @@ scenario.cameras = [
     PinholeCameraCfg(
         width=1024, height=1024,
         pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0),
-        # mount_to="torso_link",
-        # mount_pos=(0.0, 0.0, 0.0),
-        # mount_quat=(1.0, 0.0, 0.0, 0.0),
+        mount_to="torso_link",
+        mount_pos=(0.1, 0.0, 0.9),
+        # mount_quat=(0.9238795042037964, 0.0, 0.3826834559440613, 0.0),
+        mount_quat=(0.9238795042037964, 0.0, 0.3826834559440613, 0.0),
     )
 ]
 
