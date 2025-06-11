@@ -59,7 +59,7 @@ class MetaSimVecEnv(VectorEnv):
     ):
         """Initialize the environment."""
         if scenario is None:
-            scenario = ScenarioCfg(task="pick_cube", robot="franka")
+            scenario = ScenarioCfg(task="pick_cube", robots=["franka"])
             scenario.task = task_name
             scenario.num_envs = num_envs
             scenario = ScenarioCfg(**vars(scenario))
@@ -169,7 +169,12 @@ class StableBaseline3VecEnv(VecEnv):
     def step_async(self, actions: np.ndarray) -> None:
         """Asynchronously step the environment."""
         self.action_dicts = [
-            {"dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))} for action in actions
+            {
+                self.env.scenario.robots[0].name: {
+                    "dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))
+                }
+            }
+            for action in actions
         ]
 
     def step_wait(self):
@@ -227,7 +232,7 @@ class StableBaseline3VecEnv(VecEnv):
 def train_ppo():
     """Train PPO for reaching task."""
     ## Choice 1: use scenario config to initialize the environment
-    scenario = ScenarioCfg(**vars(args))
+    scenario = ScenarioCfg(task=args.task, robots=[args.robot], sim=args.sim, num_envs=args.num_envs)
     scenario.cameras = []  # XXX: remove cameras to avoid rendering to speed up
     metasim_env = MetaSimVecEnv(scenario, task_name=args.task, num_envs=args.num_envs, sim=args.sim)
 
