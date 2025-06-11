@@ -837,7 +837,7 @@ class IsaacgymHandler(BaseSimHandler):
     ############################################################
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = list(self._joint_info[obj_name]["global_indices"].keys())
+            joint_names = list(self._joint_info[obj_name]["names"])
             if sort:
                 joint_names.sort()
             return joint_names
