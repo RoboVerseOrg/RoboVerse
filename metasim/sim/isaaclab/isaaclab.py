@@ -64,7 +64,7 @@ class IsaaclabHandler(BaseSimHandler):
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
-        args.enable_cameras = True
+        # args.enable_cameras = True
         args.headless = self.headless
 
         ## Only set args.renderer seems not enough
@@ -103,28 +103,28 @@ class IsaaclabHandler(BaseSimHandler):
 
         ## Render mode setting, must be done after isaaclab is launched
         ## For more info, see the import below
-        import carb
-        import omni.replicator.core as rep
+        # import carb
+        # import omni.replicator.core as rep
 
-        # from omni.rtx.settings.core.widgets.pt_widgets import PathTracingSettingsFrame
+        # # from omni.rtx.settings.core.widgets.pt_widgets import PathTracingSettingsFrame
 
-        rep.settings.set_render_rtx_realtime()  # fix noising rendered images
+        # rep.settings.set_render_rtx_realtime()  # fix noising rendered images
 
-        settings = carb.settings.get_settings()
-        if self.scenario.render.mode == "pathtracing":
-            settings.set_string("/rtx/rendermode", "PathTracing")
-        elif self.scenario.render.mode == "raytracing":
-            settings.set_string("/rtx/rendermode", "RayTracedLighting")
-        elif self.scenario.render.mode == "rasterization":
-            raise ValueError("Isaaclab does not support rasterization")
-        else:
-            raise ValueError(f"Unknown render mode: {self.scenario.render.mode}")
+        # settings = carb.settings.get_settings()
+        # if self.scenario.render.mode == "pathtracing":
+        #     settings.set_string("/rtx/rendermode", "PathTracing")
+        # elif self.scenario.render.mode == "raytracing":
+        #     settings.set_string("/rtx/rendermode", "RayTracedLighting")
+        # elif self.scenario.render.mode == "rasterization":
+        #     raise ValueError("Isaaclab does not support rasterization")
+        # else:
+        #     raise ValueError(f"Unknown render mode: {self.scenario.render.mode}")
 
-        log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")
-        log.info(f"Render totalSpp: {settings.get('/rtx/pathtracing/totalSpp')}")
-        log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
-        log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
-        log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
+        # log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")
+        # log.info(f"Render totalSpp: {settings.get('/rtx/pathtracing/totalSpp')}")
+        # log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
+        # log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
+        # log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
 
     ############################################################
     ## Gymnasium main methods
