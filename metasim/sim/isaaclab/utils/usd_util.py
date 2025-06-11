@@ -11,8 +11,6 @@ from loguru import logger as log
 from omni.kit.material.library import get_material_prim_path
 from pxr import Gf, Sdf, Usd, UsdShade
 
-from metasim.utils.hf_util import check_and_download_recursive
-
 from .material_util import apply_mdl_to_prim
 
 try:
@@ -206,7 +204,7 @@ class SceneRandomizer:
     def do_it(self):
         scene_cfg_cls = random.choice(self.scene_configs)
         scene_cfg = scene_cfg_cls()
-        check_and_download_recursive([scene_cfg.usd_path])
+        # check_and_download_recursive([scene_cfg.usd_path])  # XXX: this could be buggy
         chosen_position = random.choice(scene_cfg.positions) if scene_cfg.positions else scene_cfg.default_position
 
         return {
