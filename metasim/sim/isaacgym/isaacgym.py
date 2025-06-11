@@ -575,10 +575,13 @@ class IsaacgymHandler(BaseSimHandler):
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]):
+    def set_dof_targets(self, obj_name: str, actions: list[Action] | torch.Tensor):
         self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0])
-        action_array_all = self._get_action_array_all(actions)
+        if isinstance(actions, torch.Tensor):
+            action_array_all = actions
+        else:
+            action_array_all = self._get_action_array_all(actions)
         robot_dim = action_array_all.shape[1]
 
         assert (
