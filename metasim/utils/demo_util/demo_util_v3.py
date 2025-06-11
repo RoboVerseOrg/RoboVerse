@@ -60,5 +60,8 @@ def convert_traj_v2_to_v3(
         all_states_v3 = [[convert_state_v2_to_v3(state, robot) for state in states] for states in all_states]
     else:
         all_states_v3 = None
-    all_actions_v3 = convert_actions_v2_to_v3(all_actions, robot)
+    if all_actions is not None:
+        all_actions_v3 = convert_actions_v2_to_v3(all_actions, robot)
+    else:
+        all_actions_v3 = None
     return init_states_v3, all_actions_v3, all_states_v3
