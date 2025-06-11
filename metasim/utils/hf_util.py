@@ -32,18 +32,13 @@ def _check_and_download_single(filepath: str):
         filepath: the filepath to check and download.
     """
     local_exists = os.path.exists(filepath)
-    hf_exists = hf_fs.exists(os.path.join("datasets", REPO_ID, os.path.relpath(filepath, LOCAL_DIR)))
-
     if local_exists:
         ## In this case, the runner is a developer who has the file in their local machine.
-        if hf_exists:
-            log.info(f"File {filepath} found in local directory.")
-            return
-        else:
-            log.warning(f"Please upload the file {filepath} to the huggingface dataset!")
-            return
+        log.info(f"File {filepath} found in local directory.")
+        return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
+        hf_exists = hf_fs.exists(os.path.join("datasets", REPO_ID, os.path.relpath(filepath, LOCAL_DIR)))
 
         ## Make sure the file exists in the huggingface dataset.
         if not hf_exists:
