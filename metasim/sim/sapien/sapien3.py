@@ -343,14 +343,11 @@ class Sapien3Handler(BaseSimHandler):
             action = target[0]
             pos_target = action.get("dof_pos_target", None)
             vel_target = action.get("dof_vel_target", None)
-            pos_target_arr = (
-                np.array([pos_target[name] for name in self.object_joint_order[obj_name]]) if pos_target else None
-            )
-            vel_target_arr = (
-                np.array([vel_target[name] for name in self.object_joint_order[obj_name]]) if vel_target else None
-            )
-            self._previous_dof_pos_target[obj_name] = pos_target_arr
-            self._previous_dof_vel_target[obj_name] = vel_target_arr
+            jns = self.get_joint_names(obj_name, sort=True)
+            if pos_target is not None:
+                self._previous_dof_pos_target[obj_name] = np.array([pos_target[name] for name in jns])
+            if vel_target is not None:
+                self._previous_dof_vel_target[obj_name] = np.array([vel_target[name] for name in jns])
             self._apply_action(instance, pos_target, vel_target)
 
     def _simulate(self):
@@ -432,21 +429,9 @@ class Sapien3Handler(BaseSimHandler):
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
             link_names, link_state = self._get_link_states(robot.name)
-            pos_target = (
-                torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_pos_target[robot.name] is not None
-                else None
-            )
-            vel_target = (
-                torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_vel_target[robot.name] is not None
-                else None
-            )
-            effort_target = (
-                torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_torque_target[robot.name] is not None
-                else None
-            )
+            pos_target = torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
+            vel_target = torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
+            effort_target = torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,
