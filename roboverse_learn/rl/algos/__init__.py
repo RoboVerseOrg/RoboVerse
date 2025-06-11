@@ -11,6 +11,7 @@ from typing import Any
 from roboverse_learn.rl.algos.dreamer.dreamer import Dreamer
 from roboverse_learn.rl.algos.ppo.ppo import PPO
 from roboverse_learn.rl.algos.sac.sac import SAC
+from roboverse_learn.rl.algos.td3.td3 import TD3
 
 # Export the dreamer_main function for direct use
 __all__ = ["get_algorithm", "register_algorithm"]
@@ -19,6 +20,7 @@ __all__ = ["get_algorithm", "register_algorithm"]
 ALGORITHM_REGISTRY: dict[str, type[Any]] = {
     "ppo": PPO,
     "sac": SAC,
+    "td3": TD3,
     "dreamer": Dreamer,
 }
 
