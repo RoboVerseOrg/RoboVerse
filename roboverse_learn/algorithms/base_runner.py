@@ -108,9 +108,11 @@ class PolicyRunner:
         """
         actions = [
             {
-                "dof_pos_target": {
-                    joint_name: curr_action[i, index]
-                    for index, joint_name in enumerate(sorted(self.scenario.robots[0].joint_limits.keys()))
+                self.scenario.robots[0].name: {
+                    "dof_pos_target": {
+                        joint_name: curr_action[i, index]
+                        for index, joint_name in enumerate(sorted(self.scenario.robots[0].joint_limits.keys()))
+                    }
                 }
             }
             for i in range(self.num_envs)
