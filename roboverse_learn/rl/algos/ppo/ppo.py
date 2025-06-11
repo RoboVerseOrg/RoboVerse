@@ -160,7 +160,20 @@ class PPO(object):
             self.value_mean_std.train()
 
     def model_act(self, obs_dict):
+        # Check for NaN/inf in observations
+        obs = obs_dict["obs"]
+        if torch.isnan(obs).any() or torch.isinf(obs).any():
+            print(f"Warning: NaN/inf detected in observations before normalization. Shape: {obs.shape}")
+            obs = torch.nan_to_num(obs, nan=0.0, posinf=1e6, neginf=-1e6)
+            obs_dict["obs"] = obs
+        
         processed_obs = self.running_mean_std(obs_dict["obs"])
+        
+        # Check again after normalization
+        if torch.isnan(processed_obs).any() or torch.isinf(processed_obs).any():
+            print(f"Warning: NaN/inf detected in observations after normalization. Shape: {processed_obs.shape}")
+            processed_obs = torch.nan_to_num(processed_obs, nan=0.0, posinf=5.0, neginf=-5.0)
+            
         input_dict = {
             "obs": processed_obs,
         }
@@ -172,6 +185,23 @@ class PPO(object):
         _t = time.time()
         _last_t = time.time()
         self.obs = self.env.reset()
+        # Verify observation shape matches configuration
+        actual_obs_shape = self.obs["obs"].shape[1:]  # Remove batch dimension
+        expected_obs_shape = tuple(self.obs_shape)
+        if actual_obs_shape != expected_obs_shape:
+            print(f"Warning: Observation shape mismatch!")
+            print(f"  Expected: {expected_obs_shape}")
+            print(f"  Actual: {actual_obs_shape}")
+            print(f"  First observation sample: {self.obs['obs'][0][:10]}...")  # Show first 10 values
+            
+        # Warm up the observation normalizer with initial observations
+        if self.normalize_input:
+            print("Warming up observation normalizer...")
+            self.running_mean_std.train()
+            for _ in range(10):  # Run a few updates to stabilize statistics
+                _ = self.running_mean_std(self.obs["obs"])
+            self.running_mean_std.eval()
+            
         self.agent_steps = self.batch_size if not self.multi_gpu else self.batch_size * self.rank_size
 
         if self.multi_gpu:
@@ -325,7 +355,7 @@ class PPO(object):
                     mu_loss_low = torch.clamp_max(mu + soft_bound, 0.0) ** 2
                     b_loss = (mu_loss_low + mu_loss_high).sum(axis=-1)
                 else:
-                    b_loss = 0
+                    b_loss = torch.zeros_like(a_loss)
                 a_loss, c_loss, entropy, b_loss = [torch.mean(loss) for loss in [a_loss, c_loss, entropy, b_loss]]
 
                 loss = (
@@ -336,7 +366,30 @@ class PPO(object):
                 )
 
                 self.optimizer.zero_grad()
+                
+                # Check for NaN in loss before backward
+                if torch.isnan(loss).any():
+                    print(f"Warning: NaN detected in loss before backward. Loss components:")
+                    print(f"  a_loss: {a_loss.item()}")
+                    print(f"  c_loss: {c_loss.item()}")
+                    print(f"  entropy: {entropy.item()}")
+                    print(f"  b_loss: {b_loss.item()}")
+                    # Skip this update
+                    continue
+                    
                 loss.backward(retain_graph=True)
+                
+                # Check for NaN in gradients
+                has_nan_grad = False
+                for name, param in self.model.named_parameters():
+                    if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
+                        print(f"Warning: NaN/inf detected in gradients for {name}")
+                        has_nan_grad = True
+                        
+                if has_nan_grad:
+                    print("Skipping optimizer step due to NaN gradients")
+                    self.optimizer.zero_grad()
+                    continue
 
                 if self.multi_gpu:
                     # batch all_reduce ops https://github.com/entity-neural-network/incubator/pull/220
@@ -406,9 +459,19 @@ class PPO(object):
             actions = res_dict["actions"]
             actions = actions.squeeze(0)
             self.obs, rewards, self.dones, timeout, infos = self.env.step(actions)
+            
+            # Check for NaN/inf in rewards
+            if torch.isnan(rewards).any() or torch.isinf(rewards).any():
+                print(f"Warning: NaN/inf detected in rewards. Shape: {rewards.shape}")
+                rewards = torch.nan_to_num(rewards, nan=0.0, posinf=100.0, neginf=-100.0)
+            
             # update dones and rewards after env step
             self.storage.update_data("dones", n, self.dones)
             shaped_rewards = self.reward_scale_value * rewards.clone()
+            
+            # Clamp shaped rewards to prevent extreme values
+            shaped_rewards = torch.clamp(shaped_rewards, min=-1000.0, max=1000.0)
+            
             if self.value_bootstrap and (timeout is not None):
                 shaped_rewards += self.gamma * res_dict["values"].squeeze(0) * timeout
             self.storage.update_data("rewards", n, shaped_rewards)

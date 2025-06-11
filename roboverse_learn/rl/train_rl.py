@@ -12,9 +12,10 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import hydra
 import numpy as np
-import wandb
 from omegaconf import DictConfig, OmegaConf
 from termcolor import cprint
+
+import wandb
 
 
 def set_np_formatting():
@@ -39,14 +40,15 @@ def main(cfg: DictConfig):
         import isaacgym  # noqa: F401
 
     from metasim.cfg.scenario import ScenarioCfg
-    from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
+    from metasim.utils.setup_util import (SimType, get_robot,
+                                          get_sim_env_class, get_task)
     from roboverse_learn.rl.algos import get_algorithm
     from roboverse_learn.rl.env import RLEnvWrapper
 
     cprint("Start Building the Environment", "green", attrs=["bold"])
     task = get_task(cfg.train.task_name)
     robot = get_robot(cfg.train.robot_name)
-    scenario = ScenarioCfg(task=task, robot=robot)
+    scenario = ScenarioCfg(task=task, robots=[robot])
     scenario.cameras = []
 
     tic = time.time()
@@ -78,7 +80,9 @@ def main(cfg: DictConfig):
     os.makedirs(output_dif, exist_ok=True)
 
     algo_name = cfg.train.algo.lower()
-    agent = get_algorithm(algo_name, env=env, output_dif=output_dif, full_config=OmegaConf.to_container(cfg))
+    resolved_cfg = OmegaConf.to_container(cfg, resolve=True)
+
+    agent = get_algorithm(algo_name, env=env, output_dif=output_dif, full_config=resolved_cfg)
 
     log.info(f"Algorithm: {cfg.train.algo}")
     log.info(f"Number of environments: {cfg.environment.num_envs}")
