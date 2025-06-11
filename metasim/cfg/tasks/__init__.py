@@ -13,24 +13,30 @@ def __get_quick_ref():
     tic = time.time()
 
     from .calvin.calvin import MoveSliderLeftACfg
-
     # from .debug.reach_origin_cfg import ReachOriginCfg
     from .dmcontrol.walker_walk_cfg import WalkerWalkCfg
     from .fetch import FetchCloseBoxCfg
     from .gapartnet import GapartnetOpenDrawerCfg
     from .humanoidbench import StandCfg
-    from .isaacgym_envs.allegrohand_reorientation_cfg import AllegroHandReorientationCfg
+    from .isaacgym_envs.allegrohand_cfg import AllegroHandCfg
     from .isaacgym_envs.ant_isaacgym_cfg import AntIsaacGymCfg
-    from .libero.libero_objects.libero_pick_alphabet_soup import LiberoPickAlphabetSoupCfg
-    from .libero.libero_objects.libero_pick_bbq_sauce import LiberoPickBbqSauceCfg
+    from .libero.libero_objects.libero_pick_alphabet_soup import \
+        LiberoPickAlphabetSoupCfg
+    from .libero.libero_objects.libero_pick_bbq_sauce import \
+        LiberoPickBbqSauceCfg
     from .libero.libero_objects.libero_pick_butter import LiberoPickButterCfg
-    from .libero.libero_objects.libero_pick_chocolate_pudding import LiberoPickChocolatePuddingCfg
-    from .libero.libero_objects.libero_pick_cream_cheese import LiberoPickCreamCheeseCfg
+    from .libero.libero_objects.libero_pick_chocolate_pudding import \
+        LiberoPickChocolatePuddingCfg
+    from .libero.libero_objects.libero_pick_cream_cheese import \
+        LiberoPickCreamCheeseCfg
     from .libero.libero_objects.libero_pick_ketchup import LiberoPickKetchupCfg
     from .libero.libero_objects.libero_pick_milk import LiberoPickMilkCfg
-    from .libero.libero_objects.libero_pick_orange_juice import LiberoPickOrangeJuiceCfg
-    from .libero.libero_objects.libero_pick_salad_dressing import LiberoPickSaladDressingCfg
-    from .libero.libero_objects.libero_pick_tomato_sauce import LiberoPickTomatoSauceCfg
+    from .libero.libero_objects.libero_pick_orange_juice import \
+        LiberoPickOrangeJuiceCfg
+    from .libero.libero_objects.libero_pick_salad_dressing import \
+        LiberoPickSaladDressingCfg
+    from .libero.libero_objects.libero_pick_tomato_sauce import \
+        LiberoPickTomatoSauceCfg
     from .maniskill.pick_cube_cfg import PickCubeCfg
     from .maniskill.pick_single_ycb import PickSingleYcbCrackerBoxCfg
     from .maniskill.stack_cube_cfg import StackCubeCfg
@@ -38,9 +44,9 @@ def __get_quick_ref():
     from .rlbench.basketball_in_hoop_cfg import BasketballInHoopCfg
     from .rlbench.close_box_cfg import CloseBoxCfg
     from .robosuite import SquareD0Cfg, SquareD1Cfg, SquareD2Cfg, StackD0Cfg
-    from .simpler_env.simpler_env_grasp_opened_coke_can_cfg import SimplerEnvGraspOpenedCokeCanCfg
+    from .simpler_env.simpler_env_grasp_opened_coke_can_cfg import \
+        SimplerEnvGraspOpenedCokeCanCfg
     from .simpler_env.simpler_env_move_near import SimplerEnvMoveNearCfg
-
     # from .skillblender import G1BaseTaskCfg, H1BaseTaskCfg
     from .uh1 import MabaoguoCfg
 
