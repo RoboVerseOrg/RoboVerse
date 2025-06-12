@@ -267,7 +267,7 @@ def train_ppo():
     # Inference and Save Video
     # add cameras to the scenario
     args.num_envs = 16
-    scenario = ScenarioCfg(**vars(args))
+    scenario = ScenarioCfg(task=args.task, robots=[args.robot], sim=args.sim, num_envs=args.num_envs)
     scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
     metasim_env = MetaSimVecEnv(scenario, task_name=args.task, num_envs=args.num_envs, sim=args.sim)
     task_name = scenario.task.__class__.__name__[:-3]

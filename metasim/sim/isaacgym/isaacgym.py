@@ -643,7 +643,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._render()
 
     def _render(self) -> None:
-        """Listen for keyboard events and render the environment"""
+        """Listen for keyboard events, step graphics and render the environment"""
         if not self.headless:
             for evt in self.gym.query_viewer_action_events(self.viewer):
                 if evt.action == "toggle_viewer_sync" and evt.value > 0:
