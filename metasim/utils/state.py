@@ -70,10 +70,29 @@ class RobotState:
 class CameraState:
     """State of a single camera."""
 
+    ## Images
     rgb: torch.Tensor | None
     """RGB image. Shape is (num_envs, H, W, 3)."""
     depth: torch.Tensor | None
     """Depth image. Shape is (num_envs, H, W)."""
+    instance_id_seg: torch.Tensor | None
+    """Instance id segmentation for each pixel. Shape is (num_envs, H, W)."""
+    instance_id_seg_id2label: dict[int, str] | None
+    """Instance id segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_id_seg`."""
+    instance_seg: torch.Tensor | None
+    """Instance segmentation for each pixel. Shape is (num_envs, H, W).
+
+    .. warning::
+        This is experimental and subject to change.
+    """
+    instance_seg_id2label: dict[int, str] | None
+    """Instance segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_seg`.
+
+    .. warning::
+        This is experimental and subject to change.
+    """
+
+    ## Camera parameters
     pos: torch.Tensor | None = None  # TODO: remove N
     """Position of the camera. Shape is (num_envs, 3)."""
     quat_world: torch.Tensor | None = None  # TODO: remove N

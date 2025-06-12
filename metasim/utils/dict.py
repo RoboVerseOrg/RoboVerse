@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import is_dataclass
+from functools import reduce
 from typing import Any
 
 from .string_util import callable_to_string, string_to_callable, string_to_dataclass_instance
@@ -16,6 +17,14 @@ from .string_util import callable_to_string, string_to_callable, string_to_datac
 """
 Dictionary <-> Class operations.
 """
+
+
+def deep_get(dictionary, *keys):
+    """Get a value from a dictionary using a list of keys. If any key is not found, return None.
+
+    Refer to https://stackoverflow.com/a/36131992/30487149.
+    """
+    return reduce(lambda d, key: d.get(key) if d else None, keys, dictionary)
 
 
 def class_to_dict(obj: object) -> dict[str, Any]:
