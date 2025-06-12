@@ -16,6 +16,7 @@ def reverse_joint_index_2(lst: list[int]) -> list[int]:
         reverse_index[val] = i
     return reverse_index
 
+
 # 示例用法
 numbers = [4, 14, 2, 1, 3, 0, 11, 12, 13, 9, 18, 7, 6, 5, 8, 15, 16, 17, 10]
 output = record_number_positions(numbers)

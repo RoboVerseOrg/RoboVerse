@@ -628,7 +628,6 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
 
-
     def _simulate(self) -> None:
         # Step the physics
         self._simulate_one_physics_step(self.actions)
@@ -654,7 +653,6 @@ class IsaacgymHandler(BaseSimHandler):
                 self.gym.draw_viewer(self.viewer, self.sim, False)
             else:
                 self.gym.poll_viewer_events(self.viewer)
-
 
     def _compute_effort(self, actions):
         """Compute effort from actions"""
