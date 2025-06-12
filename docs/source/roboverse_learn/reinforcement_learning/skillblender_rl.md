@@ -1,0 +1,67 @@
+# SkillBench RL
+We provide implementent [SkillBench](https://www.google.com/) into our framework.
+
+RL algorithm: `PPO` by [rsl_rl](https://github.com/leggedrobotics/rsl_rl) `v1.0.2`
+
+RL learning framework: `hierarchical RL`
+
+Simulator: `IsaacGym`
+
+## Installation
+```bash
+pip install -e roboverse_learn/skillblender_rl/rsl_rl
+```
+
+## Training
+
+- IssacGym:
+    ```bash
+    python3 roboverse_learn/skillblender_rl/train.py --task "skillblender:Walking" --sim "isaacgym" --num_envs  124 --run_name "humanoid_skillblender" --use_wandb
+   ```
+
+
+## Task list
+> 4 Goal-Conditional Skills
+- [√] Walking
+- [ ] Reaching
+- [ ] Squatting
+- [ ] Stepping
+> 8 Loco-Manipulation Tasks
+- [ ] FarReach
+- [ ] ButtonPress
+- [ ] CabinetClose
+- [ ] FootballShoot
+- [ ] BoxPush
+- [ ] PackageLift
+- [ ] BoxTransfer
+- [ ] PackageCarry
+
+## Todos
+- [ ] ground type selection
+- [ ] pushing robot
+
+## How to add new Task
+1. Create a new `wrapper.py` in , add reward function
+    define your reward functions in reward_fun_cfg.py, check whether the current states is enough for reward computation. If not, parse your state as follow:
+    ```
+    def _parse_NEW_STATES(self, envstate):
+        """NEWSTATES PARSEING..."""
+
+    def _parse_state_for_reward(self, envstate):
+        super()._parse_state_for_reward(self, envstate):
+        _parse_NEW_STATES(self, envstate)
+    ```
+2. Implemented `_compute_observation()`
+    - fill `obs` and `privelidged_obs`.
+    - modified `_post_physics_step` to reset variables you defined with `reset_env_idx`
+
+
+3. Add Cfg for your task `metasim/cfg/tasks/skillblender`
+
+
+## References and Acknowledgements
+We implement SkillBench based on and inspired by the following projects:
+- SkillBlender: Towards Versatile Humanoid Whole-Body Control via Skill Blending.
+- [Legged_gym](https://github.com/leggedrobotics/legged_gym)
+- [rsl_rl](https://github.com/leggedrobotics/rsl_rl)
+- [HumanoidVerse](https://github.com/LeCAR-Lab/HumanoidVerse/tree/master)

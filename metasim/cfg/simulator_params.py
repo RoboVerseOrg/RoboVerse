@@ -35,6 +35,7 @@ class SimParamCfg:
     replace_cylinder_with_capsule: bool = False
     rest_offset: float = 0.0
     solver_type: int = 1
+    substeps: int = 1  # for IsaacGym
 
     ## Resource management
     num_threads: int = 0

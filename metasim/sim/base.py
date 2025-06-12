@@ -190,6 +190,9 @@ class BaseSimHandler(ABC):
         self._state_cache_expire = True
         self._simulate()
 
+    def simulate_one_physics_step(self, actions):
+        self._simulate_one_physics_step(actions)
+
     ############################################################
     ## Utils
     ############################################################
@@ -239,13 +242,22 @@ class BaseSimHandler(ABC):
         """
         if not hasattr(self, "_joint_reindex_cache"):
             self._joint_reindex_cache = {}
+            self._joint_reverse_reindex_cache = {}
 
         if obj_name not in self._joint_reindex_cache:
             origin_joint_names = self.get_joint_names(obj_name, sort=False)
             sorted_joint_names = self.get_joint_names(obj_name, sort=True)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
+            self._joint_reverse_reindex_cache[obj_name] = self.reverse_joint_index(self._joint_reindex_cache[obj_name])
 
         return self._joint_reindex_cache[obj_name]
+
+    def reverse_joint_index(self, lst: str) -> list[int]:
+        """reversed sorted indices to indices in simualtor."""
+        reverse_index = [0] * len(lst)
+        for i, val in enumerate(lst):
+            reverse_index[val] = i
+        return reverse_index
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.

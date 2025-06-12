@@ -1573,3 +1573,10 @@ def create_rotation_matrix_from_view(
         x_axis = torch.where(is_close, replacement, x_axis)
     R = torch.cat((x_axis[:, None, :], y_axis[:, None, :], z_axis[:, None, :]), dim=1)
     return R.transpose(1, 2)
+
+
+def sample_int_from_float(x):
+    """Samples an int from a float."""
+    if int(x) == x:
+        return int(x)
+    return int(x) if np.random.rand() < (x - int(x)) else int(x) + 1

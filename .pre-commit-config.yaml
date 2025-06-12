@@ -1,20 +1,22 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
-    hooks:
+    hooks: #remove rsl_rl here after rsl_rl version upgrade
     -   id: trailing-whitespace
-        exclude: '(^third_party|.*\.md|.*\.rst)'
+        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/rl/rsl_rl/)'
     -   id: end-of-file-fixer
-        exclude: '(^third_party|.*\.md|.*\.rst)'
+        exclude: '(^third_party|.*\.md|.*\.rst|^roboverse_learn/rl/rsl_rl/)'
     -   id: check-added-large-files
-        exclude: '^metasim/data/'
-    -   id: debug-statements  # check for debugger imports or `breakpoint()`
-        exclude: '^roboverse_learn/'
+        exclude: '^metasim/data/|^roboverse_learn/rl/rsl_rl/'
+    -   id: debug-statements # check for debugger imports or `breakpoint()`
+        exclude: '^roboverse_learn/|^roboverse_learn/rl/rsl_rl/'
     -   id: check-yaml
     -   id: check-toml
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+    rev: v0.11.11
     hooks:
     -   id: ruff
         args: [ --fix ]
+        exclude: '^roboverse_learn/rl/rsl_rl/'
     -   id: ruff-format
+        exclude: '^roboverse_learn/rl/rsl_rl/'
