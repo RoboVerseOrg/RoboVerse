@@ -289,11 +289,18 @@ def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
         import isaaclab.sim as sim_utils
         from isaaclab.sensors import TiledCamera, TiledCameraCfg
 
+    ## See https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sensors.html#tile-rendered-usd-camera
+    data_type_map = {
+        "rgb": "rgb",
+        "depth": "depth",
+        "instance_seg": "instance_segmentation_fast",
+        "instance_id_seg": "instance_id_segmentation_fast",
+    }
     env.scene.sensors[camera.name] = TiledCamera(
         TiledCameraCfg(
             prim_path=f"/World/envs/env_.*/{camera.name}",
             offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
-            data_types=camera.data_types,
+            data_types=[data_type_map[dt] for dt in camera.data_types],
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=camera.focal_length,
                 focus_distance=camera.focus_distance,
@@ -302,6 +309,8 @@ def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
             ),
             width=camera.width,
             height=camera.height,
+            colorize_instance_segmentation=False,
+            colorize_instance_id_segmentation=False,
         )
     )
 

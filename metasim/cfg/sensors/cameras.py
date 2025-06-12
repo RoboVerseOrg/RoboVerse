@@ -14,7 +14,7 @@ class BaseCameraCfg:
 
     name: str = "camera0"
     """Name of the camera. Defaults to "camera0". Different cameras should have different names, so if you add multiple cameras, make sure to give them unique names."""
-    data_types: list[Literal["rgb", "depth"]] = ["rgb", "depth"]
+    data_types: list[Literal["rgb", "depth", "instance_seg", "instance_id_seg"]] = ["rgb", "depth"]
     """List of sensor types to enable for the camera. Defaults to ["rgb", "depth"]."""
     width: int = 256
     """Width of the image in pixels. Defaults to 256."""
