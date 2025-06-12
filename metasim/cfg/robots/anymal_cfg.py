@@ -11,7 +11,7 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class AnymalCfg(BaseRobotCfg):
     name: str = "anymal"
     num_joints: int = 12
-    fix_base_link: bool = True
+    fix_base_link: bool = False
     scale: list[float] = [1.0, 1.0, 1.0]
     usd_path: str = "roboverse_data/assets/isaacgymenvs/anymal_c/urdf/anymal.urdf"  # Using URDF for now
     mjcf_path: str = "roboverse_data/assets/isaacgymenvs/anymal_c/urdf/anymal.urdf"  # Using URDF for now
@@ -19,7 +19,8 @@ class AnymalCfg(BaseRobotCfg):
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = True
-    isaacgym_read_mjcf: bool = False  # We're using URDF
+    isaacgym_read_mjcf: bool = False
+    collapse_fixed_joints: bool = True
 
     # Define actuators for each joint
     actuators: dict[str, BaseActuatorCfg] = {
