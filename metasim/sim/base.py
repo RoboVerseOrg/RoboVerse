@@ -215,15 +215,16 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def get_joint_reindex(self, obj_name: str) -> list[int]:
+    def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
         """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
 
         Args:
             obj_name (str): The name of the object.
+            inverse (bool): Whether to return the inverse reindexing order. Default is False.
 
         Returns:
             list[int]: A list of joint indices that specifies the order to sort the joints alphabetically by their names.
-               The length of the list matches the number of joints.
+               The length of the list matches the number of joints. If ``inverse`` is True, the returned list is inversed, which means they can be used to restore the original order.
 
         Example:
             Suppose ``obj_name = "h1"``, and the ``h1`` has joints:
@@ -239,22 +240,15 @@ class BaseSimHandler(ABC):
         """
         if not hasattr(self, "_joint_reindex_cache"):
             self._joint_reindex_cache = {}
-            self._joint_reverse_reindex_cache = {}
+            self._joint_reindex_cache_inverse = {}
 
         if obj_name not in self._joint_reindex_cache:
             origin_joint_names = self.get_joint_names(obj_name, sort=False)
             sorted_joint_names = self.get_joint_names(obj_name, sort=True)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
-            self._joint_reverse_reindex_cache[obj_name] = self.reverse_joint_index(self._joint_reindex_cache[obj_name])
+            self._joint_reindex_cache_inverse[obj_name] = [sorted_joint_names.index(jn) for jn in origin_joint_names]
 
-        return self._joint_reindex_cache[obj_name]
-
-    def reverse_joint_index(self, lst: str) -> list[int]:
-        """reversed sorted indices to indices in simualtor."""
-        reverse_index = [0] * len(lst)
-        for i, val in enumerate(lst):
-            reverse_index[val] = i
-        return reverse_index
+        return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.

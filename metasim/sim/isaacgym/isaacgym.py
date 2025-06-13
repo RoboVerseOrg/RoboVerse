@@ -591,7 +591,7 @@ class IsaacgymHandler(BaseSimHandler):
         action_input = torch.zeros_like(self._dof_states[:, 0])
         if isinstance(actions, torch.Tensor):
             # reverse sorted joint indices
-            reverse_reindex = self._joint_reverse_reindex_cache[self.robot.name]
+            reverse_reindex = self.get_joint_reindex(obj_name, inverse=True)
             self._actions_cache = actions[:, reverse_reindex]
             action_array_all = actions
 
