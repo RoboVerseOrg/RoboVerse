@@ -32,7 +32,7 @@ from metasim.utils.humanoid_robot_util import *
 
 # define new reward function
 def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    foot_pos = env_states.robots[robot_name].extra["rigid_body_states"][:, cfg.feet_indices, :2]
+    foot_pos = env_states.robots[robot_name].body_state[:, cfg.feet_indices, :2]
     feet_pos_diff = (
         foot_pos[:, :, :2] - env_states.robots[robot_name].extra["ref_feet_pos"][:, :, :2]
     )  # [num_envs, 2, 2], two feet, position only

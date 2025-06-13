@@ -35,7 +35,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _init_target_wp(self, envstate: EnvState) -> None:
         self.ori_wrist_pos = (
-            envstate.robots[self.robot.name].extra["rigid_body_states"][:, self.wrist_indices, :7].clone()
+            envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
         )  # [num_envs, 2, 7], two hands
         self.target_wp, self.num_pairs, self.num_wp = self.sample_wp(
             self.device, num_points=2000000, num_wp=10, ranges=self.cfg.command_ranges
@@ -139,7 +139,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         ) * self.cfg.normalization.obs_scales.dof_pos
         dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
 
-        wrist_pos = envstates.robots[self.robot.name].extra["rigid_body_states"][:, self.wrist_indices, :7]
+        wrist_pos = envstates.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
         diff = wrist_pos - self.ref_wrist_pos
 
         ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]

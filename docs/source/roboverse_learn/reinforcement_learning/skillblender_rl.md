@@ -16,7 +16,7 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Stepping" --sim "isaacgym" --num_envs 124 --robot "h1" --use_wandb
+    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1" --use_wandb
    ```
 after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this.
 **You can press V to stop rendering and accelerate training.**

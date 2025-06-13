@@ -30,7 +30,7 @@ class SteppingWrapper(HumanoidBaseWrapper):
 
     def _init_target_wp(self, envstate: EnvState) -> None:
         self.ori_feet_pos = (
-            envstate.robots[self.robot.name].extra["rigid_body_states"][:, self.feet_indices, :2].clone()
+            envstate.robots[self.robot.name].body_state[:, self.feet_indices, :2].clone()
         )  # [num_envs, 2, 2], two feet's original xy positions
         self.target_wp, self.num_pairs, self.num_wp = self.sample_fp(
             device=self.device, num_points=1000000, num_wp=10, ranges=self.cfg.command_ranges
@@ -134,9 +134,7 @@ class SteppingWrapper(HumanoidBaseWrapper):
         ) * self.cfg.normalization.obs_scales.dof_pos
         dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
 
-        feet_pos = envstates.robots[self.robot.name].extra["rigid_body_states"][
-            :, self.feet_indices, :2
-        ]  # [num_envs, 2, 2], two feet
+        feet_pos = envstates.robots[self.robot.name].body_state[:, self.feet_indices, :2]  # [num_envs, 2, 2], two feet
         feet_pos_obs = torch.flatten(feet_pos, start_dim=1)
         ref_feet_pos_obs = torch.flatten(self.ref_feet_pos, start_dim=1)
         diff = feet_pos - self.ref_feet_pos  # [num_envs, 2, 2], two feet

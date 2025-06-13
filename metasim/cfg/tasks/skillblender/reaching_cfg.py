@@ -34,9 +34,7 @@ from metasim.utils.humanoid_robot_util import *
 
 # define new reward function
 def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    wrist_pos = env_states.robots[robot_name].extra["rigid_body_states"][
-        :, cfg.wrist_indices, :7
-    ]  # [num_envs, 2, 7], two hands
+    wrist_pos = env_states.robots[robot_name].body_state[:, cfg.wrist_indices, :7]  # [num_envs, 2, 7], two hands
     wrist_pos_diff = (
         wrist_pos[:, :, :3] - env_states.robots[robot_name].extra["ref_wrist_pos"][:, :, :3]
     )  # [num_envs, 2, 3], two hands, position only
