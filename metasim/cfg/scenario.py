@@ -18,7 +18,7 @@ from .randomization import RandomizationCfg
 from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
 from .scenes.base_scene_cfg import SceneCfg
-from .sensors import BaseCameraCfg, BaseSensorCfg, PinholeCameraCfg
+from .sensors import BaseCameraCfg, BaseSensorCfg
 from .simulator_params import SimParamCfg
 from .tasks.base_task_cfg import BaseTaskCfg
 
@@ -34,7 +34,7 @@ class ScenarioCfg:
     """None means no scene"""
     lights: list[BaseLightCfg] = [DistantLightCfg()]
     objects: list[BaseObjCfg] = []
-    cameras: list[BaseCameraCfg] = [PinholeCameraCfg()]
+    cameras: list[BaseCameraCfg] = []
     sensors: list[BaseSensorCfg] = []
     checker: BaseChecker = EmptyChecker()
     render: RenderCfg = RenderCfg()
