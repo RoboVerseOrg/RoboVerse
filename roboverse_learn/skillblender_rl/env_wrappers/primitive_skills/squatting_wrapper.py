@@ -116,14 +116,7 @@ class SquattingWrapper(HumanoidBaseWrapper):
         self._parse_ref_root_height(envstate)
 
     def _compute_observations(self, envstates: EnvState) -> None:
-        """Add observation into states
-
-        Input: envstates
-
-        Output:
-
-        """
-
+        """compute observation and privileged observation."""
         phase = self._get_phase()
 
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)

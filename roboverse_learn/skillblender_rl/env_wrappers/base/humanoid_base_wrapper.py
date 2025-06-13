@@ -401,10 +401,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         return stance_mask
 
     def _compute_observations(self, envstates):
-        """compute observations and priviledged observation
-
-        Implement when add new tasks.
-        """
+        """compute observations and priviledged observation"""
         raise NotImplementedError
 
     def _update_refreshed_tensors(self, env_states):

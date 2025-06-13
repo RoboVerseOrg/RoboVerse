@@ -16,16 +16,16 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train.py --task "skillblender:Walking" --sim "isaacgym" --num_envs  124 --run_name "humanoid_skillblender" --use_wandb
+    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Stepping" --sim "isaacgym" --num_envs  124 --run_name "humanoid_skillblender" --use_wandb
    ```
 
 
 ## Task list
 > 4 Goal-Conditional Skills
 - [√] Walking
+- [√] Squatting
+- [√] Stepping
 - [ ] Reaching
-- [ ] Squatting
-- [ ] Stepping
 > 8 Loco-Manipulation Tasks
 - [ ] FarReach
 - [ ] ButtonPress
@@ -35,6 +35,10 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 - [ ] PackageLift
 - [ ] BoxTransfer
 - [ ] PackageCarry
+
+## Robots supports
+- [√] unitree h1
+- [ ] unitree g1
 
 ## Todos
 - [ ] ground type selection

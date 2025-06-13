@@ -72,13 +72,7 @@ class WalkingWrapper(HumanoidBaseWrapper):
         self._parse_ref_pos(envstate)
 
     def _compute_observations(self, envstates):
-        """Add observation into states
-
-        Input: envstates
-
-        Output:
-
-        """
+        """compute observation and privileged observation."""
 
         phase = self._get_phase()
 
