@@ -136,6 +136,10 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             return self._episode_length_buf.tolist()
 
         @property
+        def episode_length_buf_tensor(self) -> list[int]:
+            return self._episode_length_buf
+
+        @property
         def action_space(self) -> gym.Space:
             action_low = torch.tensor(
                 [limit[0] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
