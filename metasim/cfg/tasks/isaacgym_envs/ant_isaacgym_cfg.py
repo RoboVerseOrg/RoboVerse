@@ -9,7 +9,7 @@ from metasim.cfg.checkers import EmptyChecker
 from metasim.constants import TaskType
 from metasim.utils import configclass
 from metasim.utils.math import (
-    quat_inv,  # Using quat_inv instead of quat_conjugate
+    quat_inv,
     quat_from_euler_xyz,
     quat_rotate,
     quat_rotate_inverse,
@@ -21,16 +21,16 @@ from metasim.utils.math import (
 )
 
 from ..base_task_cfg import BaseTaskCfg
+from .isaacgym_task_base import IsaacGymTaskBase
 
 
 @configclass
-class AntIsaacGymCfg(BaseTaskCfg):
+class AntIsaacGymCfg(BaseTaskCfg, IsaacGymTaskBase):
     
-    episode_length = 1000  # Maximum episode length from IsaacGymEnvs
+    episode_length = 1000
     traj_filepath = None
     task_type = TaskType.LOCOMOTION
     
-    # Initial spawn height for the ant (from MJCF: 0.55)
     initial_height = 0.55
     
     dof_vel_scale = 0.2
@@ -48,14 +48,12 @@ class AntIsaacGymCfg(BaseTaskCfg):
     
     objects: List[RigidObjCfg] = []
     
-    # Control configuration for direct torque control
     control: ControlCfg = ControlCfg(
-        action_scale=15.0,  # gear * power_scale from IsaacGymEnvs
-        action_offset=False,  # Direct torque control, no offset
+        action_scale=15.0,
+        action_offset=False,
         torque_limit_scale=1.0
     )
     
-    # Locomotion tasks typically don't have a success condition
     checker = EmptyChecker()
     
     observation_space = {
@@ -100,7 +98,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
     def get_observation(self, states):
         observations = []
         
-        # Get device from first state if available
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
         for i, env_state in enumerate(states):
@@ -154,7 +151,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
                 basis_vec0 = torch.tensor([1., 0., 0.], dtype=torch.float32, device=torso_pos.device)
                 basis_vec1 = torch.tensor([0., 0., 1.], dtype=torch.float32, device=torso_pos.device)
             
-            # Compute heading and up projections
             torso_quat, up_proj, heading_proj, up_vec, heading_vec = self.compute_heading_and_up(
                 torso_rot.unsqueeze(0), inv_start_rot.unsqueeze(0), to_target.unsqueeze(0), 
                 basis_vec0.unsqueeze(0), basis_vec1.unsqueeze(0), 2
@@ -163,7 +159,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
             up_proj = up_proj.squeeze()
             heading_proj = heading_proj.squeeze()
             
-            # Compute rotations
             vel_loc, angvel_loc, roll, pitch, yaw, angle_to_target = self.compute_rot(
                 torso_quat.unsqueeze(0), lin_vel.unsqueeze(0), ang_vel.unsqueeze(0), 
                 target.unsqueeze(0), torso_pos.unsqueeze(0)
@@ -175,32 +170,29 @@ class AntIsaacGymCfg(BaseTaskCfg):
             yaw = yaw.squeeze()
             angle_to_target = angle_to_target.squeeze()
             
-            # Scale DOF positions to [-1, 1] range
             if hasattr(self, '_dof_limits_lower') and hasattr(self, '_dof_limits_upper'):
-                # unscale_transform normalizes from (lower, upper) to [-1, 1]
                 dof_pos_scaled = (2.0 * dof_pos - self._dof_limits_upper - self._dof_limits_lower) / (self._dof_limits_upper - self._dof_limits_lower)
             else:
-                # Joint limits matching the robot configuration (hip, ankle, hip, ankle, ...)
                 deg_to_rad = 3.14159 / 180.0
                 dof_limits_lower = torch.tensor([
-                    -40 * deg_to_rad,  # hip_1
-                    30 * deg_to_rad,   # ankle_1
-                    -40 * deg_to_rad,  # hip_2
-                    -100 * deg_to_rad, # ankle_2
-                    -40 * deg_to_rad,  # hip_3
-                    -100 * deg_to_rad, # ankle_3
-                    -40 * deg_to_rad,  # hip_4
-                    30 * deg_to_rad    # ankle_4
+                    -40 * deg_to_rad,
+                    30 * deg_to_rad,
+                    -40 * deg_to_rad,
+                    -100 * deg_to_rad,
+                    -40 * deg_to_rad,
+                    -100 * deg_to_rad,
+                    -40 * deg_to_rad,
+                    30 * deg_to_rad
                 ], dtype=torch.float32, device=device)
                 dof_limits_upper = torch.tensor([
-                    40 * deg_to_rad,   # hip_1
-                    100 * deg_to_rad,  # ankle_1
-                    40 * deg_to_rad,   # hip_2
-                    -30 * deg_to_rad,  # ankle_2
-                    40 * deg_to_rad,   # hip_3
-                    -30 * deg_to_rad,  # ankle_3
-                    40 * deg_to_rad,   # hip_4
-                    100 * deg_to_rad   # ankle_4
+                    40 * deg_to_rad,
+                    100 * deg_to_rad,
+                    40 * deg_to_rad,
+                    -30 * deg_to_rad,
+                    40 * deg_to_rad,
+                    -30 * deg_to_rad,
+                    40 * deg_to_rad,
+                    100 * deg_to_rad
                 ], dtype=torch.float32, device=device)
                 dof_pos_scaled = (2.0 * dof_pos - dof_limits_upper - dof_limits_lower) / (dof_limits_upper - dof_limits_lower)
             
@@ -267,7 +259,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
                 self._basis_vec0 = torch.tensor([1., 0., 0.], device=torso_pos.device).repeat((torso_pos.shape[0], 1))
                 self._basis_vec1 = torch.tensor([0., 0., 1.], device=torso_pos.device).repeat((torso_pos.shape[0], 1))
             
-            # Compute heading and up projections
             torso_quat, up_proj, heading_proj, up_vec, heading_vec = self.compute_heading_and_up(
                 torso_rot, self._inv_start_rot, to_target, self._basis_vec0, self._basis_vec1, 2
             )
@@ -281,52 +272,45 @@ class AntIsaacGymCfg(BaseTaskCfg):
             up_reward = torch.zeros_like(heading_reward)
             up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
             
-            # Extract actions from the action dictionary
             if isinstance(actions, list) and len(actions) > 0 and isinstance(actions[0], dict):
-                # actions is a list of dicts
                 actions_list = []
                 for act in actions:
                     if self.robot.name in act and "dof_pos_target" in act[self.robot.name]:
                         joint_actions = act[self.robot.name]["dof_pos_target"]
-                        # Convert joint dict to tensor in correct order
                         action_values = [joint_actions[f"hip_{i//2+1}" if i%2==0 else f"ankle_{i//2+1}"] for i in range(8)]
                         actions_list.append(torch.tensor(action_values, device=torso_pos.device))
                     else:
                         actions_list.append(torch.zeros(8, device=torso_pos.device))
                 actions_tensor = torch.stack(actions_list)
             elif isinstance(actions, torch.Tensor):
-                # actions is already a tensor
                 actions_tensor = actions.to(torso_pos.device)
             else:
-                # Fallback - create zero actions
                 actions_tensor = torch.zeros((torso_pos.shape[0], 8), device=torso_pos.device)
             
             actions_cost = torch.sum(actions_tensor ** 2, dim=-1)
             electricity_cost = torch.sum(torch.abs(actions_tensor * dof_vel), dim=-1)
             
-            # Joint limits matching the robot configuration (hip, ankle, hip, ankle, ...)
             deg_to_rad = 3.14159 / 180.0
             dof_limits_lower = torch.tensor([
-                -40 * deg_to_rad,  # hip_1
-                30 * deg_to_rad,   # ankle_1
-                -40 * deg_to_rad,  # hip_2
-                -100 * deg_to_rad, # ankle_2
-                -40 * deg_to_rad,  # hip_3
-                -100 * deg_to_rad, # ankle_3
-                -40 * deg_to_rad,  # hip_4
-                30 * deg_to_rad    # ankle_4
+                -40 * deg_to_rad,
+                30 * deg_to_rad,
+                -40 * deg_to_rad,
+                -100 * deg_to_rad,
+                -40 * deg_to_rad,
+                -100 * deg_to_rad,
+                -40 * deg_to_rad,
+                30 * deg_to_rad
             ], device=torso_pos.device)
             dof_limits_upper = torch.tensor([
-                40 * deg_to_rad,   # hip_1
-                100 * deg_to_rad,  # ankle_1
-                40 * deg_to_rad,   # hip_2
-                -30 * deg_to_rad,  # ankle_2
-                40 * deg_to_rad,   # hip_3
-                -30 * deg_to_rad,  # ankle_3
-                40 * deg_to_rad,   # hip_4
-                100 * deg_to_rad   # ankle_4
+                40 * deg_to_rad,
+                100 * deg_to_rad,
+                40 * deg_to_rad,
+                -30 * deg_to_rad,
+                40 * deg_to_rad,
+                -30 * deg_to_rad,
+                40 * deg_to_rad,
+                100 * deg_to_rad
             ], device=torso_pos.device)
-            # Scale DOF positions to [-1, 1] range
             dof_pos_scaled = (2.0 * dof_pos - dof_limits_upper - dof_limits_lower) / (dof_limits_upper - dof_limits_lower)
             dof_at_limit_cost = torch.sum(dof_pos_scaled > 0.99, dim=-1)
             
@@ -380,6 +364,7 @@ class AntIsaacGymCfg(BaseTaskCfg):
     def reset(self, env_ids=None):
         if env_ids is None:
             num_envs = 1
+            env_ids = list(range(num_envs))
         else:
             num_envs = len(env_ids)
         
@@ -390,6 +375,13 @@ class AntIsaacGymCfg(BaseTaskCfg):
             dt = 0.01667
             self._potentials = torch.zeros(num_envs, dtype=torch.float32) - 1000. / dt
             self._prev_potentials = self._potentials.clone()
+        
+        if env_ids is not None and self._potentials is not None:
+            for i, env_id in enumerate(env_ids):
+                if env_id < len(self._potentials):
+                    self._potentials[env_id] = -1000. / 0.01667
+                    if self._prev_potentials is not None:
+                        self._prev_potentials[env_id] = self._potentials[env_id]
     
     def post_reset(self):
         pass
@@ -409,27 +401,26 @@ class AntIsaacGymCfg(BaseTaskCfg):
         self._up_vec = torch.tensor([0., 0., 1.], device=device).repeat((num_envs, 1))
         self._heading_vec = torch.tensor([1., 0., 0.], device=device).repeat((num_envs, 1))
         
-        # Joint limits matching the robot configuration (hip, ankle, hip, ankle, ...)
         deg_to_rad = 3.14159 / 180.0
         self._dof_limits_lower = torch.tensor([
-            -40 * deg_to_rad,  # hip_1
-            30 * deg_to_rad,   # ankle_1
-            -40 * deg_to_rad,  # hip_2
-            -100 * deg_to_rad, # ankle_2
-            -40 * deg_to_rad,  # hip_3
-            -100 * deg_to_rad, # ankle_3
-            -40 * deg_to_rad,  # hip_4
-            30 * deg_to_rad    # ankle_4
+            -40 * deg_to_rad,
+            30 * deg_to_rad,
+            -40 * deg_to_rad,
+            -100 * deg_to_rad,
+            -40 * deg_to_rad,
+            -100 * deg_to_rad,
+            -40 * deg_to_rad,
+            30 * deg_to_rad
         ], device=device)
         self._dof_limits_upper = torch.tensor([
-            40 * deg_to_rad,   # hip_1
-            100 * deg_to_rad,  # ankle_1
-            40 * deg_to_rad,   # hip_2
-            -30 * deg_to_rad,  # ankle_2
-            40 * deg_to_rad,   # hip_3
-            -30 * deg_to_rad,  # ankle_3
-            40 * deg_to_rad,   # hip_4
-            100 * deg_to_rad   # ankle_4
+            40 * deg_to_rad,
+            100 * deg_to_rad,
+            40 * deg_to_rad,
+            -30 * deg_to_rad,
+            40 * deg_to_rad,
+            -30 * deg_to_rad,
+            40 * deg_to_rad,
+            100 * deg_to_rad
         ], device=device)
         
         self._joint_gears = torch.ones(8, device=device) * 150.0
@@ -438,7 +429,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
         self._actions = actions
     
     def compute_heading_and_up(self, torso_rotation, inv_start_rot, to_target, vec0, vec1, up_idx):
-        """Compute heading and up projections for the ant."""
         num_envs = torso_rotation.shape[0]
         target_dirs = normalize(to_target)
         
@@ -451,7 +441,6 @@ class AntIsaacGymCfg(BaseTaskCfg):
         return torso_quat, up_proj, heading_proj, up_vec, heading_vec
     
     def compute_rot(self, torso_quat, velocity, ang_velocity, targets, torso_positions):
-        """Compute rotation-related values for the ant."""
         vel_loc = quat_rotate_inverse(torso_quat, velocity)
         angvel_loc = quat_rotate_inverse(torso_quat, ang_velocity)
         

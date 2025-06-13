@@ -47,6 +47,101 @@ class RLEnvWrapper:
         if magnitude < 1e-10:  # Avoid division by zero
             return (1.0, 0.0, 0.0, 0.0)
         return (w / magnitude, x / magnitude, y / magnitude, z / magnitude)
+    
+    def _get_default_reset_states(self, env_ids: list[int] | None = None):
+        """Get default reset states for the environments."""
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+            
+        # Get current states to determine the format
+        current_states = self.env.handler.get_states()
+        
+        # Handle TensorState (IsaacGym, etc.) - these simulators handle reset internally
+        if hasattr(current_states, '__class__') and current_states.__class__.__name__ == 'TensorState':
+            # For tensor-based simulators like IsaacGym, reset is handled differently.
+            # The task's reset() method should handle setting robots to default positions.
+            # This is because IsaacGym uses GPU tensors and requires special handling.
+            # TODO: Consider implementing a unified reset interface for all simulators.
+            return None
+        
+        # Handle list of states (MuJoCo, SAPIEN, etc.)
+        if isinstance(current_states, list):
+            reset_states = []
+            robot = self._robot
+            
+            for i in range(self.num_envs):
+                if i not in env_ids:
+                    # Keep current state for environments not being reset
+                    reset_states.append(current_states[i])
+                else:
+                    # Create default state for environments being reset
+                    state = {
+                        "robots": {},
+                        "objects": {}
+                    }
+                    
+                    # Set robot to default state
+                    robot_state = {}
+                    
+                    # Set default position
+                    if hasattr(robot, "default_position"):
+                        robot_state["pos"] = list(robot.default_position)
+                    else:
+                        robot_state["pos"] = [0.0, 0.0, 0.0]
+                    
+                    # Set default orientation
+                    if hasattr(robot, "default_orientation"):
+                        robot_state["rot"] = list(robot.default_orientation)
+                    else:
+                        robot_state["rot"] = [1.0, 0.0, 0.0, 0.0]
+                    
+                    # Set default velocities to zero
+                    robot_state["lin_vel"] = [0.0, 0.0, 0.0]
+                    robot_state["ang_vel"] = [0.0, 0.0, 0.0]
+                    
+                    # Set default joint positions
+                    if hasattr(robot, "default_joint_positions"):
+                        robot_state["dof_pos"] = dict(robot.default_joint_positions)
+                        robot_state["joint_qpos"] = list(robot.default_joint_positions.values())
+                    else:
+                        robot_state["dof_pos"] = {}
+                        robot_state["joint_qpos"] = []
+                    
+                    # Set default joint velocities to zero
+                    if hasattr(robot, "default_joint_positions"):
+                        robot_state["dof_vel"] = {name: 0.0 for name in robot.default_joint_positions.keys()}
+                        robot_state["joint_qvel"] = [0.0] * len(robot.default_joint_positions)
+                    else:
+                        robot_state["dof_vel"] = {}
+                        robot_state["joint_qvel"] = []
+                    
+                    state["robots"][robot.name] = robot_state
+                    
+                    # Set objects to default states
+                    for obj in self.scenario.task.objects:
+                        obj_state = {}
+                        
+                        if hasattr(obj, "default_position"):
+                            obj_state["pos"] = list(obj.default_position)
+                        else:
+                            obj_state["pos"] = [0.0, 0.0, 0.0]
+                            
+                        if hasattr(obj, "default_orientation"):
+                            obj_state["rot"] = list(obj.default_orientation)
+                        else:
+                            obj_state["rot"] = [1.0, 0.0, 0.0, 0.0]
+                        
+                        obj_state["lin_vel"] = [0.0, 0.0, 0.0]
+                        obj_state["ang_vel"] = [0.0, 0.0, 0.0]
+                        
+                        state["objects"][obj.name] = obj_state
+                    
+                    reset_states.append(state)
+            
+            return reset_states
+        
+        # Unknown state format
+        return None
 
     def randomize_initial_states(self, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -270,19 +365,28 @@ class RLEnvWrapper:
         else:
             reset_indices = env_ids
 
-        states = self.randomize_initial_states(env_ids=env_ids)
-
-        # For IsaacGym/TensorState, don't pass states to reset
-        if hasattr(states, '__class__') and states.__class__.__name__ == 'TensorState':
-            states, _ = self.env.reset(env_ids=env_ids)
+        # Get the default states for reset
+        reset_states = self._get_default_reset_states(env_ids=env_ids)
+        
+        # Reset the environments with the default states
+        if reset_states is not None:
+            states, _ = self.env.reset(env_ids=env_ids, states=reset_states)
         else:
-            states, _ = self.env.reset(env_ids=env_ids, states=states)
+            states, _ = self.env.reset(env_ids=env_ids)
+
+        # Call task-specific reset if available
+        if hasattr(self._task, 'reset'):
+            self._task.reset(env_ids=env_ids)
 
         observation = self.get_observation(states)
 
         self.reset_buffer[reset_indices] = torch.ones_like(self.reset_buffer[reset_indices])
         self.timestep_buffer[reset_indices] = torch.zeros_like(self.timestep_buffer[reset_indices])
         self.success_buffer[reset_indices] = torch.zeros_like(self.success_buffer[reset_indices])
+        
+        # Reset episode length buffer for the reset environments
+        for idx in reset_indices:
+            self.env._episode_length_buf[idx] = 0
 
         return observation
 
