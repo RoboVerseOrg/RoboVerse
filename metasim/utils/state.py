@@ -75,17 +75,17 @@ class CameraState:
     """RGB image. Shape is (num_envs, H, W, 3)."""
     depth: torch.Tensor | None
     """Depth image. Shape is (num_envs, H, W)."""
-    instance_id_seg: torch.Tensor | None
+    instance_id_seg: torch.Tensor | None = None
     """Instance id segmentation for each pixel. Shape is (num_envs, H, W)."""
-    instance_id_seg_id2label: dict[int, str] | None
+    instance_id_seg_id2label: dict[int, str] | None = None
     """Instance id segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_id_seg`."""
-    instance_seg: torch.Tensor | None
+    instance_seg: torch.Tensor | None = None
     """Instance segmentation for each pixel. Shape is (num_envs, H, W).
 
     .. warning::
         This is experimental and subject to change.
     """
-    instance_seg_id2label: dict[int, str] | None
+    instance_seg_id2label: dict[int, str] | None = None
     """Instance segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_seg`.
 
     .. warning::
