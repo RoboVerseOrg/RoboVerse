@@ -105,6 +105,7 @@ extend-exclude = [
     "roboverse_learn/rl/algos/dreamer",
     "roboverse_learn/rl/algos/ppo",
     "roboverse_learn/rl/algos/sac",
+    "roboverse_learn/rl/rsl_rl",
     "wandb",
     "third_party",
     "tmp",
