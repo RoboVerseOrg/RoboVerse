@@ -190,9 +190,6 @@ class BaseSimHandler(ABC):
         self._state_cache_expire = True
         self._simulate()
 
-    def simulate_one_physics_step(self, actions):
-        self._simulate_one_physics_step(actions)
-
     ############################################################
     ## Utils
     ############################################################
