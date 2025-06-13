@@ -1,5 +1,5 @@
-# SkillBench RL
-We provide implementent [SkillBench](https://www.google.com/) into our framework.
+# SkillBlender RL
+We provide implementent [SkillBlender](https://github.com/Humanoid-SkillBlender/SkillBlender) into our framework.
 
 RL algorithm: `PPO` by [rsl_rl](https://github.com/leggedrobotics/rsl_rl) `v1.0.2`
 
@@ -16,9 +16,9 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Stepping" --sim "isaacgym" --num_envs  124 --run_name "humanoid_skillblender" --use_wandb
+    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Stepping" --sim "isaacgym" --num_envs 124 --robot "h1" --use_wandb
    ```
-
+after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this.
 
 ## Task list
 > 4 Goal-Conditional Skills
@@ -43,6 +43,7 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 ## Todos
 - [ ] ground type selection
 - [ ] pushing robot
+- [ ] sim2sim
 
 ## How to add new Task
 1. Create a new `wrapper.py` in , add reward function
@@ -64,8 +65,8 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 
 
 ## References and Acknowledgements
-We implement SkillBench based on and inspired by the following projects:
-- SkillBlender: Towards Versatile Humanoid Whole-Body Control via Skill Blending.
+We implement SkillBlender based on and inspired by the following projects:
+- [SkillBlender](https://github.com/Humanoid-SkillBlender/SkillBlender)
 - [Legged_gym](https://github.com/leggedrobotics/legged_gym)
 - [rsl_rl](https://github.com/leggedrobotics/rsl_rl)
 - [HumanoidVerse](https://github.com/LeCAR-Lab/HumanoidVerse/tree/master)
