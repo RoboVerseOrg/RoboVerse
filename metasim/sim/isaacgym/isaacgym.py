@@ -439,7 +439,7 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_pose.p.y = 0.0
                 obj_pose.p.z = 0.0
                 obj_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), 0)
-                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0)
+                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0, 0)
 
                 if isinstance(self.objects[obj_i], _FileBasedMixin):
                     self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])
@@ -618,11 +618,11 @@ class IsaacgymHandler(BaseSimHandler):
             self.actions = actions_reshape[:, self._obj_num_dof :]
             # and set position target for position actuator if any exist
             if len(self._pos_ctrl_dof_dix) > 0:
-                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input[:,]))
+                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
         # directly set position target
         else:
-            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input[:,]))
+            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
     def refresh_render(self) -> None:
         # Step the physics
@@ -698,7 +698,7 @@ class IsaacgymHandler(BaseSimHandler):
         if self._obj_num_dof > 0:
             obj_force_placeholder = torch.zeros((self._num_envs, self._obj_num_dof), device=self.device)
             effort = torch.cat((obj_force_placeholder, effort), dim=1)
-        self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort[:,]))
+        self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
 
     def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids

@@ -135,7 +135,6 @@ class SquattingCfg(BaseHumanoidCfg):
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     commands = CommandsConfig(num_commands=4, resampling_time=10.0)
-    traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
     reward_functions: list[Callable] = [
         reward_squatting,

@@ -8,18 +8,17 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class H1Cfg(BaseRobotCfg):
-    name: str = "h1"
-    num_joints: int = 26
-    usd_path: str = "roboverse_data/robots/h1/usd/h1.usd"
-    mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
-    urdf_path: str = "roboverse_data/robots/h1/urdf/h1.urdf"
-    mjx_mjcf_path: str = "roboverse_data/robots/h1/mjcf/mjx_h1.xml"
+class H1WristCfg(BaseRobotCfg):
+    name: str = "h1_wrist"
+    num_joints: int = 23 #19 revolute, 4 fixed
+    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist_back.urdf"
     enabled_gravity: bool = True
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
-    collapse_fixed_joints: bool = False
+    # collapse_fixed_joints: bool = True
+
+    collapse_fixed_joints: bool = False #must set false to kepp wrist link exist
 
     actuators: dict[str, BaseActuatorCfg] = {
         "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
@@ -41,6 +40,7 @@ class H1Cfg(BaseRobotCfg):
         "right_shoulder_roll": BaseActuatorCfg(stiffness=100, damping=2),
         "right_shoulder_yaw": BaseActuatorCfg(stiffness=100, damping=2),
         "right_elbow": BaseActuatorCfg(stiffness=100, damping=2),
+
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "left_hip_yaw": (-0.43, 0.43),
@@ -133,3 +133,4 @@ class H1Cfg(BaseRobotCfg):
     ]
     terminate_contacts_links: list[str] = ["pelvis", "torso", "shoulder", "elbow"]
     penalized_contacts_links: list[str] = ["hip", "knee"]
+    wrist_links: list[str] = ["wrist"]

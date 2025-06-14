@@ -133,13 +133,12 @@ class ReachingCfg(BaseHumanoidCfg):
     frame_stack = 1
     c_frame_stack = 3
     command_dim = 14
-    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
+    num_single_obs = 3 * num_actions + 6 + command_dim
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 3 * num_actions + 60
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
+    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
     commands = CommandsConfig(num_commands=4, resampling_time=10.0)
-    traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
     reward_functions: list[Callable] = [
         reward_wrist_pos,

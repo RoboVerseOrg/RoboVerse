@@ -9,36 +9,36 @@ Simulator: `IsaacGym`
 
 ## Installation
 ```bash
-pip install -e roboverse_learn/skillblender_rl/rsl_rl
+pip install -e roboverse_learn/rl/rsl_rl
 ```
 
 ## Training
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1" --use_wandb
+    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1_wrist" --use_wandb
    ```
-after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this.
-**You can press V to stop rendering and accelerate training.**
+    after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this.
+**To speed up training, click the IsaacGym viewer and press V to stop rendering.**
 ## Task list
 > 4 Goal-Conditional Skills
-- [√] Walking
-- [√] Squatting
-- [√] Stepping
-- [ ] Reaching
+- [x]  Walking
+- [x]  Squatting
+- [x]  Stepping
+- [ ]  Reaching
 > 8 Loco-Manipulation Tasks
-- [ ] FarReach
-- [ ] ButtonPress
-- [ ] CabinetClose
-- [ ] FootballShoot
-- [ ] BoxPush
-- [ ] PackageLift
-- [ ] BoxTransfer
-- [ ] PackageCarry
+- [ ]  FarReach
+- [ ]  ButtonPress
+- [ ]  CabinetClose
+- [ ]  FootballShoot
+- [ ]  BoxPush
+- [ ]  PackageLift
+- [ ]  BoxTransfer
+- [ ]  PackageCarry
 
 ## Robots supports
-- [√] unitree h1
-- [ ] unitree g1
+- [x]  h1
+- [ ]  g1
 
 ## Todos
 - [ ] ground type selection

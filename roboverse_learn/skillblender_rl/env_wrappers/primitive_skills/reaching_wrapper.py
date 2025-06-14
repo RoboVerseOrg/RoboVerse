@@ -30,8 +30,10 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _parse_joint_indices(self, robot):
         super()._parse_joint_indices(robot)
+        # parse wrist indices and attach to cfg
         wrist_names = robot.wrist_links
-        self.wrist_indices = self.env.handler.get_robot_rigid_body_index(wrist_names)
+        self.wrist_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, wrist_names)
+        self.cfg.wrist_indices = self.wrist_indices
 
     def _init_target_wp(self, envstate: EnvState) -> None:
         self.ori_wrist_pos = (
@@ -150,7 +152,6 @@ class ReachingWrapper(HumanoidBaseWrapper):
             (
                 ref_wrist_pos_obs,  # 14
                 wrist_pos_obs,  # 14
-                diff,  # 14
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
