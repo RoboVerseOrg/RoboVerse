@@ -1,4 +1,4 @@
-# 0. Static Scene
+#  0. Static Scene
 In this tutorial, we will show you how to use MetaSim to simulate a static scene.
 
 ## Common Usage

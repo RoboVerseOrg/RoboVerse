@@ -1,4 +1,4 @@
-# 1. Control Robot
+#  1. Control Robot
 In this tutorial, we will show you how to use MetaSim to control a robot.
 
 ## Common Usage

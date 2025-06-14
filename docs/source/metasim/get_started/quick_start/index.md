@@ -12,4 +12,6 @@ We provide tutorials for using MetaSim:
 4_motion_planning
 5_hybrid_sim
 6_advanced_rendering
+7_collect_demo
+8_replay_demo
 ```

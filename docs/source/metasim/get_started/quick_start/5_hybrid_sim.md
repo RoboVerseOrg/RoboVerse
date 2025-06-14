@@ -1,4 +1,4 @@
-# 5. Hybrid Sim
+#  5. Hybrid Sim
 In this tutorial, we will show you how to use MetaSim to simulate a hybrid system.
 
 ## Common Usage

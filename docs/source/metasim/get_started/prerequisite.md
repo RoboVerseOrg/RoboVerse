@@ -1,4 +1,4 @@
-# Prerequisites
+# 📦 Prerequisites
 
 ## Use All Simulators Supported by MetaSim
 

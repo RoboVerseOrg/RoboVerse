@@ -1,4 +1,4 @@
-# Installation with Docker
+# 🐳 Docker
 
 ## Prerequisites
 

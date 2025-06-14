@@ -1,4 +1,4 @@
-# 6. Advanced Rendering
+#  6. Advanced Rendering
 In this tutorial, we will show you how to use MetaSim to render the scene with advanced rendering techniques. We currently support rasterization, ray tracing, and path tracing.
 
 ## Common Usage
