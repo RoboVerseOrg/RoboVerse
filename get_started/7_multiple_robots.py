@@ -7,17 +7,21 @@ except ImportError:
 
 from dataclasses import dataclass
 
+import rootutils
 import torch
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
+rootutils.setup_root(__file__, pythonpath=True)
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+
+from get_started.utils import ObsSaver
 from metasim.cfg.robots import FrankaCfg, H1Cfg
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.setup_util import get_sim_env_class
-
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 FRANKA_CFG = FrankaCfg()
 H1_CFG = H1Cfg()
@@ -44,6 +48,7 @@ def main():
         num_envs=args.num_envs,
         decimation=args.decimation,
     )
+    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_env_class(SimType(args.sim))
@@ -60,10 +65,13 @@ def main():
             "objects": {},
         }
     ] * scenario.num_envs
-    env.reset(states=init_states)
 
+    obs, extras = env.reset(states=init_states)
+
+    obs_saver = ObsSaver(video_path=f"get_started/output/7_multiple_robots_{args.sim}.mp4")
+    obs_saver.add(obs)
     step = 0
-    while True:
+    for _ in range(100):
         log.debug(f"Step {step}")
         actions = [
             {
@@ -81,10 +89,11 @@ def main():
             }
             for _ in range(scenario.num_envs)
         ]
-        env.step(actions)
-        env.render()
+        obs, reward, success, time_out, extras = env.step(actions)
+        obs_saver.add(obs)
         step += 1
 
+    obs_saver.save()
     env.handler.close()
 
 
