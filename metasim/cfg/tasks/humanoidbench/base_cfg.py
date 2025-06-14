@@ -49,7 +49,7 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     objects = []
     reward_weights = [1.0]
     sim_params = SimParamCfg(
-        dt=0.001,
+        dt=0.002,
         contact_offset=0.01,
         num_position_iterations=8,
         num_velocity_iterations=0,
@@ -58,8 +58,8 @@ class HumanoidTaskCfg(BaseRLTaskCfg):
     )
     control = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
 
-    @staticmethod
-    def humanoid_obs_flatten_func(envstates: list[EnvState]) -> torch.Tensor:
+    # @staticmethod
+    def humanoid_obs_flatten_func(self, envstates: list[EnvState]) -> torch.Tensor:
         """Observation function for humanoid tasks.
 
         Args:
@@ -113,7 +113,7 @@ class StableReward(HumanoidBaseReward):
         """Compute the locomotion reward."""
         ret_rewards = []
         standing = humanoid_reward_util.tolerance_tensor(
-            neck_height_tensor(states, self.robot_name),
+            neck_height_tensor(states, self.robot_name),  # Adjust for neck height
             bounds=(self._stand_neck_height, float("inf")),
             margin=self._stand_neck_height / 4,
         )

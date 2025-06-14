@@ -370,6 +370,11 @@ class MujocoHandler(BaseSimHandler):
             actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
             actuator.ctrl = target_pos
 
+    def set_actions(self, obj_name: str, actions):
+        self._actions_cache = actions
+        self.physics.data.ctrl[:] = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
+        # Reset all controls to zero
+
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
         if self.viewer is not None:
