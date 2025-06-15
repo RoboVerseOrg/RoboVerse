@@ -1,0 +1,40 @@
+defaults:
+  - ../default
+
+task_name: "dmcontrol:walker_walk"
+robot_name: "none"  # dm_control tasks don't use robot configs
+
+algo: "sac"
+
+observation_space:
+  shape: [24]
+observation_shape: [24]
+
+sac:
+  action_num: 6
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+  gamma: 0.99
+  tau: 0.005
+  learning_rate: 3e-4
+  actor_lr: 3e-4
+  critic_lr: 3e-4
+  alpha_lr: 3e-4
+  buffer_size: 1000000
+  batch_size: 256
+  target_update_interval: 1
+  gradient_steps: 1
+  automatic_entropy_tuning: True
+  alpha: 0.2
+  reward_scale_value: 1.0
+  normalize_input: True
+  normalize_value: False
+  max_agent_steps: 10000000
+  learning_starts: 10000
+  save_frequency: 50
+  save_best_after: 50
+
+  network:
+    mlp:
+      units: [512, 512, 256]
+    separate_value_mlp: False

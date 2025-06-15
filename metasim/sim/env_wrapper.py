@@ -6,6 +6,7 @@ import time
 from typing import Generic, TypeVar
 
 import gymnasium as gym
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -70,7 +71,9 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
+            return gym.spaces.Box(
+                low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
     return IdentityEnv
 
@@ -157,22 +160,29 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
+            return gym.spaces.Box(
+                low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
         @property
         def observation_space(self) -> gym.Space:
-            observation_space = {}
-            for obj in self.handler.scenario.task.observation_space.keys():
-                if obj == "robot":
-                    for joint in self.handler.scenario.robots[0].joint_names:
-                        observation_space[joint] = gym.spaces.Box(
-                            low=-torch.inf, high=torch.inf, shape=(1,), dtype=torch.float32
-                        )
+            # For now, return a simple Box space based on the first observation
+            # This is a temporary fix for AllegroHand and similar tasks
+            # TODO: Implement proper observation space handling
+
+            # Get observation shape from task if available
+            if hasattr(self.handler.scenario.task, "obs_type"):
+                if self.handler.scenario.task.obs_type == "full_no_vel":
+                    obs_shape = (50,)  # AllegroHand full_no_vel
+                elif self.handler.scenario.task.obs_type == "full":
+                    obs_shape = (72,)  # AllegroHand full
+                elif self.handler.scenario.task.obs_type == "full_state":
+                    obs_shape = (88,)  # AllegroHand full_state
                 else:
-                    for key, value in self.handler.scenario.task.observation_space[obj].items():
-                        observation_space[obj][key] = gym.spaces.Box(
-                            low=value["low"], high=value["high"], shape=value["shape"], dtype=value["dtype"]
-                        )
-            return gym.spaces.Dict(observation_space)
+                    obs_shape = (50,)  # Default
+            else:
+                obs_shape = (50,)  # Default fallback
+
+            return gym.spaces.Box(low=-np.inf, high=np.inf, shape=obs_shape, dtype=np.float32)
 
     return GymEnv

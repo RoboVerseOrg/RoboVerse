@@ -84,5 +84,8 @@ class ScenarioCfg:
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
         ### Control parameters  overvide by task
         self.control = self.task.control if self.task is not None else self.control
+        ### Objects override by task
+        if self.task is not None and hasattr(self.task, "objects") and self.task.objects is not None:
+            self.objects = self.task.objects
 
         FileDownloader(self).do_it()

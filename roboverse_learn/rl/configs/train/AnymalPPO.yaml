@@ -1,0 +1,81 @@
+defaults:
+  - ../default
+
+task_name: "isaacgym_envs:Anymal"
+robot_name: "anymal"
+algo: "ppo"
+
+environment:
+  control_hz: 50  # Control frequency
+  num_envs: 4096
+  episode_length_s: 20
+  clip_observations: 5.0
+  clip_actions: 1.0
+
+experiment:
+  rl_device: "cuda:0"
+  seed: 42
+  torch_deterministic: false
+  max_iterations: 10000
+
+observation_space:
+  shape: [48]
+
+action_space:
+  shape: [12]
+
+ppo:
+  normalize_advantage: true
+  normalize_observation: true
+
+  # Network
+  network:
+    mlp:
+      units: [256, 128, 64]
+      activation: "elu"
+      initializer:
+        name: "default"
+
+  # Training parameters
+  value_loss_coef: 1.0
+  entropy_coef: 0.0
+  gamma: 0.99
+  tau: 0.95
+  learning_rate: 3.0e-4
+  lr_schedule: "adaptive"
+  kl_threshold: 0.016
+  max_grad_norm: 1.0
+  e_clip: 0.2  # PPO clipping parameter
+  clip_value_loss: true
+  value_bootstrap: true
+  critic_coef: 2.0
+  bounds_loss_coef: 0.0
+
+  # PPO specific
+  num_actors: ${environment.num_envs}
+  horizon_length: 24  # Shorter horizon for locomotion
+  minibatch_size: ${environment.num_envs}  # Must divide batch_size (num_actors * horizon_length)
+  mini_epochs: 8
+  clip_value: true
+  reward_shaper:
+    scale_value: 0.01
+
+  # Locomotion specific parameters
+  normalize_input: true
+  normalize_value: true
+  normalize_reward: true
+  reward_scale_value: 0.01
+  truncate_grads: true
+  grad_norm: 1.0
+
+  # Action parameters
+  action_num: 12
+  actions_num: 12
+  control:
+    actionScale: 0.5
+
+  # Saves
+  save_frequency: 100
+  save_best_after: 50
+  checkpoint_dir: ${hydra:runtime.output_dir}/checkpoints
+  max_agent_steps: 500000000

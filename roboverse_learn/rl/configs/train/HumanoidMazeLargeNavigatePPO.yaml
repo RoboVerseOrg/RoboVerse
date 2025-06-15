@@ -1,0 +1,53 @@
+defaults:
+  - ../default
+
+task_name: "ogbench:HumanoidMazeLargeNavigate"
+robot_name: "none"  # OGBench tasks don't use robot configs
+
+algo: "ppo"
+
+observation_space:
+  shape: [67]  # Humanoid observation dimensions
+observation_shape: [67]
+
+ppo:
+  action_num: 17  # Humanoid has 17 action dimensions
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+
+  # Network architecture
+  network:
+    mlp:
+      units: [512, 512, 256]
+
+  # Hyperparameters
+  learning_rate: 3e-4
+  lr_schedule: "adaptive"
+  entropy_bonus: 0.001
+  clip_value: 0.2
+  e_clip: 0.2  # PPO clipping parameter
+  kl_threshold: 0.008
+  gamma: 0.99
+  tau: 0.95
+
+  # Training schedule
+  max_epochs: 15000
+  max_agent_steps: 15000000
+  steps_num: 512
+  horizon_length: 512
+  minibatch_size: 256
+  mini_epochs_num: 4
+
+  # Logging and saving
+  save_frequency: 50
+  save_best_after: 100
+  log_interval: 10
+
+  # Normalization
+  normalize_input: True
+  normalize_value: True
+  normalize_reward: True
+
+  # Gradient clipping
+  truncate_grads: True
+  grad_norm: 1.0
