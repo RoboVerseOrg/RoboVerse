@@ -32,7 +32,7 @@ def set_np_formatting():
     )
 
 
-@hydra.main(config_path="configs", config_name="default")
+@hydra.main(version_base="1.1", config_path="configs", config_name="default")
 def main(cfg: DictConfig):
     sim_name = cfg.environment.sim_name.lower()
     set_np_formatting()
@@ -50,7 +50,7 @@ def main(cfg: DictConfig):
 
     tic = time.time()
 
-    if cfg.train.task_name.startswith("dmcontrol:") or cfg.train.robot_name == "none":
+    if cfg.train.task_name.startswith("dmcontrol:") or (cfg.train.robot_name == "none" and not cfg.train.task_name.startswith("ogbench:")):
         scenario = ScenarioCfg(task=task, robots=[])
         scenario.cameras = []
         scenario.num_envs = cfg.environment.num_envs
@@ -58,6 +58,15 @@ def main(cfg: DictConfig):
 
         from metasim.cfg.tasks.dmcontrol.dmcontrol_env import DMControlEnv
         env = DMControlEnv(scenario)
+    elif cfg.train.task_name.startswith("ogbench:"):
+        task.traj_filepath = None
+        scenario = ScenarioCfg(task=task, robots=[])
+        scenario.cameras = []
+        scenario.num_envs = cfg.environment.num_envs
+        scenario.headless = cfg.environment.headless
+
+        from metasim.cfg.tasks.ogbench.ogbench_env import OGBenchEnv
+        env = OGBenchEnv(scenario=scenario, handler=None)
     else:
         robot = get_robot(cfg.train.robot_name)
         scenario = ScenarioCfg(task=task, robots=[robot])
