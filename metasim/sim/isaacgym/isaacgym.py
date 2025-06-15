@@ -503,40 +503,54 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.viewer_camera_look_at(self.viewer, middle_env, cam_pos, cam_target)
         ################################
 
+    def _reorder_quat_xyzw_to_wxyz(self, state: torch.Tensor) -> torch.Tensor:
+        quat_xyzw = state[..., 3:7]
+        quat_wxyz = torch.cat([quat_xyzw[..., 3:4], quat_xyzw[..., 0:3]], dim=-1)
+        return torch.cat([state[..., 0:3], quat_wxyz, state[..., 7:]], dim=-1)
+
     def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-
         object_states = {}
         for obj_id, obj in enumerate(self.objects):
             if isinstance(obj, ArticulationObjCfg):
-                joint_reindex = self.get_joint_reindex(obj.name)
+                joint_ids_reindex = self._get_joint_ids_reindex(obj.name)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
+                root_state = self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :]
+                root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
+                body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
+                body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
                 state = ObjectState(
-                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    root_state=root_state,
                     body_names=self.get_body_names(obj.name),
-                    body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
-                    joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
-                    joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
+                    body_state=body_state,
+                    joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 0],
+                    joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
                 )
             else:
+                root_state = self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :]
+                root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
                 state = ObjectState(
-                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    root_state=root_state,
                 )
             object_states[obj.name] = state
 
         # FIXME some RL task need joint state as dof_pos - default_dof_pos, not absolute dof_pos. see https://github.com/leggedrobotics/legged_gym/blob/17847702f90d8227cd31cce9c920aa53a739a09a/legged_gym/envs/base/legged_robot.py#L216 for further details
         robot_states = {}
         for robot_id, robot in enumerate([self.robot]):
-            joint_reindex = self.get_joint_reindex(robot.name)
+            joint_ids_reindex = self._get_joint_ids_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
+            root_state = self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :]
+            root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
+            body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
+            body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
+
             state = RobotState(
-                # HACK: robot is always after objects
-                root_state=self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :],
+                root_state=root_state,
                 body_names=self.get_body_names(robot.name),
-                body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
-                joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
-                joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
+                body_state=body_state,
+                joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 0],
+                joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
                 joint_effort_target=self._effort if self._manual_pd_on else None,
@@ -880,6 +894,9 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._body_info[obj_name]["global_indices"][bn] for bn in self.get_body_names(obj_name)]
+
+    def _get_joint_ids_reindex(self, obj_name: str) -> list[int]:
+        return [self._joint_info[obj_name]["global_indices"][jn] for jn in self.get_joint_names(obj_name)]
 
     def get_body_reindexed_indices_from_substring(self, obj_name, body_names: list[str]) -> torch.tensor:
         """given substring of body name, find all the bodies indices in sorted order."""
