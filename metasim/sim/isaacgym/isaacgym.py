@@ -27,7 +27,6 @@ class IsaacgymHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
         self._robot_names = {self.robot.name}
         self._robot_init_pos = self.robot.default_position
-        # self._robot_init_pos = (0, 0, 1)
         self._robot_init_quat = self.robot.default_orientation
         self._cameras = scenario.cameras
 
