@@ -1,7 +1,5 @@
-
 from typing import List
 
-import numpy as np
 import torch
 
 from metasim.cfg.objects import RigidObjCfg
@@ -14,7 +12,6 @@ from ..base_task_cfg import BaseTaskCfg
 
 @configclass
 class AllegroHandCfg(BaseTaskCfg):
-
     episode_length = 600
     traj_filepath = None
     task_type = TaskType.TABLETOP_MANIPULATION
@@ -76,11 +73,7 @@ class AllegroHandCfg(BaseTaskCfg):
                 ),
             ]
 
-    observation_space = {
-        "full_no_vel": 50,
-        "full": 72,
-        "full_state": 88
-    }
+    observation_space = {"full_no_vel": 50, "full": 72, "full_state": 88}
 
     randomize = {
         "robot": {
@@ -104,7 +97,7 @@ class AllegroHandCfg(BaseTaskCfg):
                     "y": [-1.0, 1.0],
                     "z": [-1.0, 1.0],
                     "w": [-1.0, 1.0],
-                }
+                },
             },
             "goal": {
                 "orientation": {
@@ -113,8 +106,8 @@ class AllegroHandCfg(BaseTaskCfg):
                     "z": [-1.0, 1.0],
                     "w": [-1.0, 1.0],
                 }
-            }
-        }
+            },
+        },
     }
 
     def get_observation(self, states):
@@ -167,7 +160,9 @@ class AllegroHandCfg(BaseTaskCfg):
                     target_pos,
                     target_rot,
                     quat_diff,
-                    self._get_prev_actions(i) if hasattr(self, '_prev_actions') and self._prev_actions is not None else torch.zeros(16, dtype=torch.float32),
+                    self._get_prev_actions(i)
+                    if hasattr(self, "_prev_actions") and self._prev_actions is not None
+                    else torch.zeros(16, dtype=torch.float32),
                 ])
             elif self.obs_type == "full":
                 if "joint_qvel" in robot_state:
@@ -176,7 +171,9 @@ class AllegroHandCfg(BaseTaskCfg):
                     hand_vel = torch.tensor([v for v in robot_state["dof_vel"].values()], dtype=torch.float32)
                 else:
                     hand_vel = torch.zeros(16, dtype=torch.float32)
-                object_vel = torch.tensor(block_state.get("lin_vel", block_state.get("vel", [0.0, 0.0, 0.0])), dtype=torch.float32)
+                object_vel = torch.tensor(
+                    block_state.get("lin_vel", block_state.get("vel", [0.0, 0.0, 0.0])), dtype=torch.float32
+                )
                 object_ang_vel = torch.tensor(block_state.get("ang_vel", [0.0, 0.0, 0.0]), dtype=torch.float32)
 
                 obs = torch.cat([
@@ -189,7 +186,9 @@ class AllegroHandCfg(BaseTaskCfg):
                     target_pos,
                     target_rot,
                     quat_diff,
-                    self._get_prev_actions(i) if hasattr(self, '_prev_actions') and self._prev_actions is not None else torch.zeros(16, dtype=torch.float32),
+                    self._get_prev_actions(i)
+                    if hasattr(self, "_prev_actions") and self._prev_actions is not None
+                    else torch.zeros(16, dtype=torch.float32),
                 ])
             elif self.obs_type == "full_state":
                 if "joint_qvel" in robot_state:
@@ -212,11 +211,13 @@ class AllegroHandCfg(BaseTaskCfg):
                     target_pos,
                     target_rot,
                     quat_diff,
-                    self._get_prev_actions(i) if hasattr(self, '_prev_actions') and self._prev_actions is not None else torch.zeros(16, dtype=torch.float32),
+                    self._get_prev_actions(i)
+                    if hasattr(self, "_prev_actions") and self._prev_actions is not None
+                    else torch.zeros(16, dtype=torch.float32),
                 ])
 
             if torch.isnan(obs).any():
-                print(f"Warning: NaN detected in observation. Replacing with zeros.")
+                print("Warning: NaN detected in observation. Replacing with zeros.")
                 obs = torch.nan_to_num(obs, nan=0.0)
 
             observations.append(obs)
@@ -224,14 +225,16 @@ class AllegroHandCfg(BaseTaskCfg):
         return torch.stack(observations) if observations else torch.zeros((0, 50))
 
     def reward_fn(self, states, actions):
-        if not hasattr(self, '_debug_printed_reward'):
+        if not hasattr(self, "_debug_printed_reward"):
             print(f"Reward fn - States type: {type(states)}")
-            print(f"Reward fn - States class name: {states.__class__.__name__ if hasattr(states, '__class__') else 'No class'}")
-            if hasattr(states, '__dict__'):
+            print(
+                f"Reward fn - States class name: {states.__class__.__name__ if hasattr(states, '__class__') else 'No class'}"
+            )
+            if hasattr(states, "__dict__"):
                 print(f"Reward fn - States attributes: {list(states.__dict__.keys())}")
             self._debug_printed_reward = True
 
-        if hasattr(self, '_prev_actions'):
+        if hasattr(self, "_prev_actions"):
             num_envs = len(actions)
             if self._prev_actions is None or self._prev_actions.shape[0] != num_envs:
                 self._prev_actions = torch.zeros((num_envs, 16), dtype=torch.float32)
@@ -242,12 +245,12 @@ class AllegroHandCfg(BaseTaskCfg):
                     if "dof_pos_target" in act[robot_name]:
                         action_values = list(act[robot_name]["dof_pos_target"].values())
                         self._prev_actions[i] = torch.tensor(action_values, dtype=torch.float32)
-        if hasattr(states, '__class__') and states.__class__.__name__ == 'TensorState':
-            if not hasattr(self, '_debug_printed_objects'):
+        if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
+            if not hasattr(self, "_debug_printed_objects"):
                 print(f"Objects in states: {list(states.objects.keys())}")
                 for obj_name, obj_state in states.objects.items():
                     print(f"Object '{obj_name}' has attributes: {dir(obj_state)}")
-                    if hasattr(obj_state, 'root_state'):
+                    if hasattr(obj_state, "root_state"):
                         print(f"Object '{obj_name}' root_state shape: {obj_state.root_state.shape}")
                         print(f"Object '{obj_name}' root_state sample: {obj_state.root_state[0]}")
                 self._debug_printed_objects = True
@@ -257,7 +260,14 @@ class AllegroHandCfg(BaseTaskCfg):
 
             if object_state is None or goal_state is None:
                 print(f"ERROR: Missing objects - block: {object_state is not None}, goal: {goal_state is not None}")
-                return torch.zeros(len(actions), device=actions[0][list(actions[0].keys())[0]]["dof_pos_target"][list(actions[0][list(actions[0].keys())[0]]["dof_pos_target"].keys())[0]].device if isinstance(actions[0], dict) else torch.device('cpu'))
+                return torch.zeros(
+                    len(actions),
+                    device=actions[0][list(actions[0].keys())[0]]["dof_pos_target"][
+                        list(actions[0][list(actions[0].keys())[0]]["dof_pos_target"].keys())[0]
+                    ].device
+                    if isinstance(actions[0], dict)
+                    else torch.device("cpu"),
+                )
 
             object_pos = object_state.root_state[:, :3]
             object_rot = object_state.root_state[:, 3:7]
@@ -289,15 +299,11 @@ class AllegroHandCfg(BaseTaskCfg):
             quat_dot = torch.abs(torch.sum(object_rot * goal_rot, dim=1))
             quat_dot = torch.clamp(quat_dot, min=0.0, max=1.0)
 
-            rot_dist = torch.where(
-                quat_dot >= 1.0,
-                torch.zeros_like(quat_dot),
-                2.0 * torch.acos(quat_dot)
-            )
+            rot_dist = torch.where(quat_dot >= 1.0, torch.zeros_like(quat_dot), 2.0 * torch.acos(quat_dot))
 
             rot_reward = self.rot_reward_scale / (torch.abs(rot_dist) + self.rot_eps)
 
-            action_penalty = torch.sum(action_tensor ** 2, dim=1) * self.action_penalty_scale
+            action_penalty = torch.sum(action_tensor**2, dim=1) * self.action_penalty_scale
 
             rewards = dist_reward + rot_reward + action_penalty
 
@@ -342,7 +348,7 @@ class AllegroHandCfg(BaseTaskCfg):
 
                 rot_reward = self.rot_reward_scale / (torch.abs(rot_dist) + self.rot_eps)
 
-                action_penalty = torch.sum(action ** 2) * self.action_penalty_scale
+                action_penalty = torch.sum(action**2) * self.action_penalty_scale
 
                 reward = dist_reward + rot_reward + action_penalty
 
@@ -357,7 +363,7 @@ class AllegroHandCfg(BaseTaskCfg):
             return torch.tensor(rewards) if rewards else torch.tensor([0.0])
 
     def termination_fn(self, states):
-        if hasattr(states, '__class__') and states.__class__.__name__ == 'TensorState':
+        if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
             robot_state = states.robots["allegro_hand"]
             block_state = states.objects["block"]
 
@@ -414,7 +420,7 @@ class AllegroHandCfg(BaseTaskCfg):
         pass
 
     def _get_prev_actions(self, env_idx):
-        if hasattr(self, '_prev_actions') and self._prev_actions is not None:
+        if hasattr(self, "_prev_actions") and self._prev_actions is not None:
             if env_idx < len(self._prev_actions):
                 return self._prev_actions[env_idx]
         return torch.zeros(16, dtype=torch.float32)

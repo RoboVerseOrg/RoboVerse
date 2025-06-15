@@ -7,7 +7,7 @@ from .dmcontrol_base import DMControlBaseCfg
 @configclass
 class CartpoleBalanceCfg(DMControlBaseCfg):
     """Cartpole balance task from dm_control suite."""
-    
+
     domain_name = "cartpole"
     task_name = "balance"
     episode_length = 1000

@@ -12,10 +12,9 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import hydra
 import numpy as np
+import wandb
 from omegaconf import DictConfig, OmegaConf
 from termcolor import cprint
-
-import wandb
 
 
 def set_np_formatting():
@@ -40,8 +39,7 @@ def main(cfg: DictConfig):
         import isaacgym  # noqa: F401
 
     from metasim.cfg.scenario import ScenarioCfg
-    from metasim.utils.setup_util import (SimType, get_robot,
-                                          get_sim_env_class, get_task)
+    from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
     from roboverse_learn.rl.algos import get_algorithm
     from roboverse_learn.rl.env import RLEnvWrapper
 
@@ -50,13 +48,16 @@ def main(cfg: DictConfig):
 
     tic = time.time()
 
-    if cfg.train.task_name.startswith("dmcontrol:") or (cfg.train.robot_name == "none" and not cfg.train.task_name.startswith("ogbench:")):
+    if cfg.train.task_name.startswith("dmcontrol:") or (
+        cfg.train.robot_name == "none" and not cfg.train.task_name.startswith("ogbench:")
+    ):
         scenario = ScenarioCfg(task=task, robots=[])
         scenario.cameras = []
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
 
         from metasim.cfg.tasks.dmcontrol.dmcontrol_env import DMControlEnv
+
         env = DMControlEnv(scenario)
     elif cfg.train.task_name.startswith("ogbench:"):
         task.traj_filepath = None
@@ -66,6 +67,7 @@ def main(cfg: DictConfig):
         scenario.headless = cfg.environment.headless
 
         from metasim.cfg.tasks.ogbench.ogbench_env import OGBenchEnv
+
         env = OGBenchEnv(scenario=scenario, handler=None)
     else:
         robot = get_robot(cfg.train.robot_name)

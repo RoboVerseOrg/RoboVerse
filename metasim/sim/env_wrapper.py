@@ -71,7 +71,9 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32)
+            return gym.spaces.Box(
+                low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
     return IdentityEnv
 
@@ -158,16 +160,18 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32)
+            return gym.spaces.Box(
+                low=action_low.numpy(), high=action_high.numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
         @property
         def observation_space(self) -> gym.Space:
             # For now, return a simple Box space based on the first observation
             # This is a temporary fix for AllegroHand and similar tasks
             # TODO: Implement proper observation space handling
-            
+
             # Get observation shape from task if available
-            if hasattr(self.handler.scenario.task, 'obs_type'):
+            if hasattr(self.handler.scenario.task, "obs_type"):
                 if self.handler.scenario.task.obs_type == "full_no_vel":
                     obs_shape = (50,)  # AllegroHand full_no_vel
                 elif self.handler.scenario.task.obs_type == "full":
@@ -178,12 +182,7 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
                     obs_shape = (50,)  # Default
             else:
                 obs_shape = (50,)  # Default fallback
-                
-            return gym.spaces.Box(
-                low=-np.inf, 
-                high=np.inf, 
-                shape=obs_shape, 
-                dtype=np.float32
-            )
+
+            return gym.spaces.Box(low=-np.inf, high=np.inf, shape=obs_shape, dtype=np.float32)
 
     return GymEnv

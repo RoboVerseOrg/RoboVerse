@@ -7,7 +7,7 @@ from .dmcontrol_base import DMControlBaseCfg
 @configclass
 class HopperStandCfg(DMControlBaseCfg):
     """Hopper stand task from dm_control suite."""
-    
+
     domain_name = "hopper"
     task_name = "stand"
     episode_length = 1000

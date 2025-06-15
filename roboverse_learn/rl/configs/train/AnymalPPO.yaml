@@ -17,17 +17,17 @@ experiment:
   seed: 42
   torch_deterministic: false
   max_iterations: 10000
-  
+
 observation_space:
   shape: [48]
-  
+
 action_space:
   shape: [12]
-  
+
 ppo:
   normalize_advantage: true
   normalize_observation: true
-  
+
   # Network
   network:
     mlp:
@@ -35,7 +35,7 @@ ppo:
       activation: "elu"
       initializer:
         name: "default"
-        
+
   # Training parameters
   value_loss_coef: 1.0
   entropy_coef: 0.0
@@ -50,7 +50,7 @@ ppo:
   value_bootstrap: true
   critic_coef: 2.0
   bounds_loss_coef: 0.0
-  
+
   # PPO specific
   num_actors: ${environment.num_envs}
   horizon_length: 24  # Shorter horizon for locomotion
@@ -59,7 +59,7 @@ ppo:
   clip_value: true
   reward_shaper:
     scale_value: 0.01
-  
+
   # Locomotion specific parameters
   normalize_input: true
   normalize_value: true
@@ -67,13 +67,13 @@ ppo:
   reward_scale_value: 0.01
   truncate_grads: true
   grad_norm: 1.0
-  
+
   # Action parameters
   action_num: 12
   actions_num: 12
   control:
     actionScale: 0.5
-  
+
   # Saves
   save_frequency: 100
   save_best_after: 50

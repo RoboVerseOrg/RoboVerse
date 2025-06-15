@@ -1,24 +1,25 @@
-import numpy as np
+from typing import Any, Dict, Optional
+
 import torch
-from typing import Dict, List, Optional, Any
 
 from metasim.cfg.checkers import EmptyChecker
 from metasim.constants import TaskType
 from metasim.utils import configclass
+
 from ..base_task_cfg import BaseTaskCfg
-from .dm_wrapper import DMControlWrapper, DM_CONTROL_AVAILABLE
+from .dm_wrapper import DM_CONTROL_AVAILABLE, DMControlWrapper
 
 
 @configclass
 class DMControlBaseCfg(BaseTaskCfg):
     """Base configuration for dm_control tasks."""
-    
+
     episode_length = 1000
     traj_filepath = None
     task_type = TaskType.LOCOMOTION
     objects = []
     checker = EmptyChecker()
-    
+
     # dm_control specific parameters
     domain_name: str = None
     task_name: str = None
@@ -26,12 +27,12 @@ class DMControlBaseCfg(BaseTaskCfg):
     time_limit: Optional[float] = None
     environment_kwargs: Optional[Dict[str, Any]] = None
     random_state: Optional[int] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         self._wrapper = None
         self._initialized = False
-        
+
         # Set observation space based on dm_control environment
         if DM_CONTROL_AVAILABLE and self.domain_name and self.task_name:
             # Create temporary wrapper to get dimensions
@@ -40,23 +41,23 @@ class DMControlBaseCfg(BaseTaskCfg):
                 task_name=self.task_name,
                 num_envs=1,
                 time_limit=self.time_limit,
-                visualize_reward=False
+                visualize_reward=False,
             )
-            
+
             self.observation_space = {"shape": [temp_wrapper.obs_dim]}
             self.action_dim = temp_wrapper.action_dim
-            
+
             temp_wrapper.close()
         else:
             # Default values if dm_control is not available
             self.observation_space = {"shape": [50]}  # Default observation size
             self.action_dim = 6  # Default action size
-    
+
     def get_wrapper(self, num_envs: int = 1, headless: bool = True) -> DMControlWrapper:
         """Get the dm_control wrapper."""
         if not DM_CONTROL_AVAILABLE:
             raise ImportError("dm_control is not installed. Please install it with: pip install dm-control")
-            
+
         if self._wrapper is None:
             self._wrapper = DMControlWrapper(
                 domain_name=self.domain_name,
@@ -66,11 +67,11 @@ class DMControlBaseCfg(BaseTaskCfg):
                 visualize_reward=self.visualize_reward,
                 environment_kwargs=self.environment_kwargs,
                 random_state=self.random_state,
-                headless=headless
+                headless=headless,
             )
-        
+
         return self._wrapper
-    
+
     def get_observation(self, obs_tensor):
         """Return observations from dm_control wrapper."""
         # The wrapper already returns flattened torch tensors
@@ -79,7 +80,7 @@ class DMControlBaseCfg(BaseTaskCfg):
         else:
             # Convert to tensor if needed
             return torch.tensor(obs_tensor, dtype=torch.float32)
-    
+
     def reward_fn(self, reward_tensor):
         """Return rewards from dm_control wrapper."""
         # The wrapper already returns reward tensors
@@ -87,7 +88,7 @@ class DMControlBaseCfg(BaseTaskCfg):
             return reward_tensor
         else:
             return torch.tensor(reward_tensor, dtype=torch.float32)
-    
+
     def termination_fn(self, done_tensor):
         """Return terminations from dm_control wrapper."""
         # The wrapper already returns done tensors
@@ -95,16 +96,16 @@ class DMControlBaseCfg(BaseTaskCfg):
             return done_tensor
         else:
             return torch.tensor(done_tensor, dtype=torch.bool)
-    
+
     def build_scene(self, config=None):
         """Initialize the dm_control wrapper."""
         self._initialized = True
-    
+
     def reset(self, env_ids=None):
         """Reset dm_control environment."""
         # Reset handled by wrapper
         pass
-    
+
     def post_reset(self):
         """Called after reset."""
         pass

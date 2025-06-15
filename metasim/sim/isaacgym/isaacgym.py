@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 import math
-import os
 
 import numpy as np
 import torch
 from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 from loguru import logger as log
 
-from metasim.cfg.objects import (ArticulationObjCfg, BaseObjCfg,
-                                 PrimitiveCubeCfg, PrimitiveSphereCfg,
-                                 RigidObjCfg, _FileBasedMixin)
+from metasim.cfg.objects import (
+    ArticulationObjCfg,
+    BaseObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+    _FileBasedMixin,
+)
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
-from metasim.utils.state import (CameraState, ObjectState, RobotState,
-                                 TensorState)
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class IsaacgymHandler(BaseSimHandler):
@@ -226,7 +229,7 @@ class IsaacgymHandler(BaseSimHandler):
             if object.fix_base_link:
                 asset_options.fix_base_link = True
             # For XFORM physics (goal object), disable gravity
-            if hasattr(object, 'physics') and object.physics == PhysicStateType.XFORM:
+            if hasattr(object, "physics") and object.physics == PhysicStateType.XFORM:
                 asset_options.disable_gravity = True
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
 
@@ -343,7 +346,9 @@ class IsaacgymHandler(BaseSimHandler):
 
         robot_pose = gymapi.Transform()
         robot_pose.p = gymapi.Vec3(*self._robot_init_pose)
-        robot_pose.r = gymapi.Quat(*self._robot_init_quat[1:], self._robot_init_quat[0])  # x, y, z, w order for gymapi.Quat
+        robot_pose.r = gymapi.Quat(
+            *self._robot_init_quat[1:], self._robot_init_quat[0]
+        )  # x, y, z, w order for gymapi.Quat
 
         # add ground plane
         plane_params = gymapi.PlaneParams()
@@ -442,11 +447,14 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_pose.p.y = obj.default_position[1]
                 obj_pose.p.z = obj.default_position[2]
                 # Use default orientation from object configuration
-                obj_pose.r = gymapi.Quat(obj.default_orientation[1], obj.default_orientation[2],
-                                         obj.default_orientation[3], obj.default_orientation[0])  # x, y, z, w order
+                obj_pose.r = gymapi.Quat(
+                    obj.default_orientation[1],
+                    obj.default_orientation[2],
+                    obj.default_orientation[3],
+                    obj.default_orientation[0],
+                )  # x, y, z, w order
                 # Create actor with collision group 0 and filter 0 (matches IsaacGymEnvs)
                 obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, obj.name, i, 0, 0)
-
 
                 if isinstance(self.objects[obj_i], _FileBasedMixin):
                     self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])

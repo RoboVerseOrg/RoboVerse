@@ -57,7 +57,7 @@ class RLEnvWrapper:
         current_states = self.env.handler.get_states()
 
         # Handle TensorState (IsaacGym, etc.) - these simulators handle reset internally
-        if hasattr(current_states, '__class__') and current_states.__class__.__name__ == 'TensorState':
+        if hasattr(current_states, "__class__") and current_states.__class__.__name__ == "TensorState":
             # For tensor-based simulators like IsaacGym, reset is handled differently.
             # The task's reset() method should handle setting robots to default positions.
             # This is because IsaacGym uses GPU tensors and requires special handling.
@@ -79,10 +79,7 @@ class RLEnvWrapper:
                     reset_states.append(current_states[i])
                 else:
                     # Create default state for environments being reset
-                    state = {
-                        "robots": {},
-                        "objects": {}
-                    }
+                    state = {"robots": {}, "objects": {}}
 
                     # Set robot to default state
                     robot_state = {}
@@ -154,7 +151,7 @@ class RLEnvWrapper:
         states = self.env.handler.get_states()
 
         # Handle TensorState object from IsaacGym
-        if hasattr(states, '__class__') and states.__class__.__name__ == 'TensorState':
+        if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
             # For IsaacGym/TensorState, we don't randomize here as it's handled in the task reset
             return states
 
@@ -333,7 +330,9 @@ class RLEnvWrapper:
             observation = self.get_observation(states)
 
             if self.rgb_observation:
-                observation["rgb"] = torch.zeros(self.num_envs, 3, self.camera_resolution_height, self.camera_resolution_width, device=self.device)
+                observation["rgb"] = torch.zeros(
+                    self.num_envs, 3, self.camera_resolution_height, self.camera_resolution_width, device=self.device
+                )
 
             reward = torch.nan_to_num(reward, nan=0.0)
 
@@ -415,7 +414,7 @@ class RLEnvWrapper:
             states, _ = self.env.reset(env_ids=env_ids)
 
         # Call task-specific reset if available
-        if hasattr(self._task, 'reset'):
+        if hasattr(self._task, "reset"):
             self._task.reset(env_ids=env_ids)
 
         observation = self.get_observation(states)
@@ -434,9 +433,9 @@ class RLEnvWrapper:
         """Process the observation from the handler/GymEnv state format into the dict expected by PPO."""
 
         # Check if the task has its own get_observation method (e.g., AllegroHand)
-        if hasattr(self.scenario.task, 'get_observation'):
+        if hasattr(self.scenario.task, "get_observation"):
             # For TensorState objects, we need to convert to the format expected by the task
-            if hasattr(states, '__class__') and states.__class__.__name__ == 'TensorState':
+            if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
                 # Convert TensorState to list of dicts for task's get_observation
                 states_list = []
                 for i in range(self.num_envs):
@@ -448,8 +447,16 @@ class RLEnvWrapper:
                     # Extract robot states
                     for robot_name, robot_state in states.robots.items():
                         # Extract and clean position/rotation data
-                        pos_data = robot_state.root_state[i, :3].cpu() if robot_state.root_state is not None else torch.tensor([0.0, 0.0, 0.0])
-                        rot_data = robot_state.root_state[i, 3:7].cpu() if robot_state.root_state is not None else torch.tensor([1.0, 0.0, 0.0, 0.0])
+                        pos_data = (
+                            robot_state.root_state[i, :3].cpu()
+                            if robot_state.root_state is not None
+                            else torch.tensor([0.0, 0.0, 0.0])
+                        )
+                        rot_data = (
+                            robot_state.root_state[i, 3:7].cpu()
+                            if robot_state.root_state is not None
+                            else torch.tensor([1.0, 0.0, 0.0, 0.0])
+                        )
 
                         # Normalize quaternion to prevent NaN
                         rot_norm = torch.norm(rot_data)
@@ -461,10 +468,24 @@ class RLEnvWrapper:
                         state_dict["robots"][robot_name] = {
                             "pos": torch.nan_to_num(pos_data, nan=0.0).numpy(),
                             "rot": rot_data.numpy(),
-                            "joint_qpos": torch.nan_to_num(robot_state.joint_pos[i].cpu(), nan=0.0).numpy() if robot_state.joint_pos is not None else np.zeros(16),
-                            "joint_qvel": torch.nan_to_num(robot_state.joint_vel[i].cpu(), nan=0.0).numpy() if robot_state.joint_vel is not None else np.zeros(16),
-                            "dof_pos": {f"joint_{j}": float(torch.nan_to_num(robot_state.joint_pos[i, j], nan=0.0).item()) for j in range(robot_state.joint_pos.shape[1])} if robot_state.joint_pos is not None else {},
-                            "dof_vel": {f"joint_{j}": float(torch.nan_to_num(robot_state.joint_vel[i, j], nan=0.0).item()) for j in range(robot_state.joint_vel.shape[1])} if robot_state.joint_vel is not None else {},
+                            "joint_qpos": torch.nan_to_num(robot_state.joint_pos[i].cpu(), nan=0.0).numpy()
+                            if robot_state.joint_pos is not None
+                            else np.zeros(16),
+                            "joint_qvel": torch.nan_to_num(robot_state.joint_vel[i].cpu(), nan=0.0).numpy()
+                            if robot_state.joint_vel is not None
+                            else np.zeros(16),
+                            "dof_pos": {
+                                f"joint_{j}": float(torch.nan_to_num(robot_state.joint_pos[i, j], nan=0.0).item())
+                                for j in range(robot_state.joint_pos.shape[1])
+                            }
+                            if robot_state.joint_pos is not None
+                            else {},
+                            "dof_vel": {
+                                f"joint_{j}": float(torch.nan_to_num(robot_state.joint_vel[i, j], nan=0.0).item())
+                                for j in range(robot_state.joint_vel.shape[1])
+                            }
+                            if robot_state.joint_vel is not None
+                            else {},
                         }
 
                     # Extract object states

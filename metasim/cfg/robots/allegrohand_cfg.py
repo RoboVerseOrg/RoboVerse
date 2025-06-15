@@ -78,9 +78,9 @@ class AllegroHandCfg(BaseRobotCfg):
 
     # Default orientation for AllegroHand - from IsaacGym reference
     default_orientation: tuple[float, float, float, float] = (
-        0.2575507164001465,   # w
+        0.2575507164001465,  # w
         0.28304457664489746,  # x
-        0.6833299994468689,   # y
+        0.6833299994468689,  # y
         -0.6217824220657349,  # z
     )  # w, x, y, z
 
