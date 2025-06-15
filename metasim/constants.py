@@ -47,6 +47,9 @@ class BenchmarkType(enum.Enum):
 
     ## humanoid
     HUMANOIDBENCH = "HumanoidBench"
+    
+    ## dm_control
+    DMCONTROL = "DMControl"
 
     ## Debug
     DEBUG = "Debug"
