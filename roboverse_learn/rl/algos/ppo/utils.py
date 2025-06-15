@@ -74,7 +74,10 @@ class RunningMeanStd(nn.Module):
     def forward(self, input, unnorm=False):
         if self.training:
             mean = input.mean(self.axis)  # along channel axis
-            var = input.var(self.axis)
+            if input.size()[0] == 1:
+                var = self.running_var if self.count > 1 else torch.ones_like(mean)
+            else:
+                var = input.var(self.axis)
             self.running_mean, self.running_var, self.count = self._update_mean_var_count_from_moments(
                 self.running_mean, self.running_var, self.count, mean, var, input.size()[0]
             )
@@ -107,5 +110,8 @@ class RunningMeanStd(nn.Module):
                 std = torch.sqrt(current_var.float() + self.epsilon)
                 std = torch.clamp(std, min=0.01)  # Prevent extremely small std
                 y = (input - current_mean.float()) / std
+                if torch.isnan(y).any() or torch.isinf(y).any():
+                    print(f"NaN/inf in normalization output. Input range: [{input.min():.3f}, {input.max():.3f}], Mean: {current_mean.float().mean():.3f}, Std: {std.mean():.3f}")
+                    y = torch.nan_to_num(y, nan=0.0, posinf=5.0, neginf=-5.0)
                 y = torch.clamp(y, min=-5.0, max=5.0)
         return y

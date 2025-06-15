@@ -47,15 +47,15 @@ class RLEnvWrapper:
         if magnitude < 1e-10:  # Avoid division by zero
             return (1.0, 0.0, 0.0, 0.0)
         return (w / magnitude, x / magnitude, y / magnitude, z / magnitude)
-    
+
     def _get_default_reset_states(self, env_ids: list[int] | None = None):
         """Get default reset states for the environments."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-            
+
         # Get current states to determine the format
         current_states = self.env.handler.get_states()
-        
+
         # Handle TensorState (IsaacGym, etc.) - these simulators handle reset internally
         if hasattr(current_states, '__class__') and current_states.__class__.__name__ == 'TensorState':
             # For tensor-based simulators like IsaacGym, reset is handled differently.
@@ -63,16 +63,16 @@ class RLEnvWrapper:
             # This is because IsaacGym uses GPU tensors and requires special handling.
             # TODO: Consider implementing a unified reset interface for all simulators.
             return None
-        
+
         # Handle list of states (MuJoCo, SAPIEN, etc.)
         if isinstance(current_states, list):
             reset_states = []
             robot = self._robot
-            
+
             # For dm_control tasks, return None to let the wrapper handle reset
             if robot is None:
                 return None
-            
+
             for i in range(self.num_envs):
                 if i not in env_ids:
                     # Keep current state for environments not being reset
@@ -83,26 +83,26 @@ class RLEnvWrapper:
                         "robots": {},
                         "objects": {}
                     }
-                    
+
                     # Set robot to default state
                     robot_state = {}
-                    
+
                     # Set default position
                     if hasattr(robot, "default_position"):
                         robot_state["pos"] = list(robot.default_position)
                     else:
                         robot_state["pos"] = [0.0, 0.0, 0.0]
-                    
+
                     # Set default orientation
                     if hasattr(robot, "default_orientation"):
                         robot_state["rot"] = list(robot.default_orientation)
                     else:
                         robot_state["rot"] = [1.0, 0.0, 0.0, 0.0]
-                    
+
                     # Set default velocities to zero
                     robot_state["lin_vel"] = [0.0, 0.0, 0.0]
                     robot_state["ang_vel"] = [0.0, 0.0, 0.0]
-                    
+
                     # Set default joint positions
                     if hasattr(robot, "default_joint_positions"):
                         robot_state["dof_pos"] = dict(robot.default_joint_positions)
@@ -110,7 +110,7 @@ class RLEnvWrapper:
                     else:
                         robot_state["dof_pos"] = {}
                         robot_state["joint_qpos"] = []
-                    
+
                     # Set default joint velocities to zero
                     if hasattr(robot, "default_joint_positions"):
                         robot_state["dof_vel"] = {name: 0.0 for name in robot.default_joint_positions.keys()}
@@ -118,32 +118,32 @@ class RLEnvWrapper:
                     else:
                         robot_state["dof_vel"] = {}
                         robot_state["joint_qvel"] = []
-                    
+
                     state["robots"][robot.name] = robot_state
-                    
+
                     # Set objects to default states
                     for obj in self.scenario.task.objects:
                         obj_state = {}
-                        
+
                         if hasattr(obj, "default_position"):
                             obj_state["pos"] = list(obj.default_position)
                         else:
                             obj_state["pos"] = [0.0, 0.0, 0.0]
-                            
+
                         if hasattr(obj, "default_orientation"):
                             obj_state["rot"] = list(obj.default_orientation)
                         else:
                             obj_state["rot"] = [1.0, 0.0, 0.0, 0.0]
-                        
+
                         obj_state["lin_vel"] = [0.0, 0.0, 0.0]
                         obj_state["ang_vel"] = [0.0, 0.0, 0.0]
-                        
+
                         state["objects"][obj.name] = obj_state
-                    
+
                     reset_states.append(state)
-            
+
             return reset_states
-        
+
         # Unknown state format
         return None
 
@@ -316,7 +316,7 @@ class RLEnvWrapper:
             action = action.to(self.device)
         else:
             action = torch.tensor(action, device=self.device, dtype=torch.float32)
-            
+
         if isinstance(action_space, gym.spaces.box.Box):
             action_low = torch.tensor(action_space.low, device=self.device, dtype=torch.float32)
             action_high = torch.tensor(action_space.high, device=self.device, dtype=torch.float32)
@@ -331,31 +331,31 @@ class RLEnvWrapper:
         if self._robot is None:
             states, reward, success, timeout, extra = self.env.step(processed_action)
             observation = self.get_observation(states)
-            
+
             if self.rgb_observation:
                 observation["rgb"] = torch.zeros(self.num_envs, 3, self.camera_resolution_height, self.camera_resolution_width, device=self.device)
-            
+
             reward = torch.nan_to_num(reward, nan=0.0)
-            
+
             reset_mask = success | timeout
             self.reset_buffer[:, 0] = reset_mask.float()
             self.timestep_buffer += 1
-            
+
             reset_indices = torch.where(reset_mask)[0]
             if len(reset_indices) > 0:
                 reset_env_ids = reset_indices.tolist()
                 self.reset(env_ids=reset_env_ids)
-            
+
             self.success_buffer = success
-            
+
             # Ensure reward and timeout have the right shape for PPO
             if reward.dim() == 1:
                 reward = reward.unsqueeze(-1)
             if timeout.dim() == 1:
                 timeout = timeout.unsqueeze(-1)
-                
+
             return observation, reward.to(self.device), success.to(self.device), timeout.to(self.device), extra or {}
-        
+
         joint_names = list(self._robot.actuators.keys())
 
         action_dict = []
@@ -407,7 +407,7 @@ class RLEnvWrapper:
 
         # Get the default states for reset
         reset_states = self._get_default_reset_states(env_ids=env_ids)
-        
+
         # Reset the environments with the default states
         if reset_states is not None:
             states, _ = self.env.reset(env_ids=env_ids, states=reset_states)
@@ -423,7 +423,7 @@ class RLEnvWrapper:
         self.reset_buffer[reset_indices] = torch.ones_like(self.reset_buffer[reset_indices])
         self.timestep_buffer[reset_indices] = torch.zeros_like(self.timestep_buffer[reset_indices])
         self.success_buffer[reset_indices] = torch.zeros_like(self.success_buffer[reset_indices])
-        
+
         # Reset episode length buffer for the reset environments
         for idx in reset_indices:
             self.env._episode_length_buf[idx] = 0
@@ -507,6 +507,23 @@ class RLEnvWrapper:
                 obs = torch.nan_to_num(obs, nan=0.0)
 
             return {"obs": obs}
+
+        if isinstance(states, list) and len(states) > 0 and isinstance(states[0], dict) and "observations" in states[0]:
+            obs_list = []
+            for state in states:
+                obs = state["observations"]
+                if isinstance(obs, (list, tuple)):
+                    obs = np.array(obs)
+                obs_list.append(obs)
+
+            obs_array = np.array(obs_list)
+            obs_tensor = torch.tensor(obs_array, device=self.device, dtype=torch.float32)
+
+            if torch.isnan(obs_tensor).any():
+                print(f"Warning: NaN detected in OGBench observations. Shape: {obs_tensor.shape}")
+                obs_tensor = torch.nan_to_num(obs_tensor, nan=0.0)
+
+            return {"obs": obs_tensor}
 
         # Fallback to original implementation for tasks without get_observation
         # XXX: currently only one of "joint_qpos" or "rgb" is supported. If there's a mixture of

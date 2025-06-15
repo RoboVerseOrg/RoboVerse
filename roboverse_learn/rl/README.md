@@ -279,3 +279,25 @@ To add support for new tasks:
 1. Create a task configuration in `metasim/cfg/tasks/`
 2. Create corresponding training configurations in `configs/train/`
 3. Follow the naming convention: `<TaskName><Algorithm>.yaml`
+
+## OGBench Tasks
+
+OGBench provides offline goal-conditioned RL benchmarks with locomotion and manipulation tasks:
+
+### Supported OGBench Environments
+- **Locomotion**: AntMaze (large, medium, giant), HumanoidMaze (large, medium, giant)
+- **Manipulation**: Cube (double, triple, quadruple play)
+
+### Training Commands
+```bash
+# AntMaze tasks
+python roboverse_learn/rl/train_rl.py train=AntMazeLargeNavigatePPO
+
+# HumanoidMaze tasks
+python roboverse_learn/rl/train_rl.py train=HumanoidMazeLargeNavigatePPO
+
+# Cube manipulation tasks
+python roboverse_learn/rl/train_rl.py train=CubeDoublePlayPPO
+```
+
+Note: OGBench integration is experimental and may require additional configuration for optimal performance (we need offline RL algos)

@@ -50,6 +50,9 @@ class BenchmarkType(enum.Enum):
     
     ## dm_control
     DMCONTROL = "DMControl"
+    
+    ## OGBench
+    OGBENCH = "OGBench"
 
     ## Debug
     DEBUG = "Debug"
