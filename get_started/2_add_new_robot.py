@@ -51,15 +51,14 @@ args = tyro.cli(Args)
 robot = BaseRobotCfg(
     name="new_robot_h1",
     num_joints=26,
-    # usd_path="get_started/example_assets/h1/usd/h1.usd",
-    # mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
+    usd_path="get_started/example_assets/h1/usd/h1.usd",
+    mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
     urdf_path="get_started/example_assets/h1/urdf/h1_wrist.urdf",
     enabled_gravity=True,
     fix_base_link=False,
     enabled_self_collisions=False,
     isaacgym_flip_visual_attachments=False,
-    # collapse_fixed_joints=True,
-    collapse_fixed_joints=False,
+    collapse_fixed_joints=True,
     actuators={
         "left_hip_yaw": BaseActuatorCfg(),
         "left_hip_roll": BaseActuatorCfg(),
