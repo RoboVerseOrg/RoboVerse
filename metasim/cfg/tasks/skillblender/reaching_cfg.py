@@ -68,7 +68,7 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 5000  # check for potential saves every this many iterations
+        save_interval = 1000  # check for potential saves every this many iterations
         experiment_name = "reaching"
         run_name = ""
         # load and resume
@@ -113,7 +113,7 @@ class ReachingCfg(BaseHumanoidCfg):
         num_position_iterations=4,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=True,
+        replace_cylinder_with_capsule=False,
         friction_offset_threshold=0.04,
         num_threads=10,
     )
@@ -133,13 +133,12 @@ class ReachingCfg(BaseHumanoidCfg):
     frame_stack = 1
     c_frame_stack = 3
     command_dim = 14
-    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
+    num_single_obs = 3 * num_actions + 6 + command_dim
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 3 * num_actions + 60
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
+    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
     commands = CommandsConfig(num_commands=4, resampling_time=10.0)
-    traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
     reward_functions: list[Callable] = [
         reward_wrist_pos,

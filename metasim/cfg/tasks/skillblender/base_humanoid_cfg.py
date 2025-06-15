@@ -38,6 +38,7 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
 
     elbow_indices: torch.Tensor | None = None
     contact_indices: torch.Tensor | None = None
+    traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"
 
     class human:
         delay = 0.0  # delay in seconds

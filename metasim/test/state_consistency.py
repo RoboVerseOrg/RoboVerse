@@ -129,6 +129,9 @@ init_states = [
     }
 ]
 
+if args.sim == "isaacgym":
+    env.handler.simulate()
+
 env.handler.set_states(init_states)
 states = state_tensor_to_nested(env.handler, env.handler.get_states())
 

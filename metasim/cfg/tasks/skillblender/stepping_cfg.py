@@ -67,8 +67,8 @@ class SteppingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 5000  # check for potential saves every this many iterations
-        experiment_name = "h1_stepping"
+        save_interval = 1000  # check for potential saves every this many iterations
+        experiment_name = "stepping"
         run_name = ""
         # load and resume
         resume = False
@@ -111,7 +111,7 @@ class SteppingCfg(BaseHumanoidCfg):
         num_position_iterations=4,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=True,
+        replace_cylinder_with_capsule=False,
         friction_offset_threshold=0.04,
         num_threads=10,
     )
@@ -131,7 +131,6 @@ class SteppingCfg(BaseHumanoidCfg):
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
-    traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
     reward_functions: list[Callable] = [
         reward_feet_pos,
