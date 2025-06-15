@@ -298,6 +298,7 @@ python roboverse_learn/rl/train_rl.py train=HumanoidMazeLargeNavigatePPO
 
 # Cube manipulation tasks
 python roboverse_learn/rl/train_rl.py train=CubeDoublePlayPPO
+python roboverse_learn/rl/train_rl.py train=CubeQuadruplePlayPPO
 ```
 
 Note: OGBench integration is experimental and may require additional configuration for optimal performance (we need offline RL algos)
