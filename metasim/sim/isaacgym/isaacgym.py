@@ -503,6 +503,11 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.viewer_camera_look_at(self.viewer, middle_env, cam_pos, cam_target)
         ################################
 
+    def _reorder_quat_xyzw_to_wxyz(self, state: torch.Tensor) -> torch.Tensor:
+        quat_xyzw = state[..., 3:7]
+        quat_wxyz = torch.cat([quat_xyzw[..., 3:4], quat_xyzw[..., 0:3]], dim=-1)
+        return torch.cat([state[..., 0:3], quat_wxyz, state[..., 7:]], dim=-1)
+
     def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -512,16 +517,22 @@ class IsaacgymHandler(BaseSimHandler):
             if isinstance(obj, ArticulationObjCfg):
                 joint_reindex = self.get_joint_reindex(obj.name)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
+                root_state = self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :]
+                root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
+                body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
+                body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
                 state = ObjectState(
-                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    root_state=root_state,
                     body_names=self.get_body_names(obj.name),
-                    body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
+                    body_state=body_state,
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 )
             else:
+                root_state = self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :]
+                root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
                 state = ObjectState(
-                    root_state=self._root_states.view(self.num_envs, -1, 13)[:, obj_id, :],
+                    root_state=root_state,
                 )
             object_states[obj.name] = state
 
@@ -530,11 +541,14 @@ class IsaacgymHandler(BaseSimHandler):
         for robot_id, robot in enumerate([self.robot]):
             joint_reindex = self.get_joint_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
+            root_state = self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :]
+            root_state = self._reorder_quat_xyzw_to_wxyz(root_state)
+            body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
+            body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
             state = RobotState(
-                # HACK: robot is always after objects
-                root_state=self._root_states.view(self.num_envs, -1, 13)[:, len(self.objects) + robot_id, :],
+                root_state=root_state,
                 body_names=self.get_body_names(robot.name),
-                body_state=self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :],
+                body_state=body_state,
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_reindex, 1],
                 joint_pos_target=None,  # TODO
