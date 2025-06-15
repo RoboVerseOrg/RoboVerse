@@ -19,7 +19,7 @@ class H1Cfg(BaseRobotCfg):
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
-    collapse_fixed_joints: bool = False
+    collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
         "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),

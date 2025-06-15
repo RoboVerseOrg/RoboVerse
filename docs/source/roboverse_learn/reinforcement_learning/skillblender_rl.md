@@ -25,7 +25,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [x]  Walking
 - [x]  Squatting
 - [x]  Stepping
-- [ ]  Reaching
+- [x]  Reaching
 > 8 Loco-Manipulation Tasks
 - [ ]  FarReach
 - [ ]  ButtonPress
@@ -39,6 +39,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 ## Robots supports
 - [x]  h1
 - [ ]  g1
+- [ ]  h1_2
 
 ## Todos
 - [ ] ground type selection

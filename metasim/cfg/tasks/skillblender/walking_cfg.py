@@ -73,8 +73,8 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 5000  # check for potential saves every this many iterations
-        experiment_name = "h1_walking"
+        save_interval = 1000  # check for potential saves every this many iterations
+        experiment_name = "walking"
         run_name = ""
         # load and resume
         resume = False
@@ -112,7 +112,7 @@ class WalkingCfg(BaseHumanoidCfg):
         num_position_iterations=4,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=True,
+        replace_cylinder_with_capsule=False,
         friction_offset_threshold=0.04,
         num_threads=10,
     )

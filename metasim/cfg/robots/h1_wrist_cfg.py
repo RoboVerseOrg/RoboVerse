@@ -10,15 +10,15 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 @configclass
 class H1WristCfg(BaseRobotCfg):
     name: str = "h1_wrist"
-    num_joints: int = 23 #19 revolute, 4 fixed
-    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist_back.urdf"
+    num_joints: int = 19  # 19 revolute, 4 fixed
+    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist.urdf"
     enabled_gravity: bool = True
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
     # collapse_fixed_joints: bool = True
 
-    collapse_fixed_joints: bool = False #must set false to kepp wrist link exist
+    collapse_fixed_joints: bool = False  # must set false to kepp wrist link exist
 
     actuators: dict[str, BaseActuatorCfg] = {
         "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
@@ -40,7 +40,6 @@ class H1WristCfg(BaseRobotCfg):
         "right_shoulder_roll": BaseActuatorCfg(stiffness=100, damping=2),
         "right_shoulder_yaw": BaseActuatorCfg(stiffness=100, damping=2),
         "right_elbow": BaseActuatorCfg(stiffness=100, damping=2),
-
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "left_hip_yaw": (-0.43, 0.43),

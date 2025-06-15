@@ -26,7 +26,8 @@ class IsaacgymHandler(BaseSimHandler):
         super().__init__(scenario)
         self._actions_cache: list[Action] = []
         self._robot_names = {self.robot.name}
-        self._robot_init_pose = self.robot.default_position
+        self._robot_init_pos = self.robot.default_position
+        # self._robot_init_pos = (0, 0, 1)
         self._robot_init_quat = self.robot.default_orientation
         self._cameras = scenario.cameras
 
@@ -342,7 +343,7 @@ class IsaacgymHandler(BaseSimHandler):
         log.info("Creating %d environments" % self.num_envs)
 
         robot_pose = gymapi.Transform()
-        robot_pose.p = gymapi.Vec3(*self._robot_init_pose)
+        robot_pose.p = gymapi.Vec3(*self._robot_init_pos)
 
         # add ground plane
         plane_params = gymapi.PlaneParams()
@@ -477,7 +478,7 @@ class IsaacgymHandler(BaseSimHandler):
 
             # # carefully add robot
             robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 2)
-            self.gym.set_actor_scale(env, robot_handle, self.robot.scale[0])
+
             self._robot_handles.append(robot_handle)
             # set dof properties
             self.gym.set_actor_dof_properties(env, robot_handle, robot_dof_props)
