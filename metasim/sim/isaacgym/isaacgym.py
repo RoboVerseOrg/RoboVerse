@@ -440,7 +440,7 @@ class IsaacgymHandler(BaseSimHandler):
                 obj_pose.p.y = 0.0
                 obj_pose.p.z = 0.0
                 obj_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), 0)
-                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0, 0)
+                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0)
 
                 if isinstance(self.objects[obj_i], _FileBasedMixin):
                     self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])

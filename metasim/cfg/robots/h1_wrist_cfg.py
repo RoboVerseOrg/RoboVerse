@@ -16,7 +16,7 @@ class H1WristCfg(BaseRobotCfg):
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
-    collapse_fixed_joints: bool = False  # must set false to kepp wrist link exist
+    collapse_fixed_joints: bool = False  # must set false to keep wrist link exist
 
     actuators: dict[str, BaseActuatorCfg] = {
         "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
