@@ -24,7 +24,7 @@ from .ogbench_wrapper import OGBenchWrapper
 __all__ = [
     # Base classes
     "OGBenchBaseCfg",
-    "OGBenchEnv", 
+    "OGBenchEnv",
     "OGBenchWrapper",
     # AntMaze tasks
     "AntMazeLargeNavigateCfg",
