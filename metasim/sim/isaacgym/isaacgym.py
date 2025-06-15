@@ -770,7 +770,6 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
 
-        self.gym.simulate(self.sim)  # FIXME: update the state, but has the side effect of stepping the physics
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
