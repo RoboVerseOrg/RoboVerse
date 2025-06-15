@@ -15,10 +15,10 @@ experiment:
   use_wandb: False
 
 environment:
-  num_envs: 32 # XXX: use inheritance from hydra in the future
+  num_envs: 32
   headless: False
   # Options: "isaacgym", "mujoco", or "isaaclab"
-  sim_name: "isaacgym"
+  sim_name: "mujoco"
   rgb_observation: False
 
 wandb:

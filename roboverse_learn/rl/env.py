@@ -69,6 +69,10 @@ class RLEnvWrapper:
             reset_states = []
             robot = self._robot
             
+            # For dm_control tasks, return None to let the wrapper handle reset
+            if robot is None:
+                return None
+            
             for i in range(self.num_envs):
                 if i not in env_ids:
                     # Keep current state for environments not being reset
@@ -252,7 +256,8 @@ class RLEnvWrapper:
         self.headless = self.scenario.headless
         self.num_envs = self.handler.num_envs
         self._task = self.scenario.task
-        self._robot = self.scenario.robots[0]
+        # Handle dm_control tasks which don't have robots
+        self._robot = self.scenario.robots[0] if self.scenario.robots else None
         self.device = self.handler.device
         self.rgb_observation = len(self.scenario.cameras) > 0
         self.obs_space = self.get_observation_space()
@@ -306,6 +311,12 @@ class RLEnvWrapper:
         start_time = time.time()
 
         action_space = self.get_action_space()
+        # Ensure action is on the correct device
+        if isinstance(action, torch.Tensor):
+            action = action.to(self.device)
+        else:
+            action = torch.tensor(action, device=self.device, dtype=torch.float32)
+            
         if isinstance(action_space, gym.spaces.box.Box):
             action_low = torch.tensor(action_space.low, device=self.device, dtype=torch.float32)
             action_high = torch.tensor(action_space.high, device=self.device, dtype=torch.float32)
@@ -316,6 +327,35 @@ class RLEnvWrapper:
             log.warning(f"Action space type {type(action_space)} not Box, not scaling actions.")
             processed_action = action
 
+        # For dm_control tasks, directly use the environment's step
+        if self._robot is None:
+            states, reward, success, timeout, extra = self.env.step(processed_action)
+            observation = self.get_observation(states)
+            
+            if self.rgb_observation:
+                observation["rgb"] = torch.zeros(self.num_envs, 3, self.camera_resolution_height, self.camera_resolution_width, device=self.device)
+            
+            reward = torch.nan_to_num(reward, nan=0.0)
+            
+            reset_mask = success | timeout
+            self.reset_buffer[:, 0] = reset_mask.float()
+            self.timestep_buffer += 1
+            
+            reset_indices = torch.where(reset_mask)[0]
+            if len(reset_indices) > 0:
+                reset_env_ids = reset_indices.tolist()
+                self.reset(env_ids=reset_env_ids)
+            
+            self.success_buffer = success
+            
+            # Ensure reward and timeout have the right shape for PPO
+            if reward.dim() == 1:
+                reward = reward.unsqueeze(-1)
+            if timeout.dim() == 1:
+                timeout = timeout.unsqueeze(-1)
+                
+            return observation, reward.to(self.device), success.to(self.device), timeout.to(self.device), extra or {}
+        
         joint_names = list(self._robot.actuators.keys())
 
         action_dict = []

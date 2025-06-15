@@ -1,0 +1,46 @@
+defaults:
+  - ../default
+
+task_name: "dmcontrol:walker_walk"
+robot_name: "none"  # dm_control tasks don't use robot configs
+
+algo: "ppo"
+
+observation_space:
+  shape: [24]
+observation_shape: [24]
+
+ppo:
+  action_num: 6
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+  e_clip: 0.2
+  clip_value: True
+  entropy_coef: 0.01
+  critic_coef: 1.0
+  bounds_loss_coef: 0.0
+  gamma: 0.99
+  tau: 0.95
+  truncate_grads: True
+  grad_norm: 1.0
+  value_bootstrap: True
+  normalize_advantage: True
+  normalize_input: True
+  normalize_value: True
+  reward_scale_value: 1.0
+  clip_value_loss: True
+  horizon_length: 256
+  minibatch_size: 256
+  mini_epochs: 10
+  learning_rate: 3e-4
+  lr_schedule: "adaptive"
+  max_agent_steps: 10000000
+  kl_threshold: 0.016
+  save_frequency: 50
+  save_best_after: 50
+  seq_len: 4
+
+  network:
+    mlp:
+      units: [512, 512, 256]
+    separate_value_mlp: True

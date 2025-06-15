@@ -1,0 +1,56 @@
+defaults:
+  - ../default
+
+task_name: "dmcontrol:cartpole_balance"
+robot_name: "none"  # dm_control tasks don't use robot configs
+
+algo: "dreamer"
+
+observation_space:
+  shape: [5]
+observation_shape: [5]
+
+dreamer:
+  action_num: 1
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+  gamma: 0.99
+  lambda_: 0.95
+  learning_rate: 3e-4
+  model_lr: 6e-4
+  value_lr: 8e-4
+  actor_lr: 8e-4
+  grad_clip: 100.0
+  buffer_size: 1000000
+  batch_size: 50
+  batch_length: 50
+  imagination_horizon: 15
+  free_nats: 3.0
+  kl_scale: 1.0
+  reward_scale_value: 1.0
+  normalize_input: False
+  max_agent_steps: 1000000
+  prefill_steps: 5000
+  save_frequency: 50
+  save_best_after: 50
+
+  network:
+    rssm:
+      stoch_size: 30
+      deter_size: 200
+      hidden_size: 200
+    encoder:
+      depth: 2
+      units: 400
+    decoder:
+      depth: 2
+      units: 400
+    reward:
+      layers: 2
+      units: 400
+    value:
+      layers: 3
+      units: 400
+    actor:
+      layers: 4
+      units: 400

@@ -47,22 +47,33 @@ def main(cfg: DictConfig):
 
     cprint("Start Building the Environment", "green", attrs=["bold"])
     task = get_task(cfg.train.task_name)
-    robot = get_robot(cfg.train.robot_name)
-    scenario = ScenarioCfg(task=task, robots=[robot])
-    scenario.cameras = []
 
     tic = time.time()
-    scenario.num_envs = cfg.environment.num_envs
-    scenario.headless = cfg.environment.headless
 
-    env_class = get_sim_env_class(SimType(sim_name))
-    if sim_name == "mujoco":
-        from metasim.sim import GymEnvWrapper
-        from metasim.sim.mujoco import MujocoHandler
-        from metasim.sim.parallel import ParallelSimWrapper
+    if cfg.train.task_name.startswith("dmcontrol:") or cfg.train.robot_name == "none":
+        scenario = ScenarioCfg(task=task, robots=[])
+        scenario.cameras = []
+        scenario.num_envs = cfg.environment.num_envs
+        scenario.headless = cfg.environment.headless
 
-        env_class = GymEnvWrapper(ParallelSimWrapper(MujocoHandler))
-    env = env_class(scenario)
+        from metasim.cfg.tasks.dmcontrol.dmcontrol_env import DMControlEnv
+        env = DMControlEnv(scenario)
+    else:
+        robot = get_robot(cfg.train.robot_name)
+        scenario = ScenarioCfg(task=task, robots=[robot])
+        scenario.cameras = []
+
+        scenario.num_envs = cfg.environment.num_envs
+        scenario.headless = cfg.environment.headless
+
+        env_class = get_sim_env_class(SimType(sim_name))
+        if sim_name == "mujoco":
+            from metasim.sim import GymEnvWrapper
+            from metasim.sim.mujoco import MujocoHandler
+            from metasim.sim.parallel import ParallelSimWrapper
+
+            env_class = GymEnvWrapper(ParallelSimWrapper(MujocoHandler))
+        env = env_class(scenario)
 
     env = RLEnvWrapper(
         gym_env=env,
