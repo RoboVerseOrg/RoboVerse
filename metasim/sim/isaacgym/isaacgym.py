@@ -98,6 +98,15 @@ class IsaacgymHandler(BaseSimHandler):
         self._robot_dof_state = self._dof_states.view(self._num_envs, -1, 2)[:, self._obj_num_dof :]
         self._contact_forces = gymtorch.wrap_tensor(self.gym.acquire_net_contact_force_tensor(self.sim))
 
+        # Refresh tensors
+        if not self._manual_pd_on:
+            self.gym.refresh_dof_state_tensor(self.sim)
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_jacobian_tensors(self.sim)
+        self.gym.refresh_mass_matrix_tensors(self.sim)
+        self.gym.refresh_net_contact_force_tensor(self.sim)
+
     def _init_gym(self) -> None:
         physics_engine = gymapi.SIM_PHYSX
         self.gym = gymapi.acquire_gym()
