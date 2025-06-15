@@ -7,7 +7,7 @@ from .dmcontrol_base import DMControlBaseCfg
 @configclass
 class CheetahRunCfg(DMControlBaseCfg):
     """Cheetah run task from dm_control suite."""
-    
+
     domain_name = "cheetah"
     task_name = "run"
     episode_length = 1000

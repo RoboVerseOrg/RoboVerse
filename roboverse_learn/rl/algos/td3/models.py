@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class MLP(nn.Module):
@@ -56,7 +55,7 @@ class Actor(nn.Module):
 
     def act(self, obs_dict, exploration_noise=0.1, target_noise=None, noise_clip=None):
         actions = self.forward(obs_dict)
-        
+
         if target_noise is not None and noise_clip is not None:
             noise = torch.randn_like(actions) * target_noise
             noise = torch.clamp(noise, -noise_clip, noise_clip)
@@ -64,7 +63,7 @@ class Actor(nn.Module):
         elif exploration_noise > 0:
             noise = torch.randn_like(actions) * exploration_noise
             actions = torch.clamp(actions + noise, -1.0, 1.0)
-            
+
         return actions
 
 

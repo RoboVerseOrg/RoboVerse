@@ -40,7 +40,6 @@ WalkerStandCfg = WalkerStandCfg
 WalkerWalkCfg = WalkerWalkCfg
 
 __all__ = [
-    "DMControlBaseCfg",
     "AcrobotSwingupCfg",
     "CartpoleBalanceCfg",
     "CartpoleBalanceSparseCfg",
@@ -48,6 +47,7 @@ __all__ = [
     "CartpoleSwingupSparseCfg",
     "CheetahRunCfg",
     "CupCatchCfg",
+    "DMControlBaseCfg",
     "FingerSpinCfg",
     "FingerTurnEasyCfg",
     "FingerTurnHardCfg",

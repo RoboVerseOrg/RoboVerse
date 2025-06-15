@@ -22,7 +22,6 @@ class AntCfg(BaseRobotCfg):
     isaacgym_read_mjcf: bool = True
     collapse_fixed_joints: bool = True
 
-
     actuators: dict[str, BaseActuatorCfg] = None
 
     joint_limits: dict[str, tuple[float, float]] = None
@@ -38,13 +37,13 @@ class AntCfg(BaseRobotCfg):
             # Joint limits from nv_ant.xml, converted from degrees to radians
             deg_to_rad = 3.14159 / 180.0
             self.joint_limits = {
-                "hip_1": (-40 * deg_to_rad, 40 * deg_to_rad),    # -0.698, 0.698 rad
+                "hip_1": (-40 * deg_to_rad, 40 * deg_to_rad),  # -0.698, 0.698 rad
                 "ankle_1": (30 * deg_to_rad, 100 * deg_to_rad),  # 0.524, 1.745 rad
-                "hip_2": (-40 * deg_to_rad, 40 * deg_to_rad),    # -0.698, 0.698 rad
-                "ankle_2": (-100 * deg_to_rad, -30 * deg_to_rad), # -1.745, -0.524 rad
-                "hip_3": (-40 * deg_to_rad, 40 * deg_to_rad),    # -0.698, 0.698 rad
-                "ankle_3": (-100 * deg_to_rad, -30 * deg_to_rad), # -1.745, -0.524 rad
-                "hip_4": (-40 * deg_to_rad, 40 * deg_to_rad),    # -0.698, 0.698 rad
+                "hip_2": (-40 * deg_to_rad, 40 * deg_to_rad),  # -0.698, 0.698 rad
+                "ankle_2": (-100 * deg_to_rad, -30 * deg_to_rad),  # -1.745, -0.524 rad
+                "hip_3": (-40 * deg_to_rad, 40 * deg_to_rad),  # -0.698, 0.698 rad
+                "ankle_3": (-100 * deg_to_rad, -30 * deg_to_rad),  # -1.745, -0.524 rad
+                "hip_4": (-40 * deg_to_rad, 40 * deg_to_rad),  # -0.698, 0.698 rad
                 "ankle_4": (30 * deg_to_rad, 100 * deg_to_rad),  # 0.524, 1.745 rad
             }
 
@@ -52,14 +51,14 @@ class AntCfg(BaseRobotCfg):
             # Set initial positions based on joint limits (following IsaacGymEnvs logic)
             deg_to_rad = 3.14159 / 180.0
             self.default_joint_positions = {
-                "hip_1": 0.0,                     # limit: -40 to 40, use 0
-                "ankle_1": 30 * deg_to_rad,       # limit: 30 to 100, use lower limit
-                "hip_2": 0.0,                     # limit: -40 to 40, use 0
-                "ankle_2": -30 * deg_to_rad,      # limit: -100 to -30, use upper limit
-                "hip_3": 0.0,                     # limit: -40 to 40, use 0
-                "ankle_3": -30 * deg_to_rad,      # limit: -100 to -30, use upper limit
-                "hip_4": 0.0,                     # limit: -40 to 40, use 0
-                "ankle_4": 30 * deg_to_rad,       # limit: 30 to 100, use lower limit
+                "hip_1": 0.0,  # limit: -40 to 40, use 0
+                "ankle_1": 30 * deg_to_rad,  # limit: 30 to 100, use lower limit
+                "hip_2": 0.0,  # limit: -40 to 40, use 0
+                "ankle_2": -30 * deg_to_rad,  # limit: -100 to -30, use upper limit
+                "hip_3": 0.0,  # limit: -40 to 40, use 0
+                "ankle_3": -30 * deg_to_rad,  # limit: -100 to -30, use upper limit
+                "hip_4": 0.0,  # limit: -40 to 40, use 0
+                "ankle_4": 30 * deg_to_rad,  # limit: 30 to 100, use lower limit
             }
 
         if self.actuators is None:

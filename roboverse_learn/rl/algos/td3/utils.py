@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 
-class AverageScalarMeter(object):
+class AverageScalarMeter:
     def __init__(self, window_size):
         self.window_size = window_size
         self.current_size = 0
@@ -107,7 +107,7 @@ class RunningMeanStd(nn.Module):
         return y
 
 
-class AdaptiveScheduler(object):
+class AdaptiveScheduler:
     def __init__(self, kl_threshold=0.008):
         super().__init__()
         self.min_lr = 1e-6
