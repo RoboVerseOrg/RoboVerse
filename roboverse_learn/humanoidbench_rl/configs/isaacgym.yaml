@@ -2,7 +2,7 @@
 
 # Environment settings
 sim: isaacgym
-robot: h1
+robots: [h1]
 task: humanoidbench:Stand
 decimation: 4
 num_envs: 128

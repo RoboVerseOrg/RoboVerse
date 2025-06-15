@@ -3,7 +3,7 @@
 # Environment
 # -------------------------------------------------------------------------------
 sim: mujoco
-robot: h1
+robots: [h1]
 task: humanoidbench:Stand
 decimation: 10
 train_or_eval: train

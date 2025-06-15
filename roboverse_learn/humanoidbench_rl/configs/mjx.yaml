@@ -1,9 +1,9 @@
 # Environment settings
 sim: mjx
-robot: h1
+robots: [h1]
 task: humanoidbench:Stand
 decimation: 10
-num_envs: 128
+num_envs: 2048
 add_table: false
 
 # Training settings
@@ -18,15 +18,9 @@ eval_model_path: <path to eval model>
 
 # PPO parameters
 learning_rate: 0.0003
-n_steps: 256
+n_steps: 32
 num_batch: 64
 n_epochs: 4
-
-# # PPO parameters
-# learning_rate: 0.0003
-# n_steps: 32
-# num_batch: 64
-# n_epochs: 4
 
 # Learning rate schedule
 use_lr_schedule: true

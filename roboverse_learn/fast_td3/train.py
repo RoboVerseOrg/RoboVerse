@@ -17,6 +17,12 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["JAX_DEFAULT_MATMUL_PRECISION"]          = "highest"
 
 import numpy as np
+
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,7 +33,7 @@ import yaml
 from fast_td3 import Actor, Critic
 from fast_td3_utils import EmpiricalNormalization, SimpleReplayBuffer
 from loguru import logger as log
-from tensordict import TensorDict, from_module
+from tensordict import TensorDict
 from torch.amp import GradScaler, autocast
 from wrapper import FastTD3EnvWrapper
 
@@ -104,7 +110,7 @@ def main() -> None:
 
     scenario = ScenarioCfg(
         task=cfg("task"),
-        robot=cfg("robot"),
+        robots=cfg("robots"),
         try_add_table=cfg("add_table", False),
         sim=cfg("sim"),
         num_envs=cfg("num_envs", 1),
@@ -151,7 +157,7 @@ def main() -> None:
         hidden_dim=cfg("actor_hidden_dim"),
     )
     # Copy params to actor_detach without grad
-    from_module(actor).data.to_module(actor_detach)
+    TensorDict.from_module(actor).data.to_module(actor_detach)
     policy = actor_detach.explore
 
     qnet = Critic(

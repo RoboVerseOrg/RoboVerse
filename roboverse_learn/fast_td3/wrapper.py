@@ -29,7 +29,7 @@ class FastTD3EnvWrapper:
         self.env = EnvironmentClass(scenario)
 
         self.num_envs = scenario.num_envs
-        self.robot = scenario.robot
+        self.robot = scenario.robots[0]
         self.task = scenario.task
         # ----------- initial states --------------------------------------------------
         initial_states, _, _ = get_traj(self.task, self.robot, self.env.handler)

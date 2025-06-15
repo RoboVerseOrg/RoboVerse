@@ -3,9 +3,9 @@
 # Environment
 # -------------------------------------------------------------------------------
 sim: isaacgym
-robot: h1
+robots: [h1]
 task: humanoidbench:Stand
-decimation: 4
+decimation: 10
 train_or_eval: train
 
 # -------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ num_envs: 128
 num_eval_envs: 128
 total_timesteps: 100000
 learning_starts: 10
-num_steps: 1
+num_steps: 4
 
 # -------------------------------------------------------------------------------
 # Replay, Batching, Discounting
@@ -83,8 +83,8 @@ action_bounds: 1.0
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-project: fast_td3_mjc128
-exp_name: fasttd3_mjc128
+project: fasttd3_isaacgym
+exp_name: fasttd3_isaacgym
 use_wandb: true
 checkpoint_path: null
 eval_interval: 2000

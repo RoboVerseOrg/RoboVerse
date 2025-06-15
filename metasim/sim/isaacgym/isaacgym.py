@@ -624,6 +624,27 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input[:,]))
 
+    def set_actions(self, obj_name: str, actions: torch.Tensor) -> None:
+        action_input = torch.zeros_like(self._dof_states[:, 0])
+
+        if not hasattr(self, "_robot_dim_index"):
+            chunk = action_input.shape[0] // self._num_envs
+            robot_dim = actions.shape[1]
+            self._robot_dim_index = [
+                env * chunk + (chunk - robot_dim) + i for env in range(self._num_envs) for i in range(robot_dim)
+            ]
+
+        action_input[self._robot_dim_index] = actions.to(self.device).reshape(-1)
+
+        if self._manual_pd_on:
+            self.actions = action_input.view(self._num_envs, self._obj_num_dof + self._robot_num_dof)[
+                :, self._obj_num_dof :
+            ]
+            if self._pos_ctrl_dof_dix:
+                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
+        else:
+            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
+
     def refresh_render(self) -> None:
         # Step the physics
         self.gym.simulate(self.sim)

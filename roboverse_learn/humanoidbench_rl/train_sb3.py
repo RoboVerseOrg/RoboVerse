@@ -118,7 +118,7 @@ def main():
 
     scenario = ScenarioCfg(
         task=config.get("task"),
-        robot=config.get("robot"),
+        robots=config.get("robots"),
         try_add_table=config.get("add_table", False),
         sim=config.get("sim"),
         num_envs=config.get("num_envs", 1),
