@@ -513,9 +513,7 @@ class IsaacgymHandler(BaseSimHandler):
         ################################
 
     def _reorder_quat_xyzw_to_wxyz(self, state: torch.Tensor) -> torch.Tensor:
-        quat_xyzw = state[..., 3:7]
-        quat_wxyz = torch.cat([quat_xyzw[..., 3:4], quat_xyzw[..., 0:3]], dim=-1)
-        return torch.cat([state[..., 0:3], quat_wxyz, state[..., 7:]], dim=-1)
+        return state[..., [0, 1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 11, 12]]
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
