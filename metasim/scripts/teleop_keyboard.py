@@ -105,6 +105,11 @@ def main():
         ee_idx = states.robots[robot.name].body_names.index(robot.ee_body_name)
         robot_pos, robot_quat = states.robots[robot.name].root_state[0, :7].split([3, 4])
         curr_ee_pos, curr_ee_quat = states.robots[robot.name].body_state[0, ee_idx, :7].split([3, 4])
+        curr_robot_q = curr_robot_q.to(device)
+        curr_ee_pos = curr_ee_pos.to(device)
+        curr_ee_quat = curr_ee_quat.to(device)
+        robot_pos = robot_pos.to(device)
+        robot_quat = robot_quat.to(device)
 
         curr_ee_pos = quat_apply(quat_inv(robot_quat), curr_ee_pos - robot_pos)
         curr_ee_quat_local = quat_mul(quat_inv(robot_quat), curr_ee_quat)
