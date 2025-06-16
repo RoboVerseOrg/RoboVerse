@@ -1,4 +1,4 @@
-Follow these steps to build and run a full XR-to-robot teleoperation sample on a **PICO 4 Ultra headset and a Linux x86 PC**. This sample has been tested only under the below system OS requirements:
+Follow these steps to install and run a full XR-to-robot teleoperation sample on a **PICO 4 Ultra headset and a Linux x86 PC**.
 
 - Linux x86 PC: Ubuntu 22.04
 
@@ -25,7 +25,7 @@ Follow these steps to build and run a full XR-to-robot teleoperation sample on a
 
 4. **Install the XR App on Headset**
    - Turn on developer mode on Pico 4 Ultra headset first ([Enable developer mode on Pico 4 Ultra](https://developer.picoxr.com/ja/document/unreal/test-and-build/)), and make sure that [adb](https://developer.android.com/tools/adb) is installed properly.
-   - Download [XRoboToolkit-PICO.apk](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/releases/download/v1.0.1/XRoboToolkit-PICO.apk) on a PC with adb installed.
+   - Download [XRoboToolkit-PICO.apk](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/releases/download/v1.0.1/XRoboToolkit-PICO-1.0.1.apk) on a PC with adb installed.
    - To install apk on the headset, use command
      ```bash
       adb install -g XRoboToolkit-PICO.apk

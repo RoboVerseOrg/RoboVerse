@@ -122,3 +122,52 @@ These sensors work together to provide a **rotation vector**, which represents t
 - Ensure the **Android app** is running and connected to the pc.
 - Calibration may be needed the first time you use the phone to ensure the sensors are aligned with the robot’s coordinate system.
 - Ensure that the phone is not hold too close to strong electromagnetic sources (e.g., motors, power lines, or other electronic devices) as they can interfere with the sensors' ability to accurately determine the "North" direction, which is crucial for rotation control.
+
+---
+## by XR Headset
+Run a full XR-to-robot teleoperation sample on a **PICO 4 Ultra headset and a Linux x86 PC**. System Requirements:
+
+- Linux x86 PC: Ubuntu 22.04
+
+- PICO 4 Ultra: User OS >5.12. Currently supports [PICO 4 Ultra](https://www.picoxr.com/global/products/pico4-ultra) and [PICO 4 Ultra Enterprise](https://www.picoxr.com/global/products/pico4-ultra-enterprise).
+
+### Dependencies
+You need to install `XRoboToolkit-PC-Service` on PC and `XRoboToolkit-PICO` app on your XR Headset. Follow the [XRoboToolkit Installation Instruction](docs/source/metasim/user_guide/xrobotoolkit_instruction.md).
+
+### Play in Simulation
+   - Run the XR teleoperation demo
+      ```bash
+      python metasim/scripts/teleop_xr.py --task=PickCube
+      ```
+
+task could also be:
+- `PickCube`
+- `StackCube`
+- `CloseBox`
+- `BasketballInHoop`
+
+### Instructions
+
+Movement (World Coordinates):
+
+| Key    | Action                                   |
+|--------|------------------------------------------|
+| **Grip** | Hold Grip key to activate teleoperation |
+
+Gripper:
+
+| Key      | Action                                      |
+|----------|---------------------------------------------|
+| **Target** | Close (hold) / Open (release) the gripper  |
+
+Simulation Control:
+
+| Key      | Action                                      |
+|----------|---------------------------------------------|
+| **A**  | Toggle start/stop sending data from headset|
+| **B**  | Quit the simulation and exit               |
+
+### Additional Notes:
+- Connect robot PC and Pico 4 Ultra under the same network
+- On robot PC, double click app icon of `XRoboToolkit-PC-Service` or run service `/opt/apps/roboticsservice/runService.sh`
+- Open app `XRoboToolkit` on the Pico headset. Details of the Unity app can be found in the [Unity source repo](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client).
