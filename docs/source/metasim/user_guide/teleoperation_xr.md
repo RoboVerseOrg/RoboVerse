@@ -36,5 +36,5 @@ Follow these steps to build and run a full XR-to-robot teleoperation sample on a
    - Open app `XRoboToolkit` on the Pico headset. Details of the Unity app can be found in the [Unity source repo](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client).
    - Run the XR teleoperation demo
     ```bash
-    python metasim/scripts/teleop_keyboard.py --task=PickCube
+    python metasim/scripts/teleop_xr.py --task=PickCube
     ```
