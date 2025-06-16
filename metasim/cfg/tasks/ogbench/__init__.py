@@ -22,22 +22,22 @@ from .ogbench_env import OGBenchEnv
 from .ogbench_wrapper import OGBenchWrapper
 
 __all__ = [
+    # AntMaze tasks
+    "AntMazeGiantNavigateCfg",
+    "AntMazeLargeNavigateCfg",
+    "AntMazeLargeNavigateSingleTaskCfg",
+    "AntMazeMediumNavigateCfg",
+    # Cube tasks
+    "CubeDoublePlayCfg",
+    "CubeDoublePlaySingleTaskCfg",
+    "CubeQuadruplePlayCfg",
+    "CubeTriplePlayCfg",
+    # HumanoidMaze tasks
+    "HumanoidMazeGiantNavigateCfg",
+    "HumanoidMazeLargeNavigateCfg",
+    "HumanoidMazeMediumNavigateCfg",
     # Base classes
     "OGBenchBaseCfg",
     "OGBenchEnv",
     "OGBenchWrapper",
-    # AntMaze tasks
-    "AntMazeLargeNavigateCfg",
-    "AntMazeLargeNavigateSingleTaskCfg",
-    "AntMazeMediumNavigateCfg",
-    "AntMazeGiantNavigateCfg",
-    # HumanoidMaze tasks
-    "HumanoidMazeLargeNavigateCfg",
-    "HumanoidMazeMediumNavigateCfg",
-    "HumanoidMazeGiantNavigateCfg",
-    # Cube tasks
-    "CubeDoublePlayCfg",
-    "CubeDoublePlaySingleTaskCfg",
-    "CubeTriplePlayCfg",
-    "CubeQuadruplePlayCfg",
 ]

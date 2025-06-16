@@ -5,7 +5,7 @@ import torch.nn as nn
 
 class MLP(nn.Module):
     def __init__(self, units, input_size):
-        super(MLP, self).__init__()
+        super().__init__()
         layers = []
         for output_size in units:
             layers.append(nn.Linear(input_size, output_size))

@@ -1,10 +1,12 @@
 """Wrapper for OGBench environments."""
 
+from __future__ import annotations
+
 import os
 
 # Add ogbench to Python path if needed
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -31,7 +33,7 @@ class OGBenchWrapper:
         num_envs: int = 1,
         headless: bool = True,
         single_task: bool = False,
-        task_id: Optional[int] = None,
+        task_id: int | None = None,
         use_oracle_rep: bool = False,
         terminate_at_goal: bool = True,
         add_noise_to_goal: bool = True,
@@ -109,7 +111,7 @@ class OGBenchWrapper:
         self._is_cube_env = "cube" in dataset_name.lower()
         self._viewer_launched = False
 
-    def reset(self, env_ids: Optional[List[int]] = None) -> Tuple[torch.Tensor, Dict[str, Any]]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[torch.Tensor, dict[str, Any]]:
         """Reset environment(s).
 
         Args:
@@ -164,8 +166,8 @@ class OGBenchWrapper:
         return obs_tensor, info
 
     def step(
-        self, actions: Union[np.ndarray, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Dict[str, Any]]:
+        self, actions: np.ndarray | torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict[str, Any]]:
         """Step the environment.
 
         Args:
@@ -233,13 +235,13 @@ class OGBenchWrapper:
             return torch.zeros((1, *self.observation_space.shape), dtype=torch.float32)
         return torch.tensor(self._last_obs, dtype=torch.float32).unsqueeze(0)
 
-    def get_goal(self) -> Optional[torch.Tensor]:
+    def get_goal(self) -> torch.Tensor | None:
         """Get current goal observation for goal-conditioned tasks."""
         if self._last_info is not None and "goal" in self._last_info:
             return torch.tensor(self._last_info["goal"], dtype=torch.float32).unsqueeze(0)
         return None
 
-    def render(self) -> Optional[np.ndarray]:
+    def render(self) -> np.ndarray | None:
         """Render the environment."""
         return self.env.render()
 

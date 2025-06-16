@@ -1,6 +1,8 @@
 """OGBench environment integration for RoboVerse."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
 import torch
@@ -48,9 +50,9 @@ class OGBenchEnv:
 
     def reset(
         self,
-        env_ids: Optional[List[int]] = None,
-        states: Optional[List[Dict[str, Any]]] = None,
-    ) -> Tuple[Obs, Dict[str, Any]]:
+        env_ids: list[int] | None = None,
+        states: list[dict[str, Any]] | None = None,
+    ) -> tuple[Obs, dict[str, Any]]:
         """Reset environments.
 
         Args:
@@ -85,7 +87,7 @@ class OGBenchEnv:
 
         return obs_list, info
 
-    def step(self, action_dict: Action) -> Tuple[Obs, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def step(self, action_dict: Action) -> tuple[Obs, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Step the environment.
 
         Args:
@@ -101,9 +103,9 @@ class OGBenchEnv:
             for env_action in action_dict:
                 if isinstance(env_action, dict):
                     # Assuming flat action space
-                    action = list(env_action.values())[0]
+                    action = next(iter(env_action.values()))
                     if isinstance(action, dict):
-                        action = list(action.values())[0]
+                        action = next(iter(action.values()))
                     actions.append(action)
                 else:
                     actions.append(env_action)
@@ -150,7 +152,7 @@ class OGBenchEnv:
 
         return obs_list, rewards, success, timeouts, terminations
 
-    def render(self) -> Optional[np.ndarray]:
+    def render(self) -> np.ndarray | None:
         """Render the environment."""
         return self._wrapper.render()
 

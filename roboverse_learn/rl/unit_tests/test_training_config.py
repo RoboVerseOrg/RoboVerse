@@ -65,21 +65,21 @@ class TestAllegroHandTrainingConfig:
         assert ppo_cfg.kl_threshold == 0.016
 
         # Gradient clipping
-        assert ppo_cfg.truncate_grads == True
+        assert ppo_cfg.truncate_grads
         assert ppo_cfg.grad_norm == 1.0
 
         # Value function
-        assert ppo_cfg.clip_value == True
-        assert ppo_cfg.normalize_value == True
-        assert ppo_cfg.normalize_advantage == True
-        assert ppo_cfg.normalize_input == True
+        assert ppo_cfg.clip_value
+        assert ppo_cfg.normalize_value
+        assert ppo_cfg.normalize_advantage
+        assert ppo_cfg.normalize_input
 
     def test_network_architecture(self, training_config):
         """Test neural network architecture configuration."""
         network_cfg = training_config.train.ppo.network
 
         assert network_cfg.mlp.units == [512, 512, 256, 128]
-        assert network_cfg.separate_value_mlp == True
+        assert network_cfg.separate_value_mlp
 
     def test_environment_settings(self, training_config):
         """Test environment configuration."""
@@ -87,7 +87,7 @@ class TestAllegroHandTrainingConfig:
 
         # These come from default.yaml unless overridden
         assert env_cfg.num_envs == 32  # Default value
-        assert env_cfg.headless == False  # Default value
+        assert not env_cfg.headless  # Default value
         assert env_cfg.sim_name == "isaacgym"
 
     def test_experiment_settings(self, training_config):

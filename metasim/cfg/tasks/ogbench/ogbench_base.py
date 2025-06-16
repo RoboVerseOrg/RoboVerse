@@ -1,7 +1,8 @@
 """Base configuration for OGBench tasks."""
 
+from __future__ import annotations
+
 from dataclasses import field
-from typing import List, Optional
 
 from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import BenchmarkType
@@ -19,7 +20,7 @@ class OGBenchBaseCfg(BaseTaskCfg):
     # OGBench specific parameters
     dataset_name: str = ""
     single_task: bool = False  # If True, use single-task version
-    task_id: Optional[int] = None  # Task ID for single-task mode (1-5)
+    task_id: int | None = None  # Task ID for single-task mode (1-5)
     use_oracle_rep: bool = False  # Use oracle goal representations
     compact_dataset: bool = False  # Use compact dataset format
 
@@ -37,11 +38,11 @@ class OGBenchBaseCfg(BaseTaskCfg):
     sparse_reward: bool = True
 
     # Required fields from BaseTaskCfg
-    objects: List = field(default_factory=list)
+    objects: list = field(default_factory=list)
     traj_filepath: str = ""  # No predefined trajectories for OGBench
     source_benchmark: BenchmarkType = BenchmarkType.OGBENCH
-    reward_functions: List = field(default_factory=list)
-    reward_weights: List = field(default_factory=list)
+    reward_functions: list = field(default_factory=list)
+    reward_weights: list = field(default_factory=list)
 
     def get_wrapper(self, num_envs: int = 1, headless: bool = True):
         """Get OGBench wrapper instance."""
