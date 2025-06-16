@@ -1,6 +1,8 @@
 """Environment wrapper for dm_control tasks in RoboVerse."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -32,8 +34,8 @@ class DMControlEnv:
             self._wrapper.launch_viewer()
 
     def reset(
-        self, states: Optional[List[Any]] = None, env_ids: Optional[List[int]] = None
-    ) -> Tuple[Dict[str, torch.Tensor], None]:
+        self, states: list[Any] | None = None, env_ids: list[int] | None = None
+    ) -> tuple[dict[str, torch.Tensor], None]:
         """Reset specified environments."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -49,7 +51,7 @@ class DMControlEnv:
 
     def step(
         self, actions: torch.Tensor
-    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor, torch.Tensor, None]:
+    ) -> tuple[dict[str, torch.Tensor], torch.Tensor, torch.Tensor, torch.Tensor, None]:
         """Step all environments with given actions."""
         # Increment episode counters
         self._episode_length_buf += 1
@@ -84,7 +86,7 @@ class DMControlEnv:
             self._wrapper.close()
 
     @property
-    def episode_length_buf(self) -> List[int]:
+    def episode_length_buf(self) -> list[int]:
         """Get episode length buffer."""
         return self._episode_length_buf.tolist()
 
