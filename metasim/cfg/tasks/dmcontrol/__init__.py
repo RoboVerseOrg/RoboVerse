@@ -19,26 +19,6 @@ from .walker_run_cfg import WalkerRunCfg
 from .walker_stand_cfg import WalkerStandCfg
 from .walker_walk_cfg import WalkerWalkCfg
 
-AcrobotSwingupCfg = AcrobotSwingupCfg
-CartpoleBalanceCfg = CartpoleBalanceCfg
-CartpoleBalanceSparseCfg = CartpoleBalanceSparseCfg
-CartpoleSwingupCfg = CartpoleSwingupCfg
-CartpoleSwingupSparseCfg = CartpoleSwingupSparseCfg
-CheetahRunCfg = CheetahRunCfg
-CupCatchCfg = CupCatchCfg
-FingerSpinCfg = FingerSpinCfg
-FingerTurnEasyCfg = FingerTurnEasyCfg
-FingerTurnHardCfg = FingerTurnHardCfg
-HopperHopCfg = HopperHopCfg
-HopperStandCfg = HopperStandCfg
-HumanoidWalkCfg = HumanoidWalkCfg
-PendulumSwingupCfg = PendulumSwingupCfg
-ReacherEasyCfg = ReacherEasyCfg
-ReacherHardCfg = ReacherHardCfg
-WalkerRunCfg = WalkerRunCfg
-WalkerStandCfg = WalkerStandCfg
-WalkerWalkCfg = WalkerWalkCfg
-
 __all__ = [
     "AcrobotSwingupCfg",
     "CartpoleBalanceCfg",

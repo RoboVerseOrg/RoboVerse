@@ -1,6 +1,8 @@
 """DM Control wrapper for RoboVerse integration."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any, list, tuple
 
 import numpy as np
 import torch
@@ -25,10 +27,10 @@ class DMControlWrapper:
         domain_name: str,
         task_name: str,
         num_envs: int = 1,
-        time_limit: Optional[float] = None,
+        time_limit: float | None = None,
         visualize_reward: bool = False,
-        environment_kwargs: Optional[Dict[str, Any]] = None,
-        random_state: Optional[int] = None,
+        environment_kwargs: dict[str, Any] | None = None,
+        random_state: int | None = None,
         headless: bool = True,
     ):
         """Initialize the dm_control wrapper.
@@ -97,7 +99,7 @@ class DMControlWrapper:
                 obs_dim += np.prod(spec.shape)
         return obs_dim
 
-    def reset(self, env_ids: Optional[List[int]] = None) -> torch.Tensor:
+    def reset(self, env_ids: list[int] | None = None) -> torch.Tensor:
         """Reset specified environments.
 
         Args:
@@ -122,7 +124,7 @@ class DMControlWrapper:
 
         return torch.stack(observations).to(self.device)
 
-    def step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def step(self, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Step all environments with given actions.
 
         Args:
@@ -177,7 +179,7 @@ class DMControlWrapper:
 
         return obs_tensor, reward_tensor, done_tensor, timeout_tensor
 
-    def _flatten_observation(self, obs_dict: Dict[str, np.ndarray]) -> torch.Tensor:
+    def _flatten_observation(self, obs_dict: dict[str, np.ndarray]) -> torch.Tensor:
         """Flatten observation dictionary into a single tensor."""
         if not obs_dict:
             return torch.zeros(self.obs_dim, dtype=torch.float32)
@@ -237,7 +239,6 @@ class DMControlWrapper:
                             self._mj_model, self._mj_data, show_left_ui=False, show_right_ui=True
                         )
                         self._viewer_running = True
-                        print("MuJoCo viewer launched in passive mode.")
                         return
 
                 # Fallback to dm_control viewer if available
@@ -257,9 +258,8 @@ class DMControlWrapper:
                     viewer_thread.daemon = True
                     viewer_thread.start()
                     self._viewer_running = True
-                    print("DM Control viewer launched. Press ESC in viewer window to close.")
             except Exception as e:
-                print(f"Could not launch viewer: {e}")
+                pass
 
     @property
     def episode_length_buf(self) -> torch.Tensor:
