@@ -1,4 +1,6 @@
-from typing import List
+from __future__ import annotations
+
+import logging
 
 import torch
 
@@ -8,6 +10,8 @@ from metasim.utils import configclass
 from metasim.utils.math import quat_inv, quat_mul
 
 from ..base_task_cfg import BaseTaskCfg
+
+log = logging.getLogger(__name__)
 
 
 @configclass
@@ -45,7 +49,7 @@ class AllegroHandCfg(BaseTaskCfg):
     force_decay = 0.99
     force_decay_interval = 0.08
 
-    objects: List[RigidObjCfg] = None
+    objects: list[RigidObjCfg] | None = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -217,7 +221,7 @@ class AllegroHandCfg(BaseTaskCfg):
                 ])
 
             if torch.isnan(obs).any():
-                print("Warning: NaN detected in observation. Replacing with zeros.")
+                log.warning("NaN detected in observation. Replacing with zeros.")
                 obs = torch.nan_to_num(obs, nan=0.0)
 
             observations.append(obs)
@@ -226,12 +230,6 @@ class AllegroHandCfg(BaseTaskCfg):
 
     def reward_fn(self, states, actions):
         if not hasattr(self, "_debug_printed_reward"):
-            print(f"Reward fn - States type: {type(states)}")
-            print(
-                f"Reward fn - States class name: {states.__class__.__name__ if hasattr(states, '__class__') else 'No class'}"
-            )
-            if hasattr(states, "__dict__"):
-                print(f"Reward fn - States attributes: {list(states.__dict__.keys())}")
             self._debug_printed_reward = True
 
         if hasattr(self, "_prev_actions"):
@@ -241,29 +239,29 @@ class AllegroHandCfg(BaseTaskCfg):
 
             for i, act in enumerate(actions):
                 if isinstance(act, dict):
-                    robot_name = list(act.keys())[0]
+                    robot_name = next(iter(act.keys()))
                     if "dof_pos_target" in act[robot_name]:
                         action_values = list(act[robot_name]["dof_pos_target"].values())
                         self._prev_actions[i] = torch.tensor(action_values, dtype=torch.float32)
         if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
             if not hasattr(self, "_debug_printed_objects"):
-                print(f"Objects in states: {list(states.objects.keys())}")
+                log.debug(f"Objects in states: {list(states.objects.keys())}")
                 for obj_name, obj_state in states.objects.items():
-                    print(f"Object '{obj_name}' has attributes: {dir(obj_state)}")
+                    log.debug(f"Object '{obj_name}' has attributes: {dir(obj_state)}")
                     if hasattr(obj_state, "root_state"):
-                        print(f"Object '{obj_name}' root_state shape: {obj_state.root_state.shape}")
-                        print(f"Object '{obj_name}' root_state sample: {obj_state.root_state[0]}")
+                        log.debug(f"Object '{obj_name}' root_state shape: {obj_state.root_state.shape}")
+                        log.debug(f"Object '{obj_name}' root_state sample: {obj_state.root_state[0]}")
                 self._debug_printed_objects = True
 
             object_state = states.objects.get("block")
             goal_state = states.objects.get("goal")
 
             if object_state is None or goal_state is None:
-                print(f"ERROR: Missing objects - block: {object_state is not None}, goal: {goal_state is not None}")
+                log.error(f"Missing objects - block: {object_state is not None}, goal: {goal_state is not None}")
                 return torch.zeros(
                     len(actions),
-                    device=actions[0][list(actions[0].keys())[0]]["dof_pos_target"][
-                        list(actions[0][list(actions[0].keys())[0]]["dof_pos_target"].keys())[0]
+                    device=actions[0][next(iter(actions[0].keys()))]["dof_pos_target"][
+                        next(iter(actions[0][next(iter(actions[0].keys()))]["dof_pos_target"].keys()))
                     ].device
                     if isinstance(actions[0], dict)
                     else torch.device("cpu"),
@@ -279,7 +277,7 @@ class AllegroHandCfg(BaseTaskCfg):
 
             for i, act in enumerate(actions):
                 if isinstance(act, dict):
-                    robot_name = list(act.keys())[0]
+                    robot_name = next(iter(act.keys()))
                     if "dof_pos_target" in act[robot_name]:
                         action_values = list(act[robot_name]["dof_pos_target"].values())
                         action_tensor[i] = torch.tensor(action_values, device=object_pos.device)
@@ -288,13 +286,13 @@ class AllegroHandCfg(BaseTaskCfg):
             dist_reward = self.dist_reward_scale * pos_dist
 
             if torch.isnan(object_pos).any() or torch.isnan(goal_pos).any():
-                print(f"NaN in positions - object_pos: {object_pos[0]}, goal_pos: {goal_pos[0]}")
+                log.warning(f"NaN in positions - object_pos: {object_pos[0]}, goal_pos: {goal_pos[0]}")
 
             object_rot = torch.nn.functional.normalize(object_rot, p=2, dim=1)
             goal_rot = torch.nn.functional.normalize(goal_rot, p=2, dim=1)
 
             if torch.isnan(object_rot).any() or torch.isnan(goal_rot).any():
-                print(f"NaN in rotations - object_rot: {object_rot[0]}, goal_rot: {goal_rot[0]}")
+                log.warning(f"NaN in rotations - object_rot: {object_rot[0]}, goal_rot: {goal_rot[0]}")
 
             quat_dot = torch.abs(torch.sum(object_rot * goal_rot, dim=1))
             quat_dot = torch.clamp(quat_dot, min=0.0, max=1.0)
@@ -322,7 +320,7 @@ class AllegroHandCfg(BaseTaskCfg):
                 goal_state = env_state["objects"]["goal"]
 
                 if isinstance(actions[i], dict):
-                    robot_name = list(actions[i].keys())[0]
+                    robot_name = next(iter(actions[i].keys()))
                     if "dof_pos_target" in actions[i][robot_name]:
                         action = torch.tensor(list(actions[i][robot_name]["dof_pos_target"].values()))
                     else:
