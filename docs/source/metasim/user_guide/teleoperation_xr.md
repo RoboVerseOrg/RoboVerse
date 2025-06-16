@@ -1,15 +1,16 @@
 Follow these steps to build and run a full XR-to-robot teleoperation sample on a **PICO 4 Ultra headset and a Linux x86 PC**. This sample has been tested only under the below system OS requirements:
-Linux x86 PC: Ubuntu 22.04
-PICO 4 Ultra: User OS >5.12. Special permission with enterprise version and VST camera permission is required for headset camera access.
+
+- Linux x86 PC: Ubuntu 22.04
+
+- PICO 4 Ultra: User OS >5.12. Currently supports [PICO 4 Ultra](https://www.picoxr.com/global/products/pico4-ultra) and [PICO 4 Ultra Enterprise](https://www.picoxr.com/global/products/pico4-ultra-enterprise).
 
 1. **Install Roboverse**
    - Install Roboverse with your preferred simulators following [this instruction](https://roboverse.wiki/metasim/get_started/installation), the XR teleoperation is tested with Isaac v1.4
    - Install [cuRobo](https://roboverse.wiki/metasim/get_started/advanced_installation/curobo)
 
 2. **Install xrobotoolkit-sdk**
-   - Use the following command under the Roboverse directory
+   - Use the following command
         ```bash
-        cd third_party
         git clone https://github.com/XR-Robotics/XRoboToolkit-PC-Service-Pybind.git
         cd XRoboToolkit-PC-Service-Pybind
         ./setup_ubuntu.sh
@@ -24,7 +25,7 @@ PICO 4 Ultra: User OS >5.12. Special permission with enterprise version and VST 
 
 4. **Install the XR App on Headset**
    - Turn on developer mode on Pico 4 Ultra headset first ([Enable developer mode on Pico 4 Ultra](https://developer.picoxr.com/ja/document/unreal/test-and-build/)), and make sure that [adb](https://developer.android.com/tools/adb) is installed properly.
-   - Download [XRoboToolkit-PICO.apk](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/releases/download/v1.0.0/XRoboToolkit-PICO.apk) on a PC with adb installed.
+   - Download [XRoboToolkit-PICO.apk](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/releases/download/v1.0.1/XRoboToolkit-PICO.apk) on a PC with adb installed.
    - To install apk on the headset, use command
      ```bash
       adb install -g XRoboToolkit-PICO.apk
@@ -35,5 +36,5 @@ PICO 4 Ultra: User OS >5.12. Special permission with enterprise version and VST 
    - Open app `XRoboToolkit` on the Pico headset. Details of the Unity app can be found in the [Unity source repo](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client).
    - Run the XR teleoperation demo
     ```bash
-    python metasim/scripts/teleop_keyboard.py --task=StackCube
+    python metasim/scripts/teleop_keyboard.py --task=PickCube
     ```
