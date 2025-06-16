@@ -1,4 +1,4 @@
-from typing import List
+from __future__ import annotations
 
 import torch
 
@@ -97,7 +97,7 @@ class AnymalTerrainCfg(BaseTaskCfg):
 
     robot: AnymalRobotCfg = AnymalRobotCfg()
 
-    objects: List[RigidObjCfg] = []
+    objects: list[RigidObjCfg] = []
 
     control: ControlCfg = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=1.0)
 

@@ -1,10 +1,10 @@
-from typing import List, Optional
+from __future__ import annotations
 
 import torch
 
 
 class IsaacGymTaskBase:
-    def reset_robot_state(self, handler, env_ids: Optional[List[int]] = None):
+    def reset_robot_state(self, handler, env_ids: list[int] | None = None):
         if not hasattr(handler, "gym") or not hasattr(handler, "sim"):
             return
 

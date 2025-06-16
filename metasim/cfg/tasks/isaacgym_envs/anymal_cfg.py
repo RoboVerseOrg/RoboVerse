@@ -1,4 +1,6 @@
-from typing import List
+from __future__ import annotations
+
+import logging
 
 import torch
 
@@ -9,6 +11,8 @@ from metasim.utils import configclass
 from metasim.utils.math import quat_rotate, quat_rotate_inverse
 
 from ..base_task_cfg import BaseTaskCfg
+
+log = logging.getLogger(__name__)
 
 
 @configclass
@@ -36,7 +40,7 @@ class AnymalCfg(BaseTaskCfg):
 
     robot: AnymalRobotCfg = AnymalRobotCfg()
 
-    objects: List[RigidObjCfg] = []
+    objects: list[RigidObjCfg] = []
 
     observation_space = {"shape": [48]}
 
@@ -70,10 +74,8 @@ class AnymalCfg(BaseTaskCfg):
             base_ang_vel = torch.tensor(robot_state.get("ang_vel", [0.0, 0.0, 0.0]), dtype=torch.float32)
 
             if not hasattr(self, "_debug_printed"):
-                print(
-                    f"Debug: robot_state keys: {robot_state.keys() if hasattr(robot_state, 'keys') else 'Not a dict'}"
-                )
-                print(f"Debug: base_quat: {base_quat}")
+                log.debug(f"robot_state keys: {robot_state.keys() if hasattr(robot_state, 'keys') else 'Not a dict'}")
+                log.debug(f"base_quat: {base_quat}")
                 self._debug_printed = True
 
             base_lin_vel_base = quat_rotate_inverse(base_quat, base_lin_vel) * self.lin_vel_scale
