@@ -24,7 +24,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from get_started.utils import ObsSaver
 from metasim.cfg.objects import RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg, ContactForceSensorCfg
+from metasim.cfg.sensors import ContactForceSensorCfg, PinholeCameraCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
@@ -74,7 +74,9 @@ scenario = ScenarioCfg(
 
 # add cameras
 scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, -0.2, 0.0))]
-scenario.sensors = [ContactForceSensorCfg(base_link=("shadow_hand_right","robot0_ffdistal"), source_link=None, name="test_sensor" )]
+scenario.sensors = [
+    ContactForceSensorCfg(base_link=("shadow_hand_right", "robot0_ffdistal"), source_link=None, name="test_sensor")
+]
 
 scenario.objects = [
     RigidObjCfg(
