@@ -103,9 +103,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         TODO: move those var into
         """
-        self.base_quat = (
-            torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
-        )  # TODO align it with metasim quaternion format [wxyz]
+        self.base_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
 
         self.obs_buf = torch.zeros(self.num_envs, self.num_obs, device=self.device, dtype=torch.float)
@@ -509,7 +507,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.episode_length_buf[env_ids] = 0
         self.feet_air_time[env_ids] = 0.0
         self.base_quat[env_ids] = (
-            torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device, dtype=torch.float32)
+            torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
             .unsqueeze(0)
             .repeat(len(env_ids), 1)
         )

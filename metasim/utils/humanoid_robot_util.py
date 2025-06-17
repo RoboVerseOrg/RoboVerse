@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import numpy as np
 import torch
 
-try:
-    from isaacgym.torch_utils import get_euler_xyz
-except ImportError:
-    pass
-
-
-from metasim.utils.math import axis_angle_from_quat, matrix_from_quat, quat_from_angle_axis, quat_mul
+from metasim.utils.math import (
+    axis_angle_from_quat,
+    euler_xyz_from_quat,
+    matrix_from_quat,
+    quat_from_angle_axis,
+    quat_mul,
+)
 
 
 def torso_upright(envstate, robot_name: str):
@@ -219,10 +218,10 @@ def get_euler_xyz_tensor(quat):
     Returns:
         torch.Tensor: Euler angles tensor of shape (N, 3) where each row contains (roll, pitch, yaw).
     """
-    r, p, w = get_euler_xyz(quat)
+    r, p, w = euler_xyz_from_quat(quat)
     # stack r, p, w in dim1
     euler_xyz = torch.stack((r, p, w), dim=1)
-    euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
+    euler_xyz[euler_xyz > torch.pi] -= 2 * torch.pi
     return euler_xyz
 
 
