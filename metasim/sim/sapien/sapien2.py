@@ -458,7 +458,7 @@ class Sapien2Handler(BaseSimHandler):
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
-    def set_states(self, states, env_ids=None):
+    def _set_states(self, states, env_ids=None):
         states_flat = [state["objects"] | state["robots"] for state in states]
         for name, val in states_flat[0].items():
             if name not in self.object_ids:

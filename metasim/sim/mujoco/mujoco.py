@@ -343,7 +343,7 @@ class MujocoHandler(BaseSimHandler):
             except KeyError:
                 pass
 
-    def set_states(self, states, env_ids=None, zero_vel=True):
+    def _set_states(self, states, env_ids=None, zero_vel=True):
         if len(states) > 1:
             raise ValueError("MujocoHandler only supports single env state setting")
 

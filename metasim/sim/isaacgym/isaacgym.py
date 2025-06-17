@@ -742,7 +742,7 @@ class IsaacgymHandler(BaseSimHandler):
             effort = torch.cat((obj_force_placeholder, effort), dim=1)
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
 
-    def set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
+    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids
         if env_ids is None:
             env_ids = list(range(self.num_envs))

@@ -180,7 +180,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                 process.join()
             self.closed = True
 
-        def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+        def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 

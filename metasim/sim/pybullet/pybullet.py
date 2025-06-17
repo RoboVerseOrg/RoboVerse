@@ -283,7 +283,7 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     ## Set states
     ############################################################
-    def set_states(self, init_states, env_ids=None):
+    def _set_states(self, init_states, env_ids=None):
         """Set the initial states of the environment.
 
         Args:

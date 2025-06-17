@@ -479,7 +479,7 @@ class Sapien3Handler(BaseSimHandler):
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
 
-    def set_states(self, states, env_ids=None):
+    def _set_states(self, states, env_ids=None):
         states_flat = [state["objects"] | state["robots"] for state in states]
         for name, val in states_flat[0].items():
             if name not in self.object_ids:

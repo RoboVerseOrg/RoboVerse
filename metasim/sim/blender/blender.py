@@ -67,7 +67,7 @@ class BlenderHandler(BaseSimHandler):
 
         self._add_camera()
 
-    def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         assert env_ids == [0]

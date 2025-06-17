@@ -166,7 +166,7 @@ class GenesisHandler(BaseSimHandler):
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
-    def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         states_flat = [state["objects"] | state["robots"] for state in states]

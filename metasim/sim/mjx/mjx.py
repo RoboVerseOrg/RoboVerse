@@ -202,7 +202,7 @@ class MJXHandler(BaseSimHandler):
                 )
         return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors={})
 
-    def set_states(
+    def _set_states(
         self,
         ts: TensorState,
         env_ids: list[int] | None = None,

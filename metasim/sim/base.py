@@ -76,6 +76,10 @@ class BaseSimHandler(ABC):
             states (dict): A dictionary containing the states of the environment
             env_ids (list[int]): List of environment ids to set the states. If None, set the states of all environments
         """
+        self._state_cache_expire = True
+        self._set_states(states, env_ids=env_ids)
+
+    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         raise NotImplementedError
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:

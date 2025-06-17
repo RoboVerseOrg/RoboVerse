@@ -69,7 +69,7 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Set states
     ############################################################
-    def set_states(self, states: list[EnvState]) -> None:
+    def _set_states(self, states: list[EnvState]) -> None:
         assert len(states) == 1  # PyRep only supports one env
         state = states[0]
 
