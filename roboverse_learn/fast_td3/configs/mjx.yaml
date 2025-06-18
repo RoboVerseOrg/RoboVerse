@@ -90,3 +90,4 @@ checkpoint_path: null
 eval_interval: 2000
 save_interval: 2000
 render_interval: 0
+video_path: null

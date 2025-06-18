@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import numpy as np
 import torch
+from torchvision.utils import make_grid
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.state import list_state_to_tensor
 
 
 class FastTD3EnvWrapper:
@@ -38,6 +41,8 @@ class FastTD3EnvWrapper:
             k = self.num_envs // len(initial_states)
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
+        if(scenario.sim == "mjx"):
+            self._initial_states =  list_state_to_tensor(self.env.handler, self._initial_states)
         self.env.reset(states=self._initial_states)
         states = self.env.handler.get_states()
         first_obs = self.get_humanoid_observation(states)
@@ -73,12 +78,19 @@ class FastTD3EnvWrapper:
         return observation
 
     def step(self, actions: torch.Tensor):
-        # ---------- env.step ----------
+        import time
+        def _now(): 
+            torch.cuda.synchronize() if torch.cuda.is_available() else None
+            return time.time()
+
+        t0 = _now()
         real_action = self._unnormalise_action(actions)
         states, _, terminated, truncated, _ = self.env.step_actions(real_action)
+        t1 = _now()
 
         obs_now = self.get_humanoid_observation(states).to(self.device)
         reward_now = self.get_humanoid_reward(states).to(self.device)
+        t2 = _now()
 
         done_flag = terminated.to(self.device, torch.bool)
         time_out_flag = truncated.to(self.device, torch.bool)
@@ -88,23 +100,30 @@ class FastTD3EnvWrapper:
             "observations": {"raw": {"obs": self._raw_observation_cache.clone().to(self.device)}},
         }
 
-        # ---------- reset----------
         if (done_indices := (done_flag | time_out_flag).nonzero(as_tuple=False).squeeze(-1)).numel():
             self.env.reset(states=self._initial_states, env_ids=done_indices.tolist())
             reset_states = self.env.handler.get_states()
             reset_obs_full = self.get_humanoid_observation(reset_states).to(self.device)
             obs_now[done_indices] = reset_obs_full[done_indices]
             self._raw_observation_cache[done_indices] = reset_obs_full[done_indices]
-
         else:
             keep_mask = (~done_flag).unsqueeze(-1)
             self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs_now)
+        t3 = _now()
+
+        print(f"[timing] step_actions: {(t1 - t0)*1e3:.2f} ms | obs+reward: {(t2 - t1)*1e3:.2f} ms | reset: {(t3 - t2)*1e3:.2f} ms | total: {(t3 - t0)*1e3:.2f} ms")
 
         return obs_now, reward_now, done_flag, info
 
-    def render(self) -> None:
-        self.env.render()
 
+    def render(self) -> None:
+        state=self.env.handler.get_states()
+        rgb_data = next(iter(state.cameras.values())).rgb
+        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
+        image = image.cpu().numpy().transpose(1, 2, 0)  # (H, W, C)
+        image = (image * 255).astype(np.uint8)
+        return image
+       
     def close(self) -> None:
         self.env.close()
 

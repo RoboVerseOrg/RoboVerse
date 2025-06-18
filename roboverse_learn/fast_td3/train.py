@@ -37,6 +37,9 @@ from tensordict import TensorDict
 from torch.amp import GradScaler, autocast
 from wrapper import FastTD3EnvWrapper
 
+from metasim.cfg.scenario import ScenarioCfg
+from metasim.cfg.sensors import PinholeCameraCfg
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.set_float32_matmul_precision("high")
 
@@ -56,6 +59,7 @@ def load_config_from_yaml(config_name: str) -> dict:
     with open(config_path) as f:
         config = yaml.safe_load(f)
     return config
+
 
 
 def main() -> None:
@@ -106,8 +110,6 @@ def main() -> None:
             raise ValueError("No GPU available")
     print(f"Using device: {device}")
 
-    from metasim.cfg.scenario import ScenarioCfg
-
     scenario = ScenarioCfg(
         task=cfg("task"),
         robots=cfg("robots"),
@@ -123,7 +125,24 @@ def main() -> None:
 
     envs = FastTD3EnvWrapper(scenario, device=device)
     eval_envs = envs  # reuse for evaluation
-    render_env = envs  # reuse for optional rendering
+    scenario_render = ScenarioCfg(
+        task=cfg("task"),
+        robots=cfg("robots"),
+        try_add_table=cfg("add_table", False),
+        sim=cfg("sim"),
+        num_envs=cfg("num_envs", 1),
+        headless=True,
+        cameras=[ 
+            PinholeCameraCfg(
+            width   = cfg("video_width", 1024),
+            height  = cfg("video_height", 1024),
+            pos     = (4.0, -4.0, 4.0),   # adjust as needed
+            look_at = (0.0, 0.0, 0.0),
+        )],
+    )
+    scenario_render.task.decimation = cfg("decimation", 1)
+
+    render_env = FastTD3EnvWrapper(scenario_render, device=device)
 
     # ---------------- derive shapes ------------------------------------
     n_act = envs.num_actions
@@ -233,23 +252,26 @@ def main() -> None:
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
+        import cv2
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
         """
+        video_path: str = cfg("video_path", "output/rollout.mp4")
+        os.makedirs(os.path.dirname(video_path), exist_ok=True)
         obs_normalizer.eval()
 
         # first frame after reset
         obs = render_env.reset()
         frames = [render_env.render()]
 
-        for _ in range(render_env.max_episode_steps):
+        for s in range(render_env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
             next_obs, _, done, _ = render_env.step(act.float())
 
             # store every second frame to keep GIF size reasonable
-            if _ % 2 == 0:
+            if s % 2 == 0:
                 frames.append(render_env.render())
 
             if done.any():
@@ -257,7 +279,18 @@ def main() -> None:
             obs = next_obs
 
         obs_normalizer.train()
-        return frames
+        h, w, _ = frames[0].shape
+        fps     = 30                                       # change if desired
+        fourcc  = cv2.VideoWriter_fourcc(*"mp4v")          # .mp4 w/ MPEG-4 codec
+        writer  = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
+
+        for f in frames:
+            writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))   # OpenCV needs BGR
+        writer.release()
+
+        print(f"[render_with_rollout] MP4 saved to {video_path}")
+
+
 
     def update_main(data, logs_dict):
         with autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
@@ -461,7 +494,7 @@ def main() -> None:
             if torch.cuda.is_available():
                 torch.cuda.synchronize(device)
 
-            if global_step % 100 == 0 and start_time is not None:
+            if global_step % 10 == 0 and start_time is not None:
                 speed = (global_step - measure_burnin) / (time.time() - start_time)
                 pbar.set_description(f"{speed: 4.4f} sps, " + desc)
                 with torch.no_grad():
@@ -483,6 +516,9 @@ def main() -> None:
                         logs["eval_avg_return"] = eval_avg_return
                         logs["eval_avg_length"] = eval_avg_length
                         print(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
+
+                    if cfg("render_interval") > 0 and global_step % cfg("render_interval") == 0:
+                        renders = render_with_rollout()
 
                 if cfg("use_wandb"):
                     wandb.log(
