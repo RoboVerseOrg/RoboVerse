@@ -100,7 +100,7 @@ def get_args(test=False):
             "name": "--num_envs",
             "type": int,
             "default": 128,
-            "help": "number of parrallel environments.",
+            "help": "number of parallel environments.",
         },
         {
             "name": "--sim",

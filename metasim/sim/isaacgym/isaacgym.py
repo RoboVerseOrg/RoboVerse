@@ -345,7 +345,7 @@ class IsaacgymHandler(BaseSimHandler):
     ) -> None:
         # configure env grid
         num_per_row = int(math.sqrt(self.num_envs))
-        spacing = 1.0
+        spacing = self.scenario.env_spacing
         env_lower = gymapi.Vec3(-spacing, -spacing, 0.0)
         env_upper = gymapi.Vec3(spacing, spacing, spacing)
         log.info("Creating %d environments" % self.num_envs)

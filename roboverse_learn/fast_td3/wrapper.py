@@ -41,8 +41,8 @@ class FastTD3EnvWrapper:
             k = self.num_envs // len(initial_states)
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
-        if(scenario.sim == "mjx"):
-            self._initial_states =  list_state_to_tensor(self.env.handler, self._initial_states)
+        if scenario.sim == "mjx":
+            self._initial_states = list_state_to_tensor(self.env.handler, self._initial_states)
         self.env.reset(states=self._initial_states)
         states = self.env.handler.get_states()
         first_obs = self.get_humanoid_observation(states)
