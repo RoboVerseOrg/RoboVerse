@@ -49,7 +49,7 @@ def main(cfg: DictConfig):
     cprint("Setting up environment for evaluation", "green", attrs=["bold"])
     task = get_task(cfg.train.task_name)
     robot = get_robot(cfg.train.robot_name)
-    scenario = ScenarioCfg(task=task, robot=robot)
+    scenario = ScenarioCfg(task=task, robots=[robot])
     scenario.cameras = []
 
     tic = time.time()

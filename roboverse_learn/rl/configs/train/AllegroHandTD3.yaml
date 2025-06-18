@@ -1,0 +1,62 @@
+defaults:
+  - ../default
+
+task_name: "AllegroHand"
+robot_name: "allegro_hand"
+
+algo: "td3"
+
+observation_space:
+  shape: [50]  # full_no_vel observation
+observation_shape: [50]
+
+td3:
+  action_num: 16
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+
+  # Network architecture
+  network:
+    mlp:
+      units: [512, 512, 256, 128]
+
+  # Hyperparameters
+  learning_rate: 3e-4
+  critic_learning_rate: 3e-4
+  lr_schedule: "adaptive"  # adaptive or linear
+  kl_threshold: 0.016  # For adaptive scheduler
+  batch_size: 256
+  replay_buffer_size: 1000000
+  gamma: 0.99
+  tau: 0.005  # Target network update rate
+
+  # TD3 specific
+  policy_noise: 0.2  # Noise added to target policy
+  noise_clip: 0.5  # Range to clip target policy noise
+  policy_delay: 2  # Frequency of delayed policy updates
+  exploration_noise: 0.1  # Std of Gaussian exploration noise
+
+  # Training schedule
+  max_epochs: 10000
+  max_agent_steps: 500000000
+  steps_num: 128  # Steps per epoch
+  games_per_epoch: 10
+  warmup_steps: 10000  # Random actions before using policy
+  learning_starts: 10000  # Start learning after this many steps
+
+  # Logging and saving
+  save_frequency: 50
+  save_best_after: 50
+  log_interval: 100
+  eval_interval: 1000
+  reward_threshold: 5000  # Early stopping threshold
+
+  # Normalization
+  normalize_input: True
+  normalize_value: True
+  normalize_reward: True
+  reward_scale_value: 0.01
+
+  # Gradient clipping
+  truncate_grads: True
+  grad_norm: 1.0

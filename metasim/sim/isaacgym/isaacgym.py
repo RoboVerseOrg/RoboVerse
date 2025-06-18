@@ -16,6 +16,7 @@ from metasim.cfg.objects import (
     _FileBasedMixin,
 )
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -233,10 +234,12 @@ class IsaacgymHandler(BaseSimHandler):
         elif isinstance(object, RigidObjCfg):
             asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
             asset_options = gymapi.AssetOptions()
-            asset_options.armature = 0.01
-            asset_options.fix_base_link = object.fix_base_link
-            asset_options.disable_gravity = False
-            asset_options.flip_visual_attachments = False
+            # Only set fix_base_link if it's True (non-default)
+            if object.fix_base_link:
+                asset_options.fix_base_link = True
+            # For XFORM physics (goal object), disable gravity
+            if hasattr(object, "physics") and object.physics == PhysicStateType.XFORM:
+                asset_options.disable_gravity = True
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
 
         asset_link_dict = self.gym.get_asset_rigid_body_dict(asset)
@@ -351,7 +354,10 @@ class IsaacgymHandler(BaseSimHandler):
         log.info("Creating %d environments" % self.num_envs)
 
         robot_pose = gymapi.Transform()
-        robot_pose.p = gymapi.Vec3(*self._robot_init_pos)
+        robot_pose.p = gymapi.Vec3(*self._robot_init_pose)
+        robot_pose.r = gymapi.Quat(
+            *self._robot_init_quat[1:], self._robot_init_quat[0]
+        )  # x, y, z, w order for gymapi.Quat
 
         # add ground plane
         plane_params = gymapi.PlaneParams()
@@ -444,11 +450,20 @@ class IsaacgymHandler(BaseSimHandler):
             for obj_i, obj_asset in enumerate(obj_assets_list):
                 # add object
                 obj_pose = gymapi.Transform()
-                obj_pose.p.x = obj_i * 0.2  # place to any position, will update immediately at reset stage
-                obj_pose.p.y = 0.0
-                obj_pose.p.z = 0.0
-                obj_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), 0)
-                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, "object", i, 0)
+                obj = self.objects[obj_i]
+                # Use default position from object configuration
+                obj_pose.p.x = obj.default_position[0]
+                obj_pose.p.y = obj.default_position[1]
+                obj_pose.p.z = obj.default_position[2]
+                # Use default orientation from object configuration
+                obj_pose.r = gymapi.Quat(
+                    obj.default_orientation[1],
+                    obj.default_orientation[2],
+                    obj.default_orientation[3],
+                    obj.default_orientation[0],
+                )  # x, y, z, w order
+                # Create actor with collision group 0 and filter 0 (matches IsaacGymEnvs)
+                obj_handle = self.gym.create_actor(env, obj_asset, obj_pose, obj.name, i, 0, 0)
 
                 if isinstance(self.objects[obj_i], _FileBasedMixin):
                     self.gym.set_actor_scale(env, obj_handle, self.objects[obj_i].scale[0])
@@ -476,11 +491,11 @@ class IsaacgymHandler(BaseSimHandler):
                 self._obj_handles[-1].append(obj_handle)
 
                 object_rigid_body_indices = {}
-                for rigid_body_name, rigid_body_idx in self._asset_dict_dict[self.objects[obj_i].name].items():
-                    rigid_body_idx = self.gym.find_actor_rigid_body_index(
+                for rigid_body_name, local_idx in self._asset_dict_dict[self.objects[obj_i].name].items():
+                    global_rigid_body_idx = self.gym.find_actor_rigid_body_index(
                         env, obj_handle, rigid_body_name, gymapi.DOMAIN_SIM
                     )
-                    object_rigid_body_indices[rigid_body_name] = rigid_body_idx
+                    object_rigid_body_indices[rigid_body_name] = global_rigid_body_idx
 
                 self._env_rigid_body_global_indices[-1][self.objects[obj_i].name] = object_rigid_body_indices
 

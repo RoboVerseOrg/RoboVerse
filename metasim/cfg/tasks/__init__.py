@@ -19,8 +19,9 @@ def __get_quick_ref():
     from .fetch import FetchCloseBoxCfg
     from .gapartnet import GapartnetOpenDrawerCfg
     from .humanoidbench import StandCfg
-    from .isaacgym_envs.allegrohand_reorientation_cfg import AllegroHandReorientationCfg
+    from .isaacgym_envs.allegrohand_cfg import AllegroHandCfg
     from .isaacgym_envs.ant_isaacgym_cfg import AntIsaacGymCfg
+    from .isaacgym_envs.anymal_cfg import AnymalCfg
     from .libero.libero_objects.libero_pick_alphabet_soup import LiberoPickAlphabetSoupCfg
     from .libero.libero_objects.libero_pick_bbq_sauce import LiberoPickBbqSauceCfg
     from .libero.libero_objects.libero_pick_butter import LiberoPickButterCfg

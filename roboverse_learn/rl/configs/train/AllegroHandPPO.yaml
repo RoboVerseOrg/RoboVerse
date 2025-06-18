@@ -1,0 +1,46 @@
+defaults:
+  - ../default
+
+task_name: "AllegroHand"
+robot_name: "allegro_hand"
+
+algo: "ppo"
+
+observation_space:
+  shape: [50]  # full_no_vel observation
+observation_shape: [50]
+
+ppo:
+  action_num: 16
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+  e_clip: 0.2
+  clip_value: True
+  entropy_coef: 0.0
+  critic_coef: 2.0
+  bounds_loss_coef: 0.0
+  gamma: 0.99
+  tau: 0.95
+  truncate_grads: True
+  grad_norm: 1.0
+  value_bootstrap: True
+  normalize_advantage: True
+  normalize_input: True
+  normalize_value: True
+  reward_scale_value: 0.01
+  clip_value_loss: True
+  horizon_length: 16
+  minibatch_size: 64  # Reduced for smaller num_envs
+  mini_epochs: 5
+  learning_rate: 5e-4
+  lr_schedule: "adaptive"
+  max_agent_steps: 500000000
+  kl_threshold: 0.016
+  save_frequency: 50
+  save_best_after: 50
+  seq_len: 4
+
+  network:
+    mlp:
+      units: [512, 512, 256, 128]
+    separate_value_mlp: True

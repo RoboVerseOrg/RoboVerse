@@ -1,23 +1,23 @@
 defaults:
   - ../default
 
-task_name: "AllegroHandReorientation"
-robot_name: "allegro_hand"
+task_name: "isaacgym_envs:AnymalTerrain"
+robot_name: "anymal"
 
 algo: "ppo"
 
 observation_space:
-  shape: [16]
-observation_shape: [16]
+  shape: [188]  # AnymalTerrain observation size (includes height measurements)
+observation_shape: [188]
 
 ppo:
-  action_num: 16
+  action_num: 12
   multi_gpu: ${experiment.multi_gpu}
-  num_actors: 32
+  num_actors: ${environment.num_envs}
   e_clip: 0.2
   clip_value: True
   entropy_coef: 0.0
-  critic_coef: 4
+  critic_coef: 2.0
   bounds_loss_coef: 0.0001
   gamma: 0.99
   tau: 0.95
@@ -27,20 +27,20 @@ ppo:
   normalize_advantage: True
   normalize_input: True
   normalize_value: True
-  reward_scale_value: 0.01
+  reward_scale_value: 1.0
   clip_value_loss: True
-  horizon_length: 8
-  minibatch_size: 128
+  horizon_length: 24
+  minibatch_size: 64
   mini_epochs: 5
-  learning_rate: 5e-4
+  learning_rate: 3e-4
   lr_schedule: "adaptive"
-  max_agent_steps: 500000
-  kl_threshold: 0.016
-  save_frequency: 200
-  save_best_after: 500
+  max_agent_steps: 1000000000
+  kl_threshold: 0.01
+  save_frequency: 100
+  save_best_after: 100
   seq_len: 4
 
   network:
     mlp:
       units: [512, 256, 128]
-    separate_value_mlp: True
+    separate_value_mlp: False
