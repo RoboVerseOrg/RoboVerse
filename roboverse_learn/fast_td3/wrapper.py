@@ -79,7 +79,8 @@ class FastTD3EnvWrapper:
 
     def step(self, actions: torch.Tensor):
         import time
-        def _now(): 
+
+        def _now():
             torch.cuda.synchronize() if torch.cuda.is_available() else None
             return time.time()
 
@@ -111,19 +112,20 @@ class FastTD3EnvWrapper:
             self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs_now)
         t3 = _now()
 
-        print(f"[timing] step_actions: {(t1 - t0)*1e3:.2f} ms | obs+reward: {(t2 - t1)*1e3:.2f} ms | reset: {(t3 - t2)*1e3:.2f} ms | total: {(t3 - t0)*1e3:.2f} ms")
+        print(
+            f"[timing] step_actions: {(t1 - t0) * 1e3:.2f} ms | obs+reward: {(t2 - t1) * 1e3:.2f} ms | reset: {(t3 - t2) * 1e3:.2f} ms | total: {(t3 - t0) * 1e3:.2f} ms"
+        )
 
         return obs_now, reward_now, done_flag, info
 
-
     def render(self) -> None:
-        state=self.env.handler.get_states()
+        state = self.env.handler.get_states()
         rgb_data = next(iter(state.cameras.values())).rgb
         image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
         image = image.cpu().numpy().transpose(1, 2, 0)  # (H, W, C)
         image = (image * 255).astype(np.uint8)
         return image
-       
+
     def close(self) -> None:
         self.env.close()
 

@@ -61,7 +61,6 @@ def load_config_from_yaml(config_name: str) -> dict:
     return config
 
 
-
 def main() -> None:
     if len(sys.argv) < 2:
         log.error("Please provide the config file path, e.g. python train_sb3.py configs/isaacgym.yaml")
@@ -132,13 +131,14 @@ def main() -> None:
         sim=cfg("sim"),
         num_envs=cfg("num_envs", 1),
         headless=True,
-        cameras=[ 
+        cameras=[
             PinholeCameraCfg(
-            width   = cfg("video_width", 1024),
-            height  = cfg("video_height", 1024),
-            pos     = (4.0, -4.0, 4.0),   # adjust as needed
-            look_at = (0.0, 0.0, 0.0),
-        )],
+                width=cfg("video_width", 1024),
+                height=cfg("video_height", 1024),
+                pos=(4.0, -4.0, 4.0),  # adjust as needed
+                look_at=(0.0, 0.0, 0.0),
+            )
+        ],
     )
     scenario_render.task.decimation = cfg("decimation", 1)
 
@@ -253,6 +253,7 @@ def main() -> None:
 
     def render_with_rollout() -> list:
         import cv2
+
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
@@ -280,17 +281,15 @@ def main() -> None:
 
         obs_normalizer.train()
         h, w, _ = frames[0].shape
-        fps     = 30                                       # change if desired
-        fourcc  = cv2.VideoWriter_fourcc(*"avc1")         # .mp4 w/ MPEG-4 codec
-        writer  = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
+        fps = 30  # change if desired
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # .mp4 w/ MPEG-4 codec
+        writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
 
         for f in frames:
-            writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))   # OpenCV needs BGR
+            writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))  # OpenCV needs BGR
         writer.release()
 
         print(f"[render_with_rollout] MP4 saved to {video_path}")
-
-
 
     def update_main(data, logs_dict):
         with autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
