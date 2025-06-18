@@ -32,6 +32,7 @@ class BaseTaskCfg:
         reward_functions: The list of reward functions.
         reward_weights: The list of reward weights.
         sim_params: The simulation params.
+        env_spacing: The spacing of parrelal environment.
     """
 
     decimation: int = 3
@@ -46,6 +47,7 @@ class BaseTaskCfg:
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
     control: ControlCfg = ControlCfg()
+    env_spacing: float = 1.0
 
 
 @configclass

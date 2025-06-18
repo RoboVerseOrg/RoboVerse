@@ -49,6 +49,15 @@ Simulation Configuration
      -
      -
      -
+   * - ``env_spacing``
+     - 
+     - ✓
+     -
+     - ✓
+     -
+     -
+
+
 
 Robot Configuration
 ~~~~~~~~~~~~~~~~~~~
