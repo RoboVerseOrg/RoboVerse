@@ -90,7 +90,9 @@ class GenesisHandler(BaseSimHandler):
             )
             self.camera_inst_dict[camera.name] = camera_inst
 
-        self.scene_inst.build(n_envs=self.scenario.num_envs, env_spacing=(2, 2))
+        self.scene_inst.build(
+            n_envs=self.scenario.num_envs, env_spacing=(self.scenario.env_spacing, self.scenario.env_spacing)
+        )
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:

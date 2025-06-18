@@ -54,6 +54,8 @@ class ScenarioCfg:
     object_states: bool = False
     split: Literal["train", "val", "test", "all"] = "all"
     headless: bool = False
+    """environment spacing for parallel environments"""
+    env_spacing: float = 1.0
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -84,5 +86,7 @@ class ScenarioCfg:
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
         ### Control parameters  overvide by task
         self.control = self.task.control if self.task is not None else self.control
+        ### spacing of parallel environments
+        self.env_spacing = self.task.env_spacing if self.task is not None else self.env_spacing
 
         FileDownloader(self).do_it()
