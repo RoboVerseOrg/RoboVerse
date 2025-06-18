@@ -11,16 +11,15 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    BaseConfig,
+    BaseLeggedRobotChecker,
     CommandRanges,
     CommandsConfig,
     LeggedRobotCfgPPO,
     RewardCfg,
 )
 from metasim.constants import PhysicStateType
+from metasim.sim import BaseSimHandler
 from metasim.types import EnvState
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import *
 
@@ -34,7 +33,32 @@ def reward_torso_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
     return torch.exp(-4 * torso_ori_ball_pos_error), torso_ori_ball_pos_error
 
 
-class ReachingCfgPPO(LeggedRobotCfgPPO):
+def reward_ball_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    ball_goal_diff = (
+        env_states.objects[cfg.objects[0].name].root_state[:, :3] - env_states.robots[robot_name].extra["goal_pos"]
+    )
+    ball_goal_error = torch.mean(torch.abs(ball_goal_diff), dim=1)
+    return torch.exp(-1 * ball_goal_error), ball_goal_error
+
+
+@configclass
+class TaskBallChecker(BaseLeggedRobotChecker):
+    def check(self, handler: BaseSimHandler):
+        reset_buf = super().check(handler)
+
+        # if the ball hits the goal, reset the env
+        envstates = handler.get_states()
+        ball_pos = envstates.objects[handler.scenario.objects[0].name].root_state[:, :3]
+        # HACK This is a hack to get the goal position for checker
+        goal_pos = handler.task.goal_pos
+        ball_goal_diff = ball_pos - goal_pos  # [envs, 3]
+        ball_goal_dist = torch.norm(ball_goal_diff, dim=1)
+        reset_buf |= ball_goal_dist < handler.task.command_ranges.threshold
+
+        return reset_buf
+
+
+class TaskBallCfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
@@ -42,6 +66,25 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
+        # HRL
+        num_dofs = 19
+        frame_stack = 1
+        command_dim = 6
+        # Expert skills
+        skill_dict = {
+            "h1_wrist_walking": {
+                "experiment_name": "h1_wrist_walking",
+                "load_run": "202501010",
+                "checkpoint": -1,
+                "low_high": (-2, 2),
+            },
+            "h1_wrist_stepping": {
+                "experiment_name": "h1_wrist_stepping",
+                "load_run": "20250321_094203",
+                "checkpoint": -1,
+                "low_high": (-1, 1),
+            },
+        }
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         entropy_coef = 0.001
@@ -53,26 +96,20 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
 
     class runner:
         wandb = True
-        policy_class_name = "ActorCritic"
+        policy_class_name = "ActorCriticHierarchical"
         algorithm_class_name = "PPO"
         num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
         save_interval = 1000  # check for potential saves every this many iterations
-        experiment_name = "reaching"
+        experiment_name = "task_ball"
         run_name = ""
         # load and resume
         resume = False
         load_run = -1  # -1 = last run
         checkpoint = -1  # -1 = last saved model
         resume_path = None  # updated from load_run and ckpt
-
-
-# TODO task config override robot config
-class robot_asset(BaseConfig):
-    fix_base_link: bool = False
-    penalize_contacts_on = ["hip", "knee", "pelvis", "torso", "shoulder", "elbow"]
 
 
 # TODO this may be constant move it to humanoid cfg
@@ -111,7 +148,7 @@ class TaskBallCfg(BaseHumanoidCfg):
         num_threads=10,
     )
 
-    ppo_cfg = ReachingCfgPPO()
+    ppo_cfg = TaskBallCfgPPO()
     reward_cfg = ReachingRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
 
@@ -124,36 +161,28 @@ class TaskBallCfg(BaseHumanoidCfg):
     num_actions = 19
     frame_stack = 1
     c_frame_stack = 3
-    command_dim = 14
-    num_single_obs = 3 * num_actions + 6 + command_dim
+    command_dim = 6
+    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
     num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 60
-
+    single_num_privileged_obs = 3 * num_actions + 33
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
 
-    reward_functions: list[Callable] = [
-        reward_torso_pos,
-        # reward_ball_pos,
-    ]
+    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
+    checker = TaskBallChecker()
+
+    reward_functions: list[Callable] = [reward_torso_pos, reward_ball_pos]
 
     # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
 
     reward_weights: dict[str, float] = {
-        "wrist_pos": 5,
-        "feet_distance": 0.5,
-        "upper_body_pos": 0.5,
-        "default_joint_pos": 0.5,
-        "orientation": 1.0,
-        "torques": -1e-5,
-        "dof_vel": -5e-4,
-        "dof_acc": -1e-7,
+        "torso_pos": 1,
+        "ball_pos": 5,
     }
 
     objects = [
         PrimitiveSphereCfg(
             name="sphere",
-            radius=0.1,
+            radius=0.2,
             color=[0.0, 1.0, 1.0],  # TODO randomization
             physics=PhysicStateType.RIGIDBODY,
         ),
@@ -163,7 +192,8 @@ class TaskBallCfg(BaseHumanoidCfg):
         {
             "objects": {
                 "sphere": {
-                    "pos": torch.tensor([0.7, 0.0, 0.05]),  # TODO domain randomization as original repo
+                    # pos[2] = radius
+                    "pos": torch.tensor([0.7, 0.0, 0.2]),  # TODO domain randomization as original repo
                     "rot": torch.tensor([
                         1.0,
                         0.0,

@@ -10,7 +10,6 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    BaseConfig,
     CommandRanges,
     CommandsConfig,
     LeggedRobotCfgPPO,
@@ -77,12 +76,6 @@ class SquattingCfgPPO(LeggedRobotCfgPPO):
         load_run = -1  # -1 = last run
         checkpoint = -1  # -1 = last saved model
         resume_path = None  # updated from load_run and ckpt
-
-
-# TODO task config override robot config
-class robot_asset(BaseConfig):
-    fix_base_link: bool = False
-    penalize_contacts_on = ["hip", "knee", "pelvis", "torso", "shoulder", "elbow"]
 
 
 @configclass

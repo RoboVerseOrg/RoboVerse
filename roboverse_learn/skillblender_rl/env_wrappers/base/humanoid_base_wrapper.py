@@ -39,25 +39,29 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.use_vision = scenario.task.use_vision
         self.up_axis_idx = 2
 
-        self._parse_joint_indices(scenario.robots[0])
+        self._parse_rigid_body_indices(scenario.robots[0])
         self._get_cfg_from_handler()
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
-    def _parse_joint_indices(self, robot):
+    def _parse_rigid_body_indices(self, robot):
         """
         Parse humanoid rigid body indices from robot cfg.
         """
         feet_names = robot.feet_links
         knee_names = robot.knee_links
         elbow_names = robot.elbow_links
+        wrist_names = robot.wrist_links
+        torso_names = robot.torso_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
 
-        # TODO get alphabet order
+        # get sorted indices for specific body links
         self.feet_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, feet_names)
         self.knee_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, knee_names)
         self.elbow_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, elbow_names)
+        self.wrist_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, wrist_names)
+        self.torso_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, torso_names)
         self.termination_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
             robot.name, termination_contact_names
         )
@@ -69,6 +73,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.cfg.feet_indices = self.feet_indices
         self.cfg.knee_indices = self.knee_indices
         self.cfg.elbow_indices = self.elbow_indices
+        self.cfg.wrist_indices = self.wrist_indices
+        self.cfg.torso_indices = self.torso_indices
         self.cfg.termination_contact_indices = self.termination_contact_indices
         self.cfg.penalised_contact_indices = self.penalised_contact_indices
 
@@ -308,8 +314,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _parse_state_for_reward(self, envstate):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
         Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config

@@ -106,9 +106,6 @@ class SquattingWrapper(HumanoidBaseWrapper):
     def _parse_state_for_reward(self, envstate: EnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
-        Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config
         # parse those state which cannot directly get from Envstates
