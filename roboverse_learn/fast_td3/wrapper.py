@@ -6,7 +6,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
-
+from metasim.utils.state import  list_state_to_tensor
 
 class FastTD3EnvWrapper:
     """
@@ -38,6 +38,8 @@ class FastTD3EnvWrapper:
             k = self.num_envs // len(initial_states)
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
+        if(scenario.sim == "mjx"):
+            self._initial_states =  list_state_to_tensor(self.env.handler, self._initial_states)
         self.env.reset(states=self._initial_states)
         states = self.env.handler.get_states()
         first_obs = self.get_humanoid_observation(states)

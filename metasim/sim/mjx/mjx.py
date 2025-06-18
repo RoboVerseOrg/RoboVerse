@@ -24,7 +24,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .mjx_helper import (
     j2t,
@@ -209,7 +209,7 @@ class MJXHandler(BaseSimHandler):
         *,
         zero_vel: bool = True,
     ) -> None:
-        ts = list_state_to_tensor(self, ts)
+        # ts = list_state_to_tensor(self, ts)
         self._init_mjx_once(ts)
 
         data = self._data
@@ -360,7 +360,7 @@ class MJXHandler(BaseSimHandler):
         tgt_jax = t2j(actions)
 
         # -------- id maps ---------------------------------------------
-        if obj_name == self._scenario.robot.name:
+        if obj_name == self._scenario.robots[0].name:
             a_ids = self._robot_act_ids.get(obj_name)
         else:
             a_ids = self._object_act_ids.get(obj_name)
