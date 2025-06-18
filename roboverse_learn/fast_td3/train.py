@@ -281,7 +281,7 @@ def main() -> None:
         obs_normalizer.train()
         h, w, _ = frames[0].shape
         fps     = 30                                       # change if desired
-        fourcc  = cv2.VideoWriter_fourcc(*"mp4v")          # .mp4 w/ MPEG-4 codec
+        fourcc  = cv2.VideoWriter_fourcc(*"avc1")         # .mp4 w/ MPEG-4 codec
         writer  = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
 
         for f in frames:
