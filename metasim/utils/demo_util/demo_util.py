@@ -31,6 +31,7 @@ def get_traj(task: BaseTaskCfg, robot: BaseRobotCfg, handler: BaseSimHandler | N
         log.info("Reading trajectory using v2 data format")
         if os.path.exists(task.traj_filepath):
             if v2_as_v3:
+                a = get_traj_v2(task, robot)
                 return convert_traj_v2_to_v3(*get_traj_v2(task, robot), robot)
             else:
                 return get_traj_v2(task, robot)

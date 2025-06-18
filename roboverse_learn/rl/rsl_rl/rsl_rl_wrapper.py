@@ -54,7 +54,9 @@ class RslRlWrapper(VecEnv):
         self.train_cfg = rsl_rl_class_to_dict(scenario.task.ppo_cfg)
 
     def _get_init_states(self, scenario):
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
+        self.init_states = getattr(scenario.task, 'init_states', None)
+        if self.init_states is None:
+            raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
         if len(self.init_states) < self.num_envs:
             self.init_states = (
                 self.init_states * (self.num_envs // len(self.init_states))

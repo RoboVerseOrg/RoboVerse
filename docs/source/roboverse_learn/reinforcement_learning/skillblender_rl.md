@@ -18,7 +18,7 @@ pip install -e roboverse_learn/rl/rsl_rl
     ```bash
     python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1_wrist" --use_wandb
    ```
-    after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this.
+    after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this. Note that we should always use `h1_wrist` instead of navie `h1` keep ths wrist links exist.
 **To speed up training, click the IsaacGym viewer and press V to stop rendering.**
 ## Task list
 > 4 Goal-Conditional Skills
