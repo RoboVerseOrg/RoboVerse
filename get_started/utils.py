@@ -31,7 +31,7 @@ class ObsSaver:
             return
 
         try:
-            rgb_data = next(iter(state.cameras.values())).rgb
+            rgb_data = torch.concat([cam.rgb for cam in state.cameras.values()], dim=2)  # horizontal concat
             image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
         except Exception as e:
             log.error(f"Error adding observation: {e}")
