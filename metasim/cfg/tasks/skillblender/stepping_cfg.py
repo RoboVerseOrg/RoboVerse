@@ -133,9 +133,6 @@ class SteppingCfg(BaseHumanoidCfg):
         reward_dof_vel,
         reward_dof_acc,
     ]
-
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "feet_pos": 5,
         "upper_body_pos": 0.5,

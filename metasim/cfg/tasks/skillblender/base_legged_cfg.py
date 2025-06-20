@@ -210,7 +210,7 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     num_obs: int = 124
     num_privileged_obs: int = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
     num_actions: int = 12
-    env_spacing: float = 3.0  # not used with heightfields/trimeshes
+    env_spacing: float = 1.0  # not used with heightfields/trimeshes
     send_timeouts: bool = True  # send time out information to the algorithm
     episode_length_s: float = 20.0  # episode length in seconds
 

@@ -23,6 +23,9 @@ class TaskBallWrapper(HumanoidBaseWrapper):
         super().__init__(scenario)
         _, _ = self.env.reset()
         self.ori_ball_pos = torch.zeros(self.num_envs, 3, device=self.device)
+        # TODO add domain randomizatoin
+        self.ori_ball_pos[:, 0] = 0.5 * (self.scenario.task.ball_range_x[0] + self.scenario.task.ball_range_x[1])
+        self.ori_ball_pos[:, 1] = 0.5 * (self.scenario.task.ball_range_y[0] + self.scenario.task.ball_range_y[1])
         self.goal_pos = torch.zeros(self.num_envs, 3, device=self.device)
         # HACK This is a hack to get the goal position for checker
         self.cfg.goal_pos = self.goal_pos

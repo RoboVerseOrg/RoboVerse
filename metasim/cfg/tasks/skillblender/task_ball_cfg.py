@@ -6,7 +6,7 @@ from typing import Callable
 
 import torch
 
-from metasim.cfg.objects import PrimitiveSphereCfg
+from metasim.cfg.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
@@ -114,7 +114,7 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
 
 # TODO this may be constant move it to humanoid cfg
 @configclass
-class ReachingRewardCfg(RewardCfg):
+class TaskBallRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
@@ -137,7 +137,7 @@ class TaskBallCfg(BaseHumanoidCfg):
     env_spacing = 10.0
     traj_filepath = "roboverse_data/trajs/skillblender/initial_state_v2.json"
     sim_params = SimParamCfg(
-        dt=0.001,
+        dt=0.01,
         contact_offset=0.01,
         substeps=1,
         num_position_iterations=4,
@@ -149,7 +149,7 @@ class TaskBallCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = TaskBallCfgPPO()
-    reward_cfg = ReachingRewardCfg()
+    reward_cfg = TaskBallRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
 
     # goal, related to asset size
@@ -162,18 +162,15 @@ class TaskBallCfg(BaseHumanoidCfg):
     frame_stack = 1
     c_frame_stack = 3
     command_dim = 6
-    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
+    num_single_obs = 3 * num_actions + 6 + command_dim
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 3 * num_actions + 33
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
-    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
-    checker = TaskBallChecker()
+    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
+    checker = BaseLeggedRobotChecker()
 
     reward_functions: list[Callable] = [reward_torso_pos, reward_ball_pos]
-
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "torso_pos": 1,
         "ball_pos": 5,
@@ -183,24 +180,76 @@ class TaskBallCfg(BaseHumanoidCfg):
         PrimitiveSphereCfg(
             name="sphere",
             radius=0.2,
-            color=[0.0, 1.0, 1.0],  # TODO randomization
+            color=[0.0, 0.5, 1.0],  # TODO domain randomization
             physics=PhysicStateType.RIGIDBODY,
+            mass=0.4,  # TODO domain randomization
+        ),
+        PrimitiveCubeCfg(
+            name="doll1",
+            size=[0.05, 4.0, 2.0],
+            color=[1.0, 1.0, 1.0],
+            fix_base_link=True,
+            enabled_gravity=True,
+        ),
+        PrimitiveCubeCfg(
+            name="doll2",
+            size=[1.0, 0.05, 2.0],
+            color=[1.0, 1.0, 1.0],
+            fix_base_link=True,
+            enabled_gravity=True,
+        ),
+        PrimitiveCubeCfg(
+            name="doll3",
+            size=[1.0, 0.05, 2.0],
+            color=[1.0, 1.0, 1.0],
+            fix_base_link=True,
+            enabled_gravity=True,
         ),
     ]
+
+    ball_range_x = [0.5, 1.0]
+    ball_range_y = [-0.3, 0.3]
+    ball_range_mass = [0.3, 0.5]
 
     init_states = [
         {
             "objects": {
                 "sphere": {
-                    # pos[2] = radius
-                    "pos": torch.tensor([0.7, 0.0, 0.2]),  # TODO domain randomization as original repo
+                    "pos": torch.tensor([1.7, 0.0, 0.1]),  # TODO domain randomization as original repo
                     "rot": torch.tensor([
                         1.0,
                         0.0,
                         0.0,
                         0.0,
                     ]),  # TODO domain randomize as original repo as original repo
-                }
+                },
+                "doll1": {
+                    "pos": torch.tensor([5.0, 0.0, 1.0]),
+                    "rot": torch.tensor([
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ]),
+                },
+                "doll2": {
+                    "pos": torch.tensor([4.5, 2.0, 1.0]),
+                    "rot": torch.tensor([
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ]),
+                },
+                "doll3": {
+                    "pos": torch.tensor([4.5, -2.0, 1.0]),
+                    "rot": torch.tensor([
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ]),
+                },
             },
             "robots": {
                 "h1_wrist": {

@@ -41,11 +41,9 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"
 
     class human:
-        delay = 0.0  # delay in seconds
+        delay = 0.0
         freq = 10
         resample_on_env_reset = True
-        filename = "CMU.npy"
-        rng = None
 
     init_states = [
         {

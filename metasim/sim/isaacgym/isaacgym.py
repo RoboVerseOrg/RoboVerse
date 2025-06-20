@@ -209,15 +209,15 @@ class IsaacgymHandler(BaseSimHandler):
         if isinstance(object, PrimitiveCubeCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_box(self.sim, object.size[0], object.size[1], object.size[2], asset_options)
         elif isinstance(object, PrimitiveSphereCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
@@ -226,7 +226,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = True
-            asset_options.disable_gravity = False
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)

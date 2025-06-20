@@ -1,4 +1,4 @@
-"""This is a training script that train legged robot"""
+"""This is a training script for skillblender framework"""
 
 from __future__ import annotations
 

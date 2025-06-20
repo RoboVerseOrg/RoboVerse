@@ -108,6 +108,9 @@ class BaseRigidObjCfg(BaseObjCfg):
     physics: PhysicStateType | None = None
     """IsaacSim's convention for collision and gravity state. Default to None. If specified, it will be translated to :attr:`collision_enabled` and :attr:`fix_base_link`."""
 
+    enabled_gravity: bool = True
+    """Whether to enable gravity. Default to True. If False, the robot will not be affected by gravity."""
+
     def __post_init__(self):
         super().__post_init__()
 

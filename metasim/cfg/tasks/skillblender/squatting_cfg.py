@@ -140,8 +140,6 @@ class SquattingCfg(BaseHumanoidCfg):
         reward_default_joint_pos,
     ]
 
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "squatting": 5,
         "feet_distance": 0.5,

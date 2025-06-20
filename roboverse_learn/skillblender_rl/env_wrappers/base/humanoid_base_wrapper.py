@@ -112,10 +112,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             1,
         ))
 
-        # TODO implement it
-        # self.neg_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-        # self.pos_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-
         self.common_step_counter = 0
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.bool)
         self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.int)
@@ -217,7 +213,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _get_phase(
         self,
     ):
-        # FIXME cycle_time definition and access
         cycle_time = self.cfg.reward_cfg.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time
         return phase
