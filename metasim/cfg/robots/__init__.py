@@ -4,6 +4,7 @@ from .allegrohand_cfg import AllegroHandCfg
 from .ant_cfg import AntCfg
 from .anymal_cfg import AnymalCfg
 from .base_robot_cfg import BaseRobotCfg
+from .cartpole_cfg import CartpoleCfg
 from .fetch_cfg import FetchCfg
 from .franka_cfg import FrankaCfg
 from .franka_slide_urdf_cfg import FrankaSlideUrdfCfg
