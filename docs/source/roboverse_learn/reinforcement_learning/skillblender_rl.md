@@ -30,7 +30,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [ ]  FarReach
 - [ ]  ButtonPress
 - [ ]  CabinetClose
-- [ ]  FootballShoot
+- [x]  FootballShoot
 - [ ]  BoxPush
 - [ ]  PackageLift
 - [ ]  BoxTransfer

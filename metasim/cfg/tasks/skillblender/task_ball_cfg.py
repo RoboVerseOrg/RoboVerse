@@ -150,7 +150,6 @@ class TaskBallCfg(BaseHumanoidCfg):
         friction_offset_threshold=0.04,
         default_buffer_size_multiplier=5,
         num_threads=10,
-        contact_collection=5,
     )
 
     ppo_cfg = TaskBallCfgPPO()

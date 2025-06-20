@@ -132,6 +132,7 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.physx.use_gpu = self.scenario.sim_params.use_gpu
         sim_params.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
         sim_params.physx.max_depenetration_velocity = self.scenario.sim_params.max_depenetration_velocity
+        sim_params.physx.default_buffer_size_multiplier = self.scenario.sim_params.default_buffer_size_multiplier
 
         compute_device_id = 0
         graphics_device_id = 0
