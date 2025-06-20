@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.utils.math import (
-    euler_xyz_from_quat,
-    matrix_from_quat,
-)
+from metasim.utils.math import euler_xyz_from_quat, matrix_from_quat
 
 
 def torso_upright(envstate, robot_name: str):

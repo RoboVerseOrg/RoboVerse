@@ -89,6 +89,16 @@ class AntIsaacGymCfg(BaseTaskCfg, IsaacGymTaskBase):
         observations = []
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        num_envs = len(states)
+
+        # Initialize buffers if needed
+        if self._targets is None or len(self._targets) != num_envs:
+            self._targets = torch.tensor([1000.0, 0.0, 0.0], dtype=torch.float32, device=device).repeat((num_envs, 1))
+
+        if self._potentials is None or len(self._potentials) != num_envs:
+            dt = 0.01667
+            self._potentials = torch.zeros(num_envs, dtype=torch.float32, device=device) - 1000.0 / dt
+            self._prev_potentials = self._potentials.clone()
 
         for i, env_state in enumerate(states):
             robot_state = env_state["robots"]["ant"]
@@ -117,9 +127,9 @@ class AntIsaacGymCfg(BaseTaskCfg, IsaacGymTaskBase):
                 dof_vel = torch.zeros(8, dtype=torch.float32, device=device)
 
             if self._targets is not None and i < len(self._targets):
-                target = self._targets[i]
+                target = self._targets[i].to(device)
             else:
-                target = torch.tensor([1000.0, 0.0, 0.0], dtype=torch.float32, device=torso_pos.device)
+                target = torch.tensor([1000.0, 0.0, 0.0], dtype=torch.float32, device=device)
 
             to_target = target - torso_pos
             to_target[2] = 0.0
@@ -410,11 +420,12 @@ class AntIsaacGymCfg(BaseTaskCfg, IsaacGymTaskBase):
             num_envs = len(env_ids)
 
         if self._targets is None:
-            self._targets = torch.tensor([1000.0, 0.0, 0.0], dtype=torch.float32).repeat((num_envs, 1))
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self._targets = torch.tensor([1000.0, 0.0, 0.0], dtype=torch.float32, device=device).repeat((num_envs, 1))
 
         if self._potentials is None:
             dt = 0.01667
-            self._potentials = torch.zeros(num_envs, dtype=torch.float32) - 1000.0 / dt
+            self._potentials = torch.zeros(num_envs, dtype=torch.float32, device=device) - 1000.0 / dt
             self._prev_potentials = self._potentials.clone()
 
         if env_ids is not None and self._potentials is not None:

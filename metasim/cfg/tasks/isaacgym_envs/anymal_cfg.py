@@ -60,6 +60,7 @@ class AnymalCfg(BaseTaskCfg):
     def __post_init__(self):
         super().__post_init__()
         self._commands = None
+        self._prev_actions = None
 
     def get_observation(self, states):
         observations = []

@@ -12,9 +12,43 @@ This directory contains the reinforcement learning infrastructure for RoboVerse,
 ## Supported Tasks
 
 ### IsaacGymEnvs Tasks
-- **AllegroHand**: Dexterous manipulation with the Allegro robotic hand
-- **Ant**: Quadruped locomotion
-- **Anymal**: Quadruped robot locomotion on flat and rough terrain
+
+#### AllegroHand - Dexterous Manipulation
+The AllegroHand task involves dexterous object manipulation with a 4-finger robotic hand. The task requires rotating objects to match target orientations.
+
+**Supported Objects:**
+- **Block**: Cube object for basic manipulation
+- **Pen**: Cylindrical object requiring precision grasping (configuration available via `object_type="pen"`)
+- **Egg**: Ellipsoid object requiring careful handling (configuration available via `object_type="egg"`)
+
+**Key Features:**
+- 16 DOF control (4 joints per finger)
+- Object reorientation to match goal poses
+- Dense rewards based on position/rotation errors
+- Support for different observation types (full, full_no_vel, full_state)
+
+#### Ant - Quadruped Locomotion
+The Ant environment features a 4-legged robot learning to walk and navigate.
+
+**Key Features:**
+- 8 DOF control (2 joints per leg)
+- Forward locomotion with stability
+- Energy-efficient movement rewards
+- Configurable action scaling and torque limits
+
+#### Anymal - Advanced Quadruped Locomotion
+The Anymal tasks feature a realistic quadruped robot based on ANYbotics' ANYmal robot.
+
+**Variants:**
+- **Anymal**: Basic locomotion on flat terrain
+- **AnymalTerrain**: Locomotion on rough/uneven terrain with curriculum learning
+
+**Key Features:**
+- 12 DOF control (3 joints per leg)
+- Command-following (velocity tracking)
+- Terrain adaptation capabilities
+- Base orientation and contact force rewards
+- Configurable terrain difficulty levels
 
 ### DMControl Tasks
 #### Locomotion Tasks
@@ -54,18 +88,47 @@ python roboverse_learn/rl/train_rl.py train=<TaskAlgorithm>
 
 ### IsaacGymEnvs Tasks
 
+#### AllegroHand Object Manipulation
 ```bash
-# AllegroHand
+# Basic block manipulation
 python roboverse_learn/rl/train_rl.py train=AllegroHandPPO
 python roboverse_learn/rl/train_rl.py train=AllegroHandTD3
 
-# Ant
+# Different object types (override object_type parameter)
+python roboverse_learn/rl/train_rl.py train=AllegroHandPPO task.object_type="pen"
+python roboverse_learn/rl/train_rl.py train=AllegroHandPPO task.object_type="egg"
+
+# Custom observation types
+python roboverse_learn/rl/train_rl.py train=AllegroHandPPO task.obs_type="full"
+python roboverse_learn/rl/train_rl.py train=AllegroHandPPO task.obs_type="full_state"
+```
+
+#### Ant Locomotion
+```bash
+# Standard Ant locomotion
 python roboverse_learn/rl/train_rl.py train=AntPPO
 python roboverse_learn/rl/train_rl.py train=AntIsaacGymPPO
 
-# Anymal
+# Custom parameters
+python roboverse_learn/rl/train_rl.py train=AntPPO task.heading_weight=0.7
+python roboverse_learn/rl/train_rl.py train=AntPPO task.actions_cost_scale=0.01
+```
+
+#### Anymal Quadruped Robot
+```bash
+# Flat terrain locomotion
 python roboverse_learn/rl/train_rl.py train=AnymalPPO
+
+# Rough terrain with curriculum learning
 python roboverse_learn/rl/train_rl.py train=AnymalTerrainPPO
+
+# Custom command ranges
+python roboverse_learn/rl/train_rl.py train=AnymalPPO task.command_x_range="[-3.0,3.0]"
+python roboverse_learn/rl/train_rl.py train=AnymalPPO task.command_yaw_range="[-2.0,2.0]"
+
+# Terrain difficulty settings
+python roboverse_learn/rl/train_rl.py train=AnymalTerrainPPO task.terrain_num_levels=10
+python roboverse_learn/rl/train_rl.py train=AnymalTerrainPPO task.terrain_curriculum=True
 ```
 
 ### DMControl Tasks
@@ -280,25 +343,128 @@ To add support for new tasks:
 2. Create corresponding training configurations in `configs/train/`
 3. Follow the naming convention: `<TaskName><Algorithm>.yaml`
 
+### Adding IsaacGymEnvs Tasks
+
+For tasks from NVIDIA's IsaacGymEnvs benchmark:
+1. Create a wrapper configuration in `metasim/cfg/tasks/isaacgym_envs/`
+2. Import the task in `metasim/cfg/tasks/isaacgym_envs/__init__.py`
+3. Create training configs with appropriate observation/action dimensions
+4. Tasks can be accessed via the `isaacgym_envs:` prefix (e.g., `isaacgym_envs:AllegroHand`)
+
+#### Available IsaacGymEnvs Tasks for Integration
+The following tasks from IsaacGymEnvs can be integrated following the above pattern:
+- **Manipulation**: FrankaCabinet, FrankaClothManipulation, Ingenuity (drone), ShadowHand
+- **Locomotion**: BallBalance, Cartpole, Humanoid, Quadcopter, Trifinger
+- **Other**: Factory environments, Industreal tasks
+
+Each task would require creating appropriate wrapper configurations and training configs
+
 ## OGBench Tasks
 
-OGBench provides offline goal-conditioned RL benchmarks with locomotion and manipulation tasks:
+OGBench provides offline goal-conditioned RL benchmarks with various locomotion and manipulation tasks. All tasks are goal-conditioned and use sparse rewards.
 
 ### Supported OGBench Environments
-- **Locomotion**: AntMaze (large, medium, giant), HumanoidMaze (large, medium, giant)
-- **Manipulation**: Cube (double, triple, quadruple play)
+
+#### Navigation Tasks
+- **PointMaze**: Simple 2D navigation (medium, large, giant, teleport)
+- **AntMaze**: Ant robot navigation (medium, large, giant, teleport)
+- **HumanoidMaze**: Humanoid robot navigation (medium, large, giant)
+- **AntSoccer**: Ant robot soccer tasks (arena, medium)
+
+#### Manipulation Tasks
+- **Cube**: Single to quadruple cube stacking tasks
+- **Scene**: Complex scene manipulation
+- **Puzzle**: Sliding puzzle solving (3x3, 4x4, 4x5, 4x6)
+- **Powderworld**: Discrete action powder simulation (easy, medium, hard)
+
+#### Visual Tasks (Image-based observations)
+- **Visual-AntMaze**: Vision-based ant navigation
+- **Visual-HumanoidMaze**: Vision-based humanoid navigation
+- **Visual-Cube**: Vision-based cube manipulation
+- **Visual-Scene**: Vision-based scene manipulation
+- **Visual-Puzzle**: Vision-based puzzle solving
 
 ### Training Commands
+
+#### PointMaze Navigation
 ```bash
-# AntMaze tasks
+python roboverse_learn/rl/train_rl.py train=PointMazeMediumPPO
+python roboverse_learn/rl/train_rl.py train=PointMazeLargePPO
+python roboverse_learn/rl/train_rl.py train=PointMazeGiantPPO
+python roboverse_learn/rl/train_rl.py train=PointMazeTeleportPPO
+```
+
+#### AntMaze Navigation
+```bash
+python roboverse_learn/rl/train_rl.py train=AntMazeMediumNavigatePPO
 python roboverse_learn/rl/train_rl.py train=AntMazeLargeNavigatePPO
+python roboverse_learn/rl/train_rl.py train=AntMazeGiantNavigatePPO
+python roboverse_learn/rl/train_rl.py train=AntMazeTeleportPPO
+```
 
-# HumanoidMaze tasks
+#### HumanoidMaze Navigation
+```bash
+python roboverse_learn/rl/train_rl.py train=HumanoidMazeMediumNavigatePPO
 python roboverse_learn/rl/train_rl.py train=HumanoidMazeLargeNavigatePPO
+python roboverse_learn/rl/train_rl.py train=HumanoidMazeGiantNavigatePPO
+```
 
-# Cube manipulation tasks
+#### AntSoccer Tasks
+```bash
+python roboverse_learn/rl/train_rl.py train=AntSoccerArenaPPO
+python roboverse_learn/rl/train_rl.py train=AntSoccerMediumPPO
+```
+
+#### Cube Manipulation
+```bash
+python roboverse_learn/rl/train_rl.py train=CubeSinglePPO
+python roboverse_learn/rl/train_rl.py train=CubeDoublePPO
+python roboverse_learn/rl/train_rl.py train=CubeTriplePPO
+python roboverse_learn/rl/train_rl.py train=CubeQuadruplePPO
+
+# Play variants (different reward structure)
 python roboverse_learn/rl/train_rl.py train=CubeDoublePlayPPO
 python roboverse_learn/rl/train_rl.py train=CubeQuadruplePlayPPO
 ```
 
-Note: OGBench integration is experimental and may require additional configuration for optimal performance (we need offline RL algos)
+#### Scene Manipulation
+```bash
+python roboverse_learn/rl/train_rl.py train=ScenePPO
+```
+
+#### Puzzle Solving
+```bash
+python roboverse_learn/rl/train_rl.py train=Puzzle3x3PPO
+python roboverse_learn/rl/train_rl.py train=Puzzle4x4PPO
+python roboverse_learn/rl/train_rl.py train=Puzzle4x5PPO
+python roboverse_learn/rl/train_rl.py train=Puzzle4x6PPO
+```
+
+#### Powderworld (Discrete Actions)
+```bash
+python roboverse_learn/rl/train_rl.py train=PowderworldEasyPPO
+python roboverse_learn/rl/train_rl.py train=PowderworldMediumPPO
+python roboverse_learn/rl/train_rl.py train=PowderworldHardPPO
+```
+
+### Single-Task Variants
+
+For focused training on specific goals:
+```bash
+python roboverse_learn/rl/train_rl.py train=AntMazeLargeNavigateSingleTaskPPO
+python roboverse_learn/rl/train_rl.py train=CubeDoublePlaySingleTaskPPO
+```
+
+### Visual Tasks
+
+Note: Visual tasks are not yet fully supported but configurations are available for future implementation.
+
+### Important Notes
+
+1. **Goal-Conditioned**: All OGBench tasks are goal-conditioned, meaning the agent must learn to reach different goals
+2. **Sparse Rewards**: Tasks use sparse rewards (only given when goal is achieved)
+3. **Episode Lengths**: Vary by task complexity (200-4000 steps)
+4. **Observation Dimensions**: Range from 2 (PointMaze) to 6144 (Powderworld visual)
+5. **Action Spaces**: Most tasks use continuous actions except Powderworld (discrete)
+
+Note: OGBench integration is experimental and may require additional configuration for optimal performance. Consider using offline RL algorithms for better results with the provided datasets.

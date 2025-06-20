@@ -55,3 +55,15 @@ class AntMazeGiantNavigateCfg(OGBenchBaseCfg):
 
     goal_conditioned: bool = True
     single_task: bool = False
+
+
+@configclass
+class AntMazeTeleportNavigateCfg(OGBenchBaseCfg):
+    """AntMaze teleport navigation task from OGBench."""
+
+    dataset_name: str = "antmaze-teleport-v0"
+    task_type = TaskType.NAVIGATION
+    episode_length: int = 1000
+
+    goal_conditioned: bool = True
+    single_task: bool = False
