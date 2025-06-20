@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training loco-manipulation skill: FootballShoot"""
+"""SkillBlench wrapper for training loco-manipulation Skillbench:FootballShoot"""
 
 # ruff: noqa: F405
 from __future__ import annotations
@@ -14,8 +14,6 @@ from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper imp
 class TaskBallWrapper(HumanoidBaseWrapper):
     """
     Wrapper for Skillbench:FootballShoot
-
-    # TODO implement push robot.
     """
 
     def __init__(self, scenario: ScenarioCfg):
