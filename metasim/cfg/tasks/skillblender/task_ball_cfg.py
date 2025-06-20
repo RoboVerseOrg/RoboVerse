@@ -135,17 +135,22 @@ class TaskBallCfg(BaseHumanoidCfg):
 
     task_name = "task_ball"
     env_spacing = 10.0
-    decimation = 1
+    decimation = 10
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
+        solver_type=1,
         substeps=1,
         num_position_iterations=4,
+        max_depenetration_velocity=1.0,
+        rest_offset=0.0,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.1,
         replace_cylinder_with_capsule=False,
         friction_offset_threshold=0.04,
+        default_buffer_size_multiplier=5,
         num_threads=10,
+        contact_collection=5,
     )
 
     ppo_cfg = TaskBallCfgPPO()

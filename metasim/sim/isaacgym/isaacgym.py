@@ -131,6 +131,7 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.physx.num_threads = self.scenario.sim_params.num_threads
         sim_params.physx.use_gpu = self.scenario.sim_params.use_gpu
         sim_params.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
+        sim_params.physx.max_depenetration_velocity = self.scenario.sim_params.max_depenetration_velocity
 
         compute_device_id = 0
         graphics_device_id = 0
@@ -683,7 +684,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def refresh_render(self) -> None:
         # Step the physics
-        self.gym.simulate(self.sim)
+        # self.gym.simulate(self.sim)
         self.gym.fetch_results(self.sim, True)
         self._render()
 
@@ -825,6 +826,8 @@ class IsaacgymHandler(BaseSimHandler):
 
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
+
+        # self.gym.simulate(self.sim)
 
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
