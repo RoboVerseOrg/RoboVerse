@@ -354,7 +354,7 @@ class IsaacgymHandler(BaseSimHandler):
         log.info("Creating %d environments" % self.num_envs)
 
         robot_pose = gymapi.Transform()
-        robot_pose.p = gymapi.Vec3(*self._robot_init_pose)
+        robot_pose.p = gymapi.Vec3(*self._robot_init_pos)
         robot_pose.r = gymapi.Quat(
             *self._robot_init_quat[1:], self._robot_init_quat[0]
         )  # x, y, z, w order for gymapi.Quat
