@@ -1,9 +1,10 @@
 import hydra
+from loguru import logger
+from omegaconf import DictConfig, OmegaConf
+
 from deploy.arm_hand_deployment.consts import CONFIG_PATH
 from deploy.arm_hand_deployment.franka.communication.client import FrankaClient
 from deploy.arm_hand_deployment.utils.client_context import robot_client_context
-from loguru import logger
-from omegaconf import DictConfig, OmegaConf
 
 
 @hydra.main(config_path=CONFIG_PATH, config_name="config", version_base="1.3")
@@ -75,4 +76,7 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
+    main()
+    main()
+    main()
     main()
