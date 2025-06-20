@@ -135,9 +135,9 @@ class TaskBallCfg(BaseHumanoidCfg):
 
     task_name = "task_ball"
     env_spacing = 10.0
-    traj_filepath = "roboverse_data/trajs/skillblender/initial_state_v2.json"
+    decimation = 1
     sim_params = SimParamCfg(
-        dt=0.01,
+        dt=0.001,
         contact_offset=0.01,
         substeps=1,
         num_position_iterations=4,
@@ -215,7 +215,7 @@ class TaskBallCfg(BaseHumanoidCfg):
         {
             "objects": {
                 "sphere": {
-                    "pos": torch.tensor([1.7, 0.0, 0.1]),  # TODO domain randomization as original repo
+                    "pos": torch.tensor([1.7, 0.0, 0.2]),  # TODO domain randomization as original repo
                     "rot": torch.tensor([
                         1.0,
                         0.0,

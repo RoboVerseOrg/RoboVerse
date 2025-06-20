@@ -837,6 +837,9 @@ class IsaacgymHandler(BaseSimHandler):
         # reset all env_id action to default
         self.actions[env_ids] = 0.0
 
+        # TODO check necessrary
+        self._state_cache_expire = True
+
     def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()
         actor_indices = []
