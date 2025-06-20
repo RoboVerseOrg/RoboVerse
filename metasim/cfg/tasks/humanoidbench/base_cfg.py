@@ -154,7 +154,7 @@ class BaseLocomotionReward(HumanoidBaseReward):
         stable_rewards = StableReward(self.robot_name)(states)
         if self._move_speed == 0:
             horizontal_velocity = robot_velocity_tensor(states, self.robot_name)[:, [0, 1]]
-            dont_move = humanoid_reward_util.tolerance_tensor(horizontal_velocity, margin=2).mean()
+            dont_move = humanoid_reward_util.tolerance_tensor(horizontal_velocity, margin=2).mean(dim=-1)
             moving_reward = dont_move
         else:
             com_x_velocity = robot_local_velocity_tensor(states, self.robot_name)[:, 0]
