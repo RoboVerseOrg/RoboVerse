@@ -11,6 +11,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.state import list_state_to_tensor
 
 
 class Sb3EnvWrapper(VecEnv):
@@ -36,7 +37,8 @@ class Sb3EnvWrapper(VecEnv):
             )
         else:
             self.init_states = self.init_states[: self.num_envs]
-
+        if scenario.sim == "mjx":
+            self._initial_states = list_state_to_tensor(self.env.handler, self._initial_states)
         # FIXME action limit differs with joint limit in locomotion configuration(desire pos = scale*action + default pos)
         # Set up action space based on robot joint limits
         joint_limits = self.robot.joint_limits
