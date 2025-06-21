@@ -23,7 +23,7 @@ class TaskReachWrapper(HumanoidBaseWrapper):
 
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
-        env_states, _ = self.env.reset()
+        env_states, _ = self.env.reset(self.init_states)
         self.env.handler.simulate()
         self._init_target_wp(env_states)
 

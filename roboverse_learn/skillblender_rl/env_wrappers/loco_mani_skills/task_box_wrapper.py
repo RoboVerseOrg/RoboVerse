@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training loco-manipulation Skillbench:BoxTransfer"""
+"""SkillBlench wrapper for training loco-manipulation Skillbench:BoxPush"""
 
 from __future__ import annotations
 
@@ -14,23 +14,21 @@ from metasim.utils.humanoid_robot_util import (
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
 
-class TaskTransferWrapper(HumanoidBaseWrapper):
+class TaskBoxWrapper(HumanoidBaseWrapper):
     """
-    Wrapper for Skillbench:BoxTransfer
+    Wrapper for Skillbench:BoxPush
     """
 
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset(self.init_states)
+        env_states, _ = self.env.reset(self.init_states)
+        self.table_root_states = env_states.objects["table"].root_state.clone()
         self.env.handler.simulate()
 
     def _init_buffers(self):
         super()._init_buffers()
         self.box_goal_pos = torch.zeros(self.num_envs, 3, device=self.device)
-        env_states = self.env.handler.get_states()
-        self.front_table_root_states = env_states.objects["front_table"].root_state.clone()
-        self.back_table_root_states = env_states.objects["back_table"].root_state.clone()
 
     def _parse_box_goal_pos(self, envstate: EnvState):
         """Parse box goal position from envstate"""
@@ -127,12 +125,12 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
 
     def _resample_box_goal_position(self, reset_env_idx, env_states):
         self.box_goal_pos[reset_env_idx, 2] = env_states.objects["box"].root_state[reset_env_idx, 2]
-        self.box_goal_pos[reset_env_idx, 0] = self.back_table_root_states[reset_env_idx, 0] - torch.FloatTensor(
+        self.box_goal_pos[reset_env_idx, 0] = self.table_root_states[reset_env_idx, 0] - torch.FloatTensor(
             len(reset_env_idx)
-        ).uniform_(*self.cfg.box_range_x).to(self.device)
-        self.box_goal_pos[reset_env_idx, 1] = self.back_table_root_states[reset_env_idx, 1] - torch.FloatTensor(
+        ).uniform_(*self.cfg.command_ranges.box_range_x).to(self.device)
+        self.box_goal_pos[reset_env_idx, 1] = self.table_root_states[reset_env_idx, 1] - torch.FloatTensor(
             len(reset_env_idx)
-        ).uniform_(*self.cfg.box_range_y).to(self.device)
+        ).uniform_(*self.cfg.command_ranges.box_range_y).to(self.device)
 
     def _post_physics_step(self, env_states):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""

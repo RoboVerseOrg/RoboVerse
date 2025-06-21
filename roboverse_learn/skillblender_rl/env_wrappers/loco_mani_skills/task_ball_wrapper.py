@@ -22,7 +22,7 @@ class TaskBallWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset()
+        _, _ = self.env.reset(self.init_states)
         self.env.handler.simulate()
 
     def _init_buffers(self):

@@ -2,6 +2,7 @@
 
 # ruff: noqa: F401
 from .loco_mani_skills.task_ball_wrapper import TaskBallWrapper
+from .loco_mani_skills.task_box_wrapper import TaskBoxWrapper
 from .loco_mani_skills.task_button_wrapper import TaskButtonWrapper
 from .loco_mani_skills.task_cabinet_wrapper import TaskCabinetWrapper
 from .loco_mani_skills.task_carry_wrapper import TaskCarryWrapper

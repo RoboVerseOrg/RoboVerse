@@ -22,8 +22,8 @@ class TaskLiftWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset()
-        self.env.handler.simulate()
+        _, _ = self.env.reset(self.init_states)
+        self.env.handler.simulate(self.init_states)
 
     def _init_buffers(self):
         super()._init_buffers()

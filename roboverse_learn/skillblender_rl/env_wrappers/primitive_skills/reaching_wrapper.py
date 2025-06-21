@@ -21,7 +21,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        env_states, _ = self.env.reset()
+        env_states, _ = self.env.reset(self.init_states)
         self._init_target_wp(env_states)
 
     def _parse_ref_wrist_pos(self, envstate: EnvState):

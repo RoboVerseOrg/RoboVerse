@@ -27,7 +27,7 @@ class SquattingWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset()
+        _, _ = self.env.reset(self.init_states)
         self._init_target_wp()
 
     def _parse_ref_root_height(self, envstate: EnvState):

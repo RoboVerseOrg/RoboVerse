@@ -168,7 +168,7 @@ def train(args):
     # dump snapshot of training config
     task_path = f"metasim/cfg/tasks/skillblender/{scenario.task.task_name}_cfg.py"
     if not os.path.exists(task_path):
-        log.error(f"Task path {task_path} does not exist, please check your task name carefully")
+        log.error(f"Task path {task_path} does not exist, please check your task name in config carefully")
         return
     shutil.copy2(task_path, log_dir)
 

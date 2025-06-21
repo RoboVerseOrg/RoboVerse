@@ -21,7 +21,7 @@ class TaskButtonWrapper(HumanoidBaseWrapper):
 
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
-        _, _ = self.env.reset()
+        _, _ = self.env.reset(self.init_states)
         self.env.handler.simulate()
         # prepare right arm indices for reward computation
         right_arm_joint_names = self.cfg.right_arm_joint_names
