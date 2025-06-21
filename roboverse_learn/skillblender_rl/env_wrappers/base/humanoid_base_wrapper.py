@@ -19,7 +19,16 @@ except ImportError:
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_vel_tensor,
+    gait_phase_tensor,
+    get_euler_xyz_tensor,
+    robot_ang_velocity_tensor,
+    robot_root_state_tensor,
+    robot_rotation_tensor,
+    robot_velocity_tensor,
+)
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 
 
@@ -251,7 +260,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _parse_feet_air_time(self, envstate):
         # TODO contact is computed for servaral times. maybe precompute it as a class var?
-        contact = contact_force_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
+        contact = contact_forces_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
         stance_mask = gait_phase_tensor(envstate, self.robot.name)
         contact_filt = torch.logical_or(torch.logical_or(contact, stance_mask), self.last_contacts)
         self.last_contacts = contact

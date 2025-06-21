@@ -45,7 +45,6 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_vel_mismatch_exp,
 )
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
 
 
 class WalkingCfgPPO(LeggedRobotCfgPPO):

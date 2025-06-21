@@ -19,7 +19,6 @@ from metasim.cfg.tasks.skillblender.base_legged_cfg import (
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
 
 
 # define new reward function

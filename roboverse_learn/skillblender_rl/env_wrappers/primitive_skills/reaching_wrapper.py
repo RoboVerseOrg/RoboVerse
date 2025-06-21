@@ -1,13 +1,12 @@
 """SkillBlench wrapper for training primitive skill: reaching."""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import contact_forces_tensor, dof_pos_tensor, dof_vel_tensor, sample_wp
 from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
@@ -32,7 +31,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         self.ori_wrist_pos = (
             envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
         )  # [num_envs, 2, 7], two hands
-        self.target_wp, self.num_pairs, self.num_wp = self.sample_wp(
+        self.target_wp, self.num_pairs, self.num_wp = sample_wp(
             self.device, num_points=2000000, num_wp=10, ranges=self.cfg.command_ranges
         )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
         self.target_wp_i = torch.randint(
@@ -179,67 +178,3 @@ class ReachingWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = torch.clip(
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
-
-    @staticmethod
-    def sample_wp(device, num_points, num_wp, ranges):
-        """sample waypoints, relative to the starting point"""
-        # position
-        l_positions = torch.randn(num_points, 3)  # left wrist positions
-        l_positions = (
-            l_positions / l_positions.norm(dim=-1, keepdim=True) * ranges.wrist_max_radius
-        )  # within a sphere, [-radius, +radius]
-        l_positions = l_positions[
-            l_positions[:, 0] > ranges.l_wrist_pos_x[0]
-        ]  # keep the ones that x > ranges.l_wrist_pos_x[0]
-        l_positions = l_positions[
-            l_positions[:, 0] < ranges.l_wrist_pos_x[1]
-        ]  # keep the ones that x < ranges.l_wrist_pos_x[1]
-        l_positions = l_positions[
-            l_positions[:, 1] > ranges.l_wrist_pos_y[0]
-        ]  # keep the ones that y > ranges.l_wrist_pos_y[0]
-        l_positions = l_positions[
-            l_positions[:, 1] < ranges.l_wrist_pos_y[1]
-        ]  # keep the ones that y < ranges.l_wrist_pos_y[1]
-        l_positions = l_positions[
-            l_positions[:, 2] > ranges.l_wrist_pos_z[0]
-        ]  # keep the ones that z > ranges.l_wrist_pos_z[0]
-        l_positions = l_positions[
-            l_positions[:, 2] < ranges.l_wrist_pos_z[1]
-        ]  # keep the ones that z < ranges.l_wrist_pos_z[1]
-
-        r_positions = torch.randn(num_points, 3)  # right wrist positions
-        r_positions = (
-            r_positions / r_positions.norm(dim=-1, keepdim=True) * ranges.wrist_max_radius
-        )  # within a sphere, [-radius, +radius]
-        r_positions = r_positions[
-            r_positions[:, 0] > ranges.r_wrist_pos_x[0]
-        ]  # keep the ones that x > ranges.r_wrist_pos_x[0]
-        r_positions = r_positions[
-            r_positions[:, 0] < ranges.r_wrist_pos_x[1]
-        ]  # keep the ones that x < ranges.r_wrist_pos_x[1]
-        r_positions = r_positions[
-            r_positions[:, 1] > ranges.r_wrist_pos_y[0]
-        ]  # keep the ones that y > ranges.r_wrist_pos_y[0]
-        r_positions = r_positions[
-            r_positions[:, 1] < ranges.r_wrist_pos_y[1]
-        ]  # keep the ones that y < ranges.r_wrist_pos_y[1]
-        r_positions = r_positions[
-            r_positions[:, 2] > ranges.r_wrist_pos_z[0]
-        ]  # keep the ones that z > ranges.r_wrist_pos_z[0]
-        r_positions = r_positions[
-            r_positions[:, 2] < ranges.r_wrist_pos_z[1]
-        ]  # keep the ones that z < ranges.r_wrist_pos_z[1]
-
-        num_pairs = min(l_positions.size(0), r_positions.size(0))
-        positions = torch.stack([l_positions[:num_pairs], r_positions[:num_pairs]], dim=1)  # (num_pairs, 2, 3)
-
-        # rotation (quaternion)
-        quaternions = torch.randn(num_pairs, 2, 4)
-        quaternions = quaternions / quaternions.norm(dim=-1, keepdim=True)
-
-        # concat
-        wp = torch.cat([positions, quaternions], dim=-1)  # (num_pairs, 2, 7)
-        # repeat for num_wp
-        wp = wp.unsqueeze(1).repeat(1, num_wp, 1, 1)  # (num_pairs, num_wp, 2, 7)
-        print("===> [sample_wp] return shape:", wp.shape)
-        return wp.to(device), num_pairs, num_wp

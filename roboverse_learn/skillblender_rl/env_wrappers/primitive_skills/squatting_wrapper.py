@@ -1,13 +1,18 @@
 """SkillBlench wrapper for training primitive skill: squatting."""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_pos_tensor,
+    dof_vel_tensor,
+    robot_position_tensor,
+    sample_root_height,
+)
 from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
