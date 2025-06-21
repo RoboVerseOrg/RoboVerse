@@ -42,14 +42,14 @@ class TaskReachCfgPPO(LeggedRobotCfgPPO):
         frame_stack = 1
         command_dim = 14
         skill_dict = {
-            "walking": {
-                "experiment_name": "walking",
+            "h1_wrist_walking": {
+                "experiment_name": "h1_wrist_walking",
                 "load_run": "2025_0101_093233",
                 "checkpoint": -1,
                 "low_high": (-2, 2),
             },
-            "reaching": {
-                "experiment_name": "reaching",
+            "h1_wrist_reaching": {
+                "experiment_name": "h1_wrist_reaching",
                 "load_run": "2025_0621_095457",
                 "checkpoint": -1,
                 "low_high": (-1, 1),
@@ -66,7 +66,7 @@ class TaskReachCfgPPO(LeggedRobotCfgPPO):
 
     class runner:
         wandb = True
-        policy_class_name = "ActorCritic"
+        policy_class_name = "ActorCriticHierarchical"
         algorithm_class_name = "PPO"
         num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
