@@ -828,8 +828,6 @@ class IsaacgymHandler(BaseSimHandler):
         self._set_actor_root_state(pos_list, rot_list, env_ids)
         self._set_actor_joint_state(q_list, env_ids)
 
-        # self.gym.simulate(self.sim)
-
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -840,9 +838,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         # reset all env_id action to default
         self.actions[env_ids] = 0.0
-
-        # TODO check necessrary
-        self._state_cache_expire = True
 
     def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()
