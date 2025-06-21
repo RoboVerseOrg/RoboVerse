@@ -27,16 +27,19 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
+import rootutils
+rootutils.setup_root(__file__, pythonpath=True)
 
 import os
 from copy import deepcopy
 
 import torch
 import torch.nn as nn
-from legged_gym import LEGGED_GYM_ROOT_DIR
+
 from torch.distributions import Normal
 
-from metasim.utils.dict import class_to_dict
+from roboverse_learn.rl.rsl_rl.rsl_rl.utils import rsl_rl_class_to_dict
+
 
 
 class ActorCriticHierarchicalVision(nn.Module):
@@ -153,9 +156,9 @@ class ActorCriticHierarchicalVision(nn.Module):
             skill_env_cfg.env.num_privileged_obs,
             skill_env_cfg.env.num_actions,
             obs_context_len=1,
-            **class_to_dict(skill_train_cfg)["policy"],
+            **rsl_rl_class_to_dict(skill_train_cfg)["policy"],
         ).to(device)
-        log_root = os.path.join(LEGGED_GYM_ROOT_DIR, "logs", skill_train_cfg.runner.experiment_name)
+        log_root = f'./logs/{skill_train_cfg.runner.experiment_name}'
         skill_resume_path = get_load_path(log_root, load_run=skill_args.load_run, checkpoint=skill_args.checkpoint)
         print(f"Loading {skill_args.task} policy from: {skill_resume_path}")
         try:

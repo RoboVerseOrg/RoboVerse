@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training primitive skill: stepping."""
+"""SkillBlench wrapper for training loco-manipulation skill: FarReaching."""
 
 from __future__ import annotations
 
@@ -10,52 +10,50 @@ from metasim.utils.humanoid_robot_util import (
     contact_forces_tensor,
     dof_pos_tensor,
     dof_vel_tensor,
-    sample_fp,
+    sample_wp,
 )
 from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
 
-class SteppingWrapper(HumanoidBaseWrapper):
+class TaskReachWrapper(HumanoidBaseWrapper):
     """
-    Wrapper for Skillbench:walking
-
-    # TODO implement push robot.
+    Wrapper for Skillbench:FarReaching
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
         env_states, _ = self.env.reset(self.init_states)
+        self.env.handler.simulate()
         self._init_target_wp(env_states)
 
-    def _parse_ref_pos(self, envstate: EnvState):
-        envstate.robots[self.robot.name].extra["ref_feet_pos"] = self.ref_feet_pos
+    def _parse_ref_wrist_pos(self, envstate: EnvState):
+        envstate.robots[self.robot.name].extra["ref_wrist_pos"] = self.ref_wrist_pos
 
     def _init_target_wp(self, envstate: EnvState) -> None:
-        self.ori_feet_pos = (
-            envstate.robots[self.robot.name].body_state[:, self.feet_indices, :2].clone()
-        )  # [num_envs, 2, 2], two feet's original xy positions
-        self.target_wp, self.num_pairs, self.num_wp = sample_fp(
-            device=self.device, num_points=1000000, num_wp=10, ranges=self.cfg.command_ranges
-        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 2]
+        self.ori_wrist_pos = (
+            envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
+        )  # [num_envs, 2, 7], two hands
+        self.target_wp, self.num_pairs, self.num_wp = sample_wp(
+            self.device, num_points=2000000, num_wp=10, ranges=self.cfg.command_ranges
+        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device
         )  # for each env, choose one seq, [num_envs]
         self.target_wp_j = torch.zeros(
             self.num_envs, dtype=torch.long, device=self.device
         )  # for each env, the timestep in the seq is initialized to 0, [num_envs]
-        self.target_wp_dt = 1 / self.cfg.human.freq  # TODO
+        self.target_wp_dt = 1 / self.cfg.human.freq
         self.target_wp_update_steps = self.target_wp_dt / self.dt  # not necessary integer
         assert self.dt <= self.target_wp_dt, (
             f"self.dt {self.dt} must be less than self.target_wp_dt {self.target_wp_dt}"
         )
         self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
 
-        self.ref_feet_pos = None
+        self.ref_wrist_pos = None
         self.ref_action = self.cfg.default_joint_pd_target
         self.delayed_obs_target_wp = None
-        self.delayed_obs_target_wp_steps = self.cfg.human.delay / self.target_wp_dt  # TODO
+        self.delayed_obs_target_wp_steps = self.cfg.human.delay / self.target_wp_dt
         self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
         self.update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
 
@@ -85,11 +83,11 @@ class SteppingWrapper(HumanoidBaseWrapper):
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf
 
-    def update_target_wp(self, reset_env_ids) -> None:
+    def update_target_wp(self, reset_env_ids):
         # self.target_wp_i specifies which seq to use for each env, and self.target_wp_j specifies the timestep in the seq
-        self.ref_feet_pos = (
-            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_feet_pos
-        )  # [num_envs, 2, 2], two feet
+        self.ref_wrist_pos = (
+            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_wrist_pos
+        )  # [num_envs, 2, 7], two hands
         self.delayed_obs_target_wp = self.target_wp[
             self.target_wp_i, torch.maximum(self.target_wp_j - self.delayed_obs_target_wp_steps_int, torch.tensor(0))
         ]
@@ -115,10 +113,10 @@ class SteppingWrapper(HumanoidBaseWrapper):
         # TODO read from config
         # parse those state which cannot directly get from Envstates
         super()._parse_state_for_reward(envstate)
-        self._parse_ref_pos(envstate)
+        self._parse_ref_wrist_pos(envstate)
 
     def _compute_observations(self, envstates: EnvState) -> None:
-        """compute observation and privileged observation."""
+        """Add observation into states"""
 
         phase = self._get_phase()
 
@@ -135,20 +133,21 @@ class SteppingWrapper(HumanoidBaseWrapper):
         ) * self.cfg.normalization.obs_scales.dof_pos
         dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
 
-        feet_pos = envstates.robots[self.robot.name].body_state[:, self.feet_indices, :2]  # [num_envs, 2, 2], two feet
-        feet_pos_obs = torch.flatten(feet_pos, start_dim=1)
-        ref_feet_pos_obs = torch.flatten(self.ref_feet_pos, start_dim=1)
-        diff = feet_pos - self.ref_feet_pos  # [num_envs, 2, 2], two feet
-        diff_obs = torch.flatten(diff, start_dim=1)
+        wrist_pos = envstates.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
+        diff = wrist_pos - self.ref_wrist_pos
+
+        ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
+        wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
+        diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
 
         self.privileged_obs_buf = torch.cat(
             (
-                ref_feet_pos_obs,
-                feet_pos_obs,
-                diff_obs,
-                q,
-                dq,
+                ref_wrist_pos_obs,  # 14
+                wrist_pos_obs,  # 14
+                q,  # |A|
+                dq,  # |A|
                 self.actions,  # |A|
+                diff_obs,
                 self.base_lin_vel * self.cfg.normalization.obs_scales.lin_vel,  # 3
                 self.base_ang_vel * self.cfg.normalization.obs_scales.ang_vel,  # 3
                 self.base_euler_xyz * self.cfg.normalization.obs_scales.quat,  # 3

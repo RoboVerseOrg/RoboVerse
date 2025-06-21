@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+import torch
+
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
@@ -42,10 +44,7 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
     reward_vel_mismatch_exp,
 )
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
 
 
 class WalkingCfgPPO(LeggedRobotCfgPPO):
@@ -73,7 +72,7 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "walking"
         run_name = ""
         # load and resume
@@ -89,14 +88,14 @@ class WalkingRewardCfg(RewardCfg):
     min_dist = 0.2
     max_dist = 0.5
     # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
+    target_joint_pos_scale = 0.17
+    target_feet_height = 0.06
+    cycle_time = 0.64
     # if true negative total rewards are clipped at zero (avoids early termination problems)
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    max_contact_force = 700
     soft_torque_limit = 0.001
 
 
@@ -132,7 +131,6 @@ class WalkingCfg(BaseHumanoidCfg):
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
-        # legged
         reward_lin_vel_z,
         reward_ang_vel_xy,
         reward_orientation,
@@ -152,7 +150,6 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_stumble,
         reward_stand_still,
         reward_feet_contact_forces,
-        # walking
         reward_joint_pos,
         reward_feet_distance,
         reward_knee_distance,
@@ -169,8 +166,6 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_action_smoothness,
     ]
 
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "termination": -0.0,
         "lin_vel_z": -0.0,
@@ -180,7 +175,6 @@ class WalkingCfg(BaseHumanoidCfg):
         "collision": -1.0,
         "feet_stumble": -0.0,
         "stand_still": -0.0,
-        # skillblender: walking
         "joint_pos": 3.2,
         "feet_clearance": 2.0,
         "feet_contact_number": 2.4,
@@ -210,3 +204,36 @@ class WalkingCfg(BaseHumanoidCfg):
         # optional
         "action_rate": -0.0,
     }
+
+    init_states = [
+        {
+            "objects": {},
+            "robots": {
+                "h1_wrist": {
+                    "pos": torch.tensor([0.0, 0.0, 1.0]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "left_hip_yaw": 0.0,
+                        "left_hip_roll": 0.0,
+                        "left_hip_pitch": -0.4,
+                        "left_knee": 0.8,
+                        "left_ankle": -0.4,
+                        "right_hip_yaw": 0.0,
+                        "right_hip_roll": 0.0,
+                        "right_hip_pitch": -0.4,
+                        "right_knee": 0.8,
+                        "right_ankle": -0.4,
+                        "torso": 0.0,
+                        "left_shoulder_pitch": 0.0,
+                        "left_shoulder_roll": 0.0,
+                        "left_shoulder_yaw": 0.0,
+                        "left_elbow": 0.0,
+                        "right_shoulder_pitch": 0.0,
+                        "right_shoulder_roll": 0.0,
+                        "right_shoulder_yaw": 0.0,
+                        "right_elbow": 0.0,
+                    },
+                },
+            },
+        }
+    ]

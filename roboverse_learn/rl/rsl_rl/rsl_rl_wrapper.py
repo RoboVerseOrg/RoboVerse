@@ -11,7 +11,7 @@ from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
-
+from roboverse_learn.rl.rsl_rl.rsl_rl.utils import rsl_rl_class_to_dict
 
 class RslRlWrapper(VecEnv):
     """
@@ -54,7 +54,9 @@ class RslRlWrapper(VecEnv):
         self.train_cfg = rsl_rl_class_to_dict(scenario.task.ppo_cfg)
 
     def _get_init_states(self, scenario):
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
+        self.init_states = getattr(scenario.task, 'init_states', None)
+        if self.init_states is None:
+            raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
         if len(self.init_states) < self.num_envs:
             self.init_states = (
                 self.init_states * (self.num_envs // len(self.init_states))
@@ -86,22 +88,3 @@ class RslRlWrapper(VecEnv):
 
         # reset in the env
         self.env.reset(env_ids)
-
-
-# TODO: move this to .utils and aligned naive config in rsl_rl with rsl_rl config
-def rsl_rl_class_to_dict(obj) -> dict:
-    if not hasattr(obj, "__dict__"):
-        return obj
-    result = {}
-    for key in dir(obj):
-        if key.startswith("_"):
-            continue
-        element = []
-        val = getattr(obj, key)
-        if isinstance(val, list):
-            for item in val:
-                element.append(rsl_rl_class_to_dict(item))
-        else:
-            element = rsl_rl_class_to_dict(val)
-        result[key] = element
-    return result

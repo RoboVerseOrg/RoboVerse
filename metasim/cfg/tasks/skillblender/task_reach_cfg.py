@@ -1,4 +1,4 @@
-"""Reaching config in SkillBench in Skillblender"""
+"""FarReaching config in SkillBench in Skillblender"""
 
 from __future__ import annotations
 
@@ -15,15 +15,6 @@ from metasim.cfg.tasks.skillblender.base_legged_cfg import (
     LeggedRobotCfgPPO,
     RewardCfg,
 )
-from metasim.cfg.tasks.skillblender.reward_func_cfg import (
-    reward_default_joint_pos,
-    reward_dof_acc,
-    reward_dof_vel,
-    reward_feet_distance,
-    reward_orientation,
-    reward_torques,
-    reward_upper_body_pos,
-)
 from metasim.types import EnvState
 from metasim.utils import configclass
 
@@ -39,7 +30,7 @@ def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
     return torch.exp(-4 * wrist_pos_error), wrist_pos_error
 
 
-class ReachingCfgPPO(LeggedRobotCfgPPO):
+class TaskReachCfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
@@ -47,6 +38,23 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
+        num_dofs = 19
+        frame_stack = 1
+        command_dim = 14
+        skill_dict = {
+            "h1_wrist_walking": {
+                "experiment_name": "h1_wrist_walking",
+                "load_run": "2025_0101_093233",
+                "checkpoint": -1,
+                "low_high": (-2, 2),
+            },
+            "h1_wrist_reaching": {
+                "experiment_name": "h1_wrist_reaching",
+                "load_run": "2025_0621_134216",
+                "checkpoint": -1,
+                "low_high": (-1, 1),
+            },
+        }
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         entropy_coef = 0.001
@@ -58,14 +66,14 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
 
     class runner:
         wandb = True
-        policy_class_name = "ActorCritic"
+        policy_class_name = "ActorCriticHierarchical"
         algorithm_class_name = "PPO"
         num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 500  # check for potential saves every this many iterations
-        experiment_name = "reaching"
+        save_interval = 400  # check for potential saves every this many iterations
+        experiment_name = "task_reach"
         run_name = ""
         # load and resume
         resume = False
@@ -76,24 +84,26 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
 
 # TODO this may be constant move it to humanoid cfg
 @configclass
-class ReachingRewardCfg(RewardCfg):
+class TaskReachRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
     # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17
-    target_feet_height = 0.06
-    cycle_time = 0.64
+    target_joint_pos_scale = 0.17  # rad
+    target_feet_height = 0.06  # m
+    cycle_time = 0.64  # sec
+    # if true negative total rewards are clipped at zero (avoids early termination problems)
     only_positive_rewards = True
+    # tracking reward = exp(error*sigma)
     tracking_sigma = 5
-    max_contact_force = 700
+    max_contact_force = 700  # forces above this value are penalized
 
 
 @configclass
-class ReachingCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Reaching."""
+class TaskReachCfg(BaseHumanoidCfg):
+    """Cfg class for Skillbench:FarReaching."""
 
-    task_name = "reaching"
+    task_name = "task_reach"
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
@@ -106,8 +116,8 @@ class ReachingCfg(BaseHumanoidCfg):
         num_threads=10,
     )
 
-    ppo_cfg = ReachingCfgPPO()
-    reward_cfg = ReachingRewardCfg()
+    ppo_cfg = TaskReachCfgPPO()
+    reward_cfg = TaskReachRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
     command_ranges.wrist_max_radius = 0.25
     command_ranges.l_wrist_pos_x = [-0.10, 0.25]
@@ -126,26 +136,12 @@ class ReachingCfg(BaseHumanoidCfg):
     single_num_privileged_obs = 3 * num_actions + 60
 
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
+    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
         reward_wrist_pos,
-        reward_upper_body_pos,
-        reward_orientation,
-        reward_torques,
-        reward_dof_vel,
-        reward_dof_acc,
-        reward_feet_distance,
-        reward_default_joint_pos,
     ]
 
     reward_weights: dict[str, float] = {
         "wrist_pos": 5,
-        "feet_distance": 0.5,
-        "upper_body_pos": 0.5,
-        "default_joint_pos": 0.5,
-        "orientation": 1.0,
-        "torques": -1e-5,
-        "dof_vel": -5e-4,
-        "dof_acc": -1e-7,
     }

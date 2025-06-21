@@ -10,7 +10,6 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    BaseConfig,
     CommandRanges,
     CommandsConfig,
     LeggedRobotCfgPPO,
@@ -26,10 +25,7 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
 )
 from metasim.types import EnvState
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
 
 
 # define new reward function
@@ -69,7 +65,7 @@ class SquattingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "squatting"
         run_name = ""
         # load and resume
@@ -77,12 +73,6 @@ class SquattingCfgPPO(LeggedRobotCfgPPO):
         load_run = -1  # -1 = last run
         checkpoint = -1  # -1 = last saved model
         resume_path = None  # updated from load_run and ckpt
-
-
-# TODO task config override robot config
-class robot_asset(BaseConfig):
-    fix_base_link: bool = False
-    penalize_contacts_on = ["hip", "knee", "pelvis", "torso", "shoulder", "elbow"]
 
 
 @configclass
@@ -105,7 +95,7 @@ class SquattingRewardCfg(RewardCfg):
 class SquattingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Stepping."""
 
-    task_name = "walking"
+    task_name = "squatting"
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
@@ -146,8 +136,6 @@ class SquattingCfg(BaseHumanoidCfg):
         reward_feet_distance,
         reward_default_joint_pos,
     ]
-
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
 
     reward_weights: dict[str, float] = {
         "squatting": 5,

@@ -36,6 +36,8 @@ class SimParamCfg:
     rest_offset: float = 0.0
     solver_type: int = 1
     substeps: int = 1  # for IsaacGym
+    max_depenetration_velocity: float = 1.0
+    default_buffer_size_multiplier: int = 2.0
 
     ## Resource management
     num_threads: int = 0

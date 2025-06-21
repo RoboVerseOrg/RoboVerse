@@ -1,13 +1,18 @@
 """SkillBlench wrapper for training primitive skill: squatting."""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_pos_tensor,
+    dof_vel_tensor,
+    robot_position_tensor,
+    sample_root_height,
+)
 from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
@@ -22,14 +27,14 @@ class SquattingWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset()
+        _, _ = self.env.reset(self.init_states)
         self._init_target_wp()
 
     def _parse_ref_root_height(self, envstate: EnvState):
         envstate.robots[self.robot.name].extra["ref_root_height"] = self.ref_root_height
 
     def _init_target_wp(self) -> None:
-        self.target_wp, self.num_pairs, self.num_wp = self.sample_root_height(
+        self.target_wp, self.num_pairs, self.num_wp = sample_root_height(
             self.device,
             num_points=1000000,
             num_wp=10,
@@ -106,9 +111,6 @@ class SquattingWrapper(HumanoidBaseWrapper):
     def _parse_state_for_reward(self, envstate: EnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
-        Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config
         # parse those state which cannot directly get from Envstates
@@ -177,19 +179,3 @@ class SquattingWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = torch.clip(
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
-
-    @staticmethod
-    def sample_int_from_float(x: float) -> int:
-        """Sample an int from a float."""
-        if int(x) == x:
-            return int(x)
-        return int(x) if np.random.rand() < (x - int(x)) else int(x) + 1
-
-    @staticmethod
-    def sample_root_height(device, num_points, num_wp, ranges, base_height_target):
-        """sample root height"""
-        root_height = torch.randn(num_points, 1) * ranges.root_height_std + base_height_target
-        root_height = torch.clamp(root_height, ranges.min_root_height, ranges.max_root_height)
-        root_height = root_height.unsqueeze(1).repeat(1, num_wp, 1)  # (num_points, num_wp, 1)
-        print("===> [sample_root_height] return shape:", root_height.shape)
-        return root_height.to(device), num_points, num_wp

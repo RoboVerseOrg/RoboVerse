@@ -29,6 +29,6 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 from .actor_critic import ActorCritic
-# from .actor_critic_hierarchical_vision import ActorCriticHierarchicalVision  FIXME implementit
-# from .actor_critic_hierarchical import ActorCriticHierarchical FIXME implement it
-# from .actor_critic_vision import ActorCriticVision  FIXME implement it
+from .actor_critic_hierarchical_vision import ActorCriticHierarchicalVision
+from .actor_critic_hierarchical import ActorCriticHierarchical
+from .actor_critic_vision import ActorCriticVision

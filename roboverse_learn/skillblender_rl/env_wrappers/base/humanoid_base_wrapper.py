@@ -19,8 +19,16 @@ except ImportError:
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
-from metasim.utils.demo_util import get_traj
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_vel_tensor,
+    gait_phase_tensor,
+    get_euler_xyz_tensor,
+    robot_ang_velocity_tensor,
+    robot_root_state_tensor,
+    robot_rotation_tensor,
+    robot_velocity_tensor,
+)
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 
 
@@ -40,25 +48,29 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.use_vision = scenario.task.use_vision
         self.up_axis_idx = 2
 
-        self._parse_joint_indices(scenario.robots[0])
+        self._parse_rigid_body_indices(scenario.robots[0])
         self._get_cfg_from_handler()
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
-    def _parse_joint_indices(self, robot):
+    def _parse_rigid_body_indices(self, robot):
         """
         Parse humanoid rigid body indices from robot cfg.
         """
         feet_names = robot.feet_links
         knee_names = robot.knee_links
         elbow_names = robot.elbow_links
+        wrist_names = robot.wrist_links
+        torso_names = robot.torso_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
 
-        # TODO get alphabet order
+        # get sorted indices for specific body links
         self.feet_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, feet_names)
         self.knee_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, knee_names)
         self.elbow_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, elbow_names)
+        self.wrist_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, wrist_names)
+        self.torso_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, torso_names)
         self.termination_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
             robot.name, termination_contact_names
         )
@@ -70,6 +82,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.cfg.feet_indices = self.feet_indices
         self.cfg.knee_indices = self.knee_indices
         self.cfg.elbow_indices = self.elbow_indices
+        self.cfg.wrist_indices = self.wrist_indices
+        self.cfg.torso_indices = self.torso_indices
         self.cfg.termination_contact_indices = self.termination_contact_indices
         self.cfg.penalised_contact_indices = self.penalised_contact_indices
 
@@ -77,17 +91,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         super()._parse_cfg(scenario)
         self.dt = scenario.decimation * scenario.sim_params.dt
         self.num_commands = scenario.task.command_dim
-
-    def _get_init_states(self, scenario):
-        """Get initial states from handler."""
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robots[0], self.env.handler)
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
-            )
-        else:
-            self.init_states = self.init_states[: self.num_envs]
 
     def _get_cfg_from_handler(self):
         """
@@ -117,10 +120,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs,
             1,
         ))
-
-        # TODO implement it
-        # self.neg_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-        # self.pos_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
         self.common_step_counter = 0
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.bool)
@@ -223,7 +222,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _get_phase(
         self,
     ):
-        # FIXME cycle_time definition and access
         cycle_time = self.cfg.reward_cfg.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time
         return phase
@@ -262,7 +260,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _parse_feet_air_time(self, envstate):
         # TODO contact is computed for servaral times. maybe precompute it as a class var?
-        contact = contact_force_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
+        contact = contact_forces_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
         stance_mask = gait_phase_tensor(envstate, self.robot.name)
         contact_filt = torch.logical_or(torch.logical_or(contact, stance_mask), self.last_contacts)
         self.last_contacts = contact
@@ -320,8 +318,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _parse_state_for_reward(self, envstate):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
         Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config

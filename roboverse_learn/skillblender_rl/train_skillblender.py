@@ -1,10 +1,11 @@
-"""This is a training script that train legged robot"""
+"""This is a training script for skillblender framework"""
 
 from __future__ import annotations
 
 import datetime
 import importlib
 import os
+import shutil
 
 from loguru import logger as log
 
@@ -27,11 +28,10 @@ from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
 def parse_arguments(description="humanoid rl task arguments", custom_parameters=None):
-    """Parse arguments."""
+    """Parse command line arguments."""
 
     if custom_parameters is None:
         custom_parameters = []
-    """Parse command line arguments."""
     parser = argparse.ArgumentParser(description=description)
     for argument in custom_parameters:
         if ("name" in argument) and ("type" in argument or "action" in argument):
@@ -50,17 +50,14 @@ def parse_arguments(description="humanoid rl task arguments", custom_parameters=
                 parser.add_argument(argument["name"], action=argument["action"], help=help_str)
 
         else:
-            print()
-            print("ERROR: command line argument name, type/action must be defined, argument not added to parser")
-            print("supported keys: name, type, default, action, help")
-            print()
+            log.error("ERROR: command line argument name, type/action must be defined, argument not added to parser")
+            log.error("supported keys: name, type, default, action, help")
+
     return parser.parse_args()
 
 
 # TODO
 # 1. add resume training from checkpoint
-
-
 def get_wrapper(task_id: str):
     if ":" in task_id:
         prefix, task_name = task_id.split(":")
@@ -150,23 +147,31 @@ def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
 
 def train(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    # TODO add camera
-    # cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
-    cameras = []
+
     scenario = ScenarioCfg(
         task=args.task,
         robots=[args.robot],
         num_envs=args.num_envs,
         sim=args.sim,
         headless=args.headless,
-        cameras=cameras,
+        cameras=[],
     )
-    log_dir = get_log_dir(args, scenario)
-    task_wrapper = get_wrapper(args.task)
-    env = task_wrapper(scenario)
+
     use_wandb = args.use_wandb
     if use_wandb:
         wandb.init(project=args.wandb, name=args.run_name)
+
+    log_dir = get_log_dir(args, scenario)
+    task_wrapper = get_wrapper(args.task)
+    env = task_wrapper(scenario)
+
+    # dump snapshot of training config
+    task_path = f"metasim/cfg/tasks/skillblender/{scenario.task.task_name}_cfg.py"
+    if not os.path.exists(task_path):
+        log.error(f"Task path {task_path} does not exist, please check your task name in config carefully")
+        return
+    shutil.copy2(task_path, log_dir)
+
     ppo_runner = OnPolicyRunner(
         env=env,
         train_cfg=env.train_cfg,

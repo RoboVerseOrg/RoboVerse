@@ -130,6 +130,8 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.physx.num_threads = self.scenario.sim_params.num_threads
         sim_params.physx.use_gpu = self.scenario.sim_params.use_gpu
         sim_params.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
+        sim_params.physx.max_depenetration_velocity = self.scenario.sim_params.max_depenetration_velocity
+        sim_params.physx.default_buffer_size_multiplier = self.scenario.sim_params.default_buffer_size_multiplier
 
         compute_device_id = 0
         graphics_device_id = 0
@@ -208,15 +210,15 @@ class IsaacgymHandler(BaseSimHandler):
         if isinstance(object, PrimitiveCubeCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_box(self.sim, object.size[0], object.size[1], object.size[2], asset_options)
         elif isinstance(object, PrimitiveSphereCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
@@ -225,7 +227,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = True
-            asset_options.disable_gravity = False
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)
@@ -235,7 +237,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = object.fix_base_link
-            asset_options.disable_gravity = False
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
 
@@ -406,7 +408,7 @@ class IsaacgymHandler(BaseSimHandler):
                         rigid_body_names.append(rigid_body_name)
             assert len(rigid_body_names) == num_bodies
             body_info_ = {}
-            body_info_["name"] = rigid_body_names
+            body_info_["names"] = rigid_body_names
             body_info_["local_indices"] = asset_dict
             body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in asset_dict.items()}
             self._body_info[obj_name] = body_info_
@@ -421,7 +423,7 @@ class IsaacgymHandler(BaseSimHandler):
 
         assert len(rigid_body_names) == num_bodies
         rigid_body_info_ = {}
-        rigid_body_info_["name"] = rigid_body_names
+        rigid_body_info_["names"] = rigid_body_names
         rigid_body_info_["local_indices"] = self._robot_link_dict
         rigid_body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in self._robot_link_dict.items()}
         self._body_info[self.robot.name] = rigid_body_info_
@@ -542,7 +544,6 @@ class IsaacgymHandler(BaseSimHandler):
                 )
             object_states[obj.name] = state
 
-        # FIXME some RL task need joint state as dof_pos - default_dof_pos, not absolute dof_pos. see https://github.com/leggedrobotics/legged_gym/blob/17847702f90d8227cd31cce9c920aa53a739a09a/legged_gym/envs/base/legged_robot.py#L216 for further details
         robot_states = {}
         for robot_id, robot in enumerate([self.robot]):
             joint_ids_reindex = self._get_joint_ids_reindex(robot.name)
@@ -913,7 +914,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            body_names = self._body_info[obj_name]["name"]
+            body_names = self._body_info[obj_name]["names"]
             if sort:
                 body_names.sort()
             return body_names
@@ -930,10 +931,20 @@ class IsaacgymHandler(BaseSimHandler):
         """given substring of body name, find all the bodies indices in sorted order."""
         matches = []
         for name in body_names:
-            matches.extend([s for s in self._body_info[obj_name]["name"] if name in s])
+            matches.extend([s for s in self._body_info[obj_name]["names"] if name in s])
         index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
         for i, name in enumerate(matches):
             index[i] = list(self._body_info[obj_name]["local_indices"]).index(name)
+        return index
+
+    def get_joint_reindexed_indices_from_substring(self, obj_name, joint_names: list[str]) -> torch.tensor:
+        """given substring of joint name, find all the joint indices in sorted order."""
+        matches = []
+        for name in joint_names:
+            matches.extend([s for s in self._joint_info[obj_name]["names"] if name in s])
+        index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
+        for i, name in enumerate(matches):
+            index[i] = list(self._joint_info[obj_name]["local_indices"]).index(name)
         return index
 
     @property

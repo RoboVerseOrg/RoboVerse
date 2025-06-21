@@ -41,8 +41,39 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"
 
     class human:
-        delay = 0.0  # delay in seconds
+        delay = 0.0
         freq = 10
         resample_on_env_reset = True
-        filename = "CMU.npy"
-        rng = None
+
+    init_states = [
+        {
+            "objects": {},
+            "robots": {
+                "h1_wrist": {
+                    "pos": torch.tensor([0.0, 0.0, 1.0]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "left_hip_yaw": 0.0,
+                        "left_hip_roll": 0.0,
+                        "left_hip_pitch": -0.4,
+                        "left_knee": 0.8,
+                        "left_ankle": -0.4,
+                        "right_hip_yaw": 0.0,
+                        "right_hip_roll": 0.0,
+                        "right_hip_pitch": -0.4,
+                        "right_knee": 0.8,
+                        "right_ankle": -0.4,
+                        "torso": 0.0,
+                        "left_shoulder_pitch": 0.0,
+                        "left_shoulder_roll": 0.0,
+                        "left_shoulder_yaw": 0.0,
+                        "left_elbow": 0.0,
+                        "right_shoulder_pitch": 0.0,
+                        "right_shoulder_roll": 0.0,
+                        "right_shoulder_yaw": 0.0,
+                        "right_elbow": 0.0,
+                    },
+                },
+            },
+        }
+    ]
