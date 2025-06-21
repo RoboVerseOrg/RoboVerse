@@ -163,8 +163,6 @@ class TaskTransferCfg(BaseHumanoidCfg):
             size=[0.1, 0.1, 0.1],
             color=[1.0, 0.0, 1.0],
             physics=PhysicStateType.RIGIDBODY,
-            fix_base_link=True,
-            enabled_gravity=False,
         ),
         PrimitiveCubeCfg(
             name="front_table",
