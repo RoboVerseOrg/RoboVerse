@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training loco-manipulation Skillbench:BoxTransfer"""
+"""SkillBlench wrapper for training loco-manipulation Skillbench:PackageCarry"""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from metasim.utils.humanoid_robot_util import (
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
 
-class TaskTransferWrapper(HumanoidBaseWrapper):
+class TaskCarryWrapper(HumanoidBaseWrapper):
     """
-    Wrapper for Skillbench:BoxTransfer
+    Wrapper for Skillbench:PackageCarry
     """
 
     def __init__(self, scenario: ScenarioCfg):
@@ -28,9 +28,6 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
     def _init_buffers(self):
         super()._init_buffers()
         self.box_goal_pos = torch.zeros(self.num_envs, 3, device=self.device)
-        env_states = self.env.handler.get_states()
-        self.front_table_root_states = env_states.objects["front_table"].root_state.clone()
-        self.back_table_root_states = env_states.objects["back_table"].root_state.clone()
 
     def _parse_box_goal_pos(self, envstate: EnvState):
         """Parse box goal position from envstate"""
@@ -41,8 +38,6 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
-        # TODO read from config
-        # parse those state which cannot directly get from Envstates
         super()._parse_state_for_reward(envstate)
         self._parse_box_goal_pos(envstate)
 
@@ -84,9 +79,9 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
             (
                 box_goal_pos_obs,  # 3
                 box_pos_obs,  # 3
-                diff_obs,  # 3
-                wrist_pos_obs,  # 6
-                wrist_box_diff_obs,  # 6
+                diff_obs,
+                wrist_pos_obs,
+                wrist_box_diff_obs,
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
@@ -125,32 +120,13 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
 
-    def _resample_box_goal_position(self, reset_env_idx, env_states):
-        self.box_goal_pos[reset_env_idx, 2] = env_states.objects["box"].root_state[reset_env_idx, 2]
-        self.box_goal_pos[reset_env_idx, 0] = self.back_table_root_states[reset_env_idx, 0] - torch.FloatTensor(
-            len(reset_env_idx)
-        ).uniform_(*self.cfg.box_range_x).to(self.device)
-        self.box_goal_pos[reset_env_idx, 1] = self.back_table_root_states[reset_env_idx, 1] - torch.FloatTensor(
-            len(reset_env_idx)
-        ).uniform_(*self.cfg.box_range_y).to(self.device)
-
-    def _post_physics_step(self, env_states):
-        """After physics step, compute reward, get obs and privileged_obs, resample command."""
-        # update episode length from env_wrapper
-        self.episode_length_buf = self.env.episode_length_buf_tensor
-        self.common_step_counter += 1
-
-        self._post_physics_step_callback()
-        self._update_refreshed_tensors(env_states)
-        self._parse_state_for_reward(env_states)
-        self.compute_reward(env_states)
-        reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
-        self.reset(reset_env_idx)
-
-        # resample box goal position
-        self._resample_box_goal_position(reset_env_idx, env_states)
-
-        self._compute_observations(env_states)
-        self._update_history(env_states)
-
-        return self.obs_buf, self.privileged_obs_buf, self.rew_buf
+    def _resample_box_goal(self, env_ids, env_states):
+        self.box_goal_pos[env_ids, 0] = env_states.objects["box"].root_state[env_ids, :0] + torch.FloatTensor(
+            len(env_ids)
+        ).uniform_(*self.cfg.command_ranges.box_pos_x).to(self.device)
+        self.box_goal_pos[env_ids, 1] = env_states.objects["box"].root_state[env_ids, :1] + torch.FloatTensor(
+            len(env_ids)
+        ).uniform_(*self.cfg.command_ranges.box_pos_y).to(self.device)
+        self.box_goal_pos[env_ids, 2] = env_states.objects["box"].root_state[env_ids, 2] + torch.FloatTensor(
+            len(env_ids)
+        ).uniform_(*self.cfg.command_ranges.box_pos_z).to(self.device)

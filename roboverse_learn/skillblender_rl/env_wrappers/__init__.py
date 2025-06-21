@@ -4,6 +4,7 @@
 from .loco_mani_skills.task_ball_wrapper import TaskBallWrapper
 from .loco_mani_skills.task_button_wrapper import TaskButtonWrapper
 from .loco_mani_skills.task_cabinet_wrapper import TaskCabinetWrapper
+from .loco_mani_skills.task_carry_wrapper import TaskCarryWrapper
 from .loco_mani_skills.task_reach_wrapper import TaskReachWrapper
 from .loco_mani_skills.task_transfer_wrapper import TaskTransferWrapper
 from .primitive_skills.reaching_wrapper import ReachingWrapper
