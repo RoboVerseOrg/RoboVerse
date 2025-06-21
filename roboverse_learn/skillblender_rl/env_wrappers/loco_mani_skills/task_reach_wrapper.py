@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training primitive skill: squatting."""
+"""SkillBlench wrapper for training loco-manipulation skill: FarReaching."""
 
 # ruff: noqa: F405
 from __future__ import annotations
@@ -12,30 +12,27 @@ from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
 
-class SquattingWrapper(HumanoidBaseWrapper):
+class TaskReachWrapper(HumanoidBaseWrapper):
     """
-    Wrapper for Skillbench:walking
-
-    # TODO implement push robot.
+    Wrapper for Skillbench:FarReaching
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
-        _, _ = self.env.reset()
-        self._init_target_wp()
+        env_states, _ = self.env.reset()
+        self.env.handler.simulate()
+        self._init_target_wp(env_states)
 
-    def _parse_ref_root_height(self, envstate: EnvState):
-        envstate.robots[self.robot.name].extra["ref_root_height"] = self.ref_root_height
+    def _parse_ref_wrist_pos(self, envstate: EnvState):
+        envstate.robots[self.robot.name].extra["ref_wrist_pos"] = self.ref_wrist_pos
 
-    def _init_target_wp(self) -> None:
-        self.target_wp, self.num_pairs, self.num_wp = sample_root_height(
-            self.device,
-            num_points=1000000,
-            num_wp=10,
-            ranges=self.cfg.command_ranges,
-            base_height_target=self.cfg.reward_cfg.base_height_target,
-        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 1]
+    def _init_target_wp(self, envstate: EnvState) -> None:
+        self.ori_wrist_pos = (
+            envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
+        )  # [num_envs, 2, 7], two hands
+        self.target_wp, self.num_pairs, self.num_wp = sample_wp(
+            self.device, num_points=2000000, num_wp=10, ranges=self.cfg.command_ranges
+        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device
         )  # for each env, choose one seq, [num_envs]
@@ -49,7 +46,7 @@ class SquattingWrapper(HumanoidBaseWrapper):
         )
         self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
 
-        self.ref_root_height = None
+        self.ref_wrist_pos = None
         self.ref_action = self.cfg.default_joint_pd_target
         self.delayed_obs_target_wp = None
         self.delayed_obs_target_wp_steps = self.cfg.human.delay / self.target_wp_dt
@@ -84,7 +81,9 @@ class SquattingWrapper(HumanoidBaseWrapper):
 
     def update_target_wp(self, reset_env_ids):
         # self.target_wp_i specifies which seq to use for each env, and self.target_wp_j specifies the timestep in the seq
-        self.ref_root_height = self.target_wp[self.target_wp_i, self.target_wp_j]  # [num_envs, 1]
+        self.ref_wrist_pos = (
+            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_wrist_pos
+        )  # [num_envs, 2, 7], two hands
         self.delayed_obs_target_wp = self.target_wp[
             self.target_wp_i, torch.maximum(self.target_wp_j - self.delayed_obs_target_wp_steps_int, torch.tensor(0))
         ]
@@ -110,10 +109,11 @@ class SquattingWrapper(HumanoidBaseWrapper):
         # TODO read from config
         # parse those state which cannot directly get from Envstates
         super()._parse_state_for_reward(envstate)
-        self._parse_ref_root_height(envstate)
+        self._parse_ref_wrist_pos(envstate)
 
     def _compute_observations(self, envstates: EnvState) -> None:
-        """compute observation and privileged observation."""
+        """Add observation into states"""
+
         phase = self._get_phase()
 
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
@@ -129,18 +129,21 @@ class SquattingWrapper(HumanoidBaseWrapper):
         ) * self.cfg.normalization.obs_scales.dof_pos
         dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
 
-        root_height = robot_position_tensor(envstates, self.robot.name)[:, 2].unsqueeze(1)
-        ref_root_height = self.ref_root_height
-        diff = root_height - self.ref_root_height  # [num_envs, 1]
+        wrist_pos = envstates.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
+        diff = wrist_pos - self.ref_wrist_pos
+
+        ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
+        wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
+        diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
 
         self.privileged_obs_buf = torch.cat(
             (
-                ref_root_height,  # 1
-                root_height,  # 1
-                diff,  # 1
+                ref_wrist_pos_obs,  # 14
+                wrist_pos_obs,  # 14
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
+                diff_obs,
                 self.base_lin_vel * self.cfg.normalization.obs_scales.lin_vel,  # 3
                 self.base_ang_vel * self.cfg.normalization.obs_scales.ang_vel,  # 3
                 self.base_euler_xyz * self.cfg.normalization.obs_scales.quat,  # 3
@@ -155,7 +158,7 @@ class SquattingWrapper(HumanoidBaseWrapper):
 
         obs_buf = torch.cat(
             (
-                diff,  # 3
+                diff_obs,  # 3
                 q,  # |A|
                 dq,  # |A|
                 self.actions,
