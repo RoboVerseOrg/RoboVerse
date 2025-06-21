@@ -60,7 +60,7 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         wandb = True
         policy_class_name = "ActorCritic"
         algorithm_class_name = "PPO"
-        num_steps_per_env = 500  # per iteration
+        num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
