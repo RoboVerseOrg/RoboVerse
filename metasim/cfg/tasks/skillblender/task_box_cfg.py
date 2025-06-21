@@ -161,18 +161,18 @@ class TaskBoxCfg(BaseHumanoidCfg):
 
     objects = [
         PrimitiveCubeCfg(
+            name="box",
+            size=[0.1, 0.1, 0.1],
+            color=[1.0, 0.0, 1.0],
+            physics=PhysicStateType.RIGIDBODY,
+        ),
+        PrimitiveCubeCfg(
             name="table",
             size=[0.9, 1.5, 0.05],
             color=[1.0, 1.0, 1.0],
             physics=PhysicStateType.RIGIDBODY,
             fix_base_link=True,
             enabled_gravity=False,
-        ),
-        PrimitiveCubeCfg(
-            name="box",
-            size=[0.1, 0.1, 0.1],
-            color=[1.0, 0.0, 1.0],
-            physics=PhysicStateType.RIGIDBODY,
         ),
     ]
 

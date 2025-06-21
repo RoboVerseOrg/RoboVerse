@@ -29,12 +29,12 @@ pip install -e roboverse_learn/rl/rsl_rl
 > 8 Loco-Manipulation Tasks
 - [x]  FarReach
 - [x]  ButtonPress
-- [ ]  CabinetClose
+- [x]  CabinetClose
 - [x]  FootballShoot
-- [ ]  BoxPush
-- [ ]  PackageLift
+- [x]  BoxPush
+- [x]  PackageLift
 - [x]  BoxTransfer
-- [ ]  PackageCarry
+- [x]  PackageCarry
 
 ## Robots supports
 - [x]  h1
@@ -45,6 +45,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [ ] ground type selection
 - [ ] pushing robot
 - [ ] sim2sim
+- [ ] domain randomization
 
 ## How to add new Task
 1. **Create your wrapper module**
