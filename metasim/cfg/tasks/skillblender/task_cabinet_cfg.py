@@ -6,7 +6,7 @@ from typing import Callable
 
 import torch
 
-from metasim.cfg.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
+from metasim.cfg.objects import ArticulationObjCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
@@ -17,47 +17,29 @@ from metasim.cfg.tasks.skillblender.base_legged_cfg import (
     LeggedRobotCfgPPO,
     RewardCfg,
 )
-from metasim.constants import PhysicStateType
-from metasim.sim import BaseSimHandler
+
+# from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass
 
 
 # define new reward function
-def reward_torso_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    torso_pos = env_states.robots[robot_name].body_state[:, cfg.torso_indices, :3].squeeze(1)  # [envs, 3]
-    torso_ori_ball_pos_diff = env_states.robots[robot_name].extra["ori_ball_pos"] - torso_pos
-    torso_ori_ball_pos_diff = torso_ori_ball_pos_diff[:, :2]  # only xy
-    torso_ori_ball_pos_error = torch.mean(torch.abs(torso_ori_ball_pos_diff), dim=1)
-    return torch.exp(-4 * torso_ori_ball_pos_error), torso_ori_ball_pos_error
+def reward_arti_obj_dof(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    arti_obj_dof_diff = env_states.objects["cabinet"].joint_pos - 0.0
+    arti_obj_dof_error = torch.mean(torch.abs(arti_obj_dof_diff), dim=1)
+    return torch.exp(-4 * arti_obj_dof_error), arti_obj_dof_error
 
 
-def reward_ball_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    ball_goal_diff = (
-        env_states.objects[cfg.objects[0].name].root_state[:, :3] - env_states.robots[robot_name].extra["goal_pos"]
-    )
-    ball_goal_error = torch.mean(torch.abs(ball_goal_diff), dim=1)
-    return torch.exp(-1 * ball_goal_error), ball_goal_error
+def reward_wrist_arti_obj_distance(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    wrist_pos = env_states.robots[robot_name].body_state[:, cfg.wrist_indices, :3]  # [num_envs, 2, 3], two hands
+    arti_obj_pos = env_states.objects["cabinet"].root_state[:, :3]  # [num_envs, 3]
+    wrist_arti_obj_diff = wrist_pos - arti_obj_pos.unsqueeze(1)  # [num_envs, 2, 3]
+    wrist_arti_obj_diff = torch.flatten(wrist_arti_obj_diff, start_dim=1)  # [num_envs, 6]
+    wrist_arti_obj_error = torch.mean(torch.abs(wrist_arti_obj_diff), dim=1)
+    return torch.exp(-4 * wrist_arti_obj_error), wrist_arti_obj_error
 
 
-@configclass
-class TaskBallChecker(BaseLeggedRobotChecker):
-    def check(self, handler: BaseSimHandler):
-        reset_buf = super().check(handler)
-
-        # if the ball hits the goal, reset the env
-        envstates = handler.get_states()
-        ball_pos = envstates.objects[handler.scenario.objects[0].name].root_state[:, :3]
-        # HACK This is a hack to get the goal position for checker
-        goal_pos = handler.task.goal_pos
-        ball_goal_diff = ball_pos - goal_pos  # [envs, 3]
-        ball_goal_dist = torch.norm(ball_goal_diff, dim=1)
-        reset_buf |= ball_goal_dist < handler.task.command_ranges.threshold
-
-        return reset_buf
-
-
-class TaskBallCfgPPO(LeggedRobotCfgPPO):
+class TaskCabinetCfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
@@ -68,7 +50,7 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
         # HRL
         num_dofs = 19
         frame_stack = 1
-        command_dim = 6
+        command_dim = 8
         # Expert skills
         skill_dict = {
             "h1_wrist_walking": {
@@ -77,9 +59,9 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
                 "checkpoint": -1,
                 "low_high": (-1, 1),
             },
-            "h1_wrist_stepping": {
-                "experiment_name": "h1_wrist_stepping",
-                "load_run": "20250321_094203",
+            "h1_wrist_reaching": {
+                "experiment_name": "h1_wrist_reaching",
+                "load_run": "2025_0621_134216",
                 "checkpoint": -1,
                 "low_high": (-1, 1),
             },
@@ -102,7 +84,7 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
 
         # logging
         save_interval = 500  # check for potential saves every this many iterations
-        experiment_name = "task_ball"
+        experiment_name = "task_cabinet"
         run_name = ""
         # load and resume
         resume = False
@@ -113,7 +95,7 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
 
 # TODO this may be constant move it to humanoid cfg
 @configclass
-class TaskBallRewardCfg(RewardCfg):
+class TaskCabinetRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
@@ -129,11 +111,11 @@ class TaskBallRewardCfg(RewardCfg):
 
 
 @configclass
-class TaskBallCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Stepping."""
+class TaskCabinetCfg(BaseHumanoidCfg):
+    """Cfg class for Skillbench:CabinetClose."""
 
-    task_name = "task_ball"
-    env_spacing = 10.0
+    task_name = "task_cabinet"
+    env_spacing = 5.0
     decimation = 10
     sim_params = SimParamCfg(
         dt=0.001,
@@ -151,107 +133,52 @@ class TaskBallCfg(BaseHumanoidCfg):
         num_threads=10,
     )
 
-    ppo_cfg = TaskBallCfgPPO()
-    reward_cfg = TaskBallRewardCfg()
+    ppo_cfg = TaskCabinetCfgPPO()
+    reward_cfg = TaskCabinetRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-
-    # goal, related to asset size
-    command_ranges.goal_x = [5.0, 5.0]
-    command_ranges.goal_y = [-2.0, 2.0]
-    command_ranges.goal_z = [0, 0.5]
-    command_ranges.threshold = 0.5
 
     num_actions = 19
     frame_stack = 1
     c_frame_stack = 3
-    command_dim = 6
-    num_single_obs = 3 * num_actions + 6 + command_dim
+    command_dim = 8
+    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
     num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 33
+    single_num_privileged_obs = 3 * num_actions + 18 + 8
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
     checker = BaseLeggedRobotChecker()
 
-    reward_functions: list[Callable] = [reward_torso_pos, reward_ball_pos]
+    reward_functions: list[Callable] = [reward_arti_obj_dof, reward_wrist_arti_obj_distance]
     reward_weights: dict[str, float] = {
-        "torso_pos": 1,
-        "ball_pos": 5,
+        "wrist_arti_obj_distance": 1,
+        "arti_obj_dof": 5,
     }
 
     objects = [
-        PrimitiveSphereCfg(
-            name="sphere",
-            radius=0.2,
-            color=[0.0, 0.5, 1.0],  # TODO domain randomization
-            physics=PhysicStateType.RIGIDBODY,
-            mass=0.4,  # TODO domain randomization
-        ),
-        PrimitiveCubeCfg(
-            name="doll1",
-            size=[0.05, 4.0, 2.0],
-            color=[1.0, 1.0, 1.0],
+        ArticulationObjCfg(
+            name="cabinet",
+            urdf_path="roboverse_data/assets/gapartnet/45159/mobility_annotation_gapartnet.urdf",
             fix_base_link=True,
-            enabled_gravity=True,
-        ),
-        PrimitiveCubeCfg(
-            name="doll2",
-            size=[1.0, 0.05, 2.0],
-            color=[1.0, 1.0, 1.0],
-            fix_base_link=True,
-            enabled_gravity=True,
-        ),
-        PrimitiveCubeCfg(
-            name="doll3",
-            size=[1.0, 0.05, 2.0],
-            color=[1.0, 1.0, 1.0],
-            fix_base_link=True,
-            enabled_gravity=True,
+            enabled_gravity=False,
         ),
     ]
-
-    ball_range_x = [0.5, 1.0]
-    ball_range_y = [-0.3, 0.3]
-    ball_range_mass = [0.3, 0.5]
 
     init_states = [
         {
             "objects": {
-                "sphere": {
-                    "pos": torch.tensor([1.7, 0.0, 0.2]),  # TODO domain randomization as original repo
-                    "rot": torch.tensor([
-                        1.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                    ]),  # TODO domain randomize as original repo as original repo
-                },
-                "doll1": {
-                    "pos": torch.tensor([5.0, 0.0, 1.0]),
+                "cabinet": {
+                    "pos": torch.tensor([1.5, 0.0, 1.0]),
                     "rot": torch.tensor([
                         1.0,
                         0.0,
                         0.0,
                         0.0,
                     ]),
-                },
-                "doll2": {
-                    "pos": torch.tensor([4.5, 2.0, 1.0]),
-                    "rot": torch.tensor([
-                        1.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                    ]),
-                },
-                "doll3": {
-                    "pos": torch.tensor([4.5, -2.0, 1.0]),
-                    "rot": torch.tensor([
-                        1.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                    ]),
+                    "dof_pos": {
+                        "joint_0": 1.0,
+                        "joint_1": 1.0,
+                    },
                 },
             },
             "robots": {

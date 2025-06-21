@@ -125,24 +125,7 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
 
-    def _post_physics_step(self, env_states):
-        """After physics step, compute reward, get obs and privileged_obs, resample command."""
-        # update episode length from env_wrapper
-        self.episode_length_buf = self.env.episode_length_buf_tensor
-        self.common_step_counter += 1
-
-        self._post_physics_step_callback()
-        # update refreshed tensors from simulaor
-        self._update_refreshed_tensors(env_states)
-        # prepare all the states for reward computation
-        self._parse_state_for_reward(env_states)
-        # compute the reward
-        self.compute_reward(env_states)
-        # reset envs
-        reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
-        self.reset(reset_env_idx)
-
-        # resample box goal position
+    def _resample_box_goal_position(self, reset_env_idx, env_states):
         self.box_goal_pos[reset_env_idx, 2] = env_states.objects["box"].root_state[reset_env_idx, 2]
         self.box_goal_pos[reset_env_idx, 0] = self.back_table_root_states[reset_env_idx, 0] - torch.FloatTensor(
             len(reset_env_idx)
@@ -151,7 +134,22 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
             len(reset_env_idx)
         ).uniform_(*self.cfg.box_range_y).to(self.device)
 
-        # compute obs for actor,  privileged_obs for critic network
+    def _post_physics_step(self, env_states):
+        """After physics step, compute reward, get obs and privileged_obs, resample command."""
+        # update episode length from env_wrapper
+        self.episode_length_buf = self.env.episode_length_buf_tensor
+        self.common_step_counter += 1
+
+        self._post_physics_step_callback()
+        self._update_refreshed_tensors(env_states)
+        self._parse_state_for_reward(env_states)
+        self.compute_reward(env_states)
+        reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
+        self.reset(reset_env_idx)
+
+        # resample box goal position
+        self._resample_box_goal_position(reset_env_idx, env_states)
+
         self._compute_observations(env_states)
         self._update_history(env_states)
 

@@ -429,7 +429,7 @@ class IsaacgymHandler(BaseSimHandler):
 
         assert len(rigid_body_names) == num_bodies
         rigid_body_info_ = {}
-        rigid_body_info_["name"] = rigid_body_names
+        rigid_body_info_["names"] = rigid_body_names
         rigid_body_info_["local_indices"] = self._robot_link_dict
         rigid_body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in self._robot_link_dict.items()}
         self._body_info[self.robot.name] = rigid_body_info_
@@ -929,7 +929,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            body_names = self._body_info[obj_name]["name"]
+            body_names = self._body_info[obj_name]["names"]
             if sort:
                 body_names.sort()
             return body_names
@@ -946,7 +946,7 @@ class IsaacgymHandler(BaseSimHandler):
         """given substring of body name, find all the bodies indices in sorted order."""
         matches = []
         for name in body_names:
-            matches.extend([s for s in self._body_info[obj_name]["name"] if name in s])
+            matches.extend([s for s in self._body_info[obj_name]["names"] if name in s])
         index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
         for i, name in enumerate(matches):
             index[i] = list(self._body_info[obj_name]["local_indices"]).index(name)
