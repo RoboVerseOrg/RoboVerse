@@ -102,7 +102,7 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "task_ball"
         run_name = ""
         # load and resume

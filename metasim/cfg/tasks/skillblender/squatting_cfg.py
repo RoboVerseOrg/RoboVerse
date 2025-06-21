@@ -25,8 +25,6 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
 )
 from metasim.types import EnvState
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import *
 
@@ -68,7 +66,7 @@ class SquattingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "squatting"
         run_name = ""
         # load and resume
@@ -98,7 +96,7 @@ class SquattingRewardCfg(RewardCfg):
 class SquattingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Stepping."""
 
-    task_name = "walking"
+    task_name = "squatting"
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,

@@ -44,8 +44,6 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
     reward_vel_mismatch_exp,
 )
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import *
 
@@ -75,7 +73,7 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "walking"
         run_name = ""
         # load and resume
@@ -91,14 +89,14 @@ class WalkingRewardCfg(RewardCfg):
     min_dist = 0.2
     max_dist = 0.5
     # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
+    target_joint_pos_scale = 0.17
+    target_feet_height = 0.06
+    cycle_time = 0.64
     # if true negative total rewards are clipped at zero (avoids early termination problems)
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    max_contact_force = 700
     soft_torque_limit = 0.001
 
 
@@ -134,7 +132,6 @@ class WalkingCfg(BaseHumanoidCfg):
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
-        # legged
         reward_lin_vel_z,
         reward_ang_vel_xy,
         reward_orientation,
@@ -154,7 +151,6 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_stumble,
         reward_stand_still,
         reward_feet_contact_forces,
-        # walking
         reward_joint_pos,
         reward_feet_distance,
         reward_knee_distance,
@@ -180,7 +176,6 @@ class WalkingCfg(BaseHumanoidCfg):
         "collision": -1.0,
         "feet_stumble": -0.0,
         "stand_still": -0.0,
-        # skillblender: walking
         "joint_pos": 3.2,
         "feet_clearance": 2.0,
         "feet_contact_number": 2.4,

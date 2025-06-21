@@ -25,8 +25,6 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
 )
 from metasim.types import EnvState
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import *
 
@@ -67,7 +65,7 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 500  # check for potential saves every this many iterations
         experiment_name = "reaching"
         run_name = ""
         # load and resume
@@ -84,21 +82,19 @@ class ReachingRewardCfg(RewardCfg):
     min_dist = 0.2
     max_dist = 0.5
     # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+    target_joint_pos_scale = 0.17
+    target_feet_height = 0.06
+    cycle_time = 0.64
     only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
     tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    max_contact_force = 700
 
 
 @configclass
 class ReachingCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Stepping."""
+    """Cfg class for Skillbench:Reaching."""
 
-    task_name = "walking"
+    task_name = "reaching"
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
