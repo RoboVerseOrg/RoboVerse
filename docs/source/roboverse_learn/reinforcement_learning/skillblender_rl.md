@@ -27,13 +27,13 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [x]  Stepping
 - [x]  Reaching
 > 8 Loco-Manipulation Tasks
-- [ ]  FarReach
+- [x]  FarReach
 - [ ]  ButtonPress
 - [ ]  CabinetClose
 - [x]  FootballShoot
 - [ ]  BoxPush
 - [ ]  PackageLift
-- [ ]  BoxTransfer
+- [x]  BoxTransfer
 - [ ]  PackageCarry
 
 ## Robots supports
@@ -47,17 +47,29 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [ ] sim2sim
 
 ## How to add new Task
-1. Create a new `wrapper.py` in , add reward function
-    define your reward functions in reward_fun_cfg.py, check whether the current states is enough for reward computation. If not, parse your state as follow:
+1. **Create your wrapper module**
+    - Add a new file `abc_wrapper.py` under `roboverse_learn/skillblender_rl/env_wrappers`
+    - Add a config file `abc_cfg.py` under `metasim/cfg/tasks/skillblender`
+    - define your reward functions in reward_fun_cfg.py, check whether the current states or variables are enough for reward computation.
+
+2. If states not enough, add global variable by overriding `_init_buffer()`
+    ```
+    def _init_buffers(self):
+        super()._init_buffers()
+        """DEFINED YOUR VARIABLE or BUFFER HERE"""
+        self.xxx = xxx
+    ```
+3. parse your state for reward computation if necessary:
     ```
     def _parse_NEW_STATES(self, envstate):
         """NEWSTATES PARSEING..."""
+        envstate[robot_name].extra{'xxx'} = self.xxx
 
     def _parse_state_for_reward(self, envstate):
         super()._parse_state_for_reward(self, envstate):
         _parse_NEW_STATES(self, envstate)
     ```
-2. Implemented `_compute_observation()`
+3. Implemented `_compute_observation()`
     - fill `obs` and `privelidged_obs`.
     - modified `_post_physics_step` to reset variables you defined with `reset_env_idx`
 

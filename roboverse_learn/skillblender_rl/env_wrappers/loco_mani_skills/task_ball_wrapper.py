@@ -21,6 +21,9 @@ class TaskBallWrapper(HumanoidBaseWrapper):
         super().__init__(scenario)
         _, _ = self.env.reset()
         self.env.handler.simulate()
+
+    def _init_buffers(self):
+        super()._init_buffers()
         self.ori_ball_pos = torch.zeros(self.num_envs, 3, device=self.device)
         # TODO add domain randomizatoin
         self.ori_ball_pos[:, 0] = 0.5 * (self.scenario.task.ball_range_x[0] + self.scenario.task.ball_range_x[1])

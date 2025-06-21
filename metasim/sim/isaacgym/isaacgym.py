@@ -559,7 +559,6 @@ class IsaacgymHandler(BaseSimHandler):
                 )
             object_states[obj.name] = state
 
-        # FIXME some RL task need joint state as dof_pos - default_dof_pos, not absolute dof_pos. see https://github.com/leggedrobotics/legged_gym/blob/17847702f90d8227cd31cce9c920aa53a739a09a/legged_gym/envs/base/legged_robot.py#L216 for further details
         robot_states = {}
         for robot_id, robot in enumerate([self.robot]):
             joint_ids_reindex = self._get_joint_ids_reindex(robot.name)
