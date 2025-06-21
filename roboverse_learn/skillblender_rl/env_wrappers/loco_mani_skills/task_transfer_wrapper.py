@@ -1,6 +1,5 @@
 """SkillBlench wrapper for training loco-manipulation Skillbench:BoxTransfer"""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 import torch
