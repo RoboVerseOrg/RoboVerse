@@ -28,7 +28,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [x]  Reaching
 > 8 Loco-Manipulation Tasks
 - [x]  FarReach
-- [ ]  ButtonPress
+- [x]  ButtonPress
 - [ ]  CabinetClose
 - [x]  FootballShoot
 - [ ]  BoxPush
