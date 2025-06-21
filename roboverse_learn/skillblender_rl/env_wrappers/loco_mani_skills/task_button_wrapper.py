@@ -23,10 +23,10 @@ class TaskButtonWrapper(HumanoidBaseWrapper):
         super().__init__(scenario)
         _, _ = self.env.reset()
         self.env.handler.simulate()
-        # prepare right should indices for reward computation
-        right_shoulder_pitch_names = self.cfg.right_shoulder_pitch_names
-        self.cfg.right_shoulder_pitch_index = self.env.handler.get_body_reindexed_indices_from_substring(
-            self.robot.name, right_shoulder_pitch_names
+        # prepare right arm indices for reward computation
+        right_arm_joint_names = self.cfg.right_arm_joint_names
+        self.cfg.right_shoulder_pitch_index = self.env.handler.get_joint_reindexed_indices_from_substring(
+            self.robot.name, right_arm_joint_names
         )
 
     def _init_buffers(self):

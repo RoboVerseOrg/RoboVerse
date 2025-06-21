@@ -414,7 +414,7 @@ class IsaacgymHandler(BaseSimHandler):
                         rigid_body_names.append(rigid_body_name)
             assert len(rigid_body_names) == num_bodies
             body_info_ = {}
-            body_info_["name"] = rigid_body_names
+            body_info_["names"] = rigid_body_names
             body_info_["local_indices"] = asset_dict
             body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in asset_dict.items()}
             self._body_info[obj_name] = body_info_
@@ -950,6 +950,16 @@ class IsaacgymHandler(BaseSimHandler):
         index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
         for i, name in enumerate(matches):
             index[i] = list(self._body_info[obj_name]["local_indices"]).index(name)
+        return index
+
+    def get_joint_reindexed_indices_from_substring(self, obj_name, joint_names: list[str]) -> torch.tensor:
+        """given substring of joint name, find all the joint indices in sorted order."""
+        matches = []
+        for name in joint_names:
+            matches.extend([s for s in self._joint_info[obj_name]["names"] if name in s])
+        index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
+        for i, name in enumerate(matches):
+            index[i] = list(self._joint_info[obj_name]["local_indices"]).index(name)
         return index
 
     @property

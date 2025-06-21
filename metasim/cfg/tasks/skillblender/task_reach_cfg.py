@@ -50,7 +50,7 @@ class TaskReachCfgPPO(LeggedRobotCfgPPO):
             },
             "h1_wrist_reaching": {
                 "experiment_name": "h1_wrist_reaching",
-                "load_run": "2025_0621_095457",
+                "load_run": "2025_0621_134216",
                 "checkpoint": -1,
                 "low_high": (-1, 1),
             },

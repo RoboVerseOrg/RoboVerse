@@ -227,6 +227,8 @@ class ActorCriticHierarchical(nn.Module):
             mean = self.policy_list[i](input_to_low_level_policies_i) * masks[:, i]
             means.append(mean)
         actions_mean = sum(means)
+        assert not torch.isnan(actions_mean).any()
+
         return {
             "actions_mean": actions_mean,
             "masks": masks

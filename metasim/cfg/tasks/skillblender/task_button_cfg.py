@@ -35,7 +35,7 @@ def reward_right_arm_default(env_states: EnvState, robot_name: str, cfg: BaseRLT
     Calculates the reward for keeping right arm joint positions close to default positions.
     """
     joint_diff = env_states.robots[robot_name].joint_pos - cfg.default_joint_pd_target
-    right_arm_diff = joint_diff[:, cfg.right_shoulder_pitch_index :]  # start from right shoulder pitch
+    right_arm_diff = joint_diff[:, cfg.right_shoulder_pitch_index]  # start from right shoulder pitch
     right_arm_error = torch.mean(torch.abs(right_arm_diff), dim=1)
     return torch.exp(-4 * right_arm_error), right_arm_error
 
@@ -159,7 +159,7 @@ class TaskButtonCfg(BaseHumanoidCfg):
     ]
     button_ori_z = 1.0
     env_spacing = 5.0
-    right_shoulder_pitch_names = ["right_shoulder_pitch"]
+    right_arm_joint_names = ["right_elbow", "right_shoulder_pitch", "right_shoulder_roll", "right_shoulder_yaw"]
     init_states = [
         {
             "objects": {
