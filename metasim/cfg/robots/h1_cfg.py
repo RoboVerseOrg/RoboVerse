@@ -10,7 +10,7 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 @configclass
 class H1Cfg(BaseRobotCfg):
     name: str = "h1"
-    num_joints: int = 26
+    num_joints: int = 19
     usd_path: str = "roboverse_data/robots/h1/usd/h1.usd"
     mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
     urdf_path: str = "roboverse_data/robots/h1/urdf/h1.urdf"

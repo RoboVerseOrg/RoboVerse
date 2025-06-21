@@ -22,7 +22,11 @@ class ContactForceState:
     """State of a single contact force sensor."""
 
     force: torch.Tensor
-    """Contact force. Shape is (num_envs, 3)."""
+    torque: torch.Tensor | None = None
+    """
+    Contact force. Shape is (num_envs, 3).
+    Contact torque. Shape is (num_envs, 3).
+    """
 
 
 SensorState = ContactForceState
@@ -42,6 +46,8 @@ class ObjectState:
     """Joint positions. Shape is (num_envs, num_joints). This is only available for articulation objects."""
     joint_vel: torch.Tensor | None = None
     """Joint velocities. Shape is (num_envs, num_joints). This is only available for articulation objects."""
+    joint_force: torch.Tensor | None = None
+    """Joint forces. Shape is (num_envs, num_joints). This is only available for articulation objects."""
 
 
 @dataclass
@@ -58,6 +64,8 @@ class RobotState:
     """Joint positions. Shape is (num_envs, num_joints)."""
     joint_vel: torch.Tensor
     """Joint velocities. Shape is (num_envs, num_joints)."""
+    joint_force: torch.Tensor
+    """Joint forces. Shape is (num_envs, num_joints)."""
     joint_pos_target: torch.Tensor
     """Joint positions target. Shape is (num_envs, num_joints)."""
     joint_vel_target: torch.Tensor
@@ -172,6 +180,9 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
                 joint_vel=torch.cat([obj.joint_vel for obj in object_states], dim=0)
                 if object_states[0].joint_vel is not None
                 else None,
+                joint_force=torch.cat([obj.joint_force for obj in object_states], dim=0)
+                if object_states[0].joint_force is not None
+                else None,
             )
 
     # Join robots
@@ -184,6 +195,9 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
                 body_state=torch.cat([robot.body_state for robot in robot_states], dim=0),
                 joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0),
                 joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0),
+                joint_force=torch.cat([robot.joint_force for robot in robot_states], dim=0)
+                if robot_states[0].joint_force is not None
+                else None,
                 joint_pos_target=torch.cat([robot.joint_pos_target for robot in robot_states], dim=0)
                 if robot_states[0].joint_pos_target is not None
                 else None,
@@ -269,6 +283,9 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
             if obj_state.joint_vel is not None:
                 jns = handler.get_joint_names(obj_name)
                 object_states[obj_name]["dof_vel"] = _dof_tensor_to_dict(obj_state.joint_vel[env_id], jns)
+            if obj_state.joint_force is not None:
+                jns = handler.get_joint_names(obj_name)
+                object_states[obj_name]["dof_force"] = _dof_tensor_to_dict(obj_state.joint_force[env_id], jns)
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
@@ -281,6 +298,11 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
             }
             robot_states[robot_name]["dof_pos"] = _dof_tensor_to_dict(robot_state.joint_pos[env_id], jns)
             robot_states[robot_name]["dof_vel"] = _dof_tensor_to_dict(robot_state.joint_vel[env_id], jns)
+            robot_states[robot_name]["dof_force"] = (
+                _dof_tensor_to_dict(robot_state.joint_force[env_id], jns)
+                if robot_state.joint_force is not None
+                else None
+            )
             robot_states[robot_name]["dof_pos_target"] = (
                 _dof_tensor_to_dict(robot_state.joint_pos_target[env_id], jns)
                 if robot_state.joint_pos_target is not None
@@ -326,7 +348,8 @@ def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | Non
     n_jnt = n_jnt or 0
     jpos = torch.zeros((n_env, n_jnt), device=device) if n_jnt else None
     jvel = torch.zeros_like(jpos) if jpos is not None else None
-    return root, body, jpos, jvel
+    jforce = torch.zeros_like(jvel) if jvel is not None else None
+    return root, body, jpos, jvel, jforce
 
 
 def list_state_to_tensor(
@@ -351,7 +374,7 @@ def list_state_to_tensor(
         bnames = handler.get_body_names(name)
         jnames = handler.get_joint_names(name)
 
-        root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
+        root, body, jpos, jvel, jforce = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
 
         for e, es in enumerate(env_states):
             if name not in es["objects"]:
@@ -382,15 +405,21 @@ def list_state_to_tensor(
                 for i, jn in enumerate(sorted(jnames)):
                     if jn in s["dof_vel"]:
                         jvel[e, i] = s["dof_vel"][jn]
+            if jforce is not None and "dof_force" in s:
+                for i, jn in enumerate(sorted(jnames)):
+                    if jn in s["dof_force"]:
+                        jforce[e, i] = s["dof_force"][jn]
 
-        objects[name] = ObjectState(root_state=root, body_state=body, joint_pos=jpos, joint_vel=jvel)
+        objects[name] = ObjectState(
+            root_state=root, body_state=body, joint_pos=jpos, joint_vel=jvel, joint_force=jforce
+        )
 
     # -------- robots ---------------------------------------------------
     for name in robot_names:
         jnames = handler.get_joint_names(name)
         bnames = handler.get_body_names(name)
 
-        root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
+        root, body, jpos, jvel, jforce = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
         jpos_t, jvel_t, jeff_t = (
             torch.zeros_like(jpos) if jpos is not None else None,
             torch.zeros_like(jvel) if jvel is not None else None,
@@ -416,6 +445,8 @@ def list_state_to_tensor(
                     jpos[e, i] = s["dof_pos"][jn]
                 if "dof_vel" in s and jn in s["dof_vel"]:
                     jvel[e, i] = s["dof_vel"][jn]
+                if "dof_force" in s and jn in s["dof_force"]:
+                    jforce[e, i] = s["dof_force"][jn]
                 if "dof_pos_target" in s and jn in s["dof_pos_target"]:
                     jpos_t[e, i] = s["dof_pos_target"][jn]
                 if "dof_vel_target" in s and jn in s["dof_vel_target"]:
@@ -441,6 +472,7 @@ def list_state_to_tensor(
             body_state=body,
             joint_pos=jpos,
             joint_vel=jvel,
+            joint_force=jforce,
             joint_pos_target=jpos_t,
             joint_vel_target=jvel_t,
             joint_effort_target=jeff_t,

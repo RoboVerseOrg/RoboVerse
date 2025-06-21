@@ -35,6 +35,7 @@ class BenchmarkType(enum.Enum):
     GRASPNET = "GraspNet"
     LIBERO = "Libero"
     GPT = "GPT"
+    BIDEX = "BidexHands"
 
     ## Locomotion
     UH1 = "UH1"

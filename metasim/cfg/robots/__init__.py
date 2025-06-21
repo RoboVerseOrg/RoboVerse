@@ -21,7 +21,8 @@ from .kinova_gen3_cfg import KinovaGen3Cfg
 from .kinova_gen3_robotiq_2f85 import KinovaGen3Robotiq2f85Cfg
 from .sawyer_cfg import SawyerCfg
 from .sawyer_mujoco_cfg import SawyerMujocoCfg
-from .shadow_hand_cfg import ShadowHandCfg
+from .shadow_hand_left_cfg import ShadowHandLeftCfg
+from .shadow_hand_right_cfg import ShadowHandRightCfg
 from .unitree_dex3_1_cfg import UnitreeDex31LeftCfg
 from .ur5e_2f85_cfg import Ur5E2F85Cfg
 from .walker_cfg import WalkerCfg

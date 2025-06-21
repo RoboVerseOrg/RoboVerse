@@ -335,6 +335,7 @@ class SinglePybulletHandler(BaseSimHandler):
                     body_state=None,  # TODO
                     joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
+                    joint_force=None,  # TODO
                 )
             else:
                 state = ObjectState(root_state=root_state)
@@ -357,6 +358,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 body_state=None,  # TODO
                 joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
+                joint_force=None,  # TODO
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
                 joint_effort_target=None,  # TODO

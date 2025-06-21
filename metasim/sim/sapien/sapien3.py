@@ -409,6 +409,7 @@ class Sapien3Handler(BaseSimHandler):
                     body_state=link_state.unsqueeze(0),
                     joint_pos=torch.tensor(obj_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor(obj_inst.get_qvel()[joint_reindex]).unsqueeze(0),
+                    joint_force=None,  # TODO
                 )
             else:
                 assert isinstance(obj_inst, sapien_core.Entity)
@@ -453,6 +454,7 @@ class Sapien3Handler(BaseSimHandler):
                 body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
+                joint_force=None,  # TODO
                 joint_pos_target=pos_target,
                 joint_vel_target=vel_target,
                 joint_effort_target=effort_target,

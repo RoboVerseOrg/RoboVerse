@@ -133,6 +133,7 @@ class MJXHandler(BaseSimHandler):
             body_state=j2t(body_state_r),
             joint_pos=j2t(data.qpos[idx[:, None], qadr_r]),
             joint_vel=j2t(data.qvel[idx[:, None], vadr_r]),
+            joint_force=None,  # TODO
             joint_pos_target=j2t(data.ctrl[idx[:, None], aid_r]),
             joint_vel_target=None,
             joint_effort_target=j2t(data.actuator_force[idx[:, None], aid_r]),
@@ -159,6 +160,7 @@ class MJXHandler(BaseSimHandler):
                     body_state=j2t(body_state_o),
                     joint_pos=j2t(data.qpos[idx[:, None], qadr_o]),
                     joint_vel=j2t(data.qvel[idx[:, None], vadr_o]),
+                    joint_force=None,  # TODO
                 )
             else:  # rigid object
                 objects[obj.name] = ObjectState(
