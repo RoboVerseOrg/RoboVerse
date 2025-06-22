@@ -62,6 +62,8 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     class policy:
+        """Network config class for PPO."""
+
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
@@ -101,14 +103,14 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 500  # check for potential saves every this many iterations
+        save_interval = 500
         experiment_name = "task_ball"
         run_name = ""
         # load and resume
         resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
+        load_run = -1
+        checkpoint = -1
+        resume_path = None
 
 
 # TODO this may be constant move it to humanoid cfg
@@ -117,11 +119,11 @@ class TaskBallRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
-    # put some settings here for LLM parameter tuning
+
     target_joint_pos_scale = 0.17  # rad
     target_feet_height = 0.06  # m
     cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5
@@ -130,7 +132,7 @@ class TaskBallRewardCfg(RewardCfg):
 
 @configclass
 class TaskBallCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Stepping."""
+    """Cfg class for Skillbench:FootballShoot."""
 
     task_name = "task_ball"
     env_spacing = 10.0
@@ -154,12 +156,6 @@ class TaskBallCfg(BaseHumanoidCfg):
     ppo_cfg = TaskBallCfgPPO()
     reward_cfg = TaskBallRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-
-    # goal, related to asset size
-    command_ranges.goal_x = [5.0, 5.0]
-    command_ranges.goal_y = [-2.0, 2.0]
-    command_ranges.goal_z = [0, 0.5]
-    command_ranges.threshold = 0.5
 
     num_actions = 19
     frame_stack = 1
@@ -283,3 +279,11 @@ class TaskBallCfg(BaseHumanoidCfg):
             },
         }
     ]
+
+    def __post_init__(self):
+        super().__post_init__()
+        # goal, related to asset size
+        self.command_ranges.goal_x = [5.0, 5.0]
+        self.command_ranges.goal_y = [-2.0, 2.0]
+        self.command_ranges.goal_z = [0, 0.5]
+        self.command_ranges.threshold = 0.5

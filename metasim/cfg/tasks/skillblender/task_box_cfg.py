@@ -23,6 +23,7 @@ from metasim.utils import configclass
 
 # define new reward function
 def reward_box_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """Reward function for box position."""
     box_goal_pos = env_states.objects["box"].extra["box_goal_pos"]
     box_pos_diff = env_states.objects["box"].root_state[:, :3] - box_goal_pos
     box_pos_error = torch.mean(torch.abs(box_pos_diff), dim=1)
@@ -30,6 +31,7 @@ def reward_box_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 
 def reward_wrist_box_distance(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """Reward function for box position with respect to wrist."""
     wrist_pos = env_states.robots[robot_name].body_state[:, cfg.wrist_indices, :7]
     wrist_pos = wrist_pos[:, :, :3]
     box_pos = env_states.objects["box"].root_state[:, :3]
@@ -40,10 +42,14 @@ def reward_wrist_box_distance(env_states: EnvState, robot_name: str, cfg: BaseRL
 
 
 class TaskBoxCfgPPO(LeggedRobotCfgPPO):
+    """PPO config class for Skillbench: BoxPush."""
+
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     class policy:
+        """Network config class for PPO."""
+
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
@@ -83,27 +89,29 @@ class TaskBoxCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 500  # check for potential saves every this many iterations
+        save_interval = 500
         experiment_name = "task_box"
         run_name = ""
         # load and resume
         resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
+        load_run = -1
+        checkpoint = -1
+        resume_path = None
 
 
 # TODO this may be constant move it to humanoid cfg
 @configclass
 class TaskBoxRewardCfg(RewardCfg):
+    """Reward config class for Skillbench: BoxPush."""
+
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
-    # put some settings here for LLM parameter tuning
+
     target_joint_pos_scale = 0.17  # rad
     target_feet_height = 0.06  # m
     cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5
@@ -136,8 +144,6 @@ class TaskBoxCfg(BaseHumanoidCfg):
     ppo_cfg = TaskBoxCfgPPO()
     reward_cfg = TaskBoxRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-    command_ranges.box_range_x = [-0.45, -0.35]
-    command_ranges.box_range_y = [-0.3, 0.3]
 
     num_actions = 19
     frame_stack = 1
@@ -227,3 +233,8 @@ class TaskBoxCfg(BaseHumanoidCfg):
             },
         }
     ]
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.command_ranges.box_range_x = [-0.45, -0.35]
+        self.command_ranges.box_range_y = [-0.3, 0.3]

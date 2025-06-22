@@ -56,11 +56,11 @@ class RewardCfg:
     base_height_target: float = 0.89
     min_dist: float = 0.2
     max_dist: float = 0.5
-    # put some settings here for LLM parameter tuning
+
     target_joint_pos_scale: float = 0.17  # rad
     target_feet_height: float = 0.06  # m
     cycle_time: float = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+
     only_positiverewards: bool = True
     # tracking reward = exp(error*sigma)
     tracking_sigma: float = 5.0
@@ -130,6 +130,8 @@ class LeggedRobotCfgPPO(BaseConfig):
     runner_class_name = "OnPolicyRunner"
 
     class policy:
+        """Network config class for PPO."""
+
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
@@ -156,13 +158,13 @@ class LeggedRobotCfgPPO(BaseConfig):
         max_iterations = 1500  # number of policy updates
 
         # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        save_interval = 1000
         experiment_name = "test"
         run_name = ""
         # load and resume
         resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
+        load_run = -1
+        checkpoint = -1
         resume_path = None  # updated from load_run and chkpt
         wandb: False
 

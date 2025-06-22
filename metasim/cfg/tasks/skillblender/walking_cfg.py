@@ -52,6 +52,8 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     class policy:
+        """Network config class for PPO."""
+
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
@@ -72,14 +74,14 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 500  # check for potential saves every this many iterations
+        save_interval = 500
         experiment_name = "walking"
         run_name = ""
         # load and resume
         resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
+        load_run = -1
+        checkpoint = -1
+        resume_path = None
 
 
 @configclass
@@ -87,11 +89,11 @@ class WalkingRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
-    # put some settings here for LLM parameter tuning
+
     target_joint_pos_scale = 0.17
     target_feet_height = 0.06
     cycle_time = 0.64
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5

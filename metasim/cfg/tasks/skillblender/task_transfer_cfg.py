@@ -44,6 +44,8 @@ class TaskTransferCfgPPO(LeggedRobotCfgPPO):
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     class policy:
+        """Network config class for PPO."""
+
         init_noise_std = 1.0
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [768, 256, 128]
@@ -83,14 +85,14 @@ class TaskTransferCfgPPO(LeggedRobotCfgPPO):
         max_iterations = 15001  # 3001  # number of policy updates
 
         # logging
-        save_interval = 500  # check for potential saves every this many iterations
+        save_interval = 500
         experiment_name = "task_transfer"
         run_name = ""
         # load and resume
         resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
+        load_run = -1
+        checkpoint = -1
+        resume_path = None
 
 
 # TODO this may be constant move it to humanoid cfg
@@ -99,11 +101,11 @@ class TaskTransferRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
-    # put some settings here for LLM parameter tuning
+
     target_joint_pos_scale = 0.17  # rad
     target_feet_height = 0.06  # m
     cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
+
     only_positive_rewards = True
     # tracking reward = exp(error*sigma)
     tracking_sigma = 5
@@ -141,7 +143,7 @@ class TaskTransferCfg(BaseHumanoidCfg):
     frame_stack = 1
     c_frame_stack = 3
     command_dim = 9
-    num_single_obs = 3 * num_actions + 6 + command_dim  # see `obs_buf = torch.cat(...)` for details
+    num_single_obs = 3 * num_actions + 6 + command_dim
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 3 * num_actions + 39
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
