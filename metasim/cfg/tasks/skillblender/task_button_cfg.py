@@ -11,10 +11,7 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    CommandRanges,
-    CommandsConfig,
     LeggedRobotCfgPPO,
-    RewardCfg,
 )
 from metasim.types import EnvState
 from metasim.utils import configclass
@@ -40,16 +37,12 @@ def reward_right_arm_default(env_states: EnvState, robot_name: str, cfg: BaseRLT
     return torch.exp(-4 * right_arm_error), right_arm_error
 
 
+@configclass
 class TaskButtonCfgPPO(LeggedRobotCfgPPO):
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
-
-    class policy:
+    @configclass
+    class Policy(LeggedRobotCfgPPO.Policy):
         """Network config class for PPO."""
 
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
         num_dofs = 19
         frame_stack = 1
         command_dim = 3
@@ -68,7 +61,8 @@ class TaskButtonCfgPPO(LeggedRobotCfgPPO):
             },
         }
 
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    @configclass
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -76,39 +70,19 @@ class TaskButtonCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCriticHierarchical"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
+    @configclass
+    class Runner(LeggedRobotCfgPPO.Runner):
         max_iterations = 15001  # 3001  # number of policy updates
+        policy_class_name = "ActorCriticHierarchical"
 
         # logging
         save_interval = 500
         experiment_name = "task_button"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-# TODO this may be constant move it to humanoid cfg
-@configclass
-class TaskButtonRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    algorithm = Algorithm()
+    policy = Policy()
+    runner = Runner()
+    a = 1
 
 
 @configclass
@@ -129,8 +103,10 @@ class TaskButtonCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = TaskButtonCfgPPO()
-    reward_cfg = TaskButtonRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
+
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
 
     num_actions = 19
     frame_stack = 1
@@ -142,7 +118,7 @@ class TaskButtonCfg(BaseHumanoidCfg):
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [reward_wrist_button_distance, reward_right_arm_default]
 
@@ -157,9 +133,7 @@ class TaskButtonCfg(BaseHumanoidCfg):
             enabled_gravity=True,
         ),
     ]
-    button_ori_z = 1.0
     env_spacing = 5.0
-    right_arm_joint_names = ["right_elbow", "right_shoulder_pitch", "right_shoulder_roll", "right_shoulder_yaw"]
     init_states = [
         {
             "objects": {
@@ -207,3 +181,10 @@ class TaskButtonCfg(BaseHumanoidCfg):
         super().__post_init__()
         self.command_ranges.button_pos_y = [-0.5, 0.5]
         self.command_ranges.button_pos_z = [-0.5, 0.5]
+        self.button_ori_z = 1.0
+        self.right_arm_joint_names = [
+            "right_elbow",
+            "right_shoulder_pitch",
+            "right_shoulder_roll",
+            "right_shoulder_yaw",
+        ]

@@ -69,7 +69,7 @@ class TaskCabinetCfgPPO(LeggedRobotCfgPPO):
             },
         }
 
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    class algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2

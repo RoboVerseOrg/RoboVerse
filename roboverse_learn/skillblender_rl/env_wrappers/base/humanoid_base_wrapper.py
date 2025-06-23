@@ -1,6 +1,5 @@
 """A humanoid base wrapper for skillBench tasks"""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 from collections import deque

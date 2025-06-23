@@ -128,12 +128,14 @@ class ActorCriticHierarchical(nn.Module):
         # retrieve config snapshot
         skill_env_cfg, skill_train_cfg = get_cfgs(name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name)
         # load skill policy
+        from metasim.utils.dict import class_to_dict
         skill_policy = ActorCritic(
             skill_env_cfg.num_observations,
             skill_env_cfg.num_privileged_obs,
             skill_env_cfg.num_actions,
             obs_context_len=1,
-            **rsl_rl_class_to_dict(skill_train_cfg)["policy"]
+
+            **class_to_dict(skill_train_cfg)["policy"]
         ).to(device)
         # TODO hard-coded for skillblender, add more task-suite
         log_root = f'./outputs/skillblender/{args.robot}_{skill_train_cfg.runner.experiment_name}'

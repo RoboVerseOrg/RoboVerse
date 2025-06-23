@@ -77,7 +77,7 @@ def unpad_trajectories(trajectories, masks):
         .transpose(1, 0)
     )
 
-# TODO:aligned it  with class_to_dict in metasim.utils.dict
+# TODO:aligned it with class_to_dict in metasim.utils.dict
 def rsl_rl_class_to_dict(obj) -> dict:
     if not hasattr(obj, "__dict__"):
         return obj
@@ -142,7 +142,7 @@ def retrieve_cfgs(load_run, experiment_name):
                 cfg = cfgs[key]() #Instantiate the metasim class configclass
                 if hasattr(cfg, 'task_name'):
                     env_cfg = cfg
-    return env_cfg, train_cfg
+    return env_cfg, train_cfg()
 
 def get_cfgs(name, load_run=None, experiment_name=None):
     if load_run is None and experiment_name is None:

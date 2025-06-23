@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-import torch
-
-from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
+from metasim.cfg.tasks.skillblender.base_legged_cfg import LeggedRobotCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_action_rate,
     reward_action_smoothness,
@@ -47,18 +44,13 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
 from metasim.utils import configclass
 
 
+@configclass
 class WalkingCfgPPO(LeggedRobotCfgPPO):
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
+    seed: int = 0
+    runner_class_name: str = "OnPolicyRunner"
 
-    class policy:
-        """Network config class for PPO."""
-
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
-
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    @configclass
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -66,39 +58,15 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCritic"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
-        max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
+    @configclass
+    class Runner(LeggedRobotCfgPPO.Runner):
+        num_steps_per_env = 60
+        max_iterations = 15001
         save_interval = 500
         experiment_name = "walking"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-@configclass
-class WalkingRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17
-    target_feet_height = 0.06
-    cycle_time = 0.64
-
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700
-    soft_torque_limit = 0.001
+    algorithm: Algorithm = Algorithm()
+    runner: Runner = Runner()
 
 
 @configclass
@@ -106,31 +74,18 @@ class WalkingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Walking."""
 
     task_name = "walking"
-    sim_params = SimParamCfg(
-        dt=0.001,
-        contact_offset=0.01,
-        substeps=1,
-        num_position_iterations=4,
-        num_velocity_iterations=0,
-        bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=False,
-        friction_offset_threshold=0.04,
-        num_threads=10,
-    )
 
     ppo_cfg = WalkingCfgPPO()
-    reward_cfg = WalkingRewardCfg()
-    command_ranges = CommandRanges()
 
     num_actions = 19
     command_dim = 3
     frame_stack = 1
     c_frame_stack = 3
-    num_single_obs = 3 * num_actions + 6 + command_dim  #
+    num_single_obs = 3 * num_actions + 6 + command_dim
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 4 * num_actions + 25
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
         reward_lin_vel_z,
@@ -206,36 +161,3 @@ class WalkingCfg(BaseHumanoidCfg):
         # optional
         "action_rate": -0.0,
     }
-
-    init_states = [
-        {
-            "objects": {},
-            "robots": {
-                "h1_wrist": {
-                    "pos": torch.tensor([0.0, 0.0, 1.0]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                    "dof_pos": {
-                        "left_hip_yaw": 0.0,
-                        "left_hip_roll": 0.0,
-                        "left_hip_pitch": -0.4,
-                        "left_knee": 0.8,
-                        "left_ankle": -0.4,
-                        "right_hip_yaw": 0.0,
-                        "right_hip_roll": 0.0,
-                        "right_hip_pitch": -0.4,
-                        "right_knee": 0.8,
-                        "right_ankle": -0.4,
-                        "torso": 0.0,
-                        "left_shoulder_pitch": 0.0,
-                        "left_shoulder_roll": 0.0,
-                        "left_shoulder_yaw": 0.0,
-                        "left_elbow": 0.0,
-                        "right_shoulder_pitch": 0.0,
-                        "right_shoulder_roll": 0.0,
-                        "right_shoulder_yaw": 0.0,
-                        "right_elbow": 0.0,
-                    },
-                },
-            },
-        }
-    ]
