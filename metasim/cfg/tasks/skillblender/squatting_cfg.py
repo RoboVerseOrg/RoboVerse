@@ -10,10 +10,7 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    CommandRanges,
-    CommandsConfig,
     LeggedRobotCfgPPO,
-    RewardCfg,
 )
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_default_joint_pos,
@@ -41,17 +38,8 @@ def reward_squatting(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 
 class SquattingCfgPPO(LeggedRobotCfgPPO):
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
-
-    class policy:
-        """Network config class for PPO."""
-
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
-
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    @configclass
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -59,43 +47,23 @@ class SquattingCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
+    @configclass
+    class Runner(LeggedRobotCfgPPO.Runner):
         wandb = True
         policy_class_name = "ActorCritic"
         algorithm_class_name = "PPO"
         num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
         save_interval = 500
         experiment_name = "squatting"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-@configclass
-class SquattingRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    algorithm: Algorithm = Algorithm()
+    runner: Runner = Runner()
 
 
 @configclass
 class SquattingCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Stepping."""
+    """Cfg class for Skillbench:Squatting."""
 
     task_name = "squatting"
     sim_params = SimParamCfg(
@@ -111,11 +79,9 @@ class SquattingCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = SquattingCfgPPO()
-    reward_cfg = SquattingRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-    command_ranges.root_height_std = 0.2
-    command_ranges.min_root_height = 0.2
-    command_ranges.max_root_height = 1.1
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
 
     num_actions = 19
     command_dim = 1
@@ -126,7 +92,7 @@ class SquattingCfg(BaseHumanoidCfg):
     single_num_privileged_obs = 3 * num_actions + 18 + 3
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
-    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=10.0)
 
     reward_functions: list[Callable] = [
         reward_squatting,
@@ -149,3 +115,8 @@ class SquattingCfg(BaseHumanoidCfg):
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
     }
+
+    def __post_init__(self):
+        self.command_ranges.root_height_std = 0.2
+        self.command_ranges.min_root_height = 0.2
+        self.command_ranges.max_root_height = 1.1

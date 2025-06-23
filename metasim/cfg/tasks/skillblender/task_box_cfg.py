@@ -11,10 +11,7 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    CommandRanges,
-    CommandsConfig,
     LeggedRobotCfgPPO,
-    RewardCfg,
 )
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
@@ -41,18 +38,14 @@ def reward_wrist_box_distance(env_states: EnvState, robot_name: str, cfg: BaseRL
     return torch.exp(-4 * wrist_box_error), wrist_box_error
 
 
+@configclass
 class TaskBoxCfgPPO(LeggedRobotCfgPPO):
     """PPO config class for Skillbench: BoxPush."""
 
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
-
-    class policy:
+    @configclass
+    class Policy(LeggedRobotCfgPPO.Policy):
         """Network config class for PPO."""
 
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
         # HRL
         num_dofs = 19
         frame_stack = 1
@@ -73,7 +66,8 @@ class TaskBoxCfgPPO(LeggedRobotCfgPPO):
             },
         }
 
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    @configclass
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -81,41 +75,16 @@ class TaskBoxCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCriticHierarchical"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
+    @configclass
+    class Runner(LeggedRobotCfgPPO.Runner):
         max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
         save_interval = 500
         experiment_name = "task_box"
         run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-# TODO this may be constant move it to humanoid cfg
-@configclass
-class TaskBoxRewardCfg(RewardCfg):
-    """Reward config class for Skillbench: BoxPush."""
-
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    algorithm = Algorithm()
+    policy = Policy()
+    runner = Runner()
 
 
 @configclass
@@ -142,8 +111,10 @@ class TaskBoxCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = TaskBoxCfgPPO()
-    reward_cfg = TaskBoxRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
+
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
 
     num_actions = 19
     frame_stack = 1
@@ -154,10 +125,7 @@ class TaskBoxCfg(BaseHumanoidCfg):
     single_num_privileged_obs = 3 * num_actions + 39
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
-
-    box_range_x = [-0.45, -0.35]
-    box_range_y = [-0.3, 0.3]
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [reward_box_pos, reward_wrist_box_distance]
     reward_weights: dict[str, float] = {
@@ -238,3 +206,5 @@ class TaskBoxCfg(BaseHumanoidCfg):
         super().__post_init__()
         self.command_ranges.box_range_x = [-0.45, -0.35]
         self.command_ranges.box_range_y = [-0.3, 0.3]
+        self.box_range_x = [-0.45, -0.35]
+        self.box_range_y = [-0.3, 0.3]

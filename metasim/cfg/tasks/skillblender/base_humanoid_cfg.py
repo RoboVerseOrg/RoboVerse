@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import MISSING
+
 import torch
 
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
@@ -34,16 +36,15 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     """
 
     task_name: str = "skillblender_humanoid_task"
-    humand: HumanoidExtraCfg = HumanoidExtraCfg()
+    human: HumanoidExtraCfg = HumanoidExtraCfg()
 
-    elbow_indices: torch.Tensor | None = None
-    contact_indices: torch.Tensor | None = None
+    elbow_indices: torch.Tensor = MISSING
+    knee_indices: torch.Tensor = MISSING
+    wrist_indices: torch.Tensor = MISSING
+    torso_indices: torch.Tensor = MISSING
+    contact_indices: torch.Tensor = MISSING
+
     traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"
-
-    class human:
-        delay = 0.0
-        freq = 10
-        resample_on_env_reset = True
 
     init_states = [
         {

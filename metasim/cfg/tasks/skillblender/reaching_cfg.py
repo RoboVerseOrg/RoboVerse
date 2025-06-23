@@ -10,10 +10,7 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    CommandRanges,
-    CommandsConfig,
     LeggedRobotCfgPPO,
-    RewardCfg,
 )
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_default_joint_pos,
@@ -28,8 +25,8 @@ from metasim.types import EnvState
 from metasim.utils import configclass
 
 
-# define new reward function
 def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """Reward for reaching the target position"""
     wrist_pos = env_states.robots[robot_name].body_state[:, cfg.wrist_indices, :7]  # [num_envs, 2, 7], two hands
     wrist_pos_diff = (
         wrist_pos[:, :, :3] - env_states.robots[robot_name].extra["ref_wrist_pos"][:, :, :3]
@@ -41,16 +38,9 @@ def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 class ReachingCfgPPO(LeggedRobotCfgPPO):
     seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
+    runner_class_name = "OnPolicyRunner"
 
-    class policy:
-        """Network config class for PPO."""
-
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
-
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -58,37 +48,14 @@ class ReachingCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCritic"
+    class Runner(LeggedRobotCfgPPO.Runner):
         algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
-        max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
+        max_iterations = 15001
         save_interval = 500
         experiment_name = "reaching"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-# TODO this may be constant move it to humanoid cfg
-@configclass
-class ReachingRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17
-    target_feet_height = 0.06
-    cycle_time = 0.64
-    only_positive_rewards = True
-    tracking_sigma = 5
-    max_contact_force = 700
+    algorithm = Algorithm()
+    runner = Runner()
 
 
 @configclass
@@ -109,8 +76,10 @@ class ReachingCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = ReachingCfgPPO()
-    reward_cfg = ReachingRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
+
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
 
     num_actions = 19
     frame_stack = 1
@@ -121,7 +90,6 @@ class ReachingCfg(BaseHumanoidCfg):
     single_num_privileged_obs = 3 * num_actions + 60
 
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
 
     reward_functions: list[Callable] = [
         reward_wrist_pos,

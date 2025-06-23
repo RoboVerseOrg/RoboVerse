@@ -51,7 +51,9 @@ class RslRlWrapper(VecEnv):
         self.max_episode_length = scenario.task.max_episode_length
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.cfg = scenario.task
-        self.train_cfg = rsl_rl_class_to_dict(scenario.task.ppo_cfg)
+        from metasim.utils.dict import class_to_dict
+        self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
+        a = 1
 
     def _get_init_states(self, scenario):
         self.init_states = getattr(scenario.task, 'init_states', None)

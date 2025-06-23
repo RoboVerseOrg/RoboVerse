@@ -11,11 +11,7 @@ from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    BaseLeggedRobotChecker,
-    CommandRanges,
-    CommandsConfig,
     LeggedRobotCfgPPO,
-    RewardCfg,
 )
 from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler
@@ -41,32 +37,11 @@ def reward_ball_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 
 @configclass
-class TaskBallChecker(BaseLeggedRobotChecker):
-    def check(self, handler: BaseSimHandler):
-        reset_buf = super().check(handler)
-
-        # if the ball hits the goal, reset the env
-        envstates = handler.get_states()
-        ball_pos = envstates.objects[handler.scenario.objects[0].name].root_state[:, :3]
-        # HACK This is a hack to get the goal position for checker
-        goal_pos = handler.task.goal_pos
-        ball_goal_diff = ball_pos - goal_pos  # [envs, 3]
-        ball_goal_dist = torch.norm(ball_goal_diff, dim=1)
-        reset_buf |= ball_goal_dist < handler.task.command_ranges.threshold
-
-        return reset_buf
-
-
 class TaskBallCfgPPO(LeggedRobotCfgPPO):
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
-
-    class policy:
+    @configclass
+    class Policy(LeggedRobotCfgPPO.Policy):
         """Network config class for PPO."""
 
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
         # HRL
         num_dofs = 19
         frame_stack = 1
@@ -87,7 +62,8 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
             },
         }
 
-    class algorithm(LeggedRobotCfgPPO.algorithm):
+    @configclass
+    class Algorithm(LeggedRobotCfgPPO.Algorithm):
         entropy_coef = 0.001
         learning_rate = 1e-5
         num_learning_epochs = 2
@@ -95,39 +71,16 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
         lam = 0.9
         num_mini_batches = 4
 
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCriticHierarchical"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
-        max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
+    @configclass
+    class Runner(LeggedRobotCfgPPO.Runner):
+        max_iterations = 15001
         save_interval = 500
         experiment_name = "task_ball"
         run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1
-        checkpoint = -1
-        resume_path = None
 
-
-# TODO this may be constant move it to humanoid cfg
-@configclass
-class TaskBallRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    algorithm = Algorithm()
+    policy = Policy()
+    runner = Runner()
 
 
 @configclass
@@ -154,8 +107,26 @@ class TaskBallCfg(BaseHumanoidCfg):
     )
 
     ppo_cfg = TaskBallCfgPPO()
-    reward_cfg = TaskBallRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
+
+    @configclass
+    class TaskBallChecker(BaseHumanoidCfg.BaseLeggedRobotChecker):
+        def check(self, handler: BaseSimHandler):
+            reset_buf = super().check(handler)
+            # if the ball hits the goal, reset the env
+            envstates = handler.get_states()
+            ball_pos = envstates.objects[handler.scenario.objects[0].name].root_state[:, :3]
+            # HACK This is a hack to get the goal position for checker
+            goal_pos = handler.task.goal_pos
+            ball_goal_diff = ball_pos - goal_pos  # [envs, 3]
+            ball_goal_dist = torch.norm(ball_goal_diff, dim=1)
+            reset_buf |= ball_goal_dist < handler.task.command_ranges.threshold
+            return reset_buf
+
+    checker = TaskBallChecker()
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     num_actions = 19
     frame_stack = 1
@@ -165,9 +136,6 @@ class TaskBallCfg(BaseHumanoidCfg):
     num_observations = int(frame_stack * num_single_obs)
     single_num_privileged_obs = 3 * num_actions + 33
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
-    checker = BaseLeggedRobotChecker()
 
     reward_functions: list[Callable] = [reward_torso_pos, reward_ball_pos]
     reward_weights: dict[str, float] = {
@@ -205,10 +173,6 @@ class TaskBallCfg(BaseHumanoidCfg):
             enabled_gravity=True,
         ),
     ]
-
-    ball_range_x = [0.5, 1.0]
-    ball_range_y = [-0.3, 0.3]
-    ball_range_mass = [0.3, 0.5]
 
     init_states = [
         {
@@ -287,3 +251,6 @@ class TaskBallCfg(BaseHumanoidCfg):
         self.command_ranges.goal_y = [-2.0, 2.0]
         self.command_ranges.goal_z = [0, 0.5]
         self.command_ranges.threshold = 0.5
+        self.ball_range_x = [0.5, 1.0]
+        self.ball_range_y = [-0.3, 0.3]
+        self.ball_range_mass = [0.3, 0.5]
