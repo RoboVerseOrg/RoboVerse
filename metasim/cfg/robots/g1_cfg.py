@@ -81,7 +81,7 @@ class G1Cfg(BaseRobotCfg):
         "right_knee": 0.8,
         "right_ankle_pitch": -0.4,
         "right_ankle_roll": 0,
-        "waist_yaw": 0.0,  # index=12
+        "waist_yaw": 0.0,
         "left_shoulder_pitch": 0.0,
         "left_shoulder_roll": 0.0,
         "left_shoulder_yaw": 0.0,
@@ -105,7 +105,7 @@ class G1Cfg(BaseRobotCfg):
         "right_knee": "effort",
         "right_ankle_pitch": "effort",
         "right_ankle_roll": "effort",
-        "waist_yaw": "effort",  # index=12
+        "waist_yaw": "effort",
         "left_shoulder_pitch": "effort",
         "left_shoulder_roll": "effort",
         "left_shoulder_yaw": "effort",
