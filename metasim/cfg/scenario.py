@@ -79,7 +79,7 @@ class ScenarioCfg:
                 self.robots[i] = get_robot(robot)
         if isinstance(self.task, str):
             TaskCls = get_task(self.task)
-            ### Check if task needs robots as its param
+            ### Check whether the task requires robots as a parameter.
             if "robots" in TaskCls.__dataclass_fields__.keys():
                 self.task = TaskCls(robots=self.robots)
             else:

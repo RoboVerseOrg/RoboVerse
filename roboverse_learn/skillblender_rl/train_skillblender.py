@@ -163,7 +163,6 @@ def train(args):
     )
     log_dir = get_log_dir(args, scenario)
     task_wrapper = get_wrapper(args.task)
-
     env = task_wrapper(scenario)
     use_wandb = args.use_wandb
     if use_wandb:

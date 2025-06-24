@@ -121,6 +121,15 @@ class H1Cfg(BaseRobotCfg):
         "left_elbow",
         "right_elbow",
     ]
-
+    terminate_after_contacts_on_links: list[str] = [
+        "left_elbow",
+        "right_elbow",
+        "left_shoulder_pitch",
+        "left_shoulder_roll",
+        "left_shoulder_yaw",
+        "right_shoulder_pitch",
+        "right_shoulder_roll",
+        "right_shoulder_yaw",
+    ]
     terminate_contacts_links: list[str] = ["pelvis", "torso", "shoulder", "elbow"]
     penalized_contacts_links: list[str] = ["hip", "knee"]
