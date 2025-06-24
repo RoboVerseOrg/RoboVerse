@@ -27,10 +27,17 @@ class WalkingWrapper(HumanoidBaseWrapper):
         joint_names = self.env.handler.get_joint_names(self.robot.name)
         self.left_hip_pitch_joint_idx = joint_names.index("left_hip_pitch")
         self.left_knee_joint_idx = joint_names.index("left_knee")
-        self.left_ankle_joint_idx = joint_names.index("left_ankle")
         self.right_hip_pitch_joint_idx = joint_names.index("right_hip_pitch")
         self.right_knee_joint_idx = joint_names.index("right_knee")
-        self.right_ankle_joint_idx = joint_names.index("right_ankle")
+
+        if "h1" in self.robot.name:
+            self.left_ankle_joint_idx = joint_names.index("left_ankle")
+            self.right_ankle_joint_idx = joint_names.index("right_ankle")
+        elif "g1" in self.robot.name:
+            self.left_ankle_joint_idx = joint_names.index("left_ankle_pitch")
+            self.right_ankle_joint_idx = joint_names.index("right_ankle_pitch")
+        else:
+            raise ValueError(f"Unsupported robot: {self.robot.name} for Skillblender Walking Task")
 
     def _compute_ref_state(self):
         """compute reference target position for walking task."""
