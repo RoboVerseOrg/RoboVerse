@@ -40,7 +40,7 @@ from wrapper import FastTD3EnvWrapper
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 torch.set_float32_matmul_precision("high")
 
 
