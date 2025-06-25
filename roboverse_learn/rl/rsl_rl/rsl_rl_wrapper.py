@@ -9,9 +9,7 @@ from rsl_rl.env import VecEnv
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
-from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
-from roboverse_learn.rl.rsl_rl.rsl_rl.utils import rsl_rl_class_to_dict
 
 class RslRlWrapper(VecEnv):
     """
@@ -53,7 +51,7 @@ class RslRlWrapper(VecEnv):
         self.cfg = scenario.task
         from metasim.utils.dict import class_to_dict
         self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
-        a = 1
+
 
     def _get_init_states(self, scenario):
         self.init_states = getattr(scenario.task, 'init_states', None)

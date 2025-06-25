@@ -8,10 +8,7 @@ import torch
 
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    LeggedRobotCfgPPO,
-)
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_default_joint_pos,
     reward_dof_acc,
@@ -37,27 +34,15 @@ def reward_squatting(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
     return torch.exp(-4 * root_height_error), root_height_error
 
 
-class SquattingCfgPPO(LeggedRobotCfgPPO):
+@configclass
+class SquattingCfgPPO(BaseHumanoidCfgPPO):
     @configclass
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    @configclass
-    class Runner(LeggedRobotCfgPPO.Runner):
-        wandb = True
-        policy_class_name = "ActorCritic"
-        algorithm_class_name = "PPO"
+    class Runner(BaseHumanoidCfgPPO.Runner):
         num_steps_per_env = 60  # per iteration
         max_iterations = 15001  # 3001  # number of policy updates
         save_interval = 500
         experiment_name = "squatting"
 
-    algorithm: Algorithm = Algorithm()
     runner: Runner = Runner()
 
 

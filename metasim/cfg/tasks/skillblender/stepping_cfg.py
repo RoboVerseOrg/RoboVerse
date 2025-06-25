@@ -7,10 +7,7 @@ from typing import Callable
 import torch
 
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    LeggedRobotCfgPPO,
-)
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_dof_acc,
     reward_dof_vel,
@@ -33,28 +30,18 @@ def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 
 @configclass
-class SteppingCfgPPO(LeggedRobotCfgPPO):
+class SteppingCfgPPO(BaseHumanoidCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     @configclass
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    @configclass
-    class Runner(LeggedRobotCfgPPO.Runner):
+    class Runner(BaseHumanoidCfgPPO.Runner):
         wandb = True
         num_steps_per_env = 60
         max_iterations = 15001
         save_interval = 500
         experiment_name = "stepping"
 
-    algorithm = Algorithm()
     runner = Runner()
 
 

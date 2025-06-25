@@ -6,8 +6,21 @@ from dataclasses import MISSING
 
 import torch
 
-from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
+from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg, LeggedRobotCfgPPO
 from metasim.utils import configclass
+
+
+@configclass
+class Algorithm(LeggedRobotCfgPPO.Algorithm):
+    pass
+
+
+# LeggedRobotCfgPPO.
+@configclass
+class BaseHumanoidCfgPPO(LeggedRobotCfgPPO):
+    algorithm: Algorithm = Algorithm(
+        entropy_coef=0.001, learning_rate=1e-5, num_learning_epochs=2, gamma=0.994, lam=0.9
+    )
 
 
 @configclass

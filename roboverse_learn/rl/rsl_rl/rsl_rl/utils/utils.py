@@ -77,25 +77,6 @@ def unpad_trajectories(trajectories, masks):
         .transpose(1, 0)
     )
 
-# TODO:aligned it with class_to_dict in metasim.utils.dict
-def rsl_rl_class_to_dict(obj) -> dict:
-    if not hasattr(obj, "__dict__"):
-        return obj
-    result = {}
-    for key in dir(obj):
-        if key.startswith("_"):
-            continue
-        element = []
-        val = getattr(obj, key)
-        if isinstance(val, list):
-            for item in val:
-                element.append(rsl_rl_class_to_dict(item))
-        else:
-            element = rsl_rl_class_to_dict(val)
-        result[key] = element
-    return result
-
-
 def get_load_path(root, load_run=-1, checkpoint=-1):
     try:
         runs = os.listdir(root)
