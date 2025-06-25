@@ -8,10 +8,7 @@ import torch
 
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    LeggedRobotCfgPPO,
-)
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_default_joint_pos,
     reward_dof_acc,
@@ -36,25 +33,18 @@ def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
     return torch.exp(-4 * wrist_pos_error), wrist_pos_error
 
 
-class ReachingCfgPPO(LeggedRobotCfgPPO):
+@configclass
+class ReachingCfgPPO(BaseHumanoidCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"
 
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    class Runner(LeggedRobotCfgPPO.Runner):
+    @configclass
+    class Runner(BaseHumanoidCfgPPO.Runner):
         algorithm_class_name = "PPO"
         max_iterations = 15001
         save_interval = 500
         experiment_name = "reaching"
 
-    algorithm = Algorithm()
     runner = Runner()
 
 

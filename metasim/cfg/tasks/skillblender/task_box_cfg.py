@@ -10,9 +10,6 @@ from metasim.cfg.objects import PrimitiveCubeCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    LeggedRobotCfgPPO,
-)
 from metasim.constants import PhysicStateType
 from metasim.types import EnvState
 from metasim.utils import configclass
@@ -39,55 +36,6 @@ def reward_wrist_box_distance(env_states: EnvState, robot_name: str, cfg: BaseRL
 
 
 @configclass
-class TaskBoxCfgPPO(LeggedRobotCfgPPO):
-    """PPO config class for Skillbench: BoxPush."""
-
-    @configclass
-    class Policy(LeggedRobotCfgPPO.Policy):
-        """Network config class for PPO."""
-
-        # HRL
-        num_dofs = 19
-        frame_stack = 1
-        command_dim = 9
-        # Expert skills
-        skill_dict = {
-            "h1_wrist_walking": {
-                "experiment_name": "h1_wrist_walking",
-                "load_run": "2025_0101_093233",
-                "checkpoint": -1,
-                "low_high": (-2, 2),
-            },
-            "h1_wrist_reaching": {
-                "experiment_name": "h1_wrist_reaching",
-                "load_run": "2025_0621_095651",
-                "checkpoint": -1,
-                "low_high": (-1, 1),
-            },
-        }
-
-    @configclass
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    @configclass
-    class Runner(LeggedRobotCfgPPO.Runner):
-        max_iterations = 15001  # 3001  # number of policy updates
-        save_interval = 500
-        experiment_name = "task_box"
-        run_name = ""
-
-    algorithm = Algorithm()
-    policy = Policy()
-    runner = Runner()
-
-
-@configclass
 class TaskBoxCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench: BoxPush."""
 
@@ -110,7 +58,7 @@ class TaskBoxCfg(BaseHumanoidCfg):
         num_threads=10,
     )
 
-    ppo_cfg = TaskBoxCfgPPO()
+    # ppo_cfg = TaskBoxCfgPPO()
 
     command_ranges = BaseHumanoidCfg.CommandRanges(
         lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]

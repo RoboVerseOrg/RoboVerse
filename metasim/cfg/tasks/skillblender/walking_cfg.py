@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import LeggedRobotCfgPPO
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_action_rate,
     reward_action_smoothness,
@@ -45,27 +44,16 @@ from metasim.utils import configclass
 
 
 @configclass
-class WalkingCfgPPO(LeggedRobotCfgPPO):
+class WalkingCfgPPO(BaseHumanoidCfgPPO):
     seed: int = 0
-    runner_class_name: str = "OnPolicyRunner"
 
     @configclass
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    @configclass
-    class Runner(LeggedRobotCfgPPO.Runner):
+    class Runner(BaseHumanoidCfgPPO.Runner):
         num_steps_per_env = 60
         max_iterations = 15001
         save_interval = 500
         experiment_name = "walking"
 
-    algorithm: Algorithm = Algorithm()
     runner: Runner = Runner()
 
 

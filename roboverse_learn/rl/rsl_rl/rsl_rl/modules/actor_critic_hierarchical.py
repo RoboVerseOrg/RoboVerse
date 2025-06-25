@@ -30,15 +30,13 @@
 import rootutils
 rootutils.setup_root(__file__, pythonpath=True)
 
-import numpy as np
 
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
 from torch.nn.modules import rnn
 from copy import deepcopy
-from roboverse_learn.rl.rsl_rl.rsl_rl.utils import rsl_rl_class_to_dict, get_cfgs
-import os
+from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_cfgs
 
 
 class ActorCriticHierarchical(nn.Module):

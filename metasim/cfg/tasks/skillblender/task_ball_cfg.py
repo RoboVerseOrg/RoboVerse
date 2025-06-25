@@ -9,10 +9,7 @@ import torch
 from metasim.cfg.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    LeggedRobotCfgPPO,
-)
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler
 from metasim.types import EnvState
@@ -37,9 +34,9 @@ def reward_ball_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 
 @configclass
-class TaskBallCfgPPO(LeggedRobotCfgPPO):
+class TaskBallCfgPPO(BaseHumanoidCfgPPO):
     @configclass
-    class Policy(LeggedRobotCfgPPO.Policy):
+    class Policy(BaseHumanoidCfgPPO.Policy):
         """Network config class for PPO."""
 
         # HRL
@@ -63,22 +60,13 @@ class TaskBallCfgPPO(LeggedRobotCfgPPO):
         }
 
     @configclass
-    class Algorithm(LeggedRobotCfgPPO.Algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    @configclass
-    class Runner(LeggedRobotCfgPPO.Runner):
+    class Runner(BaseHumanoidCfgPPO.Runner):
+        policy_class_name = "ActorCriticHierarchical"
         max_iterations = 15001
         save_interval = 500
         experiment_name = "task_ball"
         run_name = ""
 
-    algorithm = Algorithm()
     policy = Policy()
     runner = Runner()
 
