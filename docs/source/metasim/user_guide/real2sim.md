@@ -32,8 +32,8 @@ After you have the URDF(mjcf), You can utilize the infra of Roboverse for traini
 ```{mermaid}
 flowchart-elk LR
     start{Start} --1--> Video --2--> Cameras
-    Video & Cameras --3--> 3DGS
-    Video --4--> Normal
+    Video --3--> Normal
+    Video & Cameras --4--> 3DGS
     Video & Normal --5--> Mesh
     Mesh -->|6,7,9,10| Mesh
     3DGS -->|6,7,8,9,10| 3DGS
