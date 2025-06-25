@@ -1,0 +1,16 @@
+retargeting:
+  type: position
+  urdf_path: ability_hand/ability_hand_left.urdf
+
+  target_joint_names: [ 'thumb_q1', 'thumb_q2', 'index_q1', 'middle_q1', 'pinky_q1', 'ring_q1' ]
+  target_link_names: [ "thumb_tip",  "index_tip", "middle_tip", "ring_tip", "pinky_tip" ]
+
+  target_link_human_indices: [ 4, 8, 12, 16, 20 ]
+  add_dummy_free_joint: True
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  # 1 means no filter while 0 means not moving
+  low_pass_alpha: 1
+
+  # To ignore the mimic joint tags in the URDF, set it to True
+  ignore_mimic_joint: False

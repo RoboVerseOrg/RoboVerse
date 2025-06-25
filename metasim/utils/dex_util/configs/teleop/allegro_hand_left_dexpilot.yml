@@ -1,0 +1,11 @@
+retargeting:
+  type: DexPilot
+  urdf_path: allegro_hand/allegro_hand_left.urdf
+
+  # Target refers to the retargeting target, which is the robot hand
+  wrist_link_name: "wrist"
+  finger_tip_link_names: [ "link_15.0_tip", "link_11.0_tip", "link_7.0_tip", "link_3.0_tip" ]
+  scaling_factor: 1.6
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2

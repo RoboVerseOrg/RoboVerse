@@ -1,0 +1,12 @@
+retargeting:
+  type: DexPilot
+  urdf_path: panda_gripper/panda_gripper_glb.urdf 
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: [ "panda_finger_joint1" ]
+  wrist_link_name: "panda_hand"
+  finger_tip_link_names: [ "panda_leftfinger", "panda_rightfinger" ]
+  scaling_factor: 1.5
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2

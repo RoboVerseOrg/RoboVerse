@@ -1,0 +1,19 @@
+retargeting:
+  type: vector
+  urdf_path: schunk_hand/schunk_svh_hand_left.urdf
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: [ 'left_hand_Thumb_Opposition', 'left_hand_Thumb_Flexion', 'left_hand_Index_Finger_Proximal',
+                        'left_hand_Index_Finger_Distal', 'left_hand_Finger_Spread', 'left_hand_Pinky',
+                        'left_hand_Ring_Finger', 'left_hand_Middle_Finger_Proximal', 'left_hand_Middle_Finger_Distal' ]
+  target_origin_link_names: [ "left_hand_base_link","left_hand_base_link", "left_hand_base_link", "left_hand_base_link", "left_hand_base_link", ]
+  target_task_link_names: [ "thtip", "fftip", "mftip", "rftip", "lftip" ]
+  scaling_factor: 1.2
+
+
+  # Source refers to the retargeting input, which usually corresponds to the human hand
+  # The joint indices of human hand joint which corresponds to each link in the target_link_names
+  target_link_human_indices: [ [ 0, 0, 0, 0, 0 ], [ 4, 8, 12, 16, 20, ] ]
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2

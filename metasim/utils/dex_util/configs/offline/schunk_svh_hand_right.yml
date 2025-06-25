@@ -1,0 +1,16 @@
+retargeting:
+  type: position
+  urdf_path: schunk_hand/schunk_svh_hand_right.urdf
+
+  target_joint_names: [ 'right_hand_Thumb_Opposition', 'right_hand_Thumb_Flexion', 'right_hand_Index_Finger_Proximal',
+                        'right_hand_Index_Finger_Distal', 'right_hand_Finger_Spread', 'right_hand_Pinky',
+                        'right_hand_Ring_Finger', 'right_hand_Middle_Finger_Proximal', 'right_hand_Middle_Finger_Distal' ]
+  target_link_names: [ "right_hand_c", "right_hand_t", "right_hand_s", "right_hand_r",
+                        "right_hand_q", "right_hand_b", "right_hand_p", "right_hand_o", "right_hand_n", "right_hand_i"]
+
+  target_link_human_indices: [ 4, 8, 12, 16, 20, 2, 6, 10, 14, 18 ]
+  add_dummy_free_joint: True
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  # 1 means no filter while 0 means not moving
+  low_pass_alpha: 1

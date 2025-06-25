@@ -1,0 +1,16 @@
+retargeting:
+  type: position
+  urdf_path: panda_gripper/panda_gripper_glb.urdf
+
+  target_joint_names: [ "panda_finger_joint1" ]
+  target_link_names: [ "panda_leftfinger", "panda_rightfinger"]
+
+  target_link_human_indices: [ 4, 8 ]
+  add_dummy_free_joint: True
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  # 1 means no filter while 0 means not moving
+  low_pass_alpha: 1
+
+  # To ignore the mimic joint tags in the URDF, set it to True
+  ignore_mimic_joint: False

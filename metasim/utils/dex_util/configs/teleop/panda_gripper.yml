@@ -1,0 +1,16 @@
+retargeting:
+  type: vector
+  urdf_path: panda_gripper/panda_gripper_glb.urdf 
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: [ "panda_finger_joint1" ]
+  target_origin_link_names: [ "panda_leftfinger" ]
+  target_task_link_names: [ "panda_rightfinger" ]
+  scaling_factor: 1.5
+
+  # Source refers to the retargeting input, which usually corresponds to the human hand
+  # The joint indices of human hand joint which corresponds to each link in the target_link_names
+  target_link_human_indices: [ [ 4 ], [ 8 ] ]
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2
