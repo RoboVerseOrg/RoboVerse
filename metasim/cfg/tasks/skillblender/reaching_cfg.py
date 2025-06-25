@@ -36,7 +36,6 @@ def reward_wrist_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 @configclass
 class ReachingCfgPPO(BaseHumanoidCfgPPO):
     seed = 5
-    runner_class_name = "OnPolicyRunner"
 
     @configclass
     class Runner(BaseHumanoidCfgPPO.Runner):
