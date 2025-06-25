@@ -21,7 +21,7 @@ class RslRlWrapper(VecEnv):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__()
 
-        # TODO check compatibility for other simulators
+
         if SimType(scenario.sim) not in [SimType.ISAACGYM]:
             raise NotImplementedError(
                 f"RslRlWrapper in Roboverse now only supports {SimType.ISAACGYM}, but got {scenario.sim}"
