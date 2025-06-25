@@ -10,7 +10,7 @@
 ### note for installation
 for stablenormal, please follow this issue if you have installation issue: https://github.com/Stable-X/StableNormal/issues/34
 
-for detail of the process 4-13 please follow the docoment from robogs
+for detail of the process 4-13 please follow the docoment from [robogs](https://github.com/louhz/robogs)
 
 After you have the URDF(mjcf), You can utilize the infra of Roboverse for training and sim2real deployment.
 
