@@ -307,6 +307,7 @@ def _pack_root_state(data, env_idx, bid):
 # jit-compile with bid (scalar) static so it does not recompile per call
 pack_root_state = jax.jit(_pack_root_state, static_argnums=(2,))
 
+
 @functools.partial(jax.jit, static_argnums=())
 def _pack_site_state(data, env_idx: jnp.ndarray, site_ids: jnp.ndarray) -> jnp.ndarray:
     """
@@ -323,12 +324,15 @@ def _pack_site_state(data, env_idx: jnp.ndarray, site_ids: jnp.ndarray) -> jnp.n
     # Concatenate  → (N, S, 12)
     return jnp.concatenate([pos, rot], axis=-1)
 
+
 @functools.partial(jax.jit, static_argnums=())
 def _pack_contact_force(data, env_idx: jnp.ndarray, body_ids: jnp.ndarray) -> jnp.ndarray:
     # cfrc_ext shape: (N, B, 6) -> [force(3), torque(3)]
-    return data.cfrc_ext[env_idx[:, None], body_ids]        # (N, B, 6)
+    return data.cfrc_ext[env_idx[:, None], body_ids]  # (N, B, 6)
+
 
 _site_lookup_cache = {}
+
 
 def get_extras(mjx_data, mj_model, env_ids=None):
     """
@@ -355,7 +359,7 @@ def get_extras(mjx_data, mj_model, env_ids=None):
         id2name, name2id = [], {}
         for i in range(mj_model.nsite):
             n = mujoco.mj_id2name(mj_model, mujoco.mjtObj.mjOBJ_SITE, i)
-            if n:                      # skip empty names
+            if n:  # skip empty names
                 id2name.append(n)
                 name2id[n] = i
         _site_lookup_cache[key] = (id2name, name2id)
@@ -365,10 +369,10 @@ def get_extras(mjx_data, mj_model, env_ids=None):
     # --------------------------------------------------------
     # 2. Sites
     # --------------------------------------------------------
-    sel_names = id2name                     # ← no filtering
+    sel_names = id2name  # ← no filtering
     if sel_names:
         site_ids = jnp.asarray([name2id[n] for n in sel_names], dtype=jnp.int32)
-        site_t   = _pack_site_state(mjx_data, idx, site_ids)      # (N, S, 12)
+        site_t = _pack_site_state(mjx_data, idx, site_ids)  # (N, S, 12)
 
         extras["sites"] = {
             n: {
@@ -382,7 +386,7 @@ def get_extras(mjx_data, mj_model, env_ids=None):
     # 3. Contact forces for all bodies
     # --------------------------------------------------------
     body_ids = jnp.arange(mj_model.nbody, dtype=jnp.int32)
-    cf_t     = _pack_contact_force(mjx_data, idx, body_ids)       # (N, B, 6)
+    cf_t = _pack_contact_force(mjx_data, idx, body_ids)  # (N, B, 6)
     extras["contact_force"] = j2t(cf_t)
 
     return extras

@@ -483,10 +483,12 @@ class _PoleChecker(BaseChecker):
 class _SitChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
         from metasim.utils.humanoid_robot_util import robot_position_tensor
+
         states = handler.get_states()
         pelvis_z = robot_position_tensor(states, handler.robot.name)[:, 2]
-        terminated = pelvis_z < 0.5         # (B,) bool
+        terminated = pelvis_z < 0.5  # (B,) bool
         return terminated
+
 
 ## FIXME: This checker should be removed!
 @configclass

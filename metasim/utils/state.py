@@ -135,8 +135,9 @@ class TensorState:
     """States of all cameras."""
     sensors: dict[str, SensorState]
     """States of all sensors."""
-    extras:  dict = field(default_factory=dict)
+    extras: dict = field(default_factory=dict)
     """Extra information"""
+
 
 def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     """Join a list of tensor states with num_envs = 1 into a single tensor state."""

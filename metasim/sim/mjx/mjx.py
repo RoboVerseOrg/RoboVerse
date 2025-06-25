@@ -12,6 +12,7 @@ from pathlib import Path
 import jax
 import jax.numpy as jnp
 import mujoco
+
 # import mujoco.viewer
 import numpy as np
 import torch
@@ -27,10 +28,10 @@ from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .mjx_helper import (
+    get_extras,
     j2t,
     pack_body_state,
     pack_root_state,
-    get_extras,
     process_entity,
     sorted_actuator_ids,
     sorted_body_ids,
@@ -201,8 +202,8 @@ class MJXHandler(BaseSimHandler):
                     rgb=rgb_tensor if want_rgb else None,
                     depth=dep_tensor if want_dep else None,
                 )
-        
-        extras=get_extras(self._data,self._mj_model, env_ids)   
+
+        extras = get_extras(self._data, self._mj_model, env_ids)
         return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors={}, extras=extras)
 
     def _set_states(
