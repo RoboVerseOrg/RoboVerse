@@ -56,7 +56,6 @@ class MJXHandler(BaseSimHandler):
         self._renderer = None
 
         self._episode_length_buf = torch.zeros(self.num_envs, dtype=torch.int32)
-        self._object_root_path_cache: dict[str, str] = {}
         self._object_root_bid_cache: dict[str, int] = {}
         self._fix_path_cache: dict[str, int] = {}
         self._gravity_compensation = not self._robot.enabled_gravity
@@ -122,12 +121,8 @@ class MJXHandler(BaseSimHandler):
         qadr_r, vadr_r = sorted_joint_info(self._mjx_model, prefix)
         aid_r = sorted_actuator_ids(self._mjx_model, prefix)
         bid_r, bnames_r = sorted_body_ids(self._mjx_model, prefix)
-        if root_bid_r not in bid_r:  # ensure root first
-            bid_r.insert(0, root_bid_r)
-            bnames_r.insert(0, self.mj_objects[r_cfg.name].full_identifier)
-
-            root_state_r = pack_root_state(data, idx, root_bid_r)  # (N,13)
-            body_state_r = pack_body_state(data, idx, jnp.asarray(bid_r))  # (N,B,13)
+        root_state_r = pack_root_state(data, idx, root_bid_r)  # (N,13)
+        body_state_r = pack_body_state(data, idx, jnp.asarray(bid_r))  # (N,B,13)
 
         robots[r_cfg.name] = RobotState(
             root_state=j2t(root_state_r),
@@ -146,10 +141,6 @@ class MJXHandler(BaseSimHandler):
 
             root_bid_o = self._object_root_bid_cache[obj.name]
             bid_o, bnames_o = sorted_body_ids(self._mjx_model, prefix)
-            if root_bid_o not in bid_o:
-                bid_o.insert(0, root_bid_o)
-                bnames_o.insert(0, self.mj_objects[obj.name].full_identifier)
-
             root_state_o = pack_root_state(data, idx, root_bid_o)  # (N, 13)
 
             if isinstance(obj, ArticulationObjCfg):  # articulated
@@ -449,10 +440,7 @@ class MJXHandler(BaseSimHandler):
                 self._fix_path_cache[obj.name] = attached.full_identifier
             else:
                 attached.add("freejoint")
-            self.object_body_names.append(attached.full_identifier)
-            self._object_root_path_cache[obj.name] = attached.full_identifier
-            self.mj_objects[obj.name] = attached
-
+            self.mj_objects[obj.name] =  attached
         # -------------------- load robot ----------------------------------
         robot_xml = mjcf.from_path(self._robot_path)
         robot_attached = mjcf_model.attach(robot_xml)
@@ -460,8 +448,7 @@ class MJXHandler(BaseSimHandler):
             self._fix_path_cache[self._robot.name] = robot_attached.full_identifier
         else:
             robot_attached.add("freejoint")
-        self._robot_root_path_cache = {self._robot.name: robot_attached.full_identifier}
-        self.mj_objects[self._robot.name] = robot_attached
+        self.mj_objects[self._robot.name] = robot_attached   
         self._mujoco_robot_name = robot_attached.full_identifier
 
         return mjcf_model
@@ -537,7 +524,7 @@ class MJXHandler(BaseSimHandler):
         for name, mjcf_body in self.mj_objects.items():
             full = mjcf_body.full_identifier
             bid = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, full)
-            self._object_root_bid_cache[name] = bid
+            self._object_root_bid_cache[name] = bid + 1  # +1 because mjcf attaches a wrapper body
 
     def _init_mjx(self) -> None:
         if self._mj_model.opt.solver == mujoco.mjtSolver.mjSOL_PGS:
