@@ -25,7 +25,7 @@ class SitReward(HumanoidBaseReward):
 
     def __init__(self, robot_name: str = "h1"):
         super().__init__(robot_name)
-        
+
     def __call__(self, states: dict) -> torch.FloatTensor:
         """Vectorised HumanoidBench-style sitting reward.
 
@@ -101,7 +101,6 @@ class SitReward(HumanoidBaseReward):
         # ------------------------------------------------------------------
         reward = small_control * sit_reward * dont_move  # (B,)
         return reward
-
 
 
 @configclass
