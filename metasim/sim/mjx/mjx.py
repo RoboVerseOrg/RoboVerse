@@ -440,7 +440,7 @@ class MJXHandler(BaseSimHandler):
                 self._fix_path_cache[obj.name] = attached.full_identifier
             else:
                 attached.add("freejoint")
-            self.mj_objects[obj.name] =  attached
+            self.mj_objects[obj.name] = attached
         # -------------------- load robot ----------------------------------
         robot_xml = mjcf.from_path(self._robot_path)
         robot_attached = mjcf_model.attach(robot_xml)
@@ -448,7 +448,7 @@ class MJXHandler(BaseSimHandler):
             self._fix_path_cache[self._robot.name] = robot_attached.full_identifier
         else:
             robot_attached.add("freejoint")
-        self.mj_objects[self._robot.name] = robot_attached   
+        self.mj_objects[self._robot.name] = robot_attached
         self._mujoco_robot_name = robot_attached.full_identifier
 
         return mjcf_model

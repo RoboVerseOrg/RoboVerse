@@ -312,7 +312,6 @@ pack_root_state = jax.jit(_pack_root_state, static_argnums=(2,))
 def _pack_site_state(data, env_idx: jnp.ndarray, site_ids: jnp.ndarray) -> jnp.ndarray:
     """
     Build a (N, S, 12) tensor for the given sites:
-        [x, y, z,  R00 R01 … R22]   (row-major)
     """
     # Site position  → (N, S, 3)
     pos = data.site_xpos[env_idx[:, None], site_ids]
