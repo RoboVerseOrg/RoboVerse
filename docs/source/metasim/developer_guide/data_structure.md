@@ -1,9 +1,6 @@
-# Store Data Locally
-If you are not a developer, you don't have to follow this instruction. The required data will be downloaded automatically from HuggingFace when you run the code.
+# HuggingFace Data Structure
 
-For the current stage, the HuggingFace dataset is private. So you need a token to access it. See tips for using HuggingFace [here](../developer_guide/tips/huggingface.md).
-
-## Data on HuggingFace
+<!-- ## Data on HuggingFace
 
 See tips for using HuggingFace [here](../developer_guide/tips/huggingface.md).
 
@@ -17,9 +14,7 @@ If you haven't used Git LFS on your machine, run the following command to instal
 ```bash
 sudo apt install git-lfs
 git lfs install
-```
-
-### File structure
+``` -->
 
 ```text
 roboverse_data
