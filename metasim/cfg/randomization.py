@@ -2,9 +2,36 @@
 
 from __future__ import annotations
 
+from dataclasses import MISSING
 from typing import Literal
 
 from metasim.utils.configclass import configclass
+
+
+@configclass
+class FrictionRandomCfg:
+    """Friction randomization configuration."""
+
+    enabled: bool = False
+    """Whether to randomize friction"""
+    range: tuple[float, float] = MISSING  # TODO: Add dynamic and static randomization option
+    """Friction sampling range"""
+    num_buckets: int = MISSING
+    """Distribution buckets"""
+    dist_fn: callable = MISSING
+    """Distribution function, usually uniform or normal"""
+
+
+@configclass
+class MassRandomCfg:
+    """Mass randomization configuration."""
+
+    enabled: bool = False
+    """Whether to randomize mass"""
+    range: tuple[float, float] = MISSING
+    """Mass sampling range"""
+    dist_fn: callable = MISSING
+    """Distribution sampling function for all env, usually uniform or normal"""
 
 
 @configclass
@@ -27,6 +54,11 @@ class RandomizationCfg:
     """Randomize scene"""
     level: Literal[0, 1, 2, 3] = 0
     """Randomization level"""
+
+    friction: FrictionRandomCfg = FrictionRandomCfg()
+    """Friction randomization configuration for rigid bodies"""
+    mass: MassRandomCfg = MassRandomCfg()
+    """Mass randomization configuration for rigid bodies"""
 
     def __post_init__(self):
         """Post-initialization configuration."""

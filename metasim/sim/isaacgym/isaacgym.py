@@ -15,10 +15,12 @@ from metasim.cfg.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
+from metasim.cfg.randomization import FrictionRandomCfg, MassRandomCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
+from metasim.utils.dict import class_to_dict
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
@@ -289,6 +291,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._manual_pd_on = any(mode == "effort" for mode in self.robot.control_type.values())
 
         dof_names = self.gym.get_asset_dof_names(robot_asset)
+
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self.robot.actuators[dof_name]
@@ -369,6 +372,7 @@ class IsaacgymHandler(BaseSimHandler):
         # get object and robot asset
         obj_assets_list = [self._load_object_asset(obj) for obj in self.objects]
         robot_asset, robot_dof_props = self._load_robot_assets()
+        robot_rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
 
         #### Joint Info ####
         for art_obj_name, art_obj_joint_dict in self._articulated_joint_dict_dict.items():
@@ -516,6 +520,11 @@ class IsaacgymHandler(BaseSimHandler):
                 robot_rigid_body_indices[rigid_body_name] = rigid_body_idx
 
             self._env_rigid_body_global_indices[-1]["robot"] = robot_rigid_body_indices
+
+            # domain randomization for robots
+            self.rand_rigid_body_fric(self.scenario.random.friction, i, robot_rigid_shape_props_asset)
+            robot_body_props = self.gym.get_actor_rigid_body_properties(env, robot_handle)
+            self.rand_rigid_body_mass(self.scenario.random.mass, i, robot_body_props)
 
         # GET initial state, copy for reset later
         self._initial_state = np.copy(self.gym.get_sim_rigid_body_states(self.sim, gymapi.STATE_ALL))
@@ -961,6 +970,34 @@ class IsaacgymHandler(BaseSimHandler):
         for i, name in enumerate(matches):
             index[i] = list(self._joint_info[obj_name]["local_indices"]).index(name)
         return index
+
+    def rand_rigid_body_fric(self, cfg: FrictionRandomCfg, env_id: int, props: list[gymapi.RigidShapeProperties]):
+        """Randomize the friction of the rigid bodies."""
+        if not cfg.enabled:
+            return
+        if not hasattr(self, "_rand_fric_dist"):
+            params_dict = class_to_dict(cfg)
+            params_dict["num_envs"] = self.num_envs
+            dist_fn = cfg.dist_fn
+            self._rand_fric_dist = dist_fn(params_dict)
+        # TODO: add rigid body id index
+        for s in range(len(props)):
+            props[s].friction = self._rand_fric_dist[env_id]
+        return props
+
+    def rand_rigid_body_mass(self, cfg: MassRandomCfg, env_id: int, props: list[gymapi.RigidBodyProperties]):
+        """Randomize the base mass."""
+        if not cfg.enabled:
+            return
+        if not hasattr(self, "_rand_mass_dist"):
+            params_dict = class_to_dict(cfg)
+            params_dict["num_envs"] = self.num_envs
+
+            dist_fn = cfg.dist_fn
+            self._rand_mass_dist = dist_fn(params_dict)
+        # TODO: add rigid body id index
+        props[0].mass += self._rand_mass_dist[env_id]
+        return props
 
     @property
     def num_envs(self) -> int:

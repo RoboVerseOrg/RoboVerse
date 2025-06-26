@@ -6,9 +6,11 @@ from dataclasses import MISSING
 from typing import Callable
 
 import torch
+from loguru import logger as log
 
 from metasim.cfg.checkers.base_checker import BaseChecker
 from metasim.cfg.control import ControlCfg
+from metasim.cfg.randomization import FrictionRandomCfg, MassRandomCfg, RandomizationCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.sim import BaseSimHandler
@@ -253,3 +255,48 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     """episode length in steps"""
     control: ControlCfg = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
     """Control config."""
+
+
+@configclass
+class LeggedRobotDomainRandCfg(RandomizationCfg):
+    """Randomization config for legged robots."""
+
+    def sample_uniform_buckets(params_dict: dict) -> torch.Tensor:
+        """Sample friction coefficients uniformly via discrete buckets."""
+
+        try:
+            num_buckets = params_dict["num_buckets"]
+            range = params_dict["range"]
+            num_envs = params_dict["num_envs"]
+            device = params_dict["device"]
+        except KeyError as e:
+            log.error("num_buckets, range and device must be specified for uniform sampling")
+            raise e
+
+        shape = (num_buckets, 1)
+        bucket_ids = torch.randint(0, num_buckets, (num_envs, 1))
+        friction_buckets = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
+        friction_coeffs = friction_buckets[bucket_ids]
+        return friction_coeffs
+
+    def sample_uniform(params_dict: dict) -> torch.Tensor:
+        """Sample friction coefficients uniformly."""
+
+        try:
+            range = params_dict["range"]
+            num_envs = params_dict["num_envs"]
+            device = params_dict["device"]
+        except KeyError as e:
+            log.error("range and device must be specified for uniform sampling")
+            raise e
+
+        shape = (num_envs, 1)
+        friction_coeffs = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
+        return friction_coeffs
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.friction = FrictionRandomCfg(
+            enbaled=True, range=[0.1, 2.0], dist_fn=self.sample_uniform_buckets, num_buckets=256
+        )
+        self.mass = MassRandomCfg(enabled=True, range=[-1.0, 1.0], dist_fn=self.sample_uniform_buckets)

@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import torch
 from loguru import logger as log
 
+from metasim.cfg.randomization import FrictionRandomCfg
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
@@ -193,6 +194,12 @@ class BaseSimHandler(ABC):
         """Simulate the environment."""
         self._state_cache_expire = True
         self._simulate()
+
+    ############################################################
+    ## Domain Randomization
+    ############################################################
+    def rand_rigid_body_fric(self, cfg: FrictionRandomCfg):
+        raise NotImplementedError
 
     ############################################################
     ## Utils
