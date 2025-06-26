@@ -250,7 +250,7 @@ def main() -> None:
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
-        import cv2
+        import imageio.v2 as iio
 
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
@@ -258,37 +258,26 @@ def main() -> None:
         """
         video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
-        obs_normalizer.eval()
-        render_env = FastTD3EnvWrapper(scenario_render, device=device)
-        # first frame after reset
-        obs = render_env.reset()
-        frames = [render_env.render()]
 
-        for s in range(render_env.max_episode_steps):
+        env = FastTD3EnvWrapper(scenario_render, device=device)
+
+        obs_normalizer.eval()
+        obs = env.reset()
+        frames = [env.render()]
+
+        for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
-            next_obs, _, done, _ = render_env.step(act.float())
-
-            # store every second frame to keep GIF size reasonable
-            if s % 2 == 0:
-                frames.append(render_env.render())
-
+            obs, _, done, _ = env.step(act.float())
+            frames.append(env.render())
             if done.any():
                 break
-            obs = next_obs
 
+        env.close()
         obs_normalizer.train()
-        h, w, _ = frames[0].shape
-        fps = 30  # change if desired
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # .mp4 w/ MPEG-4 codec
-        writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
 
-        for f in frames:
-            writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))  # OpenCV needs BGR
-        writer.release()
-
-        print(f"[render_with_rollout] MP4 saved to {video_path}")
-        render_env.close()
+        iio.mimsave(video_path, frames, fps=30)
+        return frames
 
     def update_main(data, logs_dict):
         with autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):

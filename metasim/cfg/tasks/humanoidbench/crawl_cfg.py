@@ -71,7 +71,7 @@ class CrawlReward(HumanoidBaseReward):
                 margin=10,
                 value_at_margin=0,
                 sigmoid="quadratic",
-            ).mean()
+            ).mean(dim=-1)
             small_control = (4 + small_control) / 5
 
             # R = tunnel × (0.1·e + 0.25·min(heightcrawl,heightIMU) + 0.25·orientation + 0.4·speed)
