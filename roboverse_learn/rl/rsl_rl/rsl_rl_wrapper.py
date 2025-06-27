@@ -11,7 +11,7 @@ from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
-
+from metasim.utils.state import list_state_to_tensor
 
 class RslRlWrapper(VecEnv):
     """
@@ -54,14 +54,18 @@ class RslRlWrapper(VecEnv):
         self.train_cfg = rsl_rl_class_to_dict(scenario.task.ppo_cfg)
 
     def _get_init_states(self, scenario):
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
+        """"""
+        init_states_list, _, _ = get_traj(scenario.task, scenario.robots[0], self.env.handler)
+        if len(init_states_list) < self.num_envs:
+            init_states_list = (
+                init_states_list * (self.num_envs // len(init_states_list))
+                + init_states_list[: self.num_envs % len(init_states_list)]
             )
         else:
-            self.init_states = self.init_states[: self.num_envs]
+            init_states_list = init_states_list[: self.num_envs]
+        #tensorize the initial states as TensorState
+        self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
+
 
     def get_observations(self):
         """design from config"""

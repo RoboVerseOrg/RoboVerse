@@ -19,7 +19,6 @@ except ImportError:
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
-from metasim.utils.demo_util import get_traj
 from metasim.utils.humanoid_robot_util import *
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 
@@ -77,17 +76,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         super()._parse_cfg(scenario)
         self.dt = scenario.decimation * scenario.sim_params.dt
         self.num_commands = scenario.task.command_dim
-
-    def _get_init_states(self, scenario):
-        """Get initial states from handler."""
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robots[0], self.env.handler)
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
-            )
-        else:
-            self.init_states = self.init_states[: self.num_envs]
 
     def _get_cfg_from_handler(self):
         """
