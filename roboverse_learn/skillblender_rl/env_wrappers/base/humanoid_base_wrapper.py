@@ -39,7 +39,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
 
         # FIXME hardcode. read names from config, get from handler.

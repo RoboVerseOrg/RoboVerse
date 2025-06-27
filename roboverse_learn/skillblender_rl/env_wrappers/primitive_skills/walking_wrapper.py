@@ -22,7 +22,6 @@ class WalkingWrapper(HumanoidBaseWrapper):
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
         self._prepare_ref_indices()
 
