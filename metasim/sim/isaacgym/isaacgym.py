@@ -756,12 +756,15 @@ class IsaacgymHandler(BaseSimHandler):
             assert len(states) == self.num_envs, (
                 f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
             )
-            # Prepare state data for specified env_ids
+
             pos_list = []
             rot_list = []
             q_list = []
             states_flat = [{**states[i]["objects"], **states[i]["robots"]} for i in env_ids]
+
+            # Prepare state data for specified env_ids
             env_indices = {env_id: i for i, env_id in enumerate(env_ids)}
+
             for i in range(self.num_envs):
                 if i not in env_indices:
                     continue
