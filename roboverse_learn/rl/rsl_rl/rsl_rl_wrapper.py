@@ -11,6 +11,9 @@ from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.setup_util import get_sim_env_class
 
+from metasim.utils.state import list_state_to_tensor
+
+
 class RslRlWrapper(VecEnv):
     """
     Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -54,16 +57,22 @@ class RslRlWrapper(VecEnv):
 
 
     def _get_init_states(self, scenario):
+        """ Get initial states from the scenario configuration."""
+
         self.init_states = getattr(scenario.task, 'init_states', None)
         if self.init_states is None:
             raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
+
+        if len(init_states_list) < self.num_envs:
+            init_states_list = (
+                init_states_list * (self.num_envs // len(init_states_list))
+                + init_states_list[: self.num_envs % len(init_states_list)]
             )
         else:
-            self.init_states = self.init_states[: self.num_envs]
+            init_states_list = init_states_list[: self.num_envs]
+        #tensorize the initial states as TensorState
+        self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
+
 
     def get_observations(self):
         """design from config"""
