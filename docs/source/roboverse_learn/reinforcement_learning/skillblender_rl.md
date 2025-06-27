@@ -42,10 +42,10 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [ ]  h1_2
 
 ## Todos
+- [x] domain randomization
 - [ ] ground type selection
 - [ ] pushing robot
 - [ ] sim2sim
-- [ ] domain randomization
 
 ## How to add new Task
 1. **Create your wrapper module**
