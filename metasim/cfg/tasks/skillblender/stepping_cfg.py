@@ -20,6 +20,7 @@ from metasim.utils import configclass
 
 
 def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """Reward function for feet position."""
     foot_pos = env_states.robots[robot_name].body_state[:, cfg.feet_indices, :2]
     feet_pos_diff = (
         foot_pos[:, :, :2] - env_states.robots[robot_name].extra["ref_feet_pos"][:, :, :2]
@@ -31,11 +32,15 @@ def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
 
 @configclass
 class SteppingCfgPPO(BaseHumanoidCfgPPO):
+    """PPO config for Skillbench:Stepping."""
+
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
     @configclass
     class Runner(BaseHumanoidCfgPPO.Runner):
+        """Runner config for Skillbench:Stepping."""
+
         wandb = True
         num_steps_per_env = 60
         max_iterations = 15001
