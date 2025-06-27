@@ -432,8 +432,7 @@ class _RunChecker(_WalkChecker):
 @configclass
 class _CrawlChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        states = handler.get_states()
-        terminated = [False] * len(states)
+        terminated = [False] * handler.num_envs
         return torch.tensor(terminated)
 
 
