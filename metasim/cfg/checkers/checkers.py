@@ -493,16 +493,10 @@ class _SitChecker(BaseChecker):
 @configclass
 class _StairChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import torso_upright
+        from metasim.utils.humanoid_robot_util import torso_upright_tensor
 
         states = handler.get_states()
-        terminated = []
-        for state in states:
-            if torso_upright(state, handler.robot.name) < 0.1:
-                terminated.append(True)
-            else:
-                terminated.append(False)
-        return torch.tensor(terminated)
+        return torso_upright_tensor(states, handler.robot.name) < 0.1
 
 
 ## FIXME: This checker should be removed!

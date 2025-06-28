@@ -4,7 +4,7 @@
 # -------------------------------------------------------------------------------
 sim: mjx
 robots: [h1]
-task: humanoidbench:Crawl
+task: humanoidbench:Stair
 decimation: 10
 train_or_eval: train
 
