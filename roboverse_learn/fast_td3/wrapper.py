@@ -112,9 +112,9 @@ class FastTD3EnvWrapper:
             self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs_now)
         t3 = _now()
 
-        print(
-            f"[timing] step_actions: {(t1 - t0) * 1e3:.2f} ms | obs+reward: {(t2 - t1) * 1e3:.2f} ms | reset: {(t3 - t2) * 1e3:.2f} ms | total: {(t3 - t0) * 1e3:.2f} ms"
-        )
+        # print(
+        #     f"[timing] step_actions: {(t1 - t0) * 1e3:.2f} ms | obs+reward: {(t2 - t1) * 1e3:.2f} ms | reset: {(t3 - t2) * 1e3:.2f} ms | total: {(t3 - t0) * 1e3:.2f} ms"
+        # )
 
         return obs_now, reward_now, done_flag, info
 

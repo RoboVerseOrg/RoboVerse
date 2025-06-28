@@ -58,12 +58,11 @@ def neck_height(envstate, robot_name: str):
     ) / 2
 
 
-def head_height_tensor(envstate, robot_name: str):
+def robot_site_pos_tensor(envstate, robot_name: str, site_name):
     """Returns the height of the neck."""
-    robot_body_name = envstate.robots[robot_name].body_names
-    body_id = robot_body_name.index("head")
-    body_pos = envstate.robots[robot_name].body_state[:, body_id, 2]
-    return body_pos
+    key = f"{robot_name}/{site_name}"
+    site_pos = envstate.extras["sites"][key]["position"]
+    return site_pos
 
 
 def neck_height_tensor(envstate, robot_name: str):
@@ -96,6 +95,16 @@ def robot_position(envstate, robot_name: str):
 def robot_position_tensor(envstate, robot_name: str):
     """Returns position of the robot."""
     return envstate.robots[robot_name].root_state[:, 0:3]
+
+
+def object_position(envstate, object_name: str):
+    """Returns position of the robot."""
+    return envstate["objects"][object_name]["pos"]
+
+
+def object_position_tensor(envstate, object_name: str):
+    """Returns position of the robot."""
+    return envstate.objects[object_name].root_state[:, 0:3]
 
 
 def robot_velocity(envstate, robot_name: str):

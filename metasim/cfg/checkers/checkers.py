@@ -432,8 +432,7 @@ class _RunChecker(_WalkChecker):
 @configclass
 class _CrawlChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        states = handler.get_states()
-        terminated = [False] * len(states)
+        terminated = [False] * handler.num_envs
         return torch.tensor(terminated)
 
 
@@ -482,16 +481,12 @@ class _PoleChecker(BaseChecker):
 @configclass
 class _SitChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import robot_position
+        from metasim.utils.humanoid_robot_util import robot_position_tensor
 
         states = handler.get_states()
-        terminated = []
-        for state in states:
-            if robot_position(state, handler.robot.name)[2] < 0.5:
-                terminated.append(True)
-            else:
-                terminated.append(False)
-        return torch.tensor(terminated)
+        pelvis_z = robot_position_tensor(states, handler.robot.name)[:, 2]
+        terminated = pelvis_z < 0.5  # (B,) bool
+        return terminated
 
 
 ## FIXME: This checker should be removed!

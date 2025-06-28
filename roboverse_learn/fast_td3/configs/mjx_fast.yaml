@@ -4,7 +4,7 @@
 # -------------------------------------------------------------------------------
 sim: mjx
 robots: [h1]
-task: humanoidbench:Stand
+task: humanoidbench:Crawl
 decimation: 10
 train_or_eval: train
 
@@ -83,8 +83,8 @@ action_bounds: 1.0
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: fast_td3_mjx2048
-exp_name: fasttd3_mjx2048
+wandb_project: fasttd3_mjx
+exp_name: fasttd3_mjx
 use_wandb: true
 checkpoint_path: null
 eval_interval: 1000

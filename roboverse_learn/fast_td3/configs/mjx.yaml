@@ -83,11 +83,9 @@ action_bounds: 1.0
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: fast_td3_mjx128_2048_buffer
-exp_name: fasttd3_mjx128_2048_buffer
+wandb_project: fast_td3_mjx128
+exp_name: fasttd3_mjx128
 use_wandb: true
 checkpoint_path: null
-eval_interval: 2000
-save_interval: 2000
-render_interval: 0
-video_path: null
+eval_interval: 1000
+save_interval: 1000
