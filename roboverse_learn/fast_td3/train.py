@@ -259,15 +259,12 @@ def main() -> None:
         video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
         obs_normalizer.eval()
-        render_env = FastTD3EnvWrapper(scenario_render, device=device)
+        env = FastTD3EnvWrapper(scenario_render, device=device)
         # first frame after reset
-        obs = render_env.reset()
-        frames = [render_env.render()]
-
-        obs_normalizer.eval()
         obs = env.reset()
         frames = [env.render()]
 
+        obs_normalizer.eval()
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
@@ -275,15 +272,9 @@ def main() -> None:
             frames.append(env.render())
             if done.any():
                 break
-
         obs_normalizer.train()
-
-        for f in frames:
-            writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))  # OpenCV needs BGR
-        writer.release()
-
         print(f"[render_with_rollout] MP4 saved to {video_path}")
-        render_env.close()
+        env.close()
         iio.mimsave(video_path, frames, fps=30)
         return frames
 
