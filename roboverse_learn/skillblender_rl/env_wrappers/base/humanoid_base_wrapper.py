@@ -88,6 +88,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
         self.dt = scenario.decimation * scenario.sim_params.dt
+        self.command_ranges = scenario.task.command_ranges
         self.num_commands = scenario.task.command_dim
 
     def _get_cfg_from_handler(self):
@@ -169,11 +170,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
 
-        # reference dof position
-        self.ref_dof_pos = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
-        )
-
         # history buffer for reward computation
         self.last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
@@ -186,7 +182,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         )
         self.last_root_vel = torch.zeros(self.num_envs, 6, device=self.device, requires_grad=False)
 
-        # TODO move it into config
         self.last_feet_z = 0.05 * torch.ones(
             self.num_envs, len(self.feet_indices), device=self.device, requires_grad=False
         )
@@ -194,7 +189,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.feet_pos = torch.zeros((self.num_envs, len(self.feet_indices), 3), device=self.device, requires_grad=False)
         self.feet_height = torch.zeros((self.num_envs, len(self.feet_indices)), device=self.device, requires_grad=False)
 
-        # TODO add height buffer, random push force
+        self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+        self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+
+        # TODO add height buffer
         # TODO add history manager, read from config.
         self.obs_history = deque(maxlen=self.cfg.frame_stack)
         self.critic_history = deque(maxlen=self.cfg.c_frame_stack)
@@ -207,13 +205,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 torch.zeros(self.num_envs, self.cfg.single_num_privileged_obs, dtype=torch.float, device=self.device)
             )
 
-        # random push force
-        self.rand_push_force = torch.zeros(
-            (self.num_envs, 3), dtype=torch.float32, device=self.device
-        )  # TODO now set 0
-        self.rand_push_torque = torch.zeros(
-            (self.num_envs, 3), dtype=torch.float32, device=self.device
-        )  # TODO now set 0
         self.env_frictions = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device)  # TODO now set 0
         self.body_mass = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device, requires_grad=False)
 
@@ -430,15 +421,23 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf
 
-    def wrap_action_as_dict(self, actions):
+    def update_command_curriculum(self, env_ids):
+        """Implements a curriculum of increasing commands
+
+        Args:
+            env_ids (List[int]): ids of environments being reset
         """
-        wrap actions as a dict for the env handler.
-        """
-        joint_names = list(self.robot.actuators.keys())
-        return [
-            {"dof_pos_target": {joint_name: float(pos) for joint_name, pos in zip(joint_names, actions[env_id])}}
-            for env_id in range(len(actions))
-        ]
+        # If the tracking reward is above 80% of the maximum, increase the range of commands
+        if (
+            torch.mean(self.episode_sums["tracking_lin_vel"][env_ids]) / self.max_episode_length
+            > 0.8 * self.reward_scales["tracking_lin_vel"]
+        ):
+            self.command_ranges.lin_vel_x[0] = np.clip(
+                self.command_ranges.lin_vel_x[0] - 0.5, -self.cfg.commands.max_curriculum, 0.0
+            )
+            self.command_ranges.lin_vel_x[1] = np.clip(
+                self.command_ranges.lin_vel_x[1] + 0.5, 0.0, self.cfg.commands.max_curriculum
+            )
 
     def clip_actions(self, actions):
         """Clip actions based on cfg."""
@@ -452,7 +451,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
-        # action_dict = self.wrap_action_as_dict(clipped_actions)
         return self.actions
 
     def _physics_step(self, action_dict):
@@ -478,22 +476,19 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """
         Reset state in the env and buffer in this wrapper
         """
-        # if env_ids is None, reset all envs
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-        # if env_ids is empty, do nothing
         if len(env_ids) == 0:
             return
 
-        # TODO
-        # update terrain curriculum
-        # update command curriculum
-
         _, _ = self.env.reset(self.init_states, env_ids)
+
+        if self.cfg.commands.curriculum and (self.common_step_counter % self.max_episode_length == 0):
+            self.update_command_curriculum(env_ids)
 
         self._resample_commands(env_ids)
 
-        # reset state in the wrapper
+        # reset state buffer in the wrapper
         self.actions[env_ids] = 0.0
         self.last_actions[env_ids] = 0.0
         self.last_last_actions[env_ids] = 0.0
@@ -531,28 +526,28 @@ class HumanoidBaseWrapper(RslRlWrapper):
             env_ids (List[int]): Environments ids for which new commands are needed
         """
         self.commands[env_ids, 0] = torch_rand_float(
-            self.cfg.command_ranges.lin_vel_x[0],
-            self.cfg.command_ranges.lin_vel_x[1],
+            self.command_ranges.lin_vel_x[0],
+            self.command_ranges.lin_vel_x[1],
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
         self.commands[env_ids, 1] = torch_rand_float(
-            self.cfg.command_ranges.lin_vel_y[0],
-            self.cfg.command_ranges.lin_vel_y[1],
+            self.command_ranges.lin_vel_y[0],
+            self.command_ranges.lin_vel_y[1],
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(
-                self.cfg.command_ranges.heading[0],
-                self.cfg.command_ranges.heading[1],
+                self.command_ranges.heading[0],
+                self.command_ranges.heading[1],
                 (len(env_ids), 1),
                 device=self.device,
             ).squeeze(1)
         else:
             self.commands[env_ids, 2] = torch_rand_float(
-                self.cfg.command_ranges.ang_vel_yaw[0],
-                self.cfg.command_ranges.ang_vel_yaw[1],
+                self.command_ranges.ang_vel_yaw[0],
+                self.command_ranges.ang_vel_yaw[1],
                 (len(env_ids), 1),
                 device=self.device,
             ).squeeze(1)
@@ -561,7 +556,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
 
     def _post_physics_step_callback(self):
-        # TODO modified this name
         """Callback called before computing terminations, rewards, and observations
         Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
@@ -576,12 +570,20 @@ class HumanoidBaseWrapper(RslRlWrapper):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
-        # TODO: implement terrain height measurement
-        # TODO: implement random push force
+        self._push_robots()
 
-    # TODO implement this
     def _push_robots(self):
-        pass
+        """Randomly set robot's root velocity to simulate a push."""
+        if self.cfg.random.push.enabled and self.common_step_counter % self.cfg.random.push.push_interval == 0:
+            max_vel = self.cfg.random.push.max_push_vel_xy
+            max_push_angular = self.cfg.random.push.max_push_ang_vel
+            env_states = self.env.handler.get_states()
+            self.rand_push_force[:, :2] += torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)
+            env_states.robots[self.robot.name].root_state[:, 0:2] += self.rand_push_force[:, :2]
+            self.rand_push_torque = torch_rand_float(
+                -max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device
+            )
+            env_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
     # TODO implement this
     def _get_heights(self):

@@ -37,7 +37,7 @@ class SquattingWrapper(HumanoidBaseWrapper):
             self.device,
             num_points=1000000,
             num_wp=10,
-            ranges=self.cfg.command_ranges,
+            ranges=self.command_ranges,
             base_height_target=self.cfg.reward_cfg.base_height_target,
         )  # relative, self.target_wp.shape=[num_pairs, num_wp, 1]
         self.target_wp_i = torch.randint(

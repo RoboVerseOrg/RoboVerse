@@ -126,10 +126,10 @@ class TaskBoxWrapper(HumanoidBaseWrapper):
         self.box_goal_pos[reset_env_idx, 2] = env_states.objects["box"].root_state[reset_env_idx, 2]
         self.box_goal_pos[reset_env_idx, 0] = self.table_root_states[reset_env_idx, 0] - torch.FloatTensor(
             len(reset_env_idx)
-        ).uniform_(*self.cfg.command_ranges.box_range_x).to(self.device)
+        ).uniform_(*self.command_ranges.box_range_x).to(self.device)
         self.box_goal_pos[reset_env_idx, 1] = self.table_root_states[reset_env_idx, 1] - torch.FloatTensor(
             len(reset_env_idx)
-        ).uniform_(*self.cfg.command_ranges.box_range_y).to(self.device)
+        ).uniform_(*self.command_ranges.box_range_y).to(self.device)
 
     def _post_physics_step(self, env_states):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""

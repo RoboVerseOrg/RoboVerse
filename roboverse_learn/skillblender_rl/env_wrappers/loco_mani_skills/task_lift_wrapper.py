@@ -124,4 +124,4 @@ class TaskLiftWrapper(HumanoidBaseWrapper):
         self.box_goal_pos[env_ids, 1] = env_states.objects["box"].root_state[env_ids, :1]
         self.box_goal_pos[env_ids, 2] = env_states.objects["box"].root_state[env_ids, 2] + torch.FloatTensor(
             len(env_ids)
-        ).uniform_(*self.cfg.command_ranges.box_pos_z).to(self.device)
+        ).uniform_(*self.command_ranges.box_pos_z).to(self.device)

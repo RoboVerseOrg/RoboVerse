@@ -36,7 +36,7 @@ class SteppingWrapper(HumanoidBaseWrapper):
             envstate.robots[self.robot.name].body_state[:, self.feet_indices, :2].clone()
         )  # [num_envs, 2, 2], two feet's original xy positions
         self.target_wp, self.num_pairs, self.num_wp = sample_fp(
-            device=self.device, num_points=1000000, num_wp=10, ranges=self.cfg.command_ranges
+            device=self.device, num_points=1000000, num_wp=10, ranges=self.command_ranges
         )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 2]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device

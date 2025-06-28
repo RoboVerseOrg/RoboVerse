@@ -95,6 +95,66 @@ class LeggedRobotCfgPPO:
 
 
 @configclass
+class LeggedRobotDomainRandCfg(RandomizationCfg):
+    """Randomization config for legged robots."""
+
+    def sample_uniform_buckets(params_dict: dict) -> torch.Tensor:
+        """Sample friction coefficients uniformly via discrete buckets."""
+
+        try:
+            num_buckets = params_dict["num_buckets"]
+            range = params_dict["range"]
+            num_envs = params_dict["num_envs"]
+            device = params_dict["device"]
+        except KeyError as e:
+            log.error("num_buckets, range and device must be specified for uniform sampling")
+            raise e
+
+        shape = (num_buckets, 1)
+        bucket_ids = torch.randint(0, num_buckets, (num_envs, 1))
+        friction_buckets = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
+        friction_coeffs = friction_buckets[bucket_ids]
+        return friction_coeffs
+
+    def sample_uniform(params_dict: dict) -> torch.Tensor:
+        """Sample friction coefficients uniformly."""
+
+        try:
+            range = params_dict["range"]
+            num_envs = params_dict["num_envs"]
+            device = params_dict["device"]
+        except KeyError as e:
+            log.error("range and device must be specified for uniform sampling")
+            raise e
+
+        shape = (num_envs, 1)
+        friction_coeffs = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
+        return friction_coeffs
+
+    @configclass
+    class PushRandomCfg:
+        """Configuration for random push forces."""
+
+        enabled: bool = False
+        """Whether to enable random push forces."""
+        max_push_vel_xy: float = 0.2
+        """Maximum push velocity in xy plane."""
+        max_push_ang_vel: float = 0.4
+        """Maximum push angular velocity."""
+        push_interval: int = 4
+        """Interval in steps for applying random push forces and torques."""
+
+    push = PushRandomCfg(enabled=True)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.friction = FrictionRandomCfg(
+            enabled=True, range=[0.1, 2.0], dist_fn=self.sample_uniform_buckets, num_buckets=256
+        )
+        self.mass = MassRandomCfg(enabled=True, range=[-1.0, 1.0], dist_fn=self.sample_uniform)
+
+
+@configclass
 class BaseLeggedTaskCfg(BaseRLTaskCfg):
     """Base class for legged-gym style humanoid tasks.
 
@@ -232,7 +292,7 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
-        num_position_iterations=8,
+        num_position_iterations=4,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.5,
         replace_cylinder_with_capsule=True,
@@ -255,48 +315,5 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     """episode length in steps"""
     control: ControlCfg = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
     """Control config."""
-
-
-@configclass
-class LeggedRobotDomainRandCfg(RandomizationCfg):
-    """Randomization config for legged robots."""
-
-    def sample_uniform_buckets(params_dict: dict) -> torch.Tensor:
-        """Sample friction coefficients uniformly via discrete buckets."""
-
-        try:
-            num_buckets = params_dict["num_buckets"]
-            range = params_dict["range"]
-            num_envs = params_dict["num_envs"]
-            device = params_dict["device"]
-        except KeyError as e:
-            log.error("num_buckets, range and device must be specified for uniform sampling")
-            raise e
-
-        shape = (num_buckets, 1)
-        bucket_ids = torch.randint(0, num_buckets, (num_envs, 1))
-        friction_buckets = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
-        friction_coeffs = friction_buckets[bucket_ids]
-        return friction_coeffs
-
-    def sample_uniform(params_dict: dict) -> torch.Tensor:
-        """Sample friction coefficients uniformly."""
-
-        try:
-            range = params_dict["range"]
-            num_envs = params_dict["num_envs"]
-            device = params_dict["device"]
-        except KeyError as e:
-            log.error("range and device must be specified for uniform sampling")
-            raise e
-
-        shape = (num_envs, 1)
-        friction_coeffs = (range[1] - range[0]) * torch.rand(*shape, device=device) + range[0]
-        return friction_coeffs
-
-    def __post_init__(self):
-        super().__post_init__()
-        self.friction = FrictionRandomCfg(
-            enbaled=True, range=[0.1, 2.0], dist_fn=self.sample_uniform_buckets, num_buckets=256
-        )
-        self.mass = MassRandomCfg(enabled=True, range=[-1.0, 1.0], dist_fn=self.sample_uniform_buckets)
+    random: LeggedRobotDomainRandCfg = LeggedRobotDomainRandCfg()
+    """Randomization config."""

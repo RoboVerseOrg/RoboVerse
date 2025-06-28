@@ -1024,6 +1024,7 @@ class IsaacgymHandler(BaseSimHandler):
         if not hasattr(self, "_rand_fric_dist"):
             params_dict = class_to_dict(cfg)
             params_dict["num_envs"] = self.num_envs
+            params_dict["device"] = self.device
             dist_fn = cfg.dist_fn
             self._rand_fric_dist = dist_fn(params_dict)
         # TODO: add rigid body id index
@@ -1038,7 +1039,7 @@ class IsaacgymHandler(BaseSimHandler):
         if not hasattr(self, "_rand_mass_dist"):
             params_dict = class_to_dict(cfg)
             params_dict["num_envs"] = self.num_envs
-
+            params_dict["device"] = self.device
             dist_fn = cfg.dist_fn
             self._rand_mass_dist = dist_fn(params_dict)
         # TODO: add rigid body id index

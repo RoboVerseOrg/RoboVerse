@@ -35,7 +35,7 @@ class TaskReachWrapper(HumanoidBaseWrapper):
             envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
         )  # [num_envs, 2, 7], two hands
         self.target_wp, self.num_pairs, self.num_wp = sample_wp(
-            self.device, num_points=2000000, num_wp=10, ranges=self.cfg.command_ranges
+            self.device, num_points=2000000, num_wp=10, ranges=self.command_ranges
         )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device

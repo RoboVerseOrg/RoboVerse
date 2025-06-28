@@ -68,9 +68,9 @@ class TaskButtonWrapper(HumanoidBaseWrapper):
         self.button_goal_pos[reset_env_idx, 0] = self.wall_root_states[reset_env_idx, 0]
         self.button_goal_pos[reset_env_idx, 1] = self.wall_root_states[reset_env_idx, 1] + torch.FloatTensor(
             len(reset_env_idx)
-        ).uniform_(*self.cfg.command_ranges.button_pos_y).to(self.device)
+        ).uniform_(*self.command_ranges.button_pos_y).to(self.device)
         self.button_goal_pos[reset_env_idx, 2] = self.cfg.button_ori_z + torch.FloatTensor(len(reset_env_idx)).uniform_(
-            *self.cfg.command_ranges.button_pos_z
+            *self.command_ranges.button_pos_z
         ).to(self.device)
 
         # compute obs for actor,  privileged_obs for critic network

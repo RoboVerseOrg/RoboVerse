@@ -122,10 +122,10 @@ class TaskCarryWrapper(HumanoidBaseWrapper):
     def _resample_box_goal(self, env_ids, env_states):
         self.box_goal_pos[env_ids, 0] = env_states.objects["box"].root_state[env_ids, :0] + torch.FloatTensor(
             len(env_ids)
-        ).uniform_(*self.cfg.command_ranges.box_pos_x).to(self.device)
+        ).uniform_(*self.command_ranges.box_pos_x).to(self.device)
         self.box_goal_pos[env_ids, 1] = env_states.objects["box"].root_state[env_ids, :1] + torch.FloatTensor(
             len(env_ids)
-        ).uniform_(*self.cfg.command_ranges.box_pos_y).to(self.device)
+        ).uniform_(*self.command_ranges.box_pos_y).to(self.device)
         self.box_goal_pos[env_ids, 2] = env_states.objects["box"].root_state[env_ids, 2] + torch.FloatTensor(
             len(env_ids)
-        ).uniform_(*self.cfg.command_ranges.box_pos_z).to(self.device)
+        ).uniform_(*self.command_ranges.box_pos_z).to(self.device)
