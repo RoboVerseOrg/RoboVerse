@@ -40,9 +40,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
-
-        # FIXME hardcode. read names from config, get from handler.
-
         self.use_vision = scenario.task.use_vision
         self.up_axis_idx = 2
 
@@ -60,6 +57,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         elbow_names = robot.elbow_links
         wrist_names = robot.wrist_links
         torso_names = robot.torso_links
+        left_yaw_roll_names = ["left_hip_yaw", "left_hip_roll"]
+        right_yaw_roll_names = ["right_hip_yaw", "right_hip_roll"]
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
 
@@ -84,6 +83,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.cfg.torso_indices = self.torso_indices
         self.cfg.termination_contact_indices = self.termination_contact_indices
         self.cfg.penalised_contact_indices = self.penalised_contact_indices
+        self.cfg.left_yaw_roll_indices = self.env.handler.get_body_reindexed_indices_from_substring(
+            robot.name, left_yaw_roll_names
+        )
+        self.cfg.right_yaw_roll_indices = self.env.handler.get_body_reindexed_indices_from_substring(
+            robot.name, right_yaw_roll_names
+        )
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
@@ -95,7 +100,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """
         Get cfg from handler for reward computation.
         """
-        # TODO read name specified in config, add indices here
         self.cfg.default_joint_pd_target = self.env.handler.default_dof_pos
         self.cfg.torque_limits = self.env.handler.torque_limits
 
@@ -192,7 +196,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
         self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
 
-        # TODO add height buffer
         # TODO add history manager, read from config.
         self.obs_history = deque(maxlen=self.cfg.frame_stack)
         self.critic_history = deque(maxlen=self.cfg.c_frame_stack)
@@ -248,7 +251,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._parse_feet_clearance(envstate)
 
     def _parse_feet_air_time(self, envstate):
-        # TODO contact is computed for servaral times. maybe precompute it as a class var?
         contact = contact_forces_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
         stance_mask = gait_phase_tensor(envstate, self.robot.name)
         contact_filt = torch.logical_or(torch.logical_or(contact, stance_mask), self.last_contacts)
@@ -282,10 +284,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         envstate.robots[self.robot.name].extra["feet_clearance"] = rew_pos
 
     def _parse_history_state(self, envstate):
-        # TODO check integration
         """update history buffer, must be called after reset"""
-        # envstate.robots[self.robot.name].extra["last_contact_forces"] = self.last_contact_forces
-
         envstate.robots[self.robot.name].extra["last_root_vel"] = self.last_root_vel
         envstate.robots[self.robot.name].extra["last_dof_vel"] = self.last_dof_vel
         envstate.robots[self.robot.name].extra["last_actions"] = self.last_actions
@@ -297,17 +296,16 @@ class HumanoidBaseWrapper(RslRlWrapper):
         envstate.robots[self.robot.name].extra["base_ang_vel"] = self.base_ang_vel
 
     def _parse_command(self, envstate):
-        """Add command into states"""
+        """Adds the current velocity and heading command to state."""
         envstate.robots[self.robot.name].extra["command"] = self.commands
 
     def _parse_epsidoe_legth(self, envstate):
-        """parse episode length into states"""
+        """parse episode length into states."""
         envstate.robots[self.robot.name].extra["episode_length_buf"] = self.episode_length_buf
 
     def _parse_state_for_reward(self, envstate):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config
         self._parse_gait_phase(envstate)
@@ -320,9 +318,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._parse_local_base_vel(envstate)
 
     def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
-        """Prepares a list of reward functions, which will be called to compute the total reward.
-        Looks for self._reward_<REWARD_NAME>, where <REWARD_NAME> are names of all non zero reward scales in the cfg.
-        """
+        """Prepares a list of reward functions, which will be called to compute the total reward."""
         self.reward_scales = task.reward_weights
         # remove zero scales + multiply non-zero ones by dt
         for key in list(self.reward_scales.keys()):
@@ -348,13 +344,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         }
         self.episode_metrics = {name: 0 for name in self.reward_scales.keys()}
 
-    def compute_reward(self, envstates):
+    def compute_reward(self, envstate):
         """Compute all the reward from the states provided."""
         self.rew_buf[:] = 0
 
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
-            rew_func_return = self.reward_functions[i](envstates, self.robot.name, self.cfg)
+            rew_func_return = self.reward_functions[i](envstate, self.robot.name, self.cfg)
             if isinstance(rew_func_return, tuple):
                 unscaled_rew, metric = rew_func_return
                 self.episode_metrics[name] = metric.mean().item()
@@ -366,8 +362,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         if self.cfg.reward_cfg.only_positive_rewards:
             self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.0)
-
-        # TODO add termination reward checking
 
     def _get_gait_phase(self):
         """Add phase into states"""
@@ -383,7 +377,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
         return stance_mask
 
-    def _compute_observations(self, envstates):
+    def _compute_observations(self, envstate):
         """compute observations and priviledged observation"""
         raise NotImplementedError
 
@@ -585,10 +579,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             env_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
-    # TODO implement this
-    def _get_heights(self):
-        pass
-
     @staticmethod
     def get_reward_fn(target: str, reward_functions: list[Callable]) -> Callable:
         fn = next((f for f in reward_functions if f.__name__ == target), None)
@@ -596,7 +586,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             raise KeyError(f"No reward function named '{target}'")
         return fn
 
-    # TODO move the utils file
     @staticmethod
     def get_axis_params(value, axis_idx, x_value=0.0, dtype=np.float64, n_dims=3):
         """construct arguments to `Vec` according to axis index."""
@@ -607,7 +596,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         params[0] = x_value
         return list(params.astype(dtype))
 
-    # TODO move .utils file
     @staticmethod
     def wrap_to_pi(angles: torch.Tensor) -> torch.Tensor:
         angles %= 2 * np.pi

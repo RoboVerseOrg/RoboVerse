@@ -120,7 +120,7 @@ class WalkingCfg(BaseHumanoidCfg):
         "collision": -1.0,
         "feet_stumble": -0.0,
         "stand_still": -0.0,
-        "joint_pos": 3.2,
+        "joint_pos": 1.6,
         "feet_clearance": 2.0,
         "feet_contact_number": 2.4,
         # gait
@@ -130,13 +130,13 @@ class WalkingCfg(BaseHumanoidCfg):
         # contact
         "feet_contact_forces": -0.01,
         # vel tracking
-        "tracking_lin_vel": 4.8,
+        "tracking_lin_vel": 2.4,
         "tracking_ang_vel": 2.2,
         "vel_mismatch_exp": 0.5,
         "low_speed": 0.2,
         "track_vel_hard": 1.0,
         # base pos
-        "default_joint_pos": 0.5,
+        "default_joint_pos": 1.0,
         "upper_body_pos": 0.5,
         "orientation": 1.0,
         "base_acc": 0.2,

@@ -283,8 +283,8 @@ def reward_default_joint_pos(states: EnvState, robot_name: str, cfg: BaseRLTaskC
     Keep joint positions close to defaults (penalize yaw/roll).
     """
     joint_diff = states.robots[robot_name].joint_pos - cfg.default_joint_pd_target
-    left_yaw_roll = joint_diff[:, :2]
-    right_yaw_roll = joint_diff[:, 5:7]
+    left_yaw_roll = joint_diff[:, cfg.left_yaw_roll_indices]
+    right_yaw_roll = joint_diff[:, cfg.right_yaw_roll_indices]
     yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
     yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
     return torch.exp(-yaw_roll * 100) - 0.01 * torch.norm(joint_diff, dim=1)
