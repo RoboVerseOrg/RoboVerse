@@ -44,21 +44,20 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.up_axis_idx = 2
 
         self._parse_rigid_body_indices(scenario.robots[0])
+        self._parse_joint_indices(scenario.robots[0])
         self._get_cfg_from_handler()
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
     def _parse_rigid_body_indices(self, robot):
         """
-        Parse humanoid rigid body indices from robot cfg.
+        Parse rigid body indices from robot cfg.
         """
         feet_names = robot.feet_links
         knee_names = robot.knee_links
         elbow_names = robot.elbow_links
         wrist_names = robot.wrist_links
         torso_names = robot.torso_links
-        left_yaw_roll_names = ["left_hip_yaw", "left_hip_roll"]
-        right_yaw_roll_names = ["right_hip_yaw", "right_hip_roll"]
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
 
@@ -83,10 +82,17 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.cfg.torso_indices = self.torso_indices
         self.cfg.termination_contact_indices = self.termination_contact_indices
         self.cfg.penalised_contact_indices = self.penalised_contact_indices
-        self.cfg.left_yaw_roll_indices = self.env.handler.get_body_reindexed_indices_from_substring(
+
+    def _parse_joint_indices(self, robot):
+        """
+        Parse joint indices from robot cfg.
+        """
+        left_yaw_roll_names = ["left_hip_yaw", "left_hip_roll"]
+        right_yaw_roll_names = ["right_hip_yaw", "right_hip_roll"]
+        self.cfg.left_yaw_roll_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
             robot.name, left_yaw_roll_names
         )
-        self.cfg.right_yaw_roll_indices = self.env.handler.get_body_reindexed_indices_from_substring(
+        self.cfg.right_yaw_roll_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
             robot.name, right_yaw_roll_names
         )
 
