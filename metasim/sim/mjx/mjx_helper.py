@@ -5,6 +5,7 @@ import functools
 
 import jax
 import jax.numpy as jnp
+import mujoco
 import torch
 from mujoco import mjtJoint
 
@@ -305,3 +306,86 @@ def _pack_root_state(data, env_idx, bid):
 
 # jit-compile with bid (scalar) static so it does not recompile per call
 pack_root_state = jax.jit(_pack_root_state, static_argnums=(2,))
+
+
+@functools.partial(jax.jit, static_argnums=())
+def _pack_site_state(data, env_idx: jnp.ndarray, site_ids: jnp.ndarray) -> jnp.ndarray:
+    """
+    Build a (N, S, 12) tensor for the given sites:
+    """
+    # Site position  → (N, S, 3)
+    pos = data.site_xpos[env_idx[:, None], site_ids]
+
+    # Site rotation  → (N, S, 3, 3)  →  flatten to (N, S, 9)
+    rot = data.site_xmat[env_idx[:, None], site_ids]
+    rot = rot.reshape(rot.shape[0], rot.shape[1], 9)
+
+    # Concatenate  → (N, S, 12)
+    return jnp.concatenate([pos, rot], axis=-1)
+
+
+@functools.partial(jax.jit, static_argnums=())
+def _pack_contact_force(data, env_idx: jnp.ndarray, body_ids: jnp.ndarray) -> jnp.ndarray:
+    # cfrc_ext shape: (N, B, 6) -> [force(3), torque(3)]
+    return data.cfrc_ext[env_idx[:, None], body_ids]  # (N, B, 6)
+
+
+_site_lookup_cache = {}
+
+
+def get_extras(mjx_data, mj_model, env_ids=None):
+    """
+    Collect extras (site pose, contact force, …) for a batch
+    of environments.  No typing hints, no helper functions.
+    """
+    # --------------------------------------------------------
+    # 0. Basic env index selection  (pure JAX)
+    # --------------------------------------------------------
+    idx = (
+        jnp.arange(mjx_data.qpos.shape[0], dtype=jnp.int32)
+        if env_ids is None
+        else jnp.asarray(env_ids, dtype=jnp.int32)
+    )
+
+    extras = {}
+
+    # --------------------------------------------------------
+    # 1. Build / fetch site-name lookup tables (host side)
+    #    Cached by the MjModel object identity.
+    # --------------------------------------------------------
+    key = id(mj_model)
+    if key not in _site_lookup_cache:
+        id2name, name2id = [], {}
+        for i in range(mj_model.nsite):
+            n = mujoco.mj_id2name(mj_model, mujoco.mjtObj.mjOBJ_SITE, i)
+            if n:  # skip empty names
+                id2name.append(n)
+                name2id[n] = i
+        _site_lookup_cache[key] = (id2name, name2id)
+
+    id2name, name2id = _site_lookup_cache[key]
+
+    # --------------------------------------------------------
+    # 2. Sites
+    # --------------------------------------------------------
+    sel_names = id2name  # ← no filtering
+    if sel_names:
+        site_ids = jnp.asarray([name2id[n] for n in sel_names], dtype=jnp.int32)
+        site_t = _pack_site_state(mjx_data, idx, site_ids)  # (N, S, 12)
+
+        extras["sites"] = {
+            n: {
+                "position": j2t(site_t[:, k, 0:3]),
+                "rotation_matrix": j2t(site_t[:, k, 3:]),
+            }
+            for k, n in enumerate(sel_names)
+        }
+
+    # --------------------------------------------------------
+    # 3. Contact forces for all bodies
+    # --------------------------------------------------------
+    body_ids = jnp.arange(mj_model.nbody, dtype=jnp.int32)
+    cf_t = _pack_contact_force(mjx_data, idx, body_ids)  # (N, B, 6)
+    extras["contact_force"] = j2t(cf_t)
+
+    return extras
