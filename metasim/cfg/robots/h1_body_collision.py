@@ -18,5 +18,3 @@ class H1_Body_Collision_Cfg(H1Cfg):
     #    or lead to unstable simulation artifacts.
     name: str = "h1_body_collision"
     mjx_mjcf_path: str = "roboverse_data/robots/h1/mjcf/mjx_h1_body.xml"
-
-    
