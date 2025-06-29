@@ -108,7 +108,7 @@ class H1Cfg(BaseRobotCfg):
         "right_elbow": "effort",
     }
 
-    # rigid body name substrings, to find indices of different rigid bodies.
+    # rigid body name substrings, to find indices of rigid bodies.
     feet_links: list[str] = [
         "left_ankle",
         "right_ankle",

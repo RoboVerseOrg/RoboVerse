@@ -132,3 +132,8 @@ class H1WristCfg(BaseRobotCfg):
     penalized_contacts_links: list[str] = ["hip", "knee"]
     wrist_links: list[str] = ["wrist"]
     torso_links: list[str] = ["torso"]
+
+    # joint substrings, to find indices of joints.
+    left_yaw_roll_joints = ["left_hip_yaw", "left_hip_roll"]
+    right_yaw_roll_joints = ["right_hip_yaw", "right_hip_roll"]
+    upper_body_joints = ["shoulder", "elbow", "torso"]

@@ -66,7 +66,7 @@ class WalkingWrapper(HumanoidBaseWrapper):
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
         # TODO read from config
-        # parse those state which cannot directly get from Envstates
+
         super()._parse_state_for_reward(envstate)
         self._compute_ref_state()
         self._parse_ref_pos(envstate)

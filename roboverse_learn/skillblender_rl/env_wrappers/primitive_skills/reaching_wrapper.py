@@ -55,25 +55,19 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _post_physics_step(self, env_states: EnvState) -> None:
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
-        # update episode length from env_wrapper
         self.episode_length_buf = self.env.episode_length_buf_tensor
         self.common_step_counter += 1
 
         self._post_physics_step_callback()
-        # update refreshed tensors from simulaor
         self._update_refreshed_tensors(env_states)
-        # prepare all the states for reward computation
         self._parse_state_for_reward(env_states)
-        # compute the reward
         self.compute_reward(env_states)
-        # reset envs
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
         self.reset(reset_env_idx)
 
         # NOTE: this line matters because target_wp should be reset before compute ons.
         self.update_target_wp(reset_env_idx)
 
-        # compute obs for actor,  privileged_obs for critic network
         self._compute_observations(env_states)
         self._update_history(env_states)
 
@@ -107,7 +101,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
         # TODO read from config
-        # parse those state which cannot directly get from Envstates
+
         super()._parse_state_for_reward(envstate)
         self._parse_ref_wrist_pos(envstate)
 

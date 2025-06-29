@@ -16,7 +16,7 @@ pip install -e roboverse_learn/rl/rsl_rl
 
 - IssacGym:
     ```bash
-    python3 roboverse_learn/skillblender_rl/train_skillblender.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1_wrist" --use_wandb
+    python3 roboverse_learn/skillblender_rl/train.py --task "skillblender:Walking" --sim "isaacgym" --num_envs 1024 --robot "h1_wrist" --use_wandb
    ```
     after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this. Note that we should always use `h1_wrist` instead of navie `h1` keep ths wrist links exist.
 **To speed up training, click the IsaacGym viewer and press V to stop rendering.**
@@ -38,13 +38,12 @@ pip install -e roboverse_learn/rl/rsl_rl
 
 ## Robots supports
 - [x]  h1
-- [ ]  g1
+- [x]  g1
 - [ ]  h1_2
 
 ## Todos
 - [x] domain randomization
-- [ ] ground type selection
-- [ ] pushing robot
+- [x] pushing robot
 - [ ] sim2sim
 
 ## How to add new Task

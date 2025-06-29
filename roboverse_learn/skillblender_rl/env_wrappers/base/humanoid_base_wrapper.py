@@ -85,15 +85,19 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _parse_joint_indices(self, robot):
         """
-        Parse joint indices from robot cfg.
+        Parse joint indices.
         """
-        left_yaw_roll_names = ["left_hip_yaw", "left_hip_roll"]
-        right_yaw_roll_names = ["right_hip_yaw", "right_hip_roll"]
-        self.cfg.left_yaw_roll_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
+        left_yaw_roll_names = robot.left_yaw_roll_joints
+        right_yaw_roll_names = robot.right_yaw_roll_joints
+        upper_body_names = robot.upper_body_joints
+        self.cfg.left_yaw_roll_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
             robot.name, left_yaw_roll_names
         )
-        self.cfg.right_yaw_roll_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
+        self.cfg.right_yaw_roll_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
             robot.name, right_yaw_roll_names
+        )
+        self.cfg.upper_body_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
+            robot.name, upper_body_names
         )
 
     def _parse_cfg(self, scenario):
@@ -564,7 +568,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
             .nonzero(as_tuple=False)
             .flatten()
         )
-        self._resample_commands(env_ids)
+        if len(env_ids) > 0:
+            self._resample_commands(env_ids)
+
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
