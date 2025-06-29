@@ -135,7 +135,6 @@ class StableReward(HumanoidBaseReward):
         ret_rewards = small_control * stand_reward
         return ret_rewards
 
-
 class BaseLocomotionReward(HumanoidBaseReward):
     """Base class for locomotion rewards."""
 
