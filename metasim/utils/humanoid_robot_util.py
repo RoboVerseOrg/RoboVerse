@@ -83,13 +83,6 @@ def body_pos_tensor(envstate, robot_name: str, body_name: str) -> torch.Tensor:
     return envstate.robots[robot_name].body_state[:, body_id, 0:3]
 
 
-def robot_site_pos_tensor(envstate, robot_name: str, site_name):
-    """Returns the height of the neck."""
-    key = f"{robot_name}/{site_name}"
-    site_pos = envstate.extras["sites"][key]["position"]
-    return site_pos
-
-
 def left_foot_height(envstate, robot_name: str):
     """Returns the height of the left foot."""
     # return envstate[f"{_METASIM_SITE_PREFIX}left_foot"]["pos"][2] # Only for mujoco
