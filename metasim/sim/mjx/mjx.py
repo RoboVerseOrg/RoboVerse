@@ -193,9 +193,16 @@ class MJXHandler(BaseSimHandler):
                     rgb=rgb_tensor if want_rgb else None,
                     depth=dep_tensor if want_dep else None,
                 )
+        # ===================== Sensors ==================================
+        sensors: dict[str, torch.Tensor] = {}
+        # `sens_batch` has shape (batch, total_dim)
+        sens_batch = data.sensordata[idx]
+        for name, sl in self._sensor_slices:
+            # Convert JAX → PyTorch; result shape (batch, dim)
+            sensors[name] = j2t(sens_batch[:, sl])
 
         extras = get_extras(self._data, self._mj_model, env_ids)
-        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors={}, extras=extras)
+        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors, extras=extras)
 
     def _set_states(
         self,
@@ -526,12 +533,26 @@ class MJXHandler(BaseSimHandler):
             bid = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, full)
             self._object_root_bid_cache[name] = bid + 1  # +1 because mjcf attaches a wrapper body
 
+    def _build_sensor_cache(self) -> None:
+        """
+        Create a one-time lookup table that stores every sensor's
+        name and its corresponding slice in `sensordata`.
+        """
+        self._sensor_slices: list[tuple[str, slice]] = []
+        start = 0
+        for i in range(self._mj_model.nsensor):
+            dim = int(self._mj_model.sensor_dim[i])
+            name = mujoco.mj_id2name(self._mj_model, mujoco.mjtObj.mjOBJ_SENSOR, i)
+            self._sensor_slices.append((name, slice(start, start + dim)))
+            start += dim
+
     def _init_mjx(self) -> None:
         if self._mj_model.opt.solver == mujoco.mjtSolver.mjSOL_PGS:
             self._mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
         self._mjx_model = mjx.put_model(self._mj_model)
         self._build_joint_name_map()
         self._build_root_bid_cache()
+        self._build_sensor_cache()
 
         # batched empty data
         data_single = mjx.make_data(self._mjx_model)
