@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from metasim.utils import configclass
 
-from .RoboVerse.metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
+from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
@@ -20,10 +20,8 @@ class Go1FeetCfg(BaseRobotCfg):
     # Basic meta-data
     # ------------------------------------------------------------------
     name: str = "go1_feet"
-    num_joints: int = 12                              # 4 legs × 3 DoF
-    mjcf_path: str = (
-        "roboverse_data/robots/go1/go1_feet.xml"
-    )
+    num_joints: int = 12  # 4 legs × 3 DoF
+    mjcf_path: str = "roboverse_data/robots/go1/go1_feet.xml"
 
     # ------------------------------------------------------------------
     # Simulation flags
@@ -45,21 +43,21 @@ class Go1FeetCfg(BaseRobotCfg):
 
     actuators: dict[str, BaseActuatorCfg] = {
         # Front-Right (FR)
-        "FR_hip":   BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
+        "FR_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
         "FR_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FR_calf":  BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "FR_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
         # Front-Left (FL)
-        "FL_hip":   BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
+        "FL_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
         "FL_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FL_calf":  BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "FL_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
         # Rear-Right (RR)
-        "RR_hip":   BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
+        "RR_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
         "RR_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RR_calf":  BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "RR_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
         # Rear-Left (RL)
-        "RL_hip":   BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
+        "RL_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
         "RL_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RL_calf":  BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "RL_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
     }
 
     # ------------------------------------------------------------------
