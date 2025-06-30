@@ -85,7 +85,12 @@ class HumanoidBaseReward:
     def __init__(self, robot_name="h1"):
         """Initialize the humanoid reward."""
         self.robot_name = robot_name
-        if robot_name == "h1" or robot_name == "h1_simple_hand" or robot_name == "h1_hand":
+        if (
+            robot_name == "h1"
+            or robot_name == "h1_simple_hand"
+            or robot_name == "h1_hand"
+            or robot_name == "h1_body_collision"
+        ):
             self._stand_height = H1_STAND_HEAD_HEIGHT
             self._stand_neck_height = H1_STAND_NECK_HEIGHT
             self._crawl_height = H1_CRAWL_HEAD_HEIGHT
