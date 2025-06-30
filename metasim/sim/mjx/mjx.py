@@ -542,9 +542,7 @@ class MJXHandler(BaseSimHandler):
         start = 0
         for i in range(self._mj_model.nsensor):
             dim = int(self._mj_model.sensor_dim[i])
-            name = mujoco.mj_id2name(
-                self._mj_model, mujoco.mjtObj.mjOBJ_SENSOR, i
-            )
+            name = mujoco.mj_id2name(self._mj_model, mujoco.mjtObj.mjOBJ_SENSOR, i)
             self._sensor_slices.append((name, slice(start, start + dim)))
             start += dim
 
@@ -554,7 +552,7 @@ class MJXHandler(BaseSimHandler):
         self._mjx_model = mjx.put_model(self._mj_model)
         self._build_joint_name_map()
         self._build_root_bid_cache()
-        self._build_sensor_cache()  
+        self._build_sensor_cache()
 
         # batched empty data
         data_single = mjx.make_data(self._mjx_model)
