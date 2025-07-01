@@ -689,6 +689,10 @@ class IsaacgymHandler(BaseSimHandler):
         for _ in range(self.scenario.decimation):
             self._simulate_one_physics_step(self.actions)
 
+        if self.headless:
+            self.gym.step_graphics(self.sim)
+            self.gym.render_all_camera_sensors(self.sim)
+
         # Refresh tensors
         if not self._manual_pd_on:
             self.gym.refresh_dof_state_tensor(self.sim)
