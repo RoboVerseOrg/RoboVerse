@@ -35,7 +35,7 @@ class RobotName(enum.Enum):
     svh = "schunk_svh_hand"
     leap = "leap_hand"
     ability = "ability_hand"
-    inspire = "inspire_hand"
+    inspire = "inspire_hand_right"
     panda = "panda_gripper"
     barrett = "barrett"
     robotiq = "robotiq"
