@@ -13,12 +13,12 @@ from metasim.utils.dex_util.retargeting_config import RetargetingConfig
 
 # For numpy version compatibility
 np.bool = bool
-np.int = int
-np.float = float
-np.str = str
-np.complex = complex
-np.object = object
-np.unicode = np.unicode_
+int = int
+float = float
+str = str
+complex = complex
+object = object
+str = np.str_
 
 
 def viz_retarget_only(

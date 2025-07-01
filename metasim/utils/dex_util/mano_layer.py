@@ -5,9 +5,8 @@
 """Wrapper layer for manopth ManoLayer."""
 
 import torch
-
-from torch.nn import Module
 from manopth.manolayer import ManoLayer
+from torch.nn import Module
 
 
 class MANOLayer(Module):
@@ -15,6 +14,7 @@ class MANOLayer(Module):
 
     def __init__(self, side, betas):
         """Constructor.
+
         Args:
           side: MANO hand type. 'right' or 'left'.
           betas: A numpy array of shape [10] containing the betas.
@@ -37,9 +37,7 @@ class MANOLayer(Module):
         self.register_buffer("f", f)
 
         v = (
-            torch.matmul(self._mano_layer.th_shapedirs, self.b.transpose(0, 1)).permute(
-                2, 0, 1
-            )
+            torch.matmul(self._mano_layer.th_shapedirs, self.b.transpose(0, 1)).permute(2, 0, 1)
             + self._mano_layer.th_v_template
         )
         r = torch.matmul(self._mano_layer.th_J_regressor[0], v)
@@ -47,9 +45,11 @@ class MANOLayer(Module):
 
     def forward(self, p, t):
         """Forward function.
+
         Args:
           p: A tensor of shape [B, 48] containing the pose.
           t: A tensor of shape [B, 3] containing the trans.
+
         Returns:
           v: A tensor of shape [B, 778, 3] containing the vertices.
           j: A tensor of shape [B, 21, 3] containing the joints.

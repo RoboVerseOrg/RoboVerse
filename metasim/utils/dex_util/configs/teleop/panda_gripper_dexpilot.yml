@@ -1,6 +1,6 @@
 retargeting:
   type: DexPilot
-  urdf_path: panda_gripper/panda_gripper_glb.urdf 
+  urdf_path: panda_gripper/panda_gripper_glb.urdf
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: [ "panda_finger_joint1" ]
