@@ -13,7 +13,10 @@ import jax
 import jax.numpy as jnp
 import mujoco
 
-# import mujoco.viewer
+try:
+    import mujoco.viewer
+except ImportError:
+    pass
 import numpy as np
 import torch
 from dm_control import mjcf
