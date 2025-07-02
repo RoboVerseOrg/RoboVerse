@@ -42,7 +42,7 @@ def torso_upright_tensor(envstate, robot_name: str):
 def head_height(envstate, robot_name: str):
     """Returns the height of the head, actually the neck."""
     # raise NotImplementedError("head_height is not implemented for isaacgym and isaaclab")
-    return envstate["robots"][robot_name]["head"]["pos"][
+    return envstate.robots[robot_name]["head"]["pos"][
         2
     ]  # Good for mujoco, but isaacgym and isaaclab don't have head site
 
@@ -70,6 +70,14 @@ def neck_height_tensor(envstate, robot_name: str):
     body_pos_l = envstate.robots[robot_name].body_state[:, body_id_l, 2]
     body_pos_r = envstate.robots[robot_name].body_state[:, body_id_r, 2]
     return (body_pos_l + body_pos_r) / 2
+
+
+def body_pos_tensor(envstate, robot_name: str, body_name: str) -> torch.Tensor:
+    """Return world position of a specific body for ALL environments."""
+    body_names = envstate.robots[robot_name].body_names  # list[str]
+    body_id = body_names.index(body_name)
+    # body_state shape = (B, n_body, 13) -> [pos(3), quat(4), linVel(3), angVel(3)]
+    return envstate.robots[robot_name].body_state[:, body_id, 0:3]
 
 
 def left_foot_height(envstate, robot_name: str):
