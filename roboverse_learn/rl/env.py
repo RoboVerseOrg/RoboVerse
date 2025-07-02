@@ -15,6 +15,9 @@ import torch
 from metasim.sim.env_wrapper import GymEnvWrapper
 from metasim.types import Obs
 
+# Import tasks to ensure registration
+from .task_registry import get_task_wrapper
+
 log = logging.getLogger(__name__)
 
 
@@ -28,6 +31,9 @@ class RLEnvWrapper:
         self._register_configs()
         self._set_up_buffers()
 
+        # Initialize task wrapper if available
+        self._init_task_wrapper()
+
         self.verbose = verbose
         self.step_timings = {}
         self.total_steps = 0
@@ -39,6 +45,39 @@ class RLEnvWrapper:
 
         if seed is not None:
             self.set_seed(seed)
+
+    def _init_task_wrapper(self):
+        """Initialize task-specific wrapper if available."""
+        self.task_wrapper = None
+
+        # Construct task name from scenario
+        task_name = getattr(self.scenario.task, "name", None)
+        if task_name is None:
+            # Try to infer from class name
+            task_class_name = self.scenario.task.__class__.__name__
+            if task_class_name.endswith("Cfg"):
+                task_class_name = task_class_name[:-3]
+            task_name = f"isaacgym_envs:{task_class_name}"
+
+        # Get simulator type
+        sim_type = self.env.handler.__class__.__name__.lower().replace("handler", "").replace("sim", "")
+
+        # Debug logging
+        log.info(
+            f"Looking for task wrapper: task_name={task_name}, sim_type={sim_type}, task_class={self.scenario.task.__class__.__name__}"
+        )
+
+        # Try to get a task wrapper
+        self.task_wrapper = get_task_wrapper(task_name, self.env, self.scenario.task, sim_type)
+
+        if self.task_wrapper is not None:
+            log.info(f"Using task wrapper for {task_name} with simulator {sim_type}")
+            # Update observation and action spaces from wrapper
+            self.obs_space = self.task_wrapper.observation_space
+            self.action_space = self.task_wrapper.action_space
+        else:
+            log.debug(f"No task wrapper found for {task_name}, using default behavior")
+            self.action_space = self.get_action_space()
 
     def _normalize_quaternion(self, quat):
         """Normalize a quaternion to unit length."""
@@ -270,6 +309,8 @@ class RLEnvWrapper:
 
     def get_action_space(self):
         """Get the action space for the environment."""
+        if self.task_wrapper is not None:
+            return self.task_wrapper.action_space
         return self.env.action_space
 
     def _set_up_buffers(self):
@@ -368,14 +409,27 @@ class RLEnvWrapper:
         self.env._episode_length_buf += 1
         self.env.handler.set_dof_targets(self.env.handler.robot.name, action_dict)
         self.env.handler.simulate()
-        reward = self.env.handler.task.reward_fn(self.env.handler.get_states(), action_dict).to(self.device)
-        termination = (
-            self.env.handler.task.termination_fn(self.env.handler.get_states()).to(self.device)
-            if hasattr(self.env.handler.task, "termination_fn")
-            else torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        )
-        success = self.env.handler.checker.check(self.env.handler).to(self.device)
+
+        # Get current states
         states = self.env.handler.get_states()
+
+        # Use task wrapper if available for rewards and termination
+        if self.task_wrapper is not None:
+            # Update previous actions in wrapper if it tracks them
+            if hasattr(self.task_wrapper, "update_prev_actions"):
+                self.task_wrapper.update_prev_actions(processed_action)
+
+            reward = self.task_wrapper.compute_reward(states, action_dict, states).to(self.device)
+            termination = self.task_wrapper.check_termination(states).to(self.device)
+        else:
+            reward = self.env.handler.task.reward_fn(self.env.handler.get_states(), action_dict).to(self.device)
+            termination = (
+                self.env.handler.task.termination_fn(self.env.handler.get_states()).to(self.device)
+                if hasattr(self.env.handler.task, "termination_fn")
+                else torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+            )
+
+        success = self.env.handler.checker.check(self.env.handler).to(self.device)
         timeout = (self.env._episode_length_buf >= self.env.handler.scenario.episode_length).to(self.device)
         done = (success | timeout | termination).int()
 
@@ -414,7 +468,9 @@ class RLEnvWrapper:
             states, _ = self.env.reset(env_ids=env_ids)
 
         # Call task-specific reset if available
-        if hasattr(self._task, "reset"):
+        if self.task_wrapper is not None:
+            self.task_wrapper.reset_task(env_ids=env_ids)
+        elif hasattr(self._task, "reset"):
             self._task.reset(env_ids=env_ids)
 
         observation = self.get_observation(states)
@@ -432,8 +488,22 @@ class RLEnvWrapper:
     def get_observation(self, states: Obs) -> dict[str, torch.Tensor]:
         """Process the observation from the handler/GymEnv state format into the dict expected by PPO."""
 
+        # Use task wrapper if available
+        if self.task_wrapper is not None:
+            obs = self.task_wrapper.get_observation(states)
+
+            # Convert to tensor if needed
+            if isinstance(obs, np.ndarray):
+                obs = torch.tensor(obs, dtype=torch.float32, device=self.device)
+
+            # Ensure it's in the right format for PPO (dict with 'obs' key)
+            if isinstance(obs, torch.Tensor):
+                return {"obs": obs}
+            else:
+                return obs
+
         # Check if the task has its own get_observation method (e.g., AllegroHand)
-        if hasattr(self.scenario.task, "get_observation"):
+        elif hasattr(self.scenario.task, "get_observation"):
             # For TensorState objects, we need to convert to the format expected by the task
             if hasattr(states, "__class__") and states.__class__.__name__ == "TensorState":
                 # Convert TensorState to list of dicts for task's get_observation
@@ -546,30 +616,36 @@ class RLEnvWrapper:
 
             return {"obs": obs_tensor}
 
-        # Fallback to original implementation for tasks without get_observation
-        # XXX: currently only one of "joint_qpos" or "rgb" is supported. If there's a mixture of
-        # both, this will raise an error. (also joint_vel is currently not supported)
+        log.warning(f"No task wrapper or get_observation method found for task {self.scenario.task.__class__.__name__}")
+
+        if hasattr(self.obs_space, "shape"):
+            obs_tensor = torch.zeros((self.num_envs, *self.obs_space.shape), device=self.device, dtype=torch.float32)
+            return {"obs": obs_tensor}
+
         obs_mode = ""
-        if "joint_qpos" in self.obs_space.spaces.keys():
+        if hasattr(self.obs_space, "spaces") and "joint_qpos" in self.obs_space.spaces.keys():
             obs_shape_from_space = self.obs_space["joint_qpos"].shape
             obs_mode = "joint_qpos"
-        elif "rgb" in self.obs_space.spaces.keys():
+        elif hasattr(self.obs_space, "spaces") and "rgb" in self.obs_space.spaces.keys():
             obs_shape_from_space = self.obs_space["rgb"].shape
             obs_mode = "rgb"
         else:
-            raise ValueError(f"Observation space {self.obs_space} is not supported.")
+            # Last resort - return dummy observation
+            log.error(f"Cannot determine observation shape from space {self.obs_space}")
+            return {"obs": torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float32)}
 
         obs_tensor = torch.zeros((self.num_envs, *obs_shape_from_space), device=self.device, dtype=torch.float32)
 
-        for i, state in enumerate(states):
-            if obs_mode == "joint_qpos":
-                obs_tensor[i, :] = torch.tensor(
-                    list(state["robots"][self._robot.name]["dof_pos"].values()), device=self.device
-                )
-            elif obs_mode == "rgb" and "rgb" in state:
-                obs_tensor[i, :] = torch.tensor(
-                    state["cameras"][0]["rgb"], device=self.device
-                )  # TODO: this need to be tested in the future
+        if self._robot is not None:
+            for i, state in enumerate(states):
+                if obs_mode == "joint_qpos":
+                    obs_tensor[i, :] = torch.tensor(
+                        list(state["robots"][self._robot.name]["dof_pos"].values()), device=self.device
+                    )
+                elif obs_mode == "rgb" and "rgb" in state:
+                    obs_tensor[i, :] = torch.tensor(
+                        state["cameras"][0]["rgb"], device=self.device
+                    )  # TODO: this need to be tested in the future
 
         return {"obs": obs_tensor}
 
