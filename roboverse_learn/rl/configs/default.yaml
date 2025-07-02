@@ -18,7 +18,7 @@ environment:
   num_envs: 32
   headless: False
   # Options: "isaacgym", "mujoco", or "isaaclab"
-  sim_name: "isaacgym"
+  sim_name: "mujoco"
   rgb_observation: False
 
 wandb:
