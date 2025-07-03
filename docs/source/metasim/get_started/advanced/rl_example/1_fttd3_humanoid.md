@@ -9,7 +9,7 @@ cd RoboVerse/get_started/rl/fast_td3
 pip install -r requirements.txt
 
 # Step 2: Install RoboVerse with MJX simulator support
-cd ../../../..
+cd ../../..
 pip install -e ".[mjx]"
 ```
 
