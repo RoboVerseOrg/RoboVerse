@@ -52,7 +52,7 @@ def parse_docstring_metadata(docstring: str):
 
         meta[key] = values
 
-    # === 重点处理 platforms: 出现为 ✅，未出现为 ❓ ===
+    # === Occur  ✅，otherwise ❓ ===
     if "platforms" in meta:
         listed_platforms = set(p.lower() for p in meta["platforms"])  # lowercase normalize
         platform_status = {}
@@ -60,11 +60,11 @@ def parse_docstring_metadata(docstring: str):
             platform_status[p] = "✅" if p in listed_platforms else "❓"
         meta["platforms"] = platform_status
 
-    # badges 转布尔 map
+    # badges to  map
     if "badges" in meta and isinstance(meta["badges"], list):
         meta["badges"] = {b.strip(): True for b in meta["badges"] if isinstance(b, str)}
 
-    # 自动 video_url（如果没写）
+    # video_url
     if "video_url" not in meta and "title" in meta and "group" in meta:
         meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
 
@@ -140,7 +140,7 @@ def discover_all_tasks():
     task_meta = {}
     for py_path in glob.glob(os.path.join(TASK_CFG_ROOT, "*", "*.py")):
         if os.path.basename(py_path).startswith("__"):
-            continue  # 跳过 __init__.py
+            continue  # pass __init__.py
 
         try:
             with open(py_path) as f:
@@ -197,12 +197,12 @@ def generate_task_groups_md(TASK_REGISTRY, output_path=None):
     for i, group in enumerate(GROUPS):
         lines.append(f"## {group}\n")
 
-        # HTML 表格开头，添加样式美化
+        # HTML table
         lines.append(
             '<table style="table-layout: fixed; width: 100%; border-collapse: collapse; margin-bottom: 24px;">'
         )
 
-        # 表头
+        # Header
         lines.append(
             "<thead><tr>"
             "<th style='width: 30%; word-wrap: break-word; text-align: left; padding: 8px; border-bottom: 2px solid #ccc; font-size: 16px;'>Task / Robot</th>"
@@ -215,23 +215,23 @@ def generate_task_groups_md(TASK_REGISTRY, output_path=None):
 
         lines.append("<tbody>")
 
-        # 获取该 group 的所有任务
+        
         group_tasks = [(tid, meta) for tid, meta in TASK_REGISTRY.items() if meta.get("group") == group]
         group_tasks.sort(key=lambda x: x[1].get("title", x[0]))
 
         for tid, meta in group_tasks:
             task_name = meta.get("title", tid)
-            # 太长的 task_name 加换行
+             
             if len(task_name) > 25 and "_" in task_name:
                 task_name = task_name.replace("_", "_<br>", 1)
 
             # md_path = meta.get("md_path", f"tasks_md/{tid}.md")
 
-            # 第一列：任务名链接
+            
             # row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{md_path}'>{task_name}</a></td>"
             html_path = meta.get("md_path", f"tasks_md/{tid}.md").replace(".md", ".html")
             row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{html_path}'>{task_name}</a></td>"
-            # 平台支持列
+            
             for plat in PLATFORMS:
                 status = meta.get("platforms", {}).get(plat, "❓")
                 row += f"<td style='text-align: center; padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'>{status}</td>"
@@ -243,7 +243,7 @@ def generate_task_groups_md(TASK_REGISTRY, output_path=None):
         if i != len(GROUPS) - 1:
             lines.append("\n---\n")
 
-    # 写入 markdown 文件
+    
     with open(output_path, "w") as f:
         f.write("\n".join(lines))
     # print(f"✅ {output_path} generated.")
