@@ -215,23 +215,21 @@ def generate_task_groups_md(TASK_REGISTRY, output_path=None):
 
         lines.append("<tbody>")
 
-        
         group_tasks = [(tid, meta) for tid, meta in TASK_REGISTRY.items() if meta.get("group") == group]
         group_tasks.sort(key=lambda x: x[1].get("title", x[0]))
 
         for tid, meta in group_tasks:
             task_name = meta.get("title", tid)
-             
+
             if len(task_name) > 25 and "_" in task_name:
                 task_name = task_name.replace("_", "_<br>", 1)
 
             # md_path = meta.get("md_path", f"tasks_md/{tid}.md")
 
-            
             # row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{md_path}'>{task_name}</a></td>"
             html_path = meta.get("md_path", f"tasks_md/{tid}.md").replace(".md", ".html")
             row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{html_path}'>{task_name}</a></td>"
-            
+
             for plat in PLATFORMS:
                 status = meta.get("platforms", {}).get(plat, "❓")
                 row += f"<td style='text-align: center; padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'>{status}</td>"
@@ -243,7 +241,6 @@ def generate_task_groups_md(TASK_REGISTRY, output_path=None):
         if i != len(GROUPS) - 1:
             lines.append("\n---\n")
 
-    
     with open(output_path, "w") as f:
         f.write("\n".join(lines))
     # print(f"✅ {output_path} generated.")
