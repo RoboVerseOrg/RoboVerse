@@ -1,9 +1,5 @@
-from __future__ import annotations
+import torch
 
-from metasim.cfg.checkers import EmptyChecker
-from metasim.cfg.control import ControlCfg
-from metasim.cfg.objects import RigidObjCfg
-from metasim.cfg.robots.ant_cfg import AntCfg as AntRobotCfg
 from metasim.constants import TaskType
 from metasim.utils import configclass
 
@@ -12,52 +8,83 @@ from ..base_task_cfg import BaseTaskCfg
 
 @configclass
 class AntIsaacGymCfg(BaseTaskCfg):
-    name = "isaacgym_envs:AntIsaacGym"
-    episode_length = 1000
+    episode_length = 100
+    objects = []
     traj_filepath = None
     task_type = TaskType.LOCOMOTION
 
-    initial_height = 0.55
+    def reward_fn(
+        self,
+        states,
+        up_weight=0.1,
+        heading_weight=0.5,
+        actions_cost_scale=0.005,
+        energy_cost_scale=0.05,
+        joints_at_limit_cost_scale=0.1,
+        termination_height=0.31,
+        death_cost=-2.0,
+        dof_velocity_scale=0.2,
+        contact_force_scale=0.1,
+    ):
+        # Handle both multi-env (IsaacGym) and single-env (Mujoco) formats
+        rewards = []
+        for env_state in states:
+            # Get ant states
+            ant_state = env_state["ant"]
 
-    dof_vel_scale = 0.2
-    contact_force_scale = 0.1
-    power_scale = 1.0
-    heading_weight = 0.5
-    up_weight = 0.1
-    actions_cost_scale = 0.005
-    energy_cost_scale = 0.05
-    joints_at_limit_cost_scale = 0.1
-    death_cost = -2.0
-    termination_height = 0.31
+            pos = ant_state["pos"]
+            rot = ant_state["rot"]
+            vel = ant_state["vel"]
+            ang_vel = ant_state["ang_vel"]
 
-    robot: AntRobotCfg = AntRobotCfg()
+            joint_pos = torch.tensor([v for v in ant_state["dof_pos"].values()])
+            joint_vel = torch.tensor([v for v in ant_state["dof_vel"].values()])
+            if len(rot) == 4:
+                up_z = 1.0 - 2.0 * (rot[1] ** 2 + rot[2] ** 2)
+            else:
+                up_z = rot[2]
 
-    objects: list[RigidObjCfg] = []
+            up_reward = torch.zeros(1, dtype=torch.float32)
+            if up_z > 0.93:
+                up_reward = torch.tensor([up_weight], dtype=torch.float32)
 
-    control: ControlCfg = ControlCfg(action_scale=15.0, action_offset=False, torque_limit_scale=1.0)
+            vel_x = vel[0]
+            heading_reward = heading_weight * vel_x / 0.8 if vel_x < 0.8 else heading_weight
 
-    checker = EmptyChecker()
+            actions_cost = torch.sum(joint_vel**2)
 
-    observation_space = {"shape": [60]}
+            electricity_cost = torch.sum(torch.abs(joint_vel * joint_pos))
 
-    randomize = {
-        "robot": {
-            "ant": {
-                "pos": {
-                    "type": "gaussian",
-                    "mean": [0.0, 0.0, 0.55],
-                    "std": [0.0, 0.0, 0.0],
-                },
-                "joint_qpos": {
-                    "type": "uniform",
-                    "low": -0.2,
-                    "high": 0.2,
-                },
-                "joint_qvel": {
-                    "type": "uniform",
-                    "low": -0.1,
-                    "high": 0.1,
-                },
+            joint_names = list(ant_state["dof_pos"].keys())
+            joint_limits = {
+                "hip_1": (-0.6981, 0.6981),
+                "ankle_1": (0.5236, 1.7453),
+                "hip_2": (-0.6981, 0.6981),
+                "ankle_2": (-1.7453, -0.5236),
+                "hip_3": (-0.6981, 0.6981),
+                "ankle_3": (-1.7453, -0.5236),
+                "hip_4": (-0.6981, 0.6981),
+                "ankle_4": (0.5236, 1.7453),
             }
-        }
-    }
+
+            joints_at_limit = torch.tensor([float(abs(v) > 0.99) for v in ant_state["dof_pos"].values()])
+            dof_at_limit_cost = torch.sum(joints_at_limit)
+
+            alive_reward = torch.tensor([0.5], dtype=torch.float32)
+
+            height = pos[2]
+            total_reward = (
+                alive_reward
+                + up_reward
+                + heading_reward
+                - actions_cost_scale * actions_cost
+                - energy_cost_scale * electricity_cost
+                - joints_at_limit_cost_scale * dof_at_limit_cost
+            )
+
+            if height < termination_height:
+                total_reward = torch.tensor([death_cost], dtype=torch.float32)
+
+            rewards.append(total_reward)
+
+        return torch.cat(rewards)

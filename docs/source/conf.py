@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -214,6 +215,18 @@ def skip_member(app, what, name, obj, skip, options):
         return True
     return None
 
+def generate_task_markdown(app):
+
+    script_path = os.path.join(app.srcdir, "dataset_benchmark", "tasks", "generate_task_docs.py")
+    if not os.path.exists(script_path):
+        # print(f"[Sphinx] ❌ generate_task_docs.py not found at {script_path}")
+        return
+
+    # print(f"[Sphinx] 🛠 Generating task markdown pages with: {script_path}")
+    result = subprocess.run(
+        [sys.executable, script_path], cwd=os.path.dirname(script_path), capture_output=True, text=True, check=False
+    )
 
 def setup(app):
     app.connect("autodoc-skip-member", skip_member)
+    app.connect("builder-inited", generate_task_markdown)

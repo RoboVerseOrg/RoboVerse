@@ -7,100 +7,95 @@ import torch
 from metasim.cfg.checkers import _SitChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
-from metasim.utils import configclass
-from metasim.utils.humanoid_reward_util import tolerance_tensor
+from metasim.types import EnvState
+from metasim.utils import configclass, humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
-    actuator_forces_tensor,
-    robot_position_tensor,
-    robot_site_pos_tensor,
-    robot_velocity_tensor,
-    torso_upright_tensor,
+    actuator_forces,
+    head_height,
+    robot_position,
+    robot_velocity,
+    torso_upright,
 )
 
 from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg
 
 
 class SitReward(HumanoidBaseReward):
-    """Vectorised reward for the sit task (batch-first TensorState)."""
+    """Reward function for the sit task."""
 
-    def __init__(self, robot_name: str = "h1"):
+    def __init__(self, robot_name="h1"):
+        """Initialize the sit reward."""
         super().__init__(robot_name)
 
-    def __call__(self, states: dict) -> torch.FloatTensor:
-        """Vectorised HumanoidBench-style sitting reward.
+    def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
+        """Compute the sit reward."""
+        results = []
+        for state in states:
+            # Get robot position (center of mass)
+            robot_pos = robot_position(state, self.robot_name)
 
-        Returns:
-        -------
-        reward : (B,) tensor
-        info   : dict   # individual terms for logging
-        """
-        # ------------------------------------------------------------------
-        # Core state tensors
-        # ------------------------------------------------------------------
-        robot_pos = robot_position_tensor(states, self.robot_name)  # (B, 3)
-        chair_pos = states.objects["sit"].root_state[:, 0:3]  # (B, 3)
+            # Get chair position (assuming the chair object is named "sit" based on the config)
+            chair_pos = state["metasim_body_chair/chair"]["pos"]
 
-        head_z = robot_site_pos_tensor(states, self.robot_name, site_name="head")[:, 2]  # (B,)
-        imu_z = robot_site_pos_tensor(states, self.robot_name, site_name="imu")[:, 2]  # (B,)
+            # Get head height for posture calculation
+            head_z = head_height(state)
 
-        vel_xy = robot_velocity_tensor(states, self.robot_name)[:, :2]  # (B, 2)
-        vx, vy = vel_xy[:, 0], vel_xy[:, 1]
+            # Get IMU position (assuming it's at the torso)
+            imu_z = state[f"metasim_site_{self.robot_name}/imu"]["pos"][2]
 
-        # ------------------------------------------------------------------
-        # 1) Sitting on chair
-        # ------------------------------------------------------------------
-        sitting = tolerance_tensor(  # height within [0.68, 0.72]
-            robot_pos[:, 2], bounds=(0.68, 0.72), margin=0.2
-        )
+            # Get velocity for stillness calculation
+            velocity = robot_velocity(state, self.robot_name)
+            vx, vy = velocity[0], velocity[1]
 
-        on_chair_x = tolerance_tensor(  # X aligned with chair
-            robot_pos[:, 0] - chair_pos[:, 0], bounds=(-0.19, 0.19), margin=0.2
-        )
-        on_chair_y = tolerance_tensor(  # Y aligned with chair
-            robot_pos[:, 1] - chair_pos[:, 1], margin=0.1
-        )
-        on_chair = on_chair_x * on_chair_y
+            # Calculate sitting components using tolerance function
+            # sittingx = tol(xrobot−xchair, (−0.19, 0.19), 0.2)
+            sittingx = humanoid_reward_util.tolerance(robot_pos[0] - chair_pos[0], bounds=(-0.19, 0.19), margin=0.2)
 
-        # ------------------------------------------------------------------
-        # 2) Posture & upright
-        # ------------------------------------------------------------------
-        sitting_posture = tolerance_tensor(head_z - imu_z, bounds=(0.35, 0.45), margin=0.3)
+            # sittingy = tol(yrobot−ychair, (0, 0), 0.1)
+            sittingy = humanoid_reward_util.tolerance(robot_pos[1] - chair_pos[1], bounds=(0, 0), margin=0.1)
 
-        upright = tolerance_tensor(
-            torso_upright_tensor(states, self.robot_name),
-            bounds=(0.95, float("inf")),
-            sigmoid="linear",
-            margin=0.9,
-            value_at_margin=0.0,
-        )
+            # sittingz = tol(zrobot, (0.68, 0.72), 0.2)
+            sittingz = humanoid_reward_util.tolerance(robot_pos[2], bounds=(0.68, 0.72), margin=0.2)
 
-        sit_reward = 0.5 * sitting + 0.5 * on_chair  # blend
-        sit_reward = sit_reward * upright * sitting_posture  # pose-conditioned
+            # posture = tol(zhead−zIMU, (0.35, 0.45), 0.3)
+            posture = humanoid_reward_util.tolerance(head_z - imu_z, bounds=(0.35, 0.45), margin=0.3)
 
-        # ------------------------------------------------------------------
-        # 3) Control effort penalty → favour “small_control”
-        # ------------------------------------------------------------------
-        small_control = tolerance_tensor(
-            actuator_forces_tensor(states, self.robot_name),  # (B, n_act)
-            margin=10.0,
-            value_at_margin=0.0,
-            sigmoid="quadratic",
-        ).mean(dim=-1)  # → (B,)
-        small_control = (4.0 + small_control) / 5.0  # rescale ~[0.8,1]
+            # stillx = tol(vx, (0, 0), 2)
+            stillx = humanoid_reward_util.tolerance(vx, bounds=(0, 0), margin=2)
 
-        # ------------------------------------------------------------------
-        # 4) Don’t move horizontally
-        # ------------------------------------------------------------------
-        dont_move = tolerance_tensor(
-            torch.stack([vx, vy], dim=-1),  # (B, 2)
-            margin=2.0,
-        ).mean(dim=-1)  # → (B,)
+            # stilly = tol(vy, (0, 0), 2)
+            stilly = humanoid_reward_util.tolerance(vy, bounds=(0, 0), margin=2)
 
-        # ------------------------------------------------------------------
-        # 5) Final reward & info dict
-        # ------------------------------------------------------------------
-        reward = small_control * sit_reward * dont_move  # (B,)
-        return reward
+            # Get upright component
+            upright = humanoid_reward_util.tolerance(
+                torso_upright(state),
+                bounds=(0.9, 1.0),
+                sigmoid="linear",
+                margin=0.2,
+                value_at_margin=0,
+            )
+
+            # Small control
+            small_control = humanoid_reward_util.tolerance(
+                actuator_forces(state, self.robot_name),
+                margin=10,
+                value_at_margin=0,
+                sigmoid="quadratic",
+            ).mean()
+            small_control = (4 + small_control) / 5
+
+            # Calculate combined reward
+            # R(s,a) = ((0.5·sittingz + 0.5·sittingx×sittingy)×upright×posture)×e×mean(stillx,stilly)
+            sitting_position = 0.5 * sittingz + 0.5 * sittingx * sittingy
+
+            # Fixed: Use a simple average instead of torch.mean() on scalar values
+            stillness = (stillx + stilly) / 2.0
+
+            reward = sitting_position * upright * posture * small_control * stillness
+
+            results.append(reward)
+
+        return torch.tensor(results)
 
 
 @configclass
