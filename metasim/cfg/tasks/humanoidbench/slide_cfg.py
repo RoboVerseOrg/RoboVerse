@@ -41,7 +41,7 @@ class SlideReward(HumanoidBaseReward):
                 margin=10,
                 value_at_margin=0,
                 sigmoid="quadratic",
-            ).mean()
+            ).mean(dim=-1)
             small_control = (4 + small_control) / 5
 
             # Reward for sliding motion - encourage horizontal velocity

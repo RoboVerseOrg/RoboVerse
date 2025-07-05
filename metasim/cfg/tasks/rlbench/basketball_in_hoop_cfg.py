@@ -8,28 +8,7 @@ from .rlbench_task_cfg import RLBenchTaskCfg
 
 @configclass
 class BasketballInHoopCfg(RLBenchTaskCfg):
-    """
-    .. Description:
-
-    ### 📦 Source Metadata (from RLBench or other official sources)
-    ### title:
-    basketball_in_loop
-    ### group:
-    RLBench
-
-    ---
-    ### 🧩 Developer Defined Metadata (customized for RoboVerse or local usage)
-
-    ### video_url:
-    basketball_in_loop.mp4
-
-    ### platforms:
-    - isaaclab
-
-    ### notes:
-    This task was adapted for RoboVerse.
-    RLBench basketball_in_hoop task, migrated from https://github.com/stepjam/RLBench/blob/master/rlbench/tasks/basketball_in_hoop.py.
-    """
+    """RLBench basketball_in_hoop task, migrated from https://github.com/stepjam/RLBench/blob/master/rlbench/tasks/basketball_in_hoop.py."""
 
     episode_length = 200
     traj_filepath = "roboverse_data/trajs/rlbench/basketball_in_hoop/v2"
