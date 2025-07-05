@@ -92,3 +92,4 @@ id_rsa*
 
 # for sapien
 *.convex.stl
+docs/source/dataset_benchmark/tasks/tasks_md/
