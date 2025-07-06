@@ -1,44 +1,27 @@
 # Migrating New Tasks
-## Preparing assets
-### Converting assets
-You need to convert the assets into usd files and put them under `./data_isaaclab/assets/<benchmark_name>/<task_name>`.
 
-Isaac Lab provides easy-to-use tools to convert urdf, mjcf, and mesh files into usd files, see [here](https://isaac-sim.github.io/IsaacLab/main/source/how-to/import_new_asset.html).
+This guide walks you through the full process of integrating a new task into RoboVerse, including trajectory preparation, asset conversion, configuration, and documentation.
 
-Specifically, if you are migrating from old version, please refer to `scripts/convert_usd.py` to ensure the new assets are compatible with the Isaac Lab standard.
+---
 
-### Assets textures
+## 📌 Overview
 
-Please make sure all the paths of the Albedo Map (and other bitmap textures) are relative path.
-![materials](./images/material.jpg)
+To add a new task, you need to complete the following four components:
 
-Please refer to [Omniverse Materials Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for more details.
+1. **Trajectory (`traj`)** — Prepare a demonstration file in the v2 format  
+2. **Assets** — Convert and organize USD assets  
+3. **Configuration File** — Write a task config class in Python  
+4. **Docstring** — Add structured documentation for your task
 
-### Test assets
-You can use the following command to test the assets:
-```bash
-python scripts/test_usd.py --usd_path {your_usd_path}
-```
-By default, the usd will be loaded as Rigid Object.
+Each part is explained in detail below.
 
-For more usage, please run
-```bash
-python scripts/test_usd.py --help
-```
+---
 
-Please make sure this script doesn't give any error.
+## 🔧 1. Collecting trajectories (Data Format v2)
 
-If the scripts doesn't give any error, the assets look good, but still cannot be loaded in MetaSim framework, please report an issue.
 
-## Implementing tasks
-TODO
+Create a `.pkl` file containing demonstration data in **v2 format**. If the filename ends with `_v2.pkl`, the demo reader will automatically parse it using the v2 schema. The data format is:
 
-## Collecting trajectories
-Prepare a .pkl file containing demonstration data. Use the following v2 data format:
-
-### Data format v2
-The file name should be ended with `_v2.pkl`. Once it is ended with `_v2.pkl`, the demo reader will automatically read it by v2 format.
-The data format is:
 ```
 {
     "franka": [  // robot name should be same as BaseRobotMetaCfg.name
@@ -101,144 +84,135 @@ Explaination:
 - `len(actions) == len(states)`
 - Every object should have a key in the `init_state` and `states` dict.
 
-### Data format v1 (deprecated)
-The file name is typically `trajectory-unified.pkl`.
-The data format is:
-```python
-{
-    'source': 'ManiSkill2-rigid_body-PickSingleYCB-v0',
-    'max_episode_len': 147,
-    'demos': {
-        "franka": [
-            {
-                'name': 'banana_traj_0',
-                'description': 'Banana nana bana ba banana.', # optional
-                'env_setup': {
-                    "init_q": [...],          # [q_len], 9 for Franka
-                    "init_robot_pos": [...],  # [3]
-                    "init_robot_quat": [...], # [4]
-                    "init_{obj_name}_pos": [...],    # [3]
-                    "init_{obj_name}_quat": [...],   # [4]
-                    "init_{joint_name}_q": [...],  # [1], for articulations
-                    ...
-                },
-                'robot_traj': {
-                    "q": [[...], ...],        # [demo_len x q_len]
-                    "ee_act": [[...], ...],   # [demo_len x 1] 0.0~1.0 0 for close and 1 for open
-                }
-            },
-            ...
-        ],
-    }
-}
-```
-Explanation:
-- `max_episode_len`: The maximum length of the demo in this file. This is used to pad the trajectories so they can be stacked into a tensor for efficiency.
-- `robot_traj`:
-    - `q`: Robot joint positions
-    - `ee_act`: End-effector actions
-- In each `env_setup`:
-  - `init_q`: initial robot joint positions
-  - `init_pos`: initial robot position
-  - `init_quat`: initial robot rotation (quaterion)
-  - The other `init_*` are used to initialize each environment, and what you save here could be retrived in the `_reset_idx` method of the task env. This usually includes the intial object position, rotation, scaling, joint positions, etc.
-
-
 ### Convert v1 to v2
 If you have already exported the trajectory data in v1 format, you can convert it to v2 format by:
 ```bash
 python scripts/convert_traj_v1_to_v2.py --task CloseBox --robot franka
 ```
 
-### Examples
-```{toctree}
-:titlesonly:
+---
+## 🧱 2. Preparing and Testing Assets
+To define a new task, you must prepare the simulation assets in `.usd` format and organize them in the following directory:
 
-from_robosuite
-from_calvin
+```
+./data_isaaclab/assets/<benchmark_name>/<task_name>/
 ```
 
-### Docstrings
+### 🔄 Converting Assets to USD
 
-Add your new tasks to `docs/source/metasim/api/metasim/metasim.cfg.tasks.rst` so that they can be indexed by the docs.
+RoboVerse relies on USD assets. If your original files are in URDF, MJCF, or mesh formats, use the provided script to convert them:
 
-Once you've registered a task, you must also write a structured docstring inside your task configuration class.
+```bash
+python scripts/convert_usd.py --input {your_file}
+```
 
-📁 **Where to put it**  
-The docstring should be placed inside the corresponding Python file under `metasim/cfg/tasks`.
+> 📝 This ensures compatibility with the Isaac Lab standard.  
+> If you're migrating from an older format, this step is required.
 
-For example, for the `pick_cube` task, the docstring goes in:
+You can also refer to the official [Isaac Lab Asset Import Guide](https://isaac-sim.github.io/IsaacLab/main/source/how-to/import_new_asset.html) for more details.
 
-`metasim/cfg/tasks/maniskill/pick_cube_cfg.py`
+### 🎨 Texture Paths
 
-Below is a template you should follow when writing the docstring:
+Ensure all bitmap texture paths (e.g., Albedo Maps) are **relative paths**, not absolute.  
+For example:
+
+```usd
+diffuse_texture = "./textures/my_texture.png"  ✅
+diffuse_texture = "/home/user/textures/my_texture.png"  ❌
+```
+
+📚 See [Omniverse Material Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for texture guidelines.
+
+![materials](./images/material.jpg)
+
+### 🧪 Test Assets
+
+You can validate your `.usd` asset by running:
+
+```bash
+python scripts/test_usd.py --usd_path {your_usd_file}
+```
+
+By default, the asset is loaded as a rigid object.
+
+For more options, run:
+
+```bash
+python scripts/test_usd.py --help
+```
+
+> ✅ The test script must run **without errors**.  
+> If your asset passes validation but still fails in RoboVerse, please [open an issue](https://github.com/RoboVerseOrg/RoboVerse/issues).
+
+## ⚙️ 3. Write a Configuration File (`cfg`)
+
+Create a new Python file under:
+
+```
+metasim/cfg/tasks/<your_group>/<your_task>_cfg.py
+```
+
+It should define a task config class inheriting from `BaseTaskCfg`. Example:
 
 ```python
-"""The pick up cube task from ManiSkill.
+from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+
+class PickCubeCfg(BaseTaskCfg):
+    task_name = "pick_cube"
+    # Define scene elements, reward, success, randomization, etc.
+```
+
+Make sure your task is properly registered in the task registry.
+
+---
+
+## 📄 4. Add a Structured Docstring
+
+Inside the task config file, write a docstring using the following format:
+
+````python
+"""Pick up a red cube and move it to the goal.
 
 .. Description::
-
-### 📦 Source Metadata (from ManiSkill or other official sources)
 
 ### title:
 pick_cube
 
 ### group:
-Maniskill
+maniskill
 
 ### description:
-A simple task where the robot must grasp a red cube and move it to a target location.
-This serves as a baseline for evaluating manipulation capabilities.
+A simple pick-and-place task with a red cube and a fixed goal.
 
 ### randomizations:
-- Cube XY position is randomized within [0.1, 0.1] × [-0.1, -0.1]
-- Cube Z-axis rotation is randomized
-- Goal position is randomized in XY and Z
+- Cube XY position
+- Goal Z height
 
 ### success:
-- Cube is within 0.025m of goal position (Euclidean)
-- Robot joint velocity is near zero (q̇ < 0.2)
+- Cube within 2.5cm of goal
+- Robot velocity < 0.2
 
 ### badges:
 - demos
-- dense
 - sparse
-
-### official_url:
-https://maniskill.readthedocs.io/...
-
-### poster_url:
-(none)
-
----
-
-### 🧩 Developer Defined Metadata
 
 ### video_url:
 pick_cube.mp4
 
 ### platforms:
-mujoco, isaacgym, sapien3
+isaaclab, mujoco
 
 ### notes:
-This task was adapted for RoboVerse. The original success checker was replaced with PositionShiftChecker,
-which checks whether the cube is lifted by 0.1 meters.
+Imported from ManiSkill and adapted to IsaacLab format.
 """
+````
+
+Also add your task to the documentation index:
+
+```text
+docs/source/metasim/api/metasim/metasim.cfg.tasks.rst
 ```
-🧠 Explanation of Fields
 
-| Field            | Description                                                           |
-| ---------------- | --------------------------------------------------------------------- |
-| `title`          | Unique task name (must match registered name)                         |
-| `group`          | Source dataset or benchmark (e.g. Maniskill, CALVIN)                  |
-| `description`    | What this task does, and why it exists                                |
-| `randomizations` | List of randomized elements in the environment                        |
-| `success`        | Conditions for task completion and success                            |
-| `badges`         | Tags like `demos`, `dense`, or `sparse`                               |
-| `official_url`   | Link to original task documentation, if any                           |
-| `poster_url`     | Optional path to image or gif showing the task                        |
-| `video_url`      | Path to a short demo video (e.g. `pick_cube.mp4`)                     |
-| `platforms`      | List of simulators supported by this task (e.g. `isaacgym`, `mujoco`) |
-| `notes`          | Implementation differences or internal comments for other developers  |
+---
 
-ℹ️ Note: This docstring format is required for correct indexing by RoboVerse. Improperly formatted docstrings will be ignored by the auto-documentation tools.
+If all four components are correctly implemented, you can move on to verify the task using `replay_demo.py`.
