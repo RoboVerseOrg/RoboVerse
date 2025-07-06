@@ -1,6 +1,6 @@
 # Collect Demonstrations 
 
-This tutorial explains how to use `/metasim/scripts/collect_demo.py` to collect expert demonstrations for imitation learning in RoboVerse.
+This tutorial explains how to use `metasim/scripts/collect_demo.py` to collect expert demonstrations for imitation learning in RoboVerse.
 
 ---
 
@@ -20,7 +20,6 @@ python collect_demo.py \
   --task pick_cube \
   --robot franka \
   --sim isaaclab \
-  --split train \
   --num_envs 2 \
   --headless True \
   --run_unfinished
@@ -41,7 +40,6 @@ python collect_demo.py \
 | `--task` | Task name (e.g., `pick_cube`, `plug_charger`) |
 | `--robot` | Robot platform (e.g., `franka`) |
 | `--sim` | Simulator backend (`isaaclab`, `mujoco`, etc.) |
-| `--split` | Dataset split to collect (`train`, `val`, `test`, or `all`) |
 | `--run_all` / `--run_unfinished` / `--run_failed` | Choose exactly one |
 | `--num_envs` | Number of parallel environments |
 | `--headless` | Disable rendering window for faster collection |
@@ -85,7 +83,6 @@ Example:
 ```bash
 python collect_demo.py \
   --task plug_charger \
-  --split train \
   --run_all True \
   --num_envs 4 \
   --cust_name vision_exp \
@@ -110,7 +107,7 @@ python collect_demo.py \
 
 - Demos that have a `status.txt` file with the content `failed` will be retried automatically when using `--run_failed`. There is no need to delete these folders manually.
 - You can visualize collected observations or use them for training downstream agents.
-- All data is saved in pickle format compatible with RoboVerse loaders.
+
 
 ---
 
@@ -118,7 +115,7 @@ python collect_demo.py \
 
 - Use `collect_demo.py` to automate demonstration collection.
 - Start with `--run_unfinished` or `--run_all`.
-- Use `--cust_name` and `--split` to organize your datasets.
+- Use `--cust_name` to organize your datasets.
 - Ensure `traj_filepath` is valid in your task config.
 
 ---
