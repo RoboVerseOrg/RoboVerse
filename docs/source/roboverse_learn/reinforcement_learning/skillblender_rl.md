@@ -30,15 +30,11 @@ you can see video like this
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_reaching.gif" type="video/mp4">
-            </video>
+            <img src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_reaching.gif" style="width: 100%;" />
             <p style="margin-top: 5px;">Skillblender::Reaching</p>
         </div>
         <div style="width: 48%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_walking.gif" type="video/mp4">
-            </video>
+            <img src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_walking.gif" style="width: 100%;" />
             <p style="margin-top: 5px;">Skillblender::Walking</p>
         </div>
     </div>
