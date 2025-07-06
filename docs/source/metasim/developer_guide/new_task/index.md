@@ -8,7 +8,7 @@ This guide walks you through the full process of integrating a new task into Rob
 
 To add a new task, you need to complete the following four components:
 
-1. **Trajectory (`traj`)** — Prepare a demonstration file in the v2 format  
+1. **Trajectory (traj)** — Prepare a demonstration file in the v2 format  
 2. **Assets** — Convert and organize USD assets  
 3. **Configuration File** — Write a task config class in Python  
 4. **Docstring** — Add structured documentation for your task
@@ -19,113 +19,91 @@ Each part is explained in detail below.
 
 ## 🔧 1. Collecting trajectories (Data Format v2)
 
-
 Create a `.pkl` file containing demonstration data in **v2 format**. If the filename ends with `_v2.pkl`, the demo reader will automatically parse it using the v2 schema. The data format is:
 
-```
+```python
 {
-    "franka": [  // robot name should be same as BaseRobotMetaCfg.name
+    "franka": [
         {
             "actions": [
                 {
-                    // one or more of the following
-                    "dof_pos_target": {
-                        "{joint_name1}": float,
-                        "{joint_name2}": float,
-                        ...
-                    },
+                    "dof_pos_target": {"joint1": float, ...},
                     "ee_pose_target": {
-                        "pos": [float, float, float],
-                        "rot": [float, float, float, float],  // (w, x, y, z)
-                        "gripper_joint_pos": float,
+                        "pos": [x, y, z],
+                        "rot": [w, x, y, z],
+                        "gripper_joint_pos": float
                     }
                 },
                 ...
             ],
             "init_state": {
-                "{obj_name1}": {  // example rigid object
-                    "pos": [float, float, float],
-                    "rot": [float, float, float, float],  // (w, x, y, z)
-                },
-                "{obj_name2}": {  // example articulation object
-                    "pos": [float, float, float],
-                    "rot": [float, float, float, float],  // (w, x, y, z)
-                    "dof_pos": {
-                        "{joint_name1}": float,
-                        "{joint_name2}": float,
-                        ...
-                    }
-                },
-                "{robot_name}": {  // robot name should be same as BaseRobotMetaCfg.name
-                    "pos": [float, float, float],
-                    "rot": [float, float, float, float],  // (w, x, y, z)
-                    "dof_pos": {
-                        "{joint_name1}": float,
-                        "{joint_name2}": float,
-                        ...
-                    }
-                },
+                "object1": {"pos": [...], "rot": [...]},
+                "robot": {"pos": [...], "rot": [...], "dof_pos": {...}},
                 ...
             },
-            "states": [state1, state2, ...]  // list of states, a state has the same format as the init_state
-            "extra": None  // extra information for specific use, default is None
+            "states": [state1, state2, ...],
+            "extra": None
         },
         ...
     ],
     ...
 }
 ```
-Explaination:
-- The relationship between actions and states:
-    ```{mermaid}
-    graph LR
-    init_state --> a0["actions[0]"] --> s0["states[0]"] --> a1["actions[1]"] --> s1["states[1]"] --> ... --> an["actions[n-1]"] --> sn["states[n-1]"]
-    ```
-- `len(actions) == len(states)`
-- Every object should have a key in the `init_state` and `states` dict.
 
-### Convert v1 to v2
-If you have already exported the trajectory data in v1 format, you can convert it to v2 format by:
+Explanation:
+
+- The relationship between actions and states:
+
+```{mermaid}
+graph LR
+init_state --> a0["actions[0]"] --> s0["states[0]"] --> a1["actions[1]"] --> s1["states[1]"] --> ... --> an["actions[n-1]"] --> sn["states[n-1]"]
+```
+
+- `len(actions) == len(states)`
+- Each object must be present in both `init_state` and every `states` entry.
+
+### 🔄 Convert v1 to v2
+
+If your demonstrations were collected using the legacy **v1 format**, convert them to the new **v2 format** using:
+
 ```bash
 python scripts/convert_traj_v1_to_v2.py --task CloseBox --robot franka
 ```
 
+👉 For details about the v1 schema and field meanings, see [Data Format v1 (Deprecated)](./data_format_v1.md).
+
 ---
+
 ## 🧱 2. Preparing and Testing Assets
-To define a new task, you must prepare the simulation assets in `.usd` format and organize them in the following directory:
+
+To define a new task in RoboVerse, you must prepare simulation assets in `.usd`, `URDF`, or `MJCF` format. This section explains how to organize and validate them.
+
+Assets should be placed in the following structure:
 
 ```
-./data_isaaclab/assets/<benchmark_name>/<task_name>/
+./roboverse_data/assets/<benchmark_name>/<task_name>/
 ```
 
-### 🔄 Converting Assets to USD
+---
 
-RoboVerse relies on USD assets. If your original files are in URDF, MJCF, or mesh formats, use the provided script to convert them:
+### 🔠 A. USD Assets (Preferred)
 
-```bash
-python scripts/convert_usd.py --input {your_file}
-```
+RoboVerse natively supports assets in [USD (Universal Scene Description)](https://developer.nvidia.com/usd) format.
 
-> 📝 This ensures compatibility with the Isaac Lab standard.  
-> If you're migrating from an older format, this step is required.
+#### 🎨 Texture Guidelines
 
-You can also refer to the official [Isaac Lab Asset Import Guide](https://isaac-sim.github.io/IsaacLab/main/source/how-to/import_new_asset.html) for more details.
-
-### 🎨 Texture Paths
-
-Ensure all bitmap texture paths (e.g., Albedo Maps) are **relative paths**, not absolute.  
-For example:
+Ensure that all bitmap texture paths (e.g., Albedo Maps) in your USD files are **relative**:
 
 ```usd
 diffuse_texture = "./textures/my_texture.png"  ✅
 diffuse_texture = "/home/user/textures/my_texture.png"  ❌
 ```
 
-📚 See [Omniverse Material Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for texture guidelines.
+📚 See [Omniverse Material Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for detailed texture usage rules.
 
-![materials](./images/material.jpg)
 
-### 🧪 Test Assets
+
+#### 🧪 Test USD Assets
 
 You can validate your `.usd` asset by running:
 
@@ -133,23 +111,27 @@ You can validate your `.usd` asset by running:
 python scripts/test_usd.py --usd_path {your_usd_file}
 ```
 
-By default, the asset is loaded as a rigid object.
+By default, this loads the asset as a rigid object.
 
-For more options, run:
+> ✅ The test script must run **without errors**.\
+> If your asset passes validation but fails to load in RoboVerse, please [open an issue](https://github.com/RoboVerseOrg/RoboVerse/issues).
 
-```bash
-python scripts/test_usd.py --help
-```
+---
 
-> ✅ The test script must run **without errors**.  
-> If your asset passes validation but still fails in RoboVerse, please [open an issue](https://github.com/RoboVerseOrg/RoboVerse/issues).
+### ⚙️ B. URDF Assets (Coming Soon)
+
+---
+
+### 🔧 C. MJCF Assets (Coming Soon)
+
+---
 
 ## ⚙️ 3. Write a Configuration File (`cfg`)
 
 Create a new Python file under:
 
 ```
-metasim/cfg/tasks/<your_group>/<your_task>_cfg.py
+metasim/cfg/tasks/<benchmark_name>/<your_task>_cfg.py
 ```
 
 It should define a task config class inheriting from `BaseTaskCfg`. Example:
@@ -170,7 +152,7 @@ Make sure your task is properly registered in the task registry.
 
 Inside the task config file, write a docstring using the following format:
 
-````python
+```python
 """Pick up a red cube and move it to the goal.
 
 .. Description::
@@ -205,7 +187,8 @@ isaaclab, mujoco
 ### notes:
 Imported from ManiSkill and adapted to IsaacLab format.
 """
-````
+```
+
 | Field            | Description                                                           |
 | ---------------- | --------------------------------------------------------------------- |
 | `title`          | Unique task name (must match registered name)                         |
@@ -220,7 +203,7 @@ Imported from ManiSkill and adapted to IsaacLab format.
 | `platforms`      | List of simulators supported by this task (e.g. `isaacgym`, `mujoco`) |
 | `notes`          | Implementation differences or internal comments for other developers  |
 
-ℹ️ Note: This docstring format is required for correct indexing by RoboVerse. Improperly formatted docstrings will be ignored by the documentation system.
+ℹ️Note: This docstring format is required for correct indexing by RoboVerse. Improperly formatted docstrings will be ignored by the documentation system.
 
 Also add your task to the documentation index:
 
@@ -231,3 +214,25 @@ docs/source/metasim/api/metasim/metasim.cfg.tasks.rst
 ---
 
 If all four components are correctly implemented, you can move on to verify the task using `replay_demo.py`.
+
+---
+
+## 🔗 References
+
+The following resources may be useful when migrating existing datasets or assets into RoboVerse:
+
+- 🔄 **CALVIN Trajectories**\
+  GitHub: [https://github.com/Fisher-Wang/calvin](https://github.com/Fisher-Wang/calvin)\
+  Provides tools and examples to convert CALVIN demonstration trajectories.
+
+- 🧱 **RLBench Asset Export**\
+  GitHub: [https://github.com/Fisher-Wang/RLBench\_export\_assets](https://github.com/Fisher-Wang/RLBench_export_assets)\
+  Scripts for exporting RLBench assets (URDF / USD) in a format compatible with RoboVerse and Isaac Sim.
+
+- 🎮 **RLBench Trajectories**\
+  GitHub: [https://github.com/Fisher-Wang/RLBench](https://github.com/Fisher-Wang/RLBench)\
+  Useful for converting RLBench demonstrations and behaviors into RoboVerse-compatible format.
+
+- 📢 [**Data Format v1 (Deprecated)**](./data_format_v1.md)\
+  Full reference for the legacy v1 demonstration format and conversion guidance.
+
