@@ -206,6 +206,21 @@ isaaclab, mujoco
 Imported from ManiSkill and adapted to IsaacLab format.
 """
 ````
+| Field            | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| `title`          | Unique task name (must match registered name)                         |
+| `group`          | Source dataset or benchmark (e.g. Maniskill, CALVIN)                  |
+| `description`    | What this task does, and why it exists                                |
+| `randomizations` | List of randomized elements in the environment                        |
+| `success`        | Conditions for task completion and success                            |
+| `badges`         | Tags like `demos`, `dense`, or `sparse`                               |
+| `official_url`   | Link to original task documentation, if any                           |
+| `poster_url`     | Optional path to image or gif showing the task                        |
+| `video_url`      | Path to a short demo video (e.g. `pick_cube.mp4`)                     |
+| `platforms`      | List of simulators supported by this task (e.g. `isaacgym`, `mujoco`) |
+| `notes`          | Implementation differences or internal comments for other developers  |
+
+ℹ️ Note: This docstring format is required for correct indexing by RoboVerse. Improperly formatted docstrings will be ignored by the documentation system.
 
 Also add your task to the documentation index:
 
