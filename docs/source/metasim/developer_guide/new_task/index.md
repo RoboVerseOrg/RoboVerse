@@ -99,9 +99,9 @@ diffuse_texture = "./textures/my_texture.png"  ✅
 diffuse_texture = "/home/user/textures/my_texture.png"  ❌
 ```
 
-📚 See [Omniverse Material Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for detailed texture usage rules.
+📚 See [Omniverse Material Best Practices](https://docs.omniverse.nvidia.com/simready/latest/simready-asset-creation/material-best-practices.html) for texture guidelines.
 
-
+![materials](./images/material.jpg)
 
 #### 🧪 Test USD Assets
 
