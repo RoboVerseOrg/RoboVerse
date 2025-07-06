@@ -8,7 +8,7 @@ This guide walks you through the full process of integrating a new task into Rob
 
 To add a new task, you need to complete the following four components:
 
-1. **Trajectory (traj)** — Prepare a demonstration file in the v2 format  
+1. **Trajectory** — Prepare a demonstration file in the v2 format  
 2. **Assets** — Convert and organize USD assets  
 3. **Configuration File** — Write a task config class in Python  
 4. **Docstring** — Add structured documentation for your task
@@ -19,7 +19,7 @@ Each part is explained in detail below.
 
 ## 🔧 1. Collecting trajectories (Data Format v2)
 
-Create a `.pkl` file containing demonstration data in **v2 format**. If the filename ends with `_v2.pkl`, the demo reader will automatically parse it using the v2 schema. The data format is:
+Create a `.pkl` file containing demonstration data in **v2 format**. Make sure the filename ends with `_v2.pkl`. The data format is:
 
 ```python
 {
@@ -62,7 +62,7 @@ init_state --> a0["actions[0]"] --> s0["states[0]"] --> a1["actions[1]"] --> s1[
 - `len(actions) == len(states)`
 - Each object must be present in both `init_state` and every `states` entry.
 
-### 🔄 Convert v1 to v2
+### Convert v1 to v2
 
 If your demonstrations were collected using the legacy **v1 format**, convert them to the new **v2 format** using:
 
@@ -76,7 +76,7 @@ python scripts/convert_traj_v1_to_v2.py --task CloseBox --robot franka
 
 ## 🧱 2. Preparing and Testing Assets
 
-To define a new task in RoboVerse, you must prepare simulation assets in `.usd`, `URDF`, or `MJCF` format. This section explains how to organize and validate them.
+To define a new task in RoboVerse, you must prepare simulation assets in `USD`, `URDF`, or `MJCF` format. This section explains how to organize and validate them.
 
 Assets should be placed in the following structure:
 
@@ -86,11 +86,10 @@ Assets should be placed in the following structure:
 
 ---
 
-### 🔠 A. USD Assets (Preferred)
+### A. USD Assets 
 
-RoboVerse natively supports assets in [USD (Universal Scene Description)](https://developer.nvidia.com/usd) format.
 
-#### 🎨 Texture Guidelines
+#### Texture Guidelines
 
 Ensure that all bitmap texture paths (e.g., Albedo Maps) in your USD files are **relative**:
 
@@ -118,15 +117,15 @@ By default, this loads the asset as a rigid object.
 
 ---
 
-### ⚙️ B. URDF Assets (Coming Soon)
+### B. URDF Assets (Coming Soon)
 
 ---
 
-### 🔧 C. MJCF Assets (Coming Soon)
+### C. MJCF Assets (Coming Soon)
 
 ---
 
-## ⚙️ 3. Write a Configuration File (`cfg`)
+## ⚙️ 3. Write a Configuration File 
 
 Create a new Python file under:
 
@@ -144,8 +143,24 @@ class PickCubeCfg(BaseTaskCfg):
     # Define scene elements, reward, success, randomization, etc.
 ```
 
-Make sure your task is properly registered in the task registry.
+### Register Your Task
 
+After creating the config file, you must **register your task** by importing the config class in the `__init__.py` file under the corresponding benchmark directory:
+
+For example, in:
+
+```
+metasim/cfg/tasks/rlbench/__init__.py
+```
+
+Add a line like:
+
+```python
+from .your_task_cfg import YourTaskCfg
+```
+
+> 📝 This ensures your task is included in the RoboVerse registry and can be loaded by name.\
+> Without this, your task won't be discoverable or runnable.
 ---
 
 ## 📄 4. Add a Structured Docstring
@@ -221,18 +236,18 @@ If all four components are correctly implemented, you can move on to verify the 
 
 The following resources may be useful when migrating existing datasets or assets into RoboVerse:
 
-- 🔄 **CALVIN Trajectories**\
+-  **CALVIN Trajectories**\
   GitHub: [https://github.com/Fisher-Wang/calvin](https://github.com/Fisher-Wang/calvin)\
   Provides tools and examples to convert CALVIN demonstration trajectories.
 
-- 🧱 **RLBench Asset Export**\
+-  **RLBench Asset Export**\
   GitHub: [https://github.com/Fisher-Wang/RLBench\_export\_assets](https://github.com/Fisher-Wang/RLBench_export_assets)\
   Scripts for exporting RLBench assets (URDF / USD) in a format compatible with RoboVerse and Isaac Sim.
 
-- 🎮 **RLBench Trajectories**\
+-  **RLBench Trajectories**\
   GitHub: [https://github.com/Fisher-Wang/RLBench](https://github.com/Fisher-Wang/RLBench)\
   Useful for converting RLBench demonstrations and behaviors into RoboVerse-compatible format.
 
-- 📢 [**Data Format v1 (Deprecated)**](./data_format_v1.md)\
+-  [**Data Format v1 (Deprecated)**](./data_format_v1.md)\
   Full reference for the legacy v1 demonstration format and conversion guidance.
 
