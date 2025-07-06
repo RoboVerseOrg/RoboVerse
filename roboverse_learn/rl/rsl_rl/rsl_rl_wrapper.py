@@ -26,7 +26,7 @@ class RslRlWrapper(VecEnv):
         super().__init__()
 
 
-        if SimType(scenario.sim) not in [SimType.ISAACGYM]:
+        if SimType(scenario.sim) not in [SimType.ISAACGYM,SimType.ISAACLAB, SimType.GENESIS]:
             raise NotImplementedError(
                 f"RslRlWrapper in Roboverse now only supports {SimType.ISAACGYM}, but got {scenario.sim}"
             )
@@ -71,8 +71,12 @@ class RslRlWrapper(VecEnv):
             )
         else:
             init_states_list = init_states_list[: self.num_envs]
-        #tensorize the initial states as TensorState
-        self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
+
+        self.init_states = init_states_list
+
+        if scenario.sim == SimType.ISAACGYM:
+            #tensorize the initial states as TensorState, now we only support IsaacGym
+            self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
 
 
     def get_observations(self):

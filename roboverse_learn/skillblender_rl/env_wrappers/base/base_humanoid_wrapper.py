@@ -9,13 +9,6 @@ from typing import Callable
 import numpy as np
 import torch
 
-from metasim.utils.math import quat_apply, quat_rotate_inverse
-
-try:
-    from isaacgym.torch_utils import torch_rand_float
-except ImportError:
-    pass
-
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.humanoid_robot_util import (
@@ -28,7 +21,13 @@ from metasim.utils.humanoid_robot_util import (
     robot_rotation_tensor,
     robot_velocity_tensor,
 )
+from metasim.utils.math import quat_apply, quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+from roboverse_learn.skillblender_rl.utils import (
+    get_body_reindexed_indices_from_substring,
+    get_joint_reindexed_indices_from_substring,
+    torch_rand_float,
+)
 
 
 class HumanoidBaseWrapper(RslRlWrapper):
@@ -45,7 +44,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self._parse_rigid_body_indices(scenario.robots[0])
         self._parse_joint_indices(scenario.robots[0])
-        self._get_cfg_from_handler()
+        self._parse_joint_cfg(scenario)
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
@@ -62,16 +61,26 @@ class HumanoidBaseWrapper(RslRlWrapper):
         penalised_contact_names = robot.penalized_contacts_links
 
         # get sorted indices for specific body links
-        self.feet_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, feet_names)
-        self.knee_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, knee_names)
-        self.elbow_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, elbow_names)
-        self.wrist_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, wrist_names)
-        self.torso_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, torso_names)
-        self.termination_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
-            robot.name, termination_contact_names
+        self.feet_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, feet_names, device=self.device
         )
-        self.penalised_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
-            robot.name, penalised_contact_names
+        self.knee_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, knee_names, device=self.device
+        )
+        self.elbow_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, elbow_names, device=self.device
+        )
+        self.wrist_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, wrist_names, device=self.device
+        )
+        self.torso_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, torso_names, device=self.device
+        )
+        self.termination_contact_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, termination_contact_names, device=self.device
+        )
+        self.penalised_contact_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, penalised_contact_names, device=self.device
         )
 
         # attach to cfg for reward computation.
@@ -90,14 +99,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
         left_yaw_roll_names = robot.left_yaw_roll_joints
         right_yaw_roll_names = robot.right_yaw_roll_joints
         upper_body_names = robot.upper_body_joints
-        self.cfg.left_yaw_roll_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
-            robot.name, left_yaw_roll_names
+        self.cfg.left_yaw_roll_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, left_yaw_roll_names, device=self.device
         )
-        self.cfg.right_yaw_roll_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
-            robot.name, right_yaw_roll_names
+        self.cfg.right_yaw_roll_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, right_yaw_roll_names, device=self.device
         )
-        self.cfg.upper_body_joint_indices = self.env.handler.get_joint_reindexed_indices_from_substring(
-            robot.name, upper_body_names
+        self.cfg.upper_body_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, upper_body_names, device=self.device
         )
 
     def _parse_cfg(self, scenario):
@@ -106,18 +115,28 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.command_ranges = scenario.task.command_ranges
         self.num_commands = scenario.task.command_dim
 
-    def _get_cfg_from_handler(self):
+    def _parse_joint_cfg(self, scenario):
         """
-        Get cfg from handler for reward computation.
+        parse default joint positions and torque limits from cfg.
         """
-        self.cfg.default_joint_pd_target = self.env.handler.default_dof_pos
-        self.cfg.torque_limits = self.env.handler.torque_limits
+
+        torque_limits = scenario.robots[0].torque_limits
+        sorted_joint_names = sorted(torque_limits.keys())
+        sorted_limits = [torque_limits[name] for name in sorted_joint_names]
+        self.cfg.torque_limits = (
+            torch.tensor(sorted_limits, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+            * scenario.control.torque_limit_scale
+        )
+
+        default_joint_pos = scenario.robots[0].default_joint_positions
+        sorted_joint_pos = [default_joint_pos[name] for name in sorted_joint_names]
+        self.cfg.default_joint_pd_target = (
+            torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+        )
 
     def _init_buffers(self):
         """
         Init all buffer for reward computation
-
-        TODO: move those var into
         """
         self.base_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
@@ -191,9 +210,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
-        self.last_dof_vel = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
-        )
+        self.last_dof_vel = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self.last_root_vel = torch.zeros(self.num_envs, 6, device=self.device, requires_grad=False)
 
         self.last_feet_z = 0.05 * torch.ones(
@@ -317,7 +334,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
-        # TODO read from config
+
         self._parse_gait_phase(envstate)
         self._parse_action(envstate)
         self._parse_history_state(envstate)
@@ -329,8 +346,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
         """Prepares a list of reward functions, which will be called to compute the total reward."""
+
         self.reward_scales = task.reward_weights
-        # remove zero scales + multiply non-zero ones by dt
         for key in list(self.reward_scales.keys()):
             scale = self.reward_scales[key]
             if scale == 0:
@@ -450,7 +467,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _pre_physics_step(self, actions):
         """Apply action smoothing and wrap actions as dict before physics step."""
-        # action smoothing
         delay = torch.rand((self.num_envs, 1), device=self.device)
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
@@ -470,7 +486,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         Input: actions
         Output: obs, privileged_obs, rewards, dones, infos
         """
-        # FIXME return code back
         action_dict = self._pre_physics_step(actions)
         env_states = self._physics_step(action_dict)
         obs, privileged_obs, rewards = self._post_physics_step(env_states)

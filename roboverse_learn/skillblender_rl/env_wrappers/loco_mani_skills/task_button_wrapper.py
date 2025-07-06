@@ -11,7 +11,7 @@ from metasim.utils.humanoid_robot_util import (
     dof_pos_tensor,
     dof_vel_tensor,
 )
-from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
+from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
 class TaskButtonWrapper(HumanoidBaseWrapper):
@@ -42,7 +42,6 @@ class TaskButtonWrapper(HumanoidBaseWrapper):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
-        # TODO read from config
 
         super()._parse_state_for_reward(envstate)
         self._parse_button_goal_pos(envstate)

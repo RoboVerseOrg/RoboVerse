@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import copy
 import datetime
@@ -8,6 +10,7 @@ import torch
 from loguru import logger as log
 
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
@@ -175,3 +178,42 @@ def export_policy_as_jit(actor_critic, path, filename=None):
     model = copy.deepcopy(actor_critic.actor).to("cpu")
     traced_script_module = torch.jit.script(model)
     traced_script_module.save(path)
+
+
+def get_body_reindexed_indices_from_substring(
+    sim_handler: BaseSimHandler, obj_name: str, body_names: list[str], device
+):
+    """given substrings of body name, find all the bodies indices in sorted order."""
+
+    matches = []
+    sorted_names = sim_handler.get_body_names(obj_name, sort=True)
+
+    for name in body_names:
+        for i, s in enumerate(sorted_names):
+            if name in s:
+                matches.append(i)
+
+    index = torch.tensor(matches, dtype=torch.int32, device=device)
+    return index
+
+
+def get_joint_reindexed_indices_from_substring(
+    sim_handler: BaseSimHandler, obj_name: str, joint_names: list[str], device: str
+):
+    """given substrings of joint name, find all the bodies indices in sorted order."""
+
+    matches = []
+    sorted_names = sim_handler.get_joint_names(obj_name, sort=True)
+
+    for name in joint_names:
+        for i, s in enumerate(sorted_names):
+            if name in s:
+                matches.append(i)
+
+    index = torch.tensor(matches, dtype=torch.int32, device=device)
+    return index
+
+
+def torch_rand_float(lower: float, upper: float, shape: tuple[int, int], device: str) -> torch.Tensor:
+    """Generate a tensor of random floats in the range [lower, upper]."""
+    return (upper - lower) * torch.rand(*shape, device=device) + lower

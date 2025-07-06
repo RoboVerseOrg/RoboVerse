@@ -5,6 +5,8 @@ try:
     import isaacgym  # noqa: F401
 except ImportError:
     pass
+
+
 import torch
 from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 
@@ -49,7 +51,6 @@ def play(args):
         train_cfg=env.train_cfg,
         device=device,
         log_dir=log_dir,
-        args=args,
     )
     ppo_runner.load(load_path)
     policy = ppo_runner.get_inference_policy(device=env.device)

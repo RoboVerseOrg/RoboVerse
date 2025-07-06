@@ -11,7 +11,10 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class H1WristCfg(BaseRobotCfg):
     name: str = "h1_wrist"
     num_joints: int = 19  # 19 revolute, 4 fixed
+    usd_path: str = "roboverse_data/robots/h1/usd/h1_wrist.usd"
+    mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
     urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist.urdf"
+    # urdf_path: str = "/home/panwei/RoboVerse/roboverse_data/robots/h1/urdf/h1_wrist_copy.urdf"
     enabled_gravity: bool = True
     fix_base_link: bool = False
     enabled_self_collisions: bool = False
@@ -39,6 +42,29 @@ class H1WristCfg(BaseRobotCfg):
         "right_shoulder_yaw": BaseActuatorCfg(stiffness=100, damping=2),
         "right_elbow": BaseActuatorCfg(stiffness=100, damping=2),
     }
+
+    torque_limits: dict[str, float] = {
+        "left_hip_yaw": 200.0,
+        "left_hip_roll": 200.0,
+        "left_hip_pitch": 200.0,
+        "left_knee": 300.0,
+        "left_ankle": 40.0,
+        "right_hip_yaw": 200.0,
+        "right_hip_roll": 200.0,
+        "right_hip_pitch": 200.0,
+        "right_knee": 300.0,
+        "right_ankle": 40.0,
+        "torso": 200.0,
+        "left_shoulder_pitch": 40.0,
+        "left_shoulder_roll": 40.0,
+        "left_shoulder_yaw": 18.0,
+        "left_elbow": 18.0,
+        "right_shoulder_pitch": 40.0,
+        "right_shoulder_roll": 40.0,
+        "right_shoulder_yaw": 18.0,
+        "right_elbow": 18.0,
+    }
+
     joint_limits: dict[str, tuple[float, float]] = {
         "left_hip_yaw": (-0.43, 0.43),
         "left_hip_roll": (-0.43, 0.43),

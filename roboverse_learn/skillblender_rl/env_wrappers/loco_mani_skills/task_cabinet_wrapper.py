@@ -11,7 +11,7 @@ from metasim.utils.humanoid_robot_util import (
     dof_pos_tensor,
     dof_vel_tensor,
 )
-from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
+from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
 class TaskCabinetWrapper(HumanoidBaseWrapper):

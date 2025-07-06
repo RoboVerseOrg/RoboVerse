@@ -997,26 +997,6 @@ class IsaacgymHandler(BaseSimHandler):
     def _get_joint_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._joint_info[obj_name]["global_indices"][jn] for jn in self.get_joint_names(obj_name)]
 
-    def get_body_reindexed_indices_from_substring(self, obj_name, body_names: list[str]) -> torch.tensor:
-        """given substring of body name, find all the bodies indices in sorted order."""
-        matches = []
-        for name in body_names:
-            matches.extend([s for s in self._body_info[obj_name]["names"] if name in s])
-        index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
-        for i, name in enumerate(matches):
-            index[i] = list(self._body_info[obj_name]["local_indices"]).index(name)
-        return index
-
-    def get_joint_reindexed_indices_from_substring(self, obj_name, joint_names: list[str]) -> torch.tensor:
-        """given substring of joint name, find all the joint indices in sorted order."""
-        matches = []
-        for name in joint_names:
-            matches.extend([s for s in self._joint_info[obj_name]["names"] if name in s])
-        index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
-        for i, name in enumerate(matches):
-            index[i] = list(self._joint_info[obj_name]["local_indices"]).index(name)
-        return index
-
     def rand_rigid_body_fric(self, cfg: FrictionRandomCfg, env_id: int, props: list[gymapi.RigidShapeProperties]):
         """Randomize the friction of the rigid bodies."""
         if not cfg.enabled:
@@ -1065,7 +1045,8 @@ class IsaacgymHandler(BaseSimHandler):
 
     @property
     def torque_limits(self) -> torch.tensor:
-        return self._torque_limits
+        joint_reindex = self.get_joint_reindex(self.robot.name)
+        return self._torque_limits[:, joint_reindex]
 
     @property
     def robot_num_dof(self) -> int:
