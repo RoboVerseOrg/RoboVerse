@@ -20,6 +20,10 @@ pip install -e roboverse_learn/rl/rsl_rl
    ```
     after training around a few minuts for task `skillblender:Walking` and `skillblender:Stepping`, you can see like this. Note that we should always use `h1_wrist` instead of navie `h1` keep ths wrist links exist.
 **To speed up training, click the IsaacGym viewer and press V to stop rendering.**
+## Play
+```
+python3 roboverse_learn/skillblender_rl/play.py --task skillblender:Reaching --sim isaacgym --robot h1_wrist --load_run 2025_0628_232507  --checkpoint 15000
+```
 ## Task list
 > 4 Goal-Conditional Skills
 - [x]  Walking
@@ -35,6 +39,8 @@ pip install -e roboverse_learn/rl/rsl_rl
 - [x]  PackageLift
 - [x]  BoxTransfer
 - [x]  PackageCarry
+
+
 
 ## Robots supports
 - [x]  h1
