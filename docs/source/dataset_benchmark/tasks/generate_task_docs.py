@@ -67,6 +67,9 @@ def parse_docstring_metadata(docstring: str):
     # video_url
     if "video_url" not in meta and "title" in meta and "group" in meta:
         meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
+    elif "video_url" in meta and not meta["video_url"].startswith("http"):
+        meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
+
 
     elif "video_url" in meta and not meta["video_url"].startswith("http"):
         meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
@@ -115,7 +118,9 @@ def generate_md(tid: str, meta: dict) -> str:
     randoms = format_list_field(meta.get("randomizations", "None."))
     success = format_list_field(meta.get("success", "None."))
 
+
     video_url = meta.get("video_url")
+
     poster_url = meta.get("poster_url", "")
     official_url = meta.get("official_url", "")
     badge_section = render_badges(meta)
@@ -133,7 +138,10 @@ def generate_md(tid: str, meta: dict) -> str:
 **Success Conditions:**{success}
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5bd4a9f ( update new task Docstrings instruction and fix video display error)
 <div style="display: flex; justify-content: center; margin-bottom: 20px;">
     <div style="width: 100%; max-width: 512px; text-align: center;">
         <video width="100%" autoplay loop muted playsinline style="border-radius: 0px;">
@@ -145,7 +153,10 @@ def generate_md(tid: str, meta: dict) -> str:
 
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5bd4a9f ( update new task Docstrings instruction and fix video display error)
 """
 
 
