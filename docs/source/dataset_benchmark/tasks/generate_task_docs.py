@@ -69,10 +69,9 @@ def parse_docstring_metadata(docstring: str):
         meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
 
     elif "video_url" in meta and not meta["video_url"].startswith("http"):
-        meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
-
-
-
+        meta["video_url"] = (
+            f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
+        )
 
     return meta
 
@@ -143,7 +142,6 @@ def generate_md(tid: str, meta: dict) -> str:
     </div>
 </div>
 """
-
 
 
 def discover_all_tasks():
