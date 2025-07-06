@@ -60,8 +60,8 @@ class RslRlWrapper(VecEnv):
     def _get_init_states(self, scenario):
         """ Get initial states from the scenario configuration."""
 
-        self.init_states = getattr(scenario.task, 'init_states', None)
-        if self.init_states is None:
+        init_states_list = getattr(scenario.task, 'init_states', None)
+        if init_states_list is None:
             raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
 
         if len(init_states_list) < self.num_envs:
