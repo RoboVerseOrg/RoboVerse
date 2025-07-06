@@ -36,6 +36,7 @@ user_guide/teleoperate_demo
 user_guide/real2sim
 get_started/prepare_data_hf
 user_guide/tips/index
+user_guide/collect_demo_tutorial
 ```
 
 ```{toctree}
