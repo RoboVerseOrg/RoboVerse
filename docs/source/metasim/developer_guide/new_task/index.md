@@ -161,3 +161,84 @@ from_calvin
 ### Docstrings
 
 Add your new tasks to `docs/source/metasim/api/metasim/metasim.cfg.tasks.rst` so that they can be indexed by the docs.
+
+Once you've registered a task, you must also write a structured docstring inside your task configuration class.
+
+📁 **Where to put it**  
+The docstring should be placed inside the corresponding Python file under `metasim/cfg/tasks`.
+
+For example, for the `pick_cube` task, the docstring goes in:
+
+`metasim/cfg/tasks/maniskill/pick_cube_cfg.py`
+
+Below is a template you should follow when writing the docstring:
+
+```python
+"""The pick up cube task from ManiSkill.
+
+.. Description::
+
+### 📦 Source Metadata (from ManiSkill or other official sources)
+
+### title:
+pick_cube
+
+### group:
+Maniskill
+
+### description:
+A simple task where the robot must grasp a red cube and move it to a target location.
+This serves as a baseline for evaluating manipulation capabilities.
+
+### randomizations:
+- Cube XY position is randomized within [0.1, 0.1] × [-0.1, -0.1]
+- Cube Z-axis rotation is randomized
+- Goal position is randomized in XY and Z
+
+### success:
+- Cube is within 0.025m of goal position (Euclidean)
+- Robot joint velocity is near zero (q̇ < 0.2)
+
+### badges:
+- demos
+- dense
+- sparse
+
+### official_url:
+https://maniskill.readthedocs.io/...
+
+### poster_url:
+(none)
+
+---
+
+### 🧩 Developer Defined Metadata
+
+### video_url:
+pick_cube.mp4
+
+### platforms:
+mujoco, isaacgym, sapien3
+
+### notes:
+This task was adapted for RoboVerse. The original success checker was replaced with PositionShiftChecker,
+which checks whether the cube is lifted by 0.1 meters.
+"""
+```
+🧠 Explanation of Fields
+
+| Field            | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| `title`          | Unique task name (must match registered name)                         |
+| `group`          | Source dataset or benchmark (e.g. Maniskill, CALVIN)                  |
+| `description`    | What this task does, and why it exists                                |
+| `randomizations` | List of randomized elements in the environment                        |
+| `success`        | Conditions for task completion and success                            |
+| `badges`         | Tags like `demos`, `dense`, or `sparse`                               |
+| `official_url`   | Link to original task documentation, if any                           |
+| `poster_url`     | Optional path to image or gif showing the task                        |
+| `video_url`      | Path to a short demo video (e.g. `pick_cube.mp4`)                     |
+| `platforms`      | List of simulators supported by this task (e.g. `isaacgym`, `mujoco`) |
+| `notes`          | Implementation differences or internal comments for other developers  |
+
+ℹ️ Note: This docstring format is required for correct indexing by RoboVerse. Improperly formatted docstrings will be ignored by the auto-documentation tools.
