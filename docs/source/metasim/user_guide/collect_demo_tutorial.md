@@ -12,7 +12,7 @@ This tutorial explains how to use `metasim/scripts/collect_demo.py` to collect e
 
 ## ⚙️ 1. Basic Usage
 
-### ✅ Example
+### Example
 To collect demonstrations for `pick_cube` task, run the following command:
 
 ```bash
@@ -25,7 +25,7 @@ python collect_demo.py \
   --run_unfinished
 ```
 
-> 🔁 **Important:** You must include **exactly one** of the following collection modes:
+> **Important:** You must include **exactly one** of the following collection modes:
 >
 > - `--run_all`: Collect all demos from scratch (overwrite existing ones)
 > - `--run_unfinished`: Only collect demos that are missing or incomplete ✅ recommended
@@ -33,7 +33,7 @@ python collect_demo.py \
 
 ---
 
-## 🧾 Argument Reference
+## Argument Reference
 
 | Argument | Description |
 |----------|-------------|

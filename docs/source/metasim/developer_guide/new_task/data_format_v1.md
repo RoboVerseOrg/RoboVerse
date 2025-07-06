@@ -77,8 +77,4 @@ python scripts/convert_traj_v1_to_v2.py --task CloseBox --robot franka
 
 ---
 
-## 🔗 Related Docs
-
-- [How to Migrate New Tasks](./task_migration_guide.md)
-
 

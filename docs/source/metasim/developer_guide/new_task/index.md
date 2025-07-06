@@ -83,6 +83,31 @@ Assets should be placed in the following structure:
 ```
 ./roboverse_data/assets/<benchmark_name>/<task_name>/
 ```
+To organize simulation assets for a task, use the following folder structure:
+
+roboverse_data/
+└── assets/
+    └── <benchmark_name>/
+        └── <task_name>/
+            ├── obj1/
+            │   ├── usd/
+            │   │   └── obj1.usd
+            │   ├── mjcf/
+            │   │   └── obj1.mjcf
+            │   ├── urdf/
+            │   │   └── obj1.urdf
+            │   └── textures/         # optional
+            │       └── obj1_albedo.png
+            ├── obj2/
+            │   ├── usd/
+            │   │   └── obj2.usd
+            │   ├── mjcf/
+            │   │   └── obj2.mjcf
+            │   ├── urdf/
+            │   │   └── obj2.urdf
+            │   └── textures/         # optional
+            │       └── obj2_albedo.jpg
+            └── ...
 
 ---
 
