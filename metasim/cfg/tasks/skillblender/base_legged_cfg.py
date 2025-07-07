@@ -304,7 +304,7 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     """simulation time step in s"""
     objects = []
     """objects in the environment"""
-    traj_filepath: str = MISSING
+    traj_filepath = None
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
     max_episode_length_s: int = 24

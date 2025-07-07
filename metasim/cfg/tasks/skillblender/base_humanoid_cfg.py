@@ -57,8 +57,6 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     torso_indices: torch.Tensor = MISSING
     contact_indices: torch.Tensor = MISSING
 
-    traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"
-
     init_states = [
         {
             "objects": {},
