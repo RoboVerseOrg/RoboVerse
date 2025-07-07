@@ -149,7 +149,6 @@ class IsaaclabHandler(BaseSimHandler):
             action_tensor_all = torch.cat(action_tensors, dim=-1)
 
         _, _, _, time_out, extras = self.env.step(action_tensor_all)
-        time_out = time_out.cpu()
         success = self.checker.check(self)
         self.simulate()
         states = self.get_states()
