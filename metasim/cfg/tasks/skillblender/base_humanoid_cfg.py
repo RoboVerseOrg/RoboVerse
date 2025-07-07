@@ -49,6 +49,7 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     """
 
     task_name: str = "skillblender_humanoid_task"
+
     human: HumanoidExtraCfg = HumanoidExtraCfg()
 
     elbow_indices: torch.Tensor = MISSING
@@ -89,3 +90,4 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
             },
         }
     ]
+

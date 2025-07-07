@@ -61,9 +61,11 @@ class WalkingCfgPPO(BaseHumanoidCfgPPO):
 class WalkingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Walking."""
 
+    robots: list[BaseRobotCfg] | None = None
     task_name = "walking"
 
     ppo_cfg = WalkingCfgPPO()
+
 
     num_actions = 19
     command_dim = 3
@@ -149,3 +151,11 @@ class WalkingCfg(BaseHumanoidCfg):
         # optional
         "action_rate": -0.0,
     }
+
+    def __post_init__(self):
+        ### get observation and privileged observations from the robots
+        self.num_actions = self.robots[0].num_joints
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 4 * self.num_actions + 25
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)

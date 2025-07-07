@@ -151,7 +151,8 @@ class StableBaseline3VecEnv(VecEnv):
 
     def step_async(self, actions: np.ndarray) -> None:
         self.action_dicts = [
-            {"dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))} for action in actions
+            {args.robot: {"dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))}}
+            for action in actions
         ]
 
     def step_wait(self):
@@ -200,7 +201,7 @@ class StableBaseline3VecEnv(VecEnv):
 
 def train_ppo():
     ## Choice 1: use scenario config to initialize the environment
-    scenario = ScenarioCfg(**vars(args))
+    scenario = ScenarioCfg(task=args.task, robots=[args.robot], num_envs=args.num_envs, sim=args.sim)
     scenario.cameras = []  # XXX: remove cameras to avoid rendering to speed up
     metasim_env = MetaSimVecEnv(scenario, task_name=args.task, num_envs=args.num_envs, sim=args.sim)
 
