@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
@@ -104,7 +105,9 @@ class WalkingRewardCfg(RewardCfg):
 class WalkingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Walking."""
 
+    robots: list[BaseRobotCfg] | None = None
     task_name = "walking"
+    env_spacing = 1.0
     sim_params = SimParamCfg(
         dt=0.001,
         contact_offset=0.01,
@@ -121,14 +124,10 @@ class WalkingCfg(BaseHumanoidCfg):
     reward_cfg = WalkingRewardCfg()
     command_ranges = CommandRanges()
 
-    num_actions = 19
-    command_dim = 3
-    frame_stack = 1
-    c_frame_stack = 3
-    num_single_obs = 3 * num_actions + 6 + command_dim  #
-    num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 4 * num_actions + 25
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+    command_dim: int = 3
+    frame_stack: int = 1
+    c_frame_stack: int = 3
+
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
@@ -210,3 +209,11 @@ class WalkingCfg(BaseHumanoidCfg):
         # optional
         "action_rate": -0.0,
     }
+
+    def __post_init__(self):
+        ### get observation and privileged observations from the robots
+        self.num_actions = self.robots[0].num_joints
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 4 * self.num_actions + 25
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)

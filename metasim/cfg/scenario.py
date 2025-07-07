@@ -74,11 +74,16 @@ class ScenarioCfg:
             ]
 
         ### Parse task and robot
-        if isinstance(self.task, str):
-            self.task = get_task(self.task)
         for i, robot in enumerate(self.robots):
             if isinstance(robot, str):
                 self.robots[i] = get_robot(robot)
+        if isinstance(self.task, str):
+            TaskCls = get_task(self.task)
+            ### Instantiate TaskCls with robots if supported
+            if "robots" in TaskCls.__dataclass_fields__.keys():
+                self.task = TaskCls(robots=self.robots)
+            else:
+                self.task = TaskCls()
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
 

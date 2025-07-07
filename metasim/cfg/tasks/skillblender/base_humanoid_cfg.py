@@ -36,6 +36,10 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     task_name: str = "skillblender_humanoid_task"
     humand: HumanoidExtraCfg = HumanoidExtraCfg()
 
+    command_dim: int = 3
+    num_single_obs: int | None = None
+    single_num_privileged_obs: int | None = None
+
     elbow_indices: torch.Tensor | None = None
     contact_indices: torch.Tensor | None = None
     traj_filepath: str = "roboverse_data/trajs/skillblender/initial_state_v2.json"

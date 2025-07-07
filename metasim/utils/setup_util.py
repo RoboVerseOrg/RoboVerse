@@ -236,7 +236,7 @@ def get_task(task_id: str) -> BaseTaskCfg:
         entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
         kwargs={"task_name": task_name},
     )
-    return task_cls()
+    return task_cls
 
 
 def get_robot(robot_name: str) -> BaseRobotCfg:
