@@ -66,7 +66,6 @@ class WalkingCfg(BaseHumanoidCfg):
 
     ppo_cfg = WalkingCfgPPO()
 
-
     num_actions = 19
     command_dim = 3
     frame_stack = 1
