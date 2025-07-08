@@ -13,9 +13,9 @@ class AnymalCfg(BaseRobotCfg):
     num_joints: int = 12
     fix_base_link: bool = False
     scale: list[float] = [1.0, 1.0, 1.0]
-    usd_path: str = "roboverse_data/assets/isaacgymenvs/anymal_c/urdf/anymal.urdf"  # Using URDF for now
-    mjcf_path: str = "roboverse_data/assets/isaacgymenvs/anymal_c/urdf/anymal.urdf"  # Using URDF for now
-    urdf_path: str = "roboverse_data/assets/isaacgymenvs/anymal_c/urdf/anymal.urdf"
+    usd_path: str = "roboverse_data/assets/isaacgymenvs/assets/urdf/anymal_c/urdf/anymal.urdf"  # Using URDF for now
+    mjcf_path: str = "roboverse_data/assets/isaacgymenvs/assets/urdf/anymal_c/urdf/anymal.urdf"  # Using URDF for now
+    urdf_path: str = "roboverse_data/assets/isaacgymenvs/assets/urdf/anymal_c/urdf/anymal.urdf"
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = True

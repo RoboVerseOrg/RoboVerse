@@ -13,9 +13,9 @@ class AntCfg(BaseRobotCfg):
     num_joints: int = 8
     fix_base_link: bool = False
     scale: list[float] = [1.0, 1.0, 1.0]
-    mjcf_path: str = "roboverse_data/robots/ant/mjcf/nv_ant.xml"
-    urdf_path: str = "roboverse_data/robots/ant/urdf/ant.urdf"
-    usd_path: str = "roboverse_data/robots/ant/urdf/ant.urdf"
+    mjcf_path: str = "roboverse_data/assets/isaacgymenvs/assets/mjcf/nv_ant.xml"
+    urdf_path: str = "roboverse_data/assets/isaacgymenvs/assets/mjcf/nv_ant.xml"
+    usd_path: str = "roboverse_data/assets/isaacgymenvs/assets/mjcf/nv_ant.xml"
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = False
