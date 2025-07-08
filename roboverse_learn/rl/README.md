@@ -67,15 +67,29 @@ The Anymal tasks feature a realistic quadruped robot based on ANYbotics' ANYmal 
 
 ## Installation
 
-Before running RL training, ensure you have the proper environment set up:
+Running DM Control RL tasks:
+make sure:
+1: roboverse_learn/rl/configs/default.yaml have sim_name = "mujoco"
+2: roboverse_learn/rl/configs/default.yaml have headless = True if running on clusters
 
-```bash
-# Activate the Isaac Gym environment
-conda activate isaacgym
+conda create -n mujoco python=3.10 -y
+uv pip install -e ".[mujoco]"
+pip install hydra-core
+pip install wandb
+pip install termcolor
+pip install tensorboardx
+export MUJOCO_GL=egl #only if running on clusters
 
-# Set the library path (required for every new terminal)
-export LD_LIBRARY_PATH=/home/handsomeyoungman/anaconda3/envs/isaacgym/lib
-```
+Running IsaacGym_Envs RL Tasks:
+make sure:
+1: roboverse_learn/rl/configs/default.yaml have sim_name = "isaacgym"
+2: If you encounter any error indicating missing asset files, find relative asset over https://github.com/isaac-sim/IsaacGymEnvs/tree/main/assets . Move the asset file to the correct folder as specified by the config file.
+conda create -n isaacgym python=3.8 -y
+
+pip install hydra-core
+pip install wandb
+pip install termcolor
+pip install tensorboardx
 
 ## Training Commands
 
