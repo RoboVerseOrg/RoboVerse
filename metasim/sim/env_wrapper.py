@@ -6,6 +6,7 @@ import time
 from typing import Generic, TypeVar
 
 import gymnasium as gym
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -70,7 +71,9 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
+            return gym.spaces.Box(
+                low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
     return IdentityEnv
 
@@ -157,16 +160,24 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low, high=action_high, shape=(len(action_low),), dtype=torch.float32)
+            return gym.spaces.Box(
+                low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
         @property
         def observation_space(self) -> gym.Space:
+            # Handle simple format like {"shape": [48]} used by IsaacGym tasks
+            if "shape" in self.handler.scenario.task.observation_space:
+                shape = self.handler.scenario.task.observation_space["shape"]
+                return gym.spaces.Box(low=-np.inf, high=np.inf, shape=tuple(shape), dtype=np.float32)
+
+            # Handle nested format for more complex observation spaces
             observation_space = {}
             for obj in self.handler.scenario.task.observation_space.keys():
                 if obj == "robot":
                     for joint in self.handler.scenario.robots[0].joint_names:
                         observation_space[joint] = gym.spaces.Box(
-                            low=-torch.inf, high=torch.inf, shape=(1,), dtype=torch.float32
+                            low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32
                         )
                 else:
                     for key, value in self.handler.scenario.task.observation_space[obj].items():
