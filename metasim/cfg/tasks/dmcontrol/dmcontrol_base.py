@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 import torch
 
-from metasim.cfg.checkers import EmptyChecker
+from metasim.cfg.checkers import BaseChecker, EmptyChecker
+from metasim.cfg.objects import BaseObjCfg
 from metasim.constants import TaskType
 from metasim.utils import configclass
+from metasim.cfg.simulator_params import SimParamCfg
 
 from ..base_task_cfg import BaseTaskCfg
 from .dm_wrapper import DM_CONTROL_AVAILABLE, DMControlWrapper
@@ -16,24 +18,25 @@ from .dm_wrapper import DM_CONTROL_AVAILABLE, DMControlWrapper
 class DMControlBaseCfg(BaseTaskCfg):
     """Base configuration for dm_control tasks."""
 
-    episode_length = 1000
-    traj_filepath = None
-    task_type = TaskType.LOCOMOTION
-    objects = []
-    checker = EmptyChecker()
+    episode_length: int = 1000
+    traj_filepath: Optional[str] = None
+    task_type: TaskType = TaskType.LOCOMOTION
+    objects: list[BaseObjCfg] = []
+    checker: BaseChecker = EmptyChecker()
 
     # dm_control specific parameters
     domain_name: str = None
     task_name: str = None
     visualize_reward: bool = False
-    time_limit: float | None = None
-    environment_kwargs: dict[str, Any] | None = None
-    random_state: int | None = None
+    time_limit: Optional[float] = None
+    environment_kwargs: Optional[dict[str, Any]] = None
+    random_state: Optional[int] = None
 
     def __post_init__(self):
         super().__post_init__()
         self._wrapper = None
         self._initialized = False
+        self.sim_params = SimParamCfg()
 
         # Set observation space based on dm_control environment
         if DM_CONTROL_AVAILABLE and self.domain_name and self.task_name:
