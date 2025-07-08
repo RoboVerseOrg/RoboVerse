@@ -63,14 +63,9 @@ class SteppingCfg(BaseHumanoidCfg):
     )
     commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
-    num_actions = 19
     command_dim = 4
     frame_stack = 1
     c_frame_stack = 3
-    num_single_obs = 3 * num_actions + 6 + command_dim  #
-    num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 18 + 12
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     reward_functions: list[Callable] = [
         reward_feet_pos,
@@ -90,4 +85,9 @@ class SteppingCfg(BaseHumanoidCfg):
     }
 
     def __post_init__(self):
+        super().__post_init__()
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 3 * self.num_actions + 18 + 12
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
         self.command_ranges.feet_max_radius = 0.25

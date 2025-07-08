@@ -61,19 +61,13 @@ class WalkingCfgPPO(BaseHumanoidCfgPPO):
 class WalkingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Walking."""
 
-    robots: list[BaseRobotCfg] | None = None
     task_name = "walking"
 
     ppo_cfg = WalkingCfgPPO()
 
-    num_actions = 19
     command_dim = 3
     frame_stack = 1
     c_frame_stack = 3
-    num_single_obs = 3 * num_actions + 6 + command_dim
-    num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 4 * num_actions + 25
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
     commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
@@ -152,8 +146,7 @@ class WalkingCfg(BaseHumanoidCfg):
     }
 
     def __post_init__(self):
-        ### get observation and privileged observations from the robots
-        self.num_actions = self.robots[0].num_joints
+        super().__post_init__()
         self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
         self.single_num_privileged_obs: int = 4 * self.num_actions + 25

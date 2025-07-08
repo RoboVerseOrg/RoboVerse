@@ -68,14 +68,9 @@ class SquattingCfg(BaseHumanoidCfg):
         lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
     )
 
-    num_actions = 19
     command_dim = 1
     c_frame_stack = 3
     frame_stack = 1
-    num_single_obs = 3 * num_actions + 6 + command_dim  #
-    num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 18 + 3
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=10.0)
 
@@ -102,6 +97,12 @@ class SquattingCfg(BaseHumanoidCfg):
     }
 
     def __post_init__(self):
+        super().__post_init__()
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 3 * self.num_actions + 18 + 3
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
+
         self.command_ranges.root_height_std = 0.2
         self.command_ranges.min_root_height = 0.2
         self.command_ranges.max_root_height = 1.1

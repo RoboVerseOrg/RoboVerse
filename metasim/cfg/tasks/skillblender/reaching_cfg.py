@@ -104,6 +104,10 @@ class ReachingCfg(BaseHumanoidCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 3 * self.num_actions + 60
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
         self.command_ranges.wrist_max_radius = 0.25
         self.command_ranges.l_wrist_pos_x = [-0.10, 0.25]
         self.command_ranges.l_wrist_pos_y = [-0.10, 0.25]

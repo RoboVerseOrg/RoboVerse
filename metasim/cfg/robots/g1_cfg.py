@@ -68,6 +68,30 @@ class G1Cfg(BaseRobotCfg):
         "right_elbow": (-1.0472, 2.0944),
     }
 
+    torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
+        "left_hip_pitch": 88,
+        "left_hip_roll": 139,
+        "left_hip_yaw": 88,
+        "left_knee": 139,
+        "left_ankle_pitch": 50,
+        "left_ankle_roll": 50,
+        "right_hip_pitch": 88,
+        "right_hip_roll": 139,
+        "right_hip_yaw": 88,
+        "right_knee": 139,
+        "right_ankle_pitch": 50,
+        "right_ankle_roll": 50,
+        "waist_yaw": 88,
+        "left_shoulder_pitch": 25,
+        "left_shoulder_roll": 25,
+        "left_shoulder_yaw": 25,
+        "left_elbow": 25,
+        "right_shoulder_pitch": 25,
+        "right_shoulder_roll": 25,
+        "right_shoulder_yaw": 25,
+        "right_elbow": 25,
+    }
+
     default_joint_positions: dict[str, float] = {  # = target angles [rad] when action = 0.0
         "left_hip_pitch": -0.4,
         "left_hip_roll": 0,
@@ -117,17 +141,16 @@ class G1Cfg(BaseRobotCfg):
     }
 
     # rigid body name substrings, to find indices of different rigid bodies.
-    feet_links: list[str] = [
-        "ankle_roll",
-    ]
-    knee_links: list[str] = [
-        "knee",
-    ]
-    elbow_links: list[str] = [
-        "elbow",
-    ]
+    feet_links: list[str] = ["ankle_roll"]
+    knee_links: list[str] = ["knee"]
+    elbow_links: list[str] = ["elbow"]
+    wrist_links: list[str] = ["rubber_hand"]
     torso_links: list[str] = ["torso_link"]
-
     terminate_contacts_links = ["pelvis", "torso", "waist", "shoulder", "elbow", "wrist"]
-
     penalized_contacts_links: list[str] = ["hip", "knee"]
+
+    # joint substrings, to find indices of joints.
+
+    left_yaw_roll_joints = ["left_hip_yaw", "left_hip_roll"]
+    right_yaw_roll_joints = ["right_hip_yaw", "right_hip_roll"]
+    upper_body_joints = ["shoulder", "elbow", "torso"]

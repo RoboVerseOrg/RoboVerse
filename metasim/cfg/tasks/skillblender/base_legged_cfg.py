@@ -11,6 +11,7 @@ from loguru import logger as log
 from metasim.cfg.checkers.base_checker import BaseChecker
 from metasim.cfg.control import ControlCfg
 from metasim.cfg.randomization import FrictionRandomCfg, MassRandomCfg, RandomizationCfg
+from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
 from metasim.sim import BaseSimHandler
@@ -256,6 +257,8 @@ class BaseLeggedTaskCfg(BaseRLTaskCfg):
     reward_functions: list[Callable] = MISSING
     reward_weights: dict[str, float] = MISSING
 
+    robots: list[BaseRobotCfg] | None = None
+    """List of robots in the environment."""
     command_ranges: CommandRanges = CommandRanges()
     """Command Ranges for random command sampling when training."""
     commands = CommandsConfig()
