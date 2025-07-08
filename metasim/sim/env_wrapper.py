@@ -71,7 +71,9 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32)
+            return gym.spaces.Box(
+                low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
     return IdentityEnv
 
@@ -158,17 +160,17 @@ def GymEnvWrapper(cls: type[THandler]) -> type[EnvWrapper[THandler]]:
             action_high = torch.tensor(
                 [limit[1] for limit in self.handler.scenario.robots[0].joint_limits.values()], dtype=torch.float32
             )
-            return gym.spaces.Box(low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32)
+            return gym.spaces.Box(
+                low=action_low.cpu().numpy(), high=action_high.cpu().numpy(), shape=(len(action_low),), dtype=np.float32
+            )
 
         @property
         def observation_space(self) -> gym.Space:
             # Handle simple format like {"shape": [48]} used by IsaacGym tasks
             if "shape" in self.handler.scenario.task.observation_space:
                 shape = self.handler.scenario.task.observation_space["shape"]
-                return gym.spaces.Box(
-                    low=-np.inf, high=np.inf, shape=tuple(shape), dtype=np.float32
-                )
-            
+                return gym.spaces.Box(low=-np.inf, high=np.inf, shape=tuple(shape), dtype=np.float32)
+
             # Handle nested format for more complex observation spaces
             observation_space = {}
             for obj in self.handler.scenario.task.observation_space.keys():
