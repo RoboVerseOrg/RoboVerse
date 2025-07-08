@@ -9,9 +9,9 @@ from metasim.utils import configclass
 @configclass
 class CartpoleCfg(BaseRobotCfg):
     name = "cartpole"
-    urdf_path = "roboverse_data/robots/cartpole/urdf/cartpole.urdf"
-    mjcf_path = "roboverse_data/robots/cartpole/urdf/cartpole.urdf"
-    usd_path = "roboverse_data/robots/cartpole/urdf/cartpole.urdf"
+    urdf_path = "roboverse_data/assets/isaacgymenvs/assets/urdf/cartpole.urdf"
+    mjcf_path = "roboverse_data/assets/isaacgymenvs/assets/urdf/cartpole.urdf"
+    usd_path = "roboverse_data/assets/isaacgymenvs/assets/urdf/cartpole.urdf"
     num_joints = 2  # slider joint for cart, revolute joint for pole
 
     # Physical properties

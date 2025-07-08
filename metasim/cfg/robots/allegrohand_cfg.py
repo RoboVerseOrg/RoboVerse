@@ -10,9 +10,15 @@ class AllegroHandCfg(BaseRobotCfg):
     name: str = "allegro_hand"
     num_joints: int = 16
     fix_base_link: bool = True
-    usd_path: str = "roboverse_data/robots/allegro_hand/urdf/kuka_allegro_touch_sensor.urdf"
-    mjcf_path: str = "roboverse_data/robots/allegro_hand/urdf/kuka_allegro_touch_sensor.urdf"
-    urdf_path: str = "roboverse_data/robots/allegro_hand/urdf/kuka_allegro_touch_sensor.urdf"
+    usd_path: str = (
+        "roboverse_data/assets/isaacgymenvs/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    )
+    mjcf_path: str = (
+        "roboverse_data/assets/isaacgymenvs/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    )
+    urdf_path: str = (
+        "roboverse_data/assets/isaacgymenvs/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    )
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = False
