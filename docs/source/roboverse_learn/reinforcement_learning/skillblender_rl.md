@@ -43,15 +43,17 @@ you can see video like this
 ## Checkpoints
 We also provide [checkpoints](https://huggingface.co/RoboVerseOrg/ckeckpionts/blob/main/skillblender_reaching_ckpt.pt
 )  trained with roboverse humanoid infra. To use it with `roboverse_learn/skillblender_rl/play.py`,
-rename the file to `model_xxx.pt` and place it into the appropriate directory, which should have the following layout:
+rename the file to `model_xxx.pt` and move it into the appropriate directory, which should have the following layout:
 
 ```
 outputs/
 └── skillblender/
-└── h1_wrist_reaching/ # Task Name
-└── 2025_0628_232507/  # Timestamped experiment folder
-└── model_0.pt         # Checkpoint at iterations   0
-└── model_500.pt       # Checkpoint at iterations 500
+    └── h1_wrist_reaching/        # Task name
+        └── 2025_0628_232507/     # Timestamped experiment folder
+            ├── reaching_cfg.py   # Config snapshot (copied from metasim/cfg/tasks/skillblender)
+            ├── model_0.pt        # Checkpoint at iteration 0
+            ├── model_500.pt      # Checkpoint at iteration 500
+            └── ...
 ```
 when play
 
