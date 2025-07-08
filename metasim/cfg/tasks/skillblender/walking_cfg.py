@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.simulator_params import SimParamCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_action_rate,
     reward_action_smoothness,
@@ -43,95 +40,37 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
     reward_vel_mismatch_exp,
 )
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
-
-
-class WalkingCfgPPO(LeggedRobotCfgPPO):
-    seed = 5
-    runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
-
-    class policy:
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
-
-    class algorithm(LeggedRobotCfgPPO.algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    class runner:
-        wandb = True
-        policy_class_name = "ActorCritic"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
-        max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
-        save_interval = 1000  # check for potential saves every this many iterations
-        experiment_name = "walking"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
 
 
 @configclass
-class WalkingRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-    # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
-    soft_torque_limit = 0.001
+class WalkingCfgPPO(BaseHumanoidCfgPPO):
+    seed: int = 0
+
+    @configclass
+    class Runner(BaseHumanoidCfgPPO.Runner):
+        num_steps_per_env = 60
+        max_iterations = 15001
+        save_interval = 500
+        experiment_name = "walking"
+
+    runner: Runner = Runner()
 
 
 @configclass
 class WalkingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Walking."""
 
-    robots: list[BaseRobotCfg] | None = None
     task_name = "walking"
-    env_spacing = 1.0
-    sim_params = SimParamCfg(
-        dt=0.001,
-        contact_offset=0.01,
-        substeps=1,
-        num_position_iterations=4,
-        num_velocity_iterations=0,
-        bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=False,
-        friction_offset_threshold=0.04,
-        num_threads=10,
-    )
 
     ppo_cfg = WalkingCfgPPO()
-    reward_cfg = WalkingRewardCfg()
-    command_ranges = CommandRanges()
 
-    command_dim: int = 3
-    frame_stack: int = 1
-    c_frame_stack: int = 3
-
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
+    command_dim = 3
+    frame_stack = 1
+    c_frame_stack = 3
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
-        # legged
         reward_lin_vel_z,
         reward_ang_vel_xy,
         reward_orientation,
@@ -151,7 +90,6 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_stumble,
         reward_stand_still,
         reward_feet_contact_forces,
-        # walking
         reward_joint_pos,
         reward_feet_distance,
         reward_knee_distance,
@@ -168,8 +106,6 @@ class WalkingCfg(BaseHumanoidCfg):
         reward_action_smoothness,
     ]
 
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "termination": -0.0,
         "lin_vel_z": -0.0,
@@ -179,8 +115,7 @@ class WalkingCfg(BaseHumanoidCfg):
         "collision": -1.0,
         "feet_stumble": -0.0,
         "stand_still": -0.0,
-        # skillblender: walking
-        "joint_pos": 3.2,
+        "joint_pos": 1.6,
         "feet_clearance": 2.0,
         "feet_contact_number": 2.4,
         # gait
@@ -190,13 +125,13 @@ class WalkingCfg(BaseHumanoidCfg):
         # contact
         "feet_contact_forces": -0.01,
         # vel tracking
-        "tracking_lin_vel": 4.8,
+        "tracking_lin_vel": 2.4,
         "tracking_ang_vel": 2.2,
         "vel_mismatch_exp": 0.5,
         "low_speed": 0.2,
         "track_vel_hard": 1.0,
         # base pos
-        "default_joint_pos": 0.5,
+        "default_joint_pos": 1.0,
         "upper_body_pos": 0.5,
         "orientation": 1.0,
         "base_acc": 0.2,
@@ -211,8 +146,7 @@ class WalkingCfg(BaseHumanoidCfg):
     }
 
     def __post_init__(self):
-        ### get observation and privileged observations from the robots
-        self.num_actions = self.robots[0].num_joints
+        super().__post_init__()
         self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
         self.single_num_privileged_obs: int = 4 * self.num_actions + 25

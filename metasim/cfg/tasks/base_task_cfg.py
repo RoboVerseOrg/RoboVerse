@@ -10,6 +10,7 @@ import torch
 from metasim.cfg.checkers import BaseChecker
 from metasim.cfg.control import ControlCfg
 from metasim.cfg.objects import BaseObjCfg
+from metasim.cfg.randomization import RandomizationCfg
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import BenchmarkType, TaskType
 from metasim.types import EnvState
@@ -33,6 +34,7 @@ class BaseTaskCfg:
         reward_weights: The list of reward weights.
         sim_params: The simulation params.
         env_spacing: The spacing of parrelal environment.
+        random: The randomization config.
     """
 
     decimation: int = 3
@@ -48,6 +50,7 @@ class BaseTaskCfg:
     sim_params: SimParamCfg = SimParamCfg()
     control: ControlCfg = ControlCfg()
     env_spacing: float = 1.0
+    random: RandomizationCfg | None = None
 
 
 @configclass

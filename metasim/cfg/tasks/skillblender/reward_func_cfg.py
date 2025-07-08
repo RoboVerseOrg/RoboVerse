@@ -242,7 +242,6 @@ def reward_knee_distance(states: EnvState, robot_name: str, cfg: BaseRLTaskCfg) 
     return (torch.exp(-torch.abs(d_min) * 100) + torch.exp(-torch.abs(d_max) * 100)) / 2, knee_dist
 
 
-# @jhcao
 def reward_elbow_distance(states: EnvState, robot_name: str, cfg: BaseRLTaskCfg) -> torch.Tensor:
     """
     Calculates the reward based on the distance between the elbow of the humanoid.
@@ -271,7 +270,6 @@ def reward_feet_contact_number(states: EnvState, robot_name: str, cfg: BaseRLTas
     """
     Reward based on feet contact matching gait phase.
     """
-    # TODO fix this
     contact = states.robots[robot_name].extra["contact_forces"][:, cfg.feet_indices, 2] > 5.0
     stance_mask = states.robots[robot_name].extra["gait_phase"]
     reward = torch.where(contact == stance_mask, 1.0, -0.3)
@@ -283,8 +281,8 @@ def reward_default_joint_pos(states: EnvState, robot_name: str, cfg: BaseRLTaskC
     Keep joint positions close to defaults (penalize yaw/roll).
     """
     joint_diff = states.robots[robot_name].joint_pos - cfg.default_joint_pd_target
-    left_yaw_roll = joint_diff[:, :2]
-    right_yaw_roll = joint_diff[:, 5:7]
+    left_yaw_roll = joint_diff[:, cfg.left_yaw_roll_joint_indices]
+    right_yaw_roll = joint_diff[:, cfg.right_yaw_roll_joint_indices]
     yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
     yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
     return torch.exp(-yaw_roll * 100) - 0.01 * torch.norm(joint_diff, dim=1)
@@ -294,9 +292,8 @@ def reward_upper_body_pos(states: EnvState, robot_name: str, cfg: BaseRLTaskCfg)
     """
     Keep upper body joints close to default positions.
     """
-    torso_index = 10
     joint_diff = states.robots[robot_name].joint_pos - cfg.default_joint_pd_target
-    upper_body_diff = joint_diff[:, torso_index:]  # start from torso
+    upper_body_diff = joint_diff[:, cfg.upper_body_joint_indices]  # start from torso
     upper_body_error = torch.mean(torch.abs(upper_body_diff), dim=1)
     return torch.exp(-4 * upper_body_error), upper_body_error
 

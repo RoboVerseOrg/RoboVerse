@@ -15,10 +15,12 @@ from metasim.cfg.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
+from metasim.cfg.randomization import FrictionRandomCfg, MassRandomCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, EnvState
+from metasim.utils.dict import class_to_dict
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
@@ -131,6 +133,8 @@ class IsaacgymHandler(BaseSimHandler):
         sim_params.physx.num_threads = self.scenario.sim_params.num_threads
         sim_params.physx.use_gpu = self.scenario.sim_params.use_gpu
         sim_params.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
+        sim_params.physx.max_depenetration_velocity = self.scenario.sim_params.max_depenetration_velocity
+        sim_params.physx.default_buffer_size_multiplier = self.scenario.sim_params.default_buffer_size_multiplier
 
         compute_device_id = 0
         graphics_device_id = 0
@@ -209,15 +213,15 @@ class IsaacgymHandler(BaseSimHandler):
         if isinstance(object, PrimitiveCubeCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_box(self.sim, object.size[0], object.size[1], object.size[2], asset_options)
         elif isinstance(object, PrimitiveSphereCfg):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
-            asset_options.fix_base_link = False
-            asset_options.disable_gravity = False
+            asset_options.fix_base_link = object.fix_base_link
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
@@ -226,7 +230,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = True
-            asset_options.disable_gravity = False
+            asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)
@@ -287,6 +291,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._manual_pd_on = any(mode == "effort" for mode in self.robot.control_type.values())
 
         dof_names = self.gym.get_asset_dof_names(robot_asset)
+
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self.robot.actuators[dof_name]
@@ -367,6 +372,7 @@ class IsaacgymHandler(BaseSimHandler):
         # get object and robot asset
         obj_assets_list = [self._load_object_asset(obj) for obj in self.objects]
         robot_asset, robot_dof_props = self._load_robot_assets()
+        robot_rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
 
         #### Joint Info ####
         for art_obj_name, art_obj_joint_dict in self._articulated_joint_dict_dict.items():
@@ -412,7 +418,7 @@ class IsaacgymHandler(BaseSimHandler):
                         rigid_body_names.append(rigid_body_name)
             assert len(rigid_body_names) == num_bodies
             body_info_ = {}
-            body_info_["name"] = rigid_body_names
+            body_info_["names"] = rigid_body_names
             body_info_["local_indices"] = asset_dict
             body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in asset_dict.items()}
             self._body_info[obj_name] = body_info_
@@ -427,7 +433,7 @@ class IsaacgymHandler(BaseSimHandler):
 
         assert len(rigid_body_names) == num_bodies
         rigid_body_info_ = {}
-        rigid_body_info_["name"] = rigid_body_names
+        rigid_body_info_["names"] = rigid_body_names
         rigid_body_info_["local_indices"] = self._robot_link_dict
         rigid_body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in self._robot_link_dict.items()}
         self._body_info[self.robot.name] = rigid_body_info_
@@ -515,6 +521,11 @@ class IsaacgymHandler(BaseSimHandler):
 
             self._env_rigid_body_global_indices[-1]["robot"] = robot_rigid_body_indices
 
+            # domain randomization for robots
+            self.rand_rigid_body_fric(self.scenario.random.friction, i, robot_rigid_shape_props_asset)
+            robot_body_props = self.gym.get_actor_rigid_body_properties(env, robot_handle)
+            self.rand_rigid_body_mass(self.scenario.random.mass, i, robot_body_props)
+
         # GET initial state, copy for reset later
         self._initial_state = np.copy(self.gym.get_sim_rigid_body_states(self.sim, gymapi.STATE_ALL))
 
@@ -527,8 +538,12 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.viewer_camera_look_at(self.viewer, middle_env, cam_pos, cam_target)
         ################################
 
-    def _reorder_quat_xyzw_to_wxyz(self, state: torch.Tensor) -> torch.Tensor:
-        return state[..., [0, 1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 11, 12]]
+    def _reorder_quat_xyzw_to_wxyz(self, state: torch.Tensor, reverse: bool = False) -> torch.Tensor:
+        return (
+            state[..., [0, 1, 2, 4, 5, 6, 3, 7, 8, 9, 10, 11, 12]]
+            if reverse
+            else state[..., [0, 1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 11, 12]]
+        )
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
         if env_ids is None:
@@ -557,7 +572,6 @@ class IsaacgymHandler(BaseSimHandler):
                 )
             object_states[obj.name] = state
 
-        # FIXME some RL task need joint state as dof_pos - default_dof_pos, not absolute dof_pos. see https://github.com/leggedrobotics/legged_gym/blob/17847702f90d8227cd31cce9c920aa53a739a09a/legged_gym/envs/base/legged_robot.py#L216 for further details
         robot_states = {}
         for robot_id, robot in enumerate([self.robot]):
             joint_ids_reindex = self._get_joint_ids_reindex(robot.name)
@@ -762,69 +776,111 @@ class IsaacgymHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        assert len(states) == self.num_envs, (
-            f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
-        )
+        # if states is list[EnvState], iterate over it and set state
+        if isinstance(states, list):
+            assert len(states) == self.num_envs, (
+                f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
+            )
 
-        pos_list = []
-        rot_list = []
-        q_list = []
-        states_flat = [{**states[i]["objects"], **states[i]["robots"]} for i in env_ids]
+            pos_list = []
+            rot_list = []
+            q_list = []
+            states_flat = [{**states[i]["objects"], **states[i]["robots"]} for i in env_ids]
 
-        # Prepare state data for specified env_ids
-        env_indices = {env_id: i for i, env_id in enumerate(env_ids)}
+            # Prepare state data for specified env_ids
+            env_indices = {env_id: i for i, env_id in enumerate(env_ids)}
 
-        for i in range(self.num_envs):
-            if i not in env_indices:
-                continue
+            for i in range(self.num_envs):
+                if i not in env_indices:
+                    continue
 
-            state_idx = env_indices[i]
-            state = states_flat[state_idx]
+                state_idx = env_indices[i]
+                state = states_flat[state_idx]
 
-            pos_list_i = []
-            rot_list_i = []
-            q_list_i = []
-            for obj in self.objects:
-                obj_name = obj.name
-                pos = np.array(state[obj_name].get("pos", [0.0, 0.0, 0.0]))
-                rot = np.array(state[obj_name].get("rot", [1.0, 0.0, 0.0, 0.0]))
-                obj_quat = [rot[1], rot[2], rot[3], rot[0]]  # IsaacGym convention
+                pos_list_i = []
+                rot_list_i = []
+                q_list_i = []
+                for obj in self.objects:
+                    obj_name = obj.name
+                    pos = np.array(state[obj_name].get("pos", [0.0, 0.0, 0.0]))
+                    rot = np.array(state[obj_name].get("rot", [1.0, 0.0, 0.0, 0.0]))
+                    obj_quat = [rot[1], rot[2], rot[3], rot[0]]  # IsaacGym convention
 
-                pos_list_i.append(pos)
-                rot_list_i.append(obj_quat)
+                    pos_list_i.append(pos)
+                    rot_list_i.append(obj_quat)
+                    if isinstance(obj, ArticulationObjCfg):
+                        obj_joint_q = np.zeros(len(self._articulated_joint_dict_dict[obj_name]))
+                        articulated_joint_dict = self._articulated_joint_dict_dict[obj_name]
+                        for joint_name, joint_idx in articulated_joint_dict.items():
+                            if "dof_pos" in state[obj_name]:
+                                obj_joint_q[joint_idx] = state[obj_name]["dof_pos"][joint_name]
+                            else:
+                                log.warning(f"No dof_pos for {joint_name} in {obj_name}")
+                                obj_joint_q[joint_idx] = 0.0
+                        q_list_i.append(obj_joint_q)
+
+                pos_list_i.append(np.array(state[self.robot.name].get("pos", [0.0, 0.0, 0.0])))
+                rot = np.array(state[self.robot.name].get("rot", [1.0, 0.0, 0.0, 0.0]))
+                robot_quat = [rot[1], rot[2], rot[3], rot[0]]
+                rot_list_i.append(robot_quat)
+
+                robot_dof_state_i = np.zeros(len(self._robot_joint_dict))
+                if "dof_pos" in state[self.robot.name]:
+                    for joint_name, joint_idx in self._robot_joint_dict.items():
+                        robot_dof_state_i[joint_idx] = state[self.robot.name]["dof_pos"][joint_name]
+                else:
+                    for joint_name, joint_idx in self._robot_joint_dict.items():
+                        robot_dof_state_i[joint_idx] = (
+                            self.robot.joint_limits[joint_name][0] + self.robot.joint_limits[joint_name][1]
+                        ) / 2
+
+                q_list_i.append(robot_dof_state_i)
+                pos_list.append(pos_list_i)
+                rot_list.append(rot_list_i)
+                q_list.append(q_list_i)
+
+            self._set_actor_root_state(pos_list, rot_list, env_ids)
+            self._set_actor_joint_state(q_list, env_ids)
+
+        # if states is TensorState, reindex the tensors and set state
+        elif isinstance(states, TensorState):
+            new_root_states = self._root_states.view(self.num_envs, -1, 13)
+            new_dof_states = self._dof_states.view(self.num_envs, -1, 2)
+            for idx, obj in enumerate(self.objects):
+                obj_state = states.objects[obj.name]
+                roo_state = self._reorder_quat_xyzw_to_wxyz(obj_state.root_state, reverse=True)
+                new_root_states[env_ids, idx, :] = roo_state[env_ids, :]
                 if isinstance(obj, ArticulationObjCfg):
-                    obj_joint_q = np.zeros(len(self._articulated_joint_dict_dict[obj_name]))
-                    articulated_joint_dict = self._articulated_joint_dict_dict[obj_name]
-                    for joint_name, joint_idx in articulated_joint_dict.items():
-                        if "dof_pos" in state[obj_name]:
-                            obj_joint_q[joint_idx] = state[obj_name]["dof_pos"][joint_name]
-                        else:
-                            log.warning(f"No dof_pos for {joint_name} in {obj_name}")
-                            obj_joint_q[joint_idx] = 0.0
-                    q_list_i.append(obj_joint_q)
+                    joint_pos = obj_state.joint_pos
+                    joint_vel = obj_state.joint_vel
+                    joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
+                    new_dof_states[env_ids, :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
+                    new_dof_states[env_ids, :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
+            for idx, robot in enumerate(self.robots):
+                robot_state = states.robots[robot.name]
+                root_state = self._reorder_quat_xyzw_to_wxyz(robot_state.root_state, reverse=True)
+                new_root_states[env_ids, len(self.objects) + idx, :] = root_state[env_ids, :]
+                joint_pos = robot_state.joint_pos
+                joint_vel = robot_state.joint_vel
+                joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
+                new_dof_states[env_ids, :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
+                new_dof_states[env_ids, :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
 
-            pos_list_i.append(np.array(state[self.robot.name].get("pos", [0.0, 0.0, 0.0])))
-            rot = np.array(state[self.robot.name].get("rot", [1.0, 0.0, 0.0, 0.0]))
-            robot_quat = [rot[1], rot[2], rot[3], rot[0]]
-            rot_list_i.append(robot_quat)
-
-            robot_dof_state_i = np.zeros(len(self._robot_joint_dict))
-            if "dof_pos" in state[self.robot.name]:
-                for joint_name, joint_idx in self._robot_joint_dict.items():
-                    robot_dof_state_i[joint_idx] = state[self.robot.name]["dof_pos"][joint_name]
-            else:
-                for joint_name, joint_idx in self._robot_joint_dict.items():
-                    robot_dof_state_i[joint_idx] = (
-                        self.robot.joint_limits[joint_name][0] + self.robot.joint_limits[joint_name][1]
-                    ) / 2
-
-            q_list_i.append(robot_dof_state_i)
-            pos_list.append(pos_list_i)
-            rot_list.append(rot_list_i)
-            q_list.append(q_list_i)
-
-        self._set_actor_root_state(pos_list, rot_list, env_ids)
-        self._set_actor_joint_state(q_list, env_ids)
+            env_ids_int32_tensor = torch.tensor(env_ids, dtype=torch.int32, device=self.device)
+            self.gym.set_actor_root_state_tensor_indexed(
+                self.sim,
+                gymtorch.unwrap_tensor(new_root_states),
+                gymtorch.unwrap_tensor(env_ids_int32_tensor),
+                len(env_ids),
+            )
+            self.gym.set_dof_state_tensor_indexed(
+                self.sim,
+                gymtorch.unwrap_tensor(new_dof_states),
+                gymtorch.unwrap_tensor(env_ids_int32_tensor),
+                len(env_ids),
+            )
+        else:
+            raise Exception("Unsupported state type, must be EnvState or TensorState")
 
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)
@@ -928,7 +984,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            body_names = self._body_info[obj_name]["name"]
+            body_names = self._body_info[obj_name]["names"]
             if sort:
                 body_names.sort()
             return body_names
@@ -941,15 +997,34 @@ class IsaacgymHandler(BaseSimHandler):
     def _get_joint_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._joint_info[obj_name]["global_indices"][jn] for jn in self.get_joint_names(obj_name)]
 
-    def get_body_reindexed_indices_from_substring(self, obj_name, body_names: list[str]) -> torch.tensor:
-        """given substring of body name, find all the bodies indices in sorted order."""
-        matches = []
-        for name in body_names:
-            matches.extend([s for s in self._body_info[obj_name]["name"] if name in s])
-        index = torch.zeros(len(matches), dtype=torch.int32, device=self.device)
-        for i, name in enumerate(matches):
-            index[i] = list(self._body_info[obj_name]["local_indices"]).index(name)
-        return index
+    def rand_rigid_body_fric(self, cfg: FrictionRandomCfg, env_id: int, props: list[gymapi.RigidShapeProperties]):
+        """Randomize the friction of the rigid bodies."""
+        if not cfg.enabled:
+            return
+        if not hasattr(self, "_rand_fric_dist"):
+            params_dict = class_to_dict(cfg)
+            params_dict["num_envs"] = self.num_envs
+            params_dict["device"] = self.device
+            dist_fn = cfg.dist_fn
+            self._rand_fric_dist = dist_fn(params_dict)
+        # TODO: add rigid body id index
+        for s in range(len(props)):
+            props[s].friction = self._rand_fric_dist[env_id]
+        return props
+
+    def rand_rigid_body_mass(self, cfg: MassRandomCfg, env_id: int, props: list[gymapi.RigidBodyProperties]):
+        """Randomize the base mass."""
+        if not cfg.enabled:
+            return
+        if not hasattr(self, "_rand_mass_dist"):
+            params_dict = class_to_dict(cfg)
+            params_dict["num_envs"] = self.num_envs
+            params_dict["device"] = self.device
+            dist_fn = cfg.dist_fn
+            self._rand_mass_dist = dist_fn(params_dict)
+        # TODO: add rigid body id index
+        props[0].mass += self._rand_mass_dist[env_id]
+        return props
 
     @property
     def num_envs(self) -> int:
@@ -970,7 +1045,8 @@ class IsaacgymHandler(BaseSimHandler):
 
     @property
     def torque_limits(self) -> torch.tensor:
-        return self._torque_limits
+        joint_reindex = self.get_joint_reindex(self.robot.name)
+        return self._torque_limits[:, joint_reindex]
 
     @property
     def robot_num_dof(self) -> int:

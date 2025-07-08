@@ -89,9 +89,12 @@ class ScenarioCfg:
 
         ### Simulator parameters overvide by task
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
-        ### Control parameters  overvide by task
+        ### Control parameters overvide by task
         self.control = self.task.control if self.task is not None else self.control
         ### spacing of parallel environments
         self.env_spacing = self.task.env_spacing if self.task is not None else self.env_spacing
+        ### Randomization vervide by task
+        if self.task is not None and self.task.random is not None:
+            self.random = self.task.random
 
         FileDownloader(self).do_it()
