@@ -42,7 +42,7 @@ you can see video like this
 
 ## Checkpoints
 We also provide [checkpoints](https://huggingface.co/RoboVerseOrg/ckeckpionts/blob/main/skillblender_reaching_ckpt.pt
-) trained utilizing roboverse humanoid infra. To use it with `roboverse_learn/skillblender_rl/play.py`,
+)  trained with roboverse humanoid infra. To use it with `roboverse_learn/skillblender_rl/play.py`,
 rename the file to `model_xxx.pt` and place it into the appropriate directory, which should have the following layout:
 
 ```
