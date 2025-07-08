@@ -51,7 +51,7 @@ def main(cfg: DictConfig):
     if cfg.train.task_name.startswith("dmcontrol:") or (
         cfg.train.robot_name == "none" and not cfg.train.task_name.startswith("ogbench:")
     ):
-        scenario = ScenarioCfg(task=task, robots=[])
+        scenario = ScenarioCfg(task=task(), robots=[])
         scenario.cameras = []
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
