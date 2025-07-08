@@ -40,6 +40,21 @@ you can see video like this
     </div>
 </div>
 
+## Checkpoints
+We also provide [checkpoints](https://huggingface.co/RoboVerseOrg/ckeckpionts/blob/main/skillblender_reaching_ckpt.pt
+) trained utilizing roboverse humanoid infra. To use it with `roboverse_learn/skillblender_rl/play.py`,
+rename the file to `model_xxx.pt` and place it into the appropriate directory, which should have the following layout:
+
+```
+outputs/
+└── skillblender/
+└── h1_wrist_reaching/ # Task Name
+└── 2025_0628_232507/  # Timestamped experiment folder
+└── model_0.pt         # Checkpoint at iterations   0
+└── model_500.pt       # Checkpoint at iterations 500
+```
+when play
+
 ## Task list
 > 4 Goal-Conditional Skills
 - [x]  Walking
