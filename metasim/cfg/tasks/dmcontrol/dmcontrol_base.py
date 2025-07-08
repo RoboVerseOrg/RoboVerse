@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import torch
 
@@ -19,7 +19,7 @@ class DMControlBaseCfg(BaseTaskCfg):
     """Base configuration for dm_control tasks."""
 
     episode_length: int = 1000
-    traj_filepath: Optional[str] = None
+    traj_filepath: str | None = None
     task_type: TaskType = TaskType.LOCOMOTION
     objects: list[BaseObjCfg] = []
     checker: BaseChecker = EmptyChecker()
@@ -28,9 +28,9 @@ class DMControlBaseCfg(BaseTaskCfg):
     domain_name: str = None
     task_name: str = None
     visualize_reward: bool = False
-    time_limit: Optional[float] = None
-    environment_kwargs: Optional[dict[str, Any]] = None
-    random_state: Optional[int] = None
+    time_limit: float | None = None
+    environment_kwargs: dict[str, Any] | None = None
+    random_state: int | None = None
 
     def __post_init__(self):
         super().__post_init__()
