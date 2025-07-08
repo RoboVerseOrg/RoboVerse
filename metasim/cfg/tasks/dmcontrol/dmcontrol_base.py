@@ -6,9 +6,9 @@ import torch
 
 from metasim.cfg.checkers import BaseChecker, EmptyChecker
 from metasim.cfg.objects import BaseObjCfg
+from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import TaskType
 from metasim.utils import configclass
-from metasim.cfg.simulator_params import SimParamCfg
 
 from ..base_task_cfg import BaseTaskCfg
 from .dm_wrapper import DM_CONTROL_AVAILABLE, DMControlWrapper
