@@ -393,16 +393,10 @@ class _UpAxisRotationChecker(BaseChecker):
 @configclass
 class _SlideChecker(BaseChecker):
     def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
-        from metasim.utils.humanoid_robot_util import torso_upright
+        from metasim.utils.humanoid_robot_util import torso_upright_tensor
 
         states = handler.get_states()
-        terminated = []
-        for state in states:
-            if torso_upright(state, handler._robot.name) < 0.6:
-                terminated.append(True)
-            else:
-                terminated.append(False)
-        return torch.tensor(terminated)
+        return torso_upright_tensor(states, handler._robot.name) < 0.6
 
 
 ## FIXME: This checker should be removed!
