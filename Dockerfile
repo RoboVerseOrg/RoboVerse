@@ -106,6 +106,18 @@ RUN mkdir -p ${HOME}/packages \
     && ./isaaclab.sh -i \
     && pip cache purge
 
+## Install IsaacLab v2.1.0
+# RUN mkdir -p ${HOME}/packages \
+#     && cd ${HOME}/packages \
+#     && eval "$(mamba shell hook --shell bash)" \
+#     && mamba activate metasim \
+#     && git clone --depth 1 --branch v2.1.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab2 \
+#     && cd IsaacLab2 \
+#     && sed -i '/^EXTRAS_REQUIRE = {/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n}' source/isaaclab_rl/setup.py \
+#     && sed -i 's/if platform\.system() == "Linux":/if False:/' source/isaaclab_mimic/setup.py \
+#     && ./isaaclab.sh -i \
+#     && pip cache purge
+
 ########################################################
 ## Install isaacgym
 ########################################################
