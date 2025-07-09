@@ -570,6 +570,7 @@ class MujocoHandler(BaseSimHandler):
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """
+        Charlie: needs to be taken down
         Get the reindexed body ids for a given object. Reindex means the body reordered by the returned ids will be sorted by their names alphabetically.
 
         Args:
