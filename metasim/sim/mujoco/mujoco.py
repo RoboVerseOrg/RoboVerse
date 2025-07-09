@@ -508,7 +508,9 @@ class MujocoHandler(BaseSimHandler):
     ## Utils
     ############################################################
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(self.object_dict[obj_name], BaseRobotCfg):
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
+            self.object_dict[obj_name], BaseRobotCfg
+        ):
             if obj_name == self.robot.name:
                 prefix = self._mujoco_robot_name
             else:
@@ -521,7 +523,7 @@ class MujocoHandler(BaseSimHandler):
             ]
 
             if obj_name == self.robot.name:
-                joint_names = [name[len(prefix):] for name in joint_names]
+                joint_names = [name[len(prefix) :] for name in joint_names]
             else:
                 joint_names = [name.split("/")[-1] for name in joint_names]
 
@@ -539,7 +541,7 @@ class MujocoHandler(BaseSimHandler):
         robot_actuator_names = []
         for name in actuator_names:
             if name.startswith(self._mujoco_robot_name):
-                joint_name = name[len(self._mujoco_robot_name):]
+                joint_name = name[len(self._mujoco_robot_name) :]
                 if joint_name:
                     robot_actuator_names.append(joint_name)
 
