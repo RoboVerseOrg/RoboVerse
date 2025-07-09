@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING
-from typing import Literal
+from typing import Callable, Literal
 
 from metasim.utils.configclass import configclass
 
@@ -14,11 +14,11 @@ class FrictionRandomCfg:
 
     enabled: bool = False
     """Whether to randomize friction"""
-    range: tuple[float, float] = MISSING  # TODO: Add dynamic and static randomization option
+    range: tuple[float, float] = (0.0, 0.0)
     """Friction sampling range"""
     num_buckets: int = MISSING
     """Distribution buckets"""
-    dist_fn: callable = MISSING
+    dist_fn: Callable = MISSING
     """Distribution function, usually uniform or normal"""
 
 
@@ -28,9 +28,9 @@ class MassRandomCfg:
 
     enabled: bool = False
     """Whether to randomize mass"""
-    range: tuple[float, float] = MISSING
+    range: tuple[float, float] = (0.0, 0.0)
     """Mass sampling range"""
-    dist_fn: callable = MISSING
+    dist_fn: Callable = MISSING
     """Distribution sampling function for all env, usually uniform or normal"""
 
 
