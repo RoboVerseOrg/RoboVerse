@@ -3,7 +3,6 @@ from __future__ import annotations
 from metasim.cfg.checkers import EmptyChecker
 from metasim.cfg.control import ControlCfg
 from metasim.cfg.objects import RigidObjCfg
-from metasim.cfg.robots.anymal_cfg import AnymalCfg as AnymalRobotCfg
 from metasim.constants import TaskType
 from metasim.utils import configclass
 
@@ -90,8 +89,6 @@ class AnymalTerrainCfg(BaseTaskCfg):
     height_measurement_noise = 0.1
 
     friction_range = [0.5, 1.25]
-
-    robot: AnymalRobotCfg = AnymalRobotCfg()
 
     objects: list[RigidObjCfg] = []
 
