@@ -10,7 +10,7 @@ import pickle
 
 import numpy as np
 import torch
-from legged_gym.envs.h2o.legged_robot import LeggedRobot
+from .h2o_wrapper import H2OWrapper
 from tqdm import tqdm
 
 # -- project-specific paths (edit) ------------------------------------
@@ -35,9 +35,7 @@ def evaluate(
     # 1. Build env + policy
     # ----------------------------------------------------------------
     cfg      = scenario.robots[0].export_legged_cfg()
-    env      = LeggedRobot(cfg, scenario.sim_params,
-                           scenario.physics_engine,
-                           scenario.sim_device, scenario.headless)
+    env      = H2OWrapper(cfg, scenario.sim_params,device)
     env.begin_seq_motion_samples()          # start from the first mocap
     env.compute_observations()
 

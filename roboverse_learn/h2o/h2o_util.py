@@ -7,16 +7,9 @@ import os.path as osp
 sys.path.append(os.getcwd())
 
 import numpy as np
-
-import torch
-import numpy as np
 import pickle as pk
 from tqdm import tqdm
 from collections import defaultdict
-import random
-import argparse
-
-import copy
 
 def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx = 0, use_tqdm = True, concatenate = True):
     metrics = defaultdict(list)
