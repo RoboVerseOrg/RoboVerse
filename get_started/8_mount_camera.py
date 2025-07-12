@@ -50,63 +50,65 @@ class Args:
 
 args = tyro.cli(Args)
 
-robot = BaseRobotCfg(
-    name="new_robot_h1",
-    num_joints=26,
-    usd_path="get_started/example_assets/h1/usd/h1.usd",
-    mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
-    urdf_path="get_started/example_assets/h1/urdf/h1_wrist.urdf",
-    enabled_gravity=True,
-    fix_base_link=False,
-    enabled_self_collisions=False,
-    isaacgym_flip_visual_attachments=False,
-    collapse_fixed_joints=True,
-    actuators={
-        "left_hip_yaw": BaseActuatorCfg(),
-        "left_hip_roll": BaseActuatorCfg(),
-        "left_hip_pitch": BaseActuatorCfg(),
-        "left_knee": BaseActuatorCfg(),
-        "left_ankle": BaseActuatorCfg(),
-        "right_hip_yaw": BaseActuatorCfg(),
-        "right_hip_roll": BaseActuatorCfg(),
-        "right_hip_pitch": BaseActuatorCfg(),
-        "right_knee": BaseActuatorCfg(),
-        "right_ankle": BaseActuatorCfg(),
-        "torso": BaseActuatorCfg(),
-        "left_shoulder_pitch": BaseActuatorCfg(),
-        "left_shoulder_roll": BaseActuatorCfg(),
-        "left_shoulder_yaw": BaseActuatorCfg(),
-        "left_elbow": BaseActuatorCfg(),
-        "right_shoulder_pitch": BaseActuatorCfg(),
-        "right_shoulder_roll": BaseActuatorCfg(),
-        "right_shoulder_yaw": BaseActuatorCfg(),
-        "right_elbow": BaseActuatorCfg(),
-    },
-    joint_limits={
-        "left_hip_yaw": (-0.43, 0.43),
-        "left_hip_roll": (-0.43, 0.43),
-        "left_hip_pitch": (-3.14, 2.53),
-        "left_knee": (-0.26, 2.05),
-        "left_ankle": (-0.87, 0.52),
-        "right_hip_yaw": (-0.43, 0.43),
-        "right_hip_roll": (-0.43, 0.43),
-        "right_hip_pitch": (-3.14, 2.53),
-        "right_knee": (-0.26, 2.05),
-        "right_ankle": (-0.87, 0.52),
-        "torso": (-2.35, 2.35),
-        "left_shoulder_pitch": (-2.87, 2.87),
-        "left_shoulder_roll": (-0.34, 3.11),
-        "left_shoulder_yaw": (-1.3, 4.45),
-        "left_elbow": (-1.25, 2.61),
-        "right_shoulder_pitch": (-2.87, 2.87),
-        "right_shoulder_roll": (-3.11, 0.34),
-        "right_shoulder_yaw": (-4.45, 1.3),
-        "right_elbow": (-1.25, 2.61),
-    },
-)
+robots = [
+    BaseRobotCfg(
+        name="new_robot_h1",
+        num_joints=26,
+        usd_path="get_started/example_assets/h1/usd/h1.usd",
+        mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
+        urdf_path="get_started/example_assets/h1/urdf/h1_wrist.urdf",
+        enabled_gravity=True,
+        fix_base_link=False,
+        enabled_self_collisions=False,
+        isaacgym_flip_visual_attachments=False,
+        collapse_fixed_joints=True,
+        actuators={
+            "left_hip_yaw": BaseActuatorCfg(),
+            "left_hip_roll": BaseActuatorCfg(),
+            "left_hip_pitch": BaseActuatorCfg(),
+            "left_knee": BaseActuatorCfg(),
+            "left_ankle": BaseActuatorCfg(),
+            "right_hip_yaw": BaseActuatorCfg(),
+            "right_hip_roll": BaseActuatorCfg(),
+            "right_hip_pitch": BaseActuatorCfg(),
+            "right_knee": BaseActuatorCfg(),
+            "right_ankle": BaseActuatorCfg(),
+            "torso": BaseActuatorCfg(),
+            "left_shoulder_pitch": BaseActuatorCfg(),
+            "left_shoulder_roll": BaseActuatorCfg(),
+            "left_shoulder_yaw": BaseActuatorCfg(),
+            "left_elbow": BaseActuatorCfg(),
+            "right_shoulder_pitch": BaseActuatorCfg(),
+            "right_shoulder_roll": BaseActuatorCfg(),
+            "right_shoulder_yaw": BaseActuatorCfg(),
+            "right_elbow": BaseActuatorCfg(),
+        },
+        joint_limits={
+            "left_hip_yaw": (-0.43, 0.43),
+            "left_hip_roll": (-0.43, 0.43),
+            "left_hip_pitch": (-3.14, 2.53),
+            "left_knee": (-0.26, 2.05),
+            "left_ankle": (-0.87, 0.52),
+            "right_hip_yaw": (-0.43, 0.43),
+            "right_hip_roll": (-0.43, 0.43),
+            "right_hip_pitch": (-3.14, 2.53),
+            "right_knee": (-0.26, 2.05),
+            "right_ankle": (-0.87, 0.52),
+            "torso": (-2.35, 2.35),
+            "left_shoulder_pitch": (-2.87, 2.87),
+            "left_shoulder_roll": (-0.34, 3.11),
+            "left_shoulder_yaw": (-1.3, 4.45),
+            "left_elbow": (-1.25, 2.61),
+            "right_shoulder_pitch": (-2.87, 2.87),
+            "right_shoulder_roll": (-3.11, 0.34),
+            "right_shoulder_yaw": (-4.45, 1.3),
+            "right_elbow": (-1.25, 2.61),
+        },
+    )
+]
 # initialize scenario
 scenario = ScenarioCfg(
-    robot=robot,
+    robots=robots,
     try_add_table=False,
     sim=args.sim,
     headless=args.headless,
@@ -115,7 +117,8 @@ scenario = ScenarioCfg(
 
 from scipy.spatial.transform import Rotation as R
 
-quat = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
+quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
+quat = (quat_xyzw[1], quat_xyzw[2], quat_xyzw[3], quat_xyzw[0])  # convert to wxyz
 translation = (0.1, 0.0, 0.9)
 
 # add cameras
@@ -241,21 +244,24 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/7_mount_camera_{args.sim}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/8_mount_camera_{args.sim}.mp4")
 obs_saver.add(obs)
 
 step = 0
-robot_joint_limits = scenario.robot.joint_limits
+robot = scenario.robots[0]
+robot_joint_limits = robot.joint_limits
 for _ in range(100):
     log.debug(f"Step {step}")
     actions = [
         {
-            "dof_pos_target": {
-                joint_name: (
-                    torch.rand(1).item() * (robot_joint_limits[joint_name][1] - robot_joint_limits[joint_name][0])
-                    + robot_joint_limits[joint_name][0]
-                )
-                for joint_name in robot_joint_limits.keys()
+            robot.name: {
+                "dof_pos_target": {
+                    joint_name: (
+                        torch.rand(1).item() * (robot_joint_limits[joint_name][1] - robot_joint_limits[joint_name][0])
+                        + robot_joint_limits[joint_name][0]
+                    )
+                    for joint_name in robot_joint_limits.keys()
+                }
             }
         }
         for _ in range(scenario.num_envs)

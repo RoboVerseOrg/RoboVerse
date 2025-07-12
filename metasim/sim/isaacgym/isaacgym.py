@@ -186,7 +186,9 @@ class IsaacgymHandler(BaseSimHandler):
                         mount_handle = self._robot_link_dict[cam_cfg.mount_to]
                     elif isinstance(cam_cfg.mount_to, tuple):
                         mount_handle = self._robot_link_dict[cam_cfg.mount_to[1]]
-                    camera_pose = gymapi.Transform(gymapi.Vec3(*cam_cfg.mount_pos), gymapi.Quat(*cam_cfg.mount_quat))
+                    camera_pose = gymapi.Transform(
+                        gymapi.Vec3(*cam_cfg.mount_pos), gymapi.Quat(*cam_cfg.mount_quat[1:], cam_cfg.mount_quat[0])
+                    )
                     self.gym.attach_camera_to_body(
                         camera_handle, self._envs[i_env], mount_handle, camera_pose, gymapi.FOLLOW_TRANSFORM
                     )
