@@ -118,7 +118,7 @@ scenario = ScenarioCfg(
 from scipy.spatial.transform import Rotation as R
 
 quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
-quat = (quat_xyzw[1], quat_xyzw[2], quat_xyzw[3], quat_xyzw[0])  # convert to wxyz
+quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  # convert to wxyz
 translation = (0.1, 0.0, 0.9)
 
 # add cameras
