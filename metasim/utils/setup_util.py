@@ -226,17 +226,47 @@ def get_task(task_id: str) -> BaseTaskCfg:
     import_path = f"metasim.cfg.tasks.{prefix}" if prefix is not None else "metasim.cfg.tasks"
     module = importlib.import_module(import_path)
     task_cls = getattr(module, f"{task_name_camel}Cfg")
-    gym.register(
-        task_name_camel,
-        entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
-        kwargs={"task_name": task_name},
-    )
-    gym.register(
-        task_name_snake,
-        entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
-        kwargs={"task_name": task_name},
-    )
     return task_cls
+
+
+def register_task(task_id: str):
+    """Register the task to the gym registry.
+
+    Args:
+        task_id: The id of the task.
+
+    .. warning::
+       Currently we don't support task_id with leading benchmark name and colon.
+    """
+    if ":" in task_id:
+        log.warning(
+            "Currently we don't support task_id with leading benchmark name and colon. However, you can use module path as prefix. "
+            "For example, `debug:reach_origin` is invalid, but `metasim.cfg.tasks.debug:reach_origin` is valid."
+        )
+        prefix, task_name = task_id.split(":", 1)
+    else:
+        prefix, task_name = None, task_id
+
+    if is_camel_case(task_name):
+        task_name_camel = task_name
+        task_name_snake = to_snake_case(task_name)
+    elif is_snake_case(task_name):
+        task_name_camel = to_camel_case(task_name)
+        task_name_snake = task_name
+    else:
+        raise ValueError(f"Invalid task name: {task_id}, should be in either camel case or snake case")
+
+    for task_nickname in [
+        task_name_camel,
+        task_name_snake,
+    ]:
+        log.info(f"Registering task {task_nickname}")
+        gym.register(
+            task_nickname,
+            entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
+            vector_entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
+            kwargs={"task_name": task_name},
+        )
 
 
 def get_robot(robot_name: str) -> BaseRobotCfg:
