@@ -13,8 +13,7 @@ def __get_quick_ref():
     tic = time.time()
 
     from .calvin.calvin import MoveSliderLeftACfg
-
-    # from .debug.reach_origin_cfg import ReachOriginCfg
+    from .debug.reach_cfg import ReachOriginCfg
     from .dmcontrol.walker_walk_cfg import WalkerWalkCfg
     from .fetch import FetchCloseBoxCfg
     from .gapartnet import GapartnetOpenDrawerCfg
