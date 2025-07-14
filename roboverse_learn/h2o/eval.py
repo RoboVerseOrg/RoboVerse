@@ -64,7 +64,7 @@ def evaluate(
     timeout_mask = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
 
     while bar.n < bar.total:
-        actions = policy.predict_action({"obs": stack_cat()})["action"][:, 0]
+        actions = policy.predict_azhction({"obs": stack_cat()})["action"][:, 0]
 
         if clip_actions:
             centered = actions*0.25 + env.default_dof_pos

@@ -4,7 +4,7 @@
 # -------------------------------------------------------------------------------
 sim: mjx
 robots: [h1]
-task: humanoidbench:Stair
+task: humanoidbench:Stand
 decimation: 10
 train_or_eval: train
 
