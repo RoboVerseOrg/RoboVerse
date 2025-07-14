@@ -22,6 +22,7 @@ class H2ODomainRandCfg:
         enabled = True
         max_push_vel_xy = 0.5
         push_interval_s = 5.0
+
     push = Push()
 
     friction_enabled = True
@@ -34,8 +35,12 @@ class H2ODomainRandCfg:
     link_mass_range = [0.7, 1.3]
     link_names = [
         "pelvis",
-        "left_hip_yaw_link", "left_hip_roll_link", "left_hip_pitch_link",
-        "right_hip_yaw_link", "right_hip_roll_link", "right_hip_pitch_link",
+        "left_hip_yaw_link",
+        "left_hip_roll_link",
+        "left_hip_pitch_link",
+        "right_hip_yaw_link",
+        "right_hip_roll_link",
+        "right_hip_pitch_link",
         "torso_link",
     ]
 
@@ -61,14 +66,26 @@ class H2ONoiseCfg:
     noise_level = 1.0
 
     class scales:
-        base_z = 0.05; dof_pos = 0.01; dof_vel = 0.10
-        lin_vel = 0.20; ang_vel = 0.50; gravity = 0.10
-        height_measurements = 0.05; body_pos = 0.01
-        body_lin_vel = 0.01; body_rot = 0.001
-        delta_base_pos = 0.05; delta_heading = 0.10
-        ref_body_pos = 0.10; ref_body_rot = 0.01; ref_body_vel = 0.01
-        ref_lin_vel = 0.01; ref_ang_vel = 0.01
-        ref_dof_pos = 0.01; ref_dof_vel = 0.01; ref_gravity = 0.01
+        base_z = 0.05
+        dof_pos = 0.01
+        dof_vel = 0.10
+        lin_vel = 0.20
+        ang_vel = 0.50
+        gravity = 0.10
+        height_measurements = 0.05
+        body_pos = 0.01
+        body_lin_vel = 0.01
+        body_rot = 0.001
+        delta_base_pos = 0.05
+        delta_heading = 0.10
+        ref_body_pos = 0.10
+        ref_body_rot = 0.01
+        ref_body_vel = 0.01
+        ref_lin_vel = 0.01
+        ref_ang_vel = 0.01
+        ref_dof_pos = 0.01
+        ref_dof_vel = 0.01
+        ref_gravity = 0.01
 
 
 # ───────────────── contact-based reset checker ────────────────
@@ -104,6 +121,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
         max_contact_force = 500.0
         only_positive_rewards = False
         tracking_sigma = 0.25
+
     reward_cfg: RewardCfg = RewardCfg()
     reward_functions: List[Callable] = MISSING
     reward_weights: Dict[str, float] = MISSING
@@ -115,6 +133,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
         num_commands = 4
         resampling_time = 10.0
         heading_command = False
+
     commands: Commands = Commands()
 
     class CommandRanges:
@@ -122,6 +141,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
         lin_vel_y = [0.0, 0.0]
         ang_vel_yaw = [0.0, 0.0]
         heading = [0.0, 0.0]
+
     command_ranges: CommandRanges = CommandRanges()
 
     # observation & action sizes
@@ -135,8 +155,10 @@ class H2OTaskCfg(BaseRLTaskCfg):
         class obs_scales:
             lin_vel = ang_vel = dof_pos = dof_vel = height_measurements = 1.0
             body_pos = body_lin_vel = body_rot = delta_base_pos = delta_heading = 1.0
+
         clip_observations = 100.0
         clip_actions = 100.0
+
     normalization: Normalization = Normalization()
 
     # physics
@@ -154,14 +176,24 @@ class H2OTaskCfg(BaseRLTaskCfg):
         decimation=decimation,
         torque_limit_scale=0.85,
         stiffness={
-            "hip_yaw": 200, "hip_roll": 200, "hip_pitch": 200,
-            "knee": 300, "ankle": 40, "torso": 300,
-            "shoulder": 100, "elbow": 100,
+            "hip_yaw": 200,
+            "hip_roll": 200,
+            "hip_pitch": 200,
+            "knee": 300,
+            "ankle": 40,
+            "torso": 300,
+            "shoulder": 100,
+            "elbow": 100,
         },
         damping={
-            "hip_yaw": 5, "hip_roll": 5, "hip_pitch": 5,
-            "knee": 6, "ankle": 2, "torso": 6,
-            "shoulder": 2, "elbow": 2,
+            "hip_yaw": 5,
+            "hip_roll": 5,
+            "hip_pitch": 5,
+            "knee": 6,
+            "ankle": 2,
+            "torso": 6,
+            "shoulder": 2,
+            "elbow": 2,
         },
         action_filt=False,
         action_cutfreq=4.0,
@@ -189,6 +221,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
             base_ang_vel = 5.0
             gravity_x = gravity_y = 0.7
             max_ref_motion_distance = 0.5
+
     asset: Asset = Asset()
 
     # terrain
@@ -199,6 +232,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
         static_friction = dynamic_friction = 1.0
         restitution = 0.0
         slope_treshold = 0.75
+
     terrain: Terrain = Terrain()
 
     # reference motion
@@ -215,10 +249,14 @@ class H2OTaskCfg(BaseRLTaskCfg):
         extend_head = False
         extend_hand = True
         teleop_selected_keypoints_names = [
-            "left_ankle_link", "right_ankle_link",
-            "left_shoulder_pitch_link", "right_shoulder_pitch_link",
-            "left_elbow_link", "right_elbow_link",
+            "left_ankle_link",
+            "right_ankle_link",
+            "left_shoulder_pitch_link",
+            "right_shoulder_pitch_link",
+            "left_elbow_link",
+            "right_elbow_link",
         ]
+
     motion: Motion = Motion()
 
     # viewer
@@ -227,6 +265,7 @@ class H2OTaskCfg(BaseRLTaskCfg):
         ref_env = 0
         pos = [10, 0, 6]
         lookat = [11, 5, 3]
+
     viewer: Viewer = Viewer()
 
     # plugs
@@ -252,15 +291,25 @@ class H2OTaskCfg(BaseRLTaskCfg):
                     "pos": torch.tensor([0.0, 0.0, 1.0]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "left_hip_yaw": 0.0, "left_hip_roll": 0.0, "left_hip_pitch": -0.4,
-                        "left_knee": 0.8, "left_ankle": -0.4,
-                        "right_hip_yaw": 0.0, "right_hip_roll": 0.0, "right_hip_pitch": -0.4,
-                        "right_knee": 0.8, "right_ankle": -0.4,
+                        "left_hip_yaw": 0.0,
+                        "left_hip_roll": 0.0,
+                        "left_hip_pitch": -0.4,
+                        "left_knee": 0.8,
+                        "left_ankle": -0.4,
+                        "right_hip_yaw": 0.0,
+                        "right_hip_roll": 0.0,
+                        "right_hip_pitch": -0.4,
+                        "right_knee": 0.8,
+                        "right_ankle": -0.4,
                         "torso": 0.0,
-                        "left_shoulder_pitch": 0.0, "left_shoulder_roll": 0.0,
-                        "left_shoulder_yaw": 0.0, "left_elbow": 0.0,
-                        "right_shoulder_pitch": 0.0, "right_shoulder_roll": 0.0,
-                        "right_shoulder_yaw": 0.0, "right_elbow": 0.0,
+                        "left_shoulder_pitch": 0.0,
+                        "left_shoulder_roll": 0.0,
+                        "left_shoulder_yaw": 0.0,
+                        "left_elbow": 0.0,
+                        "right_shoulder_pitch": 0.0,
+                        "right_shoulder_roll": 0.0,
+                        "right_shoulder_yaw": 0.0,
+                        "right_elbow": 0.0,
                     },
                 },
             },

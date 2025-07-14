@@ -1,28 +1,25 @@
-import glob
 import os
 import sys
-import pdb
-import os.path as osp
 
 sys.path.append(os.getcwd())
 
-import numpy as np
-import pickle as pk
-from tqdm import tqdm
 from collections import defaultdict
 
-def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx = 0, use_tqdm = True, concatenate = True):
+import numpy as np
+from tqdm import tqdm
+
+
+def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx=0, use_tqdm=True, concatenate=True):
     metrics = defaultdict(list)
     if use_tqdm:
         pbar = tqdm(range(len(pred_pos_all)))
     else:
         pbar = range(len(pred_pos_all))
-        
+
     for idx in pbar:
         jpos_pred = pred_pos_all[idx].copy()
         jpos_gt = gt_pos_all[idx].copy()
-        mpjpe_g = np.linalg.norm(jpos_gt - jpos_pred, axis=2)  * 1000
-        
+        mpjpe_g = np.linalg.norm(jpos_gt - jpos_pred, axis=2) * 1000
 
         vel_dist = (compute_error_vel(jpos_pred, jpos_gt)) * 1000
         accel_dist = (compute_error_accel(jpos_pred, jpos_gt)) * 1000
@@ -31,17 +28,18 @@ def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx = 0, use_tqdm = True
         jpos_gt = jpos_gt - jpos_gt[:, [root_idx]]
 
         pa_mpjpe = p_mpjpe(jpos_pred, jpos_gt) * 1000
-        mpjpe = np.linalg.norm(jpos_pred - jpos_gt, axis=2)* 1000
-        
+        mpjpe = np.linalg.norm(jpos_pred - jpos_gt, axis=2) * 1000
+
         metrics["mpjpe_g"].append(mpjpe_g)
         metrics["mpjpe_l"].append(mpjpe)
         metrics["mpjpe_pa"].append(pa_mpjpe)
         metrics["accel_dist"].append(accel_dist)
         metrics["vel_dist"].append(vel_dist)
-    
+
     if concatenate:
-        metrics = {k:np.concatenate(v) for k, v in metrics.items()}
+        metrics = {k: np.concatenate(v) for k, v in metrics.items()}
     return metrics
+
 
 def p_mpjpe(predicted, target):
     """
