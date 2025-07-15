@@ -306,11 +306,9 @@ def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
 
     env.scene.sensors[camera.name] = TiledCamera(
         TiledCameraCfg(
-            # prim_path=f"/World/envs/env_.*/{camera.name}",
             prim_path=prim_path,
             offset=offset,
-            # data_types=[data_type_map[dt] for dt in camera.data_types],
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=[data_type_map[dt] for dt in camera.data_types],
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=camera.focal_length,
                 focus_distance=camera.focus_distance,
