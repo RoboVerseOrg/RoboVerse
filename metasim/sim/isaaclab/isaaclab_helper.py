@@ -33,6 +33,7 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
 
     assert isinstance(obj, BaseObjCfg)
     prim_path = f"/World/envs/env_.*/{obj.name}"
+    # prim_path = "/World/envs/env_.*/Robot/body/torso_link/robot_head_cam"
 
     ## Articulation object
     if isinstance(obj, ArticulationObjCfg):
@@ -296,11 +297,20 @@ def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
         "instance_seg": "instance_segmentation_fast",
         "instance_id_seg": "instance_id_segmentation_fast",
     }
+    if camera.mount_to is None:
+        prim_path = f"/World/envs/env_.*/{camera.name}"
+        offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+    else:
+        prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
+        offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+
     env.scene.sensors[camera.name] = TiledCamera(
         TiledCameraCfg(
-            prim_path=f"/World/envs/env_.*/{camera.name}",
-            offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
-            data_types=[data_type_map[dt] for dt in camera.data_types],
+            # prim_path=f"/World/envs/env_.*/{camera.name}",
+            prim_path=prim_path,
+            offset=offset,
+            # data_types=[data_type_map[dt] for dt in camera.data_types],
+            data_types=["rgb", "distance_to_image_plane"],
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=camera.focal_length,
                 focus_distance=camera.focus_distance,

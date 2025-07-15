@@ -136,7 +136,8 @@ scenario.cameras = [
         height=1024,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
-        mount_to="torso_link",
+        mount_to=robots[0].name,
+        mount_link="torso_link",
         mount_pos=translation,
         mount_quat=quat,
     ),
@@ -193,7 +194,7 @@ init_states = [
                 "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
             },
             "roof": {
-                "pos": torch.tensor([0.0, 0.0, 1.5]),
+                "pos": torch.tensor([0.0, 0.0, 2.0]),
                 "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
             },
             "sphere": {
@@ -244,7 +245,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/8_mount_camera_{args.sim}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/8_mount_camera_{args.sim}_.mp4")
 obs_saver.add(obs)
 
 step = 0
