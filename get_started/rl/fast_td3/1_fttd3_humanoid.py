@@ -12,7 +12,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "sim": "mjx",
     "robots": ["h1_hand_hb"],
-    "task": "humanoidbench:Walk",
+    "task": "humanoidbench:Cube",
     "decimation": 10,
     "train_or_eval": "train",
     # -------------------------------------------------------------------------------

@@ -33,6 +33,8 @@ def get_traj_v2(task: BaseTaskCfg, robot: BaseRobotCfg):
             or task.traj_filepath.endswith("_v2.json")
             or task.traj_filepath.endswith("_v2.yaml")
         )
+        traj = load_traj_file(task.traj_filepath)
+        print("Available robot keys in traj file:", traj.keys())
         data = load_traj_file(task.traj_filepath)[robot.name]
     else:
         assert task.traj_filepath.find("v2") != -1

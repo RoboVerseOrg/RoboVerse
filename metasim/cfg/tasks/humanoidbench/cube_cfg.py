@@ -16,7 +16,7 @@ from .base_cfg import HumanoidBaseReward, HumanoidTaskCfg, StableReward
 class StandingReward(HumanoidBaseReward):
     """Reward function for maintaining standing posture."""
 
-    def __init__(self, robot_name="h1_simple_hand"):
+    def __init__(self, robot_name="h1_hand_hb"):
         """Initialize the standing reward."""
         super().__init__(robot_name)
         self._stand_height = 0.6  # 需要根据实际机器人调整
@@ -38,7 +38,7 @@ class StandingReward(HumanoidBaseReward):
 class OrientationReward(HumanoidBaseReward):
     """Reward function for cube orientation alignment."""
 
-    def __init__(self, robot_name="h1_simple_hand"):
+    def __init__(self, robot_name="h1_hand_hb"):
         """Initialize the orientation reward."""
         super().__init__(robot_name)
 
@@ -60,7 +60,7 @@ class OrientationReward(HumanoidBaseReward):
 class HandProximityReward(HumanoidBaseReward):
     """Reward function for hand-cube proximity."""
 
-    def __init__(self, robot_name="h1_simple_hand"):
+    def __init__(self, robot_name="h1_hand_hb"):
         """Initialize the hand proximity reward."""
         super().__init__(robot_name)
 
