@@ -57,7 +57,6 @@ class IsaaclabEnvOverwriter:
             )
 
         for camera in self.cameras:
-            # continue
             ## Randomize camera pose
             if self.scenario.random.camera:
                 from .utils.camera_random_util import randomize_camera_pose
