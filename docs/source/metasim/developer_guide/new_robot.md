@@ -42,7 +42,7 @@ If your robot doesn't break apart and no error occurs during the test, it should
 
 ## 3. Add the Robot to the RoboVerse Data Repository
 
-Add the robot to the [RoboVerse data repository](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data) by a creating a PR. We thank you for your contribution!
+Add the robot to the [RoboVerse data repository](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data) by a creating a PR. Please follow the [data structure](https://roboverse.wiki/metasim/developer_guide/data_structure). We thank you for your contribution!
 
 ## Tips
 
