@@ -4,9 +4,7 @@ import torch
 
 
 class MultitaskWrapper(gym.Wrapper):
-    """
-    Wrapper for multi-task environments.
-    """
+    """Wrapper for multi-task environments."""
 
     def __init__(self, cfg, envs):
         super().__init__(envs[0])
@@ -19,12 +17,8 @@ class MultitaskWrapper(gym.Wrapper):
         self._episode_lengths = [env.max_episode_steps for env in self.envs]
         self._obs_shape = (max(self._obs_dims),)
         self._action_dim = max(self._action_dims)
-        self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=self._obs_shape, dtype=np.float32
-        )
-        self.action_space = gym.spaces.Box(
-            low=-1, high=1, shape=(self._action_dim,), dtype=np.float32
-        )
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self._obs_shape, dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self._action_dim,), dtype=np.float32)
 
     @property
     def task(self):
@@ -43,16 +37,14 @@ class MultitaskWrapper(gym.Wrapper):
 
     def _pad_obs(self, obs):
         if obs.shape != self._obs_shape:
-            obs = torch.cat(
-                (
-                    obs,
-                    torch.zeros(
-                        self._obs_shape[0] - obs.shape[0],
-                        dtype=obs.dtype,
-                        device=obs.device,
-                    ),
-                )
-            )
+            obs = torch.cat((
+                obs,
+                torch.zeros(
+                    self._obs_shape[0] - obs.shape[0],
+                    dtype=obs.dtype,
+                    device=obs.device,
+                ),
+            ))
         return obs
 
     def reset(self, task_idx=-1):
@@ -62,7 +54,5 @@ class MultitaskWrapper(gym.Wrapper):
         return self._pad_obs(self.env.reset())
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(
-            action[: self.env.action_space.shape[0]]
-        )
+        obs, reward, done, info = self.env.step(action[: self.env.action_space.shape[0]])
         return self._pad_obs(obs), reward, done, info

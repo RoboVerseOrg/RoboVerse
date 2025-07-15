@@ -1,7 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
+from gymnasium.spaces import Box
 
 _STAND_HEIGHT = 1.65
 
@@ -62,20 +61,13 @@ class BalanceBase(Task):
     def get_terminated(self):
         if self._env.data.qpos[2] < 0.8:
             return True, {}
-        sphere_collision_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "pivot_sphere_collision"
-        )
-        board_collision_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "stand_board_collision"
-        )
+        sphere_collision_id = self._env.named.data.geom_xpos.axes.row.names.index("pivot_sphere_collision")
+        board_collision_id = self._env.named.data.geom_xpos.axes.row.names.index("stand_board_collision")
         floor_collision_id = 0
         for pair in self._env.data.contact.geom:
-            if sphere_collision_id in pair and all(
-                [
-                    allowed_collision not in pair
-                    for allowed_collision in [floor_collision_id, board_collision_id]
-                ]
-            ):  # for no hand. if for hand, > 155
+            if sphere_collision_id in pair and all([
+                allowed_collision not in pair for allowed_collision in [floor_collision_id, board_collision_id]
+            ]):  # for no hand. if for hand, > 155
                 return True, {}
             if floor_collision_id in pair and sphere_collision_id not in pair:
                 return True, {}
@@ -111,7 +103,7 @@ class BalanceSimple(BalanceBase):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             0 0 0.37 1 0 0 0
-        """
+        """,
     }
     dof = 7
     vels = 6
@@ -150,7 +142,7 @@ class BalanceHard(BalanceBase):
             0 0 0 0 0 0 0
             0 0 0.37 1 0 0 0
             0 0 0.17 1 0 0 0
-        """
+        """,
     }
     dof = 14
     vels = 12

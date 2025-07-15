@@ -2,7 +2,7 @@
     <asset>
         <material name="wooden_cover"  texuniform="false"  texture="wooden_cover"/>
         <texture type="2d" name="wooden_cover" file="../tasks/assets/dark-wood.png"/>
-        
+
         <material name="metal_cover"  texuniform="false"  texture="metal_cover"/>
         <texture type="2d" name="metal_cover" file="../tasks/assets/metal.png"/>
     </asset>
@@ -21,7 +21,7 @@
                 <geom name="door_lock" pos="0.15 0.07 0" size="0.01 0.07" zaxis="0 1 0" type="cylinder" material="metal_cover" class="visual"/>
                 <geom name="door_lock_internal" pos="-0.15 0.07 0" size="0.01 0.07" zaxis="0 1 0" type="cylinder" material="metal_cover" class="visual"/>
 
-                
+
                 <geom type="cylinder" pos="-0.12 0 0" size="0.05 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="0.12 0 0" size="0.05 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="-0.141 -0.1 0" size="0.02 0.1" zaxis="0 1 0" class="collision"/>
@@ -42,7 +42,7 @@
             <geom name="left_wall"   type="box" pos="-1.31 -0.7 1.19" size="1.19 0.12 1.19" rgba="0.8 0.8 0.83 0.3" class="visual"/>
             <geom name="right_wall"  type="box" pos="-1.31 0.7 1.19"  size="1.19 0.12 1.19" rgba="0.8 0.8 0.83 0.3" class="visual"/>
             <geom name="behind_wall" type="box" pos="-2.35 0 1.19"    size="0.15 0.58 1.19" rgba="0.8 0.8 0.83 0.3" class="visual"/>
-            
+
             <geom type="box" pos="-1.31 -0.7 1.19" size="1.19 0.12 1.19" class="collision"/>
             <geom type="box" pos="-1.31 0.7 1.19"  size="1.19 0.12 1.19" class="collision"/>
             <geom type="box" pos="-2.35 0 1.19"    size="0.15 0.58 1.19" class="collision"/>

@@ -24,8 +24,7 @@ torch.backends.cudnn.benchmark = True
 
 @hydra.main(config_name="config", config_path=".")
 def evaluate(cfg: dict):
-    """
-    Script for evaluating a single-task / multi-task TD-MPC2 checkpoint.
+    """Script for evaluating a single-task / multi-task TD-MPC2 checkpoint.
 
     Most relevant args:
             `task`: task name (or mt30/mt80 for multi-task evaluation)
@@ -49,11 +48,7 @@ def evaluate(cfg: dict):
     cfg = parse_cfg(cfg)
     set_seed(cfg.seed)
     print(colored(f"Task: {cfg.task}", "blue", attrs=["bold"]))
-    print(
-        colored(
-            f'Model size: {cfg.get("model_size", "default")}', "blue", attrs=["bold"]
-        )
-    )
+    print(colored(f"Model size: {cfg.get('model_size', 'default')}", "blue", attrs=["bold"]))
     print(colored(f"Checkpoint: {cfg.checkpoint}", "blue", attrs=["bold"]))
     if not cfg.multitask and ("mt80" in cfg.checkpoint or "mt30" in cfg.checkpoint):
         print(
@@ -76,18 +71,12 @@ def evaluate(cfg: dict):
 
     # Load agent
     agent = TDMPC2(cfg)
-    assert os.path.exists(
-        cfg.checkpoint
-    ), f"Checkpoint {cfg.checkpoint} not found! Must be a valid filepath."
+    assert os.path.exists(cfg.checkpoint), f"Checkpoint {cfg.checkpoint} not found! Must be a valid filepath."
     agent.load(cfg.checkpoint)
 
     # Evaluate
     if cfg.multitask:
-        print(
-            colored(
-                f"Evaluating agent on {len(cfg.tasks)} tasks:", "yellow", attrs=["bold"]
-            )
-        )
+        print(colored(f"Evaluating agent on {len(cfg.tasks)} tasks:", "yellow", attrs=["bold"]))
     else:
         print(colored(f"Evaluating agent on {cfg.task}:", "yellow", attrs=["bold"]))
     if cfg.save_video:
@@ -113,27 +102,19 @@ def evaluate(cfg: dict):
             ep_rewards.append(ep_reward)
             ep_successes.append(info["success"])
             if cfg.save_video:
-                imageio.mimsave(
-                    os.path.join(video_dir, f"{task}-{i}.mp4"), frames, fps=15
-                )
+                imageio.mimsave(os.path.join(video_dir, f"{task}-{i}.mp4"), frames, fps=15)
         ep_rewards = np.mean(ep_rewards)
         ep_successes = np.mean(ep_successes)
         if cfg.multitask:
-            scores.append(
-                ep_successes * 100 if task.startswith("mw-") else ep_rewards / 10
-            )
+            scores.append(ep_successes * 100 if task.startswith("mw-") else ep_rewards / 10)
         print(
             colored(
-                f"  {task:<22}" f"\tR: {ep_rewards:.01f}  " f"\tS: {ep_successes:.02f}",
+                f"  {task:<22}\tR: {ep_rewards:.01f}  \tS: {ep_successes:.02f}",
                 "yellow",
             )
         )
     if cfg.multitask:
-        print(
-            colored(
-                f"Normalized score: {np.mean(scores):.02f}", "yellow", attrs=["bold"]
-            )
-        )
+        print(colored(f"Normalized score: {np.mean(scores):.02f}", "yellow", attrs=["bold"]))
 
 
 if __name__ == "__main__":

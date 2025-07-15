@@ -62,7 +62,8 @@ def pure(fun, nested=False):
     """Wrap an impure function that uses global state to explicitly pass the
     state in and out. The result is a pure function that is composable with JAX
     transformation. The pure function can be used as follows:
-    `out, state = fun(state, rng, *args, **kwargs)`."""
+    `out, state = fun(state, rng, *args, **kwargs)`.
+    """
 
     @functools.wraps(fun)
     def purified(state, rng, *args, create=None, modify=None, ignore=None, **kwargs):
@@ -103,7 +104,8 @@ def pure(fun, nested=False):
 def context():
     """Access and modify the global context from within an impure function. For
     advanced users only. Prefer to use module methods to access and modify state
-    and rng() to get the next RNG key."""
+    and rng() to get the next RNG key.
+    """
     context = CONTEXT.get(threading.get_ident(), None)
     if context is None:
         raise RuntimeError("Wrap impure functions in pure() before running them.")
@@ -129,7 +131,8 @@ def rng(amount=None, reserve=16):
 def creating():
     """Indicates whether the program is currently allowed to create state
     entries. Can use used for initialization logic that should be excluded from
-    compiled functions."""
+    compiled functions.
+    """
     return context().create
 
 
@@ -143,7 +146,8 @@ def grad(fun, keys, has_aux=False):
     """Compute the gradient of an impure function with respect to the specified
     state entries or modules. The transformed function returns a tuple containing
     the computed value, selected state entries, their gradients, and if
-    applicable auxiliary outputs of the function."""
+    applicable auxiliary outputs of the function.
+    """
     keys = keys if hasattr(keys, "__len__") else (keys,)
     if not has_aux:
         fun = lambda *args, _fun=fun, **kwargs: (_fun(*args, *kwargs), {})
@@ -174,7 +178,8 @@ def grad(fun, keys, has_aux=False):
 
 def jit(fun, static=(), donate=(), **jit_kwargs):
     """Compiles a pure function for fast execution. Only the first call of the
-    function is allowed to create state entries."""
+    function is allowed to create state entries.
+    """
     jit_kwargs["static_argnums"] = [0]
     jit_kwargs["donate_argnums"] = [1]
 
@@ -212,7 +217,8 @@ def jit(fun, static=(), donate=(), **jit_kwargs):
 
 def pmap(fun, axis_name=None, static=(), donate=(), **pmap_kwargs):
     """Compiles n pure function for fast execution across multiple devices. Only
-    the first call of the function is allowed to create state entries."""
+    the first call of the function is allowed to create state entries.
+    """
     pmap_kwargs["axis_name"] = axis_name
     pmap_kwargs["static_broadcasted_argnums"] = [0]
     pmap_kwargs["donate_argnums"] = [1]
@@ -281,17 +287,13 @@ def scan(fun, carry, xs, reverse=False, unroll=1, modify=False):
             (carry, y), state = fun(state, rng, carry, x, create=False)
             return (carry, state), y
 
-        (carry, state), ys = jax.lax.scan(
-            inner, (carry, dict(context())), (xs, rngs), length, reverse, unroll
-        )
+        (carry, state), ys = jax.lax.scan(inner, (carry, dict(context())), (xs, rngs), length, reverse, unroll)
         context().update(state)
     else:
 
         def inner(carry, x):
             x, rng = x
-            (carry, y), state = fun(
-                dict(context()), rng, carry, x, create=False, modify=False
-            )
+            (carry, y), state = fun(dict(context()), rng, carry, x, create=False, modify=False)
             return carry, y
 
         carry, ys = jax.lax.scan(inner, carry, (xs, rngs), length, reverse, unroll)
@@ -317,12 +319,11 @@ SCOPE = ""
 @contextlib.contextmanager
 def scope(name, absolute=False):
     """Enter a relative or absolute name scope. Name scopes are used to make
-    names of state entries unique."""
+    names of state entries unique.
+    """
     global SCOPE
     if SCOPE is None:
-        raise RuntimeError(
-            "Purify stateful functions with fn = pure(fn) before running them."
-        )
+        raise RuntimeError("Purify stateful functions with fn = pure(fn) before running them.")
     outside = SCOPE
     if absolute:
         SCOPE = name
@@ -337,13 +338,14 @@ def scope(name, absolute=False):
 
 
 class ModuleMeta(type):
-
     """Meta class that creates a unique path for each module instance and wraps
-    the methods and properties of the module to enter the name scope."""
+    the methods and properties of the module to enter the name scope.
+    """
 
     def __new__(mcs, name, bases, clsdict):
         """This runs once per user module class definition. It wraps the methods of
-        the module class to automatically enter the name scope of the module."""
+        the module class to automatically enter the name scope of the module.
+        """
         method_names = []
         for key, value in clsdict.items():
             if key.startswith("__") and key != "__call__":
@@ -366,15 +368,12 @@ class ModuleMeta(type):
 
     def __call__(cls, *args, name=None, **kwargs):
         """This runs once per use module instance creation. It derives a unique
-        name and path for the module instance."""
+        name and path for the module instance.
+        """
         if not isinstance(name, str):
-            raise KeyError(
-                "Please provide a module name via Module(..., name='example')."
-            )
+            raise KeyError("Please provide a module name via Module(..., name='example').")
         if not re.match(r"[A-Za-z0-9_]+", name):
-            raise KeyError(
-                "Only letters, numbers, and underscores are allowed in scope names."
-            )
+            raise KeyError("Only letters, numbers, and underscores are allowed in scope names.")
         obj = cls.__new__(cls)
         with scope(name) as path:
             obj._path = path
@@ -394,10 +393,10 @@ def _scope_method(method):
     return wrapper
 
 
-class Module(object, metaclass=ModuleMeta):
-
+class Module(metaclass=ModuleMeta):
     """Base class for users to inherit their modules from. Provides automatic
-    name scoping via the meta class and helper functions for accessing state."""
+    name scoping via the meta class and helper functions for accessing state.
+    """
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.path})"

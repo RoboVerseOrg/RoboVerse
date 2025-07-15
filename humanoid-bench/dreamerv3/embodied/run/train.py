@@ -2,8 +2,9 @@ import re
 from collections import defaultdict
 from functools import partial as bind
 
-import embodied
 import numpy as np
+
+import embodied
 
 
 def train(make_agent, make_replay, make_env, make_logger, args):
@@ -91,9 +92,7 @@ def train(make_agent, make_replay, make_env, make_logger, args):
     should_save(step)  # Register that we just saved.
 
     print("Start training loop")
-    policy = lambda *args: agent.policy(
-        *args, mode="explore" if should_expl(step) else "train"
-    )
+    policy = lambda *args: agent.policy(*args, mode="explore" if should_expl(step) else "train")
     driver.reset(agent.init_policy)
     while step < args.steps:
         driver(policy, steps=10)

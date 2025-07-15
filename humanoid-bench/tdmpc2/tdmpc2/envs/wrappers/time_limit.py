@@ -1,7 +1,7 @@
-"""
-Wrapper for limiting the time steps of an environment.
+"""Wrapper for limiting the time steps of an environment.
 Source: https://github.com/openai/gym/blob/3498617bf031538a808b75b932f4ed2c11896a3e/gym/wrappers/time_limit.py
 """
+
 from typing import Optional
 
 import gymnasium as gym

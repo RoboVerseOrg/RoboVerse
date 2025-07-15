@@ -1,11 +1,10 @@
 import os
 
-from dm_control.rl import control
-from dm_control.suite import pendulum
-from dm_control.suite import common
-from dm_control.utils import rewards
-from dm_control.utils import io as resources
 import numpy as np
+from dm_control.rl import control
+from dm_control.suite import common, pendulum
+from dm_control.utils import io as resources
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -27,9 +26,7 @@ def spin(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     physics = pendulum.Physics.from_xml_string(*get_model_and_assets())
     task = Spin(random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 class Spin(pendulum.SwingUp):

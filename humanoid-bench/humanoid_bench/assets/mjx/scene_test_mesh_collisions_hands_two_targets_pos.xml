@@ -2,9 +2,9 @@
   <option timestep="0.002" iterations="100" ls_iterations="50" solver="Newton">
       <flag eulerdamp="enable"/>
   </option>
-  
-  <include file="h1_mesh_collisions_hands_pos.xml"/>  
-  
+
+  <include file="h1_mesh_collisions_hands_pos.xml"/>
+
   <statistic center="0 0 1" extent="1.8"/>
 
   <visual>

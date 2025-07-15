@@ -2,9 +2,9 @@
   <option timestep="0.002" iterations="100" ls_iterations="50" solver="Newton">
       <flag eulerdamp="enable"/>
   </option>
-  
+
   <include file="h1_mjx_feet_collisions_pos.xml"/>
-  
+
   <statistic center="0 0 1" extent="1.8"/>
 
   <visual>

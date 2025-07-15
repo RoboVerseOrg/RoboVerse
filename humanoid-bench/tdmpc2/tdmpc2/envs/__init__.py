@@ -1,5 +1,5 @@
-from copy import deepcopy
 import warnings
+from copy import deepcopy
 
 import gymnasium as gym
 
@@ -9,13 +9,12 @@ from tdmpc2.envs.wrappers.tensor import TensorWrapper
 
 
 def missing_dependencies(task):
-    raise ValueError(
-        f"Missing dependencies for task {task}; install dependencies to use this environment."
-    )
+    raise ValueError(f"Missing dependencies for task {task}; install dependencies to use this environment.")
 
 
 from tdmpc2.envs.dmcontrol import make_env as make_dm_control_env
 from tdmpc2.envs.humanoid import make_env as make_humanoid_env
+
 try:
     from tdmpc2.envs.maniskill import make_env as make_maniskill_env
 except:
@@ -34,9 +33,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def make_multitask_env(cfg):
-    """
-    Make a multi-task environment for TD-MPC2 experiments.
-    """
+    """Make a multi-task environment for TD-MPC2 experiments."""
     print("Creating multi-task environment with tasks:", cfg.tasks)
     envs = []
     for task in cfg.tasks:
@@ -55,9 +52,7 @@ def make_multitask_env(cfg):
 
 
 def make_env(cfg):
-    """
-    Make an environment for TD-MPC2 experiments.
-    """
+    """Make an environment for TD-MPC2 experiments."""
     gym.logger.set_level(40)
     if cfg.multitask:
         env = make_multitask_env(cfg)

@@ -2,16 +2,14 @@ import collections
 import concurrent.futures
 import json
 import os
+import pathlib
 import re
 import time
-import pathlib
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from . import basics
-from . import path
-from . import timer
+from . import basics, path, timer
 
 
 class Logger:
@@ -131,12 +129,8 @@ class TerminalOutput:
 
     @timer.section("terminal")
     def __call__(self, summaries):
-        step = max(s for s, _, _, in summaries)
-        scalars = {
-            k: float(v)
-            for _, k, v in summaries
-            if isinstance(v, np.ndarray) and len(v.shape) == 0
-        }
+        step = max(s for s, _, _ in summaries)
+        scalars = {k: float(v) for _, k, v in summaries if isinstance(v, np.ndarray) and len(v.shape) == 0}
         if self._pattern:
             scalars = {k: v for k, v in scalars.items() if self._pattern.search(k)}
         else:
@@ -146,9 +140,9 @@ class TerminalOutput:
                 scalars = dict(list(scalars.items())[: self._limit])
         formatted = {k: self._format_value(v) for k, v in scalars.items()}
         if self._name:
-            header = f'{"-"*20}[{self._name} Step {step}]{"-"*20}'
+            header = f"{'-' * 20}[{self._name} Step {step}]{'-' * 20}"
         else:
-            header = f'{"-"*20}[Step {step}]{"-"*20}'
+            header = f"{'-' * 20}[Step {step}]{'-' * 20}"
         if formatted:
             content = " / ".join(f"{k} {v}" for k, v in formatted.items())
         else:
@@ -205,12 +199,7 @@ class JSONLOutput(AsyncOutput):
                 bystep[step][name] = value
             if isinstance(value, np.ndarray) and len(value.shape) == 0:
                 bystep[step][name] = float(value)
-        lines = "".join(
-            [
-                json.dumps({"step": step, **scalars}) + "\n"
-                for step, scalars in bystep.items()
-            ]
-        )
+        lines = "".join([json.dumps({"step": step, **scalars}) + "\n" for step, scalars in bystep.items()])
         basics.print_(f"Writing metrics: {self._filename}")
         with self._filename.open("a") as f:
             f.write(lines)
@@ -246,9 +235,7 @@ class TensorBoardOutput(AsyncOutput):
             self._promise = self._checker.submit(self._check)
         if not self._writer or reset:
             print("Creating new TensorBoard event file writer.")
-            self._writer = tf.summary.create_file_writer(
-                self._logdir, flush_millis=1000, max_queue=10000
-            )
+            self._writer = tf.summary.create_file_writer(self._logdir, flush_millis=1000, max_queue=10000)
         self._writer.set_as_default()
         for step, name, value in summaries:
             try:
@@ -302,7 +289,7 @@ class TensorBoardOutput(AsyncOutput):
             image.encoded_image_string = _encode_gif(video, self._fps)
             summary.value.add(tag=name, image=image)
             tf.summary.experimental.write_raw_pb(summary.SerializeToString(), step)
-        except (IOError, OSError) as e:
+        except OSError as e:
             print("GIF summaries require ffmpeg in $PATH.", e)
             tf.summary.image(name, video, step)
 
@@ -351,9 +338,7 @@ class WandBOutput:
                 value = np.transpose(value, [0, 3, 1, 2])
                 if value.dtype != np.uint8:
                     value = (255 * np.clip(value, 0, 1)).astype(np.uint8)
-                bystep[step][name] = wandb.Video(
-                    value, caption=f"{self._name}_{step}_{name}", fps=20, format="mp4"
-                )
+                bystep[step][name] = wandb.Video(value, caption=f"{self._name}_{step}_{name}", fps=20, format="mp4")
 
         for step, metrics in bystep.items():
             self._wandb.log(metrics, step=step)
@@ -396,23 +381,21 @@ class MLFlowOutput:
 
 @timer.section("gif")
 def _encode_gif(frames, fps):
-    from subprocess import Popen, PIPE
+    from subprocess import PIPE, Popen
 
     h, w, c = frames[0].shape
     pxfmt = {1: "gray", 3: "rgb24"}[c]
-    cmd = " ".join(
-        [
-            "ffmpeg -y -f rawvideo -vcodec rawvideo",
-            f"-r {fps:.02f} -s {w}x{h} -pix_fmt {pxfmt} -i - -filter_complex",
-            "[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse",
-            f"-r {fps:.02f} -f gif -",
-        ]
-    )
+    cmd = " ".join([
+        "ffmpeg -y -f rawvideo -vcodec rawvideo",
+        f"-r {fps:.02f} -s {w}x{h} -pix_fmt {pxfmt} -i - -filter_complex",
+        "[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse",
+        f"-r {fps:.02f} -f gif -",
+    ])
     proc = Popen(cmd.split(" "), stdin=PIPE, stdout=PIPE, stderr=PIPE)
     for image in frames:
         proc.stdin.write(image.tobytes())
     out, err = proc.communicate()
     if proc.returncode:
-        raise IOError("\n".join([" ".join(cmd), err.decode("utf8")]))
+        raise OSError("\n".join([" ".join(cmd), err.decode("utf8")]))
     del proc
     return out

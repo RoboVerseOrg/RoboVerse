@@ -1,12 +1,10 @@
 import os
 
-from dm_control import composer
-from dm_control import mjcf
-from dm_control.composer.observation import observable
-from dm_control.locomotion.walkers import base
-from dm_control.locomotion.walkers import legacy_base
-from dm_control.mujoco.wrapper import mjbindings
 import numpy as np
+from dm_control import composer, mjcf
+from dm_control.composer.observation import observable
+from dm_control.locomotion.walkers import base, legacy_base
+from dm_control.mujoco.wrapper import mjbindings
 
 enums = mjbindings.enums
 mjlib = mjbindings.mjlib
@@ -15,9 +13,7 @@ mjlib = mjbindings.mjlib
 class Quadruped(legacy_base.Walker):
     def _build(self, name="walker", initializer=None):
         super()._build(initializer=initializer)
-        self._mjcf_root = mjcf.from_path(
-            os.path.join(os.path.dirname(__file__), "loconav_quadruped.xml")
-        )
+        self._mjcf_root = mjcf.from_path(os.path.join(os.path.dirname(__file__), "loconav_quadruped.xml"))
         if name:
             self._mjcf_root.model = name
         self._prev_action = np.zeros(self.action_spec.shape, self.action_spec.dtype)

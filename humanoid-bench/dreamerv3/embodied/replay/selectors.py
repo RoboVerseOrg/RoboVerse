@@ -46,9 +46,7 @@ class Uniform:
 
 
 class Prioritized:
-    def __init__(
-        self, exponent=1.0, initial=1.0, zero_on_sample=False, branching=16, seed=0
-    ):
+    def __init__(self, exponent=1.0, initial=1.0, zero_on_sample=False, branching=16, seed=0):
         self.exponent = exponent
         self.initial = initial
         self.zero_on_sample = zero_on_sample

@@ -48,10 +48,7 @@ class TestDistr:
             stats["frames"] += len(data["foo"])
             stats["nbytes"] += sum(x.nbytes for x in data.values())
 
-        procs = [
-            embodied.distr.StoppableProcess(client, addr, barrier, start=True)
-            for _ in range(clients)
-        ]
+        procs = [embodied.distr.StoppableProcess(client, addr, barrier, start=True) for _ in range(clients)]
 
         server = embodied.distr.Server(addr)
         # server = embodied.distr.Server2(addr)
@@ -65,9 +62,9 @@ class TestDistr:
                 now = time.time()
                 dur = now - start
                 print(
-                    f'{stats["batches"]/dur:.2f} bat/s '
-                    + f'{stats["frames"]/dur:.2f} frm/s '
-                    + f'{stats["nbytes"]/dur/(1024**3):.2f} gib/s'
+                    f"{stats['batches'] / dur:.2f} bat/s "
+                    + f"{stats['frames'] / dur:.2f} frm/s "
+                    + f"{stats['nbytes'] / dur / (1024**3):.2f} gib/s"
                 )
                 stats.clear()
                 start = now
@@ -99,9 +96,7 @@ class TestDistr:
                 client.function(data).result()
 
         def proxy(context, outer_addr, inner_addr, barrier):
-            client = embodied.distr.Client(
-                inner_addr, pings=0, maxage=0, name="ProxyInner"
-            )
+            client = embodied.distr.Client(inner_addr, pings=0, maxage=0, name="ProxyInner")
             client.connect()
             server = embodied.distr.Server(outer_addr, errors=True, name="ProxyOuter")
 
@@ -137,9 +132,9 @@ class TestDistr:
                     now = time.time()
                     dur = now - start
                     print(
-                        f'{stats["batches"]/dur:.2f} bat/s '
-                        + f'{stats["frames"]/dur:.2f} frm/s '
-                        + f'{stats["nbytes"]/dur/(1024**3):.2f} gib/s'
+                        f"{stats['batches'] / dur:.2f} bat/s "
+                        + f"{stats['frames'] / dur:.2f} frm/s "
+                        + f"{stats['nbytes'] / dur / (1024**3):.2f} gib/s"
                     )
                     stats.clear()
                     start = now
@@ -148,13 +143,8 @@ class TestDistr:
         inner_addr = "ipc:///tmp/test-inner"
         outer_addr = "ipc:///tmp/test-outer"
         barrier = embodied.distr.mp.Barrier(2 + clients)
-        procs = [
-            embodied.distr.StoppableProcess(client, outer_addr, barrier)
-            for _ in range(clients)
-        ]
-        procs.append(
-            embodied.distr.StoppableProcess(proxy, outer_addr, inner_addr, barrier)
-        )
+        procs = [embodied.distr.StoppableProcess(client, outer_addr, barrier) for _ in range(clients)]
+        procs.append(embodied.distr.StoppableProcess(proxy, outer_addr, inner_addr, barrier))
         procs.append(embodied.distr.StoppableProcess(backend, inner_addr, barrier))
         embodied.distr.run(procs)
 

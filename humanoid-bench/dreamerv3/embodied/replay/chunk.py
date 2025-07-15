@@ -1,12 +1,13 @@
 import io
 from datetime import datetime
 
-import embodied
 import numpy as np
+
+import embodied
 
 
 class Chunk:
-    __slots__ = ("time", "uuid", "succ", "length", "size", "data", "saved")
+    __slots__ = ("data", "length", "saved", "size", "succ", "time", "uuid")
 
     def __init__(self, size=1024):
         now = datetime.now()
@@ -29,7 +30,7 @@ class Chunk:
     @property
     def filename(self):
         succ = self.succ.uuid if isinstance(self.succ, type(self)) else self.succ
-        return f"{self.time}-{str(self.uuid)}-{str(succ)}-{self.length}.npz"
+        return f"{self.time}-{self.uuid!s}-{succ!s}-{self.length}.npz"
 
     @property
     def nbytes(self):
@@ -41,9 +42,7 @@ class Chunk:
         assert self.length < self.size
         if not self.data:
             example = step
-            self.data = {
-                k: np.empty((self.size, *v.shape), v.dtype) for k, v in example.items()
-            }
+            self.data = {k: np.empty((self.size, *v.shape), v.dtype) for k, v in example.items()}
         for key, value in step.items():
             self.data[key][self.length] = value
         self.length += 1

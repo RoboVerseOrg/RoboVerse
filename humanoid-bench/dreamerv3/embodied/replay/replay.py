@@ -4,12 +4,12 @@ from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial as bind
 
-import embodied
 import numpy as np
 
+import embodied
+
 from . import chunk as chunklib
-from . import limiters
-from . import selectors
+from . import limiters, selectors
 
 
 class Replay:
@@ -33,9 +33,7 @@ class Replay:
 
         self.sampler = selectors.Uniform(seed)
         if samples_per_insert:
-            self.limiter = limiters.SamplesPerInsert(
-                samples_per_insert, tolerance, min_size
-            )
+            self.limiter = limiters.SamplesPerInsert(samples_per_insert, tolerance, min_size)
         else:
             self.limiter = limiters.MinSize(min_size)
 
@@ -172,9 +170,7 @@ class Replay:
                     take = min(remaining, chunk.length)
                     parts.append(chunk.slice(0, take))
                     remaining -= take
-                seq = {
-                    k: np.concatenate([p[k] for p in parts], 0) for k in parts[0].keys()
-                }
+                seq = {k: np.concatenate([p[k] for p in parts], 0) for k in parts[0].keys()}
         with embodied.timer.section("isfirst"):
             if "is_first" in seq:
                 seq["is_first"] = seq["is_first"].copy()
@@ -210,9 +206,7 @@ class Replay:
                 seqs = []
                 for _ in range(batch):
                     seqs.append(self._sample())
-                stacked = {
-                    k: np.stack([seq[k] for seq in seqs]) for k in seqs[0].keys()
-                }
+                stacked = {k: np.stack([seq[k] for seq in seqs]) for k in seqs[0].keys()}
                 yield stacked
         else:
             while True:

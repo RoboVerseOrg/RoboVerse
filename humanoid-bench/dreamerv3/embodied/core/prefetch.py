@@ -2,8 +2,8 @@ import queue as queuelib
 
 import numpy as np
 
-from . import timer
 from .. import distr
+from . import timer
 
 
 class Prefetch:

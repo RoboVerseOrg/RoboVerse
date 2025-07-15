@@ -1,9 +1,9 @@
 import enum
 import itertools
-import msgpack
 import threading
 import time
 
+import msgpack
 import numpy as np
 import zmq
 
@@ -12,11 +12,11 @@ DEBUG = False
 
 
 class Type(enum.Enum):
-    PING = int(1).to_bytes(1, "big")  # rid
-    PONG = int(2).to_bytes(1, "big")  # rid
-    CALL = int(3).to_bytes(1, "big")  # rid, text, payload
-    RESULT = int(4).to_bytes(1, "big")  # rid, payload
-    ERROR = int(5).to_bytes(1, "big")  # rid, text
+    PING = (1).to_bytes(1, "big")  # rid
+    PONG = (2).to_bytes(1, "big")  # rid
+    CALL = (3).to_bytes(1, "big")  # rid, text, payload
+    RESULT = (4).to_bytes(1, "big")  # rid, payload
+    ERROR = (5).to_bytes(1, "big")  # rid, text
 
 
 class ConnectError(RuntimeError):
@@ -111,10 +111,7 @@ class ClientSocket:
 
         typ, rid, *args = [x.buffer for x in parts]
         rid = bytes(rid)
-        DEBUG and print(
-            f"Client received {Type(bytes(typ)).name} "
-            + f'with rid {int.from_bytes(rid, "big")}'
-        )
+        DEBUG and print(f"Client received {Type(bytes(typ)).name} " + f"with rid {int.from_bytes(rid, 'big')}")
         if typ == Type.PING.value:
             assert not args
             with self.lock:
@@ -239,9 +236,6 @@ def pack(data):
 def unpack(payload):
     meta, *buffers = payload
     keys, dtypes, shapes = msgpack.unpackb(meta)
-    vals = [
-        np.frombuffer(b, d).reshape(s)
-        for i, (d, s, b) in enumerate(zip(dtypes, shapes, buffers))
-    ]
+    vals = [np.frombuffer(b, d).reshape(s) for i, (d, s, b) in enumerate(zip(dtypes, shapes, buffers))]
     data = dict(zip(keys, vals))
     return data

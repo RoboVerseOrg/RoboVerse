@@ -8,8 +8,7 @@ from tdmpc2.common.world_model import WorldModel
 
 
 class TDMPC2:
-    """
-    TD-MPC2 agent. Implements training + inference.
+    """TD-MPC2 agent. Implements training + inference.
     Can be used for both single-task and multi-task experiments,
     and supports both state and pixel observations.
     """
@@ -30,22 +29,14 @@ class TDMPC2:
                 {"params": self.model._dynamics.parameters()},
                 {"params": self.model._reward.parameters()},
                 {"params": self.model._Qs.parameters()},
-                {
-                    "params": self.model._task_emb.parameters()
-                    if self.cfg.multitask
-                    else []
-                },
+                {"params": self.model._task_emb.parameters() if self.cfg.multitask else []},
             ],
             lr=self.cfg.lr,
         )
-        self.pi_optim = torch.optim.Adam(
-            self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5
-        )
+        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5)
         self.model.eval()
         self.scale = RunningScale(cfg)
-        self.cfg.iterations += 2 * int(
-            cfg.action_dim >= 20
-        )  # Heuristic for large action spaces
+        self.cfg.iterations += 2 * int(cfg.action_dim >= 20)  # Heuristic for large action spaces
         self.discount = (
             torch.tensor(
                 [self._get_discount(ep_len) for ep_len in cfg.episode_lengths],
@@ -56,8 +47,7 @@ class TDMPC2:
         )
 
     def _get_discount(self, episode_length):
-        """
-        Returns discount factor for a given episode length.
+        """Returns discount factor for a given episode length.
         Simple heuristic that scales discount linearly with episode length.
         Default values should work well for most tasks, but can be changed as needed.
 
@@ -68,13 +58,10 @@ class TDMPC2:
                 float: Discount factor for the task.
         """
         frac = episode_length / self.cfg.discount_denom
-        return min(
-            max((frac - 1) / (frac), self.cfg.discount_min), self.cfg.discount_max
-        )
+        return min(max((frac - 1) / (frac), self.cfg.discount_min), self.cfg.discount_max)
 
     def save(self, fp):
-        """
-        Save state dict of the agent to filepath.
+        """Save state dict of the agent to filepath.
 
         Args:
                 fp (str): Filepath to save state dict to.
@@ -82,8 +69,7 @@ class TDMPC2:
         torch.save({"model": self.model.state_dict()}, fp)
 
     def load(self, fp):
-        """
-        Load a saved state dict from filepath (or dictionary) into current agent.
+        """Load a saved state dict from filepath (or dictionary) into current agent.
 
         Args:
                 fp (str or dict): Filepath or state dict to load.
@@ -93,8 +79,7 @@ class TDMPC2:
 
     @torch.no_grad()
     def act(self, obs, t0=False, eval_mode=False, task=None):
-        """
-        Select an action by planning in the latent space of the world model.
+        """Select an action by planning in the latent space of the world model.
 
         Args:
                 obs (torch.Tensor): Observation from the environment.
@@ -123,19 +108,12 @@ class TDMPC2:
             reward = math.two_hot_inv(self.model.reward(z, actions[t], task), self.cfg)
             z = self.model.next(z, actions[t], task)
             G += discount * reward
-            discount *= (
-                self.discount[torch.tensor(task)]
-                if self.cfg.multitask
-                else self.discount
-            )
-        return G + discount * self.model.Q(
-            z, self.model.pi(z, task)[1], task, return_type="avg"
-        )
+            discount *= self.discount[torch.tensor(task)] if self.cfg.multitask else self.discount
+        return G + discount * self.model.Q(z, self.model.pi(z, task)[1], task, return_type="avg")
 
     @torch.no_grad()
     def plan(self, z, t0=False, eval_mode=False, task=None):
-        """
-        Plan a sequence of actions using the learned world model.
+        """Plan a sequence of actions using the learned world model.
 
         Args:
                 z (torch.Tensor): Latent state from which to plan.
@@ -163,9 +141,7 @@ class TDMPC2:
         # Initialize state and parameters
         z = z.repeat(self.cfg.num_samples, 1)
         mean = torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.device)
-        std = self.cfg.max_std * torch.ones(
-            self.cfg.horizon, self.cfg.action_dim, device=self.device
-        )
+        std = self.cfg.max_std * torch.ones(self.cfg.horizon, self.cfg.action_dim, device=self.device)
         if not t0:
             mean[:-1] = self._prev_mean[1:]
         actions = torch.empty(
@@ -195,23 +171,16 @@ class TDMPC2:
 
             # Compute elite actions
             value = self._estimate_value(z, actions, task).nan_to_num_(0)
-            elite_idxs = torch.topk(
-                value.squeeze(1), self.cfg.num_elites, dim=0
-            ).indices
+            elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices
             elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs]
 
             # Update parameters
             max_value = elite_value.max(0)[0]
             score = torch.exp(self.cfg.temperature * (elite_value - max_value))
             score /= score.sum(0)
-            mean = torch.sum(score.unsqueeze(0) * elite_actions, dim=1) / (
-                score.sum(0) + 1e-9
-            )
+            mean = torch.sum(score.unsqueeze(0) * elite_actions, dim=1) / (score.sum(0) + 1e-9)
             std = torch.sqrt(
-                torch.sum(
-                    score.unsqueeze(0) * (elite_actions - mean.unsqueeze(1)) ** 2, dim=1
-                )
-                / (score.sum(0) + 1e-9)
+                torch.sum(score.unsqueeze(0) * (elite_actions - mean.unsqueeze(1)) ** 2, dim=1) / (score.sum(0) + 1e-9)
             ).clamp_(self.cfg.min_std, self.cfg.max_std)
             if self.cfg.multitask:
                 mean = mean * self.model._action_masks[task]
@@ -227,8 +196,7 @@ class TDMPC2:
         return a.clamp_(-1, 1)
 
     def update_pi(self, zs, task):
-        """
-        Update policy using a sequence of latent states.
+        """Update policy using a sequence of latent states.
 
         Args:
                 zs (torch.Tensor): Sequence of latent states.
@@ -248,9 +216,7 @@ class TDMPC2:
         rho = torch.pow(self.cfg.rho, torch.arange(len(qs), device=self.device))
         pi_loss = ((self.cfg.entropy_coef * log_pis - qs).mean(dim=(1, 2)) * rho).mean()
         pi_loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            self.model._pi.parameters(), self.cfg.grad_clip_norm
-        )
+        torch.nn.utils.clip_grad_norm_(self.model._pi.parameters(), self.cfg.grad_clip_norm)
         self.pi_optim.step()
         self.model.track_q_grad(True)
 
@@ -258,8 +224,7 @@ class TDMPC2:
 
     @torch.no_grad()
     def _td_target(self, next_z, reward, task):
-        """
-        Compute the TD-target from a reward and the observation at the following time step.
+        """Compute the TD-target from a reward and the observation at the following time step.
 
         Args:
                 next_z (torch.Tensor): Latent state at the following time step.
@@ -270,16 +235,11 @@ class TDMPC2:
                 torch.Tensor: TD-target.
         """
         pi = self.model.pi(next_z, task)[1]
-        discount = (
-            self.discount[task].unsqueeze(-1) if self.cfg.multitask else self.discount
-        )
-        return reward + discount * self.model.Q(
-            next_z, pi, task, return_type="min", target=True
-        )
+        discount = self.discount[task].unsqueeze(-1) if self.cfg.multitask else self.discount
+        return reward + discount * self.model.Q(next_z, pi, task, return_type="min", target=True)
 
     def update(self, buffer):
-        """
-        Main update function. Corresponds to one iteration of model learning.
+        """Main update function. Corresponds to one iteration of model learning.
 
         Args:
                 buffer (common.buffer.Buffer): Replay buffer.
@@ -321,15 +281,9 @@ class TDMPC2:
         # Compute losses
         reward_loss, value_loss = 0, 0
         for t in range(self.cfg.horizon):
-            reward_loss += (
-                math.soft_ce(reward_preds[t], reward[t], self.cfg).mean()
-                * self.cfg.rho**t
-            )
+            reward_loss += math.soft_ce(reward_preds[t], reward[t], self.cfg).mean() * self.cfg.rho**t
             for q in range(self.cfg.num_q):
-                value_loss += (
-                    math.soft_ce(qs[q][t], td_targets[t], self.cfg).mean()
-                    * self.cfg.rho**t
-                )
+                value_loss += math.soft_ce(qs[q][t], td_targets[t], self.cfg).mean() * self.cfg.rho**t
         consistency_loss *= 1 / self.cfg.horizon
         reward_loss *= 1 / self.cfg.horizon
         value_loss *= 1 / (self.cfg.horizon * self.cfg.num_q)
@@ -341,9 +295,7 @@ class TDMPC2:
 
         # Update model
         total_loss.backward()
-        grad_norm = torch.nn.utils.clip_grad_norm_(
-            self.model.parameters(), self.cfg.grad_clip_norm
-        )
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip_norm)
         self.optim.step()
 
         # Update policy

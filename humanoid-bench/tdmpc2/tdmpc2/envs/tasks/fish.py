@@ -1,14 +1,10 @@
-import collections
 import os
 
-from dm_control import mujoco
-from dm_control.rl import control
-from dm_control.suite import base
-from dm_control.suite import common
-from dm_control.suite import fish
-from dm_control.utils import rewards
-from dm_control.utils import io as resources
 import numpy as np
+from dm_control.rl import control
+from dm_control.suite import base, common, fish
+from dm_control.utils import io as resources
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -37,11 +33,7 @@ def obstacles(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=No
     task = Obstacles(random=random)
     environment_kwargs = environment_kwargs or {}
     return control.Environment(
-        physics,
-        task,
-        control_timestep=_CONTROL_TIMESTEP,
-        time_limit=time_limit,
-        **environment_kwargs
+        physics, task, control_timestep=_CONTROL_TIMESTEP, time_limit=time_limit, **environment_kwargs
     )
 
 
@@ -54,12 +46,7 @@ class Obstacles(fish.Swim):
     def in_wall(self, physics, name, min_distance=0.08):
         """Returns True if the given body is too close to a wall."""
         for wall in ["wall0", "wall1", "wall2", "wall3"]:
-            l1_dist = np.min(
-                np.abs(
-                    physics.named.data.geom_xpos[name][:2]
-                    - physics.named.data.geom_xpos[wall][:2]
-                )
-            )
+            l1_dist = np.min(np.abs(physics.named.data.geom_xpos[name][:2] - physics.named.data.geom_xpos[wall][:2]))
             if l1_dist < min_distance:
                 return True
         return False

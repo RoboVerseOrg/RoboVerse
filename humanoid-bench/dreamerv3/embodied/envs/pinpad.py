@@ -36,7 +36,7 @@ class PinPad(embodied.Env):
         for (x, y), char in np.ndenumerate(self.layout):
             if char != "#":
                 self.spawns.append((x, y))
-        print(f'Created PinPad env with sequence: {"->".join(self.target)}')
+        print(f"Created PinPad env with sequence: {'->'.join(self.target)}")
         self.sequence = collections.deque(maxlen=len(self.target))
         self.player = None
         self.steps = None
@@ -135,9 +135,7 @@ LAYOUT_THREE = """
 #     2222     #
 #     2222     #
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 LAYOUT_FOUR = """
 ################
@@ -154,9 +152,7 @@ LAYOUT_FOUR = """
 #3333      2222#
 #3333      2222#
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 LAYOUT_FIVE = """
 ################
@@ -173,9 +169,7 @@ LAYOUT_FIVE = """
 #333       2222#
 #          2222#
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 LAYOUT_SIX = """
 ################
@@ -192,9 +186,7 @@ LAYOUT_SIX = """
 #444        222#
 #444        222#
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 LAYOUT_SEVEN = """
 ################
@@ -211,9 +203,7 @@ LAYOUT_SEVEN = """
 #666  7777  222#
 #666  7777  222#
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 LAYOUT_EIGHT = """
 ################
@@ -230,6 +220,4 @@ LAYOUT_EIGHT = """
 #666  7777  222#
 #666  7777  222#
 ################
-""".strip(
-    "\n"
-)
+""".strip("\n")

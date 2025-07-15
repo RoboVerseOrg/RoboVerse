@@ -1,13 +1,11 @@
 import time
 import weakref
-from functools import partial as bind
 from collections import deque
+from functools import partial as bind
 
 import numpy as np
 
-from ..core import basics
-from ..core import fps
-from ..core import timer
+from ..core import basics, fps, timer
 from . import sockets
 
 

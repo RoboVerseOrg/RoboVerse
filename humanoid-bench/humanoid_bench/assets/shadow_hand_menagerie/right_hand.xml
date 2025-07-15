@@ -1,5 +1,5 @@
 <mujoco model="right_shadow_hand">
-  
+
 
     <!-- <body name="rh_forearm" childclass="right_hand" quat="0 1 0 1"> -->
       <!-- <inertial mass="3" pos="0 0 0.09" diaginertia="0.0138 0.0138 0.00744"/> -->
@@ -174,5 +174,5 @@
       </body>
     <!-- </body> -->
 
-  
+
 </mujoco>

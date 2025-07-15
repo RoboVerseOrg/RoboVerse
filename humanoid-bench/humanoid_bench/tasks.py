@@ -1,8 +1,5 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
-from dm_control.utils import rewards
-import mujoco
+
 
 class Task:
     qpos0_robot = {}
@@ -45,17 +42,10 @@ class Task:
         return self.get_obs()
 
     def normalize_action(self, action):
-        return (
-            2
-            * (action - self._env.action_low)
-            / (self._env.action_high - self._env.action_low)
-            - 1
-        )
+        return 2 * (action - self._env.action_low) / (self._env.action_high - self._env.action_low) - 1
 
     def unnormalize_action(self, action):
-        return (action + 1) / 2 * (
-            self._env.action_high - self._env.action_low
-        ) + self._env.action_low
+        return (action + 1) / 2 * (self._env.action_high - self._env.action_low) + self._env.action_low
 
     def step(self, action):
         action = self.unnormalize_action(action)
@@ -69,6 +59,4 @@ class Task:
         return obs, reward, terminated, False, info
 
     def render(self):
-        return self._env.mujoco_renderer.render(
-            self._env.render_mode, self._env.camera_id, self._env.camera_name
-        )
+        return self._env.mujoco_renderer.render(self._env.render_mode, self._env.camera_id, self._env.camera_name)

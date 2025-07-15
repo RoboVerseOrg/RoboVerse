@@ -1,13 +1,7 @@
-import os
-
 import numpy as np
-import mujoco
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 # Height of head above which stand reward is 1.
 _STAND_HEIGHT = 1.65
@@ -56,7 +50,7 @@ class Room(Task):
             0 0 0.1 0 0 0 0
             0 0 0.1 0 0 0 0
             0 0 0 0 0 0 0
-        """
+        """,
     }
     dof = 7 * 6
 
@@ -99,22 +93,18 @@ class Room(Task):
         ).mean()
         small_control = (4 + small_control) / 5
 
-        room_object_positions = np.vstack(
-            [
-                self._env.named.data.xpos[obj_name]
-                for obj_name in [
-                    "chair",
-                    "trophy",
-                    "headphone",
-                    "package_a",
-                    "package_b",
-                    "snow_globe",
-                ]
+        room_object_positions = np.vstack([
+            self._env.named.data.xpos[obj_name]
+            for obj_name in [
+                "chair",
+                "trophy",
+                "headphone",
+                "package_a",
+                "package_b",
+                "snow_globe",
             ]
-        )
-        room_object_entropies = np.array(
-            [np.var(room_object_positions[:, col_id]) for col_id in range(2)]
-        )
+        ])
+        room_object_entropies = np.array([np.var(room_object_positions[:, col_id]) for col_id in range(2)])
 
         room_object_organized = rewards.tolerance(
             np.max(room_object_entropies),
@@ -138,12 +128,8 @@ class Room(Task):
         velocity = self._env.data.qvel.flat.copy()
         for i in range(-7, 0):
             position[i * 7] = np.random.uniform(-3.5 + (i + 7), -3.5 + (i + 8))
-            position[i * 7 + 1] = np.random.uniform(1.2, 3.5) * np.random.choice(
-                [1, -1]
-            )
+            position[i * 7 + 1] = np.random.uniform(1.2, 3.5) * np.random.choice([1, -1])
             if i == -4:
-                position[i * 7 + 3 : i * 7 + 7] = np.array(
-                    [0.0733422, 0.0519076, -0.240058, -0.966591]
-                )
+                position[i * 7 + 3 : i * 7 + 7] = np.array([0.0733422, 0.0519076, -0.240058, -0.966591])
         self._env.set_state(position, velocity)
         return super().reset_model()

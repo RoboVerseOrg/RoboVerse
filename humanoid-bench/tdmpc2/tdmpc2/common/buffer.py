@@ -2,13 +2,12 @@ import sys
 
 import torch
 from tensordict.tensordict import TensorDict
-from torchrl.data.replay_buffers import ReplayBuffer, LazyTensorStorage
+from torchrl.data.replay_buffers import LazyTensorStorage, ReplayBuffer
 from torchrl.data.replay_buffers.samplers import SliceSampler
 
 
 class Buffer:
-    """
-    Replay buffer for TD-MPC2 training. Based on torchrl.
+    """Replay buffer for TD-MPC2 training. Based on torchrl.
     Uses CUDA memory if available, and CPU memory otherwise.
     """
 
@@ -39,9 +38,7 @@ class Buffer:
         return self._num_eps
 
     def _reserve_buffer(self, storage):
-        """
-        Reserve a buffer with the given storage.
-        """
+        """Reserve a buffer with the given storage."""
         return ReplayBuffer(
             storage=storage,
             sampler=self._sampler,
@@ -57,36 +54,28 @@ class Buffer:
             mem_free = 0
         else:
             mem_free, _ = torch.cuda.mem_get_info()
-        bytes_per_step = sum(
-            [
-                (
-                    v.numel() * v.element_size()
-                    if not isinstance(v, TensorDict)
-                    else sum([x.numel() * x.element_size() for x in v.values()])
-                )
-                for v in tds.values()
-            ]
-        ) / len(tds)
+        bytes_per_step = sum([
+            (
+                v.numel() * v.element_size()
+                if not isinstance(v, TensorDict)
+                else sum([x.numel() * x.element_size() for x in v.values()])
+            )
+            for v in tds.values()
+        ]) / len(tds)
         total_bytes = bytes_per_step * self._capacity
-        print(f"Storage required: {total_bytes/1e9:.2f} GB")
+        print(f"Storage required: {total_bytes / 1e9:.2f} GB")
         # Heuristic: decide whether to use CUDA or CPU memory
         storage_device = "cuda" if 2.5 * total_bytes < mem_free else "cpu"
         print(f"Using {storage_device.upper()} memory for storage.")
-        return self._reserve_buffer(
-            LazyTensorStorage(self._capacity, device=torch.device(storage_device))
-        )
+        return self._reserve_buffer(LazyTensorStorage(self._capacity, device=torch.device(storage_device)))
 
     def _to_device(self, *args, device=None):
         if device is None:
             device = self._device
-        return (
-            arg.to(device, non_blocking=True) if arg is not None else None
-            for arg in args
-        )
+        return (arg.to(device, non_blocking=True) if arg is not None else None for arg in args)
 
     def _prepare_batch(self, td):
-        """
-        Prepare a sampled batch for training (post-processing).
+        """Prepare a sampled batch for training (post-processing).
         Expects `td` to be a TensorDict with batch size TxB.
         """
         obs = td["obs"]

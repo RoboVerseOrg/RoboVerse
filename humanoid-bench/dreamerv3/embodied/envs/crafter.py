@@ -32,12 +32,7 @@ class Crafter(embodied.Env):
             "log_reward": embodied.Space(np.float32),
         }
         if self._logs:
-            spaces.update(
-                {
-                    f"log_achievement_{k}": embodied.Space(np.int32)
-                    for k in self._achievements
-                }
-            )
+            spaces.update({f"log_achievement_{k}": embodied.Space(np.int32) for k in self._achievements})
         return spaces
 
     @property
@@ -54,13 +49,9 @@ class Crafter(embodied.Env):
             return self._obs(image, 0.0, {}, is_first=True)
         image, reward, self._done, info = self._env.step(action["action"])
         reward = np.float32(reward)
-        return self._obs(
-            image, reward, info, is_last=self._done, is_terminal=info["discount"] == 0
-        )
+        return self._obs(image, reward, info, is_last=self._done, is_terminal=info["discount"] == 0)
 
-    def _obs(
-        self, image, reward, info, is_first=False, is_last=False, is_terminal=False
-    ):
+    def _obs(self, image, reward, info, is_first=False, is_last=False, is_terminal=False):
         obs = dict(
             image=image,
             reward=np.float32(reward),
@@ -71,8 +62,7 @@ class Crafter(embodied.Env):
         )
         if self._logs:
             log_achievements = {
-                f"log_achievement_{k}": info["achievements"][k] if info else 0
-                for k in self._achievements
+                f"log_achievement_{k}": info["achievements"][k] if info else 0 for k in self._achievements
             }
             obs.update({k: np.int32(v) for k, v in log_achievements.items()})
         return obs

@@ -1,7 +1,7 @@
-import numpy as np
 import gymnasium as gym
-from tdmpc2.envs.wrappers.time_limit import TimeLimit
+import numpy as np
 
+from tdmpc2.envs.wrappers.time_limit import TimeLimit
 
 MYOSUITE_TASKS = {
     "myo-reach": "myoHandReachFixed-v0",
@@ -35,19 +35,14 @@ class MyoSuiteWrapper(gym.Wrapper):
         return self.env.unwrapped
 
     def render(self, *args, **kwargs):
-        return self.env.sim.renderer.render_offscreen(
-            width=384, height=384, camera_id=self.camera_id
-        ).copy()
+        return self.env.sim.renderer.render_offscreen(width=384, height=384, camera_id=self.camera_id).copy()
 
 
 def make_env(cfg):
-    """
-    Make Myosuite environment.
-    """
-    if not cfg.task in MYOSUITE_TASKS:
+    """Make Myosuite environment."""
+    if cfg.task not in MYOSUITE_TASKS:
         raise ValueError("Unknown task:", cfg.task)
     assert cfg.obs == "state", "This task only supports state observations."
-    import myosuite
 
     env = gym.make(MYOSUITE_TASKS[cfg.task])
     env = MyoSuiteWrapper(env, cfg)

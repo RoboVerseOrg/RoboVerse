@@ -12,7 +12,7 @@
         <geom type="box" name="behind_barrier" pos="-0.525 0 1" size="0.05 5 1" rgba="0.1 0.1 0.1 0.1" class="visual" />
         <geom type="box" name="behind_barrier_collision" pos="-0.525 0 1" size="0.05 5 1" class="collision" />
     </body>
-    <body name="hurdle_array" pos="0 0 0" > 
+    <body name="hurdle_array" pos="0 0 0" >
 
 
         <body name="starting_hurdle_1_0" pos="7 0 0">
@@ -22,7 +22,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_1_1" pos="7 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -37,7 +37,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_1_2" pos="7 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -52,7 +52,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_1_3" pos="7 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -67,7 +67,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_1_4" pos="7 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -82,7 +82,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_2_0" pos="14 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -90,7 +90,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_2_1" pos="14 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -105,7 +105,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_2_2" pos="14 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -120,7 +120,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_2_3" pos="14 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -135,7 +135,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_2_4" pos="14 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -150,7 +150,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_3_0" pos="21 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -158,7 +158,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_3_1" pos="21 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -173,7 +173,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_3_2" pos="21 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -188,7 +188,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_3_3" pos="21 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -203,7 +203,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_3_4" pos="21 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -218,7 +218,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_4_0" pos="28 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -226,7 +226,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_4_1" pos="28 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -241,7 +241,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_4_2" pos="28 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -256,7 +256,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_4_3" pos="28 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -271,7 +271,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_4_4" pos="28 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -286,7 +286,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_5_0" pos="35 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -294,7 +294,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_5_1" pos="35 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -309,7 +309,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_5_2" pos="35 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -324,7 +324,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_5_3" pos="35 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -339,7 +339,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_5_4" pos="35 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -354,7 +354,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_6_0" pos="42 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -362,7 +362,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_6_1" pos="42 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -377,7 +377,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_6_2" pos="42 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -392,7 +392,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_6_3" pos="42 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -407,7 +407,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_6_4" pos="42 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -422,7 +422,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_7_0" pos="49 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -430,7 +430,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_7_1" pos="49 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -445,7 +445,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_7_2" pos="49 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -460,7 +460,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_7_3" pos="49 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -475,7 +475,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_7_4" pos="49 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -490,7 +490,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_8_0" pos="56 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -498,7 +498,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_8_1" pos="56 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -513,7 +513,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_8_2" pos="56 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -528,7 +528,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_8_3" pos="56 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -543,7 +543,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_8_4" pos="56 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -558,7 +558,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_9_0" pos="63 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -566,7 +566,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_9_1" pos="63 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -581,7 +581,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_9_2" pos="63 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -596,7 +596,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_9_3" pos="63 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -611,7 +611,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_9_4" pos="63 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -626,7 +626,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
         <body name="starting_hurdle_10_0" pos="70 0 0">
             <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual" />
             <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual" />
@@ -634,7 +634,7 @@
             <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
             <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
         </body>
-    
+
             <body name="starting_hurdle_10_1" pos="70 1 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -649,7 +649,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_10_2" pos="70 2 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -664,7 +664,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_10_3" pos="70 3 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
@@ -679,7 +679,7 @@
                 <geom type="box" pos="0 0.47 0.2" size="0.01 0.01 0.2" class="visual"/>
                 <geom type="box" pos="0 0 0.34" size="0.01 0.45 0.03" class="visual"/>
             </body>
-        
+
             <body name="starting_hurdle_10_4" pos="70 4 0">
                 <geom type="box" pos="-0.1 -0.47 0.01" size="0.15 0.01 0.01" class="visual"/>
                 <geom type="box" pos="-0.1 0.47 0.01" size="0.15 0.01 0.01" class="visual"/>

@@ -285,7 +285,7 @@
       </geometry>
     </collision>
   </link>
- 
+
   <link name="right_hip_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="-0.001967 -0.000244 0.031435"/>
@@ -551,7 +551,7 @@
         <mesh filename="arm-L4.obj" scale="1 -1 1"/>
       </geometry>
     </collision>
-  </link> 
+  </link>
   <joint name="left-hip-roll" type="continuous">
     <origin rpy="1.57079632679 -1.1955506 -1.57079632679" xyz="-0.001 0.091 0"/>
     <axis xyz="0 0 1"/>
@@ -751,7 +751,7 @@
     <child link="right_elbow"/>
     <limit effort="1.4" lower="-1.3526" upper="1.3526" velocity="12.5"/>
   </joint>
-  
+
   <!-- pins  -->
    <!-- <link name="leftpin">
         <inertial>
@@ -761,14 +761,14 @@
         </inertial>
         <visual>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
-        <geometry> 
-            <box size="0.2 0.1 0.05"/> 
+        <geometry>
+            <box size="0.2 0.1 0.05"/>
         </geometry>
         </visual>
         <collision>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
         <geometry>
-            <box size="0.2 0.1 0.05"/> 
+            <box size="0.2 0.1 0.05"/>
         </geometry>
         </collision>
     </link>
@@ -781,25 +781,25 @@
         </inertial>
         <visual>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
-        <geometry> 
-            <box size="0.2 0.1 0.05"/> 
+        <geometry>
+            <box size="0.2 0.1 0.05"/>
         </geometry>
         </visual>
         <collision>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
         <geometry>
-            <box size="0.2 0.1 0.05"/> 
+            <box size="0.2 0.1 0.05"/>
         </geometry>
         </collision>
     </link>
     <joint name="leftpinjoint" type="fixed">
-      <origin rpy="0 -1.1 -1.57" xyz="0.0 -0.1 0.0"/> 
+      <origin rpy="0 -1.1 -1.57" xyz="0.0 -0.1 0.0"/>
       <parent link="left_toe_roll"/>
-      <child link="leftpin"/> 
+      <child link="leftpin"/>
     </joint>
     <joint name="rightpinjoint" type="fixed">
-      <origin rpy="0 -1.1 1.57" xyz="0.0 0.1 0.0"/> 
+      <origin rpy="0 -1.1 1.57" xyz="0.0 0.1 0.0"/>
       <parent link="right_toe_roll"/>
-      <child link="rightpin"/> 
+      <child link="rightpin"/>
     </joint> -->
 </robot>

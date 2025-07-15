@@ -8,7 +8,6 @@ sys.path.append(str(pathlib.Path(__file__).parent))
 import embodied
 import numpy as np
 import pytest
-
 import utils
 
 

@@ -1,4 +1,4 @@
-from collections import deque, defaultdict
+from collections import defaultdict
 from typing import Any, NamedTuple
 
 import dm_env
@@ -7,11 +7,9 @@ from dm_control import suite
 
 suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks("custom")
 suite.TASKS_BY_DOMAIN = suite._get_tasks_by_domain(suite.ALL_TASKS)
+import gymnasium as gym
 from dm_control.suite.wrappers import action_scale
 from dm_env import StepType, specs
-import gymnasium as gym
-
-from tdmpc2.envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
 
 
 class ExtendedTimeStep(NamedTuple):
@@ -187,8 +185,7 @@ class TimeStepToGymWrapper:
 
 
 def make_env(cfg):
-    """
-    Make DMControl environment.
+    """Make DMControl environment.
     Adapted from https://github.com/facebookresearch/drqv2
     """
     domain, task = cfg.task.replace("-", "_").split("_", 1)
@@ -199,9 +196,7 @@ def make_env(cfg):
         "state",
         "rgb",
     }, "This task only supports state and rgb observations."
-    env = suite.load(
-        domain, task, task_kwargs={"random": cfg.seed}, visualize_reward=False
-    )
+    env = suite.load(domain, task, task_kwargs={"random": cfg.seed}, visualize_reward=False)
     env = ActionDTypeWrapper(env, np.float32)
     env = ActionRepeatWrapper(env, 2)
     env = action_scale.Wrapper(env, minimum=-1.0, maximum=1.0)

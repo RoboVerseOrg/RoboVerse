@@ -25,10 +25,7 @@ class Timer:
             return
         stack = self.stack[threading.get_ident()]
         if name in stack:
-            raise RuntimeError(
-                f"Tried to recursively enter timer section {name} "
-                + f"from {'/'.join(stack)}."
-            )
+            raise RuntimeError(f"Tried to recursively enter timer section {name} " + f"from {'/'.join(stack)}.")
         stack.append(name)
         path = "/".join(stack)
         start = time.perf_counter_ns()
@@ -61,22 +58,20 @@ class Timer:
         metrics = {}
         div = lambda x, y: x and x / y
         for key in self.paths:
-            metrics.update(
-                {
-                    f"{key}/sum": self.sums[key] / 1e9,
-                    f"{key}/min": self.mins[key] / 1e9,
-                    f"{key}/max": self.maxs[key] / 1e9,
-                    f"{key}/avg": div(self.sums[key], self.counts[key]) / 1e9,
-                    f"{key}/frac": self.sums[key] / passed,
-                    f"{key}/count": self.counts[key],
-                }
-            )
+            metrics.update({
+                f"{key}/sum": self.sums[key] / 1e9,
+                f"{key}/min": self.mins[key] / 1e9,
+                f"{key}/max": self.maxs[key] / 1e9,
+                f"{key}/avg": div(self.sums[key], self.counts[key]) / 1e9,
+                f"{key}/frac": self.sums[key] / passed,
+                f"{key}/count": self.counts[key],
+            })
         self.writing = False
         fracs = {k: metrics[f"{k}/frac"] for k in self.paths}
         fracs = sorted(fracs.items(), key=lambda x: -x[1])
         # metrics['summary'] = '\n'.join(
         #     f'- {100*v:.0f}% {k} ({", ".join(self.threads[k])})' for k, v in fracs)
-        metrics["summary"] = "\n".join(f"- {100*v:.0f}% {k}" for k, v in fracs)
+        metrics["summary"] = "\n".join(f"- {100 * v:.0f}% {k}" for k, v in fracs)
         reset and self.reset()
         return metrics
 

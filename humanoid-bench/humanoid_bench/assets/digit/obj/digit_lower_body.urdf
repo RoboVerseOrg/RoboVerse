@@ -95,7 +95,7 @@
       </geometry>
     </collision>
   </link>
-  
+
   <link name="left_waist_cap">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 -0.003158 0.023405"/>
@@ -115,7 +115,7 @@
       </geometry>
     </collision>
   </link>
-  
+
   <link name="right_hip_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="-0.001967 -0.000244 0.031435"/>
@@ -192,7 +192,7 @@
       </geometry>
     </collision>
   </link>
-  
+
   <link name="right_waist_cap">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 0.003158 0.023405"/>
@@ -278,7 +278,7 @@
     <child link="left_knee"/>
     <limit effort="12.5" lower="-1.2392" upper="0.8727" velocity="8.5085"/>
   </joint>
-  
+
   <joint name="right-hip-roll" type="continuous">
     <origin rpy="-1.57079632679 -1.1955506 1.57079632679" xyz="-0.001 -0.091 0"/>
     <axis xyz="0 0 1"/>
@@ -338,5 +338,5 @@
     <limit effort="1.4" lower="-1.309" upper="1.309" velocity="12.5"/>
   </joint>
 
-  
+
 </robot>

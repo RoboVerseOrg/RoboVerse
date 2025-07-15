@@ -1,7 +1,7 @@
 import numpy as np
-from jaxrl_m.typing import Data
 from flax.core.frozen_dict import FrozenDict
 from jax import tree_util
+from jaxrl_m.typing import Data
 
 
 def get_size(data: Data) -> int:
@@ -10,8 +10,7 @@ def get_size(data: Data) -> int:
 
 
 class Dataset(FrozenDict):
-    """
-    A class for storing (and retrieving batches of) data in nested dictionary format.
+    """A class for storing (and retrieving batches of) data in nested dictionary format.
 
     Example:
         dataset = Dataset({
@@ -34,8 +33,7 @@ class Dataset(FrozenDict):
         self.size = get_size(self._dict)
 
     def sample(self, batch_size: int, indx=None):
-        """
-        Sample a batch of data from the dataset. Use `indx` to specify a specific
+        """Sample a batch of data from the dataset. Use `indx` to specify a specific
         set of indices to retrieve. Otherwise, a random sample will be drawn.
 
         Returns a dictionary with the same structure as the original dataset.
@@ -49,8 +47,7 @@ class Dataset(FrozenDict):
 
 
 class ReplayBuffer(Dataset):
-    """
-    Dataset where data is added to the buffer.
+    """Dataset where data is added to the buffer.
 
     Example:
         example_transition = {

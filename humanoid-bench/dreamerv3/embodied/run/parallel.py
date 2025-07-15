@@ -5,8 +5,9 @@ import time
 from collections import defaultdict, deque
 
 import cloudpickle
-import embodied
 import numpy as np
+
+import embodied
 
 prefix = lambda d, p: {f"{p}/{k}": v for k, v in d.items()}
 
@@ -23,10 +24,7 @@ def parallel(make_agent, make_replay, make_env, make_logger, args):
     make_replay = cloudpickle.dumps(make_replay)
     make_logger = cloudpickle.dumps(make_logger)
 
-    workers = [
-        embodied.distr.Process(parallel_env, make_env, i, args, True)
-        for i in range(args.num_envs)
-    ]
+    workers = [embodied.distr.Process(parallel_env, make_env, i, args, True) for i in range(args.num_envs)]
     workers.append(embodied.distr.Process(parallel_agent, make_agent, args))
     workers.append(embodied.distr.Process(parallel_replay, make_replay, args))
     workers.append(embodied.distr.Process(parallel_logger, make_logger, args))
@@ -111,18 +109,14 @@ def parallel_learner(agent, barrier, args):
     if args.from_checkpoint:
         checkpoint.load(args.from_checkpoint)
     checkpoint.load_or_save()
-    logger = embodied.distr.Client(
-        args.logger_addr, name="LearnerLogger", maxinflight=1, connect=True
-    )
+    logger = embodied.distr.Client(args.logger_addr, name="LearnerLogger", maxinflight=1, connect=True)
     barrier.wait()
     should_save()  # Register that we just saved.
 
     replays = []
 
     def parallel_dataset(prefetch=1):
-        replay = embodied.distr.Client(
-            args.replay_addr, name=f"LearnerReplay{len(replays)}", connect=True
-        )
+        replay = embodied.distr.Client(args.replay_addr, name=f"LearnerReplay{len(replays)}", connect=True)
         replays.append(replay)
         futures = deque([replay.sample_batch({}) for _ in range(prefetch)])
         while True:
@@ -164,9 +158,7 @@ def parallel_replay(make_replay, args):
     dataset = iter(replay.dataset(args.batch_size))
 
     should_log = embodied.when.Clock(args.log_every)
-    logger = embodied.distr.Client(
-        args.logger_addr, name="ReplayLogger", connect=True, maxinflight=1
-    )
+    logger = embodied.distr.Client(args.logger_addr, name="ReplayLogger", connect=True, maxinflight=1)
     usage = embodied.Usage(**args.usage.update(nvsmi=False))
 
     should_save = embodied.when.Clock(args.save_every)
@@ -303,18 +295,14 @@ def parallel_env(make_env, envid, args, logging=False):
     _print = lambda x: embodied.print(f"[{name}] {x}")
     should_log = embodied.when.Clock(args.log_every)
     if logging:
-        logger = embodied.distr.Client(
-            args.logger_addr, name=f"{name}Logger", connect=True, maxinflight=1
-        )
+        logger = embodied.distr.Client(args.logger_addr, name=f"{name}Logger", connect=True, maxinflight=1)
     fps = embodied.FPS()
     if envid == 0:
         usage = embodied.Usage(**args.usage.update(nvsmi=False))
 
     _print("Make env")
     env = make_env(envid)
-    actor = embodied.distr.Client(
-        args.actor_addr, envid, name, args.ipv6, pings=10, maxage=60, connect=True
-    )
+    actor = embodied.distr.Client(args.actor_addr, envid, name, args.ipv6, pings=10, maxage=60, connect=True)
 
     done = True
     while True:

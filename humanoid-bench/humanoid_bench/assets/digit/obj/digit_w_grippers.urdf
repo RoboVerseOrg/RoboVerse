@@ -17,12 +17,12 @@
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry> 
+      <geometry>
         <mesh filename="package://torso.obj"/>
       </geometry>
     </collision>
   </link>
-  
+
   <link name="left_shoulder_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 -0.003158 0.023405"/>
@@ -137,8 +137,8 @@
       </geometry>
     </collision>
   </link>
- 
-   
+
+
   <link name="right_shoulder_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 0.003158 0.023405"/>
@@ -252,7 +252,7 @@
         <mesh filename="package://arm-L4.obj" scale="1 -1 1"/>
       </geometry>
     </collision>
-  </link> 
+  </link>
   <link name="left_wrist">
     <inertial>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -291,7 +291,7 @@
       </geometry>
     </collision>
   </link>
-   
+
   <joint name="left-shoulder-roll" type="revolute">
     <origin rpy="-1.57079632679 -1.3962633 1.57079632679" xyz="-0.001 0.12 0.4"/>
     <axis xyz="0 0 1"/>
@@ -327,7 +327,7 @@
     <child link="left_elbow"/>
     <limit effort="1.4" lower="-1.3526" upper="1.3526" velocity="12.5"/>
   </joint>
-   
+
   <joint name="right-shoulder-roll" type="revolute">
     <origin rpy="1.57079632679 -1.3962633 -1.57079632679" xyz="-0.001 -0.12 0.4"/>
     <axis xyz="0 0 1"/>
@@ -381,14 +381,14 @@
     <limit effort="1.4" lower="-1.3526" upper="1.3526" velocity="12.5"/>
   </joint>
   <joint name="wrist_joint_left" type="fixed">
-    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/> 
+    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/>
     <parent link="left_elbow"/>
-    <child link="left_wrist"/> 
+    <child link="left_wrist"/>
   </joint>
   <joint name="wrist_joint_right" type="fixed">
-    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/> 
+    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/>
     <parent link="right_elbow"/>
-    <child link="right_wrist"/> 
+    <child link="right_wrist"/>
   </joint>
 
   <!-- legs -->
@@ -811,7 +811,7 @@
     <child link="right_toe_roll"/>
     <limit effort="0.9" lower="-0.6109" upper="0.6109" velocity="11.5"/>
   </joint>
-  
+
   <link name="leftpin">
         <inertial>
             <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -820,15 +820,15 @@
         </inertial>
         <visual>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
-        <geometry> 
-            <box size="0.3 0.1 0.015"/> 
+        <geometry>
+            <box size="0.3 0.1 0.015"/>
         </geometry>
         <material name="feet_material"/>
         </visual>
         <collision>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
         <geometry>
-            <box size="0.3 0.1 0.015"/> 
+            <box size="0.3 0.1 0.015"/>
         </geometry>
         </collision>
     </link>
@@ -840,26 +840,26 @@
         </inertial>
         <visual>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
-        <geometry> 
-            <box size="0.3 0.1 0.015"/> 
+        <geometry>
+            <box size="0.3 0.1 0.015"/>
         </geometry>
         <material name="feet_material"/>
         </visual>
         <collision>
         <origin rpy="0 0 0" xyz="0.0 0 0"/>
         <geometry>
-            <box size="0.3 0.1 0.015"/> 
+            <box size="0.3 0.1 0.015"/>
         </geometry>
         </collision>
     </link>
     <joint name="leftpinjoint" type="fixed">
-      <origin rpy="0 -1.05 -1.57" xyz="0.0 -0.065 -0.025"/> 
+      <origin rpy="0 -1.05 -1.57" xyz="0.0 -0.065 -0.025"/>
       <parent link="left_toe_roll"/>
-      <child link="leftpin"/> 
+      <child link="leftpin"/>
     </joint>
     <joint name="rightpinjoint" type="fixed">
-      <origin rpy="0 -1.05 1.57" xyz="0.0 0.065 -0.025"/> 
+      <origin rpy="0 -1.05 1.57" xyz="0.0 0.065 -0.025"/>
       <parent link="right_toe_roll"/>
-      <child link="rightpin"/> 
-    </joint> 
+      <child link="rightpin"/>
+    </joint>
 </robot>

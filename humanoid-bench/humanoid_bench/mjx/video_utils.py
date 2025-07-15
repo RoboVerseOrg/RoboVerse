@@ -3,7 +3,8 @@ from glob import glob
 import natsort
 import numpy as np
 from moviepy.editor import VideoFileClip
-from humanoid_bench.mjx.visualization_utils import make_grid, save_numpy_as_video, save_numpy_as_gif
+
+from humanoid_bench.mjx.visualization_utils import make_grid, save_numpy_as_gif, save_numpy_as_video
 
 
 def video_pad_time(videos):
@@ -16,7 +17,8 @@ def video_pad_time(videos):
         padded.append(video)
     return np.array(padded)
 
-def make_grid_video_from_numpy(video_array, ncol, output_name='./output.mp4', speedup=1, padding=5, **kwargs):
+
+def make_grid_video_from_numpy(video_array, ncol, output_name="./output.mp4", speedup=1, padding=5, **kwargs):
     videos = []
     for video in video_array:
         if speedup != 1:
@@ -29,7 +31,8 @@ def make_grid_video_from_numpy(video_array, ncol, output_name='./output.mp4', sp
         grid_frames.append(grid_frame)
     save_numpy_as_video(np.array(grid_frames), output_name, **kwargs)
 
-def make_grid_gif_from_numpy(video_array, ncol, output_name='./output.gif', speedup=1, fps=10):
+
+def make_grid_gif_from_numpy(video_array, ncol, output_name="./output.gif", speedup=1, fps=10):
     videos = []
     for video in video_array:
         if speedup != 1:
@@ -43,7 +46,7 @@ def make_grid_gif_from_numpy(video_array, ncol, output_name='./output.gif', spee
     save_numpy_as_gif(np.array(grid_frames), output_name, fps=fps)
 
 
-def make_grid_video(video_list, ncol, output_name='./output.mp4', speedup=1, **kwargs):
+def make_grid_video(video_list, ncol, output_name="./output.mp4", speedup=1, **kwargs):
     videos = []
     for video_path in video_list:
         myclip = VideoFileClip(video_path)
@@ -63,9 +66,9 @@ def make_grid_video(video_list, ncol, output_name='./output.mp4', speedup=1, **k
     save_numpy_as_video(np.array(grid_frames), output_name, **kwargs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # make_grid_video(glob('./data/debug/*.mp4')[:25], 5)
-    video_dir = './data/local/0908_visual_bc/0908_visual_bc_2022_09_08_09_36_00_0001/eval_200/valid/videos/'
-    video_list = natsort.natsorted(glob(video_dir + '*.mp4'))
-    output_name = video_dir + 'grid.mp4'
+    video_dir = "./data/local/0908_visual_bc/0908_visual_bc_2022_09_08_09_36_00_0001/eval_200/valid/videos/"
+    video_list = natsort.natsorted(glob(video_dir + "*.mp4"))
+    output_name = video_dir + "grid.mp4"
     make_grid_video(video_list, len(video_list) // 2, output_name)

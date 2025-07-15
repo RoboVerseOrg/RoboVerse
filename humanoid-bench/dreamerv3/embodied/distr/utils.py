@@ -1,10 +1,9 @@
+import multiprocessing as mp
 import sys
 import time
 import traceback
-import multiprocessing as mp
 
 import embodied
-
 
 PRINT_LOCK = None
 

@@ -11,9 +11,5 @@ except ImportError:
 # except ImportError:
 #   pass
 
+from . import distr, envs, replay, run
 from .core import *
-
-from . import distr
-from . import envs
-from . import replay
-from . import run

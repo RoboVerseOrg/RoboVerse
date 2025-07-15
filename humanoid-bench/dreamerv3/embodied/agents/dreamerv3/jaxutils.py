@@ -256,9 +256,7 @@ class TwoHotDist:
             jax.nn.one_hot(below, len(self.bins)) * weight_below[..., None]
             + jax.nn.one_hot(above, len(self.bins)) * weight_above[..., None]
         )
-        log_pred = self.logits - jax.scipy.special.logsumexp(
-            self.logits, -1, keepdims=True
-        )
+        log_pred = self.logits - jax.scipy.special.logsumexp(self.logits, -1, keepdims=True)
         return (target * log_pred).sum(-1).sum(self.dims)
 
 
@@ -287,9 +285,7 @@ def balance_stats(dist, target, thres):
 
 
 class Moments(nj.Module):
-    def __init__(
-        self, impl="mean_std", decay=0.99, max=1e8, eps=0.0, perclo=5, perchi=95
-    ):
+    def __init__(self, impl="mean_std", decay=0.99, max=1e8, eps=0.0, perclo=5, perchi=95):
         self.impl = impl
         self.decay = decay
         self.max = max
@@ -429,11 +425,7 @@ class Optimizer(nj.Module):
             chain.append(
                 optax.additive_weight_decay(
                     wd,
-                    lambda params: (
-                        tree_map(
-                            lambda k: bool(wd_pattern.search(k)), tree_keys(params)
-                        )
-                    ),
+                    lambda params: (tree_map(lambda k: bool(wd_pattern.search(k)), tree_keys(params))),
                 )
             )
         chain.append(optax.scale(-lr))
@@ -443,9 +435,7 @@ class Optimizer(nj.Module):
         self.scaling = COMPUTE_DTYPE == jnp.float16
         if self.scaling:
             self.opt = optax.apply_if_finite(self.opt, max_consecutive_errors=1000)
-            self.grad_scale = nj.Variable(
-                jnp.array, init_grad_scale, f32, name="grad_scale"
-            )
+            self.grad_scale = nj.Variable(jnp.array, init_grad_scale, f32, name="grad_scale")
             self.good_steps = nj.Variable(jnp.array, 0, i32, name="good_steps")
         self.once = True
 
@@ -460,9 +450,7 @@ class Optimizer(nj.Module):
             return loss, aux
 
         metrics = {}
-        loss, params, grads, aux = nj.grad(wrapped, modules, has_aux=True)(
-            *args, **kwargs
-        )
+        loss, params, grads, aux = nj.grad(wrapped, modules, has_aux=True)(*args, **kwargs)
         if not isinstance(modules, (list, tuple)):
             modules = [modules]
 
@@ -540,9 +528,7 @@ def ada_clip(clip=0.1, b1=0.9, b2=0.999, eps=1e-6):
         up = m_corr + clip * jnp.sqrt(v_corr + eps)
         up = jax.lax.select(s <= 1, jnp.inf, up)
         trigger = jnp.squeeze(x < up)
-        updates = jax.tree_util.tree_map(
-            lambda t: jax.lax.select(trigger, t, (t / x.astype(t.dtype)) * up), updates
-        )
+        updates = jax.tree_util.tree_map(lambda t: jax.lax.select(trigger, t, (t / x.astype(t.dtype)) * up), updates)
         x = jnp.minimum(x, up)
         m = b1 * m + (1 - b1) * x
         v = b2 * v + (1 - b2) * x * x
@@ -570,9 +556,7 @@ def concat_dict(mapping, batch_shape=None):
 
 def tree_keys(params, prefix=""):
     if hasattr(params, "items"):
-        return type(params)(
-            {k: tree_keys(v, prefix + "/" + k.lstrip("/")) for k, v in params.items()}
-        )
+        return type(params)({k: tree_keys(v, prefix + "/" + k.lstrip("/")) for k, v in params.items()})
     elif isinstance(params, (tuple, list)):
         return [tree_keys(x, prefix) for x in params]
     elif isinstance(params, jnp.ndarray):
@@ -595,14 +579,9 @@ class SlowUpdater(nj.Module):
         need_init = (updates == 0).astype(f32)
         need_update = (updates % self.period == 0).astype(f32)
         mix = jnp.clip(1.0 * need_init + self.fraction * need_update, 0, 1)
-        params = {
-            k.replace(f"/{self.src.name}/", f"/{self.dst.name}/"): v
-            for k, v in self.src.getm().items()
-        }
+        params = {k.replace(f"/{self.src.name}/", f"/{self.dst.name}/"): v for k, v in self.src.getm().items()}
         ema = tree_map(lambda s, d: mix * s + (1 - mix) * d, params, self.dst.getm())
         for name, param in ema.items():
-            assert (
-                param.dtype == jnp.float32
-            ), f"EMA of {name} should be float32 not {param.dtype}"
+            assert param.dtype == jnp.float32, f"EMA of {name} should be float32 not {param.dtype}"
         self.dst.putm(ema)
         self.updates.write(updates + 1)

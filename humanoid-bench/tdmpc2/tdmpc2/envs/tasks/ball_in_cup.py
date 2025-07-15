@@ -1,14 +1,12 @@
 import collections
 import os
 
+import numpy as np
 from dm_control import mujoco
 from dm_control.rl import control
-from dm_control.suite import base
-from dm_control.suite import ball_in_cup
-from dm_control.suite import common
-from dm_control.utils import rewards
+from dm_control.suite import ball_in_cup, base, common
 from dm_control.utils import io as resources
-import numpy as np
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -34,11 +32,7 @@ def spin(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     task = CustomBallInCup(random=random)
     environment_kwargs = environment_kwargs or {}
     return control.Environment(
-        physics,
-        task,
-        time_limit=time_limit,
-        control_timestep=_CONTROL_TIMESTEP,
-        **environment_kwargs
+        physics, task, time_limit=time_limit, control_timestep=_CONTROL_TIMESTEP, **environment_kwargs
     )
 
 

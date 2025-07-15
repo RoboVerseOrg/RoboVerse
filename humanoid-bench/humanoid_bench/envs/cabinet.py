@@ -1,10 +1,7 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 _STAND_HEIGHT = 1.65
 
@@ -46,7 +43,7 @@ class Cabinet(Task):
             0.9 0 0.87 1 0 0 0
             0.9 0 1.16 1 0 0 0
             0.9 0 1.45 1 0 0 0
-        """
+        """,
     }
     dof = 5 * 1 + 4 * 7
     camera_name = "cam_hand_visible"
@@ -99,9 +96,7 @@ class Cabinet(Task):
             lambda: (1000, {}, False),
         ]
 
-        reward, reward_info, subtask_complete = subtask_get_reward[
-            self.current_subtask - 1
-        ]()
+        reward, reward_info, subtask_complete = subtask_get_reward[self.current_subtask - 1]()
         if self.current_subtask < 5:
             reward = 0.2 * stabilization_reward + 0.8 * reward
 
@@ -113,8 +108,7 @@ class Cabinet(Task):
         return reward, {
             "stand_reward": stand_reward,
             "small_control": small_control,
-            "success_subtasks": self.current_subtask
-            - 1,  # The first subtask is not automatically completed.
+            "success_subtasks": self.current_subtask - 1,  # The first subtask is not automatically completed.
             "success": self.current_subtask == 5,
             **reward_info,
         }
@@ -151,9 +145,7 @@ class Cabinet(Task):
         normal_cabinet_right_joint_pos = self._env.data.qpos[-(4 * 7) - 3]
         left_door_openness_reward = min(1, abs(normal_cabinet_left_joint_pos))
         right_door_openness_reward = min(1, abs(normal_cabinet_right_joint_pos))
-        door_openness_reward = max(
-            left_door_openness_reward, right_door_openness_reward
-        )  # Any open door is sufficient
+        door_openness_reward = max(left_door_openness_reward, right_door_openness_reward)  # Any open door is sufficient
 
         cube_proximity_horizontal = (
             rewards.tolerance(
@@ -162,9 +154,7 @@ class Cabinet(Task):
                 margin=0.3,
                 sigmoid="linear",
             )
-            + rewards.tolerance(
-                drawer_cube_pos[1], bounds=(-0.6, 0.6), margin=0.3, sigmoid="linear"
-            )
+            + rewards.tolerance(drawer_cube_pos[1], bounds=(-0.6, 0.6), margin=0.3, sigmoid="linear")
         ) / 2
         cube_proximity_vertical = rewards.tolerance(
             drawer_cube_pos[2] - 0.94,
@@ -178,9 +168,7 @@ class Cabinet(Task):
         in_cabinet_z = 0.94 - 0.15 <= drawer_cube_pos[2] <= 0.94 + 0.15
         task_completed = in_cabinet_x and in_cabinet_y and in_cabinet_z
 
-        drawer_cube_proximity_reward = (
-            0.3 * cube_proximity_horizontal + 0.7 * cube_proximity_vertical
-        )
+        drawer_cube_proximity_reward = 0.3 * cube_proximity_horizontal + 0.7 * cube_proximity_vertical
         reward = 0.5 * (drawer_cube_proximity_reward) + 0.5 * door_openness_reward
         return (
             reward,
@@ -201,18 +189,14 @@ class Cabinet(Task):
         normal_cabinet_right_joint_pos = self._env.data.qpos[-(4 * 7) - 3]
         left_door_openness_reward = min(1, abs(normal_cabinet_left_joint_pos))
         right_door_openness_reward = min(1, abs(normal_cabinet_right_joint_pos))
-        secondary_door_openness_reward = max(
-            left_door_openness_reward, right_door_openness_reward
-        )
+        secondary_door_openness_reward = max(left_door_openness_reward, right_door_openness_reward)
 
         cube_proximity_horizontal = rewards.tolerance(
             pullup_drawer_cube_pos[0] - 0.9,
             bounds=(-0.3, 0.3),
             margin=0.3,
             sigmoid="linear",
-        ) + rewards.tolerance(
-            pullup_drawer_cube_pos[1], bounds=(-0.6, 0.6), margin=0.3, sigmoid="linear"
-        )
+        ) + rewards.tolerance(pullup_drawer_cube_pos[1], bounds=(-0.6, 0.6), margin=0.3, sigmoid="linear")
         cube_proximity_vertical = rewards.tolerance(
             pullup_drawer_cube_pos[2] - 1.54,
             bounds=(-0.15, 0.15),
@@ -225,9 +209,7 @@ class Cabinet(Task):
         in_cabinet_z = 1.54 - 0.15 <= pullup_drawer_cube_pos[2] <= 1.54 + 0.15
         task_completed = in_cabinet_x and in_cabinet_y and in_cabinet_z
 
-        drawer_cube_proximity_reward = (
-            0.3 * cube_proximity_horizontal / 2 + 0.7 * cube_proximity_vertical
-        )
+        drawer_cube_proximity_reward = 0.3 * cube_proximity_horizontal / 2 + 0.7 * cube_proximity_vertical
         reward = 0.5 * (drawer_cube_proximity_reward) + 0.5 * door_openness_reward
 
         return (

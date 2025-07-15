@@ -8,6 +8,7 @@ class FromGym(embodied.Env):
     def __init__(self, env, obs_key="image", act_key="action", **kwargs):
         if isinstance(env, str):
             import gym
+
             self._env = gym.make(env, **kwargs)
         else:
             assert not kwargs, kwargs
@@ -91,6 +92,7 @@ class FromGym(embodied.Env):
 
     def _flatten(self, nest, prefix=None):
         import gym
+
         result = {}
         for key, value in nest.items():
             key = prefix + "/" + key if prefix else key

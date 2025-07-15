@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 _STAND_HEIGHT = 1.65
@@ -39,7 +37,7 @@ class Insert(Task):
             0.8 -0.2 0.95 1 0 0 0
             0.8 0.2 0.95 1 0 0 0
             0.6 0 0.95 1 0 0 0
-        """
+        """,
     }
     dof = 21
     max_episode_steps = 500
@@ -86,8 +84,7 @@ class Insert(Task):
         cube_targets = [
             rewards.tolerance(
                 np.linalg.norm(
-                    self._env.named.data.site_xpos[f"block_peg_{ch}"]
-                    - self._env.named.data.site_xpos[f"peg_{ch}"]
+                    self._env.named.data.site_xpos[f"block_peg_{ch}"] - self._env.named.data.site_xpos[f"peg_{ch}"]
                 ),
                 margin=0.5,
                 sigmoid="linear",
@@ -106,12 +103,10 @@ class Insert(Task):
         peg_height_reward = np.mean(peg_heights)
 
         left_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["left_hand"]
-            - self._env.named.data.site_xpos["peg_a"]
+            self._env.named.data.site_xpos["left_hand"] - self._env.named.data.site_xpos["peg_a"]
         )
         right_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["right_hand"]
-            - self._env.named.data.site_xpos["peg_b"]
+            self._env.named.data.site_xpos["right_hand"] - self._env.named.data.site_xpos["peg_b"]
         )
         hand_tool_proximity_reward = rewards.tolerance(
             min(left_hand_tool_distance, right_hand_tool_distance),

@@ -11,7 +11,7 @@
             <geom name="post" type="cylinder" pos="0 0 0" size="0.029 0.65" zaxis="0 1 0" material="steel_cover" class="visual"/>
             <geom name="left_weight" type="cylinder" pos="0 0.75 0" size="0.2 0.2" zaxis="0 1 0" material="metal_cover" class="visual"/>
             <geom name="right_weight" type="cylinder" pos="0 -0.75 0" size="0.2 0.2" zaxis="0 1 0" material="metal_cover" class="visual"/>
-            
+
             <geom type="cylinder" pos="0 0 0" size="0.029 0.65" zaxis="0 1 0" class="collision"/>
             <geom type="cylinder" pos="0 0.75 0" size="0.2 0.2" zaxis="0 1 0" class="collision" density="500"/>
             <geom type="cylinder" pos="0 -0.75 0" size="0.2 0.2" zaxis="0 1 0" class="collision" density="500"/>

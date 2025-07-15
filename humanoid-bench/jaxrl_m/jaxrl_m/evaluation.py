@@ -1,14 +1,14 @@
-from typing import Dict
-import jax
-import gymnasium as gym
-import numpy as np
-from collections import defaultdict
 import time
+from collections import defaultdict
+from typing import Dict
+
+import gymnasium as gym
+import jax
+import numpy as np
 
 
 def supply_rng(f, rng=jax.random.PRNGKey(0)):
-    """
-    Wrapper that supplies a jax random key to a function (using keyword `seed`).
+    """Wrapper that supplies a jax random key to a function (using keyword `seed`).
     Useful for stochastic policies that require randomness.
 
     Similar to functools.partial(f, seed=seed), but makes sure to use a different
@@ -25,8 +25,7 @@ def supply_rng(f, rng=jax.random.PRNGKey(0)):
 
 
 def flatten(d, parent_key="", sep="."):
-    """
-    Helper function that flattens a dictionary of dictionaries into a single dictionary.
+    """Helper function that flattens a dictionary of dictionaries into a single dictionary.
     E.g: flatten({'a': {'b': 1}}) -> {'a.b': 1}
     """
     items = []
@@ -45,8 +44,7 @@ def add_to(dict_of_lists, single_dict):
 
 
 def evaluate(policy_fn, env: gym.Env, num_episodes: int) -> Dict[str, float]:
-    """
-    Evaluates a policy in an environment by running it for some number of episodes,
+    """Evaluates a policy in an environment by running it for some number of episodes,
     and returns average statistics for metrics in the environment's info dict.
 
     If you wish to log environment returns, you can use the EpisodeMonitor wrapper (see below).
@@ -56,13 +54,14 @@ def evaluate(policy_fn, env: gym.Env, num_episodes: int) -> Dict[str, float]:
             (if your policy needs JAX RNG keys, use supply_rng to supply a random key)
         env: The environment to evaluate in.
         num_episodes: The number of episodes to run for.
+
     Returns:
         A dictionary of average statistics for metrics in the environment's info dict.
 
     """
     stats = defaultdict(list)
     for _ in range(num_episodes):
-        observation, info = env.reset() 
+        observation, info = env.reset()
         done = False
         while not done:
             action = policy_fn(observation)
@@ -76,14 +75,12 @@ def evaluate(policy_fn, env: gym.Env, num_episodes: int) -> Dict[str, float]:
     return stats
 
 
-def evaluate_with_trajectories(
-    policy_fn, env: gym.Env, num_episodes: int
-) -> Dict[str, float]:
-    """
-    Same as evaluate, but also returns the trajectories of observations, actions, rewards, etc.
+def evaluate_with_trajectories(policy_fn, env: gym.Env, num_episodes: int) -> Dict[str, float]:
+    """Same as evaluate, but also returns the trajectories of observations, actions, rewards, etc.
 
     Arguments:
         See evaluate.
+
     Returns:
         stats: See evaluate.
         trajectories: A list of dictionaries (each dictionary corresponds to an episode),
@@ -96,7 +93,6 @@ def evaluate_with_trajectories(
                 'info': list of info dicts,
             }
     """
-
     trajectories = []
     stats = defaultdict(list)
 
@@ -156,9 +152,7 @@ class EpisodeMonitor(gym.ActionWrapper):
             info["episode"]["duration"] = time.time() - self.start_time
 
             if hasattr(self, "get_normalized_score"):
-                info["episode"]["normalized_return"] = (
-                    self.get_normalized_score(info["episode"]["return"]) * 100.0
-                )
+                info["episode"]["normalized_return"] = self.get_normalized_score(info["episode"]["return"]) * 100.0
 
         return observation, reward, terminated, truncated, info
 

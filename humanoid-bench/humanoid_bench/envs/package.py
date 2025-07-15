@@ -1,12 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
-from humanoid_bench.mjx.flax_to_torch import TorchModel, TorchPolicy
-
-import mujoco
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 _STAND_HEIGHT = 1.65
@@ -41,7 +35,7 @@ class Package(Task):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             0.75 0 0.35 1 0 0 0
-        """
+        """,
     }
     dof = 7
     frame_skip = 10
@@ -76,17 +70,15 @@ class Package(Task):
         left_hand = self.robot.left_hand_position()
         right_hand = self.robot.right_hand_position()
 
-        return np.concatenate(
-            [
-                position,
-                velocity,
-                package_destination,
-                box_pos,
-                box_vel,
-                left_hand,
-                right_hand,
-            ]
-        )
+        return np.concatenate([
+            position,
+            velocity,
+            package_destination,
+            box_pos,
+            box_vel,
+            left_hand,
+            right_hand,
+        ])
 
     def get_reward(self):
         standing = rewards.tolerance(
@@ -113,15 +105,9 @@ class Package(Task):
         package_destination = self._env.named.data.site_xpos["destination_loc"]
         package_location = self._env.named.data.qpos["free_package"][:3]
 
-        dist_package_destination = np.linalg.norm(
-            package_location - package_destination
-        )
-        dist_hand_package_right = np.linalg.norm(
-            self._env.named.data.site_xpos["right_hand"] - package_location
-        )
-        dist_hand_package_left = np.linalg.norm(
-            self._env.named.data.site_xpos["left_hand"] - package_location
-        )
+        dist_package_destination = np.linalg.norm(package_location - package_destination)
+        dist_hand_package_right = np.linalg.norm(self._env.named.data.site_xpos["right_hand"] - package_location)
+        dist_hand_package_left = np.linalg.norm(self._env.named.data.site_xpos["left_hand"] - package_location)
         package_height = np.min((package_location[2], 1))
 
         reward_success = dist_package_destination < 0.1
@@ -146,8 +132,7 @@ class Package(Task):
 
     def get_terminated(self):
         dist_package_destination = np.linalg.norm(
-            self._env.named.data.qpos["free_package"][:3]
-            - self._env.named.data.site_xpos["destination_loc"]
+            self._env.named.data.qpos["free_package"][:3] - self._env.named.data.site_xpos["destination_loc"]
         )
 
         return dist_package_destination < 0.1, {}
@@ -160,7 +145,5 @@ class Package(Task):
 
         q_vel = self._env.data.qvel.copy()
         self._env.set_state(q_pos, q_vel)
-        self._env.model.body_pos[-1] = np.array(
-            [np.random.uniform(-2, 2), np.random.uniform(-2, 2), 0]
-        )
+        self._env.model.body_pos[-1] = np.array([np.random.uniform(-2, 2), np.random.uniform(-2, 2), 0])
         return super().reset_model()

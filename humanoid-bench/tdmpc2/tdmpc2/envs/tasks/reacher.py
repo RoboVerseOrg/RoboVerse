@@ -1,12 +1,11 @@
 import collections
 import os
 
+import numpy as np
 from dm_control import mujoco
 from dm_control.rl import control
-from dm_control.suite import common
-from dm_control.suite import reacher
+from dm_control.suite import common, reacher
 from dm_control.utils import io as resources
-import numpy as np
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -28,9 +27,7 @@ def three_easy(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=N
     physics = Physics.from_xml_string(*get_model_and_assets(links=3))
     task = CustomThreeLinkReacher(target_size=_BIG_TARGET, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @reacher.SUITE.add("custom")
@@ -39,9 +36,7 @@ def three_hard(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=N
     physics = Physics.from_xml_string(*get_model_and_assets(links=3))
     task = CustomThreeLinkReacher(target_size=_SMALL_TARGET, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @reacher.SUITE.add("custom")
@@ -50,9 +45,7 @@ def four_easy(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=No
     physics = Physics.from_xml_string(*get_model_and_assets(links=4))
     task = CustomThreeLinkReacher(target_size=_BIG_TARGET, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @reacher.SUITE.add("custom")
@@ -61,9 +54,7 @@ def four_hard(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=No
     physics = Physics.from_xml_string(*get_model_and_assets(links=4))
     task = CustomThreeLinkReacher(target_size=_SMALL_TARGET, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 class Physics(mujoco.Physics):
@@ -71,10 +62,7 @@ class Physics(mujoco.Physics):
 
     def finger_to_target(self):
         """Returns the vector from target to finger in global coordinates."""
-        return (
-            self.named.data.geom_xpos["target", :2]
-            - self.named.data.geom_xpos["finger", :2]
-        )
+        return self.named.data.geom_xpos["target", :2] - self.named.data.geom_xpos["finger", :2]
 
     def finger_to_target_dist(self):
         """Returns the signed distance between the finger and target surface."""

@@ -10,7 +10,6 @@ import embodied
 import numpy as np
 import pytest
 
-
 REPLAYS_UNLIMITED = [
     embodied.replay.Replay,
     # embodied.replay.Reverb,
@@ -79,9 +78,7 @@ class TestReplay:
             assert (seq["worker"] == seq["worker"][0]).all()
 
     @pytest.mark.parametrize("Replay", REPLAYS_UNLIMITED)
-    @pytest.mark.parametrize(
-        "length,capacity", [(1, 1), (2, 2), (5, 10), (1, 2), (5, 15), (2, 20)]
-    )
+    @pytest.mark.parametrize("length,capacity", [(1, 1), (2, 2), (5, 10), (1, 2), (5, 15), (2, 20)])
     def test_sample_single(self, Replay, length, capacity):
         replay = Replay(length, capacity)
         for step in range(length):
@@ -219,9 +216,7 @@ class TestReplay:
             assert len(next(dataset)["step"]) == length
 
     @pytest.mark.parametrize("Replay", REPLAYS_SAVECHUNKS)
-    @pytest.mark.parametrize(
-        "length,capacity,chunksize", [(1, 1, 1), (3, 10, 5), (5, 100, 12)]
-    )
+    @pytest.mark.parametrize("length,capacity,chunksize", [(1, 1, 1), (3, 10, 5), (5, 100, 12)])
     def test_restore_chunks_exact(self, tmpdir, Replay, length, capacity, chunksize):
         embodied.uuid.reset(debug=True)
         assert len(list(embodied.Path(tmpdir).glob("*.npz"))) == 0
@@ -246,12 +241,8 @@ class TestReplay:
 
     @pytest.mark.parametrize("Replay", REPLAYS_SAVECHUNKS)
     @pytest.mark.parametrize("workers", [1, 2, 5])
-    @pytest.mark.parametrize(
-        "length,capacity,chunksize", [(1, 1, 1), (3, 10, 5), (5, 100, 12)]
-    )
-    def test_restore_chunks_workers(
-        self, tmpdir, Replay, workers, length, capacity, chunksize
-    ):
+    @pytest.mark.parametrize("length,capacity,chunksize", [(1, 1, 1), (3, 10, 5), (5, 100, 12)])
+    def test_restore_chunks_workers(self, tmpdir, Replay, workers, length, capacity, chunksize):
         capacity *= workers
         replay = Replay(length, capacity, directory=tmpdir, chunksize=chunksize)
         for step in range(50):
@@ -296,9 +287,7 @@ class TestReplay:
         assert len(replay) == num_items
 
     @pytest.mark.parametrize("Replay", REPLAYS_UNLIMITED)
-    def test_threading(
-        self, tmpdir, Replay, length=5, capacity=128, chunksize=32, adders=8, samplers=4
-    ):
+    def test_threading(self, tmpdir, Replay, length=5, capacity=128, chunksize=32, adders=8, samplers=4):
         embodied.uuid.reset(debug=True)
         replay = Replay(length, capacity, directory=tmpdir, chunksize=chunksize)
         running = [True]

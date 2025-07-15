@@ -1,10 +1,8 @@
 import os
 import sys
 
-import numpy as np
 import gymnasium as gym
-
-from tdmpc2.envs.wrappers.time_limit import TimeLimit
+import numpy as np
 
 
 class HumanoidWrapper(gym.Wrapper):
@@ -36,12 +34,9 @@ class HumanoidWrapper(gym.Wrapper):
 
 
 def make_env(cfg):
-    """
-    Make Humanoid environment.
-    """
+    """Make Humanoid environment."""
     if not cfg.task.startswith("humanoid_"):
         raise ValueError("Unknown task:", cfg.task)
-    import humanoid_bench
 
     policy_path = cfg.get("policy_path", None)
     mean_path = cfg.get("mean_path", None)

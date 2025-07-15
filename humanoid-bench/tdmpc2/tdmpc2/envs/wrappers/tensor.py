@@ -6,9 +6,7 @@ import torch
 
 
 class TensorWrapper(gym.Wrapper):
-    """
-    Wrapper for converting numpy arrays to torch tensors.
-    """
+    """Wrapper for converting numpy arrays to torch tensors."""
 
     def __init__(self, env):
         super().__init__(env)

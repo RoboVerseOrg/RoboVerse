@@ -2,9 +2,7 @@ import concurrent.futures
 import pickle
 import time
 
-from . import basics
-from . import path
-from . import timer
+from . import basics, path, timer
 
 
 class Checkpoint:

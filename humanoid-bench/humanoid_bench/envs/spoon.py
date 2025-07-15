@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 _STAND_HEIGHT = 1.65
@@ -33,7 +31,7 @@ class Spoon(Task):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             0.75 0.2 0.9 1 0 0 0
-        """
+        """,
     }
     dof = 7
     frame_skip = 10
@@ -61,9 +59,11 @@ class Spoon(Task):
         velocity = self._env.data.qvel.flat.copy()
 
         current_spin_angle = self.step_counter * (2 * np.pi / 40)
-        spoon_target_pos = np.array([0.75, -0.1, 0.95]) + np.array(
-            [np.cos(current_spin_angle) * 0.06, np.sin(current_spin_angle) * 0.06, 0]
-        )
+        spoon_target_pos = np.array([0.75, -0.1, 0.95]) + np.array([
+            np.cos(current_spin_angle) * 0.06,
+            np.sin(current_spin_angle) * 0.06,
+            0,
+        ])
 
         return np.concatenate((position, velocity, spoon_target_pos))
 
@@ -90,12 +90,10 @@ class Spoon(Task):
         small_control = (4 + small_control) / 5
 
         left_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["left_hand"]
-            - self._env.named.data.geom_xpos["spoon_handle"]
+            self._env.named.data.site_xpos["left_hand"] - self._env.named.data.geom_xpos["spoon_handle"]
         )
         right_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["right_hand"]
-            - self._env.named.data.geom_xpos["spoon_handle"]
+            self._env.named.data.site_xpos["right_hand"] - self._env.named.data.geom_xpos["spoon_handle"]
         )
         hand_tool_proximity_reward = rewards.tolerance(
             min(left_hand_tool_distance, right_hand_tool_distance),
@@ -104,9 +102,11 @@ class Spoon(Task):
         )
 
         current_spin_angle = self.step_counter * (2 * np.pi / 40)
-        spoon_target_pos = np.array([0.75, -0.1, 0.95]) + np.array(
-            [np.cos(current_spin_angle) * 0.06, np.sin(current_spin_angle) * 0.06, 0]
-        )
+        spoon_target_pos = np.array([0.75, -0.1, 0.95]) + np.array([
+            np.cos(current_spin_angle) * 0.06,
+            np.sin(current_spin_angle) * 0.06,
+            0,
+        ])
         self._env.named.data.site_xpos["goal"] = spoon_target_pos
         # spoon_velocity = self._env.named.data.sensordata["spoon_gyro"][2]
         spoon_plate_pos = self._env.named.data.geom_xpos["spoon_plate"]
@@ -119,9 +119,7 @@ class Spoon(Task):
         spoon_in_cup_x = abs(spoon_plate_pos[0] - cup_pos[0]) < 0.1
         spoon_in_cup_y = abs(spoon_plate_pos[1] - cup_pos[1]) < 0.1
         spoon_in_cup_z = abs(spoon_plate_pos[2] - (cup_pos[2] + 0.1)) < 0.1
-        reward_spoon_in_cup = (
-            int(spoon_in_cup_x) + int(spoon_in_cup_y) + int(spoon_in_cup_z)
-        ) // 3
+        reward_spoon_in_cup = (int(spoon_in_cup_x) + int(spoon_in_cup_y) + int(spoon_in_cup_z)) // 3
 
         self.step_counter += 1
 

@@ -2,8 +2,9 @@ import re
 from collections import defaultdict
 from functools import partial as bind
 
-import embodied
 import numpy as np
+
+import embodied
 
 
 def eval_only(make_agent, make_env, make_logger, args):

@@ -9,7 +9,7 @@
             <geom name="package_a" type="box" size="0.2 0.1 0.35" material="package" class="visual" density="5"/>
             <geom name="package_a_collision" type="box" size="0.2 0.1 0.35" rgba="0.5 0.5 0.5 1" class="collision" density="5"/>
         </body>
-        
+
         <body name="package_destination" pos="0 0 0">
             <site name="destination_loc" pos="0 0 0.35" rgba="0 0 0 0"/>
             <geom type="sphere" name="reaching_point" pos="0 0 0.35"  size=".01" rgba="1 1 1 0.9" class="visual"/>

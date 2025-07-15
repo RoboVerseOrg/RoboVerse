@@ -155,7 +155,13 @@ class ExpandScalars(base.Wrapper):
         self._obs_expanded = []
         self._obs_space = {}
         for key, space in self.env.obs_space.items():
-            if space.shape == () and key != "reward" and key != "success" and key != "success_subtasks" and not space.discrete:
+            if (
+                space.shape == ()
+                and key != "reward"
+                and key != "success"
+                and key != "success_subtasks"
+                and not space.discrete
+            ):
                 space = spacelib.Space(space.dtype, (1,), space.low, space.high)
                 self._obs_expanded.append(key)
             self._obs_space[key] = space
@@ -176,15 +182,9 @@ class ExpandScalars(base.Wrapper):
         return self._act_space
 
     def step(self, action):
-        action = {
-            key: np.squeeze(value, 0) if key in self._act_expanded else value
-            for key, value in action.items()
-        }
+        action = {key: np.squeeze(value, 0) if key in self._act_expanded else value for key, value in action.items()}
         obs = self.env.step(action)
-        obs = {
-            key: np.expand_dims(value, 0) if key in self._obs_expanded else value
-            for key, value in obs.items()
-        }
+        obs = {key: np.expand_dims(value, 0) if key in self._obs_expanded else value for key, value in obs.items()}
         return obs
 
 
@@ -255,9 +255,7 @@ class CheckSpaces(base.Wrapper):
         return obs
 
     def _check(self, value, space, key):
-        if not isinstance(
-            value, (np.ndarray, np.generic, list, tuple, int, float, bool)
-        ):
+        if not isinstance(value, (np.ndarray, np.generic, list, tuple, int, float, bool)):
             raise TypeError(f"Invalid type {type(value)} for key {key}.")
         if value in space:
             return
@@ -306,12 +304,8 @@ class ResizeImage(base.Wrapper):
     def __init__(self, env, size=(64, 64)):
         super().__init__(env)
         self._size = size
-        self._keys = [
-            k
-            for k, v in env.obs_space.items()
-            if len(v.shape) > 1 and v.shape[:2] != size
-        ]
-        print(f'Resizing keys {",".join(self._keys)} to {self._size}.')
+        self._keys = [k for k, v in env.obs_space.items() if len(v.shape) > 1 and v.shape[:2] != size]
+        print(f"Resizing keys {','.join(self._keys)} to {self._size}.")
         if self._keys:
             from PIL import Image
 

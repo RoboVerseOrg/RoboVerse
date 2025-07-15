@@ -368,4 +368,3 @@
     <jointvel name='right-elbow-vel' joint='right-elbow'/>
   </sensor>
 </mujoco>
-

@@ -1,12 +1,7 @@
-import os
-
-import numpy as np
-import mujoco
 import gymnasium as gym
+import numpy as np
 from gymnasium.spaces import Box
-
 from humanoid_bench.tasks import Task
-from humanoid_bench.mjx.flax_to_torch import TorchModel, TorchPolicy
 
 
 class Reach(Task):
@@ -14,7 +9,7 @@ class Reach(Task):
         "h1": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0",
         "h1hand": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
         "h1touch": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0"
+        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0",
     }
     htarget_low = np.array([-2.5, -2.5, 0.2])
     htarget_high = np.array([25, 2.5, 2.0])
@@ -58,17 +53,13 @@ class Reach(Task):
         return np.concatenate((position, velocity, left_hand, target))
 
     def get_reward(self):
-        hand_dist = np.sqrt(
-            np.square(self.robot.left_hand_position() - self.goal).sum()
-        )
+        hand_dist = np.sqrt(np.square(self.robot.left_hand_position() - self.goal).sum())
 
         healthy_reward = self._env.data.xmat[1, -1] * 5.0
         motion_penalty = np.square(self._env.data.qvel[: self.robot.dof - 1]).sum()
         reward_close = 5 if hand_dist < 1 else 0
         reward_success = 10 if hand_dist < 0.05 else 0
-        reward = (
-            healthy_reward - 0.0001 * motion_penalty + reward_close + reward_success
-        )
+        reward = healthy_reward - 0.0001 * motion_penalty + reward_close + reward_success
 
         info = {
             "hand_dist": hand_dist,
@@ -100,9 +91,7 @@ class Reach(Task):
                 label="",
             )
 
-        return self._env.mujoco_renderer.render(
-            self._env.render_mode, self._env.camera_id, self._env.camera_name
-        )
+        return self._env.mujoco_renderer.render(self._env.render_mode, self._env.camera_id, self._env.camera_name)
 
 
 if __name__ == "__main__":

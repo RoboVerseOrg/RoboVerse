@@ -6,9 +6,9 @@
     <include file="../common/floor.xml"/>
     <include file="../robots/h1simplehand_pos.xml"/>
     <keyframe>
-        <key name="qpos0" qpos="0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 
-        0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 
+        <key name="qpos0" qpos="0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0
+        0 0 0 0 0
+        0 0 0 0 0 0 0 0 0 0 0 0
         0 0 0 0 0
         0 0 0 0 0 0 0 0 0 0 0 0"/>
     </keyframe>

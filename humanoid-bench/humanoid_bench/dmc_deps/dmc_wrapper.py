@@ -31,9 +31,7 @@ class MjDataWrapper:
         velocity = np.empty(6, dtype=np.float64)
         if not isinstance(object_id, int):
             object_id = self.model.name2id(object_id, object_type)
-        mujoco.mj_objectVelocity(
-            self._model.ptr, self._data, object_type, object_id, velocity, local_frame
-        )
+        mujoco.mj_objectVelocity(self._model.ptr, self._data, object_type, object_id, velocity, local_frame)
         #  MuJoCo returns velocities in (angular, linear) order, which we flip here.
         return velocity.reshape(2, 3)[::-1]
 
@@ -52,11 +50,7 @@ class MjDataWrapper:
           ValueError: If `contact_id` is negative or bigger than ncon-1.
         """
         if not 0 <= contact_id < self.ncon:
-            raise ValueError(
-                _CONTACT_ID_OUT_OF_RANGE.format(
-                    max_valid=self.ncon - 1, actual=contact_id
-                )
-            )
+            raise ValueError(_CONTACT_ID_OUT_OF_RANGE.format(max_valid=self.ncon - 1, actual=contact_id))
 
         # Run the portion of `mj_step2` that are needed for correct contact forces.
         mujoco.mj_fwdActuation(self._model.ptr, self._data)
@@ -120,11 +114,7 @@ class MjModelWrapper:
             object_type = _str2type(object_type)
         obj_id = mujoco.mj_name2id(self.ptr, object_type, name)
         if obj_id == -1:
-            raise Error(
-                "Object of type {!r} with name {!r} does not exist.".format(
-                    _type2str(object_type), name
-                )
-            )
+            raise Error(f"Object of type {_type2str(object_type)!r} with name {name!r} does not exist.")
         return obj_id
 
     def id2name(self, object_id, object_type):

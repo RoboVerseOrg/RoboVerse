@@ -7,9 +7,7 @@ import time
 import tracemalloc
 from collections import defaultdict
 
-from . import agg
-from . import basics
-from . import timer
+from . import agg, basics, timer
 
 
 class Usage:
@@ -152,9 +150,7 @@ class GcStats:
     def _summary(self):
         lines = ["GC Most Common Types"]
         for gen in range(3):
-            objs = {
-                id(obj): obj for obj in gc.get_objects(gen) if not inspect.isframe(obj)
-            }
+            objs = {id(obj): obj for obj in gc.get_objects(gen) if not inspect.isframe(obj)}
             for obj in list(objs.values()):
                 for obj in gc.get_referents(obj):
                     if not gc.is_tracked(obj):
@@ -264,7 +260,7 @@ class GilStats:
             if log:
                 basics.print_("-" * 79)
                 for name, (held, wait) in items:
-                    line = f"{name:<25} {100*held:5.1f}% held, {100*wait:5.1f}% wait"
+                    line = f"{name:<25} {100 * held:5.1f}% held, {100 * wait:5.1f}% wait"
                     basics.print_(line)
                 basics.print_("-" * 79)
         return stats

@@ -1,10 +1,7 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 _STAND_HEIGHT = 1.65
 
@@ -42,7 +39,7 @@ class Door(Task):
             0 0 0 0 0 0 0
             0
             0
-        """
+        """,
     }
     dof = 2
     success_bar = 600
@@ -84,20 +81,16 @@ class Door(Task):
         ).mean()
         small_control = (4 + small_control) / 5
 
-        door_openness_reward = min(
-            1, (self._env.data.qpos[-2] / 1) * abs(self._env.data.qpos[-2] / 1)
-        )
+        door_openness_reward = min(1, (self._env.data.qpos[-2] / 1) * abs(self._env.data.qpos[-2] / 1))
         door_hatch_openness_reward = rewards.tolerance(
             self._env.data.qpos[-1], bounds=(0.75, 2), margin=0.75, sigmoid="linear"
         )
 
         left_hand_hatch_closeness = np.linalg.norm(
-            self._env.data.body("door_hatch").xpos
-            - self._env.named.data.site_xpos["left_hand"]
+            self._env.data.body("door_hatch").xpos - self._env.named.data.site_xpos["left_hand"]
         )
         right_hand_hatch_closeness = np.linalg.norm(
-            self._env.data.body("door_hatch").xpos
-            - self._env.named.data.site_xpos["right_hand"]
+            self._env.data.body("door_hatch").xpos - self._env.named.data.site_xpos["right_hand"]
         )
         hand_hatch_proximity_reward = rewards.tolerance(
             min(right_hand_hatch_closeness, left_hand_hatch_closeness),

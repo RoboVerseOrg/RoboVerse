@@ -6,9 +6,7 @@ import torch
 
 
 class PixelWrapper(gym.Wrapper):
-    """
-    Wrapper for pixel observations. Compatible with DMControl environments.
-    """
+    """Wrapper for pixel observations. Compatible with DMControl environments."""
 
     def __init__(self, cfg, env, num_frames=3, render_size=64):
         super().__init__(env)
@@ -24,9 +22,7 @@ class PixelWrapper(gym.Wrapper):
         self._render_size = render_size
 
     def _get_obs(self):
-        frame = self.env.render(
-            mode="rgb_array", width=self._render_size, height=self._render_size
-        ).transpose(2, 0, 1)
+        frame = self.env.render(mode="rgb_array", width=self._render_size, height=self._render_size).transpose(2, 0, 1)
         self._frames.append(frame)
         return torch.from_numpy(np.concatenate(self._frames))
 

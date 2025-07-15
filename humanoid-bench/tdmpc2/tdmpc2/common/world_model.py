@@ -4,12 +4,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from tdmpc2.common import layers, math, init
+from tdmpc2.common import init, layers, math
 
 
 class WorldModel(nn.Module):
-    """
-    TD-MPC2 implicit world model architecture.
+    """TD-MPC2 implicit world model architecture.
     Can be used for both single-task and multi-task experiments.
     """
 
@@ -33,20 +32,16 @@ class WorldModel(nn.Module):
             2 * [cfg.mlp_dim],
             max(cfg.num_bins, 1),
         )
-        self._pi = layers.mlp(
-            cfg.latent_dim + cfg.task_dim, 2 * [cfg.mlp_dim], 2 * cfg.action_dim
-        )
-        self._Qs = layers.Ensemble(
-            [
-                layers.mlp(
-                    cfg.latent_dim + cfg.action_dim + cfg.task_dim,
-                    2 * [cfg.mlp_dim],
-                    max(cfg.num_bins, 1),
-                    dropout=cfg.dropout,
-                )
-                for _ in range(cfg.num_q)
-            ]
-        )
+        self._pi = layers.mlp(cfg.latent_dim + cfg.task_dim, 2 * [cfg.mlp_dim], 2 * cfg.action_dim)
+        self._Qs = layers.Ensemble([
+            layers.mlp(
+                cfg.latent_dim + cfg.action_dim + cfg.task_dim,
+                2 * [cfg.mlp_dim],
+                max(cfg.num_bins, 1),
+                dropout=cfg.dropout,
+            )
+            for _ in range(cfg.num_q)
+        ])
         self.apply(init.weight_init)
         init.zero_([self._reward[-1].weight, self._Qs.params[-2]])
         self._target_Qs = deepcopy(self._Qs).requires_grad_(False)
@@ -58,9 +53,7 @@ class WorldModel(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def to(self, *args, **kwargs):
-        """
-        Overriding `to` method to also move additional tensors to device.
-        """
+        """Overriding `to` method to also move additional tensors to device."""
         super().to(*args, **kwargs)
         if self.cfg.multitask:
             self._action_masks = self._action_masks.to(*args, **kwargs)
@@ -69,16 +62,13 @@ class WorldModel(nn.Module):
         return self
 
     def train(self, mode=True):
-        """
-        Overriding `train` method to keep target Q-networks in eval mode.
-        """
+        """Overriding `train` method to keep target Q-networks in eval mode."""
         super().train(mode)
         self._target_Qs.train(False)
         return self
 
     def track_q_grad(self, mode=True):
-        """
-        Enables/disables gradient tracking of Q-networks.
+        """Enables/disables gradient tracking of Q-networks.
         Avoids unnecessary computation during policy optimization.
         This method also enables/disables gradients for task embeddings.
         """
@@ -89,16 +79,13 @@ class WorldModel(nn.Module):
                 p.requires_grad_(mode)
 
     def soft_update_target_Q(self):
-        """
-        Soft-update target Q-networks using Polyak averaging.
-        """
+        """Soft-update target Q-networks using Polyak averaging."""
         with torch.no_grad():
             for p, p_target in zip(self._Qs.parameters(), self._target_Qs.parameters()):
                 p_target.data.lerp_(p.data, self.cfg.tau)
 
     def task_emb(self, x, task):
-        """
-        Continuous task embedding for multi-task experiments.
+        """Continuous task embedding for multi-task experiments.
         Retrieves the task embedding for a given task ID `task`
         and concatenates it to the input `x`.
         """
@@ -112,8 +99,7 @@ class WorldModel(nn.Module):
         return torch.cat([x, emb], dim=-1)
 
     def encode(self, obs, task):
-        """
-        Encodes an observation into its latent representation.
+        """Encodes an observation into its latent representation.
         This implementation assumes a single state-based observation.
         """
         if self.cfg.multitask:
@@ -123,26 +109,21 @@ class WorldModel(nn.Module):
         return self._encoder[self.cfg.obs](obs)
 
     def next(self, z, a, task):
-        """
-        Predicts the next latent state given the current latent state and action.
-        """
+        """Predicts the next latent state given the current latent state and action."""
         if self.cfg.multitask:
             z = self.task_emb(z, task)
         z = torch.cat([z, a], dim=-1)
         return self._dynamics(z)
 
     def reward(self, z, a, task):
-        """
-        Predicts instantaneous (single-step) reward.
-        """
+        """Predicts instantaneous (single-step) reward."""
         if self.cfg.multitask:
             z = self.task_emb(z, task)
         z = torch.cat([z, a], dim=-1)
         return self._reward(z)
 
     def pi(self, z, task):
-        """
-        Samples an action from the policy prior.
+        """Samples an action from the policy prior.
         The policy prior is a Gaussian distribution with
         mean and (log) std predicted by a neural network.
         """
@@ -169,8 +150,7 @@ class WorldModel(nn.Module):
         return mu, pi, log_pi, log_std
 
     def Q(self, z, a, task, return_type="min", target=False):
-        """
-        Predict state-action value.
+        """Predict state-action value.
         `return_type` can be one of [`min`, `avg`, `all`]:
                 - `min`: return the minimum of two randomly subsampled Q-values.
                 - `avg`: return the average of two randomly subsampled Q-values.

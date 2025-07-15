@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from metasim.utils import configclass
+
 from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
@@ -11,7 +12,7 @@ class H1HandHbCfg(BaseRobotCfg):
     #  High-level metadata
     # --------------------------------------------------------------------- #
     name: str = "h1_hand_hb"
-    num_joints: int = 61                                # 21 body + 20 LH + 20 RH
+    num_joints: int = 61  # 21 body + 20 LH + 20 RH
     mjcf_path: str = "roboverse_data/robots/h1_hand_hb/mjcf/mjx_h1_hand.xml"
     mjx_mjcf_path: str = "roboverse_data/robots/h1_hand_hb/mjcf/mjx_h1_hand.xml"
 
@@ -61,17 +62,17 @@ class H1HandHbCfg(BaseRobotCfg):
         "lh_A_THJ1": BaseActuatorCfg(),
         "lh_A_FFJ4": BaseActuatorCfg(),
         "lh_A_FFJ3": BaseActuatorCfg(),
-        "lh_A_FFJ0": BaseActuatorCfg(),   # tendon (FFJ2 + FFJ1)
+        "lh_A_FFJ0": BaseActuatorCfg(),  # tendon (FFJ2 + FFJ1)
         "lh_A_MFJ4": BaseActuatorCfg(),
         "lh_A_MFJ3": BaseActuatorCfg(),
-        "lh_A_MFJ0": BaseActuatorCfg(),   # tendon (MFJ2 + MFJ1)
+        "lh_A_MFJ0": BaseActuatorCfg(),  # tendon (MFJ2 + MFJ1)
         "lh_A_RFJ4": BaseActuatorCfg(),
         "lh_A_RFJ3": BaseActuatorCfg(),
-        "lh_A_RFJ0": BaseActuatorCfg(),   # tendon (RFJ2 + RFJ1)
+        "lh_A_RFJ0": BaseActuatorCfg(),  # tendon (RFJ2 + RFJ1)
         "lh_A_LFJ5": BaseActuatorCfg(),
         "lh_A_LFJ4": BaseActuatorCfg(),
         "lh_A_LFJ3": BaseActuatorCfg(),
-        "lh_A_LFJ0": BaseActuatorCfg(),   # tendon (LFJ2 + LFJ1)
+        "lh_A_LFJ0": BaseActuatorCfg(),  # tendon (LFJ2 + LFJ1)
         # --------------------- right hand (prefix rh_A_) ------------------
         "rh_A_WRJ2": BaseActuatorCfg(),
         "rh_A_WRJ1": BaseActuatorCfg(),

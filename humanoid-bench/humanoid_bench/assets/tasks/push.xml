@@ -2,10 +2,10 @@
     <asset>
         <material name="wooden_cover"  texuniform="false"  texture="wooden_cover"/>
         <texture type="2d" name="wooden_cover" file="../tasks/assets/kitchen-wood.png"/>
-        
+
         <material name="dark_wooden_cover"  texuniform="false"  texture="dark_wooden_cover"/>
         <texture type="2d" name="dark_wooden_cover" file="../tasks/assets/dark-wood.png"/>
-        
+
         <material name="plywood_cover"  texuniform="false"  texture="plywood_cover"/>
         <texture type="2d" name="plywood_cover" file="../tasks/assets/plywood-4k.png"/>
     </asset>

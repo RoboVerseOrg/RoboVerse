@@ -128,7 +128,8 @@ class Cache:
         tf.config.set_visible_devices([], "TPU")
 
     def get_path(self, key):
-        import hashlib, os
+        import hashlib
+        import os
 
         key = hashlib.md5(key.encode("utf-8")).hexdigest()
         dir_, filename = key[:3], key[3:]
@@ -146,6 +147,7 @@ class Cache:
 
     def write(self, key, pk3_path):
         import os
+
         import tensorflow as tf
 
         path = self.get_path(key)

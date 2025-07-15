@@ -104,7 +104,7 @@
                             <geom class="visual" mesh="left_knee_link"/>
                             <geom class="collision" mesh="left_knee_link"/>
                             <body name="left_ankle_link" pos="0 0 -0.4">
-                                <inertial pos="0.048568 0 -0.045609" quat="0.489385 0.510394 0.510394 0.489385" mass="0.552448" 
+                                <inertial pos="0.048568 0 -0.045609" quat="0.489385 0.510394 0.510394 0.489385" mass="0.552448"
                                     diaginertia="0.00362 0.00355701 0.000149987"/>
                                 <joint name="left_ankle" axis="0 1 0" range="-0.87 0.52"/>
                                 <geom class="visual" mesh="left_ankle_link"/>

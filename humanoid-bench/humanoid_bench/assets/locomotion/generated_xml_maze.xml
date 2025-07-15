@@ -2,91 +2,91 @@
 
                 	<geom type='box' pos='0.75 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_00" pos='0.75 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='2.25 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_01" pos='2.25 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='3.75 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_02" pos='3.75 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='5.25 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_03" pos='5.25 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='6.75 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_04" pos='6.75 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='8.25 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_05" pos='8.25 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 9.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_06" pos='9.75 9.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 8.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_10" pos='0.75 8.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 8.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_16" pos='9.75 8.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 6.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_20" pos='0.75 6.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='2.25 6.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_21" pos='2.25 6.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='3.75 6.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_22" pos='3.75 6.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='6.75 6.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_24" pos='6.75 6.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 6.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_26" pos='9.75 6.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 5.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_30" pos='0.75 5.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 5.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_36" pos='9.75 5.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 3.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_40" pos='0.75 3.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='3.75 3.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_42" pos='3.75 3.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='6.75 3.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_44" pos='6.75 3.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='8.25 3.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_45" pos='8.25 3.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 3.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_46" pos='9.75 3.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 2.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_50" pos='0.75 2.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 2.25 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_56" pos='9.75 2.25 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='0.75 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_60" pos='0.75 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='2.25 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_61" pos='2.25 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='3.75 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_62" pos='3.75 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='5.25 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_63" pos='5.25 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='6.75 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_64" pos='6.75 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='8.25 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_65" pos='8.25 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
-            
+
                 	<geom type='box' pos='9.75 0.75 0.6' size='0.75 0.75 0.6' rgba='0.4 0.4 0.4 0.3' class="visual" />
                 	<geom type='box' name="block_collision_66" pos='9.75 0.75 0.6' size='0.75 0.75 0.6' class="collision" />
             </body>

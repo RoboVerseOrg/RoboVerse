@@ -11,9 +11,7 @@ class RunningScale:
         else:
             self.device = torch.device("cpu")
         self._value = torch.ones(1, dtype=torch.float32, device=self.device)
-        self._percentiles = torch.tensor(
-            [5, 95], dtype=torch.float32, device=self.device
-        )
+        self._percentiles = torch.tensor([5, 95], dtype=torch.float32, device=self.device)
 
     def state_dict(self):
         return dict(value=self._value, percentiles=self._percentiles)

@@ -1,13 +1,10 @@
+import numpy as np
 from minerl.herobraine.env_spec import EnvSpec
-from minerl.herobraine.hero import handler
-from minerl.herobraine.hero import handlers
-from minerl.herobraine.hero import mc
+from minerl.herobraine.hero import handler, handlers, mc
 from minerl.herobraine.hero.mc import INVERSE_KEYMAP
 
-import numpy as np
-
-np.float = float
-np.int = int
+float = float
+int = int
 np.bool = bool
 
 
@@ -78,9 +75,7 @@ class MineRLEnv(EnvSpec):
         return [
             handlers.POVObservation(self.resolution),
             handlers.FlatInventoryObservation(mc.ALL_ITEMS),
-            handlers.EquippedItemObservation(
-                mc.ALL_ITEMS, _default="air", _other="other"
-            ),
+            handlers.EquippedItemObservation(mc.ALL_ITEMS, _default="air", _other="other"),
             handlers.ObservationFromCurrentLocation(),
             handlers.ObservationFromLifeStats(),
         ]

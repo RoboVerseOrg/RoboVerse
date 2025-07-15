@@ -33,10 +33,7 @@ class Driver:
         self.reset()
 
     def reset(self, init_policy=None):
-        self.acts = {
-            k: np.zeros((self.length,) + v.shape, v.dtype)
-            for k, v in self.act_space.items()
-        }
+        self.acts = {k: np.zeros((self.length,) + v.shape, v.dtype) for k, v in self.act_space.items()}
         self.acts["reset"] = np.ones(self.length, bool)
         self.carry = init_policy and init_policy(self.length)
 

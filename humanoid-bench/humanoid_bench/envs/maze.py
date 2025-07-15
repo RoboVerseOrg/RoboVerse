@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 # Height of head above which stand reward is 1.
@@ -27,7 +25,7 @@ class MazeBase(Task):
             0 0 0 0 0 0 0
             0 0 0 0 1.57
             0 0 0 0 0 0 0
-        """
+        """,
     }
     htarget_low = np.array([-1, -1, 0.8])
     htarget_high = np.array([7, 7, 1.2])
@@ -40,18 +38,14 @@ class MazeBase(Task):
 
     @property
     def observation_space(self):
-        return Box(
-            low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64
-        )
+        return Box(low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64)
 
     def update_move_direction(self):
         self.move_direction = np.array([1, 0, 0])
         self.maze_stage = 0
 
     def get_reward(self):
-        self.begining_wall_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "block_collision_00"
-        )
+        self.begining_wall_id = self._env.named.data.geom_xpos.axes.row.names.index("block_collision_00")
 
         standing = rewards.tolerance(
             self.robot.head_height(),
@@ -85,14 +79,12 @@ class MazeBase(Task):
         stage_convert_reward = self.update_move_direction()
 
         move = rewards.tolerance(
-            self.robot.center_of_mass_velocity()[0]
-            - self.move_direction[0] * _MOVE_SPEED,
+            self.robot.center_of_mass_velocity()[0] - self.move_direction[0] * _MOVE_SPEED,
             margin=1,
             value_at_margin=0,
             sigmoid="linear",
         ) * rewards.tolerance(
-            self.robot.center_of_mass_velocity()[1]
-            - self.move_direction[1] * _MOVE_SPEED,
+            self.robot.center_of_mass_velocity()[1] - self.move_direction[1] * _MOVE_SPEED,
             margin=1,
             value_at_margin=0,
             sigmoid="linear",
@@ -104,16 +96,13 @@ class MazeBase(Task):
         move = (5 * move + 1) / 6
 
         checkpoint_proximity = np.linalg.norm(
-            self.checkpoints[self.maze_stage][:2]
-            - self._env.named.data.site_xpos["imu"][:2]
+            self.checkpoints[self.maze_stage][:2] - self._env.named.data.site_xpos["imu"][:2]
         )
 
         checkpoint_proximity_reward = rewards.tolerance(checkpoint_proximity, margin=1)
 
         reward = (
-            0.2 * (stand_reward * small_control)
-            + 0.4 * move
-            + 0.4 * checkpoint_proximity_reward
+            0.2 * (stand_reward * small_control) + 0.4 * move + 0.4 * checkpoint_proximity_reward
         ) * wall_collision_discount + stage_convert_reward
 
         return reward, {
@@ -152,40 +141,23 @@ class Maze(MazeBase):
         if self.maze_stage == 0:
             self._env.named.model.geom_rgba["intersection_a"] = np.array([0, 1, 0, 1])
 
-        dist_cp = np.linalg.norm(
-            self._env.named.data.xpos["pelvis"][:2]
-            - self.checkpoints[self.maze_stage][:2]
-        )
+        dist_cp = np.linalg.norm(self._env.named.data.xpos["pelvis"][:2] - self.checkpoints[self.maze_stage][:2])
         if dist_cp < 0.4:
             if self.maze_stage == 0:
                 self.move_direction = np.array([1, 0, 0])
-                self._env.named.model.geom_rgba["intersection_a"] = np.array(
-                    [0, 1, 0, 1]
-                )
-                self._env.named.model.geom_rgba["intersection_b"] = np.array(
-                    [1, 0, 0, 1]
-                )
+                self._env.named.model.geom_rgba["intersection_a"] = np.array([0, 1, 0, 1])
+                self._env.named.model.geom_rgba["intersection_b"] = np.array([1, 0, 0, 1])
             elif self.maze_stage == 1:
                 self.move_direction = np.array([0, 1, 0])
-                self._env.named.model.geom_rgba["intersection_b"] = np.array(
-                    [0, 1, 0, 1]
-                )
-                self._env.named.model.geom_rgba["intersection_c"] = np.array(
-                    [1, 0, 0, 1]
-                )
+                self._env.named.model.geom_rgba["intersection_b"] = np.array([0, 1, 0, 1])
+                self._env.named.model.geom_rgba["intersection_c"] = np.array([1, 0, 0, 1])
             elif self.maze_stage == 2:
                 self.move_direction = np.array([1, 0, 0])
-                self._env.named.model.geom_rgba["intersection_c"] = np.array(
-                    [0, 1, 0, 1]
-                )
-                self._env.named.model.geom_rgba["intersection_d"] = np.array(
-                    [1, 0, 0, 1]
-                )
+                self._env.named.model.geom_rgba["intersection_c"] = np.array([0, 1, 0, 1])
+                self._env.named.model.geom_rgba["intersection_d"] = np.array([1, 0, 0, 1])
             elif self.maze_stage == 3:
                 self.move_direction = np.array([0, 1, 0])
-                self._env.named.model.geom_rgba["intersection_d"] = np.array(
-                    [0, 1, 0, 1]
-                )
+                self._env.named.model.geom_rgba["intersection_d"] = np.array([0, 1, 0, 1])
 
             self.maze_stage += 1
             self.maze_stage = min(self.maze_stage, 4)

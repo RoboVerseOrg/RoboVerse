@@ -47,8 +47,7 @@ def squash(mu, pi, log_pi):
 
 @torch.jit.script
 def symlog(x):
-    """
-    Symmetric logarithmic function.
+    """Symmetric logarithmic function.
     Adapted from https://github.com/danijar/dreamerv3.
     """
     return torch.sign(x) * torch.log(1 + torch.abs(x))
@@ -56,8 +55,7 @@ def symlog(x):
 
 @torch.jit.script
 def symexp(x):
-    """
-    Symmetric exponential function.
+    """Symmetric exponential function.
     Adapted from https://github.com/danijar/dreamerv3.
     """
     return torch.sign(x) * (torch.exp(torch.abs(x)) - 1)

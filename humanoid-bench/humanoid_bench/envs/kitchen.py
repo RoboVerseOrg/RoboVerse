@@ -1,6 +1,5 @@
 import numpy as np
 from gymnasium.spaces import Box
-
 from humanoid_bench.tasks import Task
 
 OBS_ELEMENT_INDICES = {
@@ -120,9 +119,7 @@ class Kitchen(Task):
         all_completed_so_far = True
         for i, element in enumerate(self.tasks_to_complete):
             element_idx = OBS_ELEMENT_INDICES[element]
-            distance = np.linalg.norm(
-                next_obj_obs[..., element_idx] - self.goal[element_idx]
-            )
+            distance = np.linalg.norm(next_obj_obs[..., element_idx] - self.goal[element_idx])
             complete = distance < BONUS_THRESH
             if complete and (all_completed_so_far or not self.ENFORCE_TASK_ORDER):
                 completions.append(element)
@@ -133,9 +130,7 @@ class Kitchen(Task):
             # [self.tasks_to_complete.remove(element) for element in completions]
         bonus = float(len(completions))
 
-        reward_dict["success_subtasks"] = len(self.TASK_ELEMENTS) - len(
-            self.tasks_to_complete
-        )
+        reward_dict["success_subtasks"] = len(self.TASK_ELEMENTS) - len(self.tasks_to_complete)
         reward_dict["success"] = 0
         if len(self.tasks_to_complete) == 0:
             reward_dict["success"] = 1

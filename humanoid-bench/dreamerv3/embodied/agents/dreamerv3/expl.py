@@ -4,8 +4,7 @@ import jax.numpy as jnp
 tree_map = jax.tree_util.tree_map
 sg = lambda x: tree_map(jax.lax.stop_gradient, x)
 
-from . import nets
-from . import jaxutils
+from . import jaxutils, nets
 from . import ninjax as nj
 
 
@@ -16,8 +15,7 @@ class Disag(nj.Module):
         self.inputs = nets.Input(config.disag_head.inputs, dims="deter")
         self.target = nets.Input(self.config.disag_target, dims="deter")
         self.nets = [
-            nets.MLP(shape=None, **self.config.disag_head, name=f"disag{i}")
-            for i in range(self.config.disag_models)
+            nets.MLP(shape=None, **self.config.disag_head, name=f"disag{i}") for i in range(self.config.disag_models)
         ]
 
     def __call__(self, traj):

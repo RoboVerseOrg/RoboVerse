@@ -1,5 +1,5 @@
 <mujoco model="left_shadow_hand">
-  
+
 
     <!-- <body name="lh_forearm" childclass="left_hand" quat="1 -1 1 -1"> -->
       <!-- <site name="lh_forearm_touch" class="left_hand" pos="0 0 0.08" zaxis="0 1 0"/> -->
@@ -180,5 +180,5 @@
       </body>
     <!-- </body> -->
 
- 
+
 </mujoco>

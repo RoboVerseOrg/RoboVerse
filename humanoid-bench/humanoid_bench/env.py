@@ -1,59 +1,58 @@
+import collections
 import os
 
-import numpy as np
-import mujoco
 import gymnasium as gym
+import mujoco
+import numpy as np
 from gymnasium.envs import register
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
-import humanoid_bench.dmc_deps.dmc_index as index
-import collections
-NamedIndexStructs = collections.namedtuple(
-    'NamedIndexStructs', ['model', 'data'])
 
-from dm_control.utils import rewards
+import humanoid_bench.dmc_deps.dmc_index as index
+
+NamedIndexStructs = collections.namedtuple("NamedIndexStructs", ["model", "data"])
+
 
 from humanoid_bench.dmc_deps.dmc_wrapper import MjDataWrapper, MjModelWrapper
 
-from .wrappers import (
-    SingleReachWrapper,
-    DoubleReachAbsoluteWrapper,
-    DoubleReachRelativeWrapper,
-    BlockedHandsLocoWrapper,
-    ObservationWrapper,
-)
-
-from .robots import H1, H1Hand, H1SimpleHand, H1Touch, H1Strong, G1
-from .envs.cube import Cube
-from .envs.bookshelf import BookshelfSimple, BookshelfHard
-from .envs.window import Window
-from .envs.spoon import Spoon
-from .envs.door import Door
-from .envs.basketball import Basketball
+from .envs.balance import BalanceHard, BalanceSimple
 from .envs.basic_locomotion_envs import (
-    Stand,
-    Walk,
-    Run,
-    Hurdle,
     Crawl,
+    Hurdle,
+    Run,
     Sit,
     SitHard,
-    Stair,
     Slide,
+    Stair,
+    Stand,
+    Walk,
 )
-from .envs.reach import Reach
-from .envs.pole import Pole
-from .envs.push import Push
-from .envs.maze import Maze
-from .envs.highbar import HighBarSimple, HighBarHard
-from .envs.kitchen import Kitchen
-from .envs.truck import Truck
-from .envs.package import Package
+from .envs.basketball import Basketball
+from .envs.bookshelf import BookshelfHard, BookshelfSimple
 from .envs.cabinet import Cabinet
-from .envs.balance import BalanceHard, BalanceSimple
-from .envs.room import Room
-from .envs.powerlift import Powerlift
+from .envs.cube import Cube
+from .envs.door import Door
+from .envs.highbar import HighBarHard, HighBarSimple
 from .envs.insert import Insert
+from .envs.kitchen import Kitchen
+from .envs.maze import Maze
+from .envs.package import Package
+from .envs.pole import Pole
+from .envs.powerlift import Powerlift
+from .envs.push import Push
+from .envs.reach import Reach
+from .envs.room import Room
+from .envs.spoon import Spoon
+from .envs.truck import Truck
+from .envs.window import Window
+from .robots import G1, H1, H1Hand, H1SimpleHand, H1Strong, H1Touch
+from .wrappers import (
+    BlockedHandsLocoWrapper,
+    DoubleReachAbsoluteWrapper,
+    DoubleReachRelativeWrapper,
+    ObservationWrapper,
+    SingleReachWrapper,
+)
 
 DEFAULT_CAMERA_CONFIG = {
     "trackbodyid": 1,
@@ -126,7 +125,7 @@ class HumanoidEnv(MujocoEnv, gym.utils.EzPickle):
             model_path = kwargs["model_path"]
         else:
             model_path = f"envs/{robot}_{control}_{task}.xml"
-        
+
         model_path = os.path.join(asset_path, model_path)
 
         self.robot = ROBOTS[robot](self)
@@ -161,9 +160,7 @@ class HumanoidEnv(MujocoEnv, gym.utils.EzPickle):
 
         self.action_high = self.action_space.high
         self.action_low = self.action_space.low
-        self.action_space = Box(
-            low=-1, high=1, shape=self.action_space.shape, dtype=np.float32
-        )
+        self.action_space = Box(low=-1, high=1, shape=self.action_space.shape, dtype=np.float32)
 
         if isinstance(task, str):
             self.task = TASKS[task](self.robot, self, **kwargs)
@@ -191,7 +188,6 @@ class HumanoidEnv(MujocoEnv, gym.utils.EzPickle):
                 self.task = DoubleReachRelativeWrapper(self.task, **kwargs)
             else:
                 raise ValueError(f"Unknown policy_type: {kwargs['policy_type']}")
-        
 
         if self.obs_wrapper:
             # Note that observation wrapper is not compatible with hierarchical policy
@@ -199,15 +195,15 @@ class HumanoidEnv(MujocoEnv, gym.utils.EzPickle):
             self.observation_space = self.task.observation_space
 
         # Keyframe
-        self.keyframe = (
-            self.model.key(kwargs["keyframe"]).id if "keyframe" in kwargs else 0
-        )
+        self.keyframe = self.model.key(kwargs["keyframe"]).id if "keyframe" in kwargs else 0
 
         self.randomness = randomness
         if isinstance(self.task, (BookshelfHard, BookshelfSimple, Kitchen, Cube)):
             self.randomness = 0
-            print("No randomness in this env. This is the default behavior for (BookshelfHard, BookshelfSimple, Kitchen, Cube)")
-        
+            print(
+                "No randomness in this env. This is the default behavior for (BookshelfHard, BookshelfSimple, Kitchen, Cube)"
+            )
+
         # Set up named indexing.
         data = MjDataWrapper(self.data)
         model = MjModelWrapper(self.model)
@@ -234,9 +230,7 @@ class HumanoidEnv(MujocoEnv, gym.utils.EzPickle):
         init_qpos = self.data.qpos.copy()
         init_qvel = self.data.qvel.copy()
         r = self.randomness
-        self.set_state(
-            init_qpos + self.np_random.uniform(-r, r, size=self.model.nq), init_qvel
-        )
+        self.set_state(init_qpos + self.np_random.uniform(-r, r, size=self.model.nq), init_qvel)
 
         # Task-specific reset and return observations
         return self.task.reset_model()

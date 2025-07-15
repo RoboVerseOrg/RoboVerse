@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 
@@ -35,7 +33,7 @@ class Truck(Task):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             5 0 1.1 0.707105 -0.707108 0 0 5.1 0 1.3 0.706752 0 0 0.707462 5 0.35 1.3 0.707105 0.707108 0 0 5 -0.5 1.1 1 0 0 0 5.1 -0.6 1.4 1 0 0 0
-        """
+        """,
     }
     dof = 5 * 7
 
@@ -128,10 +126,7 @@ class Truck(Task):
         reward_robot_package_truck = 0
         if len(self.packages_on_truck) > 0:
             dist_robot_package_truck = [
-                np.linalg.norm(
-                    self._env.named.data.xpos[package]
-                    - self._env.named.data.qpos["free_base"][:3]
-                )
+                np.linalg.norm(self._env.named.data.xpos[package] - self._env.named.data.qpos["free_base"][:3])
                 for package in self.packages_on_truck
             ]
             reward_robot_package_truck = rewards.tolerance(
@@ -146,10 +141,7 @@ class Truck(Task):
         reward_robot_package_picked_up = 0
         if len(self.packages_picked_up) > 0:
             dist_robot_package_picked_up = [
-                np.linalg.norm(
-                    self._env.named.data.xpos[package]
-                    - self._env.named.data.qpos["free_base"][:3]
-                )
+                np.linalg.norm(self._env.named.data.xpos[package] - self._env.named.data.qpos["free_base"][:3])
                 for package in self.packages_picked_up
             ]
             reward_robot_package_picked_up = rewards.tolerance(
@@ -164,10 +156,7 @@ class Truck(Task):
         reward_package_table = 0
         if len(self.packages_picked_up) > 0:
             dist_package_table = [
-                np.linalg.norm(
-                    self._env.named.data.xpos[package]
-                    - self._env.named.data.xpos["table"]
-                )
+                np.linalg.norm(self._env.named.data.xpos[package] - self._env.named.data.xpos["table"])
                 for package in self.packages_picked_up
             ]
             reward_package_table = rewards.tolerance(
@@ -178,12 +167,7 @@ class Truck(Task):
                 sigmoid="linear",
             )
 
-        reward += upright * (
-            1
-            + reward_robot_package_truck
-            + reward_robot_package_picked_up
-            + reward_package_table
-        )
+        reward += upright * (1 + reward_robot_package_truck + reward_robot_package_picked_up + reward_package_table)
 
         reward_dict = {
             "upright": upright,

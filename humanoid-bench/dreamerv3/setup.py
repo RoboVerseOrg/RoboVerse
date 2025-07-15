@@ -1,6 +1,6 @@
-import setuptools
 import pathlib
 
+import setuptools
 
 extras = {}
 extras["tests"] = ["pytest", "parameterized", "cloudpickle"]

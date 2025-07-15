@@ -18,18 +18,16 @@ def main():
     for directory in args.indirs:
         paths += list(directory.expanduser().resolve().glob(args.pattern))
     tensor, tasks, methods, seeds = load_scores(sorted(set(paths)), args)
-    console.print(f'Tasks ({len(tasks)}): [cyan]{", ".join(tasks)}[/cyan]')
-    console.print(f'Methods ({len(methods)}): [cyan]{", ".join(methods)}[/cyan]')
-    console.print(f'Seed ({len(seeds)}): [cyan]{", ".join(seeds)}[/cyan]')
+    console.print(f"Tasks ({len(tasks)}): [cyan]{', '.join(tasks)}[/cyan]")
+    console.print(f"Methods ({len(methods)}): [cyan]{', '.join(methods)}[/cyan]")
+    console.print(f"Seed ({len(seeds)}): [cyan]{', '.join(seeds)}[/cyan]")
     if not tasks or not methods or not seeds:
         console.print("Nothing to print!", style="red")
         return
 
     path = pathlib.Path("~/scores/atari_baselines.json").expanduser()
     baselines = json.loads(path.read_text())
-    select = lambda baselines, name: {
-        k: v[name] for k, v in baselines.items() if name in v
-    }
+    select = lambda baselines, name: {k: v[name] for k, v in baselines.items() if name in v}
     if args.normalize:
         mins = select(baselines, "random")
         maxs = select(baselines, "human_gamer")
@@ -171,9 +169,7 @@ def parse_args(argv=None):
     parser.add_argument("--tolerance", type=float, default=100)
     parser.add_argument("--episodes", type=int, default=5)
     parser.add_argument("--normalize", type=boolean, default=True)
-    parser.add_argument(
-        "--stats", type=str, nargs="*", default=["mean", "median", "tasks"]
-    )
+    parser.add_argument("--stats", type=str, nargs="*", default=["mean", "median", "tasks"])
     args = parser.parse_args(argv)
     args.indirs = tuple([x.expanduser() for x in args.indirs])
     if args.stats == ["none"]:

@@ -1,13 +1,7 @@
-import os
-
 import numpy as np
-import mujoco
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 # Height of head above which stand reward is 1.
 _STAND_HEIGHT = 1.65
@@ -23,7 +17,7 @@ class Walk(Task):
         "h1": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0",
         "h1hand": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
         "h1touch": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0"
+        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0",
     }
     _move_speed = _WALK_SPEED
     htarget_low = np.array([-1.0, -1.0, 0.8])
@@ -39,9 +33,7 @@ class Walk(Task):
 
     @property
     def observation_space(self):
-        return Box(
-            low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64
-        )
+        return Box(low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64)
 
     def get_reward(self):
         standing = rewards.tolerance(
@@ -139,9 +131,7 @@ class Crawl(Walk):
         )
 
         reward_xquat = rewards.tolerance(
-            np.linalg.norm(
-                self._env.data.body("pelvis").xquat - np.array([0.75, 0, 0.65, 0])
-            ),
+            np.linalg.norm(self._env.data.body("pelvis").xquat - np.array([0.75, 0, 0.65, 0])),
             margin=1,
         )
 
@@ -152,10 +142,7 @@ class Crawl(Walk):
         )
 
         reward = (
-            0.1 * small_control
-            + 0.25 * min(crawling, crawling_head)
-            + 0.4 * move
-            + 0.25 * reward_xquat
+            0.1 * small_control + 0.25 * min(crawling, crawling_head) + 0.4 * move + 0.25 * reward_xquat
         ) * in_tunnel
         return reward, {
             "crawling": crawling,
@@ -271,12 +258,9 @@ class Hurdle(Walk):
         wall_collision_discount = 1
 
         for pair in self._env.data.contact.geom:
-            if any(
-                [
-                    wall_collision_id in pair
-                    for wall_collision_id in self.wall_collision_ids
-                ]
-            ):  # for no hand. if for hand, > 155
+            if any([
+                wall_collision_id in pair for wall_collision_id in self.wall_collision_ids
+            ]):  # for no hand. if for hand, > 155
                 wall_collision_discount = 0.1
                 # print(pair)
                 break
@@ -298,7 +282,7 @@ class Sit(Task):
         "h1": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0",
         "h1hand": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
         "h1touch": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0"
+        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0",
     }
     dof = 0
     vels = 0
@@ -314,9 +298,7 @@ class Sit(Task):
         )
 
     def get_reward(self):
-        sitting = rewards.tolerance(
-            self._env.data.qpos[2], bounds=(0.68, 0.72), margin=0.2
-        )
+        sitting = rewards.tolerance(self._env.data.qpos[2], bounds=(0.68, 0.72), margin=0.2)
         chair_location = self._env.named.data.xpos["chair"]
         on_chair = rewards.tolerance(
             self._env.data.qpos[0] - chair_location[0], bounds=(-0.19, 0.19), margin=0.2
@@ -360,14 +342,12 @@ class Sit(Task):
     def euler_to_quat(angles):
         cr, cp, cy = np.cos(angles[0] / 2), np.cos(angles[1] / 2), np.cos(angles[2] / 2)
         sr, sp, sy = np.sin(angles[0] / 2), np.sin(angles[1] / 2), np.sin(angles[2] / 2)
-        return np.array(
-            [
-                cr * cp * cy + sr * sp * sy,
-                sr * cp * cy - cr * sp * sy,
-                cr * sp * cy + sr * cp * sy,
-                cr * cp * sy - sr * sp * cy,
-            ]
-        )
+        return np.array([
+            cr * cp * cy + sr * sp * sy,
+            sr * cp * cy - cr * sp * sy,
+            cr * sp * cy + sr * cp * sy,
+            cr * cp * sy - sr * sp * cy,
+        ])
 
 
 class SitHard(Sit):
@@ -375,7 +355,7 @@ class SitHard(Sit):
         "h1": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 -0.25 0 0 1 0 0 0",
         "h1hand": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.25 0 0 1 0 0 0",
         "h1touch": "0 0 0.98 1 0 0 0 0 0 -0.4 0.8 -0.4 0 0 -0.4 0.8 -0.4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.25 0 0 1 0 0 0",
-        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0 -0.25 0 0 1 0 0 0"
+        "g1": "0 0 0.75 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.57 0 0 0 0 0 0 0 0 0 0 0 1.57 0 0 0 0 0 0 0 -0.25 0 0 1 0 0 0",
     }
 
     dof = 7

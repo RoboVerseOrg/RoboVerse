@@ -43,7 +43,7 @@ class OnlineTrainer(Trainer):
             ep_successes.append(info["success"])
             if self.cfg.save_video:
                 # self.logger.video.save(self._step)
-                self.logger.video.save(self._step, key='results/video')
+                self.logger.video.save(self._step, key="results/video")
         return dict(
             episode_reward=np.nanmean(ep_rewards),
             episode_success=np.nanmean(ep_successes),
@@ -87,19 +87,19 @@ class OnlineTrainer(Trainer):
 
                 if self._step > 0:
                     train_metrics.update(
-                        episode_reward=torch.tensor(
-                            [td["reward"] for td in self._tds[1:]]
-                        ).sum(),
+                        episode_reward=torch.tensor([td["reward"] for td in self._tds[1:]]).sum(),
                         episode_success=info["success"],
                     )
                     train_metrics.update(self.common_metrics())
 
-                    results_metrics = {'return': train_metrics['episode_reward'],
-                                       'episode_length': len(self._tds[1:]),
-                                       'success': train_metrics['episode_success'],
-                                       'success_subtasks': info['success_subtasks'],
-                                       'step': self._step,}
-                
+                    results_metrics = {
+                        "return": train_metrics["episode_reward"],
+                        "episode_length": len(self._tds[1:]),
+                        "success": train_metrics["episode_success"],
+                        "success_subtasks": info["success_subtasks"],
+                        "step": self._step,
+                    }
+
                     self.logger.log(train_metrics, "train")
                     self.logger.log(results_metrics, "results")
                     self._ep_idx = self.buffer.add(torch.cat(self._tds))

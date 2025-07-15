@@ -12,16 +12,10 @@ This file contains nn.Module definitions for common networks used in RL. It is d
     ActorCritic: Same as WithEncoder, but for possibly many different networks (e.g. actor, critic, value)
 """
 
-from jaxrl_m.typing import *
-
-import flax.linen as nn
-import jax.numpy as jnp
-
 import distrax
 import flax.linen as nn
 import jax.numpy as jnp
-
-import jax
+from jaxrl_m.typing import *
 
 ###############################
 #
@@ -41,9 +35,7 @@ class MLP(nn.Module):
     kernel_init: Callable[[PRNGKey, Shape, Dtype], Array] = default_init()
 
     def setup(self):
-        self.layers = [
-            nn.Dense(size, kernel_init=self.kernel_init) for size in self.hidden_dims
-        ]
+        self.layers = [nn.Dense(size, kernel_init=self.kernel_init) for size in self.hidden_dims]
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         for i, layer in enumerate(self.layers):
@@ -68,9 +60,7 @@ class DiscreteCritic(nn.Module):
 
     @nn.compact
     def __call__(self, observations: jnp.ndarray) -> jnp.ndarray:
-        return MLP((*self.hidden_dims, self.n_actions), activations=self.activations)(
-            observations
-        )
+        return MLP((*self.hidden_dims, self.n_actions), activations=self.activations)(observations)
 
 
 class Critic(nn.Module):
@@ -85,8 +75,7 @@ class Critic(nn.Module):
 
 
 def ensemblize(cls, num_qs, out_axes=0, **kwargs):
-    """
-    Useful for making ensembles of Q functions (e.g. double Q in SAC).
+    """Useful for making ensembles of Q functions (e.g. double Q in SAC).
 
     Usage:
 
@@ -101,7 +90,7 @@ def ensemblize(cls, num_qs, out_axes=0, **kwargs):
         in_axes=None,
         out_axes=out_axes,
         axis_size=num_qs,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -124,33 +113,23 @@ class Policy(nn.Module):
     final_fc_init_scale: float = 1e-2
 
     @nn.compact
-    def __call__(
-        self, observations: jnp.ndarray, temperature: float = 1.0
-    ) -> distrax.Distribution:
+    def __call__(self, observations: jnp.ndarray, temperature: float = 1.0) -> distrax.Distribution:
         outputs = MLP(
             self.hidden_dims,
             activate_final=True,
         )(observations)
 
-        means = nn.Dense(
-            self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
-        )(outputs)
+        means = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))(outputs)
         if self.state_dependent_std:
-            log_stds = nn.Dense(
-                self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
-            )(outputs)
+            log_stds = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))(outputs)
         else:
             log_stds = self.param("log_stds", nn.initializers.zeros, (self.action_dim,))
 
         log_stds = jnp.clip(log_stds, self.log_std_min, self.log_std_max)
 
-        distribution = distrax.MultivariateNormalDiag(
-            loc=means, scale_diag=jnp.exp(log_stds) * temperature
-        )
+        distribution = distrax.MultivariateNormalDiag(loc=means, scale_diag=jnp.exp(log_stds) * temperature)
         if self.tanh_squash_distribution:
-            distribution = TransformedWithMode(
-                distribution, distrax.Block(distrax.Tanh(), ndims=1)
-            )
+            distribution = TransformedWithMode(distribution, distrax.Block(distrax.Tanh(), ndims=1))
 
         return distribution
 
@@ -168,22 +147,16 @@ class TransformedWithMode(distrax.Transformed):
 ###############################
 
 
-def get_latent(
-    encoder: nn.Module, observations: Union[jnp.ndarray, Dict[str, jnp.ndarray]]
-):
-    """
-
-    Get latent representation from encoder. If observations is a dict
-        a state and image component, then concatenate the latents.
+def get_latent(encoder: nn.Module, observations: Union[jnp.ndarray, Dict[str, jnp.ndarray]]):
+    """Get latent representation from encoder. If observations is a dict
+    a state and image component, then concatenate the latents.
 
     """
     if encoder is None:
         return observations
 
     elif isinstance(observations, dict):
-        return jnp.concatenate(
-            [encoder(observations["image"]), observations["state"]], axis=-1
-        )
+        return jnp.concatenate([encoder(observations["image"]), observations["state"]], axis=-1)
 
     else:
         return encoder(observations)
@@ -204,7 +177,6 @@ class ActorCritic(nn.Module):
     Note: You can share encoder parameters between actor and critic by passing in the same encoder definition for both.
 
     Example:
-
         encoder_def = ImpalaEncoder()
         actor_def = Policy(...)
         critic_def = Critic(...)

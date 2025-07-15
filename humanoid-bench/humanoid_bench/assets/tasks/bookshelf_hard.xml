@@ -120,27 +120,27 @@
             <geom type="box" pos="0.3 0 0.08" size="0.02 0.08 0.02" class="collision"/>
         </body>
 
-        
+
         <body name="book_a_vision" pos="0.85 -0.25 1.55" euler='-0 0 -0'>
             <site name="book_a_vision" pos="0 0 0" rgba="1 1 1 0"/>
             <geom type="mesh" mesh="book" name="book_a_vision_a" rgba="1 1 1 0" class="visual"/>
         </body>
-        
+
         <body name="book_b_vision" pos="0.85 -0.25 1.55" euler='-0 0 -0'>
             <site name="book_b_vision" pos="0 0 0" rgba="1 1 1 0"/>
             <geom type="mesh" mesh="book" name="book_b_vision_a" rgba="1 1 1 0" class="visual"/>
         </body>
-        
+
         <body name="book_c_vision" pos="0.85 -0.25 1.55" euler='-0 0 -0'>
             <site name="book_c_vision" pos="0 0 0" rgba="1 1 1 0"/>
             <geom type="mesh" mesh="book" name="book_c_vision_a" rgba="1 1 1 0" class="visual"/>
         </body>
-        
+
         <body name="book_d_vision" pos="0.85 -0.25 1.55" euler='-0 0 -0'>
             <site name="book_d_vision" pos="0 0 0" rgba="1 1 1 0"/>
             <geom type="mesh" mesh="book" name="book_d_vision_a" rgba="1 1 1 0" class="visual"/>
         </body>
-        
+
         <body name="book_e_vision" pos="0.85 -0.25 1.55" euler='-0 0 -0'>
             <site name="book_e_vision" pos="0 0 0" rgba="1 1 1 0"/>
             <geom type="mesh" mesh="book" name="book_e_vision_a" rgba="1 1 1 0" class="visual"/>
@@ -187,6 +187,6 @@
             <geom type="box" name="headphone_vision_d" pos="0.2 0.07 0.11" size="0.1 0.02 0.02" rgba="1 1 1 0" class="visual"/>
             <geom type="box" name="headphone_vision_e" pos="0.3 0 0.11" size="0.02 0.08 0.02" rgba="1 1 1 0" class="visual"/>
         </body>
-        
+
     </worldbody>
 </mujocoinclude>

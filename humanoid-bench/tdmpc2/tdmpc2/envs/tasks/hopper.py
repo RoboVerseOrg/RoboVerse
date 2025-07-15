@@ -1,12 +1,10 @@
 import os
 
-from dm_control import mujoco
-from dm_control.rl import control
-from dm_control.suite import common
-from dm_control.suite import hopper
-from dm_control.utils import rewards
-from dm_control.utils import io as resources
 import numpy as np
+from dm_control.rl import control
+from dm_control.suite import common, hopper
+from dm_control.utils import io as resources
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -61,9 +59,7 @@ def flip(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
 
 
 @hopper.SUITE.add("custom")
-def flip_backwards(
-    time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def flip_backwards(time_limit=_DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Flip Backwards task."""
     physics = Physics.from_xml_string(*get_model_and_assets())
     task = CustomHopper(goal="flip-backwards", random=random)

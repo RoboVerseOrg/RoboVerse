@@ -10,7 +10,6 @@ import embodied
 import numpy as np
 import pytest
 
-
 REPLAYS = [
     ("Replay", embodied.replay.Replay),
 ]

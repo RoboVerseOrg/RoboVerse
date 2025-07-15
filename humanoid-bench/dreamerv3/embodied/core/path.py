@@ -33,10 +33,10 @@ class Path:
 
     def __truediv__(self, part):
         sep = "" if self._path.endswith("/") else "/"
-        return type(self)(f"{self._path}{sep}{str(part)}")
+        return type(self)(f"{self._path}{sep}{part!s}")
 
     def __repr__(self):
-        return f"Path({str(self)})"
+        return f"Path({self!s})"
 
     def __fspath__(self):
         return str(self)
@@ -133,7 +133,7 @@ class LocalPath(Path):
         return type(self)(os.path.absolute(str(self)))
 
     def glob(self, pattern):
-        for path in globlib.glob(f"{str(self)}/{pattern}"):
+        for path in globlib.glob(f"{self!s}/{pattern}"):
             yield type(self)(path)
 
     def exists(self):
@@ -196,7 +196,7 @@ class GFilePath(Path):
         return self
 
     def glob(self, pattern):
-        for path in self.gfile.glob(f"{str(self)}/{pattern}"):
+        for path in self.gfile.glob(f"{self!s}/{pattern}"):
             yield type(self)(path)
 
     def exists(self):

@@ -15,11 +15,11 @@
     <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4"
         rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="2.5 2.5"
-        reflectance="0.2"/> 
+        reflectance="0.2"/>
 
-    <material name='collision' rgba='0.1 0.5 0.9 0.4'/> 
+    <material name='collision' rgba='0.1 0.5 0.9 0.4'/>
     <material name='robot' rgba='0.9 0.5 0.1 1'/>
-    
+
     <material name="base-0" texture="base-0"/>
     <material name="base-1" texture="base-1"/>
     <material name="base-2" texture="base-2"/>
@@ -61,7 +61,7 @@
     <material name="right-shoulder-roll-0" texture="right-shoulder-roll-0"/>
     <material name="right-shoulder-pitch-0" texture="right-shoulder-pitch-0"/>
     <material name="right-shoulder-yaw-0" texture="right-shoulder-yaw-0"/>
-    <material name="right-elbow-0" texture="right-elbow-0"/>	
+    <material name="right-elbow-0" texture="right-elbow-0"/>
 
     <texture type="2d" name="base-0" file="shin.png"/>
     <texture type="2d" name="base-1" file="hip-roll-housing.png"/>
@@ -390,7 +390,7 @@
     <include file="../shadow_hand_submodel/right_lf_metacarpal_collision_assets.xml"/>
     <include file="../shadow_hand_submodel/right_th_proximal_collision_assets.xml"/>
     <include file="../shadow_hand_submodel/right_th_middle_collision_assets.xml"/>
-    <include file="../shadow_hand_submodel/right_th_distal_pst_collision_assets.xml"/> 
+    <include file="../shadow_hand_submodel/right_th_distal_pst_collision_assets.xml"/>
 
   </asset>
 
@@ -416,7 +416,7 @@
         <camera name="right_eye_camera" mode="fixed" pos="-0.035 0.045 0.075" xyaxes="-1 0 0 0 1 0"/>
         <geom type='mesh' mesh='head' material='head'/>
         <geom class="collision" type="mesh" mesh="head" friction='0.7 0.01 0.005'/>
-        <joint name='head-roll' type='hinge' axis='1 0 0' range='-0.523599 0.523599' stiffness='0' frictionloss='1' damping='1' armature='0.0001' limited='true' pos='0 0 0'/> 
+        <joint name='head-roll' type='hinge' axis='1 0 0' range='-0.523599 0.523599' stiffness='0' frictionloss='1' damping='1' armature='0.0001' limited='true' pos='0 0 0'/>
         <joint name='head-pitch' type='hinge' axis='0 1 0' range='-0.523599 0.523599' stiffness='0' frictionloss='1' damping='1' armature='0.0001' limited='true' pos='0 0 0'/>
         <joint name='head-yaw' type='hinge' axis='0 0 1' range='-0.523599 0.523599' stiffness='0' frictionloss='1' damping='1' armature='0.0001' limited='true' pos='0 0 0'/>
       </body>
@@ -706,7 +706,7 @@
     <motor name='right-wrist-yaw' joint='right_wrist_yaw' gear='50' ctrllimited='true' ctrlrange='-1.570796327 1.570796327'/>
   </actuator>
 
-   
+
   <contact>
     <exclude body1="left-elbow" body2="lh_palm"/>
     <exclude body1="left-hip-roll" body2="left-hip-pitch"/>
@@ -781,7 +781,7 @@
 
   <!-- <include file="../digit/touch_sensors_body.xml"/> -->
   <!-- <include file="../shadow_hand_submodel/touch_sensors.xml"/> -->
-  
+
   <actuator>
     <position name="lh_A_WRJ2" joint="lh_WRJ2" class="left_wrist_y"/>
     <position name="lh_A_WRJ1" joint="lh_WRJ1" class="left_wrist_x"/>

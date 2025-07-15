@@ -4,7 +4,7 @@ Run setup_wandb(hyperparam_dict, ...) to initialize wandb logging.
 See default_wandb_config() for a list of available configurations.
 
 We recommend the following workflow (see examples/mujoco/d4rl_iql.py for a more full example):
-    
+
     from ml_collections import config_flags
     from jaxrl_m.wandb import setup_wandb, default_wandb_config
     import wandb
@@ -24,16 +24,16 @@ We recommend the following workflow (see examples/mujoco/d4rl_iql.py for a more 
 With the following setup, you may set wandb configurations from the command line, e.g.
     python main.py --wandb.project=my_project --wandb.group=my_group --wandb.offline
 """
-import wandb
 
+import datetime
 import tempfile
+import time
+
 import absl.flags as flags
 import ml_collections
-from  ml_collections.config_dict import FieldReference
-import datetime
-import wandb
-import time
 import numpy as np
+import wandb
+from ml_collections.config_dict import FieldReference
 
 
 def get_flag_dict():
@@ -54,7 +54,7 @@ def default_wandb_config():
     config.exp_prefix = group_name  # Group name (deprecated, but kept for backwards compatibility)
     config.group = group_name  # Group name
 
-    experiment_name = FieldReference(None, field_type=str) # Experiment name
+    experiment_name = FieldReference(None, field_type=str)  # Experiment name
     config.name = experiment_name  # Run name (will be formatted with flags / variant)
     config.exp_descriptor = experiment_name  # Run name (deprecated, but kept for backwards compatibility)
 
@@ -74,8 +74,7 @@ def setup_wandb(
     random_delay=0,
     **additional_init_kwargs,
 ):
-    """
-    Utility for setting up wandb logging (based on Young's simplesac):
+    """Utility for setting up wandb logging (based on Young's simplesac):
 
     Arguments:
         - hyperparam_dict: dict of hyperparameters for experiment

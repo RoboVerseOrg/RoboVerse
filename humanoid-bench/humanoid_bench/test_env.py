@@ -1,11 +1,7 @@
 import argparse
-import pathlib
 
 import cv2
 import gymnasium as gym
-
-import humanoid_bench
-from .env import ROBOTS, TASKS
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="HumanoidBench environment test")
@@ -31,12 +27,12 @@ if __name__ == "__main__":
     print(f"arguments: {kwargs}")
 
     # Test offscreen rendering
-    print(f"Test offscreen mode...")
+    print("Test offscreen mode...")
     env = gym.make(args.env, render_mode="rgb_array", **kwargs)
     ob, _ = env.reset()
     if isinstance(ob, dict):
         print(f"ob_space = {env.observation_space}")
-        print(f"ob = ")
+        print("ob = ")
         for k, v in ob.items():
             print(f"  {k}: {v.shape}")
     else:
@@ -48,17 +44,17 @@ if __name__ == "__main__":
     cv2.imwrite("test_env_img.png", rgb_img)
 
     # Test online rendering with interactive viewer
-    print(f"Test onscreen mode...")
+    print("Test onscreen mode...")
     env = gym.make(args.env, render_mode=args.render_mode, **kwargs)
     ob, _ = env.reset()
     if isinstance(ob, dict):
         print(f"ob_space = {env.observation_space}")
-        print(f"ob = ")
+        print("ob = ")
         for k, v in ob.items():
             print(f"  {k}: {v.shape}")
-            assert (
-                v.shape == env.observation_space.spaces[k].shape
-            ), f"{v.shape} != {env.observation_space.spaces[k].shape}"
+            assert v.shape == env.observation_space.spaces[k].shape, (
+                f"{v.shape} != {env.observation_space.spaces[k].shape}"
+            )
         assert ob.keys() == env.observation_space.spaces.keys()
     else:
         print(f"ob_space = {env.observation_space}, ob = {ob.shape}")

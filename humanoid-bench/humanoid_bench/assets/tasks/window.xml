@@ -8,7 +8,7 @@
 
         <material name="wooden_cover"  texuniform="false"  texture="wooden_cover"/>
         <texture type="2d" name="wooden_cover" file="../tasks/assets/kitchen-wood.png"/>
-        
+
         <material name="dark_wooden_cover"  texuniform="false"  texture="dark_wooden_cover"/>
         <texture type="2d" name="dark_wooden_cover" file="../tasks/assets/dark-wood.png"/>
     </asset>
@@ -32,7 +32,7 @@
             <geom name="window_top_column_3" type="box" pos="0 0.325 1.7125" size="0.1 0.025 0.2" class="visual" material="steel_cover"/>
             <geom name="window_top_column_4" type="box" pos="0 0.975 1.7125" size="0.1 0.025 0.2" class="visual" material="steel_cover"/>
             <geom name="window_top_base" type="box" pos="0 0 1.915" size="0.1 1 0.025" class="visual" material="steel_cover"/>
-            
+
             <geom type="box" pos="0 0 1.5125" size="0.1 1 0.025" class="collision"/>
             <geom type="box" pos="0 -0.975 1.7125" size="0.1 0.025 0.2" class="collision"/>
             <geom type="box" pos="0 -0.325 1.7125" size="0.1 0.025 0.2" class="collision"/>
@@ -40,7 +40,7 @@
             <geom type="box" pos="0 0.975 1.7125" size="0.1 0.025 0.2" class="collision"/>
             <geom type="box" pos="0 0 1.915" size="0.1 1 0.025" class="collision"/>
 
-            
+
             <geom name="window_bottom_pane_1" type="box" pos="0 -0.65 1.1" size="0.05 0.3 0.4" rgba="0.2 0.95 0.95 0.3" class="visual"/>
             <geom name="window_bottom_pane_2" type="box" pos="0 0 1.1" size="0.05 0.3 0.4" rgba="0.2 0.95 0.95 0.3" class="visual"/>
             <geom name="window_bottom_pane_3" type="box" pos="0 0.65 1.1" size="0.05 0.3 0.4" rgba="0.2 0.95 0.95 0.3" class="visual"/>
@@ -58,7 +58,7 @@
 
                 <geom type="sphere" pos="0 0 0" size="0.03" material="steel_cover" class="visual"/>
                 <geom type="box" pos="0 0.03 0.02" size="0.1 0.01 0.05" class="visual"/>
-                
+
                 <geom type="sphere" pos="0 0 0" size="0.03" class="collision"/>
                 <geom type="box" name="window_wipe_collision" pos="0 0.03 0.02" size="0.1 0.01 0.05" class="collision"/>
 

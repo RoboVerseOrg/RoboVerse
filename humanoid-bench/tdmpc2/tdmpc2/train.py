@@ -8,27 +8,25 @@ os.environ["LAZY_LEGACY_OP"] = "0"
 import warnings
 
 warnings.filterwarnings("ignore")
-import torch
-
 import hydra
+import torch
 from termcolor import colored
 
+from tdmpc2.common.buffer import Buffer
+from tdmpc2.common.logger import Logger
 from tdmpc2.common.parser import parse_cfg
 from tdmpc2.common.seed import set_seed
-from tdmpc2.common.buffer import Buffer
 from tdmpc2.envs import make_env
 from tdmpc2.tdmpc2 import TDMPC2
 from tdmpc2.trainer.offline_trainer import OfflineTrainer
 from tdmpc2.trainer.online_trainer import OnlineTrainer
-from tdmpc2.common.logger import Logger
 
 torch.backends.cudnn.benchmark = True
 
 
 @hydra.main(config_name="config", config_path=".")
 def train(cfg: dict):
-    """
-    Script for training single-task / multi-task TD-MPC2 agents.
+    """Script for training single-task / multi-task TD-MPC2 agents.
 
     Most relevant args:
             `task`: task name (or mt30/mt80 for multi-task training)

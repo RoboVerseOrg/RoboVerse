@@ -1,13 +1,7 @@
-import os
-
 import numpy as np
-import mujoco
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 # Height of head above which stand reward is 1.
 _STAND_HEIGHT = 1.65
@@ -36,9 +30,7 @@ class Pole(Task):
 
     @property
     def observation_space(self):
-        return Box(
-            low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64
-        )
+        return Box(low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64)
 
     def get_reward(self):
         standing = rewards.tolerance(
@@ -76,16 +68,11 @@ class Pole(Task):
 
         collision_discount = 1
         for pair in self._env.data.contact.geom:
-            if (
-                any(["pole_r" in all_geoms_id[p_val] for p_val in pair])
-                and 0 not in pair
-            ):  #
+            if any(["pole_r" in all_geoms_id[p_val] for p_val in pair]) and 0 not in pair:  #
                 collision_discount = 0.1
                 break
 
-        reward = (
-            0.5 * (small_control * stand_reward) + 0.5 * move
-        ) * collision_discount
+        reward = (0.5 * (small_control * stand_reward) + 0.5 * move) * collision_discount
         return reward, {
             "stand_reward": stand_reward,
             "small_control": small_control,

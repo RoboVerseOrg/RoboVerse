@@ -4,16 +4,13 @@ import time
 import numpy as np
 
 from ..core import basics
-
-from . import process
-from . import server
-from . import sockets
+from . import process, server, sockets
 
 
 class ProcServer:
     def __init__(self, address, workers=1, name="Server", errors=True, ipv6=False):
         self.address = address
-        self.inner = f"ipc:///tmp/inner{np.random.randint(2 ** 32)}"
+        self.inner = f"ipc:///tmp/inner{np.random.randint(2**32)}"
         self.name = name
         self.ipv6 = ipv6
         self.server = server.Server(self.inner, workers, name, errors, ipv6)
@@ -111,10 +108,7 @@ class ProcServer:
                     if batches[name]:
                         addrs, rids = addr, rid
                         result = sockets.unpack(payload)
-                        results = [
-                            {k: v[i] for k, v in result.items()}
-                            for i in range(batches[name])
-                        ]
+                        results = [{k: v[i] for k, v in result.items()} for i in range(batches[name])]
                         payloads = [sockets.pack(x) for x in results]
                         for addr, rid, payload in zip(addrs, rids, payloads):
                             socket.send_result(addr, rid, payload)

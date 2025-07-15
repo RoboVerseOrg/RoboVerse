@@ -1,7 +1,6 @@
 import embodied
 import jax
 import jax.numpy as jnp
-import numpy as np
 import ruamel.yaml as yaml
 from tensorflow_probability.substrates import jax as tfp
 
@@ -23,10 +22,7 @@ class CheckTypesFilter(logging.Filter):
 
 logger.addFilter(CheckTypesFilter())
 
-from . import behaviors
-from . import jaxagent
-from . import jaxutils
-from . import nets
+from . import behaviors, jaxagent, jaxutils, nets
 from . import ninjax as nj
 
 # from . import ssm
@@ -34,14 +30,10 @@ from . import ninjax as nj
 
 @jaxagent.Wrapper
 class Agent(nj.Module):
-    configs = yaml.YAML(typ="safe").load(
-        (embodied.Path(__file__).parent / "configs.yaml").read()
-    )
+    configs = yaml.YAML(typ="safe").load((embodied.Path(__file__).parent / "configs.yaml").read())
 
     def __init__(self, obs_space, act_space, config):
-        self.obs_space = {
-            k: v for k, v in obs_space.items() if not k.startswith("log_")
-        }
+        self.obs_space = {k: v for k, v in obs_space.items() if not k.startswith("log_")}
         self.act_space = {k: v for k, v in act_space.items() if k != "reset"}
         self.config = config
         self.wm = WorldModel(self.obs_space, self.act_space, config, name="wm")
@@ -80,10 +72,7 @@ class Agent(nj.Module):
         expl_act, expl_state = self.expl_behavior.policy(carry, expl_state)
         act = {"eval": task_act, "explore": expl_act, "train": task_act}[mode]
         carry = ((carry, act), task_state, expl_state)
-        act = {
-            k: jnp.argmax(act[k], -1).astype(jnp.int32) if s.discrete else act[k]
-            for k, s in self.act_space.items()
-        }
+        act = {k: jnp.argmax(act[k], -1).astype(jnp.int32) if s.discrete else act[k] for k, s in self.act_space.items()}
         return act, carry
 
     def train(self, data, carry, train_wm=True, train_ac=True, ignore_inputs=()):
@@ -171,9 +160,7 @@ class WorldModel(nj.Module):
 
     def train(self, data, carry, ignore_inputs=()):
         modules = [self.encoder, self.rssm, *self.heads.values()]
-        mets, (outs, carry, metrics) = self.opt(
-            modules, self.loss, data, carry, ignore_inputs, has_aux=True
-        )
+        mets, (outs, carry, metrics) = self.opt(modules, self.loss, data, carry, ignore_inputs, has_aux=True)
         metrics.update(mets)
         return outs, carry, metrics
 
@@ -214,10 +201,7 @@ class WorldModel(nj.Module):
     def observe(self, data, carry):
         embed = self.encoder(data)
         prev_state, prev_action = carry
-        prev_acts = {
-            k: jnp.concatenate([prev_action[k][:, None], data[k][:, :-1]], 1)
-            for k in self.act_space
-        }
+        prev_acts = {k: jnp.concatenate([prev_action[k][:, None], data[k][:, :-1]], 1) for k in self.act_space}
         states = self.rssm.observe(prev_state, prev_acts, embed, data["is_first"])
         new_state = {k: v[:, -1] for k, v in states.items()}
         new_action = {k: data[k][:, -1] for k in self.act_space}
@@ -315,15 +299,10 @@ class ImagActorCritic(nj.Module):
         else:
             self.grad = "reinforce"
         dist1, dist2 = config.actor_dist_disc, config.actor_dist_cont
-        shapes = {
-            k: (*s.shape, int(s.high)) if s.discrete else s.shape
-            for k, s in act_space.items()
-        }
+        shapes = {k: (*s.shape, int(s.high)) if s.discrete else s.shape for k, s in act_space.items()}
         dists = {k: dist1 if v.discrete else dist2 for k, v in act_space.items()}
         self.actor = nets.MLP(**config.actor, name="actor", shape=shapes, dist=dists)
-        self.retnorms = {
-            k: jaxutils.Moments(**config.retnorm, name=f"retnorm_{k}") for k in critics
-        }
+        self.retnorms = {k: jaxutils.Moments(**config.retnorm, name=f"retnorm_{k}") for k in critics}
         self.opt = jaxutils.Optimizer(name="actor_opt", **config.actor_opt)
 
     def initial(self, batch_size):
@@ -388,9 +367,7 @@ class ImagActorCritic(nj.Module):
         for key, space in self.act_space.items():
             act = jnp.argmax(traj[key], -1) if space.discrete else traj[key]
             metrics.update(jaxutils.tensorstats(act.astype(f32), f"{key}_action"))
-            rand = (ent[key] - policy[key].minent) / (
-                policy[key].maxent - policy[key].minent
-            )
+            rand = (ent[key] - policy[key].minent) / (policy[key].maxent - policy[key].minent)
             rand = rand.mean(range(2, len(rand.shape)))
             metrics.update(jaxutils.tensorstats(rand, f"{key}_policy_randomness"))
             metrics.update(jaxutils.tensorstats(ent[key], f"{key}_policy_entropy"))
@@ -430,9 +407,7 @@ class VFunction(nj.Module):
         if self.config.critic_slowreg == "logprob":
             reg = -dist.log_prob(sg(self.slow(traj).mean()))
         elif self.config.critic_slowreg == "xent":
-            reg = -jnp.einsum(
-                "...i,...i->...", sg(self.slow(traj).probs), jnp.log(dist.probs)
-            )
+            reg = -jnp.einsum("...i,...i->...", sg(self.slow(traj).probs), jnp.log(dist.probs))
         else:
             raise NotImplementedError(self.config.critic_slowreg)
         loss += self.config.loss_scales.slowreg * reg
@@ -443,9 +418,7 @@ class VFunction(nj.Module):
 
     def score(self, traj, actor=None, slow=False):
         rew = self.rewfn(traj)
-        assert (
-            len(rew) == len(list(traj.values())[0]) - 1
-        ), "should provide rewards for all but last action"
+        assert len(rew) == len(list(traj.values())[0]) - 1, "should provide rewards for all but last action"
         discount = 1 - 1 / self.config.horizon
         disc = traj["cont"][1:] * discount
         if slow:

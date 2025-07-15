@@ -14,11 +14,7 @@ class RandomAgent:
 
     def policy(self, obs, carry=(), mode="train"):
         batch_size = len(obs["is_first"])
-        act = {
-            k: np.stack([v.sample() for _ in range(batch_size)])
-            for k, v in self.act_space.items()
-            if k != "reset"
-        }
+        act = {k: np.stack([v.sample() for _ in range(batch_size)]) for k, v in self.act_space.items() if k != "reset"}
         return act, carry
 
     def train(self, data, carry=()):

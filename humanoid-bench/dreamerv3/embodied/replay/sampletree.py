@@ -79,7 +79,7 @@ class SampleTree:
 
 
 class Node:
-    __slots__ = ("parent", "children", "uprob")
+    __slots__ = ("children", "parent", "uprob")
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -87,9 +87,7 @@ class Node:
         self.uprob = 0
 
     def __repr__(self):
-        return (
-            f"Node(uprob={self.uprob}, " f"children={[x.uprob for x in self.children]})"
-        )
+        return f"Node(uprob={self.uprob}, children={[x.uprob for x in self.children]})"
 
     def __len__(self):
         return len(self.children)
@@ -115,7 +113,7 @@ class Node:
 
 
 class Entry:
-    __slots__ = ("parent", "key", "uprob")
+    __slots__ = ("key", "parent", "uprob")
 
     def __init__(self, key=None, uprob=None):
         self.parent = None

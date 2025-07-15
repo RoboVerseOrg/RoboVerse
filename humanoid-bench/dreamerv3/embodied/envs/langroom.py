@@ -4,7 +4,6 @@ import embodied
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-
 COLORS = ("red", "green", "blue", "yellow")
 OBJECTS = ("ball", "rug", "table", "vase")
 VOCAB = ("", *COLORS, *OBJECTS, "what", "color", "is", "the", "?", "it")
@@ -20,15 +19,11 @@ LAYOUT = """
 #       #
 #2     3#
 #########
-""".strip(
-    "\n"
-)
+""".strip("\n")
 
 
 class LangRoom(embodied.Env):
-    def __init__(
-        self, task="talk", view=2, length=200, resolution=64, vocab_size=15, seed=None
-    ):
+    def __init__(self, task="talk", view=2, length=200, resolution=64, vocab_size=15, seed=None):
         assert task in ("talk", "acc"), task
         assert length > 0, length
         assert vocab_size >= len(VOCAB)
@@ -281,7 +276,7 @@ if __name__ == "__main__":
 
     env = LangRoom()
     img = env._display(["hello", "world"])
-    imageio.imsave(f"test.png", img)
+    imageio.imsave("test.png", img)
     import sys
 
     sys.exit()

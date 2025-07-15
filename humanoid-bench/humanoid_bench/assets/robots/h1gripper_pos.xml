@@ -1,6 +1,6 @@
 <mujoco model="h1">
     <compiler angle="radian" autolimits="true"/>
-    
+
     <!-- <include file="../common/visual.xml"/>
     <include file="../common/floor.xml"/> -->
 
@@ -241,7 +241,7 @@
                                 <geom class="visual" mesh="left_elbow_link"/>
                                 <geom class="collision" mesh="left_elbow_link"/>
                                 <site name="left_hand" pos="0.31 0 -0.01" rgba="0 1 0 1" size="0.01"/>
-                                
+
                                 <body name='left-hand' pos='0.3 0 -0.017' quat="0 1 0 1">
                                     <inertial mass="0.001" pos="0 0 0.001" diaginertia="1e-05 1e-05 1e-05"/>
                                     <joint name="left_wrist_yaw" axis="0 0 -1" range="-0.15 1.57"/>
@@ -311,7 +311,7 @@
         <joint joint="lh_left_driver_joint" coef="0.5"/>
         </fixed>
     </tendon>
-    
+
     <tendon>
         <fixed name="rh_split">
         <joint joint="rh_right_driver_joint" coef="0.5"/>

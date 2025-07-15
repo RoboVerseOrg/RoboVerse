@@ -54,9 +54,7 @@ class LocoNav(embodied.Env):
         if not again:
 
             def after_step(self, physics, random_state):
-                super(random_goal_maze.RepeatSingleGoalMaze, self).after_step(
-                    physics, random_state
-                )
+                super(random_goal_maze.RepeatSingleGoalMaze, self).after_step(physics, random_state)
                 self._rewarded_this_step = self._target.activated
                 self._targets_obtained = int(self._target.activated)
 
@@ -111,10 +109,9 @@ class LocoNav(embodied.Env):
 
     def _make_arena(self, name):
         import labmaze
-        from dm_control import mjcf
-        from dm_control.locomotion.arenas import labmaze_textures
-        from dm_control.locomotion.arenas import mazes
         import matplotlib.pyplot as plt
+        from dm_control import mjcf
+        from dm_control.locomotion.arenas import labmaze_textures, mazes
 
         class WallTexture(labmaze_textures.WallTextures):
             def _build(self, color=[0.8, 0.8, 0.8], model="labmaze_style_01"):
@@ -136,9 +133,7 @@ class LocoNav(embodied.Env):
         for index in range(9):
             wall_textures[str(index + 1)] = WallTexture(cmap(index)[:3])
         layout = "".join([line[::2].replace(".", " ") + "\n" for line in MAPS[name]])
-        maze = labmaze.FixedMazeWithRandomGoals(
-            entity_layer=layout, num_spawns=1, num_objects=1, random_state=None
-        )
+        maze = labmaze.FixedMazeWithRandomGoals(entity_layer=layout, num_spawns=1, num_objects=1, random_state=None)
         arena = mazes.MazeWithTargets(
             maze,
             xy_scale=1.2,

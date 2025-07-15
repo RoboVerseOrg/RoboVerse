@@ -1,10 +1,9 @@
 import os
 
 from dm_control.rl import control
-from dm_control.suite import common
-from dm_control.suite import cheetah
-from dm_control.utils import rewards
+from dm_control.suite import cheetah, common
 from dm_control.utils import io as resources
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -19,44 +18,30 @@ def get_model_and_assets():
 
 
 @cheetah.SUITE.add("custom")
-def run_backwards(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def run_backwards(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Run Backwards task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
-    task = CustomCheetah(
-        goal="run-backwards", move_speed=cheetah._RUN_SPEED * 0.8, random=random
-    )
+    task = CustomCheetah(goal="run-backwards", move_speed=cheetah._RUN_SPEED * 0.8, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def stand_front(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def stand_front(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Stand Front task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="stand-front", move_speed=0.5, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def stand_back(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def stand_back(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Stand Back task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="stand-back", move_speed=0.5, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
@@ -65,65 +50,43 @@ def jump(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="jump", move_speed=0.5, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def run_front(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def run_front(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Run Front task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
-    task = CustomCheetah(
-        goal="run-front", move_speed=cheetah._RUN_SPEED * 0.6, random=random
-    )
+    task = CustomCheetah(goal="run-front", move_speed=cheetah._RUN_SPEED * 0.6, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def run_back(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def run_back(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Run Back task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
-    task = CustomCheetah(
-        goal="run-back", move_speed=cheetah._RUN_SPEED * 0.6, random=random
-    )
+    task = CustomCheetah(goal="run-back", move_speed=cheetah._RUN_SPEED * 0.6, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def lie_down(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def lie_down(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Lie Down task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="lie-down", random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def legs_up(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def legs_up(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Legs Up task."""
     physics = cheetah.Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="legs-up", random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
@@ -132,24 +95,16 @@ def flip(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs
     physics = Physics.from_xml_string(*get_model_and_assets())
     task = CustomCheetah(goal="flip", move_speed=cheetah._RUN_SPEED, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 @cheetah.SUITE.add("custom")
-def flip_backwards(
-    time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def flip_backwards(time_limit=cheetah._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Flip Backwards task."""
     physics = Physics.from_xml_string(*get_model_and_assets())
-    task = CustomCheetah(
-        goal="flip-backwards", move_speed=cheetah._RUN_SPEED * 0.8, random=random
-    )
+    task = CustomCheetah(goal="flip-backwards", move_speed=cheetah._RUN_SPEED * 0.8, random=random)
     environment_kwargs = environment_kwargs or {}
-    return control.Environment(
-        physics, task, time_limit=time_limit, **environment_kwargs
-    )
+    return control.Environment(physics, task, time_limit=time_limit, **environment_kwargs)
 
 
 class Physics(cheetah.Physics):
@@ -242,10 +197,7 @@ class CustomCheetah(cheetah.Cheetah):
 
     def _lie_down_reward(self, physics):
         torso_height = physics.named.data.xpos["torso", "z"]
-        feet_height = (
-            physics.named.data.xpos["ffoot", "z"]
-            + physics.named.data.xpos["bfoot", "z"]
-        ) / 2
+        feet_height = (physics.named.data.xpos["ffoot", "z"] + physics.named.data.xpos["bfoot", "z"]) / 2
         torso_down = rewards.tolerance(
             torso_height,
             bounds=(-float("inf"), _CHEETAH_LIE_HEIGHT),

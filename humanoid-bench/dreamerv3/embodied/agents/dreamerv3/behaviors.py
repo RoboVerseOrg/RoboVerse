@@ -3,10 +3,8 @@ from tensorflow_probability.substrates import jax as tfp
 
 tfd = tfp.distributions
 
-from . import agent
-from . import expl
+from . import agent, expl, jaxutils
 from . import ninjax as nj
-from . import jaxutils
 
 
 class Greedy(nj.Module):
@@ -20,9 +18,7 @@ class Greedy(nj.Module):
         act_priors = None
         if config.talk_prior:
             act_priors = {"talk": lambda s: wm.heads["decoder"](s, cnn=False)["text"]}
-        self.ac = agent.ImagActorCritic(
-            critics, {"extr": 1.0}, act_space, config, act_priors, name="ac"
-        )
+        self.ac = agent.ImagActorCritic(critics, {"extr": 1.0}, act_space, config, act_priors, name="ac")
 
     def initial(self, batch_size):
         return self.ac.initial(batch_size)

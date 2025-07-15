@@ -19,7 +19,7 @@
       </geometry>
     </collision>
   </link>
-  
+
   <link name="left_shoulder_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 -0.003158 0.023405"/>
@@ -134,8 +134,8 @@
       </geometry>
     </collision>
   </link>
- 
-   
+
+
   <link name="right_shoulder_roll">
     <inertial>
       <origin rpy="0 0 0" xyz="9e-06 0.003158 0.023405"/>
@@ -249,7 +249,7 @@
         <mesh filename="package://arm-L4.obj" scale="1 -1 1"/>
       </geometry>
     </collision>
-  </link> 
+  </link>
   <link name="left_wrist">
     <inertial>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -288,7 +288,7 @@
       </geometry>
     </collision>
   </link>
-   
+
   <joint name="left-shoulder-roll" type="revolute">
     <origin rpy="-1.57079632679 -1.3962633 1.57079632679" xyz="-0.001 0.12 0.4"/>
     <axis xyz="0 0 1"/>
@@ -324,7 +324,7 @@
     <child link="left_elbow"/>
     <limit effort="1.4" lower="-1.3526" upper="1.3526" velocity="12.5"/>
   </joint>
-   
+
   <joint name="right-shoulder-roll" type="revolute">
     <origin rpy="1.57079632679 -1.3962633 -1.57079632679" xyz="-0.001 -0.12 0.4"/>
     <axis xyz="0 0 1"/>
@@ -378,14 +378,14 @@
     <limit effort="1.4" lower="-1.3526" upper="1.3526" velocity="12.5"/>
   </joint>
   <joint name="wrist_joint_left" type="fixed">
-    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/> 
+    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/>
     <parent link="left_elbow"/>
-    <child link="left_wrist"/> 
+    <child link="left_wrist"/>
   </joint>
   <joint name="wrist_joint_right" type="fixed">
-    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/> 
+    <origin rpy="0.0 0.0 0.0" xyz="0.375 0.0 -0.06"/>
     <parent link="right_elbow"/>
-    <child link="right_wrist"/> 
+    <child link="right_wrist"/>
   </joint>
-  
+
 </robot>

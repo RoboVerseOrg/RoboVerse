@@ -1,10 +1,7 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 _STAND_HEIGHT = 1.65
 
@@ -38,7 +35,7 @@ class Basketball(Task):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             0.35 0.9 2 1 0 0 0
-        """
+        """,
     }
     dof = 7
     max_episode_steps = 500
@@ -62,9 +59,7 @@ class Basketball(Task):
         )
 
     def get_reward(self):
-        self.ball_collision_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "basketball_collision"
-        )
+        self.ball_collision_id = self._env.named.data.geom_xpos.axes.row.names.index("basketball_collision")
 
         standing = rewards.tolerance(
             self.robot.head_height(),
@@ -88,26 +83,18 @@ class Basketball(Task):
         small_control = (4 + small_control) / 5
 
         basketball_pos = self._env.named.data.xpos["basketball"]
-        left_hand_distance = (
-            self._env.named.data.site_xpos["left_hand"] - basketball_pos
-        )
-        right_hand_distance = (
-            self._env.named.data.site_xpos["right_hand"] - basketball_pos
-        )
+        left_hand_distance = self._env.named.data.site_xpos["left_hand"] - basketball_pos
+        right_hand_distance = self._env.named.data.site_xpos["right_hand"] - basketball_pos
         reward_hand_proximity = rewards.tolerance(
-            max(
-                [
-                    np.linalg.norm(left_hand_distance),
-                    np.linalg.norm(right_hand_distance),
-                ]
-            ),
+            max([
+                np.linalg.norm(left_hand_distance),
+                np.linalg.norm(right_hand_distance),
+            ]),
             bounds=(0, 0.2),
             margin=1,
         )
         reward_ball_success = 0
-        ball_hoop_distance = np.linalg.norm(
-            basketball_pos - self._env.named.data.site_xpos["hoop_center"]
-        )
+        ball_hoop_distance = np.linalg.norm(basketball_pos - self._env.named.data.site_xpos["hoop_center"])
         reward_ball_success = rewards.tolerance(
             ball_hoop_distance,
             margin=7,
@@ -120,11 +107,7 @@ class Basketball(Task):
                     self.stage = "throw"
                     break
         if self.stage == "throw":
-            reward = (
-                0.15 * (stand_reward * small_control)
-                + 0.05 * reward_hand_proximity
-                + 0.8 * reward_ball_success
-            )
+            reward = 0.15 * (stand_reward * small_control) + 0.05 * reward_hand_proximity + 0.8 * reward_ball_success
         elif self.stage == "catch":
             reward = 0.5 * (stand_reward * small_control) + 0.5 * reward_hand_proximity
 
@@ -146,10 +129,7 @@ class Basketball(Task):
         if self._env.data.qpos[2] < 0.5:
             return True, {}
         if (
-            np.linalg.norm(
-                self._env.named.data.xpos["basketball"]
-                - self._env.named.data.site_xpos["hoop_center"]
-            )
+            np.linalg.norm(self._env.named.data.xpos["basketball"] - self._env.named.data.site_xpos["hoop_center"])
             < 0.05
         ):
             return True, {}

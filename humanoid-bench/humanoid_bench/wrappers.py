@@ -1,10 +1,12 @@
-from gymnasium.spaces import Box, Dict
-import numpy as np
 import mujoco
+import numpy as np
+from gymnasium.spaces import Box, Dict
 
 from humanoid_bench.mjx.flax_to_torch import TorchModel, TorchPolicy
 from humanoid_bench.tasks import Task
+
 # from humanoid_bench.env import HumanoidEnv
+
 
 def get_body_idxs(model):
     # Filter out hand and wrist joints
@@ -21,17 +23,14 @@ def get_body_idxs(model):
             curr_idx += 7
             curr_vel_idx += 6
             continue
-        elif (
-            not joint_name.startswith("lh_")
-            and not joint_name.startswith("rh_")
-            and not "wrist" in joint_name
-        ):
+        elif not joint_name.startswith("lh_") and not joint_name.startswith("rh_") and "wrist" not in joint_name:
             body_idxs.append(curr_idx)
             body_vel_idxs.append(curr_vel_idx)
         curr_idx += 1
         curr_vel_idx += 1
 
     return body_idxs, body_vel_idxs
+
 
 class BaseWrapper(Task):
     def __init__(self, task):
@@ -40,14 +39,14 @@ class BaseWrapper(Task):
         self.unwrapped = task.unwrapped
         self.dof = task.dof
         # self._env.unwrapped = task._env.unwrapped
-    
+
     def reset_model(self):
         self.task.reset_model()
         return self.get_obs()
-    
+
     def render(self):
         return self.task.render()
-    
+
     def step(self, action):
         return self.task.step(action)
 
@@ -65,7 +64,7 @@ class BaseWrapper(Task):
 
     def get_terminated(self):
         return self.task.get_terminated()
-    
+
     def reset_model(self):
         self.task.reset_model()
         return self.get_obs()
@@ -78,12 +77,16 @@ class BaseWrapper(Task):
 
     def render(self):
         return self.task.render()
-        
-class SingleReachWrapper(BaseWrapper): 
+
+
+class SingleReachWrapper(BaseWrapper):
     def __init__(self, task, policy_path, mean_path, var_path, max_delta=0.1, **kwargs):
-        
-        assert task.unwrapped.robot.__class__.__name__ == "H1Hand" or task.unwrapped.robot.__class__.__name__ == "H1" or task.unwrapped.robot.__class__.__name__ == "H1Touch", "SingleReachWrapper only works with H1 robot"
-        
+        assert (
+            task.unwrapped.robot.__class__.__name__ == "H1Hand"
+            or task.unwrapped.robot.__class__.__name__ == "H1"
+            or task.unwrapped.robot.__class__.__name__ == "H1Touch"
+        ), "SingleReachWrapper only works with H1 robot"
+
         super().__init__(task)
 
         self.policy_path = policy_path
@@ -128,8 +131,7 @@ class SingleReachWrapper(BaseWrapper):
 
     def unnormalize_body_action(self, action):
         return (action + 1) / 2 * (
-            self._env.action_high[self.act_idxs]
-            - self._env.action_low[self.act_idxs]
+            self._env.action_high[self.act_idxs] - self._env.action_low[self.act_idxs]
         ) + self._env.action_low[self.act_idxs]
 
     def get_reach_obs(self):
@@ -155,9 +157,7 @@ class SingleReachWrapper(BaseWrapper):
         action = self.reaching_policy(reach_obs)
         action = np.clip(action, -1, 1)
 
-        if (
-            self.task._env.model.nu > 19
-        ):  # only needed because reaching policy is trained without hands
+        if self.task._env.model.nu > 19:  # only needed because reaching policy is trained without hands
             action = self.unnormalize_body_action(action)
 
             action_new = self.task._env.data.ctrl.copy()
@@ -194,18 +194,12 @@ class DoubleReachBaseWrapper(BaseWrapper):
 
     mode_right = None
 
-    def __init__(
-        self,
-        task,
-        policy_path,
-        mean_path,
-        var_path,
-        max_delta=0.1,
-        max_delta_coords=0.1,
-        **kwargs
-    ):
-        
-        assert task.unwrapped.robot.__class__.__name__ == "H1Hand" or task.unwrapped.robot.__class__.__name__ == "H1" or task.unwrapped.robot.__class__.__name__ == "H1Touch", "DoubleReachWrapper only works with H1 robot"
+    def __init__(self, task, policy_path, mean_path, var_path, max_delta=0.1, max_delta_coords=0.1, **kwargs):
+        assert (
+            task.unwrapped.robot.__class__.__name__ == "H1Hand"
+            or task.unwrapped.robot.__class__.__name__ == "H1"
+            or task.unwrapped.robot.__class__.__name__ == "H1Touch"
+        ), "DoubleReachWrapper only works with H1 robot"
 
         super().__init__(task)
 
@@ -253,8 +247,7 @@ class DoubleReachBaseWrapper(BaseWrapper):
 
     def unnormalize_body_action(self, action):
         return (action + 1) / 2 * (
-            self._env.action_high[self.act_idxs]
-            - self._env.action_low[self.act_idxs]
+            self._env.action_high[self.act_idxs] - self._env.action_low[self.act_idxs]
         ) + self._env.action_low[self.act_idxs]
 
     def _sample_from_sphere(self, center, radius, coords):
@@ -288,18 +281,14 @@ class DoubleReachBaseWrapper(BaseWrapper):
         target_left -= offset
         target_right -= offset
 
-        return np.concatenate(
-            (position[2:], velocity, left_hand, right_hand, target_left, target_right)
-        )
+        return np.concatenate((position[2:], velocity, left_hand, right_hand, target_left, target_right))
 
     def step(self, action):
         action_left = action[:3]
         target_left = self.unnormalize_target(action_left) + self.last_target_left
         if self.mode_right == "absolute":
             action_right = action[3:]
-            target_right = (
-                self.unnormalize_target(action_right) + self.last_target_right
-            )
+            target_right = self.unnormalize_target(action_right) + self.last_target_right
         elif self.mode_right == "relative":
             coords = action[3:]
             coords *= self.max_delta_coords
@@ -322,9 +311,7 @@ class DoubleReachBaseWrapper(BaseWrapper):
         action = self.reaching_policy(reach_obs)
         action = np.clip(action, -1, 1)
 
-        if (
-            self._env.model.nu > 19
-        ):  # only needed because reaching policy is trained without hands
+        if self._env.model.nu > 19:  # only needed because reaching policy is trained without hands
             action = self.unnormalize_body_action(action)
 
             action_new = self._env.data.ctrl.copy()
@@ -381,8 +368,11 @@ class DoubleReachRelativeWrapper(DoubleReachBaseWrapper):
 
 class BlockedHandsLocoWrapper(BaseWrapper):
     def __init__(self, task, **kwargs):
-
-        assert task.unwrapped.robot.__class__.__name__ == "H1Hand" or task.unwrapped.robot.__class__.__name__ == "H1" or task.unwrapped.robot.__class__.__name__ == "H1Touch", "BlockedHandsWrapper only works with H1 robot"
+        assert (
+            task.unwrapped.robot.__class__.__name__ == "H1Hand"
+            or task.unwrapped.robot.__class__.__name__ == "H1"
+            or task.unwrapped.robot.__class__.__name__ == "H1Touch"
+        ), "BlockedHandsWrapper only works with H1 robot"
 
         super().__init__(task)
 
@@ -392,9 +382,7 @@ class BlockedHandsLocoWrapper(BaseWrapper):
             self.small_obs = False
         print("Small obs: ", self.small_obs)
 
-        assert (
-            task._env.model.nu > 19
-        ), "BlockedHandsWrapper only works when hands are present in the action space"
+        assert task._env.model.nu > 19, "BlockedHandsWrapper only works when hands are present in the action space"
 
         task._env.action_space = Box(low=-1, high=1, shape=(19,), dtype=np.float32)
 
@@ -417,8 +405,7 @@ class BlockedHandsLocoWrapper(BaseWrapper):
         if action.shape[0] > 19:
             action = action[self.act_idxs]
         return (action + 1) / 2 * (
-            self._env.action_high[self.act_idxs]
-            - self._env.action_low[self.act_idxs]
+            self._env.action_high[self.act_idxs] - self._env.action_low[self.act_idxs]
         ) + self._env.action_low[self.act_idxs]
 
     def get_obs(self):
@@ -451,7 +438,6 @@ class BlockedHandsLocoWrapper(BaseWrapper):
 
 class ObservationWrapper(BaseWrapper):
     def __init__(self, task, **kwargs):
-
         super().__init__(task)
 
         sensors = kwargs.get("sensors").split(",")
@@ -460,9 +446,9 @@ class ObservationWrapper(BaseWrapper):
         self._privileged_ob = "privileged" in sensors
 
         if self._tactile_ob:
-            assert (
-                "H1Touch" == task.unwrapped._env.robot.__class__.__name__
-            ), "Tactile observations are only available for H1Touch robot"
+            assert "H1Touch" == task.unwrapped._env.robot.__class__.__name__, (
+                "Tactile observations are only available for H1Touch robot"
+            )
 
     @property
     def observation_space(self):
@@ -478,9 +464,7 @@ class ObservationWrapper(BaseWrapper):
             camera_spaces = [
                 (
                     key,
-                    Box(
-                        low=0, high=255, shape=image_example[key].shape, dtype=np.uint8
-                    ),
+                    Box(low=0, high=255, shape=image_example[key].shape, dtype=np.uint8),
                 )
                 for key in image_example
             ]
@@ -512,7 +496,7 @@ class ObservationWrapper(BaseWrapper):
             spaces.extend(tactile_spaces)
         if self._camera_ob:
             spaces.extend(camera_spaces)
-            
+
         return Dict(spaces)
 
     def get_obs(self):
@@ -542,26 +526,20 @@ class ObservationWrapper(BaseWrapper):
         return dict(obses)
 
     def get_tactile_obs(self):
-        """
-        Touch data is in the form of a dictionary with keys as the sensor names and values as the touch data.
+        """Touch data is in the form of a dictionary with keys as the sensor names and values as the touch data.
         The touch data is then reshaped to a 3D array with the first dimension as the number of components (x-y-z),
         and the second and third dimensions as the touch data in a 2D grid, e.g., np.reshape(touch_data, (3, 2, 4))[[1, 2, 0]]
         (note that Mujoco returns them in the order z-x-y).
         """
         model = self.task._env.model
         data = self.task._env.data
-        sensor_names = [
-            mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_SENSOR, i)
-            for i in range(model.nsensor)
-        ]
+        sensor_names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_SENSOR, i) for i in range(model.nsensor)]
 
-        touch = dict(
-            [
-                ("_".join(["tactile", *name.split("_")[:-1]]), data.sensor(name).data)
-                for i, name in enumerate(sensor_names)
-                if name.endswith("_touch")
-            ]
-        )
+        touch = dict([
+            ("_".join(["tactile", *name.split("_")[:-1]]), data.sensor(name).data)
+            for i, name in enumerate(sensor_names)
+            if name.endswith("_touch")
+        ])
 
         for key in touch:
             if key != "tactile_torso":
@@ -578,18 +556,9 @@ class ObservationWrapper(BaseWrapper):
         return obs, rew, terminated, truncated, info
 
     def get_camera_obs(self):
-        left_eye = self.task._env.mujoco_renderer.render(
-            "rgb_array", camera_name="left_eye_camera"
-        )
-        right_eye = self.task._env.mujoco_renderer.render(
-            "rgb_array", camera_name="right_eye_camera"
-        )
+        left_eye = self.task._env.mujoco_renderer.render("rgb_array", camera_name="left_eye_camera")
+        right_eye = self.task._env.mujoco_renderer.render("rgb_array", camera_name="right_eye_camera")
         return {"image_left_eye": left_eye, "image_right_eye": right_eye}
 
     def normalize_action(self, action):
-        return (
-            2
-            * (action - self.task._env.action_low)
-            / (self.task._env.action_high - self.task._env.action_low)
-            - 1
-        )
+        return 2 * (action - self.task._env.action_low) / (self.task._env.action_high - self.task._env.action_low) - 1

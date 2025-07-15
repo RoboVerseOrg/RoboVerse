@@ -15,7 +15,7 @@
 <mujoco model="franka_mocap_studyTable_buttons">
 
     <size njmax='1000' nconmax='1000'/>
-    
+
     <compiler inertiafromgeom='auto' inertiagrouprange='3 5' angle="radian"
               meshdir="../../../adept_models/kitchen"
               texturedir="../../../adept_models/kitchen"/>

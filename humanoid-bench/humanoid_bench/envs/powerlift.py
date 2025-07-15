@@ -1,13 +1,7 @@
-import os
-
 import numpy as np
-import mujoco
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
-
 
 # Height of head above which stand reward is 1.
 _STAND_HEIGHT = 1.65
@@ -38,7 +32,7 @@ class Powerlift(Task):
             0 0 0 0 1.57
             0 0 0 0 0 0 0
             0.5 0 0.2 0 0 0 0
-        """
+        """,
     }
 
     dof = 7
@@ -83,9 +77,7 @@ class Powerlift(Task):
         small_control = (4 + small_control) / 5
 
         dumbbell_height = self._env.named.data.xpos["dumbbell", "z"]
-        reward_dumbbell_lifted = rewards.tolerance(
-            dumbbell_height, bounds=(1.9, 2.1), margin=2
-        )
+        reward_dumbbell_lifted = rewards.tolerance(dumbbell_height, bounds=(1.9, 2.1), margin=2)
 
         reward = 0.2 * (small_control * stand_reward) + 0.8 * reward_dumbbell_lifted
         return reward, {

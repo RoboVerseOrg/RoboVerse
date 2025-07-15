@@ -23,7 +23,6 @@ class MetaWorld(embodied.Env):
             camera = "corner2"
         from metaworld.envs import (
             ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
-            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN,
         )
 
         os.environ["MUJOCO_GL"] = "egl"
@@ -76,9 +75,7 @@ class MetaWorld(embodied.Env):
             obs["reward"] = reward
             obs["log_success"] = success
         if self._render:
-            obs["image"] = self._env._env.sim.render(
-                *self._size, mode="offscreen", camera_name=self._camera
-            )
+            obs["image"] = self._env._env.sim.render(*self._size, mode="offscreen", camera_name=self._camera)
         if self._mode == "eval":
             if obs["log_success"] and self._once:
                 obs["reward"] = 1.0
@@ -97,11 +94,9 @@ def quat(axis, angle):
 def mult(quat1, quat2):
     w0, x0, y0, z0 = quat2
     w1, x1, y1, z1 = quat1
-    return np.array(
-        [
-            -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
-            x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
-            -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
-            x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0,
-        ]
-    )
+    return np.array([
+        -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
+        x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
+        -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
+        x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0,
+    ])

@@ -218,7 +218,7 @@
     <position name="right_shoulder_yaw" joint="right_shoulder_yaw" ctrlrange="-4.45 1.3" class="shoulder2" />
     <position name="right_elbow" joint="right_elbow" ctrlrange="-1.25 2.61" class="elbow" />
   </actuator>
-  
+
   <sensor>
     <touch name="left_foot_sensor" site="left_foot"/>
     <touch name="right_foot_sensor" site="right_foot"/>

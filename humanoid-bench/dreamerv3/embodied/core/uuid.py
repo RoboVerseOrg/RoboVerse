@@ -6,9 +6,10 @@ import numpy as np
 
 class uuid:
     """UUID that is stored as 16 byte string and can be converted to and from
-    int, string, and array types."""
+    int, string, and array types.
+    """
 
-    __slots__ = ("value", "_hash")
+    __slots__ = ("_hash", "value")
 
     DEBUG_ID = None
     BASE62 = string.digits + string.ascii_letters

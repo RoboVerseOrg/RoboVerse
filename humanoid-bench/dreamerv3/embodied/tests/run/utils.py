@@ -56,11 +56,7 @@ class TestAgent:
         if self.client and self.should_stats():
             self.client.report(self.stats())
 
-        act = {
-            k: np.stack([v.sample() for _ in range(B)])
-            for k, v in self.act_space.items()
-            if k != "reset"
-        }
+        act = {k: np.stack([v.sample() for _ in range(B)]) for k, v in self.act_space.items() if k != "reset"}
         return act, (carry,)
 
     def train(self, data, carry):

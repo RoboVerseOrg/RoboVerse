@@ -96,7 +96,7 @@
     <mesh class="left_hand" file="th_proximal.obj"/>
     <mesh class="left_hand" file="th_middle.obj"/>
     <mesh class="left_hand" file="th_distal_pst.obj"/>
-    
+
   </asset>
 
   <include file="forearm_collision_collision_assets.xml"/>
@@ -290,7 +290,7 @@
     </body>
   </worldbody>
 
-  
+
   <contact>
     <exclude body1="lh_wrist" body2="lh_forearm"/>
     <exclude body1="lh_palm" body2="lh_forearm"/>

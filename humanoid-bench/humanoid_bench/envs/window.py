@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 _STAND_HEIGHT = 1.65
@@ -36,7 +34,7 @@ class Window(Task):
             0 0 0 0 0 0 0
             0.3 0 0.855 0 0 0 0
             0 0 0 0
-        """
+        """,
     }
     dof = 11
     frame_skip = 10
@@ -60,13 +58,9 @@ class Window(Task):
         )
 
     def get_reward(self):
-        self.window_pane_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "window_pane_collision"
-        )
+        self.window_pane_id = self._env.named.data.geom_xpos.axes.row.names.index("window_pane_collision")
 
-        self.window_wipe_id = self._env.named.data.geom_xpos.axes.row.names.index(
-            "window_wipe_collision"
-        )
+        self.window_wipe_id = self._env.named.data.geom_xpos.axes.row.names.index("window_wipe_collision")
 
         standing = rewards.tolerance(
             self.robot.head_height(),
@@ -89,47 +83,37 @@ class Window(Task):
         ).mean()
         small_control = (4 + small_control) / 5
 
-        window_contact_reward = np.min(
-            [
-                rewards.tolerance(
-                    self._env.named.data.site_xpos[site_name, "x"],
-                    bounds=(0.92, 0.92),
-                    margin=0.4,
-                    sigmoid="linear",
-                )
-                for site_name in [
-                    "wipe_contact_site_a",
-                    "wipe_contact_site_b",
-                    "wipe_contact_site_c",
-                    "wipe_contact_site_d",
-                    "wipe_contact_site_e",
-                ]
+        window_contact_reward = np.min([
+            rewards.tolerance(
+                self._env.named.data.site_xpos[site_name, "x"],
+                bounds=(0.92, 0.92),
+                margin=0.4,
+                sigmoid="linear",
+            )
+            for site_name in [
+                "wipe_contact_site_a",
+                "wipe_contact_site_b",
+                "wipe_contact_site_c",
+                "wipe_contact_site_d",
+                "wipe_contact_site_e",
             ]
-        )
+        ])
         window_contact_filter = 0
         for pair in self._env.data.contact.geom:
-            if (
-                self.window_pane_id in pair and self.window_wipe_id in pair
-            ):  # if has hand
+            if self.window_pane_id in pair and self.window_wipe_id in pair:  # if has hand
                 window_contact_filter = 1
                 break
 
         left_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["left_hand"]
-            - self._env.named.data.xpos["window_wiping_tool"]
+            self._env.named.data.site_xpos["left_hand"] - self._env.named.data.xpos["window_wiping_tool"]
         )
         right_hand_tool_distance = np.linalg.norm(
-            self._env.named.data.site_xpos["right_hand"]
-            - self._env.named.data.xpos["window_wiping_tool"]
+            self._env.named.data.site_xpos["right_hand"] - self._env.named.data.xpos["window_wiping_tool"]
         )
-        hand_tool_proximity_reward = min(
-            [
-                rewards.tolerance(left_hand_tool_distance, bounds=(0, 0.2), margin=0.5),
-                rewards.tolerance(
-                    right_hand_tool_distance, bounds=(0, 0.2), margin=0.5
-                ),
-            ]
-        )
+        hand_tool_proximity_reward = min([
+            rewards.tolerance(left_hand_tool_distance, bounds=(0, 0.2), margin=0.5),
+            rewards.tolerance(right_hand_tool_distance, bounds=(0, 0.2), margin=0.5),
+        ])
 
         moving_wipe_reward = rewards.tolerance(
             abs(self._env.named.data.sensordata["window_wiping_tool_subtreelinvel"][2]),

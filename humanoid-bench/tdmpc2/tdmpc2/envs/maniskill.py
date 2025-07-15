@@ -2,9 +2,6 @@ import gymnasium as gym
 import numpy as np
 from envs.wrappers.time_limit import TimeLimit
 
-import mani_skill2.envs
-
-
 MANISKILL_TASKS = {
     "lift-cube": dict(
         env="LiftCube-v0",
@@ -60,9 +57,7 @@ class ManiSkillWrapper(gym.Wrapper):
 
 
 def make_env(cfg):
-    """
-    Make ManiSkill2 environment.
-    """
+    """Make ManiSkill2 environment."""
     if cfg.task not in MANISKILL_TASKS:
         raise ValueError("Unknown task:", cfg.task)
     assert cfg.obs == "state", "This task only supports state observations."

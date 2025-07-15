@@ -8,10 +8,7 @@ from tdmpc2.common import MODEL_SIZE, TASK_SET
 
 
 def parse_cfg(cfg: OmegaConf) -> OmegaConf:
-    """
-    Parses a Hydra config. Mostly for convenience.
-    """
-
+    """Parses a Hydra config. Mostly for convenience."""
     # Logic
     for k in cfg.keys():
         try:
@@ -35,23 +32,15 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
             pass
 
     # Convenience
-    cfg.work_dir = (
-        Path(hydra.utils.get_original_cwd())
-        / "logs"
-        / cfg.task
-        / str(cfg.seed)
-        / cfg.exp_name
-    )
+    cfg.work_dir = Path(hydra.utils.get_original_cwd()) / "logs" / cfg.task / str(cfg.seed) / cfg.exp_name
     cfg.task_title = cfg.task.replace("-", " ").title()
-    cfg.bin_size = (cfg.vmax - cfg.vmin) / (
-        cfg.num_bins - 1
-    )  # Bin size for discrete regression
+    cfg.bin_size = (cfg.vmax - cfg.vmin) / (cfg.num_bins - 1)  # Bin size for discrete regression
 
     # Model size
     if cfg.get("model_size", None) is not None:
-        assert (
-            cfg.model_size in MODEL_SIZE.keys()
-        ), f"Invalid model size {cfg.model_size}. Must be one of {list(MODEL_SIZE.keys())}"
+        assert cfg.model_size in MODEL_SIZE.keys(), (
+            f"Invalid model size {cfg.model_size}. Must be one of {list(MODEL_SIZE.keys())}"
+        )
         for k, v in MODEL_SIZE[cfg.model_size].items():
             cfg[k] = v
         if cfg.task == "mt30" and cfg.model_size == 19:

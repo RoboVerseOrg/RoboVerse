@@ -2,7 +2,7 @@
     <asset>
         <material name="wooden_cover"  texuniform="false"  texture="wooden_cover"/>
         <texture type="2d" name="wooden_cover" file="../tasks/assets/light-wood.png"/>
-        
+
         <material name="dark_wooden_cover"  texuniform="false"  texture="dark_wooden_cover"/>
         <texture type="2d" name="dark_wooden_cover" file="../tasks/assets/dark-wood.png"/>
 
@@ -10,7 +10,7 @@
         <texture type="2d" name="metal_cover" file="../tasks/assets/metal.png"/>
         <material name="steel_cover"  texuniform="false"  texture="steel_cover"/>
         <texture type="2d" name="steel_cover" file="../tasks/assets/steel-scratched.png"/>
-        
+
         <material name="package"  texuniform="true"  texture="package"/>
         <texture type="2d" name="package" file="../tasks/assets/package_plain.png"/>
         <mesh
@@ -31,7 +31,7 @@
         <geom type="box" pos="4.15 0 1.5" size="0.15 4 1.5" rgba="0.7 0.7 0.7 0.4" class="visual"/>
         <geom type="box" pos="0 3.85 1.5" size="4 0.15 1.5" rgba="0.7 0.7 0.7 0.4" class="visual"/>
         <geom type="box" pos="0 -3.85 1.5" size="4 0.15 1.5" rgba="0.7 0.7 0.7 0.4" class="visual"/>
-        
+
         <geom type="box" pos="-4.15 0 1.5" size="0.15 4 1.5" class="collision"/>
         <geom type="box" pos="4.15 0 1.5" size="0.15 4 1.5" class="collision"/>
         <geom type="box" pos="0 3.85 1.5" size="4 0.15 1.5" class="collision"/>
@@ -90,7 +90,7 @@
             <geom type="box" pos="-0.23 0 0.65" size="0.02 0.21 0.2" class="collision" density="13900" />
             <geom type="box" pos="0 0 0.2375" size="0.21 0.21 0.2375" class="collision" density="1250" />
         </body>
-        
+
         <body name="trophy" pos="0.95 0.02 0" euler='-0 0 -0'>
             <freejoint name="free_trophy"/>
             <site name="reaching_point_1f" pos="0 0 0"/>

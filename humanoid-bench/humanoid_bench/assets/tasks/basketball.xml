@@ -6,7 +6,7 @@
         <mesh name="baskethoop" file="../tasks/assets/hoop.obj" scale="1.1 1.1 1.1"/>
         <mesh name="visual_hoop" file="../tasks/assets/hoop.stl" scale="0.3 0.3 0.3"/>
         <material name="spherebody"  texuniform="true" texture="basketball"
-            reflectance="0.8" shininess="0.9"/>  
+            reflectance="0.8" shininess="0.9"/>
         <texture type="2d" name="basketball" file="../tasks/assets/basketball.png"/>
     </asset>
     <worldbody>
@@ -21,7 +21,7 @@
                 <geom type="box" pos="-0.25 -0.2 -0.2" size="0.15 0.01 0.2" euler="0 0 -45" class="visual" rgba="0 0 0 0"/>
                 <geom type="box" pos="-0.05 0.25 -0.2" size="0.2 0.01 0.2" class="visual" rgba="0 0 0 0"/>
                 <geom type="box" pos="-0.05 -0.25 -0.2" size="0.2 0.01 0.2" class="visual" rgba="0 0 0 0"/>
-                
+
                 <geom type="box" pos="0.25 0 -0.2" size="0.01 0.2 0.2" class="collision" />
                 <geom type="box" pos="0.2 0.2 -0.2" size="0.15 0.01 0.2" euler="0 0 -45" class="collision" />
                 <geom type="box" pos="0.2 -0.2 -0.2" size="0.15 0.01 0.2" euler="0 0 45" class="collision" />

@@ -168,9 +168,7 @@ class MultiEncoder(nj.Module):
         print("Encoder MLP shapes:", {k: spaces[k].shape for k in self.mlp_keys})
         if self.cnn_keys:
             if cnn == "resnet":
-                self._cnn = ImageEncoderResnet(
-                    cnn_depth, cnn_blocks, resize, minres, **kw, name="cnn"
-                )
+                self._cnn = ImageEncoderResnet(cnn_depth, cnn_blocks, resize, minres, **kw, name="cnn")
             else:
                 raise NotImplementedError(cnn)
         if self.mlp_keys:
@@ -245,9 +243,7 @@ class MultiDecoder(nj.Module):
             assert all(x[:-1] == shapes[0][:-1] for x in shapes)
             shape = shapes[0][:-1] + (sum(x[-1] for x in shapes),)
             if cnn == "resnet":
-                self._cnn = ImageDecoderResnet(
-                    shape, cnn_depth, cnn_blocks, resize, **cnn_kw, name="cnn"
-                )
+                self._cnn = ImageDecoderResnet(shape, cnn_depth, cnn_blocks, resize, **cnn_kw, name="cnn")
             else:
                 raise NotImplementedError(cnn)
         if self.mlp_keys:
@@ -272,16 +268,9 @@ class MultiDecoder(nj.Module):
             flat = feat.reshape([-1, feat.shape[-1]])
             output = self._cnn(flat)
             output = output.reshape(feat.shape[:-1] + output.shape[1:])
-            split_indices = np.cumsum(
-                [self.spaces[k].shape[-1] for k in self.cnn_keys][:-1]
-            )
+            split_indices = np.cumsum([self.spaces[k].shape[-1] for k in self.cnn_keys][:-1])
             means = jnp.split(output, split_indices, -1)
-            dists.update(
-                {
-                    key: self._make_image_dist(key, mean)
-                    for key, mean in zip(self.cnn_keys, means)
-                }
-            )
+            dists.update({key: self._make_image_dist(key, mean) for key, mean in zip(self.cnn_keys, means)})
         if self.mlp_keys and mlp:
             dists.update(self._mlp(feat))
         return dists
@@ -322,9 +311,7 @@ class ImageEncoderResnet(nj.Module):
                 x = x.reshape((N, H // 2, W // 2, 4, D)).mean(-2)
             elif self._resize == "max":
                 x = self.get(f"s{i}res", Conv2D, depth, 3, 1, **kw)(x)
-                x = jax.lax.reduce_window(
-                    x, -jnp.inf, jax.lax.max, (1, 3, 3, 1), (1, 2, 2, 1), "same"
-                )
+                x = jax.lax.reduce_window(x, -jnp.inf, jax.lax.max, (1, 3, 3, 1), (1, 2, 2, 1), "same")
             else:
                 raise NotImplementedError(self._resize)
             for j in range(self._blocks):
@@ -420,9 +407,7 @@ class MLP(nj.Module):
         if self._shape is None:
             return x
         elif isinstance(self._shape, dict):
-            return {
-                k: self._out(k, v, self._dist[k], x) for k, v in self._shape.items()
-            }
+            return {k: self._out(k, v, self._dist[k], x) for k, v in self._shape.items()}
         else:
             return self._out("out", self._shape, self._dist, x)
 
@@ -480,9 +465,7 @@ class Dist(nj.Module):
             return jaxutils.SymlogDist(out, len(self._shape), "mse", "sum")
         if self._dist == "symlog_and_twohot":
             bins = np.linspace(-20, 20, out.shape[-1])
-            return jaxutils.TwoHotDist(
-                out, bins, len(self._shape), jaxutils.symlog, jaxutils.symexp
-            )
+            return jaxutils.TwoHotDist(out, bins, len(self._shape), jaxutils.symlog, jaxutils.symexp)
         if self._dist == "symexp_twohot":
             bins = jaxutils.symexp(jnp.linspace(-20, 20, out.shape[-1], dtype=f32))
             return jaxutils.TwoHotDist(out, bins, len(self._shape))
@@ -499,10 +482,7 @@ class Dist(nj.Module):
         if self._dist == "parab_twohot":
             eps = 0.001
             f = lambda x: np.sign(x) * (
-                np.square(
-                    np.sqrt(1 + 4 * eps * (eps + 1 + np.abs(x))) / 2 / eps - 1 / 2 / eps
-                )
-                - 1
+                np.square(np.sqrt(1 + 4 * eps * (eps + 1 + np.abs(x))) / 2 / eps - 1 / 2 / eps) - 1
             )
             bins = f(np.linspace(-300, 300, out.shape[-1]))
             return jaxutils.TwoHotDist(out, bins, len(self._shape))
@@ -706,10 +686,7 @@ class Input:
             xs = jnp.concatenate(xs, -1)
         except (KeyError, ValueError, TypeError) as e:
             shapes = {k: v.shape for k, v in inputs.items()}
-            raise ValueError(
-                f"Error: {e}\n"
-                f"Input shapes: {shapes}\n" + f"Requested keys: {self.keys}"
-            )
+            raise ValueError(f"Error: {e}\nInput shapes: {shapes}\n" + f"Requested keys: {self.keys}")
         return xs
 
 
@@ -744,9 +721,7 @@ class Initializer:
             denoms = {"avg": np.mean((fanin, fanout)), "in": fanin, "out": fanout}
             std = np.sqrt(self.scale / denoms[self.fan]) / 0.87962566103423978
             real_dtype = jnp.finfo(self.dtype).self.dtype
-            value = jax.random.truncated_normal(
-                nj.rng(), -2, 2, (2, *shape), real_dtype
-            )
+            value = jax.random.truncated_normal(nj.rng(), -2, 2, (2, *shape), real_dtype)
             value = value[0] + 1j * value[1]
             value *= jax.lax.convert_element_type(std, real_dtype)
         elif self.dist == "ortho":

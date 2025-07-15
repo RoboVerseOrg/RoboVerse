@@ -10,8 +10,8 @@ import embodied
 import jax
 import jax.numpy as jnp
 import numpy as np
-from jax.experimental import checkify
 from jax._src import checkify as src
+from jax.experimental import checkify
 
 from . import jaxutils
 from . import ninjax as nj
@@ -61,9 +61,7 @@ class JAXAgent(embodied.Agent):
         self.agent = agent_cls(obs_space, act_space, config, name="agent")
         self.rng = np.random.default_rng(config.seed)
         self.keys = [
-            k
-            for k in list(obs_space.keys()) + list(act_space.keys())
-            if not k.startswith("_") and k != "reset"
+            k for k in list(obs_space.keys()) + list(act_space.keys()) if not k.startswith("_") and k != "reset"
         ]
 
         self.train_static = {}
@@ -81,9 +79,7 @@ class JAXAgent(embodied.Agent):
         self.train_devices = [available[i] for i in self.jaxcfg.train_devices]
         print("Policy devices:", ", ".join([str(x) for x in self.policy_devices]))
         print("Train devices: ", ", ".join([str(x) for x in self.train_devices]))
-        self.single_device = (self.policy_devices == self.train_devices) and (
-            len(self.policy_devices) == 1
-        )
+        self.single_device = (self.policy_devices == self.train_devices) and (len(self.policy_devices) == 1)
 
         self.outs_worker = ThreadPoolExecutor(1, "jaxagent_outs")
         self.mets_worker = ThreadPoolExecutor(1, "jaxagent_mets")
@@ -141,9 +137,7 @@ class JAXAgent(embodied.Agent):
         kwargs = {**self.policy_static, **kwargs}
         with embodied.timer.section("agent_policy"):
             varibs = self.prev_params if self.single_device else self.policy_params
-            (outs, state), _ = self._policy(
-                varibs, rng=rng, obs=obs, carry=state, **kwargs
-            )
+            (outs, state), _ = self._policy(varibs, rng=rng, obs=obs, carry=state, **kwargs)
 
         if not self.single_device:
             with embodied.timer.section("swap_varibs"):
@@ -181,16 +175,12 @@ class JAXAgent(embodied.Agent):
 
         if not self.single_device:
             if not self.sync_promise and self.should_sync(self.updates):
-                self.sync_promise = self.sync_worker.submit(
-                    self._copy_params, self.prev_params, block=True
-                )
+                self.sync_promise = self.sync_worker.submit(self._copy_params, self.prev_params, block=True)
 
         return_outs = {}
         if self.outs_promise:
             return_outs = self.outs_promise.result()
-        self.outs_promise = self.outs_worker.submit(
-            self._convert_outs, outs, self.train_devices
-        )
+        self.outs_promise = self.outs_worker.submit(self._convert_outs, outs, self.train_devices)
 
         return_mets = {}
         if self.mets_promise and self.mets_promise.done():
@@ -200,9 +190,7 @@ class JAXAgent(embodied.Agent):
             # Only request metrics if we aren't currently waiting for previous
             # metrics. This means we'll skip the metrics of some training steps if
             # fetching them from device would slow down the training loop.
-            self.mets_promise = self.mets_worker.submit(
-                self._convert_mets, mets, self.train_devices
-            )
+            self.mets_promise = self.mets_worker.submit(self._convert_mets, mets, self.train_devices)
 
         if self.jaxcfg.profiler:
             outdir, copyto = self.logdir, None
@@ -211,7 +199,7 @@ class JAXAgent(embodied.Agent):
                 outdir = embodied.Path("/tmp/profiler")
                 outdir.mkdirs()
             if self.updates == 100:
-                embodied.print(f"Start JAX profiler: {str(outdir)}", "yellow")
+                embodied.print(f"Start JAX profiler: {outdir!s}", "yellow")
                 jax.profiler.start_trace(str(outdir))
             if self.updates == 140:
                 from embodied.core import path as pathlib
@@ -261,9 +249,7 @@ class JAXAgent(embodied.Agent):
                 del self.params
                 self.params = jax.device_put(state, self.train_devices[0])
             else:
-                chex.assert_trees_all_equal_shapes(
-                    tree_map(lambda x: x[0], self.params), state
-                )
+                chex.assert_trees_all_equal_shapes(tree_map(lambda x: x[0], self.params), state)
                 del self.params
                 self.params = jax.device_put_replicated(state, self.train_devices)
             self.prev_params = {k: self.params[k] for k in self.policy_keys}
@@ -319,30 +305,22 @@ class JAXAgent(embodied.Agent):
         if len(self.train_devices) == 1:
             kw = dict(device=self.train_devices[0])
             self._init_train = nj.jit(self._init_train, **kw)
-            self._train = nj.jit(
-                self._train, static=train_static, donate=train_donate, **kw
-            )
+            self._train = nj.jit(self._train, static=train_static, donate=train_donate, **kw)
             self._report = nj.jit(self._report, **kw)
         else:
             kw = dict(devices=self.train_devices)
             self._init_train = nj.pmap(self._init_train, "i", **kw)
-            self._train = nj.pmap(
-                self._train, "i", static=train_static, donate=train_donate, **kw
-            )
+            self._train = nj.pmap(self._train, "i", static=train_static, donate=train_donate, **kw)
             self._report = nj.pmap(self._report, "i", **kw)
 
         if len(self.policy_devices) == 1:
             kw = dict(device=self.policy_devices[0])
             self._init_policy = nj.jit(self._init_policy, **kw)
-            self._policy = nj.jit(
-                self._policy, static=policy_static, donate=policy_donate, **kw
-            )
+            self._policy = nj.jit(self._policy, static=policy_static, donate=policy_donate, **kw)
         else:
             kw = dict(devices=self.policy_devices)
             self._init_policy = nj.pmap(self._init_policy, "i", **kw)
-            self._policy = nj.pmap(
-                self._policy, "i", static=policy_static, donate=policy_donate, **kw
-            )
+            self._policy = nj.pmap(self._policy, "i", static=policy_static, donate=policy_donate, **kw)
 
         self._init_policy = bind(self._init_policy, init=False)
         self._policy = bind(self._policy, init=False)
@@ -404,17 +382,11 @@ class JAXAgent(embodied.Agent):
     def _next_rngs(self, devices, mirror=False):
         high = np.iinfo(np.uint32).max
         if len(devices) == 1:
-            return jax.device_put(
-                self.rng.integers(0, high, (2,), np.uint32), devices[0]
-            )
+            return jax.device_put(self.rng.integers(0, high, (2,), np.uint32), devices[0])
         elif mirror:
-            return jax.device_put_replicated(
-                self.rng.integers(0, high, (2,), np.uint32), devices
-            )
+            return jax.device_put_replicated(self.rng.integers(0, high, (2,), np.uint32), devices)
         else:
-            return jax.device_put_sharded(
-                list(self.rng.integers(0, high, (len(devices), 2), np.uint32)), devices
-            )
+            return jax.device_put_sharded(list(self.rng.integers(0, high, (len(devices), 2), np.uint32)), devices)
 
     def _init_varibs(self, obs_space, act_space):
         varibs = {}
@@ -423,9 +395,7 @@ class JAXAgent(embodied.Agent):
         data = self._dummy_batch({**obs_space, **act_space}, dims)
         data = self._convert_inps(data, self.train_devices)
         state, varibs = self._init_train(varibs, rng, data["is_first"])
-        varibs = self._train(
-            varibs, rng=rng, data=data, carry=state, donated={}, apply=False
-        )
+        varibs = self._train(varibs, rng=rng, data=data, carry=state, donated={}, apply=False)
         # obs = self._dummy_batch(obs_space, (1,))
         # state, varibs = self._init_policy(varibs, rng, obs['is_first'])
         # varibs = self._policy(

@@ -19,15 +19,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r1_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r1_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r1_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r1_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -37,11 +37,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r2_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r2_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r2_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -51,15 +51,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r3_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r3_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r3_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r3_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -69,11 +69,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r4_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r4_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r4_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -83,15 +83,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r5_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r5_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r5_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r5_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -101,11 +101,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r6_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r6_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r6_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -115,15 +115,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r7_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r7_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r7_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r7_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -133,11 +133,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r8_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r8_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r8_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -147,15 +147,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r9_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r9_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r9_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r9_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -165,11 +165,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r10_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r10_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r10_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -179,15 +179,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r11_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r11_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r11_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r11_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -197,11 +197,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r12_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r12_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r12_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -211,15 +211,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r13_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r13_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r13_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r13_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -229,11 +229,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r14_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r14_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r14_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -243,15 +243,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r15_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r15_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r15_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r15_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -261,11 +261,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r16_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r16_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r16_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -275,15 +275,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r17_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r17_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r17_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r17_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -293,11 +293,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r18_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r18_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r18_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -307,15 +307,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r19_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r19_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r19_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r19_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -325,11 +325,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r20_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r20_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r20_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -339,15 +339,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r21_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r21_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r21_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r21_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -357,11 +357,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r22_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r22_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r22_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -371,15 +371,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r23_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r23_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r23_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r23_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -389,11 +389,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r24_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r24_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r24_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -403,15 +403,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r25_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r25_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r25_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r25_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -421,11 +421,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r26_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r26_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r26_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -435,15 +435,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r27_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r27_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r27_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r27_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -453,11 +453,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r28_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r28_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r28_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -467,15 +467,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r29_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r29_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r29_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r29_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -485,11 +485,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r30_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r30_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r30_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -499,15 +499,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r31_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r31_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r31_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r31_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -517,11 +517,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r32_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r32_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r32_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -531,15 +531,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r33_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r33_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r33_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r33_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -549,11 +549,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r34_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r34_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r34_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -563,15 +563,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r35_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r35_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r35_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r35_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -581,11 +581,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r36_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r36_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r36_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -595,15 +595,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r37_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r37_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r37_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r37_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -613,11 +613,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r38_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r38_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r38_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -627,15 +627,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r39_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r39_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r39_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r39_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 
@@ -645,11 +645,11 @@
             		<geom type="cylinder" pos="0 1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r40_c1" pos="0 1.5 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.0 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r40_c2" pos="0 0.0 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -1.5 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r40_c3" pos="0 -1.5 1" size="0.05 1" class="collision"/>
 
@@ -659,15 +659,15 @@
             		<geom type="cylinder" pos="0 2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r41_c1" pos="0 2.25 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r41_c2" pos="0 0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -0.75 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r41_c3" pos="0 -0.75 1" size="0.05 1" class="collision"/>
 
-        
+
             		<geom type="cylinder" pos="0 -2.25 1" size="0.05 1" rgba="0.5 0.5 0.5 1" class="visual"/>
             		<geom type="cylinder" name="pole_r41_c4" pos="0 -2.25 1" size="0.05 1" class="collision"/>
 

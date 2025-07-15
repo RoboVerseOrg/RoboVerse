@@ -1,8 +1,8 @@
 import os
 from copy import deepcopy
-from time import time
-from pathlib import Path
 from glob import glob
+from pathlib import Path
+from time import time
 
 import numpy as np
 import torch
@@ -27,25 +27,17 @@ class OfflineTrainer(Trainer):
             for _ in range(self.cfg.eval_episodes):
                 obs, done, ep_reward, t = self.env.reset(task_idx)[0], False, 0, 0
                 while not done:
-                    action = self.agent.act(
-                        obs, t0=t == 0, eval_mode=True, task=task_idx
-                    )
+                    action = self.agent.act(obs, t0=t == 0, eval_mode=True, task=task_idx)
                     obs, reward, done, truncated, info = self.env.step(action)
                     done = done or truncated
                     ep_reward += reward
                     t += 1
                 ep_rewards.append(ep_reward)
                 ep_successes.append(info["success"])
-            results.update(
-                {
-                    f"episode_reward+{self.cfg.tasks[task_idx]}": np.nanmean(
-                        ep_rewards
-                    ),
-                    f"episode_success+{self.cfg.tasks[task_idx]}": np.nanmean(
-                        ep_successes
-                    ),
-                }
-            )
+            results.update({
+                f"episode_reward+{self.cfg.tasks[task_idx]}": np.nanmean(ep_rewards),
+                f"episode_success+{self.cfg.tasks[task_idx]}": np.nanmean(ep_successes),
+            })
         return results
 
     def train(self):
@@ -57,8 +49,7 @@ class OfflineTrainer(Trainer):
 
         # Load data
         assert self.cfg.task in self.cfg.data_dir, (
-            f"Expected data directory {self.cfg.data_dir} to contain {self.cfg.task}, "
-            f"please double-check your config."
+            f"Expected data directory {self.cfg.data_dir} to contain {self.cfg.task}, please double-check your config."
         )
         fp = Path(os.path.join(self.cfg.data_dir, "*.pt"))
         fps = sorted(glob(str(fp)))
@@ -79,9 +70,9 @@ class OfflineTrainer(Trainer):
             )
             for i in range(len(td)):
                 self.buffer.add(td[i])
-        assert (
-            self.buffer.num_eps == self.buffer.capacity
-        ), f"Buffer has {self.buffer.num_eps} episodes, expected {self.buffer.capacity} episodes."
+        assert self.buffer.num_eps == self.buffer.capacity, (
+            f"Buffer has {self.buffer.num_eps} episodes, expected {self.buffer.capacity} episodes."
+        )
 
         print(f"Training agent for {self.cfg.steps} iterations...")
         metrics = {}

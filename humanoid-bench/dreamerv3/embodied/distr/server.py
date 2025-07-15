@@ -1,18 +1,13 @@
-import time
 import concurrent.futures
+import time
 from collections import deque, namedtuple
 
 import numpy as np
 
-from ..core import agg
-from ..core import basics
-from . import sockets
-from . import thread
+from ..core import agg, basics
+from . import sockets, thread
 
-
-Method = namedtuple(
-    "Method", ("name,workfn,donefn,pool,workers,batched,insize,inqueue,inprog")
-)
+Method = namedtuple("Method", ("name,workfn,donefn,pool,workers,batched,insize,inqueue,inprog"))
 
 
 class Server:
@@ -41,9 +36,7 @@ class Server:
             pool = self.default_pool
         batched = batch > 0
         insize = max(1, batch)
-        self.methods[name] = Method(
-            name, workfn, donefn, pool, workers, batched, insize, deque(), [0]
-        )
+        self.methods[name] = Method(name, workfn, donefn, pool, workers, batched, insize, deque(), [0])
 
     def start(self):
         self.loop.start()
@@ -133,9 +126,7 @@ class Server:
             self.done_queue.append(future)
 
     def _handle_results(self, socket, now):
-        completed, self.result_set = concurrent.futures.wait(
-            self.result_set, 0, concurrent.futures.FIRST_COMPLETED
-        )
+        completed, self.result_set = concurrent.futures.wait(self.result_set, 0, concurrent.futures.FIRST_COMPLETED)
         for future in completed:
             method = future.method
             try:
@@ -178,10 +169,7 @@ class Server:
     def _work(self, method, addr, rid, payload, recvd):
         if method.batched:
             data = [sockets.unpack(x) for x in payload]
-            data = {
-                k: np.stack([data[i][k] for i in range(method.insize)])
-                for k, v in data[0].items()
-            }
+            data = {k: np.stack([data[i][k] for i in range(method.insize)]) for k, v in data[0].items()}
         else:
             data = sockets.unpack(payload)
         if method.donefn:
@@ -191,9 +179,7 @@ class Server:
             result = result or {}
             logs = None
         if method.batched:
-            results = [
-                {k: v[i] for k, v in result.items()} for i in range(method.insize)
-            ]
+            results = [{k: v[i] for k, v in result.items()} for i in range(method.insize)]
             payload = [sockets.pack(x) for x in results]
         else:
             payload = sockets.pack(result)

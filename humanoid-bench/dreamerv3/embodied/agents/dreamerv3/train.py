@@ -178,9 +178,7 @@ def make_env(config, index, **overrides):
         "loconav": "embodied.envs.loconav:LocoNav",
         "pinpad": "embodied.envs.pinpad:PinPad",
         "langroom": "embodied.envs.langroom:LangRoom",
-        "procgen": lambda task, **kw: from_gym.FromGym(
-            f"procgen:procgen-{task}-v0", **kw
-        ),
+        "procgen": lambda task, **kw: from_gym.FromGym(f"procgen:procgen-{task}-v0", **kw),
         "humanoid": "embodied.envs.from_gymnasium:FromGymnasium",
     }[suite]
     if isinstance(ctor, str):

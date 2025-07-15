@@ -6,9 +6,9 @@ except RuntimeError:
     pass
 
 from .client import Client
-from .thread import Thread, StoppableThread
-from .process import Process, StoppableProcess
-from .utils import run, warn_remote_error, terminate_subprocesses
-from .server import Server
 from .proc_server import ProcServer
-from .sockets import NotAliveError, RemoteError, ProtocolError
+from .process import Process, StoppableProcess
+from .server import Server
+from .sockets import NotAliveError, ProtocolError, RemoteError
+from .thread import StoppableThread, Thread
+from .utils import run, terminate_subprocesses, warn_remote_error

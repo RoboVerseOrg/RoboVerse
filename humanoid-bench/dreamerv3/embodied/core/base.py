@@ -37,12 +37,7 @@ class Env:
         return True  # Env is always truthy, despite length zero.
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}("
-            f"len={len(self)}, "
-            f"obs_space={self.obs_space}, "
-            f"act_space={self.act_space})"
-        )
+        return f"{self.__class__.__name__}(len={len(self)}, obs_space={self.obs_space}, act_space={self.act_space})"
 
     @property
     def obs_space(self):

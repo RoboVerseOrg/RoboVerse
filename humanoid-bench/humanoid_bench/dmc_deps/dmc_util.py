@@ -15,12 +15,11 @@
 
 """Various helper functions and classes."""
 
-
 import functools
 import sys
+
 import mujoco
 import numpy as np
-
 
 # Environment variable that can be used to override the default path to the
 # MuJoCo shared library.
@@ -30,33 +29,33 @@ DEFAULT_ENCODING = sys.getdefaultencoding()
 
 
 def to_binary_string(s):
-  """Convert text string to binary."""
-  if isinstance(s, bytes):
-    return s
-  return s.encode(DEFAULT_ENCODING)
+    """Convert text string to binary."""
+    if isinstance(s, bytes):
+        return s
+    return s.encode(DEFAULT_ENCODING)
 
 
 def to_native_string(s):
-  """Convert a text or binary string to the native string format."""
-  if isinstance(s, bytes):
-    return s.decode(DEFAULT_ENCODING)
-  else:
-    return s
+    """Convert a text or binary string to the native string format."""
+    if isinstance(s, bytes):
+        return s.decode(DEFAULT_ENCODING)
+    else:
+        return s
 
 
 def get_mjlib():
-  return mujoco
+    return mujoco
 
 
 @functools.wraps(np.ctypeslib.ndpointer)
 def ndptr(*args, **kwargs):
-  """Wraps `np.ctypeslib.ndpointer` to allow passing None for NULL pointers."""
-  base = np.ctypeslib.ndpointer(*args, **kwargs)
+    """Wraps `np.ctypeslib.ndpointer` to allow passing None for NULL pointers."""
+    base = np.ctypeslib.ndpointer(*args, **kwargs)
 
-  def from_param(_, obj):
-    if obj is None:
-      return obj
-    else:
-      return base.from_param(obj)
+    def from_param(_, obj):
+        if obj is None:
+            return obj
+        else:
+            return base.from_param(obj)
 
-  return type(base.__name__, (base,), {"from_param": classmethod(from_param)})
+    return type(base.__name__, (base,), {"from_param": classmethod(from_param)})

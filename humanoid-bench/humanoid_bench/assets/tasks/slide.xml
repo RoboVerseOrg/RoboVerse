@@ -14,7 +14,7 @@
             <geom type="mesh" mesh="slide" pos="70 0 0" rgba="0.6 0.6 0.6 1" class="visual"/>
             <geom type="mesh" mesh="slide" pos="80 0 0" rgba="0.6 0.6 0.6 1" class="visual"/>
 
-            
+
             <geom type="mesh" mesh="slide" pos="0 0 0"  class="collision"/>
             <geom type="mesh" mesh="slide" pos="10 0 0"  class="collision"/>
             <geom type="mesh" mesh="slide" pos="20 0 0"  class="collision"/>

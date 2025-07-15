@@ -1,10 +1,9 @@
 import os
 
 from dm_control.rl import control
-from dm_control.suite import common
-from dm_control.suite import walker
-from dm_control.utils import rewards
+from dm_control.suite import common, walker
 from dm_control.utils import io as resources
+from dm_control.utils import rewards
 
 _TASKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tasks")
 
@@ -19,9 +18,7 @@ def get_model_and_assets():
 
 
 @walker.SUITE.add("custom")
-def walk_backwards(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def walk_backwards(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Walk Backwards task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = BackwardsPlanarWalker(move_speed=walker._WALK_SPEED, random=random)
@@ -36,9 +33,7 @@ def walk_backwards(
 
 
 @walker.SUITE.add("custom")
-def run_backwards(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def run_backwards(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Run Backwards task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = BackwardsPlanarWalker(move_speed=walker._RUN_SPEED, random=random)
@@ -53,9 +48,7 @@ def run_backwards(
 
 
 @walker.SUITE.add("custom")
-def arabesque(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def arabesque(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Arabesque task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = YogaPlanarWalker(goal="arabesque", random=random)
@@ -70,9 +63,7 @@ def arabesque(
 
 
 @walker.SUITE.add("custom")
-def lie_down(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def lie_down(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Lie Down task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = YogaPlanarWalker(goal="lie_down", random=random)
@@ -87,9 +78,7 @@ def lie_down(
 
 
 @walker.SUITE.add("custom")
-def legs_up(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def legs_up(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Legs Up task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = YogaPlanarWalker(goal="legs_up", random=random)
@@ -104,9 +93,7 @@ def legs_up(
 
 
 @walker.SUITE.add("custom")
-def headstand(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def headstand(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Headstand task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
     task = YogaPlanarWalker(goal="flip", move_speed=0, random=random)
@@ -124,9 +111,7 @@ def headstand(
 def flip(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Flip task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
-    task = YogaPlanarWalker(
-        goal="flip", move_speed=walker._RUN_SPEED * 0.75, random=random
-    )
+    task = YogaPlanarWalker(goal="flip", move_speed=walker._RUN_SPEED * 0.75, random=random)
     environment_kwargs = environment_kwargs or {}
     return control.Environment(
         physics,
@@ -138,14 +123,10 @@ def flip(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=
 
 
 @walker.SUITE.add("custom")
-def backflip(
-    time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None
-):
+def backflip(time_limit=walker._DEFAULT_TIME_LIMIT, random=None, environment_kwargs=None):
     """Returns the Backflip task."""
     physics = walker.Physics.from_xml_string(*get_model_and_assets())
-    task = YogaPlanarWalker(
-        goal="flip", move_speed=-walker._RUN_SPEED * 0.75, random=random
-    )
+    task = YogaPlanarWalker(goal="flip", move_speed=-walker._RUN_SPEED * 0.75, random=random)
     environment_kwargs = environment_kwargs or {}
     return control.Environment(
         physics,
@@ -219,19 +200,13 @@ class YogaPlanarWalker(walker.PlanarWalker):
             bounds=(-float("inf"), _YOGA_LIE_DOWN_HEIGHT),
             margin=_YOGA_LIE_DOWN_HEIGHT / 2,
         )
-        thigh_height = (
-            physics.named.data.xpos["left_thigh", "z"]
-            + physics.named.data.xpos["right_thigh", "z"]
-        ) / 2
+        thigh_height = (physics.named.data.xpos["left_thigh", "z"] + physics.named.data.xpos["right_thigh", "z"]) / 2
         thigh_down = rewards.tolerance(
             thigh_height,
             bounds=(-float("inf"), _YOGA_LIE_DOWN_HEIGHT),
             margin=_YOGA_LIE_DOWN_HEIGHT / 2,
         )
-        feet_height = (
-            physics.named.data.xpos["left_foot", "z"]
-            + physics.named.data.xpos["right_foot", "z"]
-        ) / 2
+        feet_height = (physics.named.data.xpos["left_foot", "z"] + physics.named.data.xpos["right_foot", "z"]) / 2
         feet_down = rewards.tolerance(
             feet_height,
             bounds=(-float("inf"), _YOGA_LIE_DOWN_HEIGHT),
@@ -247,19 +222,13 @@ class YogaPlanarWalker(walker.PlanarWalker):
             bounds=(-float("inf"), _YOGA_LIE_DOWN_HEIGHT),
             margin=_YOGA_LIE_DOWN_HEIGHT / 2,
         )
-        thigh_height = (
-            physics.named.data.xpos["left_thigh", "z"]
-            + physics.named.data.xpos["right_thigh", "z"]
-        ) / 2
+        thigh_height = (physics.named.data.xpos["left_thigh", "z"] + physics.named.data.xpos["right_thigh", "z"]) / 2
         thigh_down = rewards.tolerance(
             thigh_height,
             bounds=(-float("inf"), _YOGA_LIE_DOWN_HEIGHT),
             margin=_YOGA_LIE_DOWN_HEIGHT / 2,
         )
-        feet_height = (
-            physics.named.data.xpos["left_foot", "z"]
-            + physics.named.data.xpos["right_foot", "z"]
-        ) / 2
+        feet_height = (physics.named.data.xpos["left_foot", "z"] + physics.named.data.xpos["right_foot", "z"]) / 2
         legs_up = rewards.tolerance(
             feet_height,
             bounds=(_YOGA_LEGS_UP_HEIGHT, float("inf")),
@@ -270,19 +239,13 @@ class YogaPlanarWalker(walker.PlanarWalker):
         return legs_up_reward
 
     def _flip_reward(self, physics):
-        thigh_height = (
-            physics.named.data.xpos["left_thigh", "z"]
-            + physics.named.data.xpos["right_thigh", "z"]
-        ) / 2
+        thigh_height = (physics.named.data.xpos["left_thigh", "z"] + physics.named.data.xpos["right_thigh", "z"]) / 2
         thigh_up = rewards.tolerance(
             thigh_height,
             bounds=(_YOGA_STAND_HEIGHT, float("inf")),
             margin=_YOGA_STAND_HEIGHT / 2,
         )
-        feet_height = (
-            physics.named.data.xpos["left_foot", "z"]
-            + physics.named.data.xpos["right_foot", "z"]
-        ) / 2
+        feet_height = (physics.named.data.xpos["left_foot", "z"] + physics.named.data.xpos["right_foot", "z"]) / 2
         legs_up = rewards.tolerance(
             feet_height,
             bounds=(_YOGA_LEGS_UP_HEIGHT, float("inf")),
@@ -293,9 +256,7 @@ class YogaPlanarWalker(walker.PlanarWalker):
             return upside_down_reward
         move_reward = rewards.tolerance(
             physics.horizontal_velocity(),
-            bounds=(self._move_speed, float("inf"))
-            if self._move_speed > 0
-            else (-float("inf"), self._move_speed),
+            bounds=(self._move_speed, float("inf")) if self._move_speed > 0 else (-float("inf"), self._move_speed),
             margin=abs(self._move_speed) / 2,
             value_at_margin=0.5,
             sigmoid="linear",

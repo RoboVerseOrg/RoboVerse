@@ -11,7 +11,7 @@
             <geom type="cylinder" name="right_supporting_bar" pos="-0.19 -1.2 2" size="0.02 2" rgba="0.2 0.2 0.2 1" class="visual"/>
             <geom type="cylinder" name="holding_bar" pos="-0.19 0 2.8" size="0.02 1.2 0.02" zaxis="0 1 0" material="steel_cover" class="visual"/>
 
-            
+
             <geom type="cylinder" pos="-0.19 1.2 2" size="0.02 2" class="collision"/>
             <geom type="cylinder" pos="-0.19 -1.2 2" size="0.02 2" class="collision"/>
             <geom type="cylinder" pos="-0.19 0 2.8" size="0.02 1.2 0.02" zaxis="0 1 0" class="collision"/>

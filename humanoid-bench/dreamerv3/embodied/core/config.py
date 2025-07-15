@@ -169,9 +169,7 @@ class Config(dict):
                 value = tuple(value)
             if isinstance(value, tuple):
                 if len(value) == 0:
-                    message = (
-                        "Empty lists are disallowed because their type is unclear."
-                    )
+                    message = "Empty lists are disallowed because their type is unclear."
                     raise TypeError(message)
                 if not isinstance(value[0], (str, float, int, bool)):
                     message = "Lists can only contain strings, floats, ints, bools"

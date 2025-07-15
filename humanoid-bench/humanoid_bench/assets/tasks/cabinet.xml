@@ -7,7 +7,7 @@
         <camera pos="2.245 1.745 2.438" xyaxes="-0.643 0.766 -0.000 -0.383 -0.321 0.866"/>
         <geom name="cabinet_base_a" type="box" pos="0.9 0 0.25" size="0.3 0.6 0.25" material="bookshelf_cover" class="visual"/>
         <geom type="box" pos="0.9 0 0.25" size="0.3 0.6 0.25" class="collision"/>
-        
+
         <geom name="cabinet_back" type="box" pos="1.21 0 0.84" size="0.009 0.6 0.84" material="bookshelf_cover" class="visual"/>
         <geom type="box" pos="1.21 0 0.84" size="0.009 0.6 0.84" class="collision"/>
 
@@ -28,7 +28,7 @@
             <geom type="cylinder" pos="-0.35 -0.2 0.24" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
             <geom type="cylinder" pos="-0.35 0.2 0.24" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
             <geom type="box" pos="-0.39 0 0.24" size="0.01 0.2 0.01" rgba="0 0 0 1" class="visual"/>
-            
+
             <geom type="cylinder" pos="-0.35 -0.2 0.24" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
             <geom type="cylinder" pos="-0.35 0.2 0.24" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
             <geom type="box" pos="-0.39 0 0.24" size="0.01 0.2 0.01" class="collision"/>
@@ -47,7 +47,7 @@
                 <geom type="cylinder" pos="-0.06 -0.2 0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="cylinder" pos="-0.06 -0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="box" pos="-0.1 -0.2 0" size="0.01 0.01 0.09" rgba="0 0 0 1" class="visual"/>
-                
+
                 <geom type="box" pos="0 0 0.01" size="0.01 0.28 0.13" class="collision"/>
                 <geom type="cylinder" pos="-0.06 -0.2 0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="-0.06 -0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
@@ -59,7 +59,7 @@
                 <geom type="cylinder" pos="-0.06 0.2 0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="cylinder" pos="-0.06 0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="box" pos="-0.1 0.2 0" size="0.01 0.01 0.09" rgba="0 0 0 1" class="visual"/>
-                
+
                 <geom type="box" pos="0 0 0.01" size="0.01 0.28 0.13" class="collision"/>
                 <geom type="cylinder" pos="-0.06 0.2 0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="-0.06 0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
@@ -70,7 +70,7 @@
             <geom type="box" pos="0 0 0.02" size="0.3 0.6 0.01"  material="bookshelf_cover" class="visual"/>
             <geom type="box" pos="0.29 0 0.15" size="0.01 0.6 0.14"  material="bookshelf_cover" class="visual"/>
             <geom type="box" pos="-0.29 -0.29 0.16" size="0.01 0.28 0.13"  material="bookshelf_cover" class="visual"/>
-            
+
             <geom type="box" pos="0 0 0.02" size="0.3 0.6 0.01"  class="collision"/>
             <geom type="box" pos="0.29 0 0.15" size="0.01 0.6 0.14" class="collision"/>
             <geom type="box" pos="-0.29 -0.29 0.16" size="0.01 0.28 0.13" class="collision"/>
@@ -81,7 +81,7 @@
                 <geom type="cylinder" pos="-0.06 0.2 0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1"  class="visual"/>
                 <geom type="cylinder" pos="-0.06 0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1"  class="visual"/>
                 <geom type="box" pos="-0.1 0.2 0" size="0.01 0.01 0.09" rgba="0 0 0 1"  class="visual"/>
-                
+
                 <geom type="box" pos="0 0 0.01" size="0.01 0.28 0.13" class="collision"/>
                 <geom type="cylinder" pos="-0.06 0.2 0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="-0.06 0.2 -0.09" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
@@ -91,7 +91,7 @@
         <body name="pullup_drawer" pos="0.9 0 1.37">
             <geom type="box" pos="0 0 0.02" size="0.3 0.6 0.01"  material="bookshelf_cover" class="visual"/>
             <geom type="box" pos="0.29 0 0.15" size="0.01 0.6 0.14"  material="bookshelf_cover" class="visual"/>
-            
+
             <geom type="box" pos="0 0 0.02" size="0.3 0.6 0.01" class="collision"/>
             <geom type="box" pos="0.29 0 0.15" size="0.01 0.6 0.14" class="collision"/>
 
@@ -101,24 +101,24 @@
                 <geom type="cylinder" pos="-0.35 -0.2 0.08" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="cylinder" pos="-0.35 0.2 0.08" size="0.02 0.05" zaxis="1 0 0" rgba="0 0 0 1" class="visual"/>
                 <geom type="box" pos="-0.39 0 0.08" size="0.01 0.2 0.01" rgba="0 0 0 1" class="visual"/>
-                
+
                 <geom type="box" pos="-0.29 0 0.16" size="0.01 0.58 0.125" class="collision"/>
                 <geom type="cylinder" pos="-0.35 -0.2 0.08" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="cylinder" pos="-0.35 0.2 0.08" size="0.02 0.05" zaxis="1 0 0" class="collision"/>
                 <geom type="box" pos="-0.39 0 0.08" size="0.01 0.2 0.01" class="collision"/>
             </body>
-            
+
             <geom type="box" pos="0.01 0 0.3" size="0.29 0.6 0.01"  material="bookshelf_cover" class="visual"/>
             <geom type="box" pos="0.01 0 0.3" size="0.29 0.6 0.01" class="collision"/>
         </body>
 
         <geom type="box" pos="0.9 0.59 0.84" size="0.3 0.01 0.84"  material="bookshelf_cover" class="visual"/>
         <geom type="box" pos="0.9 -0.59 0.84" size="0.3 0.01 0.84"  material="bookshelf_cover" class="visual"/>
-        
+
         <geom type="box" pos="0.9 0.59 0.84" size="0.3 0.01 0.84"  class="collision"/>
         <geom type="box" pos="0.9 -0.59 0.84" size="0.3 0.01 0.84"  class="collision"/>
-        
-        
+
+
         <body name="drawer_cube" pos="0.9 0 0.58">
             <freejoint name="free_drawer_cube"/>
             <geom type="box" pos="0 0 0" size="0.05 0.05 0.05" rgba="0.1 0.3 0.3 1" class="visual"/>

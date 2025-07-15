@@ -11,9 +11,7 @@ class Thread:
         self.exception = None
         name = name or fn.__name__
         self.old_name = name[:]
-        self.thread = threading.Thread(
-            target=self._wrapper, args=args, name=name, daemon=True
-        )
+        self.thread = threading.Thread(target=self._wrapper, args=args, name=name, daemon=True)
         self.started = False
         start and self.start()
 
@@ -57,9 +55,7 @@ class Thread:
             thread_id = thread._thread_id
         else:
             thread_id = [k for k, v in threading._active.items() if v is thread][0]
-        result = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-            ctypes.c_long(thread_id), ctypes.py_object(SystemExit)
-        )
+        result = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), ctypes.py_object(SystemExit))
         if result > 1:
             ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), None)
 

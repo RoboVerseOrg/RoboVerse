@@ -2,8 +2,9 @@ import re
 from collections import defaultdict
 from functools import partial as bind
 
-import embodied
 import numpy as np
+
+import embodied
 
 
 def train_eval(
@@ -60,7 +61,7 @@ def train_eval(
             for key in args.log_keys_video:
                 if key in tran:
                     episode.add(f"policy_{key}", tran[key], agg="stack")
-                    
+
         for key, value in tran.items():
             if re.match(args.log_keys_sum, key):
                 episode.add(key, value, agg="sum")
@@ -108,12 +109,8 @@ def train_eval(
     eval_driver.on_step(eval_replay.add)
     eval_driver.on_step(bind(log_step, mode="eval"))
 
-    train_dataset = agent.dataset(
-        embodied.Batch([train_replay.dataset] * args.batch_size)
-    )
-    eval_dataset = agent.dataset(
-        embodied.Batch([eval_replay.dataset] * args.batch_size)
-    )
+    train_dataset = agent.dataset(embodied.Batch([train_replay.dataset] * args.batch_size))
+    eval_dataset = agent.dataset(embodied.Batch([eval_replay.dataset] * args.batch_size))
 
     carry = [agent.init_train(args.batch_size)]
 
@@ -139,9 +136,7 @@ def train_eval(
     should_save(step)  # Register that we just saved.
 
     print("Start training loop")
-    train_policy = lambda *args: agent.policy(
-        *args, mode="explore" if should_expl(step) else "train"
-    )
+    train_policy = lambda *args: agent.policy(*args, mode="explore" if should_expl(step) else "train")
     eval_policy = lambda *args: agent.policy(*args, mode="eval")
     train_driver.reset(agent.init_policy)
     while step < args.steps:

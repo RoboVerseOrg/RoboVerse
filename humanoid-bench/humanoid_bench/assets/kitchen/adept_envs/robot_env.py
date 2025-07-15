@@ -73,7 +73,7 @@ class RobotEnv(mujoco_env.MujocoEnv):
             from adept_envs.utils.remote_viz import RemoteViz
             self.remote_viz = RemoteViz(model_path)
         except ImportError:
-            pass          
+            pass
 
 
         self._initializing = True

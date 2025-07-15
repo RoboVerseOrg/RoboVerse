@@ -2,11 +2,9 @@ import functools
 import os
 import sys
 
+import embodied
 import gymnasium as gym
 import numpy as np
-
-import embodied
-import humanoid_bench
 
 
 class FromGymnasium(embodied.Env):
@@ -55,7 +53,6 @@ class FromGymnasium(embodied.Env):
             "success": embodied.Space(np.float32),
             "success_subtasks": embodied.Space(np.float32),
         }
-        
 
     @functools.cached_property
     def act_space(self):
@@ -83,8 +80,8 @@ class FromGymnasium(embodied.Env):
             reward,
             is_last=bool(self._done),
             is_terminal=bool(self._info.get("is_terminal", terminated)),
-            success = self._info.get("success", 0.0),
-            success_subtasks = self._info.get("success_subtasks", 0.0),
+            success=self._info.get("success", 0.0),
+            success_subtasks=self._info.get("success_subtasks", 0.0),
         )
 
     def _obs(self, obs, reward, is_first=False, is_last=False, is_terminal=False, success=0.0, success_subtasks=0.0):

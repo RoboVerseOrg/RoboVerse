@@ -4,89 +4,89 @@
 
                     		<geom type="box" name="stair_50_layer_0" pos="0 0 0.090" size="2.700 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.090" size="2.700 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_50_layer_1" pos="0 0 0.270" size="2.100 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.270" size="2.100 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_50_layer_2" pos="0 0 0.450" size="1.500 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.450" size="1.500 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_50_layer_3" pos="0 0 0.630" size="0.900 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.630" size="0.900 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_50_layer_4" pos="0 0 0.810" size="0.300 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.810" size="0.300 5.0 0.09" class="collision"/>
-                
+
 	</body>
 	<body name="stairs_40" pos="9.0 0 0">
 
                     		<geom type="box" name="stair_40_layer_0" pos="0 0 0.090" size="2.700 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.090" size="2.700 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_40_layer_1" pos="0 0 0.270" size="2.100 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.270" size="2.100 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_40_layer_2" pos="0 0 0.450" size="1.500 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.450" size="1.500 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_40_layer_3" pos="0 0 0.630" size="0.900 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.630" size="0.900 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_40_layer_4" pos="0 0 0.810" size="0.300 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.810" size="0.300 5.0 0.09" class="collision"/>
-                
+
 	</body>
 	<body name="stairs_30" pos="15.0 0 0">
 
                     		<geom type="box" name="stair_30_layer_0" pos="0 0 0.090" size="2.700 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.090" size="2.700 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_30_layer_1" pos="0 0 0.270" size="2.100 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.270" size="2.100 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_30_layer_2" pos="0 0 0.450" size="1.500 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.450" size="1.500 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_30_layer_3" pos="0 0 0.630" size="0.900 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.630" size="0.900 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_30_layer_4" pos="0 0 0.810" size="0.300 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.810" size="0.300 5.0 0.09" class="collision"/>
-                
+
 	</body>
 	<body name="stairs_20" pos="21.0 0 0">
 
                     		<geom type="box" name="stair_20_layer_0" pos="0 0 0.090" size="2.700 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.090" size="2.700 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_20_layer_1" pos="0 0 0.270" size="2.100 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.270" size="2.100 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_20_layer_2" pos="0 0 0.450" size="1.500 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.450" size="1.500 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_20_layer_3" pos="0 0 0.630" size="0.900 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.630" size="0.900 5.0 0.09" class="collision"/>
-                
+
 
                     		<geom type="box" name="stair_20_layer_4" pos="0 0 0.810" size="0.300 5.0 0.09" rgba="0.8 0.8 0.83 1" mass=".02" class="visual"/>
                     		<geom type="box" pos="0 0 0.810" size="0.300 5.0 0.09" class="collision"/>
-                
+
 	</body>
 </body>
 <geom type="box" pos="13.5 -5.05 2" size="15.5 0.1 2" class="collision"/>

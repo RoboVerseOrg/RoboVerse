@@ -37,12 +37,7 @@ class Space:
     def __repr__(self):
         low = None if self.low is None else self.low.min()
         high = None if self.high is None else self.high.min()
-        return (
-            f"Space(dtype={self.dtype.name}, "
-            f"shape={self.shape}, "
-            f"low={low}, "
-            f"high={high})"
-        )
+        return f"Space(dtype={self.dtype.name}, shape={self.shape}, low={low}, high={high})"
 
     def __contains__(self, value):
         value = np.asarray(value)

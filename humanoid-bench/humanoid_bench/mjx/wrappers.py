@@ -1,15 +1,17 @@
+from functools import partial
+from typing import Optional, Tuple, Union
+
+import chex
 import jax
 import jax.numpy as jnp
-import chex
 import numpy as np
-from flax import struct
-from functools import partial
-from typing import Optional, Tuple, Union, Any
-from gymnax.environments import environment, spaces
 from brax import envs
-from brax.envs.wrappers.training import EpisodeWrapper, AutoResetWrapper
+from brax.envs.wrappers.training import AutoResetWrapper, EpisodeWrapper
+from flax import struct
+from gymnax.environments import environment, spaces
 
-class GymnaxWrapper(object):
+
+class GymnaxWrapper:
     """Base class for Gymnax wrappers."""
 
     def __init__(self, env):
@@ -27,9 +29,7 @@ class FlattenObservationWrapper(GymnaxWrapper):
         super().__init__(env)
 
     def observation_space(self, params) -> spaces.Box:
-        assert isinstance(
-            self._env.observation_space(params), spaces.Box
-        ), "Only Box spaces are supported for now."
+        assert isinstance(self._env.observation_space(params), spaces.Box), "Only Box spaces are supported for now."
         return spaces.Box(
             low=self._env.observation_space(params).low,
             high=self._env.observation_space(params).high,
@@ -90,19 +90,15 @@ class LogWrapper(GymnaxWrapper):
         action: Union[int, float],
         params: Optional[environment.EnvParams] = None,
     ) -> Tuple[chex.Array, environment.EnvState, float, bool, dict]:
-        obs, env_state, reward, done, info = self._env.step(
-            key, state.env_state, action, params
-        )
+        obs, env_state, reward, done, info = self._env.step(key, state.env_state, action, params)
         new_episode_return = state.episode_returns + reward
         new_episode_length = state.episode_lengths + 1
         state = LogEnvState(
             env_state=env_state,
             episode_returns=new_episode_return * (1 - done),
             episode_lengths=new_episode_length * (1 - done),
-            returned_episode_returns=state.returned_episode_returns * (1 - done)
-            + new_episode_return * done,
-            returned_episode_lengths=state.returned_episode_lengths * (1 - done)
-            + new_episode_length * done,
+            returned_episode_returns=state.returned_episode_returns * (1 - done) + new_episode_return * done,
+            returned_episode_lengths=state.returned_episode_lengths * (1 - done) + new_episode_length * done,
             timestep=state.timestep + 1,
         )
         info["returned_episode_returns"] = state.returned_episode_returns
@@ -232,9 +228,7 @@ class NormalizeVecObservation(GymnaxWrapper):
         return (obs - state.mean) / jnp.sqrt(state.var + 1e-8), state
 
     def step(self, key, state, action, params=None):
-        obs, env_state, reward, done, info = self._env.step(
-            key, state.env_state, action, params
-        )
+        obs, env_state, reward, done, info = self._env.step(key, state.env_state, action, params)
 
         batch_mean = jnp.mean(obs, axis=0)
         batch_var = jnp.var(obs, axis=0)
@@ -292,9 +286,7 @@ class NormalizeVecReward(GymnaxWrapper):
         return obs, state
 
     def step(self, key, state, action, params=None):
-        obs, env_state, reward, done, info = self._env.step(
-            key, state.env_state, action, params
-        )
+        obs, env_state, reward, done, info = self._env.step(key, state.env_state, action, params)
         return_val = state.return_val * self.gamma * (1 - done) + reward
 
         batch_mean = jnp.mean(return_val, axis=0)

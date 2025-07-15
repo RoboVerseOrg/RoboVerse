@@ -1,7 +1,4 @@
-import pickle
 import re
-
-import numpy as np
 
 try:
     import colored
@@ -105,9 +102,7 @@ def treemap(fn, *trees, isleaf=None):
         return [treemap(fn, *[t[i] for t in trees], **kw) for i in range(len(first))]
     if isinstance(first, tuple):
         assert all(len(x) == len(first) for x in trees), format_(trees)
-        return tuple(
-            [treemap(fn, *[t[i] for t in trees], **kw) for i in range(len(first))]
-        )
+        return tuple([treemap(fn, *[t[i] for t in trees], **kw) for i in range(len(first))])
     if isinstance(first, dict):
         assert all(set(x.keys()) == set(first.keys()) for x in trees), format_(trees)
         return {k: treemap(fn, *[t[k] for t in trees], **kw) for k in first}

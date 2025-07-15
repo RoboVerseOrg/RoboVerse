@@ -135,7 +135,7 @@
                             <geom class="visual" mesh="left_knee_link"/>
                             <geom class="collision" mesh="left_knee_link"/>
                             <body name="left_ankle_link" pos="0 0 -0.4">
-                                <inertial pos="0.048568 0 -0.045609" quat="0.489385 0.510394 0.510394 0.489385" mass="0.552448" 
+                                <inertial pos="0.048568 0 -0.045609" quat="0.489385 0.510394 0.510394 0.489385" mass="0.552448"
                                     diaginertia="0.00362 0.00355701 0.000149987"/>
                                 <joint name="left_ankle" axis="0 1 0" range="-0.87 0.52"/>
                                 <geom class="visual" mesh="left_ankle_link"/>
@@ -450,7 +450,7 @@
         <position class="h1" name="L_thumb_proximal_pitch_joint" joint="L_thumb_proximal_pitch_joint" ctrlrange="-1 1"/>
         <position class="h1" name="L_thumb_intermediate_joint" joint="L_thumb_intermediate_joint" ctrlrange="-1 1"/>
         <position class="h1" name="L_thumb_distal_joint" joint="L_thumb_distal_joint" ctrlrange="-1 1"/>
-        
+
         <position class="h1" name="R_index_proximal_joint" joint="R_index_proximal_joint" ctrlrange="-1 1"/>
         <position class="h1" name="R_index_intermediate_joint" joint="R_index_intermediate_joint" ctrlrange="-1 1"/>
         <position class="h1" name="R_middle_proximal_joint" joint="R_middle_proximal_joint" ctrlrange="-1 1"/>
@@ -464,7 +464,7 @@
         <position class="h1" name="R_thumb_intermediate_joint" joint="R_thumb_intermediate_joint" ctrlrange="-1 1"/>
         <position class="h1" name="R_thumb_distal_joint" joint="R_thumb_distal_joint" ctrlrange="-1 1"/>
     </actuator>
-    
+
     <sensor>
         <touch name="left_foot_sensor" site="left_foot"/>
         <touch name="right_foot_sensor" site="right_foot"/>

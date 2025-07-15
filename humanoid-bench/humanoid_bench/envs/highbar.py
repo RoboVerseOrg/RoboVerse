@@ -1,8 +1,6 @@
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box
 from dm_control.utils import rewards
-
+from gymnasium.spaces import Box
 from humanoid_bench.tasks import Task
 
 
@@ -12,9 +10,7 @@ class HighBarBase(Task):
 
     @property
     def observation_space(self):
-        return Box(
-            low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64
-        )
+        return Box(low=-np.inf, high=np.inf, shape=(self.robot.dof * 2 - 1,), dtype=np.float64)
 
     def get_reward(self):
         upright_reward = rewards.tolerance(

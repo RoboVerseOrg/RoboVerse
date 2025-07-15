@@ -39,12 +39,7 @@ class MinecraftBase(embodied.Env):
         self._inventory = {}
 
         # Observations
-        self._inv_keys = [
-            k
-            for k in self._env.obs_space
-            if k.startswith("inventory/")
-            if k != "inventory/log2"
-        ]
+        self._inv_keys = [k for k in self._env.obs_space if k.startswith("inventory/") if k != "inventory/log2"]
         self._inv_log_keys = [f"inventory/{k}" for k in log_inv_keys]
         assert all(k in self._inv_keys for k in self._inv_log_keys), (
             self._inv_keys,
@@ -52,9 +47,7 @@ class MinecraftBase(embodied.Env):
         )
         self._step = 0
         self._max_inventory = None
-        self._equip_enum = self._gymenv.observation_space["equipped_items"]["mainhand"][
-            "type"
-        ].values.tolist()
+        self._equip_enum = self._gymenv.observation_space["equipped_items"]["mainhand"]["type"].values.tolist()
         self._obs_space = self.obs_space
 
         # Actions
@@ -134,9 +127,7 @@ class MinecraftBase(embodied.Env):
 
     def _obs(self, obs):
         obs["inventory/log"] += obs.pop("inventory/log2")
-        self._inventory = {
-            k.split("/", 1)[1]: obs[k] for k in self._inv_keys if k != "inventory/air"
-        }
+        self._inventory = {k.split("/", 1)[1]: obs[k] for k in self._inv_keys if k != "inventory/air"}
         inventory = np.array([obs[k] for k in self._inv_keys], np.float32)
         if self._max_inventory is None:
             self._max_inventory = inventory
