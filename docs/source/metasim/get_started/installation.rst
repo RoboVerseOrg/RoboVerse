@@ -85,6 +85,9 @@ Install IsaacLab v1.4
 Install IsaacLab v2
 -------------------
 
+.. warning::
+   We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
+
 .. code-block:: bash
 
     uv pip install -e ".[isaaclab2]"
@@ -95,9 +98,6 @@ Install IsaacLab v2
 .. note::
    1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
    2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
-
-.. warning::
-   We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4. Known issues include new constraints on USD assets.
 
 Install IsaacGym
 ----------------
