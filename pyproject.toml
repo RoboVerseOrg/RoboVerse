@@ -20,6 +20,7 @@ dependencies = [
 isaaclab = [
     "protobuf<5",
     "pyglet<2",
+    "warp-lang<1.8",  # warp==1.8.0 has bug with IsaacLab v1.4.1
     "torch==2.4.0+cu118",
     "torchvision==0.19.0+cu118",
     "isaacsim==4.2.0.2",
