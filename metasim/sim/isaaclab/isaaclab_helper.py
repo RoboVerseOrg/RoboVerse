@@ -33,7 +33,6 @@ def _add_object(env: "EmptyEnv", obj: BaseObjCfg) -> None:
 
     assert isinstance(obj, BaseObjCfg)
     prim_path = f"/World/envs/env_.*/{obj.name}"
-    # prim_path = "/World/envs/env_.*/Robot/body/torso_link/robot_head_cam"
 
     ## Articulation object
     if isinstance(obj, ArticulationObjCfg):
