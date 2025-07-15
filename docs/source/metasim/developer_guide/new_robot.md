@@ -4,7 +4,7 @@
 ## 1. Create a Robot Configuration File
 Define a new robot in `metasim/cfg/robots/{robot_name}_cfg.py`.
 
-The definition of each term is explained in https://roboverse.wiki/metasim/api/metasim/metasim.cfg.robots#baserobotcfg.
+The definition of each term is explained in [API Documentation](https://roboverse.wiki/metasim/api/metasim/metasim.cfg.robots#baserobotcfg).
 
 The following terms are mandatory:
 - ``num_joints``
