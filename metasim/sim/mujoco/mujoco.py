@@ -121,6 +121,59 @@ class MujocoHandler(BaseSimHandler):
 
         self._robot_default_dof_pos = np.array(default_dof_pos)
 
+    def _apply_scale_to_mjcf(self, mjcf_model, scale):
+        """Apply scale to all geoms, bodies, and sites in the MJCF model."""
+        scale_x, scale_y, scale_z = scale
+
+        for geom in mjcf_model.find_all("geom"):
+            if hasattr(geom, "size") and geom.size is not None:
+                size = list(geom.size)
+                if geom.type in ["box", None]:
+                    if len(size) >= 3:
+                        geom.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+                elif geom.type == "sphere":
+                    if len(size) >= 1:
+                        geom.size = [size[0] * max(scale_x, scale_y, scale_z)]
+                elif geom.type == "cylinder":
+                    if len(size) >= 2:
+                        radius_scale = max(scale_x, scale_y)
+                        geom.size = [size[0] * radius_scale, size[1] * scale_z]
+                elif geom.type == "capsule":
+                    if len(size) >= 2:
+                        radius_scale = max(scale_x, scale_y)
+                        geom.size = [size[0] * radius_scale, size[1] * scale_z]
+                elif geom.type == "ellipsoid":
+                    if len(size) >= 3:
+                        geom.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+
+            if hasattr(geom, "pos") and geom.pos is not None:
+                pos = list(geom.pos)
+                if len(pos) >= 3:
+                    geom.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        for body in mjcf_model.find_all("body"):
+            if hasattr(body, "pos") and body.pos is not None:
+                pos = list(body.pos)
+                if len(pos) >= 3:
+                    body.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        for site in mjcf_model.find_all("site"):
+            if hasattr(site, "pos") and site.pos is not None:
+                pos = list(site.pos)
+                if len(pos) >= 3:
+                    site.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+            if hasattr(site, "size") and site.size is not None:
+                size = list(site.size)
+                if len(size) >= 1:
+                    site.size = [size[0] * max(scale_x, scale_y, scale_z)]
+
+        for joint in mjcf_model.find_all("joint"):
+            if hasattr(joint, "pos") and joint.pos is not None:
+                pos = list(joint.pos)
+                if len(pos) >= 3:
+                    joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
     def _create_primitive_xml(self, obj):
         if isinstance(obj, PrimitiveCubeCfg):
             size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
@@ -212,6 +265,10 @@ class MujocoHandler(BaseSimHandler):
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
                 obj_mjcf = mjcf.from_path(obj.mjcf_path)
+
+            if hasattr(obj, "scale") and obj.scale != (1.0, 1.0, 1.0):
+                self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
+
             obj_attached = mjcf_model.attach(obj_mjcf)
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")
@@ -219,6 +276,10 @@ class MujocoHandler(BaseSimHandler):
             self.mj_objects[obj.name] = obj_mjcf
 
         robot_xml = mjcf.from_path(self._robot_path)
+
+        if hasattr(self.robot, "scale") and self.robot.scale != (1.0, 1.0, 1.0):
+            self._apply_scale_to_mjcf(robot_xml, self.robot.scale)
+
         robot_attached = mjcf_model.attach(robot_xml)
         if not self.robot.fix_base_link:
             robot_attached.add("freejoint")
