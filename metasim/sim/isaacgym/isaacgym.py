@@ -738,8 +738,6 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_mass_matrix_tensors(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
-        self.gym.step_graphics(self.sim)
-        self.gym.render_all_camera_sensors(self.sim)
         # Refresh cameras and viewer
         self._render()
 
@@ -749,13 +747,14 @@ class IsaacgymHandler(BaseSimHandler):
             for evt in self.gym.query_viewer_action_events(self.viewer):
                 if evt.action == "toggle_viewer_sync" and evt.value > 0:
                     self._enable_viewer_sync = not self._enable_viewer_sync
-            if self._enable_viewer_sync or len(self.cameras) > 0:
-                self.gym.step_graphics(self.sim)
-                if len(self.cameras) > 0:
-                    self.gym.render_all_camera_sensors(self.sim)
-                if self._enable_viewer_sync:
-                    self.gym.draw_viewer(self.viewer, self.sim, False)
-            else:
+        if self._enable_viewer_sync or len(self.cameras) > 0:
+            self.gym.step_graphics(self.sim)
+            if len(self.cameras) > 0:
+                self.gym.render_all_camera_sensors(self.sim)
+            if self._enable_viewer_sync:
+                self.gym.draw_viewer(self.viewer, self.sim, False)
+        else:
+            if not self.headless:
                 self.gym.poll_viewer_events(self.viewer)
 
     def _compute_effort(self, actions):
