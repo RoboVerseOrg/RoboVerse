@@ -92,3 +92,7 @@ id_rsa*
 
 # for sapien
 *.convex.stl
+
+# humanoidbench
+roboverse_data/assets/humanoidbench
+roboverse_data/trajs/humanoidbench
