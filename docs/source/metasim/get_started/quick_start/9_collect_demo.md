@@ -1,4 +1,4 @@
-# 7. Collect Demonstrations
+# 9. Collect Demonstrations
 ```bash
 python metasim/scripts/collect_demo.py --task=CloseBox --num_envs=1 --run_all
 ```

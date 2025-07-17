@@ -1,4 +1,4 @@
-# 8. Replay Trajectories
+# 100. Replay Trajectories
 
 There are two control modes for replay. The `physics` mode replays the physics actions and the `states` mode replays the states, so the `physics` mode has greater possibilities to fail across different simulators, but the `states` mode is bound to succeed across different simulators.
 
@@ -76,4 +76,3 @@ Note: only single environment is supported for adding scene.
 ```bash
 python metasim/scripts/replay_demo.py --sim=isaaclab --task=CloseBox --num_envs 1 --scene=tapwater_scene_131
 ```
-
