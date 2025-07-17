@@ -42,7 +42,10 @@ mjx = ["mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]"]
 sapien2 = ["mani-skill2 @ git+https://github.com/haosulab/ManiSkill.git@v0.5.3"]
 sapien3 = ["sapien>=3.0.0.b1"]
 pybullet = ["numpy<2", "pybullet"]
-genesis = ["genesis-world"]
+genesis = [
+    "genesis-world",
+    "libigl==2.5.1",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
+]
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
