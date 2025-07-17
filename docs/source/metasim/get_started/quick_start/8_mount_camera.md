@@ -1,10 +1,10 @@
 #  8. Adding Camera
 In this tutorial, we demonstrate how to add and mount cameras in MetaSim.
-
+--sim <simulator>
 ## Common Usage
 
 ```bash
-python get_started/8_mount_camera.py  --simulator isaacgym
+python get_started/8_mount_camera.py  --sim <simulator>
 ```
 you can also render in the headless mode by adding `--headless` flag, only supported in `IsaacGym` and `IsaacLab`.
 
