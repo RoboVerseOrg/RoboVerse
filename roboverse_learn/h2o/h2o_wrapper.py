@@ -16,7 +16,8 @@ from metasim.cfg.scenario import ScenarioCfg
 # -- project specific (adapt paths/names) ---------------------------------
 from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.math import quat_rotate_inverse
-from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+# from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (
     get_body_reindexed_indices_from_substring,
     get_joint_reindexed_indices_from_substring,
@@ -25,7 +26,7 @@ from roboverse_learn.skillblender_rl.utils import (
 # -------------------------------------------------------------------------
 
 
-class H2OWrapper(RslRlWrapper):
+class H2OWrapper(HumanoidBaseWrapper):
     """rsl_rl vector-env wrapper for H2O."""
 
     # ------------------------------------------------------------------ #
@@ -64,115 +65,9 @@ class H2OWrapper(RslRlWrapper):
     # ----------------------------------------
     def _init_buffers(self):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
-        # get gym GPU state tensors
-        actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
-        dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
-        net_contact_forces = self.gym.acquire_net_contact_force_tensor(self.sim)
-        rigid_body_state = self.gym.acquire_rigid_body_state_tensor(self.sim)
-        self.gym.refresh_dof_state_tensor(self.sim)
-        self.gym.refresh_actor_root_state_tensor(self.sim)
-        self.gym.refresh_net_contact_force_tensor(self.sim)
-        self.gym.refresh_rigid_body_state_tensor(self.sim)
 
-        # create some wrapper tensors for different slices
-        # self.root_states = gymtorch.wrap_tensor(actor_root_state)
-        self.root_states = gymtorch.wrap_tensor(actor_root_state)
-
-        # if (not self.headless) and self.cfg.motion.visualize and self.cfg.motion.teleop:
-        #     self.root_states = self.root_states_all[0::(self._num_teleop_markers+1)]
-        #     self.marker_states = [self.root_states_all[marker_i::(self._num_teleop_markers + 1)] for marker_i in range(1,self._num_teleop_markers + 1)]
-        #     # self.root_states = self.root_states_all[0::(self.cfg.motion.num_markers+1)]
-        #     # self.marker_states = [self.root_states_all[marker_i::(self.cfg.motion.num_markers + 1)] for marker_i in range(1,self.cfg.motion.num_markers + 1)]
-        # else:
-        #     self.root_states = self.root_states_all
-
-        self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
-        self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
-        # import ipdb;ipdb.set_trace()
-        self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
-        self.base_quat = self.root_states[:, 3:7]
-        self.rpy = get_euler_xyz_in_tensor(self.base_quat)
-        self.base_pos = self.root_states[: self.num_envs, 0:3]
-        self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
-            self.num_envs, -1, 3
-        )  # shape: num_envs, num_bodies, xyz axis
-
-        # init rigid body state
-        self._rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)
-        bodies_per_env = self._rigid_body_state.shape[0] // self.num_envs
-        self._rigid_body_state_reshaped = self._rigid_body_state.view(self.num_envs, bodies_per_env, 13)
-
-        # self._rigid_body_pos = self._rigid_body_state_reshaped[..., 1:self.num_bodies, 0:3]
-        # self._rigid_body_rot = self._rigid_body_state_reshaped[..., 1:self.num_bodies, 3:7]
-        # self._rigid_body_vel = self._rigid_body_state_reshaped[..., 1:self.num_bodies, 7:10]
-        # self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., 1:self.num_bodies, 10:13]
-
-        self._rigid_body_pos = self._rigid_body_state_reshaped[..., : self.num_bodies, 0:3]
-        self._rigid_body_rot = self._rigid_body_state_reshaped[..., : self.num_bodies, 3:7]
-        self._rigid_body_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 7:10]
-        self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 10:13]
-
-        # initialize some data used later on
-        self.common_step_counter = 0
-        self.extras = {}
-        self.gravity_vec = to_torch(get_axis_params(-1.0, self.up_axis_idx), device=self.device).repeat((
-            self.num_envs,
-            1,
-        ))
-        self.forward_vec = to_torch([1.0, 0.0, 0.0], device=self.device).repeat((self.num_envs, 1))
-        self.torques = torch.zeros(
-            self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.p_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.d_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.actions = torch.zeros(
-            self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.last_actions = torch.zeros(
-            self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.last_dof_vel = torch.zeros_like(self.dof_vel)
-        self.last_root_vel = torch.zeros_like(self.root_states[:, 7:13])
-        self.last_root_pos = torch.zeros_like(self.root_states[:, 0:3])
-        self.feet_air_time = torch.zeros(
-            self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.feet_air_max_height = torch.zeros(
-            self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.last_contacts = torch.zeros(
-            self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False
-        )
-        self.last_contacts_filt = torch.zeros(
-            self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False
-        )
-        self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])  # normalization
-        self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
-        self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
-
-        self.measured_heights = 0
-
-        self.last_base_lin_vel = torch.zeros_like(self.base_lin_vel)  # different from self.last_root_vel
-
-        # joint positions offsets and PD gains
-        self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
-        for i in range(self.num_dofs):
-            name = self.dof_names[i]
-            angle = self.cfg.init_state.default_joint_angles[name]
-            self.default_dof_pos[i] = angle
-            found = False
-            for dof_name in self.cfg.control.stiffness.keys():
-                if dof_name in name:
-                    self.p_gains[i] = self.cfg.control.stiffness[dof_name]
-                    self.d_gains[i] = self.cfg.control.damping[dof_name]
-                    found = True
-            if not found:
-                self.p_gains[i] = 0.0
-                self.d_gains[i] = 0.0
-                if self.cfg.control.control_type in ["P", "V"]:
-                    print(f"PD gain of joint {name} were not defined, setting them to zero")
-        self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
-
+        super()._init_buffers()
+        
         # Init for motion reference
         if self.cfg.motion.teleop:
             self.ref_motion_cache = {}
@@ -306,9 +201,6 @@ class H2OWrapper(RslRlWrapper):
         calls self._post_physics_step_callback() for common computations
         calls self._draw_debug_vis() if needed
         """
-        self.gym.refresh_actor_root_state_tensor(self.sim)
-        self.gym.refresh_net_contact_force_tensor(self.sim)
-        self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         self.last_episode_length_buf = self.episode_length_buf.clone()
         self.episode_length_buf += 1
@@ -355,8 +247,8 @@ class H2OWrapper(RslRlWrapper):
 
             ref_body_pos_extend = motion_res["rg_pos_t"]
 
-            body_rot = self._rigid_body_rot
-            body_pos = self._rigid_body_pos
+            body_rot = envstates.robots[self.robot.name].body_state[:, ]
+            body_pos = envstates.robots[self.robot.name].body_state[:, ]
 
             extend_curr_pos = (
                 torch_utils.my_quat_rotate(
@@ -449,7 +341,7 @@ class H2OWrapper(RslRlWrapper):
     def forward_motion_samples(self):
         pass
 
-    def compute_self_and_task_obs(self):
+    def compute_self_and_task_obs(self, envstate):
         """Computes observations"""
         # import pdb;pdb.set_trace()
         # import ipdb; ipdb.set_trace()
@@ -474,17 +366,15 @@ class H2OWrapper(RslRlWrapper):
         self.marker_coords[:] = ref_body_pos_extend.reshape(B, -1, 3)
 
         if self.cfg.motion.teleop_obs_version == "v-teleop-extend-max-full":
-            # TODO change into roboverse state
-            body_pos = self._rigid_body_pos
-            body_rot = self._rigid_body_rot
-            body_vel = self._rigid_body_vel
-            body_ang_vel = self._rigid_body_ang_vel
-            dof_pos = self.dof_pos
-            dof_vel = self.dof_vel
+            # TODO  speicify body state for every component
+            body_pos = envstate.robots[robot_name].body_state
+            body_rot = envstate.robots[robot_name].body_state
+            body_vel = envstate.robots[robot_name].body_state
+            body_ang_vel = nvstate.robots[robot_name].body_state
+            dof_pos = envstate.robots[robot_name].joint_pos
+            dof_vel = envstate.robots[robot_name].joint_vel
 
             # robot
-            dof_pos = self.dof_pos
-            dof_vel = self.dof_vel
             base_vel = self.base_lin_vel
             base_ang_vel = self.base_ang_vel
             base_gravity = self.projected_gravity
@@ -722,6 +612,82 @@ class H2OWrapper(RslRlWrapper):
         obs = torch.cat(obs, dim=-1).view(B, -1)
 
         return obs
+
+    def check_termination(self, envstates):
+        """ Check if environments need to be reset
+        """
+        self.reset_buf = torch.any(torch.norm(envstates.robots[self.robot.name].contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
+
+        #import ipdb;ipdb.set_trace()
+        # Termination for knee distance too close
+        if self.cfg.asset.terminate_by_knee_distance and self.knee_distance.shape:
+            # print("terminate_by knee_distance")
+            self.reset_buf |= torch.any(self.knee_distance < self.cfg.asset.termination_scales.min_knee_distance, dim=1)
+            #print("Terminated by knee distance: ", torch.sum(self.reset_buf).item())
+                    
+        # Termination for velocities
+        if self.cfg.asset.terminate_by_lin_vel:
+            # print("terminate_by lin_vel")
+            self.reset_buf |= torch.any(torch.norm(self.base_lin_vel, dim=-1, keepdim=True) > self.cfg.asset.termination_scales.base_vel, dim=1)
+            #print("Terminated by lin vel: ", torch.sum(self.reset_buf).item())
+        # print(self.reset_buf)
+
+        # Termination for angular velocities
+        if self.cfg.asset.terminate_by_ang_vel:
+            self.reset_buf |= torch.any(torch.norm(self.base_ang_vel, dim=-1, keepdim=True) > self.cfg.asset.termination_scales.base_ang_vel, dim=1)
+
+        # Termination for gravity in x-direction
+        if self.cfg.asset.terminate_by_gravity:
+            # print("terminate_by gravity")
+            self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 0:1]) > self.cfg.asset.termination_scales.gravity_x, dim=1)
+            
+            # Termination for gravity in y-direction
+            self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 1:2]) > self.cfg.asset.termination_scales.gravity_y, dim=1)
+
+        
+        # Termination for low height
+        if self.cfg.asset.terminate_by_low_height:
+            # print("terminate_by low_height")
+            self.reset_buf |= torch.any(envstates.robots[self.robot.name].root_states[:, 2:3] < self.cfg.asset.termination_scales.base_height, dim=1)
+
+        if self.cfg.motion.teleop:
+            if self.cfg.asset.terminate_by_ref_motion_distance:
+                termination_distance = self.cfg.asset.termination_scales.max_ref_motion_distance
+
+                offset = self.env_origins + self.env_origins_init_3Doffset
+                time = (self.episode_length_buf) * self.dt + self.motion_start_times 
+
+                motion_res = self._get_state_from_motionlib_cache_trimesh(self.motion_ids, time, offset= offset)
+
+                ref_body_pos = motion_res["rg_pos"]
+                
+                if self.cfg.asset.local_upper_reward:
+                    diff =  ref_body_pos[:, [0]] - envstates.robots[self.robot.name].body_pos[:, [0]]
+                    ref_body_pos[:, 11:] -= diff
+                            
+
+                if self.cfg.env.test or self.cfg.env.im_eval:
+                    reset_buf_teleop = torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1).mean(dim=-1, keepdim=True) > termination_distance, dim=-1)
+
+                else:
+                    reset_buf_teleop = torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1) > termination_distance, dim=-1)
+                    # self.reset_buf |= torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1) > termination_distance, dim=-1)  # using average, same as UHC"s termination condition
+                if self.cfg.motion.teleop: 
+                    is_recovery = self._recovery_counter > 0 # give pushed robot time to recover
+                    reset_buf_teleop[is_recovery] = 0
+                self.reset_buf |= reset_buf_teleop
+                
+            if self.cfg.asset.terminate_by_1time_motion:
+                time = (self.episode_length_buf) * self.dt + self.motion_start_times 
+                self.time_out_by_1time_motion = time > self.motion_len # no terminal reward for time-outs
+                # if time > self.motion_len:
+                #     import ipdb;ipdb.set_trace()
+                self.time_out_buf = self.time_out_by_1time_motion
+        else:
+            self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
+        
+        self.reset_buf |= self.time_out_buf
+
 
     @property
     def _motion_lib(self):
