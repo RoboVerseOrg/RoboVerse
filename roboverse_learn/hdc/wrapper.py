@@ -67,15 +67,10 @@ class HDCWrapper(HumanoidBaseWrapper):
 
         super()._init_buffers()
         env_states = self.env.handler.reset()
-        self._rigid_body_pos = self._rigid_body_state_reshaped[..., :self.num_bodies, 0:3]
-        self._rigid_body_rot = self._rigid_body_state_reshaped[..., :self.num_bodies, 3:7]
-        self._rigid_body_vel = self._rigid_body_state_reshaped[..., :self.num_bodies, 7:10]
-        self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., :self.num_bodies, 10:13]
-
-
-
-
-
+        self._rigid_body_pos = self._rigid_body_state_reshaped[..., : self.num_bodies, 0:3]
+        self._rigid_body_rot = self._rigid_body_state_reshaped[..., : self.num_bodies, 3:7]
+        self._rigid_body_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 7:10]
+        self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 10:13]
 
         # Init for motion reference
         if self.cfg.motion.teleop:
