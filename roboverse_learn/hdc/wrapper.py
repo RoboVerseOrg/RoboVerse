@@ -14,7 +14,6 @@ from phc.utils import torch_utils
 from metasim.cfg.scenario import ScenarioCfg
 
 # - -- project specific (adapt paths/names) --------------------------------
-from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.math import quat_rotate_inverse
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (
