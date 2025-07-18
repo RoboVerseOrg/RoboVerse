@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Callable, List
 
 import torch
+import torch.nn.functional as F
 from phc.utils import torch_utils
 
 from metasim.cfg.scenario import ScenarioCfg
@@ -65,6 +66,16 @@ class HDCWrapper(HumanoidBaseWrapper):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
 
         super()._init_buffers()
+        env_states = self.env.handler.reset()
+        self._rigid_body_pos = self._rigid_body_state_reshaped[..., :self.num_bodies, 0:3]
+        self._rigid_body_rot = self._rigid_body_state_reshaped[..., :self.num_bodies, 3:7]
+        self._rigid_body_vel = self._rigid_body_state_reshaped[..., :self.num_bodies, 7:10]
+        self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., :self.num_bodies, 10:13]
+
+
+
+
+
 
         # Init for motion reference
         if self.cfg.motion.teleop:
@@ -339,6 +350,82 @@ class HDCWrapper(HumanoidBaseWrapper):
     def forward_motion_samples(self):
         pass
 
+    def reset_idx(self, env_ids):
+        """Reset some environments.
+            Calls self._reset_dofs(env_ids), self._reset_root_states(env_ids), and self._resample_commands(env_ids)
+            [Optional] calls self._update_terrain_curriculum(env_ids), self.update_command_curriculum(env_ids) and
+            Logs episode info
+            Resets some buffers
+
+        Args:
+            env_ids (list[int]): List of environment ids which must be reset
+        """
+
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+        if len(env_ids) == 0:
+            return
+
+        self.last_actions[env_ids] = 0.0
+        self.actions[env_ids] = 0.0
+        self.last_dof_vel[env_ids] = 0.0
+        self.feet_air_time[env_ids] = 0.0
+        self.episode_length_buf[env_ids] = 0.0
+        self.reset_buf[env_ids] = 1
+        if self.cfg.motion.teleop:
+            self._recovery_counter[env_ids] = 0
+            self._package_loss_counter[env_ids] = 0
+
+        if len(env_ids) == 0:
+            return
+        if self.cfg.motion.teleop:
+            self._resample_motion_times(env_ids)
+
+        if len(env_ids) > 0:
+            pass
+        self._reset_dofs(env_ids)
+        self._reset_root_states(env_ids)
+
+        self._episodic_domain_randomization(env_ids)
+        if self.cfg.control.action_filt:
+            filter_action_ids_torch = torch.concat([
+                torch.arange(self.num_actions, dtype=torch.int32, device=self.device) + env_id * self.num_actions
+                for env_id in env_ids
+            ])
+            self.action_filter.reset_hist(filter_action_ids_torch)
+
+        if self.cfg.motion.teleop:
+            self.base_pos_init[env_ids] = self.root_states[env_ids, :3]
+
+        self.extras["cost"] = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
+
+        # fill extras
+        self.extras["episode"] = {}
+
+        if self.cfg.terrain.curriculum:
+            self.extras["episode"]["terrain_level"] = torch.mean(self.terrain_levels.float())
+        if self.cfg.motion.teleop and self.cfg.motion.curriculum:
+            self.extras["episode"]["teleop_level"] = torch.mean(self.teleop_levels.float())
+        # send timeout info to the algorithm
+        # send timeout info to the algorithm
+        if self.cfg.env.send_timeouts:
+            self.extras["time_outs"] = self.time_out_buf
+
+        if self.cfg.domain_rand.randomize_ctrl_delay:
+            self.action_queue[env_ids] *= 0.0
+            self.action_queue[env_ids] = 0.0
+            self.action_delay[env_ids] = torch.randint(
+                self.cfg.domain_rand.ctrl_delay_step_range[0],
+                self.cfg.domain_rand.ctrl_delay_step_range[1] + 1,
+                (len(env_ids),),
+                device=self.device,
+                requires_grad=False,
+            )
+        self._refresh_sim_tensors()
+
+        self.trajectories[env_ids] *= 0
+        self.trajectories_with_linvel[env_ids] *= 0
+
     def compute_self_and_task_obs(self, envstate):
         """Computes observations"""
         # import pdb;pdb.set_trace()
@@ -365,12 +452,12 @@ class HDCWrapper(HumanoidBaseWrapper):
 
         if self.cfg.motion.teleop_obs_version == "v-teleop-extend-max-full":
             # TODO  speicify body state for every component
-            body_pos = envstate.robots[robot_name].body_state
-            body_rot = envstate.robots[robot_name].body_state
-            body_vel = envstate.robots[robot_name].body_state
-            body_ang_vel = nvstate.robots[robot_name].body_state
-            dof_pos = envstate.robots[robot_name].joint_pos
-            dof_vel = envstate.robots[robot_name].joint_vel
+            body_pos = envstate.robots[self.robot.name].body_state
+            body_rot = envstate.robots[self.robot.name].body_state
+            body_vel = envstate.robots[self.robot.name].body_state
+            body_ang_vel = envstate.robots[self.robot.name].body_state
+            dof_pos = envstate.robots[self.robot.name].joint_pos
+            dof_vel = envstate.robots[self.robot.name].joint_vel
 
             # robot
             base_vel = self.base_lin_vel
@@ -422,7 +509,7 @@ class HDCWrapper(HumanoidBaseWrapper):
             if self.cfg.asset.clip_motion_goal:
                 # import ipdb; ipdb.set_trace()
                 ref_head = ref_rb_pos_subset_student[:, 2]
-                body_xyz = self.root_states[:, :3]
+                body_xyz = envstate.robots[self.robot.name].body_state[:, :3]
                 direction_to_body = body_xyz - ref_head
                 xy_direction = direction_to_body[:, :2]
                 distance = torch.norm(xy_direction, dim=1)
@@ -431,7 +518,8 @@ class HDCWrapper(HumanoidBaseWrapper):
                 direction_to_body_norm = F.normalize(direction_to_body[:, :2], p=2, dim=1)
                 # direction_to_body_norm = xy_direction /
                 ref_rb_pos_subset_student[far, 2, :2] = (
-                    self.root_states[far, :2] - direction_to_body_norm[far] * self.cfg.asset.clip_motion_goal_distance
+                    envstate.robots[self.robot.name].root_states[far, :2]
+                    - direction_to_body_norm[far] * self.cfg.asset.clip_motion_goal_distance
                 )
 
             task_obs = self.compute_imitation_observations_teleop_max(
