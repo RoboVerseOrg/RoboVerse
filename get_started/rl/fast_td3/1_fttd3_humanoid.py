@@ -102,6 +102,13 @@ torch.set_float32_matmul_precision("high")
 
 import numpy as np
 
+try:
+    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
+except ImportError:
+    pass
+
+import torch
+
 import torch.nn.functional as F
 import tqdm
 import wandb
