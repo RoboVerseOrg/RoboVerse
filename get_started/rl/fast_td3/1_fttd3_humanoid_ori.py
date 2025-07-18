@@ -10,12 +10,11 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
     # -------------------------------------------------------------------------------
-    "sim": "isaaclab",  # isaaclab mjx
+    "sim": "mjx",
     "robots": ["h1"],
-    "task": "humanoidbench:Walk",
+    "task": "humanoidbench:Stand",
     "decimation": 10,
-    # "train_or_eval": "train",
-    "mode": "render",    # train, eval, render
+    "train_or_eval": "train",
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -28,7 +27,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1200,
+    "total_timesteps": 10,
     "learning_starts": 10,
     "num_steps": 1,
     # -------------------------------------------------------------------------------
@@ -78,10 +77,10 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "wandb_project": "get_started_fttd3",
     "exp_name": "get_started_fttd3",
-    "use_wandb": True,
+    "use_wandb": False,
     "checkpoint_path": None,
     "eval_interval": 1200,
-    "save_interval": 100,
+    "save_interval": 1200,
     "video_width": 1024,
     "video_height": 1024,
 }
@@ -97,10 +96,18 @@ else:
     os.environ["MUJOCO_GL"] = "glfw"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
-import torch
-torch.set_float32_matmul_precision("high")
+# import torch
 
 import numpy as np
+
+try:
+    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
+except ImportError:
+    pass
+
+import torch
+
+torch.set_float32_matmul_precision("high")
 
 import torch.nn.functional as F
 import tqdm
@@ -118,8 +125,6 @@ from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import list_state_to_tensor
-
-from utils import ObsSaver
 
 
 class FastTD3EnvWrapper:
@@ -146,8 +151,6 @@ class FastTD3EnvWrapper:
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
         if scenario.sim == "mjx":
-            self._initial_states = list_state_to_tensor(self.env.handler, self._initial_states)
-        elif scenario.sim == "isaacgym":
             self._initial_states = list_state_to_tensor(self.env.handler, self._initial_states)
         self.env.reset(states=self._initial_states)
         states = self.env.handler.get_states()
@@ -178,7 +181,6 @@ class FastTD3EnvWrapper:
 
     def step(self, actions: torch.Tensor):
         real_action = self._unnormalise_action(actions)
-
         states, _, terminated, truncated, _ = self.env.step_actions(real_action)
 
         obs_now = self.get_humanoid_observation(states).to(self.device)
@@ -235,6 +237,7 @@ def main() -> None:
     USE_CDQ = bool(cfg("use_cdq"))
     MAX_GRAD_NORM = float(cfg("max_grad_norm"))
     DISABLE_BOOTSTRAP = bool(cfg("disable_bootstrap"))
+
     amp_enabled = cfg("amp") and cfg("cuda") and torch.cuda.is_available()
     amp_device_type = (
         "cuda"
@@ -247,11 +250,9 @@ def main() -> None:
 
     scaler = GradScaler(enabled=amp_enabled and amp_dtype == torch.float16)
 
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    if cfg("use_wandb") and cfg("mode") == "train":
+    if cfg("use_wandb") and cfg("train_or_eval") == "train":
         wandb.init(
-            project=cfg("wandb_project", "fttd3_training_simcompare"),
-            name=f"{cfg('sim')}-{cfg('task')}-{timestamp}",
+            project=cfg("wandb_project", "fttd3_training"),
             save_code=True,
         )
 
@@ -271,40 +272,38 @@ def main() -> None:
             raise ValueError("No GPU available")
     log.info(f"Using device: {device}")
 
-    if cfg("mode") == "train":
-        num_envs = cfg("num_envs", 1)
-    elif cfg("mode") == "eval":
-        num_envs = cfg("num_eval_envs", 1)
-    elif cfg("mode") == "render":
-        num_envs = 1
-    else:
-        raise ValueError(f"Unsupported mode: {mode}")
-
     scenario = ScenarioCfg(
         task=cfg("task"),
         robots=cfg("robots"),
         try_add_table=cfg("add_table", False),
         sim=cfg("sim"),
-        num_envs=num_envs,
-        headless=True if cfg("mode") == "train" else True,
+        num_envs=cfg("num_envs", 1),
+        headless=True if cfg("train_or_eval") == "train" else False,
         cameras=[],
     )
 
-    if cfg("mode") == "render":
-        scenario.cameras = [
-            PinholeCameraCfg(
-                name="camera0",
-                width=1024,
-                height=1024,
-                data_types=["rgb"],         # ← 保留 rgb 即可
-                pos=(4.0, -4.0, 4.0),       # ← 摄像头位置
-                look_at=(0.0, 0.0, 0.0),    # ← 目标位置
-            )
-        ]
-
+    # For different simulators, the decimation factor is different, so we need to set it here
     scenario.task.decimation = cfg("decimation", 1)
 
     envs = FastTD3EnvWrapper(scenario, device=device)
+    eval_envs = envs  # reuse for evaluation
+    scenario_render = ScenarioCfg(
+        task=cfg("task"),
+        robots=cfg("robots"),
+        try_add_table=cfg("add_table", False),
+        sim=cfg("sim"),
+        num_envs=1,
+        headless=True,
+        cameras=[
+            PinholeCameraCfg(
+                width=cfg("video_width", 1024),
+                height=cfg("video_height", 1024),
+                pos=(4.0, -4.0, 4.0),  # adjust as needed
+                look_at=(0.0, 0.0, 0.0),
+            )
+        ],
+    )
+    scenario_render.task.decimation = cfg("decimation", 1)
 
     # ---------------- derive shapes ------------------------------------
     n_act = envs.num_actions
@@ -384,20 +383,20 @@ def main() -> None:
 
     def evaluate():
         obs_normalizer.eval()
-        num_eval_envs = envs.num_envs
+        num_eval_envs = eval_envs.num_envs
         episode_returns = torch.zeros(num_eval_envs, device=device)
         episode_lengths = torch.zeros(num_eval_envs, device=device)
         done_masks = torch.zeros(num_eval_envs, dtype=torch.bool, device=device)
 
-        obs = envs.reset()
+        obs = eval_envs.reset()
 
         # Run for a fixed number of steps
-        for _ in range(envs.max_episode_steps):
+        for _ in range(eval_envs.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 obs = normalize_obs(obs)
                 actions = actor(obs)
 
-            next_obs, rewards, dones, _ = envs.step(actions.float())
+            next_obs, rewards, dones, _ = eval_envs.step(actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -408,18 +407,17 @@ def main() -> None:
         obs_normalizer.train()
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
-    def render_with_rollout(env) -> list:
+    def render_with_rollout() -> list:
         import imageio.v2 as iio
 
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
         """
-        robot_names = "_".join([r.name for r in cfg("robots")])
-        video_path = f'get_started/output/rl/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.mp4'
+        video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
 
-        # env = FastTD3EnvWrapper(scenario_render, device=device)
+        env = FastTD3EnvWrapper(scenario_render, device=device)
 
         obs_normalizer.eval()
         obs = env.reset()
@@ -433,6 +431,7 @@ def main() -> None:
             if done.any():
                 break
 
+        env.close()
         obs_normalizer.train()
 
         iio.mimsave(video_path, frames, fps=30)
@@ -540,21 +539,9 @@ def main() -> None:
         normalize_obs = obs_normalizer.forward
     obs = envs.reset()
 
-    robot_names = "_".join([r.name for r in cfg("robots")])
-    if cfg("mode") in ["eval", "render"]:
+    if cfg("checkpoint_path"):
         # Load checkpoint if specified
-        ckpt_dir = f'get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.pt'
-        torch_checkpoint = torch.load(ckpt_dir, map_location=device, weights_only=False)
-        actor.load_state_dict(torch_checkpoint["actor_state_dict"])
-        obs_normalizer.load_state_dict(torch_checkpoint["obs_normalizer_state"])
-        critic_obs_normalizer.load_state_dict(torch_checkpoint["critic_obs_normalizer_state"])
-        qnet.load_state_dict(torch_checkpoint["qnet_state_dict"])
-        qnet_target.load_state_dict(torch_checkpoint["qnet_target_state_dict"])
-        global_step = torch_checkpoint["global_step"]
-    elif cfg("checkpoint_path"):
-        # Load checkpoint if specified
-        ckpt_dir = cfg("checkpoint_path")
-        torch_checkpoint = torch.load(ckpt_dir, map_location=device, weights_only=False)
+        torch_checkpoint = torch.load(f"{cfg('checkpoint_path')}", map_location=device, weights_only=False)
         actor.load_state_dict(torch_checkpoint["actor_state_dict"])
         obs_normalizer.load_state_dict(torch_checkpoint["obs_normalizer_state"])
         critic_obs_normalizer.load_state_dict(torch_checkpoint["critic_obs_normalizer_state"])
@@ -564,131 +551,105 @@ def main() -> None:
     else:
         global_step = 0
 
-    if cfg("mode")=="train":
-        dones = None
-        pbar = tqdm.tqdm(total=cfg("total_timesteps"), initial=global_step)
-        start_time = None
-        desc = ""
-        while global_step < cfg("total_timesteps"):
-            logs_dict = TensorDict()
-            if start_time is None and global_step >= cfg("measure_burnin") + cfg("learning_starts"):
-                start_time = time.time()
-                measure_burnin = global_step
+    dones = None
+    pbar = tqdm.tqdm(total=cfg("total_timesteps"), initial=global_step)
+    start_time = None
+    desc = ""
 
-            with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
-                norm_obs = normalize_obs(obs)
-                actions = policy(obs=norm_obs, dones=dones)
+    while global_step < cfg("total_timesteps"):
+        logs_dict = TensorDict()
+        if start_time is None and global_step >= cfg("measure_burnin") + cfg("learning_starts"):
+            start_time = time.time()
+            measure_burnin = global_step
 
-            next_obs, rewards, dones, infos = envs.step(actions.float())
+        with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
+            norm_obs = normalize_obs(obs)
+            actions = policy(obs=norm_obs, dones=dones)
 
-            truncations = infos["time_outs"]
-            # Compute 'true' next_obs and next_critic_obs for saving
-            true_next_obs = torch.where(dones[:, None] > 0, infos["observations"]["raw"]["obs"], next_obs)
-            transition = TensorDict(
-                {
-                    "observations": obs,
-                    "actions": torch.as_tensor(actions, device=device, dtype=torch.float),
-                    "next": {
-                        "observations": true_next_obs,
-                        "rewards": torch.as_tensor(rewards, device=device, dtype=torch.float),
-                        "truncations": truncations.long(),
-                        "dones": dones.long(),
-                    },
+        next_obs, rewards, dones, infos = envs.step(actions.float())
+
+        truncations = infos["time_outs"]
+        # Compute 'true' next_obs and next_critic_obs for saving
+        true_next_obs = torch.where(dones[:, None] > 0, infos["observations"]["raw"]["obs"], next_obs)
+        transition = TensorDict(
+            {
+                "observations": obs,
+                "actions": torch.as_tensor(actions, device=device, dtype=torch.float),
+                "next": {
+                    "observations": true_next_obs,
+                    "rewards": torch.as_tensor(rewards, device=device, dtype=torch.float),
+                    "truncations": truncations.long(),
+                    "dones": dones.long(),
                 },
-                batch_size=(envs.num_envs,),
-                device=device,
-            )
-            obs = next_obs
+            },
+            batch_size=(envs.num_envs,),
+            device=device,
+        )
+        obs = next_obs
 
-            rb.extend(transition)
+        rb.extend(transition)
 
-            batch_size = cfg("batch_size") // cfg("num_envs")
-            if global_step > cfg("learning_starts"):
-                for i in range(cfg("num_updates")):
-                    data = rb.sample(batch_size)
-                    data["observations"] = normalize_obs(data["observations"])
-                    data["next"]["observations"] = normalize_obs(data["next"]["observations"])
-                    logs_dict = update_main(data, logs_dict)
-                    if cfg("num_updates") > 1:
-                        if i % cfg("policy_frequency") == 1:
-                            logs_dict = update_pol(data, logs_dict)
-                    else:
-                        if global_step % cfg("policy_frequency") == 0:
-                            logs_dict = update_pol(data, logs_dict)
+        batch_size = cfg("batch_size") // cfg("num_envs")
+        if global_step > cfg("learning_starts"):
+            for i in range(cfg("num_updates")):
+                data = rb.sample(batch_size)
+                data["observations"] = normalize_obs(data["observations"])
+                data["next"]["observations"] = normalize_obs(data["next"]["observations"])
+                logs_dict = update_main(data, logs_dict)
+                if cfg("num_updates") > 1:
+                    if i % cfg("policy_frequency") == 1:
+                        logs_dict = update_pol(data, logs_dict)
+                else:
+                    if global_step % cfg("policy_frequency") == 0:
+                        logs_dict = update_pol(data, logs_dict)
 
-                    for param, target_param in zip(qnet.parameters(), qnet_target.parameters()):
-                        target_param.data.copy_(cfg("tau") * param.data + (1 - cfg("tau")) * target_param.data)
+                for param, target_param in zip(qnet.parameters(), qnet_target.parameters()):
+                    target_param.data.copy_(cfg("tau") * param.data + (1 - cfg("tau")) * target_param.data)
 
-                if torch.cuda.is_available():
-                    torch.cuda.synchronize(device)
+            if torch.cuda.is_available():
+                torch.cuda.synchronize(device)
 
-                if global_step % 100 == 0 and start_time is not None:
-                    speed = (global_step - measure_burnin) / (time.time() - start_time)
-                    pbar.set_description(f"{speed: 4.4f} sps, " + desc)
-                    with torch.no_grad():
-                        logs = {
-                            "actor_loss": logs_dict["actor_loss"].mean(),
-                            "qf_loss": logs_dict["qf_loss"].mean(),
-                            "qf_max": logs_dict["qf_max"].mean(),
-                            "qf_min": logs_dict["qf_min"].mean(),
-                            "actor_grad_norm": logs_dict["actor_grad_norm"].mean(),
-                            "critic_grad_norm": logs_dict["critic_grad_norm"].mean(),
-                            "buffer_rewards": logs_dict["buffer_rewards"].mean(),
-                            "env_rewards": rewards.mean(),
-                        }
+            if global_step % 100 == 0 and start_time is not None:
+                speed = (global_step - measure_burnin) / (time.time() - start_time)
+                pbar.set_description(f"{speed: 4.4f} sps, " + desc)
+                with torch.no_grad():
+                    logs = {
+                        "actor_loss": logs_dict["actor_loss"].mean(),
+                        "qf_loss": logs_dict["qf_loss"].mean(),
+                        "qf_max": logs_dict["qf_max"].mean(),
+                        "qf_min": logs_dict["qf_min"].mean(),
+                        "actor_grad_norm": logs_dict["actor_grad_norm"].mean(),
+                        "critic_grad_norm": logs_dict["critic_grad_norm"].mean(),
+                        "buffer_rewards": logs_dict["buffer_rewards"].mean(),
+                        "env_rewards": rewards.mean(),
+                    }
 
-                        if cfg("eval_interval") > 0 and global_step % cfg("eval_interval") == 0:
-                            log.info(f"Evaluating at global step {global_step}")
-                            eval_avg_return, eval_avg_length = evaluate()
-                            obs = envs.reset()
-                            logs["eval_avg_return"] = eval_avg_return
-                            logs["eval_avg_length"] = eval_avg_length
-                            log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
+                    if cfg("eval_interval") > 0 and global_step % cfg("eval_interval") == 0:
+                        log.info(f"Evaluating at global step {global_step}")
+                        eval_avg_return, eval_avg_length = evaluate()
+                        obs = envs.reset()
+                        logs["eval_avg_return"] = eval_avg_return
+                        logs["eval_avg_length"] = eval_avg_length
+                        log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
 
-                    if cfg("use_wandb"):
-                        wandb.log(
-                            {
-                                "speed": speed,
-                                "frame": global_step * cfg("num_envs"),
-                                **logs,
-                            },
-                            step=global_step,
-                        )
-
-                if (cfg("save_interval") > 0 and global_step > 0 and global_step % cfg("save_interval") == 0) or global_step + 1 == cfg("total_timesteps"):
-                    log.info(f"Saving model at global step {global_step}")
-                    save_dir = "get_started/output/rl/ckpts"
-                    os.makedirs(save_dir, exist_ok=True)
-                    save_path = os.path.join(save_dir, f"ckpt_step_{global_step}.pt")
-                    if global_step + 1 == cfg("total_timesteps"):
-                        save_path = f'get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.pt'
-                    torch.save(
+                if cfg("use_wandb"):
+                    wandb.log(
                         {
-                            "global_step": global_step,
-                            "actor_state_dict": actor.state_dict(),
-                            "qnet_state_dict": qnet.state_dict(),
-                            "qnet_target_state_dict": qnet_target.state_dict(),
-                            "obs_normalizer_state": obs_normalizer.state_dict(),
-                            "critic_obs_normalizer_state": critic_obs_normalizer.state_dict(),
+                            "speed": speed,
+                            "frame": global_step * cfg("num_envs"),
+                            **logs,
                         },
-                        save_path,
+                        step=global_step,
                     )
-                    log.info(f"Checkpoint saved to {save_path}")
 
-            global_step += 1
-            pbar.update(1)
+            if cfg("save_interval") > 0 and global_step > 0 and global_step % cfg("save_interval") == 0:
+                log.info(f"Saving model at global step {global_step}")
 
-    elif cfg("mode")=="eval":
-        eval_avg_return, eval_avg_length = evaluate()
-        obs = envs.reset()
-        logs["eval_avg_return"] = eval_avg_return
-        logs["eval_avg_length"] = eval_avg_length
-        log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
-
-    elif cfg("mode")=="render":
-        render_with_rollout(envs)
-
+        global_step += 1
+        pbar.update(1)
+        # Close environment and wandb
     envs.close()
+    render_with_rollout()
 
 
 if __name__ == "__main__":
