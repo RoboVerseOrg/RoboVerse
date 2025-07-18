@@ -677,7 +677,6 @@ def main() -> None:
 
             global_step += 1
             pbar.update(1)
-
     elif cfg("mode")=="eval":
         eval_avg_return, eval_avg_length = evaluate()
         obs = envs.reset()

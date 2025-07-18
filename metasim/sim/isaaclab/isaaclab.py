@@ -176,6 +176,54 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
+    def step_actions(self, actions: list[Action] | torch.Tensor) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+        self._actions_cache = actions
+
+        if isinstance(actions, torch.Tensor):
+            action_tensor_all = actions
+        else:
+            action_tensors = []
+            for robot in self.robots:
+                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
+                for env_id in range(self.num_envs):
+                    for i, actuator_name in enumerate(actuator_names):
+                        action_tensor[env_id, i] = torch.tensor(
+                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.env.device
+                        )
+                action_tensors.append(action_tensor)
+            action_tensor_all = torch.cat(action_tensors, dim=-1)
+
+        _, _, _, time_out, extras = self.env.step(action_tensor_all)
+        time_out = time_out.cpu()
+
+        success = self.checker.check(self)
+
+        self.simulate()
+        states = self.get_states()
+
+        for obj in self.objects:
+            if isinstance(obj, PrimitiveFrameCfg):
+                if obj.base_link is None:
+                    pos = torch.zeros((self.num_envs, 3), device=self.device)
+                    rot = torch.zeros((self.num_envs, 4), device=self.device)
+                    rot[:, 0] = 1.0
+                elif isinstance(obj.base_link, str):
+                    pos, rot = (states.objects | states.robots)[obj.base_link].root_state[:, :7].split([3, 4], dim=-1)
+                else:
+                    base_obj_name = obj.base_link[0]
+                    base_body_name = obj.base_link[1]
+                    merged_states = states.objects | states.robots
+                    body_idx = merged_states[base_obj_name].body_names.index(base_body_name)
+                    pos, rot = merged_states[base_obj_name].body_state[:, body_idx, :7].split([3, 4], dim=-1)
+                self._set_object_pose(obj, pos, rot)
+
+        _update_tiled_camera_pose(self.env, self.cameras)
+
+        return states, None, success, time_out, extras
+
+
+
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -221,7 +269,7 @@ class IsaaclabHandler(BaseSimHandler):
 
     def close(self) -> None:
         self.env.close()
-        self.simulation_app.close()
+        # self.simulation_app.close()
 
     ############################################################
     ## Utils

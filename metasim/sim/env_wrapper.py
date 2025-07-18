@@ -48,6 +48,10 @@ def IdentityEnvWrapper(cls: type[BaseSimHandler]) -> type[EnvWrapper[BaseSimHand
         def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
             return self.handler.step(action)
 
+        def step_actions(self, actions) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+            return self.handler.step_actions(actions)
+
+
         def render(self) -> None:
             log.warning("render() is not implemented yet")
 
