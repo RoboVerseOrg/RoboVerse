@@ -15,7 +15,7 @@ CONFIG: dict[str, Any] = {
     "task": "humanoidbench:Walk",
     "decimation": 10,
     # "train_or_eval": "train",
-    "mode": "render",    # train, eval, render
+    "mode": "render",  # train, eval, render
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -98,10 +98,10 @@ else:
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 import torch
+
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
 import torch.nn.functional as F
 import tqdm
 import wandb
@@ -118,8 +118,6 @@ from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import list_state_to_tensor
-
-from utils import ObsSaver
 
 
 class FastTD3EnvWrapper:
@@ -298,9 +296,9 @@ def main() -> None:
                 name="camera0",
                 width=1024,
                 height=1024,
-                data_types=["rgb"],         # ← 保留 rgb 即可
-                pos=(4.0, -4.0, 4.0),       # ← 摄像头位置
-                look_at=(0.0, 0.0, 0.0),    # ← 目标位置
+                data_types=["rgb"],  # ← 保留 rgb 即可
+                pos=(4.0, -4.0, 4.0),  # ← 摄像头位置
+                look_at=(0.0, 0.0, 0.0),  # ← 目标位置
             )
         ]
 
@@ -418,7 +416,7 @@ def main() -> None:
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
         """
         robot_names = "_".join([r.name for r in cfg("robots")])
-        video_path = f'get_started/output/rl/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.mp4'
+        video_path = f"get_started/output/rl/fttd3_{robot_names}_{cfg('task')}_{cfg('sim')}.mp4"
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
 
         # env = FastTD3EnvWrapper(scenario_render, device=device)
@@ -545,7 +543,7 @@ def main() -> None:
     robot_names = "_".join([r.name for r in cfg("robots")])
     if cfg("mode") in ["eval", "render"]:
         # Load checkpoint if specified
-        ckpt_dir = f'get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.pt'
+        ckpt_dir = f"get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg('task')}_{cfg('sim')}.pt"
         torch_checkpoint = torch.load(ckpt_dir, map_location=device, weights_only=False)
         actor.load_state_dict(torch_checkpoint["actor_state_dict"])
         obs_normalizer.load_state_dict(torch_checkpoint["obs_normalizer_state"])
@@ -566,7 +564,7 @@ def main() -> None:
     else:
         global_step = 0
 
-    if cfg("mode")=="train":
+    if cfg("mode") == "train":
         dones = None
         pbar = tqdm.tqdm(total=cfg("total_timesteps"), initial=global_step)
         start_time = None
@@ -657,13 +655,15 @@ def main() -> None:
                             step=global_step,
                         )
 
-                if (cfg("save_interval") > 0 and global_step > 0 and global_step % cfg("save_interval") == 0) or global_step + 1 == cfg("total_timesteps"):
+                if (
+                    cfg("save_interval") > 0 and global_step > 0 and global_step % cfg("save_interval") == 0
+                ) or global_step + 1 == cfg("total_timesteps"):
                     log.info(f"Saving model at global step {global_step}")
                     save_dir = "get_started/output/rl/ckpts"
                     os.makedirs(save_dir, exist_ok=True)
                     save_path = os.path.join(save_dir, f"ckpt_step_{global_step}.pt")
                     if global_step + 1 == cfg("total_timesteps"):
-                        save_path = f'get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg("task")}_{cfg("sim")}.pt'
+                        save_path = f"get_started/output/rl/ckpts/fttd3_{robot_names}_{cfg('task')}_{cfg('sim')}.pt"
                     torch.save(
                         {
                             "global_step": global_step,
@@ -679,10 +679,10 @@ def main() -> None:
 
             global_step += 1
             pbar.update(1)
-    elif cfg("mode")=="eval":
+    elif cfg("mode") == "eval":
         eval_avg_return, eval_avg_length = evaluate()
         print(f"[Eval Result] avg_return = {eval_avg_return:.4f}, avg_length = {eval_avg_length:.1f}")
-    elif cfg("mode")=="render":
+    elif cfg("mode") == "render":
         render_with_rollout(envs)
 
     envs.close()
