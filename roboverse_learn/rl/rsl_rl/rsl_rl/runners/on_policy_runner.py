@@ -69,6 +69,7 @@ class OnPolicyRunner:
             obs_context_len = self.env.obs_context_len
         else:
             obs_context_len = 1
+        args = kwargs['args']
         actor_critic = actor_critic_class(
             self.env.num_obs,
             num_critic_obs,
@@ -76,6 +77,7 @@ class OnPolicyRunner:
             obs_context_len=obs_context_len,
             **self.policy_cfg,
             device=self.device,
+            args=args,
         ).to(self.device)
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
         self.alg = alg_class(actor_critic, device=self.device, **self.alg_cfg)

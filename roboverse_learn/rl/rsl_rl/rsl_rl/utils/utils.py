@@ -101,7 +101,7 @@ def get_load_path(root, load_run=-1, checkpoint=-1):
     load_path = os.path.join(load_run, model)
     return load_path
 
-def retrieve_cfgs(load_run, experiment_name):
+def retrieve_cfgs(load_run, experiment_name,num_actions):
     """
     Retrieve the config files from the checkpoint directory"""
     from runpy import run_path
@@ -123,11 +123,12 @@ def retrieve_cfgs(load_run, experiment_name):
                 cfg = cfgs[key]() #Instantiate the metasim class configclass
                 if hasattr(cfg, 'task_name'):
                     env_cfg = cfg
+                    env_cfg.num_actions = num_actions
     return env_cfg, train_cfg()
 
-def get_cfgs(name, load_run=None, experiment_name=None):
+def get_cfgs(name, load_run=None, experiment_name=None, num_actions=None):
     if load_run is None and experiment_name is None:
         raise ValueError('Either load_run or experiment_name must be provided')
-    env_cfg, train_cfg = retrieve_cfgs(load_run, experiment_name)
+    env_cfg, train_cfg = retrieve_cfgs(load_run, experiment_name,num_actions )
     env_cfg.seed = train_cfg.seed
     return env_cfg, train_cfg

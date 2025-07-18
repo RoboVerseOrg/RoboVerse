@@ -113,7 +113,7 @@ class ActorCriticHierarchical(nn.Module):
         [torch.nn.init.orthogonal_(module.weight, gain=scales[idx]) for idx, module in
          enumerate(mod for mod in sequential if isinstance(mod, nn.Linear))]
 
-    def _get_one_policy(self, args, device, task, experiment_name, load_run, checkpoint):
+    def _get_one_policy(self, args, num_actions, device, task, experiment_name, load_run, checkpoint):
         from rsl_rl.modules import ActorCritic
         from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_load_path
         # get skill arguments
@@ -124,7 +124,7 @@ class ActorCriticHierarchical(nn.Module):
         skill_args.load_run = load_run
         skill_args.checkpoint = checkpoint
         # retrieve config snapshot
-        skill_env_cfg, skill_train_cfg = get_cfgs(name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name)
+        skill_env_cfg, skill_train_cfg = get_cfgs(name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name, num_actions=num_actions)
         # load skill policy
         from metasim.utils.dict import class_to_dict
         skill_policy = ActorCritic(
@@ -157,7 +157,7 @@ class ActorCriticHierarchical(nn.Module):
         self.train_cfg_list = []
         self.low_high_list = []
         for key, value in skill_dict.items():
-            policy, env_cfg, train_cfg = self._get_one_policy(args, device, key, value['experiment_name'], value['load_run'], value['checkpoint'])
+            policy, env_cfg, train_cfg = self._get_one_policy(args, kwargs['num_dofs'], device, key, value['experiment_name'], value['load_run'], value['checkpoint'])
             self.policy_list.append(policy)
             self.env_cfg_list.append(env_cfg)
             self.train_cfg_list.append(train_cfg)
