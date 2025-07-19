@@ -117,4 +117,7 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
     ]
 
     def __post_init__(self):
-        self.num_actions = self.robots[0].num_joints
+        super().__post_init__()
+        # set the number of actions based on the robot's joints if available
+        if self.robots is not None:
+            self.num_actions = self.robots[0].num_joints
