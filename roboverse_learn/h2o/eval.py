@@ -40,9 +40,8 @@ import gc
 import numpy as np
 import torch
 from phc.smpllib.smpl_eval import compute_metrics_lite
-from tqdm import tqdm
-
 from rsl_rl.env import VecEnv
+from tqdm import tqdm
 
 
 class EvalRunnerBCModified:

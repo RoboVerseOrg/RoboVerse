@@ -10,9 +10,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.setup_util import get_sim_env_class
-
 from metasim.utils.state import list_state_to_tensor
-
 
 
 class RslRlWrapper(VecEnv):
@@ -25,8 +23,7 @@ class RslRlWrapper(VecEnv):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__()
 
-
-        if SimType(scenario.sim) not in [SimType.ISAACGYM,SimType.ISAACLAB, SimType.GENESIS]:
+        if SimType(scenario.sim) not in [SimType.ISAACGYM, SimType.ISAACLAB, SimType.GENESIS]:
             raise NotImplementedError(
                 f"RslRlWrapper in Roboverse now only supports {SimType.ISAACGYM}, but got {scenario.sim}"
             )
@@ -54,15 +51,15 @@ class RslRlWrapper(VecEnv):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.cfg = scenario.task
         from metasim.utils.dict import class_to_dict
+
         self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
 
-
     def _get_init_states(self, scenario):
-        """ Get initial states from the scenario configuration."""
+        """Get initial states from the scenario configuration."""
 
-        init_states_list = getattr(scenario.task, 'init_states', None)
+        init_states_list = getattr(scenario.task, "init_states", None)
         if init_states_list is None:
-            raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
+            raise AttributeError("'task cfg' has no attribute 'init_states', please add it in your scenario config!")
 
         if len(init_states_list) < self.num_envs:
             init_states_list = (
@@ -75,9 +72,8 @@ class RslRlWrapper(VecEnv):
         self.init_states = init_states_list
 
         if scenario.sim == SimType.ISAACGYM:
-            #tensorize the initial states as TensorState, now we only support IsaacGym
+            # tensorize the initial states as TensorState, now we only support IsaacGym
             self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
-
 
     def get_observations(self):
         """design from config"""

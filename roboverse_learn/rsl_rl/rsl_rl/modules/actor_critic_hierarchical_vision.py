@@ -28,16 +28,14 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 import rootutils
+
 rootutils.setup_root(__file__, pythonpath=True)
 
 from copy import deepcopy
 
 import torch
 import torch.nn as nn
-
 from torch.distributions import Normal
-
-
 
 
 class ActorCriticHierarchicalVision(nn.Module):
@@ -149,6 +147,7 @@ class ActorCriticHierarchicalVision(nn.Module):
             name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name
         )
         from metasim.utils.dict import class_to_dict
+
         # load skill policy
         skill_policy = ActorCritic(
             skill_env_cfg.env.num_observations,
@@ -157,7 +156,7 @@ class ActorCriticHierarchicalVision(nn.Module):
             obs_context_len=1,
             **class_to_dict(skill_train_cfg)["policy"],
         ).to(device)
-        log_root = f'./logs/{skill_train_cfg.runner.experiment_name}'
+        log_root = f"./logs/{skill_train_cfg.runner.experiment_name}"
         skill_resume_path = get_load_path(log_root, load_run=skill_args.load_run, checkpoint=skill_args.checkpoint)
         print(f"Loading {skill_args.task} policy from: {skill_resume_path}")
         try:

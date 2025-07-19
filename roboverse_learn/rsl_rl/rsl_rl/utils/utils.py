@@ -29,8 +29,10 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 import os
-import torch
+
 import rootutils
+import torch
+
 rootutils.setup_root(__file__, pythonpath=True)
 
 
@@ -77,57 +79,62 @@ def unpad_trajectories(trajectories, masks):
         .transpose(1, 0)
     )
 
+
 def get_load_path(root, load_run=-1, checkpoint=-1):
     try:
         runs = os.listdir(root)
-        #TODO sort by date to handle change of month
+        # TODO sort by date to handle change of month
         runs.sort()
-        if 'exported' in runs: runs.remove('exported')
+        if "exported" in runs:
+            runs.remove("exported")
         last_run = os.path.join(root, runs[-1])
     except:
         raise ValueError("No runs in this directory: " + root)
-    if load_run=="-1": # str format
+    if load_run == "-1":  # str format
         load_run = last_run
     else:
         load_run = os.path.join(root, load_run)
 
-    if checkpoint==-1:
-        models = [file for file in os.listdir(load_run) if 'model' in file]
-        models.sort(key=lambda m: '{0:0>15}'.format(m))
+    if checkpoint == -1:
+        models = [file for file in os.listdir(load_run) if "model" in file]
+        models.sort(key=lambda m: f"{m:0>15}")
         model = models[-1]
     else:
-        model = "model_{}.pt".format(checkpoint)
+        model = f"model_{checkpoint}.pt"
 
     load_path = os.path.join(load_run, model)
     return load_path
+
 
 def retrieve_cfgs(load_run, experiment_name):
     """
     Retrieve the config files from the checkpoint directory"""
     from runpy import run_path
+
     # @TODO hardcoded, modify it to support different tasks suite
-    exp_path = f'./outputs/skillblender/{experiment_name}/{load_run}/'
+    exp_path = f"./outputs/skillblender/{experiment_name}/{load_run}/"
     exp_files = os.listdir(exp_path)
     for f in exp_files:
         if f.endswith("_cfg.py"):
             cfg_path = os.path.join(exp_path, f)
             cfgs = run_path(cfg_path)
             break
-    print('Loaded config from:', cfg_path)
+    print("Loaded config from:", cfg_path)
     for key in cfgs.keys():
-        if 'Cfg' in key:
+        if "Cfg" in key:
             # TODO aligned PPO config with metasim config
-            if 'PPO' in key:
+            if "PPO" in key:
                 train_cfg = cfgs[key]
             else:
-                cfg = cfgs[key]() #Instantiate the metasim class configclass
-                if hasattr(cfg, 'task_name'):
+                cfg = cfgs[key]()  # Instantiate the metasim class configclass
+                if hasattr(cfg, "task_name"):
                     env_cfg = cfg
     return env_cfg, train_cfg()
 
+
 def get_cfgs(name, load_run=None, experiment_name=None):
     if load_run is None and experiment_name is None:
-        raise ValueError('Either load_run or experiment_name must be provided')
+        raise ValueError("Either load_run or experiment_name must be provided")
     env_cfg, train_cfg = retrieve_cfgs(load_run, experiment_name)
     env_cfg.seed = train_cfg.seed
     return env_cfg, train_cfg

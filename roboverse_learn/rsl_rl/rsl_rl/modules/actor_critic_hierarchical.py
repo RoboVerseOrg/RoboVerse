@@ -28,28 +28,34 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 import rootutils
+
 rootutils.setup_root(__file__, pythonpath=True)
 
+
+from copy import deepcopy
 
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from torch.nn.modules import rnn
-from copy import deepcopy
+
 from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_cfgs
 
 
 class ActorCriticHierarchical(nn.Module):
     is_recurrent = False
-    def __init__(self,  num_actor_obs,
-                        num_critic_obs,
-                        num_actions,
-                        obs_context_len=1,
-                        actor_hidden_dims=[256, 256, 256],
-                        critic_hidden_dims=[256, 256, 256],
-                        activation='elu',
-                        init_noise_std=1.0,
-                        **kwargs):
+
+    def __init__(
+        self,
+        num_actor_obs,
+        num_critic_obs,
+        num_actions,
+        obs_context_len=1,
+        actor_hidden_dims=[256, 256, 256],
+        critic_hidden_dims=[256, 256, 256],
+        activation="elu",
+        init_noise_std=1.0,
+        **kwargs,
+    ):
         # if kwargs:
         #     print("ActorCriticHierarchical.__init__ got unexpected arguments, which will be ignored: " + str([key for key in kwargs.keys()]))
         super(ActorCriticHierarchical, self).__init__()
@@ -62,13 +68,13 @@ class ActorCriticHierarchical(nn.Module):
         mlp_input_dim_c = num_critic_obs
 
         # Get low-level skills
-        self.args = kwargs['args']
-        self.device = kwargs['device']
-        self.frame_stack = kwargs['frame_stack']
-        self.command_dim = kwargs['command_dim']
-        self.num_dofs = kwargs['num_dofs']
+        self.args = kwargs["args"]
+        self.device = kwargs["device"]
+        self.frame_stack = kwargs["frame_stack"]
+        self.command_dim = kwargs["command_dim"]
+        self.num_dofs = kwargs["num_dofs"]
         self._get_low_level_policies(self.args, self.device, kwargs)
-        num_output = self._get_num_output(kwargs['frame_stack'])
+        num_output = self._get_num_output(kwargs["frame_stack"])
 
         # Policy
         actor_layers = []
@@ -110,12 +116,15 @@ class ActorCriticHierarchical(nn.Module):
     @staticmethod
     # not used at the moment
     def init_weights(sequential, scales):
-        [torch.nn.init.orthogonal_(module.weight, gain=scales[idx]) for idx, module in
-         enumerate(mod for mod in sequential if isinstance(mod, nn.Linear))]
+        [
+            torch.nn.init.orthogonal_(module.weight, gain=scales[idx])
+            for idx, module in enumerate(mod for mod in sequential if isinstance(mod, nn.Linear))
+        ]
 
     def _get_one_policy(self, args, device, task, experiment_name, load_run, checkpoint):
-        from rsl_rl.modules import ActorCritic
         from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_load_path
+        from rsl_rl.modules import ActorCritic
+
         # get skill arguments
         skill_args = deepcopy(args)
         assert task == experiment_name
@@ -124,44 +133,48 @@ class ActorCriticHierarchical(nn.Module):
         skill_args.load_run = load_run
         skill_args.checkpoint = checkpoint
         # retrieve config snapshot
-        skill_env_cfg, skill_train_cfg = get_cfgs(name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name)
+        skill_env_cfg, skill_train_cfg = get_cfgs(
+            name=skill_args.task, load_run=skill_args.load_run, experiment_name=skill_args.experiment_name
+        )
         # load skill policy
         from metasim.utils.dict import class_to_dict
+
         skill_policy = ActorCritic(
             skill_env_cfg.num_observations,
             skill_env_cfg.num_privileged_obs,
             skill_env_cfg.num_actions,
             obs_context_len=1,
-
-            **class_to_dict(skill_train_cfg)["policy"]
+            **class_to_dict(skill_train_cfg)["policy"],
         ).to(device)
         # TODO hard-coded for skillblender, add more task-suite
-        log_root = f'./outputs/skillblender/{args.robot}_{skill_train_cfg.runner.experiment_name}'
+        log_root = f"./outputs/skillblender/{args.robot}_{skill_train_cfg.runner.experiment_name}"
         skill_resume_path = get_load_path(log_root, load_run=skill_args.load_run, checkpoint=skill_args.checkpoint)
         print(f"Loading {skill_args.task} policy from: {skill_resume_path}")
         try:
             loaded_dict = torch.load(skill_resume_path, map_location=device)
         except:
             loaded_dict = torch.load(skill_resume_path, map_location="cuda:0")
-        skill_policy.load_state_dict(loaded_dict['model_state_dict'])
+        skill_policy.load_state_dict(loaded_dict["model_state_dict"])
         skill_train_cfg.runner.resume_path = skill_resume_path
         skill_policy.freeze()
         skill_policy = skill_policy.actor
         return skill_policy, skill_env_cfg, skill_train_cfg
 
     def _get_low_level_policies(self, args, device, kwargs):
-        skill_dict = kwargs['skill_dict']
+        skill_dict = kwargs["skill_dict"]
         self.skill_names = list(skill_dict.keys())
         self.policy_list = []
         self.env_cfg_list = []
         self.train_cfg_list = []
         self.low_high_list = []
         for key, value in skill_dict.items():
-            policy, env_cfg, train_cfg = self._get_one_policy(args, device, key, value['experiment_name'], value['load_run'], value['checkpoint'])
+            policy, env_cfg, train_cfg = self._get_one_policy(
+                args, device, key, value["experiment_name"], value["load_run"], value["checkpoint"]
+            )
             self.policy_list.append(policy)
             self.env_cfg_list.append(env_cfg)
             self.train_cfg_list.append(train_cfg)
-            self.low_high_list.append(value['low_high'])
+            self.low_high_list.append(value["low_high"])
         self.num_skills = len(self.policy_list)
 
     def _get_num_output(self, frame_stack=1):
@@ -189,54 +202,57 @@ class ActorCriticHierarchical(nn.Module):
         return self.distribution.entropy().sum(dim=-1)
 
     def _replace_observations(self, observations, command, low_high=None):
-        '''
+        """
         observations dim: [4096 (num_envs), frame_stack*num_single_obs]
         command_dim: [4096 (num_envs), frame_stack*new_command_dim]
         state_dim (not include command): 63
         num_single_obs = state_dim + command_dim
-        '''
+        """
         # import pdb; pdb.set_trace()
         if low_high is not None:
             low, high = low_high
             command = torch.clamp(command, low, high)
         new_observations = observations.clone().reshape(observations.shape[0], self.frame_stack, -1)
         num_envs, frame_stack, num_single_obs = new_observations.shape
-        state_dim = num_single_obs - self.command_dim # 63
+        state_dim = num_single_obs - self.command_dim  # 63
         new_command = command.reshape(num_envs, frame_stack, -1)
-        replaced_observations = torch.zeros((num_envs, frame_stack, state_dim + new_command.shape[-1]), device=self.device) # command: [num_envs, frame_stack*command_dim], e.g. [4096, 15*3]
-        replaced_observations[:, :, new_command.shape[-1]:] = new_observations[:, :, self.command_dim:]
-        replaced_observations[:, :, :new_command.shape[-1]] = new_command
+        replaced_observations = torch.zeros(
+            (num_envs, frame_stack, state_dim + new_command.shape[-1]), device=self.device
+        )  # command: [num_envs, frame_stack*command_dim], e.g. [4096, 15*3]
+        replaced_observations[:, :, new_command.shape[-1] :] = new_observations[:, :, self.command_dim :]
+        replaced_observations[:, :, : new_command.shape[-1]] = new_command
         return replaced_observations.reshape(num_envs, -1)
 
     def _actor(self, observations):
-        raw_mean = self.actor(observations) # [input_to_low_level_policies, weight_for_low_level_policies]
-        input_to_low_level_policies = raw_mean[:, :-(self.num_skills*self.num_dofs)]
-        mask_to_low_level_policies = raw_mean[:, -(self.num_skills*self.num_dofs):]
+        raw_mean = self.actor(observations)  # [input_to_low_level_policies, weight_for_low_level_policies]
+        input_to_low_level_policies = raw_mean[:, : -(self.num_skills * self.num_dofs)]
+        mask_to_low_level_policies = raw_mean[:, -(self.num_skills * self.num_dofs) :]
         masks = []
         for i in range(self.num_skills):
-            mask = mask_to_low_level_policies[:, i*self.num_dofs:(i+1)*self.num_dofs]
+            mask = mask_to_low_level_policies[:, i * self.num_dofs : (i + 1) * self.num_dofs]
             masks.append(mask)
-        masks = torch.stack(masks, dim=1) # [4096, num_skills, 19]
-        masks = torch.softmax(masks, dim=1) # [4096, num_skills, 19]
+        masks = torch.stack(masks, dim=1)  # [4096, num_skills, 19]
+        masks = torch.softmax(masks, dim=1)  # [4096, num_skills, 19]
         means = []
         for i in range(self.num_skills):
             prev_command_dim_sum = sum([self.env_cfg_list[j].command_dim for j in range(i)])
             curr_command_dim = self.env_cfg_list[i].command_dim
-            input_to_low_level_policies_i = input_to_low_level_policies[:, prev_command_dim_sum:prev_command_dim_sum+curr_command_dim]
-            input_to_low_level_policies_i = self._replace_observations(observations, input_to_low_level_policies_i, low_high=self.low_high_list[i])
+            input_to_low_level_policies_i = input_to_low_level_policies[
+                :, prev_command_dim_sum : prev_command_dim_sum + curr_command_dim
+            ]
+            input_to_low_level_policies_i = self._replace_observations(
+                observations, input_to_low_level_policies_i, low_high=self.low_high_list[i]
+            )
             mean = self.policy_list[i](input_to_low_level_policies_i) * masks[:, i]
             means.append(mean)
         actions_mean = sum(means)
         assert not torch.isnan(actions_mean).any()
 
-        return {
-            "actions_mean": actions_mean,
-            "masks": masks
-        }
+        return {"actions_mean": actions_mean, "masks": masks}
 
     def update_distribution(self, observations):
-        mean = self._actor(observations)['actions_mean']
-        self.distribution = Normal(mean, mean*0. + self.std)
+        mean = self._actor(observations)["actions_mean"]
+        self.distribution = Normal(mean, mean * 0.0 + self.std)
 
     def act(self, observations, **kwargs):
         if self.obs_context_len != 1:
@@ -250,7 +266,7 @@ class ActorCriticHierarchical(nn.Module):
     def act_inference(self, observations):
         if self.obs_context_len != 1:
             observations = observations[..., -1, :]
-        actions_mean = self._actor(observations)['actions_mean']
+        actions_mean = self._actor(observations)["actions_mean"]
         return actions_mean
 
     def act_inference_hrl(self, observations):
@@ -265,6 +281,7 @@ class ActorCriticHierarchical(nn.Module):
             critic_observations = critic_observations[..., -1, :]
         value = self.critic(critic_observations)
         return value
+
 
 def get_activation(act_name):
     if act_name == "elu":
