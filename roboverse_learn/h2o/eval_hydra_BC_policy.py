@@ -5,7 +5,6 @@ import numpy as np
 
 from legged_gym.envs import *
 from legged_gym.utils import task_registry, Logger
-from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 import numpy as np
 import torch
 import hydra
@@ -61,17 +60,17 @@ def play(cfg_hydra: DictConfig) -> None:
     env_cfg.domain_rand.randomize_rfi_lim = False
     env_cfg.domain_rand.randomize_pd_gain = False
     env_cfg.domain_rand.randomize_link_mass = False
-    # env_cfg.domain_rand.link_mass_range = [0.7, 1.3] 
+    # env_cfg.domain_rand.link_mass_range = [0.7, 1.3]
     # env_cfg.domain_rand.randomize_link_body_names = [
-    #     'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link', 
-    #     'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 
-    #     'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 
+    #     'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link',
+    #     'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link',
+    #     'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link',
     #     'left_elbow_link', 'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link'
     # ]
     env_cfg.domain_rand.randomize_base_com = False
-    env_cfg.domain_rand.randomize_ctrl_delay = False 
+    env_cfg.domain_rand.randomize_ctrl_delay = False
     env_cfg.domain_rand.ctrl_delay_step_range = [1, 2]
-    clip_action = True   
+    clip_action = True
 
 
     # env_cfg.asset.termination_scales.max_ref_motion_distance = 1
@@ -95,7 +94,7 @@ def play(cfg_hydra: DictConfig) -> None:
         from legged_gym.utils import key_response_fn
 
     # prepare environment
-    
+
     env, _ = task_registry.make_env_hydra(name=cfg_hydra.task, hydra_cfg=cfg_hydra, env_cfg=env_cfg)
     # env.compute_observations()
     # import ipdb;ipdb.set_trace()
@@ -123,12 +122,12 @@ def play(cfg_hydra: DictConfig) -> None:
     # obs[:, 9:12] = torch.Tensor([0.5, 0, 0])
     # load policy
     train_cfg.runner.resume = True
-    
+
     humanoid_workspace = task_registry.load_BC_workspace(checkpoint_path=cfg_hydra.BC_ckpt_path, train_cfg=cfg_humanoid_workspace)
     #ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=cfg_hydra.task, args=cfg_hydra, train_cfg=train_cfg,log_root=cfg_hydra.log_root)
     policy = humanoid_workspace.model.to(env.device)
     eval_runner = EvalRunnerBCModified(env=env,policy=policy,train_cfg=train_cfg,device=env.device,To=To, clip_action = clip_action)
-    
+
     results = eval_runner.eval()
     ckpt_path = cfg_hydra.BC_ckpt_path  # 例如 "/home/yunshen/code/test_ckpt/amass_200k_mix@amass_100k_easy_clean/epoch_400_step_663387.ckpt"
     file_name = os.path.basename(os.path.dirname(ckpt_path))

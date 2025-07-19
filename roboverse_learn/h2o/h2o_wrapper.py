@@ -13,10 +13,9 @@ from phc.utils import torch_utils
 
 from metasim.cfg.scenario import ScenarioCfg
 
-# -- project specific (adapt paths/names) ---------------------------------
+#- -- project specific (adapt paths/names) --------------------------------
 from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.math import quat_rotate_inverse
-# from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (
     get_body_reindexed_indices_from_substring,
@@ -67,7 +66,7 @@ class H2OWrapper(HumanoidBaseWrapper):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
 
         super()._init_buffers()
-        
+
         # Init for motion reference
         if self.cfg.motion.teleop:
             self.ref_motion_cache = {}
@@ -624,7 +623,7 @@ class H2OWrapper(HumanoidBaseWrapper):
             # print("terminate_by knee_distance")
             self.reset_buf |= torch.any(self.knee_distance < self.cfg.asset.termination_scales.min_knee_distance, dim=1)
             #print("Terminated by knee distance: ", torch.sum(self.reset_buf).item())
-                    
+
         # Termination for velocities
         if self.cfg.asset.terminate_by_lin_vel:
             # print("terminate_by lin_vel")
@@ -640,11 +639,11 @@ class H2OWrapper(HumanoidBaseWrapper):
         if self.cfg.asset.terminate_by_gravity:
             # print("terminate_by gravity")
             self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 0:1]) > self.cfg.asset.termination_scales.gravity_x, dim=1)
-            
+
             # Termination for gravity in y-direction
             self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 1:2]) > self.cfg.asset.termination_scales.gravity_y, dim=1)
 
-        
+
         # Termination for low height
         if self.cfg.asset.terminate_by_low_height:
             # print("terminate_by low_height")
@@ -655,16 +654,16 @@ class H2OWrapper(HumanoidBaseWrapper):
                 termination_distance = self.cfg.asset.termination_scales.max_ref_motion_distance
 
                 offset = self.env_origins + self.env_origins_init_3Doffset
-                time = (self.episode_length_buf) * self.dt + self.motion_start_times 
+                time = (self.episode_length_buf) * self.dt + self.motion_start_times
 
                 motion_res = self._get_state_from_motionlib_cache_trimesh(self.motion_ids, time, offset= offset)
 
                 ref_body_pos = motion_res["rg_pos"]
-                
+
                 if self.cfg.asset.local_upper_reward:
                     diff =  ref_body_pos[:, [0]] - envstates.robots[self.robot.name].body_pos[:, [0]]
                     ref_body_pos[:, 11:] -= diff
-                            
+
 
                 if self.cfg.env.test or self.cfg.env.im_eval:
                     reset_buf_teleop = torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1).mean(dim=-1, keepdim=True) > termination_distance, dim=-1)
@@ -672,20 +671,20 @@ class H2OWrapper(HumanoidBaseWrapper):
                 else:
                     reset_buf_teleop = torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1) > termination_distance, dim=-1)
                     # self.reset_buf |= torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1) > termination_distance, dim=-1)  # using average, same as UHC"s termination condition
-                if self.cfg.motion.teleop: 
+                if self.cfg.motion.teleop:
                     is_recovery = self._recovery_counter > 0 # give pushed robot time to recover
                     reset_buf_teleop[is_recovery] = 0
                 self.reset_buf |= reset_buf_teleop
-                
+
             if self.cfg.asset.terminate_by_1time_motion:
-                time = (self.episode_length_buf) * self.dt + self.motion_start_times 
+                time = (self.episode_length_buf) * self.dt + self.motion_start_times
                 self.time_out_by_1time_motion = time > self.motion_len # no terminal reward for time-outs
                 # if time > self.motion_len:
                 #     import ipdb;ipdb.set_trace()
                 self.time_out_buf = self.time_out_by_1time_motion
         else:
             self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
-        
+
         self.reset_buf |= self.time_out_buf
 
 
