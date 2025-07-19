@@ -8,21 +8,30 @@ from __future__ import annotations
 
 from typing import Callable, List
 
+import numpy as np
 import torch
 import torch.nn.functional as F
+import torch.optim as optim
+from isaacgym.torch_utils import *
 from phc.utils import torch_utils
 
 from metasim.cfg.scenario import ScenarioCfg
 
 # - -- project specific (adapt paths/names) --------------------------------
+# -- project specific (adapt paths/names) ---------------------------------
+# from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.math import quat_rotate_inverse
+
+# -------------------------------------------------------------------------
+from roboverse_learn.h2o.ldf import ActionFilterButter, ActionFilterButterTorch
+
+# from phc.utils import torch_utils
+from roboverse_learn.rsl_rl.modules import VelocityEstimator, VelocityEstimatorGRU
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (
     get_body_reindexed_indices_from_substring,
     get_joint_reindexed_indices_from_substring,
 )
-
-# -------------------------------------------------------------------------
 
 
 class HDCWrapper(HumanoidBaseWrapper):
@@ -35,25 +44,70 @@ class HDCWrapper(HumanoidBaseWrapper):
         super().__init__(scenario)
         self.up_axis_idx = 2  # z-up world
 
-        # ---- static indices (used by rewards / observations) ----------
-        self._parse_rigid_body_indices(scenario.robots[0])
-        self._parse_joint_indices(scenario.robots[0])
+        if self.cfg.domain_rand.motion_package_loss:
+            offset = self.env_origins + self.env_origins_init_3Doffset
+            motion_times = (self.episode_length_buf) * self.dt + self.motion_start_times  # next frames so +1
+            motion_res = self._get_state_from_motionlib_cache_trimesh(self.motion_ids, motion_times, offset=offset)
+            self.freeze_motion_res = motion_res.copy()
+        self.init_done = True
+        self.trajectories = torch.zeros(self.num_envs, 63 * 100).to(
+            self.device
+        )  # 19dof + 19dofvel + 3angular velocity + 4projectedgravity + 19lastaction
+        self.trajectories_with_linvel = torch.zeros(self.num_envs, 66 * 100).to(
+            self.device
+        )  # 19dof + 19dofvel + 3angular velocity + 4projectedgravity + 19lastaction
+        if self.cfg.train_velocity_estimation:
+            # self.velocity_estimator = VelocityEstimator(63, 512, 256, 3, 25).to(self.device)
+            self.velocity_estimator = VelocityEstimatorGRU(63, 512, 3).to(self.device)
 
-        # ---- cfg-level meta -------------------------------------------
-        self.dt = scenario.decimation * scenario.sim_params.dt
-        self.command_ranges = scenario.task.command_ranges
-        self.num_commands = scenario.task.command_dim
-        self._prepare_reward_function(scenario.task)
-        self._init_buffers()
+            self.velocity_optimizer = optim.Adam(self.velocity_estimator.parameters(), lr=0.00001)
+
+        self.prioritize_closing = torch.zeros(self.num_envs)
+
+        # init low pass filter
+        if self.cfg.control.action_filt:
+            self.action_filter = ActionFilterButterTorch(
+                lowcut=np.zeros(self.num_envs * self.num_actions),
+                highcut=np.ones(self.num_envs * self.num_actions) * self.cfg.control.action_cutfreq,
+                sampling_rate=1.0 / self.dt,
+                num_joints=self.num_envs * self.num_actions,
+                device=self.device,
+            )
+
+        if self.cfg.motion.teleop:
+            self.extend_body_parent_ids = [15, 19]
+            self._track_bodies_id = [
+                self._body_list.index(body_name) for body_name in self.cfg.motion.teleop_selected_keypoints_names
+            ]
+            # import ipdb;ipdb.set_trace()
+            self._track_bodies_extend_id = self._track_bodies_id + [len(self._body_list), len(self._body_list) + 1]
+            self.extend_body_pos = torch.tensor([[0.3, 0, 0], [0.3, 0, 0]]).repeat(self.num_envs, 1, 1).to(self.device)
+            if self.cfg.motion.extend_head:
+                self.extend_body_parent_ids += [0]
+                self._track_bodies_id += [len(self._body_list)]
+                self._track_bodies_extend_id += [len(self._body_list) + 2]
+                self.extend_body_pos = (
+                    torch.tensor([[0.3, 0, 0], [0.3, 0, 0], [0, 0, 0.75]]).repeat(self.num_envs, 1, 1).to(self.device)
+                )
+        self.num_compute_average_epl = self.cfg.rewards.num_compute_average_epl
+        self.average_episode_length = 0.0  # num_compute_average_epl last termination episode length
+
+    def _parse_rigid_body_indices(self, robot_cfg):
+        super()._parse_rigid_body_indices(robot_cfg)
+        self.left_knee_link_idx = get_body_reindexed_indices_from_substring(
+            self.env.handler, self.robot.name, "left_knee_link", device=self.device
+        )
+        self.right_knee_link_idx = get_body_reindexed_indices_from_substring(
+            self.env.handler, self.robot.name, "right_knee_link", device=self.device
+        )
+        self.left_ankle_link_idx = get_body_reindexed_indices_from_substring(
+            self.env.handler, self.robot.name, "left_ankle_link", device=self.device
+        )
+        self.right_ankle_link_idx = get_body_reindexed_indices_from_substring(
+            self.env.handler, self.robot.name, "right_ankle_link", device=self.device
+        )
 
     # ---------------- rigid-body indices ------------------------------ #
-    def _parse_rigid_body_indices(self, robot_cfg):
-        """Resolve and cache body indices once at start-up."""
-        self.feet_indices = get_body_reindexed_indices_from_substring(
-            self.env.handler, robot_cfg.name, robot_cfg.feet_links, device=self.device
-        )
-        self.cfg.feet_indices = self.feet_indices
-
     # ---------------- joint indices ----------------------------------- #
     def _parse_joint_indices(self, robot_cfg):
         """Resolve joint groups (only if needed by reward/obs)."""
@@ -66,11 +120,11 @@ class HDCWrapper(HumanoidBaseWrapper):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
 
         super()._init_buffers()
-        env_states = self.env.handler.reset()
-        self._rigid_body_pos = self._rigid_body_state_reshaped[..., : self.num_bodies, 0:3]
-        self._rigid_body_rot = self._rigid_body_state_reshaped[..., : self.num_bodies, 3:7]
-        self._rigid_body_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 7:10]
-        self._rigid_body_ang_vel = self._rigid_body_state_reshaped[..., : self.num_bodies, 10:13]
+        env_states, _ = self.env.handler.reset()
+        self._rigid_body_pos = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 0:3]
+        self._rigid_body_rot = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 3:7]
+        self._rigid_body_vel = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 7:10]
+        self._rigid_body_ang_vel = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 10:13]
 
         # Init for motion reference
         if self.cfg.motion.teleop:
@@ -129,8 +183,6 @@ class HDCWrapper(HumanoidBaseWrapper):
 
             env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
             self._resample_motion_times(env_ids)  # need to resample before reset root states
-            # self._update_motion_reference()
-            self.forward_vec = to_torch([1.0, 0.0, 0.0], device=self.device).repeat((self.num_envs, 1))
 
         # randomize action delay
         if self.cfg.domain_rand.randomize_ctrl_delay:
@@ -212,16 +264,6 @@ class HDCWrapper(HumanoidBaseWrapper):
         if self.cfg.motion.teleop:
             self._update_recovery_count()
 
-        # prepare quantities
-        self.base_pos[:] = self.root_states[:, 0:3]
-        self.base_quat[:] = self.root_states[:, 3:7]
-        self.rpy[:] = get_euler_xyz_in_tensor(self.base_quat[:])
-        self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
-
-        self.base_ang_vel[:] = quat_rotate_inverse(self._rigid_body_rot[:, 11, :], self._rigid_body_ang_vel[:, 11, :])
-
-        self.projected_gravity[:] = quat_rotate_inverse(self._rigid_body_rot[:, 11, :], self.gravity_vec)
-
         self._post_physics_step_callback()
         # compute observations, rewards, resets, ...
         self.check_termination()
@@ -234,6 +276,9 @@ class HDCWrapper(HumanoidBaseWrapper):
         self.compute_observations()  # in some cases a simulation step might be required to refresh some obs (for example body positions)
         # print("obs_buf_after",self.obs_buf)
         # import ipdb;ipdb.set_trace()
+
+    def _update_history(self, envstates):
+        """Update history buffers with the current state."""
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_base_lin_vel[:] = self.base_lin_vel[:]
@@ -638,8 +683,7 @@ class HDCWrapper(HumanoidBaseWrapper):
         ref_episodic_offset=None,
         ref_vel_in_task_obs=True,
         obs_full=False,
-    ):  # type: (Tensor, Tensor, Tensor, Tensor, Tensor,  int, bool, bool) -> Tensor
-        #  Teleop version
+    ):
         obs = []
         B, J, _ = body_pos.shape
 
@@ -756,23 +800,20 @@ class HDCWrapper(HumanoidBaseWrapper):
 
                 ref_body_pos = motion_res["rg_pos"]
 
-                if self.cfg.asset.local_upper_reward:
-                    diff = ref_body_pos[:, [0]] - envstates.robots[self.robot.name].body_pos[:, [0]]
-                    ref_body_pos[:, 11:] -= diff
+                # if self.cfg.asset.local_upper_reward:
+                #     diff = ref_body_pos[:, [0]] - envstates.robots[self.robot.name].body_pos[:, [0]]
+                #     ref_body_pos[:, 11:] -= diff
 
                 if self.cfg.env.test or self.cfg.env.im_eval:
                     reset_buf_teleop = torch.any(
-                        torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1).mean(
-                            dim=-1, keepdim=True
-                        )
+                        torch.norm(self._rigid_body_pos - ref_body_pos, dim=-1).mean(dim=-1, keepdim=True)
                         > termination_distance,
                         dim=-1,
                     )
 
                 else:
                     reset_buf_teleop = torch.any(
-                        torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1)
-                        > termination_distance,
+                        torch.norm(self._rigid_body_pos - ref_body_pos, dim=-1) > termination_distance,
                         dim=-1,
                     )
                     # self.reset_buf |= torch.any(torch.norm(envstates.robots[self.robot.name].body_pos - ref_body_pos, dim=-1) > termination_distance, dim=-1)  # using average, same as UHC"s termination condition
@@ -791,6 +832,21 @@ class HDCWrapper(HumanoidBaseWrapper):
             self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
 
         self.reset_buf |= self.time_out_buf
+
+    # ------------ helper functions ---------------
+    @property
+    def knee_distance(self, env_states):
+        left_knee_pos = env_states.robots[self.robot.name].body_pos[:, self.left_knee_link_idx]
+        right_knee_pos = env_states.robots[self.robot.name].body_pos[:, self.right_knee_link_idx]
+        dist_knee = torch.norm(left_knee_pos - right_knee_pos, dim=-1, keepdim=True)
+        return dist_knee
+
+    @property
+    def feet_distance(self, env_states):
+        left_foot_pos = env_states.robots[self.robot.name].body_pos[:, self.left_ankle_link_idx]
+        right_foot_pos = env_states.robots[self.robot.name].body_pos[:, self.right_ankle_link_idx]
+        dist_feet = torch.norm(left_foot_pos - right_foot_pos, dim=-1, keepdim=True)
+        return dist_feet
 
     @property
     def _motion_lib(self):
