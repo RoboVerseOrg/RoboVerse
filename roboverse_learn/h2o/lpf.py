@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +29,6 @@ The filter implements::
 We assume M == N.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import collections
 
 import numpy as np
@@ -44,7 +41,7 @@ ACTION_FILTER_LOW_CUT = 0.0
 ACTION_FILTER_HIGH_CUT = 4.0
 
 
-class ActionFilter(object):
+class ActionFilter:
     """Implements a generic lowpass or bandpass action filter."""
 
     def __init__(self, a, b, order, num_joints, ftype="lowpass"):

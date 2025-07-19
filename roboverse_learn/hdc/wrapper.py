@@ -20,12 +20,8 @@ from metasim.cfg.scenario import ScenarioCfg
 # - -- project specific (adapt paths/names) --------------------------------
 # -- project specific (adapt paths/names) ---------------------------------
 # from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
-from metasim.utils.math import quat_rotate_inverse
-
 # -------------------------------------------------------------------------
-from roboverse_learn.h2o.ldf import ActionFilterButter, ActionFilterButterTorch
-
-# from phc.utils import torch_utils
+from roboverse_learn.h2o.ldf import ActionFilterButterTorch
 from roboverse_learn.rsl_rl.modules import VelocityEstimator, VelocityEstimatorGRU
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (

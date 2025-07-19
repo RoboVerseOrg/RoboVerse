@@ -1,6 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.optim as optim
 
 
 class VelocityEstimator(nn.Module):
@@ -18,7 +16,6 @@ class VelocityEstimator(nn.Module):
         return x
 
 
-import torch
 import torch.nn as nn
 
 # class VelocityEstimatorGRU(nn.Module):
