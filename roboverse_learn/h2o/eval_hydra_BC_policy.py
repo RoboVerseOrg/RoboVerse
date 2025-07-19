@@ -4,10 +4,8 @@ import os
 import hydra
 import numpy as np
 from easydict import EasyDict
-from legged_gym.envs import *
-from legged_gym.utils import Logger, task_registry
 from omegaconf import DictConfig, OmegaConf
-from rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
+from roboverse_learn.rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
 
 NOROSPY = False
 try:
@@ -35,18 +33,13 @@ def play(cfg_hydra: DictConfig) -> None:
     cfg_hydra = EasyDict(OmegaConf.to_container(cfg_hydra, resolve=True))
     env_cfg, train_cfg = cfg_hydra, cfg_hydra.train
 
-    # if not env_cfg.train_velocity_estimation:
     env_cfg.env.num_envs = 1
     env_cfg.viewer.debug_viz = True
     env_cfg.motion.visualize = False
-    # env_cfg.terrain.num_rows = 5
-    # env_cfg.terrain.num_cols = 5
+
     env_cfg.terrain.curriculum = False
     env_cfg.terrain.mesh_type = "trimesh"
-    # env_cfg.terrain.mesh_type = 'plane'
-    # if env_cfg.terrain.mesh_type == 'trimesh':
-    #     env_cfg.terrain.terrain_types = ['flat', 'rough', 'low_obst']  # do not duplicate!
-    #     env_cfg.terrain.terrain_proportions = [1.0, 0.0, 0.0]
+
     env_cfg.add_eval_noise = False
     env_cfg.noise.add_noise = False
     env_cfg.noise.noise_level = 0.5

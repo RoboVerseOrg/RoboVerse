@@ -13,15 +13,16 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from isaacgym.torch_utils import *
-from phc.utils import torch_utils
 
 from metasim.cfg.scenario import ScenarioCfg
+from phc.utils import torch_utils
+from phc.utils.motion_lib_h1 import MotionLibH1
 
 # - -- project specific (adapt paths/names) --------------------------------
 # -- project specific (adapt paths/names) ---------------------------------
 # from metasim.cfg.tasks.h2o.base_legged_cfg import BaseLeggedTaskCfg
 # -------------------------------------------------------------------------
-from roboverse_learn.h2o.ldf import ActionFilterButterTorch
+from roboverse_learn.h2o.lpf import ActionFilterButterTorch
 from roboverse_learn.rsl_rl.modules import VelocityEstimator, VelocityEstimatorGRU
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 from roboverse_learn.skillblender_rl.utils import (

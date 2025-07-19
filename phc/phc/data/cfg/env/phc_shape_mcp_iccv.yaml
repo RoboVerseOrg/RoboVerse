@@ -1,0 +1,108 @@
+# if given, will override the device setting in gym. 
+project_name: "EgoQuest_IM"
+notes:  "Progressive MCP without softmax, zero out far"
+env: 
+  numEnvs: 1024
+  envSpacing: 2
+  episodeLength: 300
+  isFlagrun: False
+  enableDebugVis: False
+  
+  bias_offset: False
+  has_self_collision: True
+  has_mesh: False
+  has_jt_limit: False
+  has_dof_subset: True
+  has_upright_start: True
+  has_smpl_pd_offset: False
+  remove_toe: False # For humanoid's geom toe
+  real_weight_porpotion_capsules: True
+  
+  sym_loss_coef: 1
+  big_ankle: True
+  fut_tracks: False
+  obs_v: 6
+
+  ######## PNN Configs ########
+  has_pnn: True
+  fitting: True
+  num_prim: 4
+  training_prim: 0
+  actors_to_load: 4
+  has_lateral: False
+  models: ['output/phc_shape_pnn_iccv/Humanoid.pth']
+
+  ######## Getup Configs ########
+  zero_out_far: True
+  zero_out_far_train: False
+  cycle_motion: False
+  getup_udpate_epoch: 78750
+  
+  getup_schedule: True
+  recoverySteps: 90
+  zero_out_far_steps: 90
+  recoveryEpisodeProb: 0.5
+  fallInitProb: 0.3
+
+  hard_negative: False
+  
+  masterfoot: False
+  freeze_toe: false
+
+  real_weight: True
+  kp_scale: 1
+  remove_toe_im: False # For imitation 
+  power_reward: True
+  power_coefficient: 0.00005
+  
+  has_shape_obs: True
+  has_shape_obs_disc: True
+  has_shape_variation: True
+  shape_resampling_interval: 500
+
+  pdControl: True
+  powerScale: 1.0
+  controlFrequencyInv: 2 # 30 Hz
+  stateInit: "Random"  
+  hybridInitProb: 0.5
+  numAMPObsSteps: 10
+  
+  localRootObs: True
+  rootHeightObs: True
+  keyBodies: ["R_Ankle", "L_Ankle", "R_Wrist",  "L_Wrist"]
+  contactBodies: ["R_Ankle", "L_Ankle", "R_Toe", "L_Toe"]
+  resetBodies: ['Pelvis', 'L_Hip', 'L_Knee', 'R_Hip', 'R_Knee', 'Torso', 'Spine', 'Chest', 'Neck', 'Head', 'L_Thorax', 'L_Shoulder', 'L_Elbow', 'L_Wrist', 'L_Hand', 'R_Thorax', 'R_Shoulder', 'R_Elbow', 'R_Wrist', 'R_Hand']
+  terminationHeight: 0.15
+  enableEarlyTermination: True
+  terminationDistance: 0.25
+
+  ### Fut config
+  numTrajSamples: 3
+  trajSampleTimestepInv: 3
+  enableTaskObs: True
+
+  asset:
+    assetRoot: "/"
+    assetFileName: "mjcf/smpl_humanoid.xml"
+
+  plane:
+    staticFriction: 1.0
+    dynamicFriction: 1.0
+    restitution: 0.0
+
+sim:
+  substeps: 2
+  physx:
+    num_threads: 4
+    solver_type: 1  # 0: pgs, 1: tgs
+    num_position_iterations: 4
+    num_velocity_iterations: 0
+    contact_offset: 0.02
+    rest_offset: 0.0
+    bounce_threshold_velocity: 0.2
+    max_depenetration_velocity: 10.0
+    default_buffer_size_multiplier: 10.0
+
+  flex:
+    num_inner_iterations: 10
+    warm_start: 0.25

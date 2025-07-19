@@ -1,0 +1,95 @@
+params:
+  seed: 0
+
+  algo:
+    name: im_amp
+
+  model:
+    name: amp
+
+  network:
+    name: amp_pnn
+    separate: True
+    discrete: False
+
+    space:
+      continuous:
+        mu_activation: None
+        sigma_activation: None
+        mu_init:
+          name: default
+        sigma_init:
+          name: const_initializer
+          val: -2.9
+        fixed_sigma: True
+        learn_sigma: False
+
+    mlp:
+      units: [1024, 512]
+      activation: relu
+      d2rl: False
+
+      initializer:
+        name: default
+      regularizer:
+        name: None
+
+    disc:
+      units: [1024, 512]
+      activation: relu
+
+      initializer:
+        name: default
+
+  load_checkpoint: False
+
+  config:
+    name: Humanoid
+    env_name: rlgpu
+    multi_gpu: False
+    ppo: True
+    mixed_precision: False
+    normalize_input: True
+    normalize_value: True
+    reward_shaper:
+      scale_value: 1
+    normalize_advantage: True
+    gamma: 0.99
+    tau: 0.95
+    learning_rate: 2e-5
+    lr_schedule: constant
+    score_to_win: 20000
+    max_epochs: 10000000
+    save_best_after: 100
+    save_frequency: 2500
+    print_stats: False
+    save_intermediate: True
+    entropy_coef: 0.0
+    truncate_grads: True
+    grad_norm: 50.0
+    ppo: True
+    e_clip: 0.2
+    horizon_length: 32
+    minibatch_size: 16384
+    mini_epochs: 6
+    critic_coef: 5
+    clip_value: False
+    
+    bounds_loss_coef: 10
+    amp_obs_demo_buffer_size: 200000
+    amp_replay_buffer_size: 200000
+    amp_replay_keep_prob: 0.01
+    amp_batch_size: 512
+    amp_minibatch_size: 4096
+    disc_coef: 5
+    disc_logit_reg: 0.01
+    disc_grad_penalty: 5
+    disc_reward_scale: 2
+    disc_weight_decay: 0.0001
+    normalize_amp_input: True
+
+    task_reward_w: 0.5
+    disc_reward_w: 0.5
+
+    player: 
+      games_num: 50000000
