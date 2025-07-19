@@ -30,23 +30,26 @@ import torch
 
 import phc.env.tasks.humanoid_amp as humanoid_amp
 from phc.utils.flags import flags
+
+
 class HumanoidAMPTask(humanoid_amp.HumanoidAMP):
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless):
         self._enable_task_obs = cfg["env"]["enableTaskObs"]
 
-        super().__init__(cfg=cfg,
-                         sim_params=sim_params,
-                         physics_engine=physics_engine,
-                         device_type=device_type,
-                         device_id=device_id,
-                         headless=headless)
+        super().__init__(
+            cfg=cfg,
+            sim_params=sim_params,
+            physics_engine=physics_engine,
+            device_type=device_type,
+            device_id=device_id,
+            headless=headless,
+        )
         self.has_task = True
         return
 
-
     def get_obs_size(self):
         obs_size = super().get_obs_size()
-        if (self._enable_task_obs):
+        if self._enable_task_obs:
             task_obs_size = self.get_task_obs_size()
             obs_size += task_obs_size
         return obs_size
@@ -57,7 +60,7 @@ class HumanoidAMPTask(humanoid_amp.HumanoidAMP):
     def pre_physics_step(self, actions):
         super().pre_physics_step(actions)
         self._update_task()
-        
+
         return
 
     def render(self, sync_frame_time=False):
@@ -84,17 +87,16 @@ class HumanoidAMPTask(humanoid_amp.HumanoidAMP):
             env_ids = torch.arange(self.num_envs).to(self.device)
         humanoid_obs = self._compute_humanoid_obs(env_ids)
 
-        if (self._enable_task_obs):
+        if self._enable_task_obs:
             task_obs = self._compute_task_obs(env_ids)
             obs = torch.cat([humanoid_obs, task_obs], dim=-1)
         else:
             obs = humanoid_obs
-        
-                
+
         if self.obs_v == 2:
             # Double sub will return a copy.
             B, N = obs.shape
-            sums = self.obs_buf[env_ids, 0:self.past_track_steps].abs().sum(dim=1)
+            sums = self.obs_buf[env_ids, 0 : self.past_track_steps].abs().sum(dim=1)
             zeros = sums == 0
             nonzero = ~zeros
             obs_slice = self.obs_buf[env_ids]

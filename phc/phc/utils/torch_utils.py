@@ -26,21 +26,22 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numpy as np
 
-from isaacgym.torch_utils import *
 import torch
-from torch import nn
-import phc.utils.pytorch3d_transforms as ptr
 import torch.nn.functional as F
+from isaacgym.torch_utils import *
+from torch import nn
+
+import phc.utils.pytorch3d_transforms as ptr
 
 
-def project_to_norm(x, norm=5, z_type = "sphere"):
+def project_to_norm(x, norm=5, z_type="sphere"):
     if z_type == "sphere":
         x = x / (torch.norm(x, dim=-1, keepdim=True) / norm + 1e-8)
     elif z_type == "uniform":
         x = torch.clamp(x, -norm, norm)
     return x
+
 
 @torch.jit.script
 def my_quat_rotate(q, v):
@@ -49,17 +50,16 @@ def my_quat_rotate(q, v):
     q_vec = q[:, :3]
     a = v * (2.0 * q_w**2 - 1.0).unsqueeze(-1)
     b = torch.cross(q_vec, v, dim=-1) * q_w.unsqueeze(-1) * 2.0
-    c = q_vec * \
-        torch.bmm(q_vec.view(shape[0], 1, 3), v.view(
-            shape[0], 3, 1)).squeeze(-1) * 2.0
+    c = q_vec * torch.bmm(q_vec.view(shape[0], 1, 3), v.view(shape[0], 3, 1)).squeeze(-1) * 2.0
     return a + b + c
+
 
 @torch.jit.script
 def quat_to_angle_axis(q):
     # type: (Tensor) -> Tuple[Tensor, Tensor]
     # computes axis-angle representation from quaternion q
     # q must be normalized
-    # ZL: could have issues. 
+    # ZL: could have issues.
     min_theta = 1e-5
     qx, qy, qz, qw = 0, 1, 2, 3
 
@@ -240,12 +240,13 @@ def calc_heading_quat_inv(q):
     heading_q = quat_from_angle_axis(-heading, axis)
     return heading_q
 
+
 def activation_facotry(act_name):
-    if act_name == 'relu':
+    if act_name == "relu":
         return nn.ReLU
-    elif act_name == 'tanh':
+    elif act_name == "tanh":
         return nn.Tanh
-    elif act_name == 'sigmoid':
+    elif act_name == "sigmoid":
         return nn.Sigmoid
     elif act_name == "elu":
         return nn.ELU

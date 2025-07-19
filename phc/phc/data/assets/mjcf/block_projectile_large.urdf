@@ -10,7 +10,7 @@
         <color rgba="0.7 0.8 0.9 1"/>
       </material>
     </visual>
-	
+
     <collision>
       <origin xyz="0 0 0"/>
       <geometry>

@@ -1,13 +1,13 @@
-# if given, will override the device setting in gym. 
+# if given, will override the device setting in gym.
 project_name: "H1"
 notes:  "PNN, no Laternal connection "
-env: 
+env:
   numEnvs: 1536
   envSpacing: 5
   episodeLength: 300
   isFlagrun: False
   enableDebugVis: False
-  
+
   bias_offset: False
   has_self_collision: True
   has_mesh: False
@@ -17,12 +17,12 @@ env:
   has_smpl_pd_offset: False
   remove_toe: False # For humanoid's geom toe
   real_weight_porpotion_capsules: True
-  
+
   sym_loss_coef: 1
   big_ankle: True
   fut_tracks: False
   obs_v: 6
-   
+
 
   cycle_motion: False
   hard_negative: False
@@ -33,9 +33,9 @@ env:
   default_humanoid_mass: 51.436 # H1 config
   real_weight: True
   kp_scale: 1
-  remove_toe_im: False # For imitation 
+  remove_toe_im: False # For imitation
   power_reward: True
-  
+
   has_shape_obs: False
   has_shape_obs_disc: False
   has_shape_variation: False
@@ -44,10 +44,10 @@ env:
   pdControl: True
   powerScale: 1.0
   controlFrequencyInv: 2 # 30 Hz
-  stateInit: "Random"  
+  stateInit: "Random"
   hybridInitProb: 0.5
   numAMPObsSteps: 10
-  
+
   localRootObs: True
   rootHeightObs: True
   keyBodies: ["left_ankle_link", "right_ankle_link", "left_elbow_link",  "right_elbow_link"]

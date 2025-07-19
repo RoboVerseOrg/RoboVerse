@@ -74,7 +74,7 @@ params:
     mini_epochs: 6
     critic_coef: 5
     clip_value: False
-    
+
     bounds_loss_coef: 10
     amp_obs_demo_buffer_size: 200000
     amp_replay_buffer_size: 200000
@@ -91,5 +91,5 @@ params:
     task_reward_w: 0.5
     disc_reward_w: 0.5
 
-    player: 
+    player:
       games_num: 50000000

@@ -1,21 +1,18 @@
+import matplotlib
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import skimage
-from skimage.draw import polygon
-from skimage.draw import bezier_curve
-from skimage.draw import circle_perimeter
-from skimage.draw import disk
 from scipy import ndimage
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib as mpl
+from skimage.draw import bezier_curve, circle_perimeter, disk, polygon
 
 
-def get_color_gradient(percent, color='Blues'):
+def get_color_gradient(percent, color="Blues"):
     return mpl.colormaps[color](percent)[:3]
 
 
 def agt_color(aidx):
-    return matplotlib.colors.to_rgb(plt.rcParams['axes.prop_cycle'].by_key()['color'][aidx % 10])
+    return matplotlib.colors.to_rgb(plt.rcParams["axes.prop_cycle"].by_key()["color"][aidx % 10])
 
 
 def draw_disk(img_size=80, max_r=10, iterations=3):
@@ -68,8 +65,12 @@ def draw_polygon(img_size=80, max_sides=10):
 
 def draw_ellipse(img_size=80, max_size=10):
     img = np.zeros((img_size, img_size), dtype=np.uint8)
-    r, c, rradius, cradius = np.random.uniform(max_size, img_size - max_size), np.random.uniform(max_size, img_size - max_size),\
-        np.random.uniform(1, max_size), np.random.uniform(1, max_size)
+    r, c, rradius, cradius = (
+        np.random.uniform(max_size, img_size - max_size),
+        np.random.uniform(max_size, img_size - max_size),
+        np.random.uniform(1, max_size),
+        np.random.uniform(1, max_size),
+    )
     rr, cc = skimage.draw.ellipse(r, c, rradius, cradius)
     np.clip(rr, 0, img_size - 1, out=rr)
     np.clip(cc, 0, img_size - 1, out=cc)

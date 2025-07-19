@@ -1,35 +1,27 @@
-import glob
 import os
 import sys
-import pdb
-import os.path as osp
 
 sys.path.append(os.getcwd())
 
-import numpy as np
-
-import torch
-import numpy as np
-import pickle as pk
-from tqdm import tqdm
-from collections import defaultdict
-import random
-import argparse
-
 import copy
+from collections import defaultdict
 
-def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx = 0, use_tqdm = True, concatenate = True):
+import numpy as np
+import torch
+from tqdm import tqdm
+
+
+def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx=0, use_tqdm=True, concatenate=True):
     metrics = defaultdict(list)
     if use_tqdm:
         pbar = tqdm(range(len(pred_pos_all)))
     else:
         pbar = range(len(pred_pos_all))
-        
+
     for idx in pbar:
         jpos_pred = pred_pos_all[idx].copy()
         jpos_gt = gt_pos_all[idx].copy()
-        mpjpe_g = np.linalg.norm(jpos_gt - jpos_pred, axis=2)  * 1000
-        
+        mpjpe_g = np.linalg.norm(jpos_gt - jpos_pred, axis=2) * 1000
 
         vel_dist = (compute_error_vel(jpos_pred, jpos_gt)) * 1000
         accel_dist = (compute_error_accel(jpos_pred, jpos_gt)) * 1000
@@ -38,21 +30,21 @@ def compute_metrics_lite(pred_pos_all, gt_pos_all, root_idx = 0, use_tqdm = True
         jpos_gt = jpos_gt - jpos_gt[:, [root_idx]]
 
         pa_mpjpe = p_mpjpe(jpos_pred, jpos_gt) * 1000
-        mpjpe = np.linalg.norm(jpos_pred - jpos_gt, axis=2)* 1000
-        
+        mpjpe = np.linalg.norm(jpos_pred - jpos_gt, axis=2) * 1000
+
         metrics["mpjpe_g"].append(mpjpe_g)
         metrics["mpjpe_l"].append(mpjpe)
         metrics["mpjpe_pa"].append(pa_mpjpe)
         metrics["accel_dist"].append(accel_dist)
         metrics["vel_dist"].append(vel_dist)
-    
+
     if concatenate:
-        metrics = {k:np.concatenate(v) for k, v in metrics.items()}
+        metrics = {k: np.concatenate(v) for k, v in metrics.items()}
     return metrics
 
+
 def p_mpjpe(predicted, target):
-    """
-    Pose error: MPJPE after rigid alignment (scale, rotation, and translation),
+    """Pose error: MPJPE after rigid alignment (scale, rotation, and translation),
     often referred to as "Protocol #2" in many papers.
     """
     assert predicted.shape == target.shape
@@ -91,20 +83,13 @@ def p_mpjpe(predicted, target):
     # Return MPJPE
     return np.linalg.norm(predicted_aligned - target, axis=len(target.shape) - 1)
 
+
 def compute_metrics(res, converter=None):
     res = copy.deepcopy(res)
     res_dict = {}
 
-    jpos_pred = (
-        converter.jpos_new_2_smpl(res["pred_jpos"])
-        if converter is not None
-        else res["pred_jpos"]
-    )
-    jpos_gt = (
-        converter.jpos_new_2_smpl(res["gt_jpos"])
-        if converter is not None
-        else res["gt_jpos"]
-    )
+    jpos_pred = converter.jpos_new_2_smpl(res["pred_jpos"]) if converter is not None else res["pred_jpos"]
+    jpos_gt = converter.jpos_new_2_smpl(res["gt_jpos"]) if converter is not None else res["gt_jpos"]
 
     traj_pred = res["pred"]
     traj_gt = res["gt"]
@@ -173,9 +158,7 @@ def compute_penetration(vert, info):
 def compute_skate(vert, info):
     skate = []
     for t in range(vert.shape[0] - 1):
-        cind = (vert[t, :, 2] <= info["floor_z"]) & (
-            vert[t + 1, :, 2] <= info["floor_z"]
-        )
+        cind = (vert[t, :, 2] <= info["floor_z"]) & (vert[t + 1, :, 2] <= info["floor_z"])
         if torch.any(cind):
             offset = vert[t + 1, cind, :2] - vert[t, cind, :2]
             skate_i = torch.norm(offset, dim=1).mean().item() * 1000
@@ -232,10 +215,11 @@ def get_mean_abs(x):
 
 
 def compute_accel(joints):
-    """
-    Computes acceleration of 3D joints.
+    """Computes acceleration of 3D joints.
+
     Args:
         joints (Nx25x3).
+
     Returns:
         Accelerations (N-2).
     """
@@ -246,15 +230,16 @@ def compute_accel(joints):
 
 
 def compute_error_accel(joints_gt, joints_pred, vis=None):
-    """
-    Computes acceleration error:
+    """Computes acceleration error:
         1/(n-2) \sum_{i=1}^{n-1} X_{i-1} - 2X_i + X_{i+1}
     Note that for each frame that is not visible, three entries in the
     acceleration error should be zero'd out.
+
     Args:
         joints_gt (Nx14x3).
         joints_pred (Nx14x3).
         vis (N).
+
     Returns:
         error_accel (N-2).
     """

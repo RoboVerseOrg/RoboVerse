@@ -1,33 +1,30 @@
+import json
 
-from typing import OrderedDict
-import torch
+import aiohttp
 import numpy as np
-from phc.utils.torch_utils import quat_to_tan_norm
-import phc.env.tasks.humanoid_im as humanoid_im
-from phc.env.tasks.humanoid_amp import HumanoidAMP, remove_base_rot
-from phc.utils.motion_lib_smpl import MotionLibSMPL 
-
-from phc.utils import torch_utils
-
-from isaacgym import gymapi
+import torch
 from isaacgym import gymtorch
 from isaacgym.torch_utils import *
+
+import phc.env.tasks.humanoid_im as humanoid_im
 from phc.utils.flags import flags
-import joblib
-import gc
-from collections import defaultdict
-import aiohttp, cv2, asyncio, json
 
 
 class HumanoidImDemo(humanoid_im.HumanoidIm):
-
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless):
-        super().__init__(cfg=cfg, sim_params=sim_params, physics_engine=physics_engine, device_type=device_type, device_id=device_id, headless=headless)
+        super().__init__(
+            cfg=cfg,
+            sim_params=sim_params,
+            physics_engine=physics_engine,
+            device_type=device_type,
+            device_id=device_id,
+            headless=headless,
+        )
         self.j3d = torch.zeros([1, 24, 3]).to(self.device).float()
         self.j3d_vel = torch.zeros([1, 24, 3]).to(self.device).float()
 
     async def talk(self):
-        URL = 'http://0.0.0.0:8081/ws'
+        URL = "http://0.0.0.0:8081/ws"
         print("Starting websocket client")
         session = aiohttp.ClientSession()
         async with session.ws_connect(URL) as ws:
@@ -35,7 +32,7 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
             await ws.send_str("get_pose")
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
-                    if msg.data == 'close cmd':
+                    if msg.data == "close cmd":
                         await ws.close()
                         break
                     else:
@@ -65,16 +62,37 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
         # self._marker_pos[:] = show_points[:, :self._marker_pos.shape[1]]
         # ######### Heading debug #######
 
-        self.gym.set_actor_root_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self._root_states), gymtorch.unwrap_tensor(self._marker_actor_ids), len(self._marker_actor_ids))
+        self.gym.set_actor_root_state_tensor_indexed(
+            self.sim,
+            gymtorch.unwrap_tensor(self._root_states),
+            gymtorch.unwrap_tensor(self._marker_actor_ids),
+            len(self._marker_actor_ids),
+        )
 
         return
 
     def _reset_ref_state_init(self, env_ids):
         num_envs = env_ids.shape[0]
-        motion_ids, motion_times, root_pos, root_rot, dof_pos, root_vel, root_ang_vel, dof_vel, rb_pos, rb_rot, body_vel, body_ang_vel = self._sample_ref_state(env_ids)
+        (
+            motion_ids,
+            motion_times,
+            root_pos,
+            root_rot,
+            dof_pos,
+            root_vel,
+            root_ang_vel,
+            dof_vel,
+            rb_pos,
+            rb_rot,
+            body_vel,
+            body_ang_vel,
+        ) = self._sample_ref_state(env_ids)
 
         from scipy.spatial.transform import Rotation as sRot
-        random_heading_quat = torch.from_numpy(sRot.from_euler("xyz", [0, 0, np.pi]).as_quat())[None,].float().to(self.device)
+
+        random_heading_quat = (
+            torch.from_numpy(sRot.from_euler("xyz", [0, 0, np.pi]).as_quat())[None,].float().to(self.device)
+        )
         random_heading_quat_repeat = random_heading_quat[:, None].repeat(1, 24, 1)
         root_rot = quat_mul(random_heading_quat, root_rot).clone()
         rb_pos = quat_apply(random_heading_quat_repeat, rb_pos - root_pos[:, None, :]).clone()
@@ -84,7 +102,19 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
         root_pos = self.j3d[0, 0:1, :]
         root_pos[..., 2] = 0.93
 
-        self._set_env_state(env_ids=env_ids, root_pos=root_pos, root_rot=root_rot, dof_pos=dof_pos, root_vel=root_vel, root_ang_vel=root_ang_vel, dof_vel=dof_vel, rigid_body_pos=rb_pos, rigid_body_rot=rb_rot, rigid_body_vel=body_vel, rigid_body_ang_vel=body_ang_vel)
+        self._set_env_state(
+            env_ids=env_ids,
+            root_pos=root_pos,
+            root_rot=root_rot,
+            dof_pos=dof_pos,
+            root_vel=root_vel,
+            root_ang_vel=root_ang_vel,
+            dof_vel=dof_vel,
+            rigid_body_pos=rb_pos,
+            rigid_body_rot=rb_rot,
+            rigid_body_vel=body_vel,
+            rigid_body_ang_vel=body_ang_vel,
+        )
 
         self._reset_ref_env_ids = env_ids
         self._reset_ref_motion_ids = motion_ids
@@ -103,7 +133,7 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
         self_obs = self._compute_humanoid_obs(env_ids)
         self.self_obs_buf[env_ids] = self_obs
 
-        if (self._enable_task_obs):
+        if self._enable_task_obs:
             task_obs = self._compute_task_obs_demo(env_ids)
             obs = torch.cat([self_obs, task_obs], dim=-1)
         else:
@@ -124,7 +154,7 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
         return obs
 
     def _compute_task_obs_demo(self, env_ids=None):
-        if (env_ids is None):
+        if env_ids is None:
             body_pos = self._rigid_body_pos
             body_rot = self._rigid_body_rot
             body_vel = self._rigid_body_vel
@@ -159,7 +189,16 @@ class HumanoidImDemo(humanoid_im.HumanoidIm):
             ref_rb_pos_subset[zeros_subset, 1:] = body_pos_subset[zeros_subset, 1:]
             ref_body_vel_subset[zeros_subset, :] = body_vel_subset[zeros_subset, :]
 
-        obs = humanoid_im.compute_imitation_observations_v7(root_pos, root_rot, body_pos_subset, body_vel_subset, ref_rb_pos_subset, ref_body_vel_subset, time_steps, self._has_upright_start)
+        obs = humanoid_im.compute_imitation_observations_v7(
+            root_pos,
+            root_rot,
+            body_pos_subset,
+            body_vel_subset,
+            ref_rb_pos_subset,
+            ref_body_vel_subset,
+            time_steps,
+            self._has_upright_start,
+        )
 
         if len(env_ids) == self.num_envs:
             self.ref_body_pos = ref_rb_pos

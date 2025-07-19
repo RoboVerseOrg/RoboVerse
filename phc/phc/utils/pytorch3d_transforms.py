@@ -37,8 +37,7 @@ e.g.
 
 
 def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as quaternions to rotation matrices.
+    """Convert rotations given as quaternions to rotation matrices.
 
     Args:
         quaternions: quaternions with real part first,
@@ -68,8 +67,7 @@ def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
 
 
 def quaternion_to_matrix_ijkr(quaternions: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as quaternions to rotation matrices.
+    """Convert rotations given as quaternions to rotation matrices.
 
     Args:
         quaternions: quaternions with real part first,
@@ -99,8 +97,7 @@ def quaternion_to_matrix_ijkr(quaternions: torch.Tensor) -> torch.Tensor:
 
 
 def _copysign(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Return a tensor where each element has the absolute value taken from the,
+    """Return a tensor where each element has the absolute value taken from the,
     corresponding element of a, with sign taken from the corresponding
     element of b. This is like the standard copysign floating-point operation,
     but is not careful about negative 0 and NaN.
@@ -117,8 +114,7 @@ def _copysign(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 
 def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
-    """
-    Returns torch.sqrt(torch.max(0, x))
+    """Returns torch.sqrt(torch.max(0, x))
     but with a zero subgradient where x is 0.
     """
     ret = torch.zeros_like(x)
@@ -128,8 +124,7 @@ def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
 
 
 def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as rotation matrices to quaternions.
+    """Convert rotations given as rotation matrices to quaternions.
 
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
@@ -143,23 +138,25 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     batch_dim = matrix.shape[:-2]
     m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(matrix.reshape(batch_dim + (9,)), dim=-1)
 
-    q_abs = _sqrt_positive_part(torch.stack(
-        [
-            1.0 + m00 + m11 + m22,
-            1.0 + m00 - m11 - m22,
-            1.0 - m00 + m11 - m22,
-            1.0 - m00 - m11 + m22,
-        ],
-        dim=-1,
-    ))
+    q_abs = _sqrt_positive_part(
+        torch.stack(
+            [
+                1.0 + m00 + m11 + m22,
+                1.0 + m00 - m11 - m22,
+                1.0 - m00 + m11 - m22,
+                1.0 - m00 - m11 + m22,
+            ],
+            dim=-1,
+        )
+    )
 
     # we produce the desired quaternion multiplied by each of r, i, j, k
     quat_by_rijk = torch.stack(
         [
-            torch.stack([q_abs[..., 0]**2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
-            torch.stack([m21 - m12, q_abs[..., 1]**2, m10 + m01, m02 + m20], dim=-1),
-            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2]**2, m12 + m21], dim=-1),
-            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3]**2], dim=-1),
+            torch.stack([q_abs[..., 0] ** 2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
+            torch.stack([m21 - m12, q_abs[..., 1] ** 2, m10 + m01, m02 + m20], dim=-1),
+            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2] ** 2, m12 + m21], dim=-1),
+            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3] ** 2], dim=-1),
         ],
         dim=-2,
     )
@@ -172,13 +169,14 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
     # forall i; we pick the best-conditioned one (with the largest denominator)
 
-    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(batch_dim + (4,))  # pyre-ignore[16]
+    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(
+        batch_dim + (4,)
+    )  # pyre-ignore[16]
 
 
 @torch.jit.script
 def matrix_to_quaternion_ijkr(matrix: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as rotation matrices to quaternions.
+    """Convert rotations given as rotation matrices to quaternions.
 
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
@@ -192,23 +190,25 @@ def matrix_to_quaternion_ijkr(matrix: torch.Tensor) -> torch.Tensor:
     batch_dim = matrix.shape[:-2]
     m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(matrix.reshape(batch_dim + (9,)), dim=-1)
 
-    q_abs = _sqrt_positive_part(torch.stack(
-        [
-            1.0 + m00 - m11 - m22,
-            1.0 - m00 + m11 - m22,
-            1.0 - m00 - m11 + m22,
-            1.0 + m00 + m11 + m22,
-        ],
-        dim=-1,
-    ))
+    q_abs = _sqrt_positive_part(
+        torch.stack(
+            [
+                1.0 + m00 - m11 - m22,
+                1.0 - m00 + m11 - m22,
+                1.0 - m00 - m11 + m22,
+                1.0 + m00 + m11 + m22,
+            ],
+            dim=-1,
+        )
+    )
 
     # we produce the desired quaternion multiplied by each of r, i, j, k
     quat_by_ijkr = torch.stack(
         [
-            torch.stack([q_abs[..., 0]**2, m10 + m01, m02 + m20, m21 - m12], dim=-1),
-            torch.stack([m10 + m01, q_abs[..., 1]**2, m21 + m12, m02 - m20], dim=-1),
-            torch.stack([m02 + m20, m12 + m21, q_abs[..., 2]**2, m10 - m01], dim=-1),
-            torch.stack([m21 - m12, m02 - m20, m10 - m01, q_abs[..., 3]**2], dim=-1),
+            torch.stack([q_abs[..., 0] ** 2, m10 + m01, m02 + m20, m21 - m12], dim=-1),
+            torch.stack([m10 + m01, q_abs[..., 1] ** 2, m21 + m12, m02 - m20], dim=-1),
+            torch.stack([m02 + m20, m12 + m21, q_abs[..., 2] ** 2, m10 - m01], dim=-1),
+            torch.stack([m21 - m12, m02 - m20, m10 - m01, q_abs[..., 3] ** 2], dim=-1),
         ],
         dim=-2,
     )
@@ -216,13 +216,14 @@ def matrix_to_quaternion_ijkr(matrix: torch.Tensor) -> torch.Tensor:
     flr = torch.tensor(0.1).to(dtype=q_abs.dtype, device=q_abs.device)
     quat_candidates = quat_by_ijkr / (2.0 * q_abs[..., None].max(flr))
 
-    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(batch_dim + (4,))  # pyre-ignore[16]
+    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(
+        batch_dim + (4,)
+    )  # pyre-ignore[16]
 
 
 @torch.jit.script
 def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as rotation matrices to quaternions.
+    """Convert rotations given as rotation matrices to quaternions.
 
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
@@ -236,23 +237,25 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     batch_dim = matrix.shape[:-2]
     m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(matrix.reshape(batch_dim + (9,)), dim=-1)
 
-    q_abs = _sqrt_positive_part(torch.stack(
-        [
-            1.0 + m00 + m11 + m22,
-            1.0 + m00 - m11 - m22,
-            1.0 - m00 + m11 - m22,
-            1.0 - m00 - m11 + m22,
-        ],
-        dim=-1,
-    ))
+    q_abs = _sqrt_positive_part(
+        torch.stack(
+            [
+                1.0 + m00 + m11 + m22,
+                1.0 + m00 - m11 - m22,
+                1.0 - m00 + m11 - m22,
+                1.0 - m00 - m11 + m22,
+            ],
+            dim=-1,
+        )
+    )
 
     # we produce the desired quaternion multiplied by each of r, i, j, k
     quat_by_rijk = torch.stack(
         [
-            torch.stack([q_abs[..., 0]**2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
-            torch.stack([m21 - m12, q_abs[..., 1]**2, m10 + m01, m02 + m20], dim=-1),
-            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2]**2, m12 + m21], dim=-1),
-            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3]**2], dim=-1),
+            torch.stack([q_abs[..., 0] ** 2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
+            torch.stack([m21 - m12, q_abs[..., 1] ** 2, m10 + m01, m02 + m20], dim=-1),
+            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2] ** 2, m12 + m21], dim=-1),
+            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3] ** 2], dim=-1),
         ],
         dim=-2,
     )
@@ -265,12 +268,13 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
     # forall i; we pick the best-conditioned one (with the largest denominator)
 
-    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(batch_dim + (4,))  # pyre-ignore[16]
+    return quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(
+        batch_dim + (4,)
+    )  # pyre-ignore[16]
 
 
 def _axis_angle_rotation(axis: str, angle: torch.Tensor) -> torch.Tensor:
-    """
-    Return the rotation matrices for one of the rotations about an axis
+    """Return the rotation matrices for one of the rotations about an axis
     of which Euler angles describe, for each value of the angle given.
 
     Args:
@@ -280,7 +284,6 @@ def _axis_angle_rotation(axis: str, angle: torch.Tensor) -> torch.Tensor:
     Returns:
         Rotation matrices as tensor of shape (..., 3, 3).
     """
-
     cos = torch.cos(angle)
     sin = torch.sin(angle)
     one = torch.ones_like(angle)
@@ -299,8 +302,7 @@ def _axis_angle_rotation(axis: str, angle: torch.Tensor) -> torch.Tensor:
 
 
 def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch.Tensor:
-    """
-    Convert rotations given as Euler angles in radians to rotation matrices.
+    """Convert rotations given as Euler angles in radians to rotation matrices.
 
     Args:
         euler_angles: Euler angles in radians as tensor of shape (..., 3).
@@ -325,8 +327,7 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch
 
 
 def _angle_from_tan(axis: str, other_axis: str, data, horizontal: bool, tait_bryan: bool) -> torch.Tensor:
-    """
-    Extract the first or third Euler angle from the two members of
+    """Extract the first or third Euler angle from the two members of
     the matrix which are positive constant times its sine and cosine.
 
     Args:
@@ -343,7 +344,6 @@ def _angle_from_tan(axis: str, other_axis: str, data, horizontal: bool, tait_bry
         Euler Angles in radians for each matrix in data as a tensor
         of shape (...).
     """
-
     i1, i2 = {"X": (2, 1), "Y": (0, 2), "Z": (1, 0)}[axis]
     if horizontal:
         i2, i1 = i1, i2
@@ -366,8 +366,7 @@ def _index_from_letter(letter: str) -> int:
 
 
 def matrix_to_euler_angles(matrix: torch.Tensor, convention: str) -> torch.Tensor:
-    """
-    Convert rotations given as rotation matrices to Euler angles in radians.
+    """Convert rotations given as rotation matrices to Euler angles in radians.
 
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
@@ -402,8 +401,7 @@ def matrix_to_euler_angles(matrix: torch.Tensor, convention: str) -> torch.Tenso
 
 
 def random_quaternions(n: int, dtype: Optional[torch.dtype] = None, device: Optional[Device] = None) -> torch.Tensor:
-    """
-    Generate random quaternions representing rotations,
+    """Generate random quaternions representing rotations,
     i.e. versors with nonnegative real part.
 
     Args:
@@ -424,8 +422,7 @@ def random_quaternions(n: int, dtype: Optional[torch.dtype] = None, device: Opti
 
 
 def random_rotations(n: int, dtype: Optional[torch.dtype] = None, device: Optional[Device] = None) -> torch.Tensor:
-    """
-    Generate random rotations as 3x3 rotation matrices.
+    """Generate random rotations as 3x3 rotation matrices.
 
     Args:
         n: Number of rotation matrices in a batch to return.
@@ -441,8 +438,7 @@ def random_rotations(n: int, dtype: Optional[torch.dtype] = None, device: Option
 
 
 def random_rotation(dtype: Optional[torch.dtype] = None, device: Optional[Device] = None) -> torch.Tensor:
-    """
-    Generate a single random 3x3 rotation matrix.
+    """Generate a single random 3x3 rotation matrix.
 
     Args:
         dtype: Type to return
@@ -456,8 +452,7 @@ def random_rotation(dtype: Optional[torch.dtype] = None, device: Optional[Device
 
 
 def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
-    """
-    Convert a unit quaternion to a standard form: one in which the real
+    """Convert a unit quaternion to a standard form: one in which the real
     part is non negative.
 
     Args:
@@ -471,8 +466,7 @@ def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
 
 
 def quaternion_raw_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Multiply two quaternions.
+    """Multiply two quaternions.
     Usual torch rules for broadcasting apply.
 
     Args:
@@ -492,8 +486,7 @@ def quaternion_raw_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 
 def quaternion_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Multiply two quaternions representing rotations, returning the quaternion
+    """Multiply two quaternions representing rotations, returning the quaternion
     representing their composition, i.e. the versor with nonnegative real part.
     Usual torch rules for broadcasting apply.
 
@@ -509,8 +502,7 @@ def quaternion_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 
 def quaternion_invert(quaternion: torch.Tensor) -> torch.Tensor:
-    """
-    Given a quaternion representing rotation, get the quaternion representing
+    """Given a quaternion representing rotation, get the quaternion representing
     its inverse.
 
     Args:
@@ -520,14 +512,12 @@ def quaternion_invert(quaternion: torch.Tensor) -> torch.Tensor:
     Returns:
         The inverse, a tensor of quaternions of shape (..., 4).
     """
-
     scaling = torch.tensor([1, -1, -1, -1], device=quaternion.device)
     return quaternion * scaling
 
 
 def quaternion_apply(quaternion: torch.Tensor, point: torch.Tensor) -> torch.Tensor:
-    """
-    Apply the rotation given by a quaternion to a 3D point.
+    """Apply the rotation given by a quaternion to a 3D point.
     Usual torch rules for broadcasting apply.
 
     Args:
@@ -549,8 +539,7 @@ def quaternion_apply(quaternion: torch.Tensor, point: torch.Tensor) -> torch.Ten
 
 
 def axis_angle_to_matrix(axis_angle: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as axis/angle to rotation matrices.
+    """Convert rotations given as axis/angle to rotation matrices.
 
     Args:
         axis_angle: Rotations given as a vector in axis angle form,
@@ -565,8 +554,7 @@ def axis_angle_to_matrix(axis_angle: torch.Tensor) -> torch.Tensor:
 
 
 def matrix_to_axis_angle(matrix: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as rotation matrices to axis/angle.
+    """Convert rotations given as rotation matrices to axis/angle.
 
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
@@ -581,8 +569,7 @@ def matrix_to_axis_angle(matrix: torch.Tensor) -> torch.Tensor:
 
 
 def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as axis/angle to quaternions.
+    """Convert rotations given as axis/angle to quaternions.
 
     Args:
         axis_angle: Rotations given as a vector in axis angle form,
@@ -598,17 +585,16 @@ def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
     eps = 1e-6
     small_angles = angles.abs() < eps
     sin_half_angles_over_angles = torch.empty_like(angles)
-    sin_half_angles_over_angles[~small_angles] = (torch.sin(half_angles[~small_angles]) / angles[~small_angles])
+    sin_half_angles_over_angles[~small_angles] = torch.sin(half_angles[~small_angles]) / angles[~small_angles]
     # for x small, sin(x/2) is about x/2 - (x/2)^3/6
     # so sin(x/2)/x is about 1/2 - (x*x)/48
-    sin_half_angles_over_angles[small_angles] = (0.5 - (angles[small_angles] * angles[small_angles]) / 48)
+    sin_half_angles_over_angles[small_angles] = 0.5 - (angles[small_angles] * angles[small_angles]) / 48
     quaternions = torch.cat([torch.cos(half_angles), axis_angle * sin_half_angles_over_angles], dim=-1)
     return quaternions
 
 
 def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as quaternions to axis/angle.
+    """Convert rotations given as quaternions to axis/angle.
 
     Args:
         quaternions: quaternions with real part first,
@@ -626,17 +612,17 @@ def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
     eps = 1e-6
     small_angles = angles.abs() < eps
     sin_half_angles_over_angles = torch.empty_like(angles)
-    sin_half_angles_over_angles[~small_angles] = (torch.sin(half_angles[~small_angles]) / angles[~small_angles])
+    sin_half_angles_over_angles[~small_angles] = torch.sin(half_angles[~small_angles]) / angles[~small_angles]
     # for x small, sin(x/2) is about x/2 - (x/2)^3/6
     # so sin(x/2)/x is about 1/2 - (x*x)/48
-    sin_half_angles_over_angles[small_angles] = (0.5 - (angles[small_angles] * angles[small_angles]) / 48)
+    sin_half_angles_over_angles[small_angles] = 0.5 - (angles[small_angles] * angles[small_angles]) / 48
     return quaternions[..., 1:] / sin_half_angles_over_angles
 
 
 def rotation_6d_to_matrix(d6: torch.Tensor) -> torch.Tensor:
-    """
-    Converts 6D rotation representation by Zhou et al. [1] to rotation matrix
+    """Converts 6D rotation representation by Zhou et al. [1] to rotation matrix
     using Gram--Schmidt orthogonalization per Section B of [1].
+
     Args:
         d6: 6D rotation representation, of size (*, 6)
 
@@ -648,7 +634,6 @@ def rotation_6d_to_matrix(d6: torch.Tensor) -> torch.Tensor:
     IEEE Conference on Computer Vision and Pattern Recognition, 2019.
     Retrieved from http://arxiv.org/abs/1812.07035
     """
-
     a1, a2 = d6[..., :3], d6[..., 3:]
     b1 = F.normalize(a1, dim=-1)
     b2 = a2 - (b1 * a2).sum(-1, keepdim=True) * b1
@@ -658,9 +643,9 @@ def rotation_6d_to_matrix(d6: torch.Tensor) -> torch.Tensor:
 
 
 def matrix_to_rotation_6d(matrix: torch.Tensor) -> torch.Tensor:
-    """
-    Converts rotation matrices to 6D rotation representation by Zhou et al. [1]
+    """Converts rotation matrices to 6D rotation representation by Zhou et al. [1]
     by dropping the last row. Note that 6D representation is not unique.
+
     Args:
         matrix: batch of rotation matrices of size (*, 3, 3)
 

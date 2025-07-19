@@ -1,11 +1,9 @@
 import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
 import numpy as np
 import torch
-import torch.nn.functional as F
-
-import math
 
 np.set_printoptions(precision=30, floatmode="maxprec")
 prec = 10
@@ -51,9 +49,7 @@ def equal(a0, a1):
 
 
 def safe_acos(q):
-    """
-    pytorch acos nan: https://github.com/pytorch/pytorch/issues/8069
-    """
+    """Pytorch acos nan: https://github.com/pytorch/pytorch/issues/8069"""
     return torch.acos(torch.clamp(q, -1.0 + 1e-7, 1.0 - 1e-7))
 
 
@@ -119,9 +115,7 @@ def quaternion_from_euler(ai, aj, ak, axes="sxyz"):
 
 
 def get_angvel_fd_batch(prev_bquat, cur_bquat, dt):
-    q_diff = quaternion_multiply_batch(
-        cur_bquat.reshape(-1, 4), quaternion_inverse_batch(prev_bquat.reshape(-1, 4))
-    )
+    q_diff = quaternion_multiply_batch(cur_bquat.reshape(-1, 4), quaternion_inverse_batch(prev_bquat.reshape(-1, 4)))
     body_angvel = rotation_from_quaternion_batch(q_diff) / dt
     return body_angvel.reshape(prev_bquat.shape[0], prev_bquat.shape[1], 3)
 
@@ -140,11 +134,9 @@ def rotation_from_quaternion(_q, separate=False):
 
 
 def rotation_from_quaternion_batch(_q, separate=False):
-    """
-    q: size(Bx4)
+    """q: size(Bx4)
     Output: size(Bx3)
     """
-
     assert _q.shape[-1] == 4
 
     q = _q.clone()
@@ -277,11 +269,7 @@ def quaternion_about_axis_batch(angle, axis):
     q[:, 3] = axis[:, 2]
 
     qlen = torch.norm(q, dim=1, p=2)
-    q_change = (
-        q[qlen > _EPS, :]
-        * torch.sin(angle[qlen > _EPS, :] / 2.0)
-        / qlen[qlen > _EPS].view(-1, 1)
-    )
+    q_change = q[qlen > _EPS, :] * torch.sin(angle[qlen > _EPS, :] / 2.0) / qlen[qlen > _EPS].view(-1, 1)
     q_res = q.clone()
     q_res[qlen > _EPS, :] = q_change
     q_res[:, 0:1] = torch.cos(angle / 2.0)
@@ -367,9 +355,7 @@ def get_qvel_fd(cur_qpos, next_qpos, dt, transform=None):
 
 def get_qvel_fd_batch(cur_qpos, next_qpos, dt, transform=None):
     v = (next_qpos[:, :3] - cur_qpos[:, :3]) / dt
-    qrel = quaternion_multiply_batch(
-        next_qpos[:, 3:7], quaternion_inverse_batch(cur_qpos[:, 3:7])
-    )
+    qrel = quaternion_multiply_batch(next_qpos[:, 3:7], quaternion_inverse_batch(cur_qpos[:, 3:7]))
     axis, angle = rotation_from_quaternion_batch(qrel, True)
 
     angle[angle > np.pi] -= 2 * np.pi
@@ -406,8 +392,7 @@ def quaternion_multiply(_q1, _q0):
 
 
 def quaternion_multiply_batch(q0, q1):
-    """
-    Multiply quaternion(s) q0 with quaternion(s) q1.
+    """Multiply quaternion(s) q0 with quaternion(s) q1.
     Expects two equally-sized tensors of shape (*, 4), where * denotes any number of dimensions.
     Returns q*r as a tensor of shape (*, 4).
     https://github.com/facebookresearch/QuaterNet/blob/master/common/quaternion.py
@@ -451,7 +436,8 @@ def de_heading_batch(q):
     q_deheaded_inv = quaternion_inverse_batch(q_deheaded)
 
     return quaternion_multiply_batch(q_deheaded_inv, q)
-    
+
+
 def get_heading_batch(q):
     hq = q.clone()
     hq[:, 1] = 0
@@ -463,6 +449,7 @@ def get_heading_batch(q):
     w = 2 * safe_acos_batch(hq[:, 0])
     heading = torch.tensor(w, dtype=hq.dtype, device=hq.device)[:, None]
     return heading
+
 
 def get_heading(q):
     hq = q.clone()
@@ -477,9 +464,7 @@ def get_heading(q):
 
 
 def safe_acos_batch(q):
-    """
-    pytorch acos nan: https://github.com/pytorch/pytorch/issues/8069
-    """
+    """Pytorch acos nan: https://github.com/pytorch/pytorch/issues/8069"""
     return torch.acos(torch.clamp(q, -1.0 + 1e-7, 1.0 - 1e-7))
 
 
@@ -488,8 +473,7 @@ def quat_mul_vec(q, v):
 
 
 def quat_mul_vec_batch(q, v):
-    """
-    Rotate vector(s) v about the rotation described by quaternion(s) q.
+    """Rotate vector(s) v about the rotation described by quaternion(s) q.
     Expects a tensor of shape (*, 4) for q and a tensor of shape (*, 3) for v,
     where * denotes any number of dimensions.
     Returns a tensor of shape (*, 3).

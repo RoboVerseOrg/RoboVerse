@@ -26,15 +26,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from gym import spaces
 import numpy as np
 import torch
+from gym import spaces
+
 from phc.env.tasks.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython
+
 
 class VecTaskCPUWrapper(VecTaskCPU):
     def __init__(self, task, rl_device, sync_frame_time=False, clip_observations=5.0):
         super().__init__(task, rl_device, sync_frame_time, clip_observations)
         return
+
 
 class VecTaskGPUWrapper(VecTaskGPU):
     def __init__(self, task, rl_device, clip_observations=5.0):
@@ -46,9 +49,13 @@ class VecTaskPythonWrapper(VecTaskPython):
     def __init__(self, task, rl_device, clip_observations=5.0):
         super().__init__(task, rl_device, clip_observations)
 
-        self._amp_obs_space = spaces.Box(np.ones(task.get_num_amp_obs()) * -np.Inf, np.ones(task.get_num_amp_obs()) * np.Inf)
-        
-        self._enc_amp_obs_space = spaces.Box(np.ones(task.get_num_enc_amp_obs()) * -np.Inf, np.ones(task.get_num_enc_amp_obs()) * np.Inf)
+        self._amp_obs_space = spaces.Box(
+            np.ones(task.get_num_amp_obs()) * -np.inf, np.ones(task.get_num_amp_obs()) * np.inf
+        )
+
+        self._enc_amp_obs_space = spaces.Box(
+            np.ones(task.get_num_enc_amp_obs()) * -np.inf, np.ones(task.get_num_enc_amp_obs()) * np.inf
+        )
         return
 
     def reset(self, env_ids=None):
@@ -58,18 +65,18 @@ class VecTaskPythonWrapper(VecTaskPython):
     @property
     def amp_observation_space(self):
         return self._amp_obs_space
-    
+
     @property
     def enc_amp_observation_space(self):
         return self._enc_amp_obs_space
 
     def fetch_amp_obs_demo(self, num_samples):
         return self.task.fetch_amp_obs_demo(num_samples)
-    
+
     @property
     def enc_amp_observation_space(self):
         return self._enc_amp_obs_space
-    
+
     ################ Calm ################
     def fetch_amp_obs_demo_pair(self, num_samples):
         return self.task.fetch_amp_obs_demo_pair(num_samples)

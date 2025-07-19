@@ -26,17 +26,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numpy as np
+import torch
 from gym import spaces
-
 from isaacgym import gymtorch
 from isaacgym.torch_utils import to_torch
-import torch
-import numpy as np
 
 
 # VecEnv Wrapper for RL training
-class VecTask():
-
+class VecTask:
     def __init__(self, task, rl_device, clip_observations=5.0):
         self.task = task
 
@@ -46,13 +44,12 @@ class VecTask():
         self.num_states = task.num_states
         self.num_actions = task.num_actions
 
-        self.obs_space = spaces.Box(np.ones(self.num_obs) * -np.Inf, np.ones(self.num_obs) * np.Inf)
-        self.state_space = spaces.Box(np.ones(self.num_states) * -np.Inf, np.ones(self.num_states) * np.Inf)
+        self.obs_space = spaces.Box(np.ones(self.num_obs) * -np.inf, np.ones(self.num_obs) * np.inf)
+        self.state_space = spaces.Box(np.ones(self.num_states) * -np.inf, np.ones(self.num_states) * np.inf)
         if isinstance(self.num_actions, int):
-            self.act_space = spaces.Box(np.ones(self.num_actions) * -1., np.ones(self.num_actions) * 1.)
+            self.act_space = spaces.Box(np.ones(self.num_actions) * -1.0, np.ones(self.num_actions) * 1.0)
         elif isinstance(self.num_actions, list):
             self.act_space = spaces.Tuple([spaces.Discrete(num_actions) for num_actions in self.num_actions])
-            
 
         self.clip_obs = clip_observations
         self.rl_device = rl_device
@@ -91,7 +88,6 @@ class VecTask():
 
 # C++ CPU Class
 class VecTaskCPU(VecTask):
-
     def __init__(self, task, rl_device, sync_frame_time=False, clip_observations=5.0):
         super().__init__(task, rl_device, clip_observations=clip_observations)
         self.sync_frame_time = sync_frame_time
@@ -102,10 +98,15 @@ class VecTaskCPU(VecTask):
 
         obs, rewards, resets, extras = self.task.step(actions)
 
-        return (to_torch(np.clip(obs, -self.clip_obs, self.clip_obs), dtype=torch.float, device=self.rl_device), to_torch(rewards, dtype=torch.float, device=self.rl_device), to_torch(resets, dtype=torch.uint8, device=self.rl_device), [])
+        return (
+            to_torch(np.clip(obs, -self.clip_obs, self.clip_obs), dtype=torch.float, device=self.rl_device),
+            to_torch(rewards, dtype=torch.float, device=self.rl_device),
+            to_torch(resets, dtype=torch.uint8, device=self.rl_device),
+            [],
+        )
 
     def reset(self):
-        actions = 0.01 * (1 - 2 * np.random.rand(self.num_envs, self.num_actions)).astype('f')
+        actions = 0.01 * (1 - 2 * np.random.rand(self.num_envs, self.num_actions)).astype("f")
 
         # step the simulator
         obs, rewards, resets, extras = self.task.step(actions)
@@ -115,7 +116,6 @@ class VecTaskCPU(VecTask):
 
 # C++ GPU Class
 class VecTaskGPU(VecTask):
-
     def __init__(self, task, rl_device, clip_observations=5.0):
         super().__init__(task, rl_device, clip_observations=clip_observations)
 
@@ -132,7 +132,9 @@ class VecTaskGPU(VecTask):
         return torch.clamp(self.obs_tensor, -self.clip_obs, self.clip_obs), self.rewards_tensor, self.resets_tensor, []
 
     def reset(self):
-        actions = 0.01 * (1 - 2 * torch.rand([self.task.num_envs, self.task.num_actions], dtype=torch.float32, device=self.rl_device))
+        actions = 0.01 * (
+            1 - 2 * torch.rand([self.task.num_envs, self.task.num_actions], dtype=torch.float32, device=self.rl_device)
+        )
         actions_tensor = gymtorch.unwrap_tensor(actions)
 
         # step the simulator
@@ -143,18 +145,23 @@ class VecTaskGPU(VecTask):
 
 # Python CPU/GPU Class
 class VecTaskPython(VecTask):
-
     def get_state(self):
         return torch.clamp(self.task.states_buf, -self.clip_obs, self.clip_obs).to(self.rl_device)
 
     def step(self, actions):
-
         self.task.step(actions)
 
-        return torch.clamp(self.task.obs_buf, -self.clip_obs, self.clip_obs).to(self.rl_device), self.task.rew_buf.to(self.rl_device), self.task.reset_buf.to(self.rl_device), self.task.extras
+        return (
+            torch.clamp(self.task.obs_buf, -self.clip_obs, self.clip_obs).to(self.rl_device),
+            self.task.rew_buf.to(self.rl_device),
+            self.task.reset_buf.to(self.rl_device),
+            self.task.extras,
+        )
 
     def reset(self):
-        actions = 0.01 * (1 - 2 * torch.rand([self.task.num_envs, self.task.num_actions], dtype=torch.float32, device=self.rl_device))
+        actions = 0.01 * (
+            1 - 2 * torch.rand([self.task.num_envs, self.task.num_actions], dtype=torch.float32, device=self.rl_device)
+        )
 
         # step the simulator
         self.task.step(actions)

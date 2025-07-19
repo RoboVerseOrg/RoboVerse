@@ -3,8 +3,7 @@ import torch.nn as nn
 
 
 class RunningNorm(nn.Module):
-    """
-    y = (x-mean)/std
+    """y = (x-mean)/std
     using running estimates of mean,std
     """
 
@@ -23,9 +22,7 @@ class RunningNorm(nn.Module):
         var_x, mean_x = torch.var_mean(x, dim=0, unbiased=False)
         m = x.shape[0]
         w = self.n.to(x.dtype) / (m + self.n).to(x.dtype)
-        self.var[:] = (
-            w * self.var + (1 - w) * var_x + w * (1 - w) * (mean_x - self.mean).pow(2)
-        )
+        self.var[:] = w * self.var + (1 - w) * var_x + w * (1 - w) * (mean_x - self.mean).pow(2)
         self.mean[:] = w * self.mean + (1 - w) * mean_x
         self.std[:] = torch.sqrt(self.var)
         self.n += m

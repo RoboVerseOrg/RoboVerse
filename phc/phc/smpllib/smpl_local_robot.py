@@ -1,21 +1,27 @@
+import argparse
 import os
+import os.path as osp
 import sys
 import time
-import argparse
+
 import torch
-import pdb
-import os.path as osp
 
 sys.path.append(os.getcwd())
 
-import numpy as np
+import atexit
 import math
+import shutil
+import uuid
 from copy import deepcopy
-from collections import defaultdict
-from lxml.etree import XMLParser, parse, ElementTree, Element, SubElement
-from lxml import etree
 from io import BytesIO
+
 import mujoco
+import mujoco.viewer
+import numpy as np
+from lxml import etree
+from lxml.etree import Element, SubElement, XMLParser, parse
+from scipy.spatial import ConvexHull
+from stl import mesh
 from uhc.khrylib.mocap.skeleton_local import Skeleton
 from uhc.khrylib.mocap.skeleton_mesh_local import Skeleton as SkeletonMesh
 from uhc.smpllib.smpl_parser import (
@@ -23,18 +29,10 @@ from uhc.smpllib.smpl_parser import (
     SMPLH_Parser,
     SMPLX_Parser,
 )
-from collections import defaultdict
-from scipy.spatial import ConvexHull
-from stl import mesh
-from uhc.utils.geom import quadric_mesh_decimation, center_scale_mesh
-import uuid
-import atexit
-import shutil
-import joblib
+
 # from scipy.spatial.qhull import _Qhull
 from uhc.utils.flags import flags
-import cv2
-import mujoco.viewer
+from uhc.utils.geom import quadric_mesh_decimation
 
 
 def parse_vec(string):
@@ -71,10 +69,9 @@ def polar_to_vec(p):
 def in_hull(hull, queries):
     tolerance = 1e-3
     if len(queries.shape) == 1:
-        queries = queries[None, ]
+        queries = queries[None,]
     return np.all(
-        np.add(np.dot(queries, hull.equations[:, :-1].T),
-               hull.equations[:, -1]) <= tolerance,
+        np.add(np.dot(queries, hull.equations[:, :-1].T), hull.equations[:, -1]) <= tolerance,
         axis=1,
     )
 
@@ -90,7 +87,6 @@ def get_joint_geometries(
     verbose=False,
     min_num_vert=50,
 ):
-
     vert_to_joint = skin_weights.argmax(axis=1)
     hull_dict = {}
 
@@ -110,11 +106,10 @@ def get_joint_geometries(
             "norm_verts": norm_verts,
             "verts": smpl_verts[vind],
             "hull": hull,
-            "volume": hull.volume
+            "volume": hull.volume,
         }
         center = norm_verts[hull.vertices].mean(axis=0)
-        jgeom = mesh.Mesh(
-            np.zeros(hull.simplices.shape[0], dtype=mesh.Mesh.dtype))
+        jgeom = mesh.Mesh(np.zeros(hull.simplices.shape[0], dtype=mesh.Mesh.dtype))
         for i, f in enumerate(hull.simplices):
             for j in range(3):
                 jgeom.vectors[i][j] = norm_verts[f[j], :]
@@ -150,7 +145,6 @@ def get_geom_dict(
     joint_names,
     scale_dict={},
 ):
-
     vert_to_joint = skin_weights.argmax(axis=1)
     hull_dict = {}
 
@@ -167,7 +161,7 @@ def get_geom_dict(
             "norm_hull": hull,
             "norm_verts": norm_verts,
             "verts": smpl_verts[vind],
-            "volume": hull.volume
+            "volume": hull.volume,
         }
 
     return hull_dict
@@ -245,7 +239,6 @@ def update_joint_limits(joint_range):
 
 
 def update_joint_limits_upright(joint_range):
-
     joint_range["L_Knee"][0] = np.array([-np.pi / 32, np.pi / 32])
     joint_range["L_Knee"][1] = np.array([0, np.pi])
     joint_range["L_Knee"][2] = np.array([-np.pi / 32, np.pi / 32])
@@ -278,7 +271,6 @@ def update_joint_limits_upright(joint_range):
     joint_range["L_Elbow"][1] = np.array([-np.pi / 32, np.pi / 32])
     joint_range["L_Elbow"][2] = np.array([-np.pi, 0])
 
-
     joint_range["Spine"][0] = np.array([-np.pi / 3, np.pi / 3])
     joint_range["Spine"][1] = np.array([-np.pi / 3, np.pi / 3])
     joint_range["Spine"][2] = np.array([-np.pi / 3, np.pi / 3])
@@ -299,7 +291,6 @@ def update_joint_limits_upright(joint_range):
     joint_range["L_Thorax"][1] = np.array([-np.pi / 32, np.pi / 32])
     joint_range["L_Thorax"][2] = np.array([-np.pi / 32, np.pi / 32])
 
-
     joint_range["Head"][0] = np.array([-np.pi / 32, np.pi / 32])
     joint_range["Head"][1] = np.array([-np.pi / 2, np.pi / 2])
     joint_range["Head"][2] = np.array([-np.pi / 2, np.pi / 2])
@@ -307,7 +298,6 @@ def update_joint_limits_upright(joint_range):
     joint_range["Neck"][0] = np.array([-np.pi / 32, np.pi / 32])
     joint_range["Neck"][1] = np.array([-np.pi / 2, np.pi / 2])
     joint_range["Neck"][2] = np.array([-np.pi / 2, np.pi / 2])
-
 
     # joint_range["L_Toe"][0] = np.array([-np.pi / 32, np.pi / 32])
     # joint_range["L_Toe"][1] = np.array([-np.pi / 2, np.pi / 2])
@@ -329,10 +319,8 @@ class Joint:
         self.type = node.attrib["type"] if "type" in node.attrib else "free"
 
         if self.type == "hinge":
-            self.range = np.deg2rad(
-                parse_vec(node.attrib.get("range", "-360 360")))
-        actu_node = (body.tree.getroot().find("actuator").find(
-            f'motor[@joint="{self.name}"]'))
+            self.range = np.deg2rad(parse_vec(node.attrib.get("range", "-360 360")))
+        actu_node = body.tree.getroot().find("actuator").find(f'motor[@joint="{self.name}"]')
         if actu_node is not None:
             self.actuator = Actuator(actu_node, self)
         else:
@@ -348,15 +336,11 @@ class Joint:
         if self.local_coord:
             self.pos += body.pos
 
-        self.damping = (parse_vec(node.attrib["damping"])
-                        if "damping" in node.attrib else np.array([0]))
-        self.stiffness = (parse_vec(node.attrib["stiffness"])
-                          if "stiffness" in node.attrib else np.array([0]))
-        self.armature = (parse_vec(node.attrib["armature"])
-                         if "armature" in node.attrib else np.array([0.01]))
+        self.damping = parse_vec(node.attrib["damping"]) if "damping" in node.attrib else np.array([0])
+        self.stiffness = parse_vec(node.attrib["stiffness"]) if "stiffness" in node.attrib else np.array([0])
+        self.armature = parse_vec(node.attrib["armature"]) if "armature" in node.attrib else np.array([0.01])
 
-        self.frictionloss = (parse_vec(node.attrib["frictionloss"]) if
-                             "frictionloss" in node.attrib else np.array([0]))
+        self.frictionloss = parse_vec(node.attrib["frictionloss"]) if "frictionloss" in node.attrib else np.array([0])
         # import ipdb; ipdb.set_trace()
         # assert np.all(self.pos == body.pos)
 
@@ -380,16 +364,11 @@ class Joint:
 
         if self.type == "hinge":
             axis_vec = polar_to_vec(self.axis)
-            self.node.attrib["axis"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in axis_vec])
-            self.node.attrib["pos"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in pos])
-            self.node.attrib["damping"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in self.damping])
-            self.node.attrib["stiffness"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in self.stiffness])
-            self.node.attrib["armature"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in self.armature])
+            self.node.attrib["axis"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in axis_vec])
+            self.node.attrib["pos"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in pos])
+            self.node.attrib["damping"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in self.damping])
+            self.node.attrib["stiffness"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in self.stiffness])
+            self.node.attrib["armature"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in self.armature])
         elif self.type == "free":
             pass
 
@@ -422,8 +401,7 @@ class Joint:
             if get_name:
                 param_list.append("damping")
             else:
-                if not self.param_inited and self.param_specs["damping"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["damping"].get("rel", False):
                     self.param_specs["damping"]["lb"] += self.damping
                     self.param_specs["damping"]["ub"] += self.damping
                     self.param_specs["damping"]["lb"] = max(
@@ -445,8 +423,7 @@ class Joint:
             if get_name:
                 param_list.append("armature")
             else:
-                if not self.param_inited and self.param_specs["armature"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["armature"].get("rel", False):
                     self.param_specs["armature"]["lb"] += self.armature
                     self.param_specs["armature"]["ub"] += self.armature
                     self.param_specs["armature"]["lb"] = max(
@@ -469,8 +446,7 @@ class Joint:
             if get_name:
                 param_list.append("stiffness")
             else:
-                if not self.param_inited and self.param_specs["stiffness"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["stiffness"].get("rel", False):
                     self.param_specs["stiffness"]["lb"] += self.stiffness
                     self.param_specs["stiffness"]["ub"] += self.stiffness
                     self.param_specs["stiffness"]["lb"] = max(
@@ -491,8 +467,7 @@ class Joint:
             if get_name:
                 param_list.append("frictionloss")
             else:
-                if not self.param_inited and self.param_specs[
-                        "frictionloss"].get("rel", False):
+                if not self.param_inited and self.param_specs["frictionloss"].get("rel", False):
                     self.param_specs["frictionloss"]["lb"] += self.frictionloss
                     self.param_specs["frictionloss"]["ub"] += self.frictionloss
                     self.param_specs["frictionloss"]["lb"] = max(
@@ -517,9 +492,7 @@ class Joint:
     def set_params(self, params, pad_zeros=False):
         if "axis" in self.param_specs:
             if self.type == "hinge":
-                self.axis = denormalize_range(params[:2],
-                                              np.array([0, -2 * np.pi]),
-                                              np.array([np.pi, 2 * np.pi]))
+                self.axis = denormalize_range(params[:2], np.array([0, -2 * np.pi]), np.array([np.pi, 2 * np.pi]))
                 params = params[2:]
             elif pad_zeros:
                 params = params[2:]
@@ -574,16 +547,14 @@ class Geom:
         self.local_coord = body.local_coord
         self.name = node.attrib.get("name", "")
         self.type = node.attrib["type"]
-        self.density = (parse_vec(node.attrib["density"]) /
-                        1000 if "density" in node.attrib else np.array([1]))
+        self.density = parse_vec(node.attrib["density"]) / 1000 if "density" in node.attrib else np.array([1])
         self.parse_param_specs()
         self.param_inited = False
         # tunable parameters
         # self.size = (
         #     parse_vec(node.attrib["size"]) if "size" in node.attrib else np.array([0])
         # )
-        self.size = (parse_vec(node.attrib["size"])
-                     if "size" in node.attrib else np.array([1, 1, 1]))
+        self.size = parse_vec(node.attrib["size"]) if "size" in node.attrib else np.array([1, 1, 1])
         if self.type == "box":
             self.start = self.end = self.pos = parse_vec(node.attrib["pos"])
             self.pos_delta = np.array([0, 0, 0])
@@ -606,8 +577,7 @@ class Geom:
         else:
             self.bone_start = body.bone_start.copy()
 
-        self.ext_start = np.linalg.norm(
-            self.bone_start - self.start)  ## Geom extension from bone start
+        self.ext_start = np.linalg.norm(self.bone_start - self.start)  ## Geom extension from bone start
 
     def __repr__(self):
         return "geom_" + self.name
@@ -629,17 +599,14 @@ class Geom:
     def update_start(self):
         if self.type == "capsule":
             vec = self.bone_start - self.end
-            self.start = self.bone_start + vec * (self.ext_start /
-                                                  np.linalg.norm(vec))
+            self.start = self.bone_start + vec * (self.ext_start / np.linalg.norm(vec))
 
     def sync_node(self):
         # self.node.attrib['name'] = self.name
         self.node.attrib.pop("name", None)
-        if not self.size is None:
-            self.node.attrib["size"] = " ".join(
-                [f"{x:.6f}".rstrip("0").rstrip(".") for x in self.size])
-        self.node.attrib["density"] = " ".join(
-            [f"{x * 1000:.6f}".rstrip("0").rstrip(".") for x in self.density])
+        if self.size is not None:
+            self.node.attrib["size"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in self.size])
+        self.node.attrib["density"] = " ".join([f"{x * 1000:.6f}".rstrip("0").rstrip(".") for x in self.density])
 
         # if self.type == "capsule":
         #     start = self.start - self.body.pos if self.local_coord else self.start
@@ -662,10 +629,8 @@ class Geom:
             if get_name:
                 param_list.append("size")
             else:
-                if (self.type == "capsule" or self.type == "box"
-                        or self.type == "sphere" or self.type == "mesh"):
-                    if not self.param_inited and self.param_specs["size"].get(
-                            "rel", False):
+                if self.type == "capsule" or self.type == "box" or self.type == "sphere" or self.type == "mesh":
+                    if not self.param_inited and self.param_specs["size"].get("rel", False):
                         self.param_specs["size"]["lb"] += self.size
                         self.param_specs["size"]["ub"] += self.size
                         self.param_specs["size"]["lb"] = max(
@@ -683,8 +648,7 @@ class Geom:
                     )
                     param_list.append(size.flatten())
                     if pad_zeros and self.type == "capsule":
-                        param_list.append(
-                            np.zeros(2))  # capsule has needs to be 3 for GNN
+                        param_list.append(np.zeros(2))  # capsule has needs to be 3 for GNN
 
                 elif pad_zeros:
                     param_list.append(np.zeros(self.size.shape))
@@ -693,10 +657,8 @@ class Geom:
             if get_name:
                 param_list.append("ext_start")
             else:
-                if (self.type == "capsule" or self.type == "box"
-                        or self.type == "sphere"):
-                    if not self.param_inited and self.param_specs[
-                            "ext_start"].get("rel", False):
+                if self.type == "capsule" or self.type == "box" or self.type == "sphere":
+                    if not self.param_inited and self.param_specs["ext_start"].get("rel", False):
                         self.param_specs["ext_start"]["lb"] += self.ext_start
                         self.param_specs["ext_start"]["ub"] += self.ext_start
                         self.param_specs["ext_start"]["lb"] = max(
@@ -720,8 +682,7 @@ class Geom:
             if get_name:
                 param_list.append("density")
             else:
-                if not self.param_inited and self.param_specs["density"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["density"].get("rel", False):
                     self.param_specs["density"]["lb"] += self.density
                     self.param_specs["density"]["ub"] += self.density
                     self.param_specs["density"]["lb"] = max(
@@ -748,8 +709,7 @@ class Geom:
                 param_list.append("pos_delta")
             else:
                 if self.type == "box" or self.type == "sphere":
-                    if not self.param_inited and self.param_specs[
-                            "pos_delta"].get("rel", False):
+                    if not self.param_inited and self.param_specs["pos_delta"].get("rel", False):
                         self.param_specs["pos_delta"]["lb"] += self.density
                         self.param_specs["pos_delta"]["ub"] += self.density
                         self.param_specs["pos_delta"]["lb"] = max(
@@ -775,8 +735,7 @@ class Geom:
 
     def set_params(self, params, pad_zeros=False):
         if "size" in self.param_specs:
-            if (self.type == "capsule" or self.type == "box"
-                    or self.type == "sphere" or self.type == "mesh"):
+            if self.type == "capsule" or self.type == "box" or self.type == "sphere" or self.type == "mesh":
                 if len(self.size) == 1:
                     self.size = denormalize_range(
                         params[[0]],
@@ -806,8 +765,7 @@ class Geom:
                 params = params[1:]
 
         if "density" in self.param_specs:
-            if (self.type == "capsule" or self.type == "box"
-                    or self.type == "sphere" or self.type == "mesh"):
+            if self.type == "capsule" or self.type == "box" or self.type == "sphere" or self.type == "mesh":
                 self.density = denormalize_range(
                     params[[0]],
                     self.param_specs["density"]["lb"],
@@ -862,8 +820,7 @@ class Actuator:
             if get_name:
                 param_list.append("gear")
             else:
-                if not self.param_inited and self.param_specs["gear"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["gear"].get("rel", False):
                     self.param_specs["gear"]["lb"] += self.gear
                     self.param_specs["gear"]["ub"] += self.gear
                     self.param_specs["gear"]["lb"] = max(
@@ -910,8 +867,9 @@ class Body:
         self.cfg = cfg
         self.tree = robot.tree
         self.local_coord = robot.local_coord
-        self.name = (node.attrib["name"] if "name" in node.attrib else
-                     self.parent.name + f"_child{len(self.parent.child)}")
+        self.name = (
+            node.attrib["name"] if "name" in node.attrib else self.parent.name + f"_child{len(self.parent.child)}"
+        )
         self.child = []
         self.cind = 0
         self.pos = parse_vec(node.attrib["pos"])
@@ -923,15 +881,16 @@ class Body:
             self.bone_start = None if parent_body is None else self.pos.copy()
         else:
             self.bone_start = self.pos.copy()
-        self.joints = [Joint(x, self) for x in node.findall('joint[@type="hinge"]')] + \
-                      [Joint(x, self) for x in node.findall('joint[@type="free"]')] + \
-                     [Joint(x, self) for x in node.findall('freejoint')]
+        self.joints = (
+            [Joint(x, self) for x in node.findall('joint[@type="hinge"]')]
+            + [Joint(x, self) for x in node.findall('joint[@type="free"]')]
+            + [Joint(x, self) for x in node.findall("freejoint")]
+        )
 
         # self.geoms = [Geom(x, self) for x in node.findall('geom[@type="capsule"]')]
         supported_geoms = self.cfg.get("supported_geoms", ["capsule", "box"])
         self.geoms = [
-            Geom(x, self) for geom_type in supported_geoms
-            for x in node.findall(f'geom[@type="{geom_type}"]')
+            Geom(x, self) for geom_type in supported_geoms for x in node.findall(f'geom[@type="{geom_type}"]')
         ]
         # self.geoms = [Geom(x, self) for x in node.findall('geom[@type="capsule"]')] + [Geom(x, self) for x in node.findall('geom[@type="sphere"]')] +  [Geom(x, self) for x in node.findall('geom[@type="box"]')]
 
@@ -984,11 +943,9 @@ class Body:
         return self.joints[0].range
 
     def sync_node(self):
-        pos = (self.pos - self.parent.pos
-               if self.local_coord and self.parent is not None else self.pos)
+        pos = self.pos - self.parent.pos if self.local_coord and self.parent is not None else self.pos
         self.node.attrib["name"] = self.name
-        self.node.attrib["pos"] = " ".join(
-            [f"{x:.6f}".rstrip("0").rstrip(".") for x in pos])
+        self.node.attrib["pos"] = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in pos])
         for idx, joint in enumerate(self.joints):
             joint.sync_node(rename=self.new_body, index=idx)
         for geom in self.geoms:
@@ -1016,11 +973,7 @@ class Body:
         self.sync_geom()
         self.sync_joint()
 
-    def get_params(self,
-                   param_list,
-                   get_name=False,
-                   pad_zeros=False,
-                   demap_params=False):
+    def get_params(self, param_list, get_name=False, pad_zeros=False, demap_params=False):
         if self.bone_offset is not None and "offset" in self.param_specs:
             if get_name:
                 if self.param_specs["offset"]["type"] == "xz":
@@ -1036,19 +989,16 @@ class Body:
                     offset = self.bone_offset[[0, 1]]
                 else:
                     offset = self.bone_offset
-                if not self.param_inited and self.param_specs["offset"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["offset"].get("rel", False):
                     self.param_specs["offset"]["lb"] += offset
                     self.param_specs["offset"]["ub"] += offset
                     self.param_specs["offset"]["lb"] = np.maximum(
                         self.param_specs["offset"]["lb"],
-                        self.param_specs["offset"].get(
-                            "min", np.full_like(offset, -np.inf)),
+                        self.param_specs["offset"].get("min", np.full_like(offset, -np.inf)),
                     )
                     self.param_specs["offset"]["ub"] = np.minimum(
                         self.param_specs["offset"]["ub"],
-                        self.param_specs["offset"].get(
-                            "max", np.full_like(offset, np.inf)),
+                        self.param_specs["offset"].get("max", np.full_like(offset, np.inf)),
                     )
                 offset = normalize_range(
                     offset,
@@ -1062,8 +1012,7 @@ class Body:
                 param_list += ["bone_len"]
             else:
                 bone_len = np.linalg.norm(self.bone_offset)
-                if not self.param_inited and self.param_specs["bone_len"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["bone_len"].get("rel", False):
                     self.param_specs["bone_len"]["lb"] += bone_len
                     self.param_specs["bone_len"]["ub"] += bone_len
                     self.param_specs["bone_len"]["lb"] = max(
@@ -1086,8 +1035,7 @@ class Body:
                 param_list += ["bone_ang"]
             else:
                 bone_ang = math.atan2(self.bone_offset[2], self.bone_offset[0])
-                if not self.param_inited and self.param_specs["bone_ang"].get(
-                        "rel", False):
+                if not self.param_inited and self.param_specs["bone_ang"].get("rel", False):
                     self.param_specs["bone_ang"]["lb"] += bone_ang
                     self.param_specs["bone_ang"]["ub"] += bone_ang
                     self.param_specs["bone_ang"]["lb"] = max(
@@ -1168,9 +1116,7 @@ class Body:
             bone_ang = math.atan2(self.bone_offset[2], self.bone_offset[0])
 
         if "bone_len" in self.param_specs or "bone_ang" in self.param_specs:
-            self.bone_offset = np.array([
-                bone_len * math.cos(bone_ang), 0, bone_len * math.sin(bone_ang)
-            ])
+            self.bone_offset = np.array([bone_len * math.cos(bone_ang), 0, bone_len * math.sin(bone_ang)])
 
         for joint in self.joints:
             params = joint.set_params(params, pad_zeros)
@@ -1205,22 +1151,17 @@ class SMPL_Robot:
         self.real_weight_porpotion_capsules = cfg.get("real_weight_porpotion_capsules", False)
         self.real_weight_porpotion_boxes = cfg.get("real_weight_porpotion_boxes", False)
         self.rel_joint_lm = cfg.get("rel_joint_lm", True)  # Rolling this out worldwide!!
-        
+
         os.makedirs("/tmp/smpl/", exist_ok=True)
         self.masterfoot = cfg.get("masterfoot", False)
         self.param_specs = self.cfg.get("body_params", {})
         self.hull_dict = {}
-        self.beta = (torch.zeros(
-            (1, 10)).float() if self.smpl_model == "smpl" else torch.zeros(
-                (1, 16)).float())
+        self.beta = torch.zeros((1, 10)).float() if self.smpl_model == "smpl" else torch.zeros((1, 16)).float()
 
         if self.smpl_model == "smpl":
-            self.smpl_parser_n = SMPL_Parser(model_path=data_dir,
-                                             gender="neutral")
-            self.smpl_parser_m = SMPL_Parser(model_path=data_dir,
-                                             gender="male")
-            self.smpl_parser_f = SMPL_Parser(model_path=data_dir,
-                                             gender="female")
+            self.smpl_parser_n = SMPL_Parser(model_path=data_dir, gender="neutral")
+            self.smpl_parser_m = SMPL_Parser(model_path=data_dir, gender="male")
+            self.smpl_parser_f = SMPL_Parser(model_path=data_dir, gender="female")
         elif self.smpl_model == "smplh":
             self.smpl_parser_n = SMPLH_Parser(
                 model_path=data_dir,
@@ -1228,14 +1169,8 @@ class SMPL_Robot:
                 use_pca=False,
                 create_transl=False,
             )
-            self.smpl_parser_m = SMPLH_Parser(model_path=data_dir,
-                                              gender="male",
-                                              use_pca=False,
-                                              create_transl=False)
-            self.smpl_parser_f = SMPLH_Parser(model_path=data_dir,
-                                              gender="female",
-                                              use_pca=False,
-                                              create_transl=False)
+            self.smpl_parser_m = SMPLH_Parser(model_path=data_dir, gender="male", use_pca=False, create_transl=False)
+            self.smpl_parser_f = SMPLH_Parser(model_path=data_dir, gender="female", use_pca=False, create_transl=False)
         elif self.smpl_model == "smplx":
             self.smpl_parser_n = SMPLX_Parser(
                 model_path=data_dir,
@@ -1243,14 +1178,8 @@ class SMPL_Robot:
                 use_pca=False,
                 create_transl=False,
             )
-            self.smpl_parser_m = SMPLX_Parser(model_path=data_dir,
-                                              gender="male",
-                                              use_pca=False,
-                                              create_transl=False)
-            self.smpl_parser_f = SMPLX_Parser(model_path=data_dir,
-                                              gender="female",
-                                              use_pca=False,
-                                              create_transl=False)
+            self.smpl_parser_m = SMPLX_Parser(model_path=data_dir, gender="male", use_pca=False, create_transl=False)
+            self.smpl_parser_f = SMPLX_Parser(model_path=data_dir, gender="female", use_pca=False, create_transl=False)
 
         self.load_from_skeleton()
 
@@ -1262,11 +1191,7 @@ class SMPL_Robot:
             if osp.isdir(geom_dir):
                 shutil.rmtree(geom_dir, ignore_errors=True)
 
-    def get_joint_vertices(self,
-                           pose_aa,
-                           th_betas=None,
-                           th_trans=None,
-                           gender=[0]):
+    def get_joint_vertices(self, pose_aa, th_betas=None, th_trans=None, gender=[0]):
         if gender[0] == 0:
             smpl_parser = self.smpl_parser_n
         elif gender[0] == 1:
@@ -1276,9 +1201,7 @@ class SMPL_Robot:
         else:
             print(gender)
             raise Exception("Gender Not Supported!!")
-        vertices, joints = smpl_parser.get_joints_verts(pose=pose_aa,
-                                                        th_betas=th_betas,
-                                                        th_trans=th_trans)
+        vertices, joints = smpl_parser.get_joints_verts(pose=pose_aa, th_betas=th_betas, th_trans=th_trans)
         return vertices, joints
 
     def load_from_skeleton(
@@ -1290,7 +1213,6 @@ class SMPL_Robot:
         obj_pose=None,
         params=None,
     ):
-
         self.tree = None  # xml tree
 
         if gender[0] == 0:
@@ -1304,12 +1226,10 @@ class SMPL_Robot:
             raise Exception("Gender Not Supported!!")
 
         if betas is None and self.beta is None:
-            betas = (torch.zeros(
-                (1, 10)).float() if self.smpl_model == "smpl" else torch.zeros(
-                    (1, 16)).float())
+            betas = torch.zeros((1, 10)).float() if self.smpl_model == "smpl" else torch.zeros((1, 16)).float()
         else:
             if params is None:
-                self.beta = betas if not betas is None else self.beta
+                self.beta = betas if betas is not None else self.beta
             else:
                 # If params is not none, we need to set the beta first
                 betas = self.map_params(betas)
@@ -1318,7 +1238,8 @@ class SMPL_Robot:
                         betas.numpy().squeeze(),
                         self.param_specs["beta"]["lb"],
                         self.param_specs["beta"]["ub"],
-                    )[None, ])
+                    )[None,]
+                )
         if flags.debug:
             print(self.beta)
 
@@ -1352,10 +1273,11 @@ class SMPL_Robot:
                 joint_range,
                 contype,
                 conaffinity,
-            ) = (smpl_parser.get_mesh_offsets(
-                zero_pose=zero_pose, betas=self.beta, flatfoot=self.flatfoot)
-                 if self.smpl_model != "smplx" else
-                 smpl_parser.get_mesh_offsets(v_template=v_template))
+            ) = (
+                smpl_parser.get_mesh_offsets(zero_pose=zero_pose, betas=self.beta, flatfoot=self.flatfoot)
+                if self.smpl_model != "smplx"
+                else smpl_parser.get_mesh_offsets(v_template=v_template)
+            )
 
             if self.rel_joint_lm:
                 if self.upright_start:
@@ -1365,8 +1287,7 @@ class SMPL_Robot:
 
             self.height = np.max(verts[:, 1]) - np.min(verts[:, 1])
 
-            if (len(self.get_params(get_name=True)) > 1
-                    and not params is None):  # ZL: dank code, very dank code
+            if len(self.get_params(get_name=True)) > 1 and params is not None:  # ZL: dank code, very dank code
                 self.set_params(params)
                 size_dict = self.get_size()
                 size_dict = self.enforce_length_size(size_dict)
@@ -1391,32 +1312,43 @@ class SMPL_Robot:
                 joint_axes,
                 joint_dofs,
                 joint_range,
-                hull_dict = self.hull_dict,
+                hull_dict=self.hull_dict,
                 sites={},
                 scale=1,
                 equalities={},
-                exclude_contacts=[["Chest", "L_Shoulder"],
-                                  ["Chest", "R_Shoulder"],
-                                  ["Chest", "R_Thorax"], ["Chest", "L_Thorax"],
-                                  ['L_Hip', 'Pelvis'], ['R_Hip', 'Pelvis'],
-                                  ['Torso', 'Pelvis'], ['L_Knee', 'L_Hip'],
-                                  ['R_Knee', 'R_Hip'], ['Spine', 'Torso'],
-                                  ['L_Ankle', 'L_Knee'], ['R_Ankle', 'R_Knee'],
-                                  ['Chest', 'Spine'], ['L_Toe', 'L_Ankle'],
-                                  ['R_Toe', 'R_Ankle'], ['Neck', 'Chest'],
-                                  ['L_Thorax', 'Chest'], ['R_Thorax', 'Chest'],
-                                  ['Head', 'Neck'], ['L_Shoulder', 'L_Thorax'],
-                                  ['R_Shoulder', 'R_Thorax'],
-                                  ['L_Elbow', 'L_Shoulder'],
-                                  ['R_Elbow', 'R_Shoulder'],
-                                  ['L_Wrist',
-                                   'L_Elbow'], ['R_Wrist', 'R_Elbow'],
-                                  ['L_Hand', 'L_Wrist'], ['R_Hand',
-                                                          'R_Wrist']],
+                exclude_contacts=[
+                    ["Chest", "L_Shoulder"],
+                    ["Chest", "R_Shoulder"],
+                    ["Chest", "R_Thorax"],
+                    ["Chest", "L_Thorax"],
+                    ["L_Hip", "Pelvis"],
+                    ["R_Hip", "Pelvis"],
+                    ["Torso", "Pelvis"],
+                    ["L_Knee", "L_Hip"],
+                    ["R_Knee", "R_Hip"],
+                    ["Spine", "Torso"],
+                    ["L_Ankle", "L_Knee"],
+                    ["R_Ankle", "R_Knee"],
+                    ["Chest", "Spine"],
+                    ["L_Toe", "L_Ankle"],
+                    ["R_Toe", "R_Ankle"],
+                    ["Neck", "Chest"],
+                    ["L_Thorax", "Chest"],
+                    ["R_Thorax", "Chest"],
+                    ["Head", "Neck"],
+                    ["L_Shoulder", "L_Thorax"],
+                    ["R_Shoulder", "R_Thorax"],
+                    ["L_Elbow", "L_Shoulder"],
+                    ["R_Elbow", "R_Shoulder"],
+                    ["L_Wrist", "L_Elbow"],
+                    ["R_Wrist", "R_Elbow"],
+                    ["L_Hand", "L_Wrist"],
+                    ["R_Hand", "R_Wrist"],
+                ],
                 collision_groups=contype,
                 conaffinity=conaffinity,
                 simple_geom=False,
-                real_weight = self.real_weight,
+                real_weight=self.real_weight,
                 replace_feet=self.replace_feet,
             )
         else:
@@ -1426,18 +1358,14 @@ class SMPL_Robot:
             else:
                 zero_pose = torch.zeros((1, 156))
             if self.upright_start:
-                zero_pose[0, :3] = torch.tensor(
-                    [1.2091996, 1.2091996, 1.2091996])
+                zero_pose[0, :3] = torch.tensor([1.2091996, 1.2091996, 1.2091996])
 
-            verts, joints, skin_weights, joint_names, joint_offsets, parents_dict, channels, joint_range = smpl_parser.get_offsets(
-                betas=self.beta, zero_pose=zero_pose)
+            verts, joints, skin_weights, joint_names, joint_offsets, parents_dict, channels, joint_range = (
+                smpl_parser.get_offsets(betas=self.beta, zero_pose=zero_pose)
+            )
 
             self.height = torch.max(verts[:, 1]) - torch.min(verts[:, 1])
-            self.hull_dict = get_geom_dict(verts,
-                                           joints,
-                                           skin_weights,
-                                           joint_names,
-                                           scale_dict=size_dict)
+            self.hull_dict = get_geom_dict(verts, joints, skin_weights, joint_names, scale_dict=size_dict)
             channels = ["x", "y", "z"]  # ZL: need to fix
             if self.rel_joint_lm:
                 if self.upright_start:
@@ -1454,20 +1382,24 @@ class SMPL_Robot:
             #     elif k in ["Torso", "Spine", "Chest", "Neck", "Head"]:
             #         v[1] = 0
 
-            self.skeleton.load_from_offsets(joint_offsets,
-                                            parents_dict,
-                                            1,
-                                            joint_range,
-                                            self.hull_dict, {},
-                                            channels, {},
-                                            upright_start=self.upright_start,
-                                            remove_toe=self.remove_toe,
-                                            freeze_hand = self.freeze_hand, 
-                                            box_body = self.box_body, 
-                                            big_ankle=self.big_ankle,
-                                            real_weight_porpotion_capsules=self.real_weight_porpotion_capsules,
-                                            real_weight_porpotion_boxes = self.real_weight_porpotion_boxes,
-                                            real_weight = self.real_weight)
+            self.skeleton.load_from_offsets(
+                joint_offsets,
+                parents_dict,
+                1,
+                joint_range,
+                self.hull_dict,
+                {},
+                channels,
+                {},
+                upright_start=self.upright_start,
+                remove_toe=self.remove_toe,
+                freeze_hand=self.freeze_hand,
+                box_body=self.box_body,
+                big_ankle=self.big_ankle,
+                real_weight_porpotion_capsules=self.real_weight_porpotion_capsules,
+                real_weight_porpotion_boxes=self.real_weight_porpotion_boxes,
+                real_weight=self.real_weight,
+            )
         self.bodies = []  ### Cleaning bodies list
         self.bone_length = np.array([np.linalg.norm(i) for i in joint_offsets.values()])
         parser = XMLParser(remove_blank_text=True)
@@ -1477,12 +1409,12 @@ class SMPL_Robot:
                 # self.skeleton.write_str(
                 #     bump_buffer=self.smpl_model == "smplh" or self.smpl_model == "smplx"
                 # )
-                self.skeleton.write_str(bump_buffer=True)),
+                self.skeleton.write_str(bump_buffer=True)
+            ),
             parser=parser,
         )
 
-        self.local_coord = (self.tree.getroot().find(
-            ".//compiler").attrib["coordinate"] == "local")
+        self.local_coord = self.tree.getroot().find(".//compiler").attrib["coordinate"] == "local"
         root = self.tree.getroot().find("worldbody").find("body")
 
         self.add_body(root, None)
@@ -1507,8 +1439,7 @@ class SMPL_Robot:
         in_body = self.in_body(body, point)
         norm_points = self.hull_dict[body]["norm_verts"]
         if not in_body[0]:
-            return norm_points[np.argmin(
-                np.linalg.norm(norm_points - point, axis=1))]
+            return norm_points[np.argmin(np.linalg.norm(norm_points - point, axis=1))]
         else:
             return point.squeeze()
 
@@ -1516,7 +1447,7 @@ class SMPL_Robot:
         actuator_dict = {}
         for body in self.bodies:
             for joint in body.joints:
-                if not joint.actuator is None:
+                if joint.actuator is not None:
                     actuator_dict[joint.actuator.name] = joint.actuator.gear
         return actuator_dict
 
@@ -1580,30 +1511,30 @@ class SMPL_Robot:
 
     def add_masterfoot_box(self):
         self.joint_range_master = {
-            "L_Toe_x": f"-0.1 0.1",
-            "L_Toe_y": f"-45.0 45",
-            "L_Toe_z": f"-10 10",
-            "R_Toe_x": f"-0.1 0.1",
-            "R_Toe_y": f"-45 45",
-            "R_Toe_z": f"-10 10",
-            "L_Toe_1_joint_0": f"-0.1 0.1",
-            "L_Toe_1_joint_1": f"-45 45",
-            "L_Toe_1_joint_2": f"-10 10",
-            "R_Toe_1_joint_0": f"-0.1 0.1",
-            "R_Toe_1_joint_1": f"-45 45",
-            "R_Toe_1_joint_2": f"-10 10",
-            "L_Toe_1_1_joint_0": f"-0.1 0.1",
-            "L_Toe_1_1_joint_1": f"-45 45",
-            "L_Toe_1_1_joint_2": f"-10 10",
-            "R_Toe_1_1_joint_0": f"-0.1 0.1",
-            "R_Toe_1_1_joint_1": f"-45 45",
-            "R_Toe_1_1_joint_2": f"-10 10",
-            "L_Toe_2_joint_0": f"-0.1 0.1",
-            "L_Toe_2_joint_1": f"-45 45",
-            "L_Toe_2_joint_2": f"-10 10",
-            "R_Toe_2_joint_0": f"-0.1 0.1",
-            "R_Toe_2_joint_1": f"-45 45",
-            "R_Toe_2_joint_2": f"-10 10",
+            "L_Toe_x": "-0.1 0.1",
+            "L_Toe_y": "-45.0 45",
+            "L_Toe_z": "-10 10",
+            "R_Toe_x": "-0.1 0.1",
+            "R_Toe_y": "-45 45",
+            "R_Toe_z": "-10 10",
+            "L_Toe_1_joint_0": "-0.1 0.1",
+            "L_Toe_1_joint_1": "-45 45",
+            "L_Toe_1_joint_2": "-10 10",
+            "R_Toe_1_joint_0": "-0.1 0.1",
+            "R_Toe_1_joint_1": "-45 45",
+            "R_Toe_1_joint_2": "-10 10",
+            "L_Toe_1_1_joint_0": "-0.1 0.1",
+            "L_Toe_1_1_joint_1": "-45 45",
+            "L_Toe_1_1_joint_2": "-10 10",
+            "R_Toe_1_1_joint_0": "-0.1 0.1",
+            "R_Toe_1_1_joint_1": "-45 45",
+            "R_Toe_1_1_joint_2": "-10 10",
+            "L_Toe_2_joint_0": "-0.1 0.1",
+            "L_Toe_2_joint_1": "-45 45",
+            "L_Toe_2_joint_2": "-10 10",
+            "R_Toe_2_joint_0": "-0.1 0.1",
+            "R_Toe_2_joint_1": "-45 45",
+            "R_Toe_2_joint_2": "-10 10",
         }
         body_index = [3, 7]
 
@@ -1614,19 +1545,28 @@ class SMPL_Robot:
             ankle_node = body_ankle.node
             flip_y = -1 if idx == 3 else 1
 
-            for element in ankle_node.getiterator(): # remvoe the geom of the ankle
+            for element in ankle_node.getiterator():  # remvoe the geom of the ankle
                 if element.tag == "geom":
                     ankle_node.remove(element)
                     break
 
             child_pos = body_ankle.child[0].pos - body_ankle.pos
-            body_ankle.geoms = [] # remove Ankel's original geom
+            body_ankle.geoms = []  # remove Ankel's original geom
             toe_x, toe_y, toe_z = child_pos
-            ankles_zs, ankle_xs = self.hull_dict[body_ankle.name]['norm_verts'][:, 2], self.hull_dict[body_ankle.name]['norm_verts'][:, 0]
-            ankle_y_max, ankle_y_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 1].max(), self.hull_dict[body_ankle.name]['norm_verts'][:, 1].min()
+            ankles_zs, ankle_xs = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 2],
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 0],
+            )
+            ankle_y_max, ankle_y_min = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].min(),
+            )
             ankle_z_max, ankle_z_min = ankles_zs.max(), ankles_zs.min()
-            toe_y_max, toe_y_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 1].max(), self.hull_dict[body_ankle.name]['norm_verts'][:, 1].min()
-            ankle_z_max_x = self.hull_dict[body_ankle.name]['norm_verts'][ankles_zs.argmax(), 0]
+            toe_y_max, toe_y_min = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].min(),
+            )
+            ankle_z_max_x = self.hull_dict[body_ankle.name]["norm_verts"][ankles_zs.argmax(), 0]
             if idx == 7:
                 ankle_y_tgt, ankle_y_green = ankle_y_max, ankle_y_min
             else:
@@ -1638,16 +1578,14 @@ class SMPL_Robot:
             ankle_z_span = ankle_z_max - ankle_z_min_neg
             ankle_y_span = ankle_y_max - ankle_y_min
             ankle_frac = 10
-            green_y = (toe_y + ankle_y_tgt)/2 - ankle_y_span * 2/5 * flip_y
+            green_y = (toe_y + ankle_y_tgt) / 2 - ankle_y_span * 2 / 5 * flip_y
 
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "box",
-                "pos":
-                f"{(toe_x + yellow_toe_back)/2 - (toe_x - yellow_toe_back)/4} {(green_y + ankle_y_tgt)/2 } {ankle_z_min_neg + ankle_z_span * 9/ankle_frac /2}",
-                "size":
-                f"{(toe_x - yellow_toe_back)/4} {np.abs((ankle_y_tgt - green_y)/2)} {ankle_z_span * 9 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x + yellow_toe_back) / 2 - (toe_x - yellow_toe_back) / 4} {(green_y + ankle_y_tgt) / 2} {ankle_z_min_neg + ankle_z_span * 9 / ankle_frac / 2}",
+                "size": f"{(toe_x - yellow_toe_back) / 4} {np.abs((ankle_y_tgt - green_y) / 2)} {ankle_z_span * 9 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1656,40 +1594,39 @@ class SMPL_Robot:
 
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(toe_x + yellow_toe_back)/2 + (toe_x - yellow_toe_back)/4} {(green_y + ankle_y_tgt)/2 } {ankle_z_min_neg + ankle_z_span * 6/ankle_frac /2}",
-                "size":
-                f"{(toe_x - yellow_toe_back)/4} {np.abs((ankle_y_tgt - green_y)/2)} {ankle_z_span * 6 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x + yellow_toe_back) / 2 + (toe_x - yellow_toe_back) / 4} {(green_y + ankle_y_tgt) / 2} {ankle_z_min_neg + ankle_z_span * 6 / ankle_frac / 2}",
+                "size": f"{(toe_x - yellow_toe_back) / 4} {np.abs((ankle_y_tgt - green_y) / 2)} {ankle_z_span * 6 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(ankle_node, "geom", attributes)
             body_ankle.geoms.append(Geom(geom_node, body_ankle))
 
-
             ############################################################ Nodes for red toes
             body_toe = body_ankle.child[0]
             body_toe_node = body_toe.node
-            for element in body_toe_node.getiterator(): # remvoe the geom of the ankle
+            for element in body_toe_node.getiterator():  # remvoe the geom of the ankle
                 if element.tag == "geom":
                     body_toe_node.remove(element)
                 elif element.tag == "joint":
                     master_range = self.cfg.get("master_range", 30)
-                    element.attrib["range"] = self.joint_range_master.get(element.attrib["name"],  f"-{master_range} {master_range}")
+                    element.attrib["range"] = self.joint_range_master.get(
+                        element.attrib["name"], f"-{master_range} {master_range}"
+                    )
 
-
-            toe_x_max, toe_x_min = self.hull_dict[body_toe.name]['norm_verts'][:, 0].max(), self.hull_dict[body_toe.name]['norm_verts'][:, 0].min()
+            toe_x_max, toe_x_min = (
+                self.hull_dict[body_toe.name]["norm_verts"][:, 0].max(),
+                self.hull_dict[body_toe.name]["norm_verts"][:, 0].min(),
+            )
             # toe_y_max, toe_y_min = self.hull_dict[body_toe.name]['norm_verts'][:, 1].max(), self.hull_dict[body_toe.name]['norm_verts'][:, 1].min()
             # toe_z_max, toe_z_min = self.hull_dict[body_toe.name]['norm_verts'][:, 2].max(), self.hull_dict[body_toe.name]['norm_verts'][:, 2].min()
 
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(toe_x_max)/4} {(green_y + ankle_y_tgt)/2  - toe_y} {ankle_z_min_neg + ankle_z_span * 4/ankle_frac /2- toe_z}",
-                "size":
-                f"{(toe_x_max)/4} {np.abs((ankle_y_tgt - green_y)/2)} {ankle_z_span * 4 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x_max) / 4} {(green_y + ankle_y_tgt) / 2 - toe_y} {ankle_z_min_neg + ankle_z_span * 4 / ankle_frac / 2 - toe_z}",
+                "size": f"{(toe_x_max) / 4} {np.abs((ankle_y_tgt - green_y) / 2)} {ankle_z_span * 4 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1698,11 +1635,9 @@ class SMPL_Robot:
 
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(toe_x_max) * 3/4 } {(green_y + ankle_y_tgt)/2  - toe_y} {ankle_z_min_neg + ankle_z_span * 2/ankle_frac /2- toe_z}",
-                "size":
-                f"{(toe_x_max)/4} {np.abs((ankle_y_tgt - green_y)/2)} {ankle_z_span * 2 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x_max) * 3 / 4} {(green_y + ankle_y_tgt) / 2 - toe_y} {ankle_z_min_neg + ankle_z_span * 2 / ankle_frac / 2 - toe_z}",
+                "size": f"{(toe_x_max) / 4} {np.abs((ankle_y_tgt - green_y) / 2)} {ankle_z_span * 2 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1711,18 +1646,18 @@ class SMPL_Robot:
 
             # #################################### First additional toe (green one)
             green_z = ankle_z_max - ankle_size - ankle_z_span * 4 / ankle_frac
-            toe_y_max, toe_y_min = self.hull_dict[body_toe.name]['norm_verts'][:, 1].max(), self.hull_dict[body_toe.name]['norm_verts'][:, 1].min()
+            toe_y_max, toe_y_min = (
+                self.hull_dict[body_toe.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_toe.name]["norm_verts"][:, 1].min(),
+            )
             pos = np.array([yellow_bone_length, green_y, green_z])
 
-
-            green_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name = "_1")
+            green_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name="_1")
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(toe_x - yellow_bone_length)/2 } {  (ankle_y_green - green_y)/2 } {ankle_z_min_neg + ankle_z_span * 5/ankle_frac /2 - green_z}",
-                "size":
-                f"{np.abs(toe_x - yellow_bone_length)/2} {np.abs(green_y - ankle_y_green)/2} {ankle_z_span * 5 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x - yellow_bone_length) / 2} {(ankle_y_green - green_y) / 2} {ankle_z_min_neg + ankle_z_span * 5 / ankle_frac / 2 - green_z}",
+                "size": f"{np.abs(toe_x - yellow_bone_length) / 2} {np.abs(green_y - ankle_y_green) / 2} {ankle_z_span * 5 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1731,54 +1666,41 @@ class SMPL_Robot:
 
             # #################################### Second additional toe (white one)
             pos = np.array([toe_x - yellow_bone_length, 0, toe_z - green_z])
-            white_toe_body = self.add_body_joint_and_actuator(green_toe_body,
-                                                          green_toe_body,
-                                                          pos,
-                                                          index_name="_1")
+            white_toe_body = self.add_body_joint_and_actuator(green_toe_body, green_toe_body, pos, index_name="_1")
 
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(toe_x_max  ) * 2/5} {  (ankle_y_green - green_y)/2 } {ankle_z_min_neg + ankle_z_span * 2 /ankle_frac /2- toe_z}",
-                "size":
-                f"{(toe_x_max ) * 2/5} {np.abs(green_y - ankle_y_green)/2} {ankle_z_span * 2 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(toe_x_max) * 2 / 5} {(ankle_y_green - green_y) / 2} {ankle_z_min_neg + ankle_z_span * 2 / ankle_frac / 2 - toe_z}",
+                "size": f"{(toe_x_max) * 2 / 5} {np.abs(green_y - ankle_y_green) / 2} {ankle_z_span * 2 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(white_toe_body.node, "geom", attributes)
             white_toe_body.geoms.append(Geom(geom_node, white_toe_body))
 
-
             #################################### Third additional toe (white one)
-            ankle_x_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 0].min()
-            pos = np.array(
-                [yellow_toe_back, (green_y + ankle_y_tgt) / 2 , toe_z])
+            ankle_x_min = self.hull_dict[body_ankle.name]["norm_verts"][:, 0].min()
+            pos = np.array([yellow_toe_back, (green_y + ankle_y_tgt) / 2, toe_z])
 
-            while_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name = "_2")
+            while_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name="_2")
             attributes = {
                 "type": "box",
-                "pos":
-                f"{(ankle_x_min - yellow_toe_back)/2} {0} {ankle_z_min_neg + ankle_z_span * 7 /ankle_frac /2- toe_z}",
-                "size":
-                f"{np.abs(ankle_x_min - yellow_toe_back)/2} {np.abs((ankle_y_tgt - green_y)/2)} {ankle_z_span * 7 / ankle_frac /2}",
-                "quat": f"0 0 0 1",
+                "pos": f"{(ankle_x_min - yellow_toe_back) / 2} {0} {ankle_z_min_neg + ankle_z_span * 7 / ankle_frac / 2 - toe_z}",
+                "size": f"{np.abs(ankle_x_min - yellow_toe_back) / 2} {np.abs((ankle_y_tgt - green_y) / 2)} {ankle_z_span * 7 / ankle_frac / 2}",
+                "quat": "0 0 0 1",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(while_toe_body.node, "geom", attributes)
             while_toe_body.geoms.append(Geom(geom_node, while_toe_body))
 
-
-
-
         self.init_tree = deepcopy(self.tree)
-
 
     def add_masterfoot_capsule(self):
         masterfoot_v = self.cfg.get("masterfoot_v", 0)
         body_index = [3, 7]
-        self.joint_range_master = {"L_Toe_x": f"-0.1 0.1", "L_Toe_y": f"-45 45", "L_Toe_z": f"-10 10"}
+        self.joint_range_master = {"L_Toe_x": "-0.1 0.1", "L_Toe_y": "-45 45", "L_Toe_z": "-10 10"}
         yellow_bone_length = 0.04
         yellow_toe_back = -0.02
         for idx in body_index:
@@ -1786,32 +1708,42 @@ class SMPL_Robot:
             ankle_node = body_ankle.node
             flip_y = -1 if idx == 3 else 1
 
-            for element in ankle_node.getiterator(): # remvoe the geom of the ankle
+            for element in ankle_node.getiterator():  # remvoe the geom of the ankle
                 if element.tag == "geom":
                     ankle_node.remove(element)
                     break
             child_pos = body_ankle.child[0].pos - body_ankle.pos
-            body_ankle.geoms = [] # remove Ankel's original geom
+            body_ankle.geoms = []  # remove Ankel's original geom
             toe_x, toe_y, toe_z = child_pos
 
-            ankle_y_max, ankle_y_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 1].max(), self.hull_dict[body_ankle.name]['norm_verts'][:, 1].min()
-            ankle_z_max, ankle_z_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 2].max(), self.hull_dict[body_ankle.name]['norm_verts'][:, 2].min()
-            toe_y_max, toe_y_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 1].max(), self.hull_dict[body_ankle.name]['norm_verts'][:, 1].min()
-            ankle_z_max_x = self.hull_dict[body_ankle.name]['norm_verts'][self.hull_dict[body_ankle.name]['norm_verts'][:, 2].argmax(), 0]
+            ankle_y_max, ankle_y_min = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].min(),
+            )
+            ankle_z_max, ankle_z_min = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 2].max(),
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 2].min(),
+            )
+            toe_y_max, toe_y_min = (
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 1].min(),
+            )
+            ankle_z_max_x = self.hull_dict[body_ankle.name]["norm_verts"][
+                self.hull_dict[body_ankle.name]["norm_verts"][:, 2].argmax(), 0
+            ]
             if idx == 7:
                 ankle_y_tgt = ankle_y_max
             else:
                 ankle_y_tgt = ankle_y_min
 
-            ankle_size = np.abs(toe_z - self.hull_dict[body_ankle.name]['norm_verts'][:, 2].min())
+            ankle_size = np.abs(toe_z - self.hull_dict[body_ankle.name]["norm_verts"][:, 2].min())
             ankle_z_span = ankle_z_max - ankle_z_min
             ankle_frac = 10
 
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {toe_y } {ankle_z_max - ankle_size - ankle_z_span * 2/ankle_frac} {toe_x} {toe_y } {toe_z}",
+                "fromto": f"{ankle_z_max_x} {toe_y} {ankle_z_max - ankle_size - ankle_z_span * 2 / ankle_frac} {toe_x} {toe_y} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1821,8 +1753,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {(toe_y + ankle_y_tgt)/2} {ankle_z_max - ankle_size- ankle_z_span * 1/ankle_frac} {toe_x} {(toe_y + ankle_y_tgt)/2} {toe_z}",
+                "fromto": f"{ankle_z_max_x} {(toe_y + ankle_y_tgt) / 2} {ankle_z_max - ankle_size - ankle_z_span * 1 / ankle_frac} {toe_x} {(toe_y + ankle_y_tgt) / 2} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1832,8 +1763,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {ankle_y_tgt} {ankle_z_max - ankle_size- ankle_z_span * 0/ankle_frac} {toe_x} {ankle_y_tgt} {toe_z}",
+                "fromto": f"{ankle_z_max_x} {ankle_y_tgt} {ankle_z_max - ankle_size - ankle_z_span * 0 / ankle_frac} {toe_x} {ankle_y_tgt} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1844,8 +1774,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {toe_y} {ankle_z_max - ankle_size- ankle_z_span * 2/ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt)/2} {toe_z}",
+                "fromto": f"{ankle_z_max_x} {toe_y} {ankle_z_max - ankle_size - ankle_z_span * 2 / ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt) / 2} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1855,8 +1784,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {(toe_y + ankle_y_tgt)/2} {ankle_z_max - ankle_size- ankle_z_span * 1/ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt)/2} {toe_z}",
+                "fromto": f"{ankle_z_max_x} {(toe_y + ankle_y_tgt) / 2} {ankle_z_max - ankle_size - ankle_z_span * 1 / ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt) / 2} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1866,8 +1794,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{ankle_z_max_x} {ankle_y_tgt} {ankle_z_max - ankle_size- ankle_z_span * 0/ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt)/2} {toe_z}",
+                "fromto": f"{ankle_z_max_x} {ankle_y_tgt} {ankle_z_max - ankle_size - ankle_z_span * 0 / ankle_frac} {yellow_toe_back} {(toe_y + ankle_y_tgt) / 2} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1875,33 +1802,33 @@ class SMPL_Robot:
             body_ankle.geoms.append(Geom(geom_node, body_ankle))
 
             ############################################################
-            green_z = ankle_z_max - ankle_size - ankle_z_span * 4/ankle_frac
+            green_z = ankle_z_max - ankle_size - ankle_z_span * 4 / ankle_frac
 
             attributes = {
                 "size": f"{ankle_size}",
                 "type": "capsule",
-                "fromto":
-                f"{yellow_bone_length} {(toe_y + ankle_y_tgt)/2 - 0.05 * flip_y} {green_z} {yellow_toe_back} {(toe_y + ankle_y_tgt)/2} {toe_z}",
+                "fromto": f"{yellow_bone_length} {(toe_y + ankle_y_tgt) / 2 - 0.05 * flip_y} {green_z} {yellow_toe_back} {(toe_y + ankle_y_tgt) / 2} {toe_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(ankle_node, "geom", attributes)
             body_ankle.geoms.append(Geom(geom_node, body_ankle))
 
-
             ############################################################ Nodes for red toes
             body_toe = body_ankle.child[0]
             body_toe_node = body_toe.node
-            for element in body_toe_node.getiterator(): # remvoe the geom of the toe
+            for element in body_toe_node.getiterator():  # remvoe the geom of the toe
                 if element.tag == "geom":
                     body_toe_node.remove(element)
                 elif element.tag == "joint":
                     master_range = self.cfg.get("master_range", 30)
-                    element.attrib["range"] = self.joint_range_master.get(element.attrib["name"],  f"-{master_range} {master_range}")
+                    element.attrib["range"] = self.joint_range_master.get(
+                        element.attrib["name"], f"-{master_range} {master_range}"
+                    )
                     print(element.attrib["range"])
 
-            toe_x_max = self.hull_dict[body_toe.name]['norm_verts'][:, 0].max()
-            toe_z_min_abs = np.abs(self.hull_dict[body_toe.name]['norm_verts'][:, 2].min())
+            toe_x_max = self.hull_dict[body_toe.name]["norm_verts"][:, 0].max()
+            toe_z_min_abs = np.abs(self.hull_dict[body_toe.name]["norm_verts"][:, 2].min())
 
             attributes = {
                 "size": f"{toe_z_min_abs}",
@@ -1916,8 +1843,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0.0} {(toe_y + ankle_y_tgt)/2 - toe_y} {0} {toe_x_max} {(toe_y + ankle_y_tgt)/2- toe_y} {0}",
+                "fromto": f"{0.0} {(toe_y + ankle_y_tgt) / 2 - toe_y} {0} {toe_x_max} {(toe_y + ankle_y_tgt) / 2 - toe_y} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1927,29 +1853,29 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0.0} {ankle_y_tgt- toe_y} {0} {toe_x_max} {ankle_y_tgt- toe_y} {0}",
+                "fromto": f"{0.0} {ankle_y_tgt - toe_y} {0} {toe_x_max} {ankle_y_tgt - toe_y} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(body_toe_node, "geom", attributes)
             body_toe.geoms.append(Geom(geom_node, body_toe))
 
-
             #################################### First additional toe (green one)
-            toe_y_max, toe_y_min = self.hull_dict[body_toe.name]['norm_verts'][:, 1].max(), self.hull_dict[body_toe.name]['norm_verts'][:, 1].min()
+            toe_y_max, toe_y_min = (
+                self.hull_dict[body_toe.name]["norm_verts"][:, 1].max(),
+                self.hull_dict[body_toe.name]["norm_verts"][:, 1].min(),
+            )
             if idx == 7:
                 toe_y_tgt = toe_y_min + toe_z_min_abs
             else:
                 toe_y_tgt = toe_y_max - toe_z_min_abs
 
-            pos = np.array([yellow_bone_length, (toe_y + ankle_y_tgt)/2 - 0.05 * flip_y, green_z])
-            green_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name = "_1")
+            pos = np.array([yellow_bone_length, (toe_y + ankle_y_tgt) / 2 - 0.05 * flip_y, green_z])
+            green_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name="_1")
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {0} {0} {toe_x - yellow_bone_length} {0} {toe_z - green_z }",
+                "fromto": f"{0} {0} {0} {toe_x - yellow_bone_length} {0} {toe_z - green_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1958,8 +1884,7 @@ class SMPL_Robot:
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {toe_y_tgt + toe_z_min_abs * flip_y} {toe_z - green_z} {toe_x - yellow_bone_length} {toe_y_tgt + toe_z_min_abs* flip_y} {toe_z - green_z}",
+                "fromto": f"{0} {toe_y_tgt + toe_z_min_abs * flip_y} {toe_z - green_z} {toe_x - yellow_bone_length} {toe_y_tgt + toe_z_min_abs * flip_y} {toe_z - green_z}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1968,16 +1893,12 @@ class SMPL_Robot:
 
             #################################### Second additional toe (white one)
             pos = np.array([toe_x - yellow_bone_length, 0, toe_z - green_z])
-            white_toe_body = self.add_body_joint_and_actuator(green_toe_body,
-                                                          green_toe_body,
-                                                          pos,
-                                                          index_name="_1")
+            white_toe_body = self.add_body_joint_and_actuator(green_toe_body, green_toe_body, pos, index_name="_1")
 
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {0} {0} {np.abs((toe_x_max - toe_x) * 3/4) } {0} {0}",
+                "fromto": f"{0} {0} {0} {np.abs((toe_x_max - toe_x) * 3 / 4)} {0} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1985,10 +1906,9 @@ class SMPL_Robot:
             white_toe_body.geoms.append(Geom(geom_node, white_toe_body))
 
             attributes = {
-                "size": f"{toe_z_min_abs }",
+                "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {toe_y_tgt + toe_z_min_abs * flip_y} {0} {np.abs((toe_x_max - toe_x) * 3/4) } {toe_y_tgt + toe_z_min_abs * flip_y} {0}",
+                "fromto": f"{0} {toe_y_tgt + toe_z_min_abs * flip_y} {0} {np.abs((toe_x_max - toe_x) * 3 / 4)} {toe_y_tgt + toe_z_min_abs * flip_y} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -1996,27 +1916,24 @@ class SMPL_Robot:
             white_toe_body.geoms.append(Geom(geom_node, white_toe_body))
 
             #################################### Third additional toe (white one)
-            ankle_x_min = self.hull_dict[body_ankle.name]['norm_verts'][:, 0].min()
-            pos = np.array([yellow_toe_back, (toe_y + ankle_y_tgt)/2, toe_z])
+            ankle_x_min = self.hull_dict[body_ankle.name]["norm_verts"][:, 0].min()
+            pos = np.array([yellow_toe_back, (toe_y + ankle_y_tgt) / 2, toe_z])
 
-            while_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name = "_2")
+            while_toe_body = self.add_body_joint_and_actuator(body_ankle, body_toe, pos, index_name="_2")
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {toe_z_min_abs} {0} {ankle_x_min - yellow_toe_back + toe_z_min_abs} {toe_z_min_abs} {0}",
+                "fromto": f"{0} {toe_z_min_abs} {0} {ankle_x_min - yellow_toe_back + toe_z_min_abs} {toe_z_min_abs} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
             geom_node = SubElement(while_toe_body.node, "geom", attributes)
             while_toe_body.geoms.append(Geom(geom_node, while_toe_body))
 
-
             attributes = {
                 "size": f"{toe_z_min_abs}",
                 "type": "capsule",
-                "fromto":
-                f"{0} {-toe_z_min_abs} {0} {ankle_x_min - yellow_toe_back + toe_z_min_abs} {-toe_z_min_abs} {0}",
+                "fromto": f"{0} {-toe_z_min_abs} {0} {ankle_x_min - yellow_toe_back + toe_z_min_abs} {-toe_z_min_abs} {0}",
                 "contype": "0",
                 "conaffinity": "1",
             }
@@ -2034,14 +1951,13 @@ class SMPL_Robot:
         # geom_node = SubElement(while_toe_body.node, "geom", attributes)
         # while_toe_body.geoms.append(Geom(geom_node, while_toe_body))
 
-
         self.init_tree = deepcopy(self.tree)
 
-    def add_body_joint_and_actuator(self, parent_body, body, pos, index_name = "_1"):
-        body_node =body.node
+    def add_body_joint_and_actuator(self, parent_body, body, pos, index_name="_1"):
+        body_node = body.node
         new_node = deepcopy(body_node)
-        new_node.attrib['pos'] = f"{pos[0]} {pos[1]} {pos[2]}"
-        new_node.attrib['name'] = body.name + index_name
+        new_node.attrib["pos"] = f"{pos[0]} {pos[1]} {pos[2]}"
+        new_node.attrib["name"] = body.name + index_name
 
         actu_node = parent_body.tree.getroot().find("actuator")
         if len(parent_body.child) > 0:
@@ -2051,18 +1967,15 @@ class SMPL_Robot:
             while len(last_child.child) > 0:
                 last_child = last_child.child[-1]
 
-            actu_insert_index = (actu_node.index(
-                actu_node.find(f'motor[@joint="{last_child.joints[-1].name}"]')) + 1)
+            actu_insert_index = actu_node.index(actu_node.find(f'motor[@joint="{last_child.joints[-1].name}"]')) + 1
         else:
-            actu_insert_index = (actu_node.index(
-                actu_node.find(
-                    f'motor[@joint="{parent_body.joints[-1].name}"]')) + 1)
+            actu_insert_index = actu_node.index(actu_node.find(f'motor[@joint="{parent_body.joints[-1].name}"]')) + 1
 
         for bnode in body_node.findall("body"):
             body_node.remove(bnode)
 
         child_body = Body(
-            new_node, parent_body, self, self.cfg, new_body = True
+            new_node, parent_body, self, self.cfg, new_body=True
         )  # This needs to called after finding the actu_insert_index
         for element in new_node.getiterator():
             if element.tag == "geom":
@@ -2071,11 +1984,12 @@ class SMPL_Robot:
                 master_range = self.cfg.get("master_range", 30)
                 element.attrib["range"] = f"-{master_range} {master_range}"
 
-
         for joint in child_body.joints:
             new_actu_node = deepcopy(actu_node.find(f'motor[@joint="{joint.name}"]'))
-            joint.node.attrib["range"] = self.joint_range_master.get(joint.node.attrib["name"],  f"-{master_range} {master_range}")
-            new_actu_node.attrib['name'] += index_name
+            joint.node.attrib["range"] = self.joint_range_master.get(
+                joint.node.attrib["name"], f"-{master_range} {master_range}"
+            )
+            new_actu_node.attrib["name"] += index_name
 
             actu_node.insert(actu_insert_index, new_actu_node)
             joint.actuator = Actuator(new_actu_node, joint)
@@ -2106,12 +2020,9 @@ class SMPL_Robot:
             while len(last_child.child) > 0:
                 last_child = last_child.child[-1]
 
-            actu_insert_index = (actu_node.index(
-                actu_node.find(
-                    f'motor[@joint="{last_child.joints[-1].name}"]')) + 1)
+            actu_insert_index = actu_node.index(actu_node.find(f'motor[@joint="{last_child.joints[-1].name}"]')) + 1
         else:
-            actu_insert_index = (actu_node.index(
-                actu_node.find(f'motor[@joint="{body.joints[-1].name}"]')) + 1)
+            actu_insert_index = actu_node.index(actu_node.find(f'motor[@joint="{body.joints[-1].name}"]')) + 1
 
         for bnode in child_node.findall("body"):
             child_node.remove(bnode)
@@ -2121,10 +2032,7 @@ class SMPL_Robot:
             child_node, body, self, self.cfg, new_body=True
         )  # This needs to called after finding the actu_insert_index
 
-        start = " ".join([
-            f"{x:.6f}".rstrip("0").rstrip(".")
-            for x in body.pos + np.array([0.0, -0.05, 0.05])
-        ])
+        start = " ".join([f"{x:.6f}".rstrip("0").rstrip(".") for x in body.pos + np.array([0.0, -0.05, 0.05])])
 
         attributes = {
             "size": "0.020 0.1000 0.0100",
@@ -2144,8 +2052,7 @@ class SMPL_Robot:
         ######## Special case for the the foot, template geometry   ##############
 
         for joint in child_body.joints:
-            new_actu_node = deepcopy(
-                actu_node.find(f'motor[@joint="{joint.name}"]'))
+            new_actu_node = deepcopy(actu_node.find(f'motor[@joint="{joint.name}"]'))
             actu_node.insert(actu_insert_index, new_actu_node)
             joint.actuator = Actuator(new_actu_node, joint)
             actu_insert_index += 1
@@ -2174,11 +2081,7 @@ class SMPL_Robot:
     def export_xml_string(self):
         return etree.tostring(self.tree, pretty_print=True)
 
-    def export_vis_string(self,
-                          num=2,
-                          smpl_robot=None,
-                          fname=None,
-                          num_cones=0):
+    def export_vis_string(self, num=2, smpl_robot=None, fname=None, num_cones=0):
         tree = deepcopy(self.tree)
         if smpl_robot is None:
             vis_tree = deepcopy(self.init_tree)
@@ -2211,8 +2114,7 @@ class SMPL_Robot:
             vis_meshes = deepcopy(vis_meshes)
             for mesh in vis_meshes:
                 old_file = mesh.attrib["file"]
-                mesh.attrib["file"] = mesh.attrib["file"].replace(
-                    ".stl", f"_{i}.stl")
+                mesh.attrib["file"] = mesh.attrib["file"].replace(".stl", f"_{i}.stl")
                 shutil.copy(old_file, mesh.attrib["file"])
                 asset.append(mesh)
 
@@ -2238,11 +2140,7 @@ class SMPL_Robot:
             geom_node = SubElement(
                 body_node,
                 "geom",
-                {
-                    "mesh": "cone",
-                    "type": "mesh",
-                    "rgba": "0.0 0.8 1.0 1.0"
-                },
+                {"mesh": "cone", "type": "mesh", "rgba": "0.0 0.8 1.0 1.0"},
             )
             worldbody.append(body_node)
         for i in range(num_cones):
@@ -2255,7 +2153,8 @@ class SMPL_Robot:
                         "type": "cylinder",
                         "size": "0.0420",
                     },
-                ))
+                )
+            )
 
         if fname is not None:
             print("Writing to file: %s" % fname)
@@ -2263,16 +2162,9 @@ class SMPL_Robot:
         vis_str = etree.tostring(tree, pretty_print=True)
         return vis_str
 
-    def export_vis_string_self(self,
-                               num=3,
-                               smpl_robot=None,
-                               fname=None,
-                               num_cones=0):
+    def export_vis_string_self(self, num=3, smpl_robot=None, fname=None, num_cones=0):
         # colors = ["0.8 0.6 .4 1", "0.7 0 0 1", "0.0 0.0 0.7 1"] * num
-        colors = [
-            f"{np.random.random():.3f} {np.random.random():.3f} {np.random.random():.3f} 1"
-            for _ in range(num)
-        ]
+        colors = [f"{np.random.random():.3f} {np.random.random():.3f} {np.random.random():.3f} 1" for _ in range(num)]
         # Export multiple vis strings
         tree = deepcopy(self.tree)
         if smpl_robot is None:
@@ -2305,8 +2197,7 @@ class SMPL_Robot:
             cur_meshes = deepcopy(vis_meshes)
             for mesh in cur_meshes:
                 old_file = mesh.attrib["file"]
-                mesh.attrib["file"] = mesh.attrib["file"].replace(
-                    ".stl", f"_{i}.stl")
+                mesh.attrib["file"] = mesh.attrib["file"].replace(".stl", f"_{i}.stl")
                 shutil.copy(old_file, mesh.attrib["file"])
                 asset.append(mesh)
 
@@ -2381,7 +2272,8 @@ class SMPL_Robot:
                     params[0:10],
                     self.param_specs["beta"]["lb"],
                     self.param_specs["beta"]["ub"],
-                )[None, ])
+                )[None,]
+            )
             params = params[10:]
 
         for body in self.bodies:
@@ -2442,8 +2334,8 @@ if __name__ == "__main__":
     smpl_robot.load_from_skeleton(betas=betas, objs_info=None, gender=gender)
     print(smpl_robot.height)
 
-    smpl_robot.write_xml(f"phc/data/assets/mjcf/smpl_humanoid.xml")
-    m = mujoco.MjModel.from_xml_path(f"phc/data/assets/mjcf/smpl_humanoid.xml")
+    smpl_robot.write_xml("phc/data/assets/mjcf/smpl_humanoid.xml")
+    m = mujoco.MjModel.from_xml_path("phc/data/assets/mjcf/smpl_humanoid.xml")
     d = mujoco.MjData(m)
     # model = load_model_from_path(f"phc/data/assets/mjcf/amp_humanoid.xml")
 

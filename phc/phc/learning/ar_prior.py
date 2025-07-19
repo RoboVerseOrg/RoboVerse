@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class AR1Prior(nn.Module):
     def __init__(self):
         super(AR1Prior, self).__init__()

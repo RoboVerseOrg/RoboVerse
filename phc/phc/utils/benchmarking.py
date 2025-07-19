@@ -1,10 +1,11 @@
-from contextlib import contextmanager
-import time
-from collections import defaultdict
 import re
 import sys
+import time
+from collections import defaultdict
+from contextlib import contextmanager
 
-average_times = defaultdict(lambda: (0,0))
+average_times = defaultdict(lambda: (0, 0))
+
 
 @contextmanager
 def timeit(name):
@@ -12,15 +13,17 @@ def timeit(name):
     yield
     end = time.time()
     total_time, num_calls = average_times[name]
-    total_time += end-start
+    total_time += end - start
     num_calls += 1
-    print("TIME:", name, end-start, "| AVG", total_time / num_calls, f"| TOTAL {total_time} {num_calls}")
+    print("TIME:", name, end - start, "| AVG", total_time / num_calls, f"| TOTAL {total_time} {num_calls}")
     average_times[name] = (total_time, num_calls)
+
 
 def time_decorator(func):
     def with_times(*args, **kwargs):
         with timeit(func.__name__):
             return func(*args, **kwargs)
+
     return with_times
 
 
@@ -31,7 +34,7 @@ def recover_map(lines):
     for l in lines:
         if not l.startswith("TIME"):
             continue
-    
+
         match = pattern.match(l)
 
         name = match.group(1)
@@ -39,16 +42,17 @@ def recover_map(lines):
         total_time = float(match.group(3))
         total_calls = float(match.group(4))
         info[name] = (avg, total_time, total_calls)
-    
+
     return info
+
 
 def compare_files(fileA, fileB):
     with open(fileA) as fA:
         linesA = fA.readlines()
-    
+
     with open(fileB) as fB:
         linesB = fB.readlines()
-    
+
     mapA = recover_map(linesA)
     mapB = recover_map(linesB)
 

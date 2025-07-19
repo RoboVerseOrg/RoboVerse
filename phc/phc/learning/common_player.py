@@ -1,25 +1,21 @@
+import numpy as np
 import torch
-
-from rl_games.algos_torch import players
-from rl_games.algos_torch import torch_ext
-from phc.utils.running_mean_std import RunningMeanStd
+from gym import spaces
+from rl_games.algos_torch import players, torch_ext
 from rl_games.common.player import BasePlayer
 
-import numpy as np
-import gc
-from gym import spaces
+from phc.utils.running_mean_std import RunningMeanStd
 
 
 class CommonPlayer(players.PpoPlayerContinuous):
-
     def __init__(self, config):
         BasePlayer.__init__(self, config)
-        self.network = config['network']
+        self.network = config["network"]
 
         self._setup_action_space()
         self.mask = [False]
 
-        self.normalize_input = self.config['normalize_input']
+        self.normalize_input = self.config["normalize_input"]
 
         net_config = self._build_net_config()
         self._build_net(net_config)
@@ -54,7 +50,7 @@ class CommonPlayer(players.PpoPlayerContinuous):
             obs_dict = self.env_reset()
 
             batch_size = 1
-            batch_size = self.get_batch_size(obs_dict['obs'], batch_size)
+            batch_size = self.get_batch_size(obs_dict["obs"], batch_size)
 
             if need_init_rnn:
                 self.init_rnn()
@@ -69,7 +65,6 @@ class CommonPlayer(players.PpoPlayerContinuous):
 
             with torch.no_grad():
                 for n in range(self.max_steps):
-
                     obs_dict = self.env_reset(done_indices)
 
                     if has_masks:
@@ -96,11 +91,11 @@ class CommonPlayer(players.PpoPlayerContinuous):
                     self._post_step(info)
 
                     if render:
-                        self.env.render(mode='human')
+                        self.env.render(mode="human")
                         time.sleep(self.render_sleep)
 
                     all_done_indices = done.nonzero(as_tuple=False)
-                    done_indices = all_done_indices[::self.num_agents]
+                    done_indices = all_done_indices[:: self.num_agents]
                     done_count = len(done_indices)
                     games_played += done_count
 
@@ -119,17 +114,24 @@ class CommonPlayer(players.PpoPlayerContinuous):
 
                         game_res = 0.0
                         if isinstance(info, dict):
-                            if 'battle_won' in info:
+                            if "battle_won" in info:
                                 print_game_res = True
-                                game_res = info.get('battle_won', 0.5)
-                            if 'scores' in info:
+                                game_res = info.get("battle_won", 0.5)
+                            if "scores" in info:
                                 print_game_res = True
-                                game_res = info.get('scores', 0.5)
+                                game_res = info.get("scores", 0.5)
                         if self.print_stats:
                             if print_game_res:
-                                print('reward:', cur_rewards / done_count, 'steps:', cur_steps / done_count, 'w:', game_res)
+                                print(
+                                    "reward:",
+                                    cur_rewards / done_count,
+                                    "steps:",
+                                    cur_steps / done_count,
+                                    "w:",
+                                    game_res,
+                                )
                             else:
-                                print('reward:', cur_rewards / done_count, 'steps:', cur_steps / done_count)
+                                print("reward:", cur_rewards / done_count, "steps:", cur_steps / done_count)
 
                         sum_game_res += game_res
                         # if batch_size//self.num_agents == 1 or games_played >= n_games:
@@ -140,19 +142,31 @@ class CommonPlayer(players.PpoPlayerContinuous):
 
         print(sum_rewards)
         if print_game_res:
-            print('av reward:', sum_rewards / games_played * n_game_life, 'av steps:', sum_steps / games_played * n_game_life, 'winrate:', sum_game_res / games_played * n_game_life)
+            print(
+                "av reward:",
+                sum_rewards / games_played * n_game_life,
+                "av steps:",
+                sum_steps / games_played * n_game_life,
+                "winrate:",
+                sum_game_res / games_played * n_game_life,
+            )
         else:
-            print('av reward:', sum_rewards / games_played * n_game_life, 'av steps:', sum_steps / games_played * n_game_life)
+            print(
+                "av reward:",
+                sum_rewards / games_played * n_game_life,
+                "av steps:",
+                sum_steps / games_played * n_game_life,
+            )
 
         return
 
     def obs_to_torch(self, obs):
         obs = super().obs_to_torch(obs)
-        obs_dict = {'obs': obs}
+        obs_dict = {"obs": obs}
         return obs_dict
 
     def get_action(self, obs_dict, is_determenistic=False):
-        output = super().get_action(obs_dict['obs'], is_determenistic)
+        output = super().get_action(obs_dict["obs"], is_determenistic)
         return output
 
     def env_step(self, env, actions):
@@ -161,7 +175,7 @@ class CommonPlayer(players.PpoPlayerContinuous):
 
         obs, rewards, dones, infos = env.step(actions)
 
-        if hasattr(obs, 'dtype') and obs.dtype == np.float64:
+        if hasattr(obs, "dtype") and obs.dtype == np.float64:
             obs = np.float32(obs)
         if self.value_size > 1:
             rewards = rewards[0]
@@ -181,7 +195,7 @@ class CommonPlayer(players.PpoPlayerContinuous):
                 obs_shape = torch_ext.shape_whc_to_cwh(self.obs_shape)
             self.running_mean_std = RunningMeanStd(obs_shape).to(self.device)
             self.running_mean_std.eval()
-        config['mean_std'] = self.running_mean_std
+        config["mean_std"] = self.running_mean_std
         self.model = self.network.build(config)
         self.model.to(self.device)
         self.model.eval()
@@ -198,7 +212,7 @@ class CommonPlayer(players.PpoPlayerContinuous):
 
     def _build_net_config(self):
         obs_shape = torch_ext.shape_whc_to_cwh(self.obs_shape)
-        config = {'actions_num': self.actions_num, 'input_shape': obs_shape, 'num_seqs': self.num_agents}
+        config = {"actions_num": self.actions_num, "input_shape": obs_shape, "num_seqs": self.num_agents}
         return config
 
     def _setup_action_space(self):
@@ -206,17 +220,17 @@ class CommonPlayer(players.PpoPlayerContinuous):
         self.actions_low = torch.from_numpy(self.action_space.low.copy()).float().to(self.device)
         self.actions_high = torch.from_numpy(self.action_space.high.copy()).float().to(self.device)
         return
-    
-class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
+
+class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
     def __init__(self, config):
         BasePlayer.__init__(self, config)
-        self.network = config['network']
+        self.network = config["network"]
 
         self._setup_action_space()
         self.mask = [False]
 
-        self.normalize_input = self.config['normalize_input']
+        self.normalize_input = self.config["normalize_input"]
 
         net_config = self._build_net_config()
         self._build_net(net_config)
@@ -251,7 +265,7 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
             obs_dict = self.env_reset()
 
             batch_size = 1
-            batch_size = self.get_batch_size(obs_dict['obs'], batch_size)
+            batch_size = self.get_batch_size(obs_dict["obs"], batch_size)
 
             if need_init_rnn:
                 self.init_rnn()
@@ -266,7 +280,6 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
             with torch.no_grad():
                 for n in range(self.max_steps):
-
                     obs_dict = self.env_reset(done_indices)
 
                     if has_masks:
@@ -292,11 +305,11 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
                     self._post_step(info)
 
                     if render:
-                        self.env.render(mode='human')
+                        self.env.render(mode="human")
                         time.sleep(self.render_sleep)
 
                     all_done_indices = done.nonzero(as_tuple=False)
-                    done_indices = all_done_indices[::self.num_agents]
+                    done_indices = all_done_indices[:: self.num_agents]
                     done_count = len(done_indices)
                     games_played += done_count
 
@@ -315,17 +328,24 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
                         game_res = 0.0
                         if isinstance(info, dict):
-                            if 'battle_won' in info:
+                            if "battle_won" in info:
                                 print_game_res = True
-                                game_res = info.get('battle_won', 0.5)
-                            if 'scores' in info:
+                                game_res = info.get("battle_won", 0.5)
+                            if "scores" in info:
                                 print_game_res = True
-                                game_res = info.get('scores', 0.5)
+                                game_res = info.get("scores", 0.5)
                         if self.print_stats:
                             if print_game_res:
-                                print('reward:', cur_rewards / done_count, 'steps:', cur_steps / done_count, 'w:', game_res)
+                                print(
+                                    "reward:",
+                                    cur_rewards / done_count,
+                                    "steps:",
+                                    cur_steps / done_count,
+                                    "w:",
+                                    game_res,
+                                )
                             else:
-                                print('reward:', cur_rewards / done_count, 'steps:', cur_steps / done_count)
+                                print("reward:", cur_rewards / done_count, "steps:", cur_steps / done_count)
 
                         sum_game_res += game_res
                         # if batch_size//self.num_agents == 1 or games_played >= n_games:
@@ -336,19 +356,31 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
         print(sum_rewards)
         if print_game_res:
-            print('av reward:', sum_rewards / games_played * n_game_life, 'av steps:', sum_steps / games_played * n_game_life, 'winrate:', sum_game_res / games_played * n_game_life)
+            print(
+                "av reward:",
+                sum_rewards / games_played * n_game_life,
+                "av steps:",
+                sum_steps / games_played * n_game_life,
+                "winrate:",
+                sum_game_res / games_played * n_game_life,
+            )
         else:
-            print('av reward:', sum_rewards / games_played * n_game_life, 'av steps:', sum_steps / games_played * n_game_life)
+            print(
+                "av reward:",
+                sum_rewards / games_played * n_game_life,
+                "av steps:",
+                sum_steps / games_played * n_game_life,
+            )
 
         return
 
     def obs_to_torch(self, obs):
         obs = super().obs_to_torch(obs)
-        obs_dict = {'obs': obs}
+        obs_dict = {"obs": obs}
         return obs_dict
 
     def get_action(self, obs_dict, is_determenistic=False):
-        output = super().get_action(obs_dict['obs'], is_determenistic)
+        output = super().get_action(obs_dict["obs"], is_determenistic)
         return output
 
     def env_step(self, env, actions):
@@ -357,7 +389,7 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
         obs, rewards, dones, infos = env.step(actions)
 
-        if hasattr(obs, 'dtype') and obs.dtype == np.float64:
+        if hasattr(obs, "dtype") and obs.dtype == np.float64:
             obs = np.float32(obs)
         if self.value_size > 1:
             rewards = rewards[0]
@@ -374,7 +406,7 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
             obs_shape = torch_ext.shape_whc_to_cwh(self.env.task.get_running_mean_size())
             self.running_mean_std = RunningMeanStd(obs_shape).to(self.device)
             self.running_mean_std.eval()
-        config['mean_std'] = self.running_mean_std
+        config["mean_std"] = self.running_mean_std
         self.model = self.network.build(config)
         self.model.to(self.device)
         self.model.eval()
@@ -391,13 +423,13 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
 
     def _build_net_config(self):
         obs_shape = torch_ext.shape_whc_to_cwh(self.obs_shape)
-        config = {'actions_num': self.actions_num, 'input_shape': obs_shape, 'num_seqs': self.num_agents}
+        config = {"actions_num": self.actions_num, "input_shape": obs_shape, "num_seqs": self.num_agents}
         return config
 
     def _setup_action_space(self):
-        action_space = self.env_info['action_space']
+        action_space = self.env_info["action_space"]
         self.actions_num = action_space.shape
-        
+
         if type(action_space) is spaces.Discrete:
             self.actions_num = action_space.n
             self.is_multi_discrete = False
@@ -405,7 +437,7 @@ class CommonPlayerDiscrete(players.PpoPlayerDiscrete):
             self.actions_num = [action.n for action in action_space]
             self.is_multi_discrete = True
         return
-    
+
     def _change_char_color(self, env_ids):
         base_col = np.array([0.4, 0.4, 0.4])
         range_col = np.array([0.0706, 0.149, 0.2863])

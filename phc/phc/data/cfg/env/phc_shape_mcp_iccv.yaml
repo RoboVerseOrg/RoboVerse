@@ -1,13 +1,13 @@
-# if given, will override the device setting in gym. 
+# if given, will override the device setting in gym.
 project_name: "EgoQuest_IM"
 notes:  "Progressive MCP without softmax, zero out far"
-env: 
+env:
   numEnvs: 1024
   envSpacing: 2
   episodeLength: 300
   isFlagrun: False
   enableDebugVis: False
-  
+
   bias_offset: False
   has_self_collision: True
   has_mesh: False
@@ -17,7 +17,7 @@ env:
   has_smpl_pd_offset: False
   remove_toe: False # For humanoid's geom toe
   real_weight_porpotion_capsules: True
-  
+
   sym_loss_coef: 1
   big_ankle: True
   fut_tracks: False
@@ -37,7 +37,7 @@ env:
   zero_out_far_train: False
   cycle_motion: False
   getup_udpate_epoch: 78750
-  
+
   getup_schedule: True
   recoverySteps: 90
   zero_out_far_steps: 90
@@ -45,16 +45,16 @@ env:
   fallInitProb: 0.3
 
   hard_negative: False
-  
+
   masterfoot: False
   freeze_toe: false
 
   real_weight: True
   kp_scale: 1
-  remove_toe_im: False # For imitation 
+  remove_toe_im: False # For imitation
   power_reward: True
   power_coefficient: 0.00005
-  
+
   has_shape_obs: True
   has_shape_obs_disc: True
   has_shape_variation: True
@@ -63,10 +63,10 @@ env:
   pdControl: True
   powerScale: 1.0
   controlFrequencyInv: 2 # 30 Hz
-  stateInit: "Random"  
+  stateInit: "Random"
   hybridInitProb: 0.5
   numAMPObsSteps: 10
-  
+
   localRootObs: True
   rootHeightObs: True
   keyBodies: ["R_Ankle", "L_Ankle", "R_Wrist",  "L_Wrist"]
