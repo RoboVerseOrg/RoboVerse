@@ -115,7 +115,8 @@ extend-exclude = [
     "tmp",
     "roboverse_data",
     "assets",
-    "docker"
+    "docker",
+    "metasim/tests",
 ]
 
 [tool.setuptools.packages.find]
@@ -173,3 +174,31 @@ known-third-party = ["wandb", "isaacsim"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+# Pytest configuration
+testpaths = ["metasim/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Exclude directories from test discovery
+norecursedirs = [
+    ".git", ".tox", "dist", "build", "*.egg",
+    "dashboard", "scripts", "docs", "wandb", "tmp",
+    "roboverse_deploy", "roboverse_learn", "roboverse_data",
+    "assets", "docker", "third_party", "IsaacGymEnvs", "ogbench"
+]
+# Additional options
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "-ra",
+]
+# Test markers
+markers = [
+    "unit: Pure unit tests without simulator dependencies",
+    "integration: Integration tests requiring simulator instances",
+    "performance: Performance benchmarking tests",
+    "slow: Long-running tests",
+    "gpu: Tests requiring GPU hardware",
+]

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<robot name="articulated_box">
+  <link name="box_base">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.1"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.2 0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="box_lid">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.02"/>
+      </geometry>
+      <material name="dark_red">
+        <color rgba="0.8 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.2 0.02"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="lid_joint" type="revolute">
+    <parent link="box_base"/>
+    <child link="box_lid"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0" upper="1.57" effort="10" velocity="1.0"/>
+  </joint>
+</robot>

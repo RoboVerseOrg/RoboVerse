@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot name="ground_plane">
+  <!-- A simple ground plane for testing -->
+
+  <link name="ground_link">
+    <visual>
+      <geometry>
+        <box size="10 10 0.01"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="10 10 0.01"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1000.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="83.33" ixy="0" ixz="0" iyy="83.33" iyz="0" izz="166.67"/>
+    </inertial>
+  </link>
+</robot>

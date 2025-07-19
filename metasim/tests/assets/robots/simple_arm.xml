@@ -1,0 +1,24 @@
+<mujoco model="simple_arm">
+  <option gravity="0 0 -9.81"/>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0">
+      <geom name="base" type="box" size="0.1 0.1 0.05" rgba="0.8 0.8 0.8 1"/>
+
+      <body name="link1" pos="0 0 0.1">
+        <joint name="joint1" type="hinge" axis="0 0 1" range="-3.14159 3.14159"/>
+        <geom name="link1_geom" type="cylinder" size="0.05 0.2" pos="0 0 0.1" rgba="0.6 0.6 0.6 1"/>
+
+        <body name="link2" pos="0 0 0.4">
+          <joint name="joint2" type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+          <geom name="link2_geom" type="cylinder" size="0.04 0.15" pos="0 0 0.075" rgba="0.6 0.6 0.6 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="joint1" joint="joint1" ctrlrange="-5 5" gear="10"/>
+    <motor name="joint2" joint="joint2" ctrlrange="-5 5" gear="10"/>
+  </actuator>
+</mujoco>

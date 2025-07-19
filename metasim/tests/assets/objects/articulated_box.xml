@@ -1,0 +1,12 @@
+<mujoco model="articulated_box">
+  <worldbody>
+    <body name="box_base" pos="0 0 0">
+      <geom name="box_base_geom" type="box" size="0.1 0.1 0.05" rgba="1 0 0 1"/>
+
+      <body name="box_lid" pos="0 0 0.1">
+        <joint name="lid_joint" type="hinge" axis="1 0 0" range="0 1.57"/>
+        <geom name="box_lid_geom" type="box" size="0.1 0.1 0.01" rgba="0.8 0 0 1"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

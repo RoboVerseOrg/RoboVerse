@@ -1,0 +1,39 @@
+# Core dependencies for metasim testing
+# Install with: pip install -r metasim/tests/test_requirements.txt
+
+# Essential packages
+numpy>=1.20.0
+torch>=2.0.0
+scipy>=1.7.0
+matplotlib>=3.5.0
+pandas>=1.3.0
+Pillow>=9.0.0
+PyYAML>=6.0
+tqdm>=4.62.0
+
+# Testing framework
+pytest>=8.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+pytest-timeout>=2.1.0
+pytest-xdist>=3.5.0
+
+# Test reporting
+pytest-html>=4.0.0
+pytest-cov>=4.0.0
+coverage[toml]>=7.0.0
+pytest-json-report>=1.5.0
+pytest-metadata>=3.0.0
+
+# Metasim dependencies
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+tyro>=0.6.0
+einops>=0.6.0
+trimesh>=4.0.0
+
+# Minimal simulator dependencies
+mujoco>=3.0.0
+dm-control>=1.0.0
+gymnasium>=0.29.0
+gym>=0.26.0
