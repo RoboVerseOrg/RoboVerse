@@ -1,0 +1,51 @@
+defaults:
+  - asset_base
+
+file : 'resources/robots/h1/urdf/h1_verse.urdf'
+name : "h1"
+foot_name : "ankle"
+penalize_contacts_on : []
+terminate_after_contacts_on : ["pelvis", "shoulder", "hip", "knee"]
+self_collisions : 1 # 1 to disable, 0 to enable...bitwise filter
+replace_cylinder_with_capsule : True
+flip_visual_attachments : False
+
+density : 0.001
+angular_damping : 0.
+linear_damping : 0.
+set_dof_properties : True
+default_dof_prop_damping : [5,5,5,6,2, 5,5,5,6,2, 6, 2,2,2,2, 2,2,2,2]
+# default_dof_prop_stiffness : [200,200,200,300,40, 200,200,200,300,40, 300, 100,100,100,100, 100,100,100,100]
+default_dof_prop_stiffness : [0,0,0,0,0, 0,0,0,0,0, 0, 0,0,0,0, 0,0,0,0]
+default_dof_prop_friction : [0,0,0,0,0, 0,0,0,0,0, 0, 0,0,0,0, 0,0,0,0]
+max_angular_velocity : 1000.
+max_linear_velocity : 1000.
+armature : 0.
+thickness : 0.01
+
+terminate_by_knee_distance : False
+terminate_by_lin_vel : False
+terminate_by_ang_vel : False
+terminate_by_gravity : True
+terminate_by_low_height : False
+
+terminate_by_ref_motion_distance : True
+terminate_by_1time_motion : True
+
+local_upper_reward : False
+zero_out_far: False # Zero out far termination
+zero_out_far_change_obs: False
+close_distance : 1.0
+far_distance : 1.0
+
+termination_scales:
+    base_height : 0.3
+    base_vel : 10.0
+    base_ang_vel : 5.0
+    gravity_x : 0.7
+    gravity_y : 0.7
+    min_knee_distance : 0.
+    max_ref_motion_distance : 5.0
+
+clip_motion_goal: True
+clip_motion_goal_distance: 1.0

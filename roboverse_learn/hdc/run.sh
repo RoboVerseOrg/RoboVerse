@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 CKPT_DIR=""
 MOTION_FILE=""
 NUM_ENVS=2048            # Parallel environments

@@ -1,0 +1,30 @@
+defaults:
+  - terrain_base
+
+# mesh_type : 'plane' # "heightfield" # none, plane, heightfield or trimesh
+# mesh_type : 'plane' # "heightfield" # none, plane, heightfield or trimesh
+mesh_type : 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
+horizontal_scale : 0.1 # [m]
+vertical_scale : 0.005 # [m]
+border_size : 25 # [m]
+curriculum : False
+# curriculum : False
+static_friction : 1.0
+dynamic_friction : 1.0
+restitution : 0.
+# rough terrain only:
+measure_heights : True # keep it False
+measured_points_x : [ 0.] # 1mx1.6m rectangle (without center line)
+measured_points_y : [ 0.]
+selected : False # select a unique terrain type and pass all arguments
+terrain_kwargs : null # Dict of arguments for selected terrain
+max_init_terrain_level : 9 # starting curriculum state
+terrain_length : 8.
+terrain_width : 8.
+num_rows: 10 # number of terrain rows (levels)
+num_cols : 20 # number of terrain cols (types)
+terrain_types : ['flat', 'rough', 'low_obst', 'smooth_slope', 'rough_slope']  # do not duplicate!
+# terrain_proportions : [0.2, 0.2, 0.2, 0.2, 0.2]
+terrain_proportions : [0.2, 0.6, 0.2, 0.0, 0.0]
+# trimesh only:
+slope_treshold : 0.75 # slopes above this threshold will be corrected to vertical surfaces

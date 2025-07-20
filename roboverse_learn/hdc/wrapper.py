@@ -25,7 +25,7 @@ from roboverse_learn.skillblender_rl.utils import (
 # -------------------------------------------------------------------------
 
 
-class H2OWrapper(HumanoidBaseWrapper):
+class HDCWrapper(HumanoidBaseWrapper):
     """rsl_rl vector-env wrapper for H2O."""
 
     # ------------------------------------------------------------------ #

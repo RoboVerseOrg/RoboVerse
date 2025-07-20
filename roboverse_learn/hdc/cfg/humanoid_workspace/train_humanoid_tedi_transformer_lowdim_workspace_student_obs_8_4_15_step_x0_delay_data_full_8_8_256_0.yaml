@@ -1,0 +1,201 @@
+name: humanoid_workspace
+_target_: diffusion_policy.workspace.humanoid_workspace_transformer.HumanoidWorkspaceTransformer
+task_name: humanoid
+exp_name: "default"
+horizon: 8
+#if (horizon < n_obs_steps - 1 + n_action_steps) or (horizon % 4 != 0):
+#    raise ValueError(
+#        "Horizon must be longer than (To-1) + Ta \n Also, the horizon must be divisible by 4 for the UNet to accept it."
+#        % (horizon - n_obs_steps, n_action_steps)
+#    )  and will be output as TypeError('not all arguments converted during string formatting')
+n_obs_steps: 4
+n_action_steps: 1
+n_latency_steps: 0
+past_action_visible: False
+keypoint_visible_rate: 1.0
+# obs_as_local_cond: False
+# obs_as_global_cond: True
+pred_action_steps_only: False
+obs_as_cond: True
+obs_dim: 251
+action_dim: 19
+keypoint_dim: 0
+
+task: 
+  name: humanoid
+
+  obs_dim: ${..obs_dim} 
+  action_dim: ${..action_dim}
+  keypoint_dim: ${..keypoint_dim}
+
+  env_runner:
+    _target_: diffusion_policy.env_runner.pusht_keypoints_runner.PushTKeypointsRunner
+    keypoint_visible_rate: ${...keypoint_visible_rate}
+    n_train: 6
+    n_train_vis: 2
+    train_start_seed: 0
+    n_test: 50
+    n_test_vis: 4
+    legacy_test: True
+    test_start_seed: 100000
+    max_steps: 300
+    n_obs_steps: ${...n_obs_steps}
+    n_action_steps: ${...n_action_steps}
+    n_latency_steps: ${...n_latency_steps}
+    fps: 10
+    agent_keypoints: False
+    past_action: ${...past_action_visible}
+    n_envs: null
+
+  dataset:
+    _target_: diffusion_policy.dataset.humanoid_dataset.HumanoidDataset
+    zarr_path: /home/yunshen/code/human2humanoid/diffusion_policy/humanoid.zarr
+    horizon: ${...horizon}
+    pad_before: ${eval:'${...n_obs_steps}-1+${...n_latency_steps}'}
+    pad_after: ${eval:'${...n_action_steps}-1'}
+    seed: 42
+    val_ratio: 0.0 # for debug
+    #val_ratio: 0.02
+    max_train_episodes: 90
+
+
+
+
+
+
+policy:
+  _target_: diffusion_policy.policy.tedi_transformer_lowdim_policy.TEDiTransformerLowdimPolicy
+
+  model:
+    _target_: diffusion_policy.model.diffusion.transformer_for_diffusion.TransformerForDiffusion
+    input_dim: "${eval:'${...action_dim} if ${...obs_as_cond} else ${...obs_dim} + ${...action_dim}'}"
+    output_dim: "${eval:'${...action_dim} if ${...obs_as_cond} else ${...obs_dim} + ${...action_dim}'}"
+    horizon: ${...horizon}
+    n_obs_steps: ${...n_obs_steps}
+    cond_dim: ${eval:'${...obs_dim} if ${...obs_as_cond} else 0'}
+
+    n_layer: 8
+    n_head: 8
+    n_emb: 256
+    p_drop_emb: 0.0
+    p_drop_attn: 0.01
+
+    causal_attn: True
+    time_as_cond: True # if false, use BERT like encoder only arch, time as input
+    obs_as_cond: ${...obs_as_cond}
+    n_cond_layers: 0 # >0: use transformer encoder for cond, otherwise use MLP
+  
+  noise_scheduler:
+    _target_: diffusion_policy.policy.schedulers.DDPMTEDiScheduler
+    num_train_timesteps: 15
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: squaredcos_cap_v2
+    variance_type: fixed_small # Yilun's paper uses fixed_small_log instead, but easy to cause Nan
+    clip_sample: True # required when predict_epsilon=False
+    prediction_type: sample # or sample
+
+  horizon: ${..horizon}
+  obs_dim: ${..obs_dim}
+  action_dim: ${..action_dim}
+  n_action_steps: ${eval:'${..n_action_steps}+${..n_latency_steps}'}
+  n_obs_steps: ${..n_obs_steps}
+  num_inference_steps: 15
+  obs_as_cond: ${..obs_as_cond}
+  pred_action_steps_only: ${..pred_action_steps_only}
+
+  temporally_constant_weight: 0.2
+  temporally_increasing_weight: 0.0
+  temporally_random_weights: 0.0
+  chunk_wise_weight: 0.8
+
+  buffer_init: "zero"
+
+  # scheduler.step params
+  # predict_epsilon: True
+
+ema:
+  _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
+  update_after_step: 0
+  inv_gamma: 1.0
+  power: 0.75
+  min_value: 0.0
+  max_value: 0.9999
+
+dataloader:
+  batch_size: 256
+  num_workers: 1
+  shuffle: True
+  pin_memory: True
+  persistent_workers: False
+
+val_dataloader:
+  batch_size: 256
+  num_workers: 1
+  shuffle: False
+  pin_memory: True
+  persistent_workers: False
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4
+  betas: [0.95, 0.999]
+  eps: 1.0e-8
+  weight_decay: 1.0e-6
+
+training:
+  device: "cuda:0"
+  seed: 42
+  debug: False
+  resume: True
+  # optimization
+  lr_scheduler: cosine
+  lr_warmup_steps: 500
+  num_epochs: 1050
+  gradient_accumulate_every: 1
+  use_ema: True
+  # training loop control
+  # in epochs
+  rollout_every: 50
+  checkpoint_every: 50
+  val_every: 1
+  sample_every: 5
+  # steps per epoch
+  max_train_steps: null
+  max_val_steps: null
+  # misc
+  tqdm_interval_sec: 1.0
+
+logging:
+  project: humanoid_BC
+  resume: True
+  mode: online
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${..name}_${..task_name}
+  tags: ["${..name}", "humanoid_logging", "default"]
+  id: null
+  group: null
+
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    k: 1
+    format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
+  save_last_ckpt: True
+  save_last_snapshot: False
+
+multi_run:
+  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${..name}_${..task_name}
+  wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${..name}_${..task_name}
+
+hydra:
+  job:
+    override_dirname: humanoid_BC   #${name}
+  run:
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_humanoid_BC
+    #data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  sweep:
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_humanoid_BC
+    #data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    #subdir: ${hydra.job.num}
+

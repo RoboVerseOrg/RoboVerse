@@ -1,0 +1,197 @@
+scales:
+  # regularization penalty
+  torques : -0.0001
+  torque_limits : -2.
+  dof_acc : -0.000011 #-8.4e-6   -4.2e-7 #-3.5e-8
+  dof_vel : -0.004 # -0.003
+  # action_rate : -0.6 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  lower_action_rate : -3.0 # -1.35 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  upper_action_rate : -0.625 # 0.0625 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  dof_pos_limits : -100.0*1.25
+  dof_vel_limits : -50.
+  termination : -200*1.25
+  feet_contact_forces : -0.75 # 0.125
+  stumble : -1000.0*1.25
+  feet_air_time_teleop : 1000
+  slippage : -30.0*1.25
+  feet_ori : -50.0*1.25
+  in_the_air: -200 # -150 # < -1
+  stable_lower_when_vrclose: 0 #-500.0
+  stable_lower_when_vrclose_positive: 0 #-500.0
+  orientation : -200.0
+  feet_height : -0
+  feet_max_height_for_this_air : -2500
+  
+
+
+  # torques : 0
+  # torque_limits : 0
+  # dof_acc : 0 #-8.4e-6   -4.2e-7 #-3.5e-8
+  # dof_vel : 0 # -0.003
+  # # action_rate : -0.6 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  # lower_action_rate : 0 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  # upper_action_rate : 0 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  # dof_pos_limits : 0
+  # termination : -200*1.25
+  # feet_contact_forces : 0
+  # stumble : 0
+  # feet_air_time_teleop : 0
+  # slippage : -0
+  # feet_ori : 0 = python legged_gym/scripts/train_hydra.py --config-name=config_teleop task=h1:teleop run_name=3pointvr_upperrewardonly_sigma_curriculum0.01-1penalty_curriculum0.25-1 env.num_observations=93 env.num_privileged_obs=170 motion.teleop_obs_version=v-teleop-extend-vr-max motion.teleop_selected_keypoints_names=[] motion.extend_head=True num_envs=4096 asset.zero_out_far=False asset.termination_scales.max_ref_motion_distance=10.0 sim_device=cuda:0 rewards.sigma_curriculum=True rewards.penalty_curriculum=Truereward
+  # orientation : -0.0
+
+
+  # # teleop task rewards
+  # teleop_joint_position_lower : 32 # 5.0
+  # teleop_joint_position_upper : 32 # 5.0
+  # teleop_joint_vel_lower : 16  # 5.
+  # teleop_joint_vel_upper : 16  # 5.
+  # teleop_body_position_extend_lower : 40 * 1.4 # 8 keypoint
+  # teleop_body_position_extend_upper : 40 * 1.4 # 8 keypoint
+  # teleop_body_position_vr_3keypoints : 60 * 1.4 # 8 keypoint
+  # teleop_body_rotation_lower : 20
+  # teleop_body_rotation_upper : 20
+  # teleop_body_vel_lower : 8
+  # teleop_body_vel_upper : 8 
+  # teleop_body_ang_vel_lower: 8 
+  # teleop_body_ang_vel_upper: 8 
+
+  # ============================= 0421 version rewards
+  closing: 0
+  # teleop upper only
+  # teleop_joint_position_lower : 0 # 5.0
+  # teleop_joint_position_upper : 32  # 5.0
+  # teleop_joint_vel_lower : 0  # 5.
+  # teleop_joint_vel_upper : 16  # 5.
+  # teleop_body_position_extend_lower : 0 # 8 keypoint
+  # teleop_body_position_extend_upper : 0 # 8 keypoint
+  # teleop_body_position_extend_upper_0dot5sigma : 40 # 8 keypoint
+  # teleop_body_position_vr_3keypoints : 0 # 8 keypoint
+  # teleop_body_rotation_lower : 0
+  # teleop_body_rotation_upper : 20
+  # teleop_body_vel_lower : 0
+  # teleop_body_vel_upper : 8
+  # teleop_body_ang_vel_lower: 0 
+  # teleop_body_ang_vel_upper: 8 
+
+  # ============================= 0406 version rewards (all whole body rewards)
+  teleop_selected_joint_position : 32 # 5.0
+  teleop_selected_joint_vel : 16 # 5.
+  teleop_body_position : 0.0 # 6 keypoint
+  teleop_body_position_extend :  30 # wholebody
+  teleop_body_position_extend_small_sigma : 0.0 # wholebody
+  teleop_body_position_extend_upper: 0
+  teleop_body_position_vr_3keypoints : 50 # 8 keypoint
+  teleop_body_rotation : 20.0
+  teleop_body_vel : 8.0
+  teleop_body_ang_vel : 8.0
+  
+
+  # teleop_selected_joint_position : 32 # 5.0
+  # teleop_selected_joint_vel : 16 # 5.
+  # teleop_body_position : 0.0 # 6 keypoint
+  # teleop_body_position_extend :  40 # 8 keypoint
+  # teleop_body_position_extend_small_sigma : 0.0 # 8 keypoint
+  # teleop_body_rotation : 0
+  # teleop_body_vel : 8
+  # teleop_body_ang_vel : 8
+
+desired_feet_max_height_for_this_air : 0.25
+feet_height_target: 0.2
+vrclose_threshold: 0.10
+ref_stable_velocity_threshold: 0.05
+only_positive_rewards : False # if true negative total rewards are clipped at zero (avoids early termination problems)
+tracking_sigma : 0.25 # tracking reward : exp(-error^2/sigma)
+soft_dof_pos_limit : 0.85 # percentage of urdf limits values above this limit are penalized
+soft_dof_vel_limit : 0.85
+soft_torque_limit : 0.85
+
+max_contact_force : 500.
+
+base_height_target : 1.
+body_pos_sigma : 0.5
+body_rot_sigma : 1.
+body_vel_sigma : 1.
+body_ang_vel_sigma : 1.
+joint_pos_sigma : 1.
+joint_vel_sigma : 1.
+
+max_penalty_compared_to_positive : False
+max_penalty_compared_to_positive_coef : 0.5
+scaling_down_body_pos_sigma : True
+teleop_body_pos_sigma_scaling_down_coef : 0.999
+
+# teleop_joint_pos_small_sigma : 0.1 # 0.5 -> 0.1 lower body
+teleop_joint_pos_sigma : 0.5 
+teleop_joint_vel_sigma : 10 # 10 -> 5
+teleop_body_pos_lowerbody_sigma : 0.5 # 0.01
+teleop_body_pos_0dot5sigma : 0.5 # 0.01
+teleop_body_pos_upperbody_sigma : 0.03 # -> 0.03
+teleop_body_pos_vr_3keypoints_sigma : 0.03 # 0.002->0.03
+
+teleop_body_pos_lowerbody_weight : 0.5
+teleop_body_pos_upperbody_weight : 1.0
+teleop_body_rot_sigma : 0.1
+teleop_body_vel_sigma : 10 # 10 -> 5
+teleop_body_ang_vel_sigma : 10 # 10 -> 5
+
+
+teleop_body_rot_selection : ['pelvis']
+teleop_body_vel_selection : ['pelvis']
+teleop_body_pos_selection : ['pelvis']
+teleop_body_ang_vel_selection : ['pelvis']
+teleop_joint_pos_selection : 
+  # upper body
+  torso_joint: 2.0
+  left_shoulder_pitch_joint: 2.0
+  left_shoulder_roll_joint: 2.0
+  left_shoulder_yaw_joint: 2.0
+  left_elbow_joint: 2.0
+  right_shoulder_pitch_joint: 2.0
+  right_shoulder_roll_joint: 2.0
+  right_shoulder_yaw_joint: 2.0
+  right_elbow_joint: 2.0
+  # lower body
+  left_hip_pitch_joint: 2.0
+  left_hip_roll_joint: 0.5
+  left_hip_yaw_joint: 0.5
+  left_knee_joint: 0.5
+  left_ankle_joint: 0.5
+  right_hip_pitch_joint: 2.0
+  right_hip_roll_joint: 0.5
+  right_hip_yaw_joint: 0.5
+  right_knee_joint: 0.5
+  right_ankle_joint: 0.5
+
+# curriculum: False
+sigma_curriculum: False
+num_compute_average_epl : 10000
+teleop_body_pos_upperbody_sigma_range: [0.02, 1.0]
+reward_position_sigma_level_up_threshold: 50
+reward_position_sigma_level_down_threshold: 120
+
+penalty_curriculum: False
+penalty_scale : 1.0
+penalty_scale_range: [0.25, 1.0]
+penalty_level_down_threshold: 50
+penalty_level_up_threshold: 120
+
+level_degree: 0.00001
+
+penalty_reward_names : [  "torques",
+  "torque_limits",
+  "dof_acc",
+  "dof_vel",
+  # action_rate : -0.6 # -0.6  # -0.3 # -0.3 -0.12 -0.01
+  "lower_action_rate",
+  "upper_action_rate",
+  "dof_pos_limits",
+  "termination",
+  "feet_contact_forces",
+  "stumble",
+  "feet_air_time_teleop",
+  "slippage",
+  "feet_ori",
+  "orientation",
+  "in_the_air",
+  "stable_lower_when_vrclose"]

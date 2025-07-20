@@ -1,0 +1,39 @@
+defaults:
+  - env_base
+
+num_envs : 4096
+# num_observations : 88 # v-min2
+# num_privileged_obs : 164 # v-min2
+# num_observations : 624
+# num_observations : 87 # v-teleop
+# num_privileged_obs : 163 # v-teleop
+# num_observations : 84 # v-teleop-clean
+# num_privileged_obs : 160 # v-teleop-clean
+# num_observations : 75 # v-teleop-superclean
+# num_privileged_obs : 151 # v-teleop-superclean
+# num_observations : 65 # v-teleop-clean-nolastaction
+# num_privileged_obs : 141 # v-teleop-clean-nolastaction
+# num_observations : 90 # v-teleop_extend
+# num_privileged_obs : 166 # v-teleop_extend
+# num_observations : 87 # v-teleop_extend_nolinvel
+# num_privileged_obs : 163 # v-teleop_extend_nolinvel
+
+num_observations : 138 # v-teleop-extend-max
+num_observations_student : 71  # data_generation
+
+num_privileged_obs : 215 #214 # v-teleop-extend-max
+
+
+
+
+# num_observations : 93 # v-teleop-extend-vr-max
+# num_privileged_obs : 170 #214 # v-teleop-extend-vr-max
+
+# num_observations : 135 # v-teleop-extend-max-nolinvel
+# num_privileged_obs : 211 # v-teleop-extend-max-nolinvel
+
+num_actions : 19
+im_eval : False
+
+add_short_history: False
+short_history_length: 5

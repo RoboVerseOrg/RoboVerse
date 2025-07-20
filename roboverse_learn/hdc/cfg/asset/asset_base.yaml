@@ -1,0 +1,38 @@
+file : ""
+name : "legged_robot"  # actor name
+foot_name : "None" # name of the feet bodies, used to index body state and contact force tensors
+penalize_contacts_on : []
+terminate_after_contacts_on : []
+disable_gravity : False
+collapse_fixed_joints : True # merge bodies connected by fixed joints. Specific fixed joints can be kept by adding " <... dont_collapse:"true">
+fix_base_link : False # fixe the base of the robot
+# default_dof_drive_mode : 3 # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
+default_dof_drive_mode : 1 # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
+self_collisions : 1 # 1 to disable, 0 to enable...bitwise filter
+replace_cylinder_with_capsule : True # replace collision cylinders with capsules, leads to faster/more stable simulation
+flip_visual_attachments : True # Some .obj meshes must be flipped from y-up to z-up
+
+density : 0.001
+angular_damping : 0.
+linear_damping : 0.
+max_angular_velocity : 1000.
+max_linear_velocity : 1000.
+armature : 0.
+thickness : 0.01
+
+terminate_by_knee_distance : False
+terminate_by_lin_vel : False
+terminate_by_ang_vel : False
+terminate_by_gravity : False
+terminate_by_low_height : False
+
+terminate_by_ref_motion_distance : False
+terminate_by_1time_motion : False
+
+termination_scales:
+  base_height : 0.3
+  base_vel : 10.0
+  base_ang_vel : 5.0
+  gravity_x : 0.7
+  gravity_y : 0.7
+  min_knee_distance : 0.

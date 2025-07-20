@@ -1,0 +1,13 @@
+obs_scales:
+    lin_vel : 2.0
+    ang_vel : 0.25
+    dof_pos : 1.0
+    dof_vel : 0.05
+    height_measurements : 5.0
+    body_pos : 1.0
+    body_lin_vel : 1.0
+    body_rot : 1.0
+    delta_base_pos : 1.0
+    delta_heading : 1.0
+clip_observations : 100.
+clip_actions : 100.

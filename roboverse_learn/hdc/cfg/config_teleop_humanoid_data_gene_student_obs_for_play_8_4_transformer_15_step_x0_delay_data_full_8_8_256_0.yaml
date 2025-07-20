@@ -1,0 +1,103 @@
+defaults:
+  - _self_
+  - asset: asset_teleop
+  - commands: commands_teleop
+  - control: control_teleop
+  - domain_rand: domain_rand_teleop_hdc
+  - env: env_teleop_hdc
+  - init_state: init_state_teleop
+  - motion: motion_teleop
+  - noise: noise_teleop_hdc
+  - normalization: normalization_teleop
+  - train: ppo_teleop
+  - rewards: rewards_teleop
+  - sim: sim_teleop
+  - terrain: terrain_teleop
+  - viewer: viewer_base
+  - humanoid_workspace: train_humanoid_tedi_transformer_lowdim_workspace_student_obs_8_4_15_step_x0_delay_data_full_8_8_256_0 #ddim_student_obs_8_4  
+
+
+project_name: "H1"
+notes: "Default Notes"
+exp_name: &exp_name humanoid_smpl
+headless: True
+seed: 1
+no_log: False
+log_root: "default"
+test: False 
+sim_device: "cuda:0"
+rl_device: "cuda:0"
+sim_device_id: 0
+metadata: false
+play: ${test}
+train: True
+im_dump: False
+task: "h1:teleop"
+#BC_ckpt_path: "/home/yunshen/code/streaming_diffusion_policy/data/outputs/2024.11.13/22.20.11_humanoid_harder_2000_8_4_humanoid/checkpoints/epoch_160_step_112216.ckpt"
+#BC_ckpt_path : "/home/yunshen/code/test_ckpt/pretrain_amass_medium_800k_t25_x0/test/epoch_20_step_186857.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/pretrain_amass_200k_aen0.4_100k_ae_100k_t25_x0_continue/epoch_102_step_1059901.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/pretrain_al6_ca_easy_en0.3_400k_t15_x0_1282560/epoch_82_step_665659.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/pretrain_al6_ca_easy_en0.3_400k_t15_x0_1282560/epoch_82_step_665659.ckpt"
+
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt_old/p_a_delay_400k_aen0.3_200k_ae_200k_t15_x0_froscr/epoch_46_step_877113.ckpt"
+BC_ckpt_path: "/home/yunshen/code/test_ckpt/pretrain_al6_ca_easy_en0.3_400k_t15_x0_1282560/epoch_87_step_705759.ckpt"
+
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/amass_mix_200k_8_4/epoch_270_step_499181.ckpt"  
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/kit_train_100k_mix@amass_100k_easy_clean/epoch_330_step_271536.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/DiffusionController/data/outputs/2025.01.03/14.33.56_pretrain_amass_mix_200k_transformer_humanoid/checkpoints/epoch_20_step_83999.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/ddim_amass_mix_200k_8_4/epoch_240_step_443921.ckpt"  
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/step_stand_punch_medium_5k_8_4/epoch_180_step_36199.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/step_stand_punch_medium_10k_8_4/epoch_240_step_99050.ckpt"
+#BC_ckpt_path: "/home/yunshen/code/test_ckpt/stand_and_stable_punch_medium_5k_8_4/epoch_200_step_39194.ckpt"
+
+load_run: ""
+num_envs: 4096
+checkpoint: 0
+
+joystick: False
+tmp_freeze_upper: False
+max_iterations: 1000000
+horovod: False
+resume: False
+experiment_name: null
+run_name: null
+compute_device_id: 0
+graphics_device_id: 0
+flex: False
+
+use_gpu: True
+use_gpu_pipeline: True
+subscenes: 0
+slices: 0
+num_threads: 0
+
+
+####### Testing Configs. ########
+server_mode: False
+no_virtual_display: False
+render_o3d: False
+debug: False
+follow: False
+add_proj: False
+real_traj: False
+
+hydra:
+  job:
+    name: ${exp_name}
+    env_set:
+      OMP_NUM_THREADS: 1
+  run:
+    dir: output/h1/${exp_name}
+
+use_wandb: True
+
+
+###### velocity estimation ########
+train_velocity_estimation: False
+use_velocity_estimation: False
+
+###### data generation ######
+obs_full: True
+play_in_order: False
+saved_file_name: randomized_data.pkl
+saved_data_nums: 5

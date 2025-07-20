@@ -1,0 +1,30 @@
+randomize_base_com : False
+base_com_range:
+  x : [-0.1, 0.1]
+  y : [-0.1, 0.1]
+  z : [-0.2, 0.2]
+randomize_link_mass : False
+randomize_link_body_names : [
+    'world', 'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link', 
+    'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 
+    'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 
+    'left_elbow_link', 'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link'
+]
+link_mass_range : [0.75, 1.25]
+randomize_pd_gain : False
+kp_range : [0.75, 1.25]
+kd_range : [0.75, 1.25]
+randomize_friction : False
+friction_range : [0.5, 1.25]
+randomize_base_mass : False
+push_robots : False
+push_interval_s : 15
+max_push_vel_xy : 1.
+randomize_torque_rfi : False
+rfi_lim : 0.1
+
+randomize_rfi_lim : True
+rfi_lim_range : [0.5, 1.5]
+
+randomize_ctrl_delay : False
+ctrl_delay_step_range : [0, 4] # integer max real delay is 90ms

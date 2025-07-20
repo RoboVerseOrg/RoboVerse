@@ -1,0 +1,117 @@
+defaults:
+  - domain_rand_base
+
+push_robots : True
+push_interval_s : 5
+max_push_vel_xy : 1.0
+
+randomize_friction : True
+# randomize_friction : False
+friction_range : [-0.6, 1.2]
+
+randomize_base_mass : False # replaced by randomize_link_mass
+added_mass_range : [-5., 10.]
+
+
+randomize_base_com : True
+base_com_range: #kg
+    x : [-0.1, 0.1]
+    y : [-0.1, 0.1]
+    z : [-0.1, 0.1]
+
+randomize_link_mass : True
+link_mass_range : [0.7, 1.3] # *factor
+randomize_link_body_names : [
+    'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 
+    'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link',  'torso_link',
+]
+
+randomize_pd_gain : True
+kp_range : [0.75, 1.25]
+kd_range : [0.75, 1.25]
+
+
+randomize_torque_rfi : True
+rfi_lim : 0.1
+randomize_rfi_lim : True
+rfi_lim_range : [0.5, 1.5]
+
+randomize_ctrl_delay : True
+ctrl_delay_step_range : [0, 3] # integer max real delay is 90ms
+
+randomize_motion_ref_xyz: True # head only for now
+motion_ref_xyz_range : [[-0.02, 0.02],[-0.02, 0.02],[-0.1, 0.1]]
+
+motion_package_loss: False
+package_loss_range: [1, 10] # dt = 0.02s, delay for 0.02s - 0.2s
+package_loss_interval_s : 2
+
+
+born_offset : False
+born_offset_curriculum: False
+born_offset_level_down_threshold: 50
+born_offset_level_up_threshold: 120
+level_degree: 0.00005
+born_distance : 0.25
+born_offset_range: [0.0, 1]
+born_offset_possibility : 1.0
+
+born_heading_curriculum: False
+born_heading_randomization : False
+born_heading_level_down_threshold: 50
+born_heading_level_up_threshold: 120
+born_heading_degree: 10
+born_heading_range: [0, 180]
+born_heading_level_degree: 0.00005
+# defaults:
+#   - domain_rand_base
+
+# push_robots : False
+# push_interval_s : 5
+# max_push_vel_xy : 1.0
+
+# randomize_friction : False
+# # randomize_friction : False
+# friction_range : [-0.6, 1.2]
+
+# randomize_base_mass : False # replaced by randomize_link_mass
+# added_mass_range : [-5., 10.]
+
+
+# randomize_base_com : False
+# base_com_range: #kg
+#     x : [-0.1, 0.1]
+#     y : [-0.1, 0.1]
+#     z : [-0.1, 0.1]
+
+# randomize_link_mass : False
+# link_mass_range : [0.7, 1.3] # *factor
+# randomize_link_body_names : [
+#     'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 
+#     'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link',  'torso_link',
+# ]
+
+# randomize_pd_gain : False
+# kp_range : [0.75, 1.25]
+# kd_range : [0.75, 1.25]
+
+
+# randomize_torque_rfi : False
+# rfi_lim : 0.1
+# randomize_rfi_lim : False
+# rfi_lim_range : [0.5, 1.5]
+
+# randomize_ctrl_delay : False
+# ctrl_delay_step_range : [1, 3] # integer max real delay is 90ms
+
+# randomize_motion_ref_xyz: False
+# motion_ref_xyz_range : [[-0.02, 0.02],[-0.02, 0.02],[-0.05, 0.05]]
+
+# motion_package_loss: False
+# package_loss_range: [1, 10] # dt = 0.02s, delay for 0.02s - 0.2s
+# package_loss_interval_s : 2
+
+
+# born_offset : False
+# born_offset_range: [-5, 5]
+# born_offset_possibility : 0.3

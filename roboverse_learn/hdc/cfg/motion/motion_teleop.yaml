@@ -1,0 +1,76 @@
+teleop : True
+visualize : False
+recycle_motion : True
+terrain_level_down_distance : 0.5
+num_markers : 19
+
+
+# motion_file : 'resources/motions/h1/amass_phc_filtered.pkl'
+motion_file : 'resources/motions/h1/stable_punch.pkl'
+skeleton_file : 'resources/robots/h1/xml/h1.xml'
+marker_file : 'resources/objects/Marker/traj_marker.urdf'
+num_dof_pos_reference : 19
+num_dof_vel_reference : 19
+
+extend_hand: True
+extend_head: False
+
+future_tracks: False
+num_traj_samples: 1
+traj_sample_timestep_inv: 50
+
+curriculum : False
+obs_noise_by_curriculum: False
+push_robot_by_curriculum: False
+kpkd_by_curriculum: False
+rfi_by_curriculum: False
+
+
+teleop_level_up_episode_length : 100
+teleop_level_down_episode_length : 30
+
+
+# eleop_obs_version : 'v-teleop'
+# teleop_obs_version : 'v-teleop-clean'
+# teleop_obs_version : 'v-teleop-superclean'
+# teleop_obs_version : 'v-teleop-clean-nolastaction'
+# teleop_obs_version : 'v-teleop-extend'
+# teleop_obs_version : 'v-teleop-extend-nolinvel'
+teleop_obs_version : 'v-teleop-extend-max'
+# teleop_obs_version : 'v-teleop-extend-max-nolinvel'
+# teleop_obs_version : 'v-min2'
+teleop_selected_keypoints_names : ['left_ankle_link', 'right_ankle_link', 'left_shoulder_pitch_link','right_shoulder_pitch_link', 'left_elbow_link', 'right_elbow_link']
+
+
+resample_motions_for_envs : True
+resample_motions_for_envs_interval_s : 1000
+
+
+visualize_config:
+    customize_color : True
+    marker_joint_colors : 
+    - [0.157, 0.231, 0.361] # pelvis
+    - [0.157, 0.231, 0.361] # left_hip_yaw_joint
+    - [0.157, 0.231, 0.361] # left_hip_roll_joint
+    - [0.157, 0.231, 0.361] # left_hip_pitch_joint
+    - [0.157, 0.231, 0.361] # left_knee_joint
+    - [0.157, 0.231, 0.361] # left_ankle_joint
+    - [0.157, 0.231, 0.361] # right_hip_yaw_joint
+    - [0.157, 0.231, 0.361] # right_hip_roll_joint
+    - [0.157, 0.231, 0.361] # right_hip_pitch_joint
+    - [0.157, 0.231, 0.361] # right_knee_joint
+    - [0.157, 0.231, 0.361] # right_ankle_joint
+    - [0.765, 0.298, 0.498] # torso_joint
+    - [1, 0.651, 0] # left_shoulder_pitch_joint
+    - [1, 0.651, 0] # left_shoulder_roll_joint
+    - [1, 0.651, 0] # left_shoulder_yaw_joint
+    - [1, 0.651, 0] # left_elbow_joint
+    - [1, 0.651, 0] # right_shoulder_pitch_joint
+    - [1, 0.651, 0] # right_shoulder_roll_joint
+    - [1, 0.651, 0] # right_shoulder_yaw_joint
+    - [1, 0.651, 0] # right_elbow_joint
+    - [1, 0.651, 0] # right_elbow_joint_extend
+    - [1, 0.651, 0] # left_elbow_joint_extend
+    - [1, 0.651, 0] # head_link
+
+realtime_vr_keypoints : False

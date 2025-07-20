@@ -1,0 +1,4 @@
+debug_viz : False
+ref_env : 0
+pos : [10, 0, 6]  # [m]
+lookat : [11., 5, 3.]  # [m]

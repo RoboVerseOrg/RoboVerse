@@ -1,0 +1,11 @@
+num_envs : 4096
+num_observations : 48
+num_privileged_obs : null # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+num_actions : 12
+env_spacing : 2.  # not used with heightfields/trimeshes 
+send_timeouts : True # send time out information to the algorithm
+episode_length_s : 20 # episode length in seconds
+test : False
+
+add_short_history: False
+short_history_length: 5

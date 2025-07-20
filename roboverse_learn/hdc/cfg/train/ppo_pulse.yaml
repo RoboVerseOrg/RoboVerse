@@ -1,0 +1,63 @@
+defaults:
+  - ppo_base
+
+distill: False
+distill_model_config: 
+  obs_v: v-teleop-extend-max-full
+  extend_head: True
+  future_tracks: True
+  num_traj_samples: 1
+  teleop_selected_keypoints_names : [ 'pelvis',  'left_hip_yaw_link', 'left_hip_roll_link','left_hip_pitch_link', 'left_knee_link', 'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link',  'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link']
+  num_observations: 913
+  num_privileged_obs: 990
+
+add_short_history: False
+short_history_length: 5
+
+
+algorithm:
+    # training params
+    value_loss_coef : 1.0
+    use_clipped_value_loss : True
+    clip_param : 0.2
+    entropy_coef : 0.005
+    num_learning_epochs : 5
+    num_mini_batches : 4 # mini batch size : num_envs*nsteps / nminibatches
+    learning_rate : 1.e-3 #5.e-4
+    schedule : 'adaptive' # could be adaptive, fixed
+    gamma : 0.99
+    lam : 0.95
+    desired_kl : 0.01
+    max_grad_norm : 0.2
+    action_smoothness_coef : 0.000 # 0.003
+    kin_only: True
+    save_z_noise: True
+    z_type: "vae"
+    
+runner:
+    run_name : ''
+    policy_class_name : 'ActorCriticPULSE'
+    experiment_name : 'h1:teleop'
+    max_iterations : 10000000
+    has_eval : False
+    eval_interval: 2500
+    auto_negative_samping: False
+policy:
+    init_noise_std : 1.0
+    actor_hidden_dims : [512, 256, 128]
+    # actor_hidden_dims : [512*4, 256*4, 128*4]
+    critic_hidden_dims : [512, 256, 128]
+    # critic_hidden_dims : [512*4, 256*4, 128*4]
+
+    embedding_size: 8
+    use_vae_prior: True
+    use_ar1_prior: True
+    use_vae_clamped_prior: True
+    vae_var_clamp_max: 2
+    kld_coefficient_max: 0.01
+    kld_coefficient_min: 0.001
+    kld_anneal: True
+    kld_reverse_anneal: False
+    ar1_coefficient: 0.005
+
+

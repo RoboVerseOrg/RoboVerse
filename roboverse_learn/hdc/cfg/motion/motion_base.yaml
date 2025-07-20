@@ -1,0 +1,41 @@
+teleop : False
+visualize : False
+reset_at_start : False
+num_markers : 0
+motion_file : ''
+skeleton_file : ''
+marker_file : ''
+num_dof_pos_reference : 0
+num_dof_vel_reference : 0
+num_ef_pos_reference : 0
+num_ef_vel_reference : 0
+
+curriculum : False
+teleop_level_up_episode_length : 100
+teleop_level_down_episode_length : 50
+
+visualize_config:
+    customize_color : True
+    marker_joint_colors : 
+    - [0.157, 0.231, 0.361] # pelvis
+    - [0.157, 0.231, 0.361] # left_hip_yaw_joint
+    - [0.157, 0.231, 0.361] # left_hip_roll_joint
+    - [0.157, 0.231, 0.361] # left_hip_pitch_joint
+    - [0.157, 0.231, 0.361] # left_knee_joint
+    - [0.157, 0.231, 0.361] # left_ankle_joint
+    - [0.157, 0.231, 0.361] # right_hip_yaw_joint
+    - [0.157, 0.231, 0.361] # right_hip_roll_joint
+    - [0.157, 0.231, 0.361] # right_hip_pitch_joint
+    - [0.157, 0.231, 0.361] # right_knee_joint
+    - [0.157, 0.231, 0.361] # right_ankle_joint
+    - [0.765, 0.298, 0.498] # torso_joint
+    - [1, 0.651, 0] # left_shoulder_pitch_joint
+    - [1, 0.651, 0] # left_shoulder_roll_joint
+    - [1, 0.651, 0] # left_shoulder_yaw_joint
+    - [1, 0.651, 0] # left_elbow_joint
+    - [1, 0.651, 0] # right_shoulder_pitch_joint
+    - [1, 0.651, 0] # right_shoulder_roll_joint
+    - [1, 0.651, 0] # right_shoulder_yaw_joint
+    - [1, 0.651, 0] # right_elbow_joint
+    - [1, 0.651, 0] # right_elbow_joint_extend
+    - [1, 0.651, 0] # left_elbow_joint_extend

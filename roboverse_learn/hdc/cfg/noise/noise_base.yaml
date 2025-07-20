@@ -1,0 +1,21 @@
+add_noise : False
+noise_level : 1.0 # scales other values
+noise_scales:
+    dof_pos : 0.01 # joint angle
+    dof_vel : 0.02 # joint angle velocity 
+    lin_vel : 0.1 # root linear velocity
+    ang_vel : 0.2  # root angular velocity
+    gravity : 0.05 # gravity
+    height_measurements : 0.1 # height measurements
+    body_pos : 0.01 # body pos in cartesian space: 19x3
+    body_lin_vel : 0.01 # body velocity in cartesian space: 19x3
+    body_rot : 0.01 # 6D body rotation 
+    ref_body_pos : 0
+    ref_body_rot : 0
+    ref_lin_vel : 0
+    ref_ang_vel : 0
+    ref_dof_pos : 0
+    ref_dof_vel : 0
+    ref_gravity : 0
+    delta_base_pos : 0.05
+    delta_heading : 0.1
