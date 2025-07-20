@@ -1,7 +1,7 @@
 
 control_type : 'P'
   # PD Drive parameters:
-stiffness : 
+stiffness :
   hip_yaw: 200
   hip_roll: 200
   hip_pitch: 200
@@ -11,7 +11,7 @@ stiffness :
   shoulder: 100
   elbow : 100 # [N*m/rad]
 
-damping : 
+damping :
   hip_yaw: 5
   hip_roll: 5
   hip_pitch: 5
