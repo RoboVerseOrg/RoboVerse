@@ -181,7 +181,8 @@ def process_entity(
     return qpos, qvel, ctrl
 
 
-_KIND_META = {  # (size-field, adr-field) for each name-pool category
+_KIND_META = {
+    # (size-field, adr-field) for each name-pool category
     "joint": ("njnt", "name_jntadr"),
     "actuator": ("nu", "name_actuatoradr"),
     "body": ("nbody", "name_bodyadr"),

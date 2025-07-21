@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import torch
-
+from metasim.cfg.query import SitePos
 from metasim.cfg.checkers import _CrawlChecker
 from metasim.cfg.objects import RigidObjCfg
+from metasim.cfg.query_type import SitePos, ContactForce
 from metasim.constants import PhysicStateType
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance_tensor
@@ -101,3 +102,9 @@ class CrawlCfg(HumanoidTaskCfg):
     checker = _CrawlChecker()
     reward_weights = [1.0]
     reward_functions = [CrawlReward]
+    def extra_obs_spec(self):
+        """Declare extra observations needed by CrawlReward."""
+        return {
+            "imu_pos": SitePos(f"{self.robot_name}/imu"),
+            "head_pos": SitePos(f"{self.robot_name}/head"),
+        }

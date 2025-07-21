@@ -20,7 +20,7 @@ from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-
+from .mujoco_querier import MujocoQuerier
 
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
@@ -467,6 +467,9 @@ class MujocoHandler(BaseSimHandler):
             self._set_root_state(obj_name, obj_state, zero_vel)
             self._set_joint_state(obj_name, obj_state, zero_vel)
         self.physics.forward()
+
+    def get_extra(self, spec):
+        return {k: MujocoQuerier.query(v, self) for k, v in spec.items()}
 
     def _disable_robotgravity(self):
         gravity_vec = np.array([0.0, 0.0, -9.81])

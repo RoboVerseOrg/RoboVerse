@@ -31,7 +31,6 @@ from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .mjx_helper import (
-    get_extras,
     j2t,
     pack_body_state,
     pack_root_state,
@@ -41,7 +40,7 @@ from .mjx_helper import (
     sorted_joint_info,
     t2j,
 )
-
+from .mjx_querier import MJXQuerier
 
 class MJXHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, *, seed: int | None = None):
@@ -204,8 +203,11 @@ class MJXHandler(BaseSimHandler):
             # Convert JAX → PyTorch; result shape (batch, dim)
             sensors[name] = j2t(sens_batch[:, sl])
 
-        extras = get_extras(self._data, self._mj_model, env_ids)
-        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors, extras=extras)
+        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors)
+
+
+    def get_extra(self, spec):
+        return {k: MJXQuerier.query(v, self) for k, v in spec.items()}
 
     def _set_states(
         self,
