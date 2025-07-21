@@ -58,6 +58,7 @@ class MujocoHandler(BaseSimHandler):
         self._effort_controlled_joints = []
         self._position_controlled_joints = []
         self._current_action = None
+        self._current_vel_target = None  # Track velocity targets
 
     def launch(self) -> None:
         model = self._init_mujoco()
@@ -120,6 +121,7 @@ class MujocoHandler(BaseSimHandler):
                 raise ValueError
 
         self._robot_default_dof_pos = np.array(default_dof_pos)
+        self._current_vel_target = None  # Initialize velocity target tracking
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):
         """Apply scale to all geoms, bodies, and sites in the MJCF model."""
@@ -388,7 +390,9 @@ class MujocoHandler(BaseSimHandler):
                     self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
                 ]).unsqueeze(0),
                 joint_pos_target=torch.from_numpy(self.physics.data.ctrl[actuator_reindex]).unsqueeze(0),
-                joint_vel_target=None,  # TODO
+                joint_vel_target=torch.from_numpy(self._current_vel_target).unsqueeze(0)
+                if self._current_vel_target is not None
+                else None,
                 joint_effort_target=torch.from_numpy(self.physics.data.actuator_force[actuator_reindex]).unsqueeze(0),
             )
             robot_states[robot.name] = state
@@ -513,6 +517,17 @@ class MujocoHandler(BaseSimHandler):
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
+
+        # Extract velocity targets if present
+        vel_targets = actions[0][obj_name].get("dof_vel_target", None)
+        if vel_targets:
+            joint_names = self.get_joint_names(self.robot.name, sort=True)
+            self._current_vel_target = np.zeros(self._robot_num_dof)
+            for i, joint_name in enumerate(joint_names):
+                if joint_name in vel_targets:
+                    self._current_vel_target[i] = vel_targets[joint_name]
+        else:
+            self._current_vel_target = None
 
         if self._manual_pd_on:
             joint_targets = actions[0][obj_name]["dof_pos_target"]
