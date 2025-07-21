@@ -153,7 +153,7 @@ def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
             usd_path=robot.usd_path,
             activate_contact_sensors=True,  # TODO: only activate when contact sensor is added
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            articulation_props=sim_utils.ArticulationRootPropertiesCfg(),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=robot.fix_base_link),
         ),
         actuators={
             jn: ImplicitActuatorCfg(
