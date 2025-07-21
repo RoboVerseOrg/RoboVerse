@@ -42,6 +42,7 @@ from .mjx_helper import (
 )
 from .mjx_querier import MJXQuerier
 
+
 class MJXHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, *, seed: int | None = None):
         super().__init__(scenario)
@@ -204,7 +205,6 @@ class MJXHandler(BaseSimHandler):
             sensors[name] = j2t(sens_batch[:, sl])
 
         return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors)
-
 
     def get_extra(self, spec):
         return {k: MJXQuerier.query(v, self) for k, v in spec.items()}

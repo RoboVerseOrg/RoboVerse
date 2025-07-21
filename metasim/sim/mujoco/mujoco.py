@@ -20,7 +20,9 @@ from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+
 from .mujoco_querier import MujocoQuerier
+
 
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):

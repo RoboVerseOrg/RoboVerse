@@ -1,19 +1,22 @@
 # mjx_query_helper.py
-import mujoco, functools
+
 import jax.numpy as jnp
-from metasim.cfg.query_type import SitePos, ContactForce
-import jax
+import mujoco
+
+from metasim.cfg.query_type import ContactForce, SitePos
+
 
 class MujocoQuerier:
     """
     Add new Query types by inserting into QUERY_MAP.
     """
+
     _site_cache = {}
     _body_cache = {}
 
     QUERY_MAP = {
-        SitePos:        "site_pos",
-        ContactForce:   "contact_force",
+        SitePos: "site_pos",
+        ContactForce: "contact_force",
         # add here
     }
 
@@ -30,13 +33,11 @@ class MujocoQuerier:
         key = id(handler._mj_model)
         cache = cls._site_cache.setdefault(key, {})
         if not cache:
-            cache.update(
-                {
-                    mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_SITE, i): i
-                    for i in range(handler._mj_model.nsite)
-                    if mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_SITE, i)
-                }
-            )
+            cache.update({
+                mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_SITE, i): i
+                for i in range(handler._mj_model.nsite)
+                if mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_SITE, i)
+            })
         sid = cache[q.site]
         return handler._data.site_xpos[:, sid]
 
@@ -46,17 +47,16 @@ class MujocoQuerier:
         key = id(handler._mj_model)
         cache = cls._body_cache.setdefault(key, {})
         if not cache:
-            cache.update(
-                {
-                    mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_BODY, i): i
-                    for i in range(handler._mj_model.nbody)
-                    if mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_BODY, i)
-                }
-            )
+            cache.update({
+                mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_BODY, i): i
+                for i in range(handler._mj_model.nbody)
+                if mujoco.mj_id2name(handler._mj_model, mujoco.mjtObj.mjOBJ_BODY, i)
+            })
         bid = cache[q.sensor_name]
 
         contact_force = handler._data.cfrc_ext[:, jnp.asarray([bid], jnp.int32)]
-        return contact_force[:, 0, :]                         # (N_env, 6)
+        return contact_force[:, 0, :]  # (N_env, 6)
+
 
 # -----------------------------------------------------------------------------
 # usage in handler
