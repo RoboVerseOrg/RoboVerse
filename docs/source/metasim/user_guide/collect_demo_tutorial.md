@@ -21,7 +21,7 @@ python collect_demo.py \
   --robot franka \
   --sim isaaclab \
   --num_envs 2 \
-  --headless True \
+  --headless \
   --run_unfinished
 ```
 
