@@ -108,7 +108,7 @@ from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
 
@@ -277,12 +277,10 @@ class DemoIndexer:
 def main():
     global global_step, tot_success, tot_give_up
     handler_class = get_sim_env_class(SimType(args.sim))
-    task = get_task(args.task)
-    robot = get_robot(args.robot)
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
-        task=task,
-        robots=[robot],
+        task=args.task,
+        robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
         random=args.random,
@@ -296,8 +294,8 @@ def main():
     env = handler_class(scenario)
 
     ## Data
-    assert os.path.exists(task.traj_filepath), f"Trajectory file does not exist: {task.traj_filepath}"
-    init_states, all_actions, all_states = get_traj(task, robot, env.handler)
+    assert os.path.exists(scenario.task.traj_filepath), f"Trajectory file does not exist: {scenario.task.traj_filepath}"
+    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
 
     tot_demo = len(all_actions)
     if args.split == "train":
@@ -377,7 +375,7 @@ def main():
     ## Main Loop
     while not all(finished):
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
-        actions = get_actions(all_actions, env, demo_idxs, robot)
+        actions = get_actions(all_actions, env, demo_idxs, scenario.robots[0])
         obs, reward, success, time_out, extras = env.step(actions)
         obs = state_tensor_to_nested(env.handler, obs)
         run_out = get_run_out(all_actions, env, demo_idxs)

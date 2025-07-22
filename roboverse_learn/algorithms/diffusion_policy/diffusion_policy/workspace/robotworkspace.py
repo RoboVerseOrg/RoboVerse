@@ -267,7 +267,7 @@ class RobotWorkspace(BaseWorkspace):
                         del mse
 
                 # checkpoint
-                if ((self.epoch + 1) % cfg.training.checkpoint_every) == 0:
+                if ((self.epoch + 1) % cfg.training.checkpoint_every) == 0 or (self.epoch + 1) >= cfg.training.num_epochs:
                     # checkpointing
                     save_name = pathlib.Path(self.cfg.task.dataset.zarr_path).stem
                     self.save_checkpoint(cfg.checkpoint.save_root_dir + f"/checkpoints/{self.epoch + 1}.ckpt")  # TODO

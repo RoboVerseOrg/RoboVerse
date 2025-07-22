@@ -26,7 +26,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors.cameras import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.setup_util import get_sim_env_class
 from roboverse_learn.algorithms import PolicyRunner, get_runner
 
 
@@ -81,9 +81,6 @@ def main():
     num_envs: int = args.num_envs
     log.info(f"Using GPU device: {args.gpu_id}")
 
-    task = get_task(args.task)
-    task.episode_length = args.action_set_steps * args.max_step
-    robot = get_robot(args.robot)
     camera = PinholeCameraCfg(pos=(1.5, 0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
         task=args.task,
@@ -94,6 +91,9 @@ def main():
         num_envs=args.num_envs,
         headless=args.headless,
     )
+    task = scenario.task
+    task.episode_length = args.action_set_steps * args.max_step
+    robot = scenario.robots[0]
 
     tic = time.time()
     env_class = get_sim_env_class(SimType(scenario.sim))

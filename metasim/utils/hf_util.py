@@ -106,7 +106,11 @@ class FileDownloader:
 
     def _add_from_scenario(self):
         ## TODO: delete this line after scenario is automatically overwritten by task
-        objects = self.scenario.task.objects if self.scenario.task is not None else self.scenario.objects
+        objects = (
+            self.scenario.task.objects
+            if self.scenario.task is not None and hasattr(self.scenario.task, "objects")
+            else self.scenario.objects
+        )
 
         for obj in objects:
             self._add_from_object(obj)
