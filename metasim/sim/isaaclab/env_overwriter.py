@@ -334,6 +334,9 @@ class IsaaclabEnvOverwriter:
         ## Add sensors
         add_sensors(env, self.sensors)
 
+        ## Add contact
+        self.contact_force = None
+
     def _pre_physics_step(self, env: "EmptyEnv", actions: torch.Tensor) -> None:
         ## TODO: Clip action or not?
         env.actions = actions

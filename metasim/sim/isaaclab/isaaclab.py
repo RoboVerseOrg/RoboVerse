@@ -380,6 +380,13 @@ class IsaaclabHandler(BaseSimHandler):
                 joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex],
                 joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex],
             )
+
+            extra = {
+                "contact_forces": self.env.scene.sensors["net_contact_force_sensor"].data.net_forces_w[
+                    :, body_reindex, :
+                ]
+            }
+            state.extra = extra
             robot_states[obj.name] = state
 
         camera_states = {}

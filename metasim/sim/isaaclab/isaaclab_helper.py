@@ -275,10 +275,27 @@ def _add_contact_force_sensor(env: "EmptyEnv", sensor: ContactForceSensorCfg) ->
         )
 
 
+def add_net_contact_force_sensor(env: "EmptyEnv", robot_name) -> None:
+    try:
+        from omni.isaac.lab.sensors import ContactSensor, ContactSensorCfg
+    except ModuleNotFoundError:
+        from isaaclab.sensors import ContactSensor, ContactSensorCfg
+
+    sensor_name = "net_contact_force_sensor"
+    contact_sensor_config = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/{robot_name}/.*",
+        history_length=3,
+        update_period=0.005,
+        track_air_time=True,
+    )
+    env.scene.sensors[sensor_name] = ContactSensor(contact_sensor_config)
+
+
 def add_sensors(env: "EmptyEnv", sensors: list[BaseSensorCfg]) -> None:
     for sensor in sensors:
         if isinstance(sensor, ContactForceSensorCfg):
             _add_contact_force_sensor(env, sensor)
+    add_net_contact_force_sensor(env)
 
 
 def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
