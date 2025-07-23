@@ -16,6 +16,32 @@ from metasim.utils.setup_util import get_sim_handler_class
 
 
 class BaseTaskWrapper:
+    """
+    A base task wrapper for roboverse.
+
+    This wrapper is used to wrap the environment to form a complete task.
+
+    To write your own task, you need to inherit this class and override the following methods:
+    - _observation
+    - _privileged_observation
+    - _reward
+    - _terminated
+    - _time_out
+    - _observation_space
+    - _action_space
+
+    And use callbacks to modify the environment. The callbacks are:
+    - pre_physics_step_callback: Called before the physics step
+    - post_physics_step_callback: Called after the physics step
+    - reset_callback: Called when the environment is reset
+    - close_callback: Called when the environment is closed
+
+    Some methods are private and usually you should not override them.
+    - __pre_physics_step
+    - __physics_step
+    - __post_physics_step
+    """
+
     def __init__(self, scenario: BaseSimHandler | ScenarioCfg) -> None:
         """
         Initialize the task wrapper.
@@ -51,16 +77,15 @@ class BaseTaskWrapper:
         self.pre_physics_step_callback: list[Callable] = []
         self.post_physics_step_callback: list[Callable] = []
         self.reset_callback: list[Callable] = []
+        self.close_callback: list[Callable] = []
 
-    @property
-    def observation_space(self) -> gym.Space:
+    def _observation_space(self) -> gym.Space:
         """
         Get the observation space of the environment.
         """
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))
 
-    @property
-    def action_space(self) -> gym.Space:
+    def _action_space(self) -> gym.Space:
         """
         Get the action space of the environment.
         """
@@ -96,13 +121,16 @@ class BaseTaskWrapper:
         """
         return [False] * self.env.num_envs
 
-    def _pre_physics_step(self, actions: Action) -> Dict():
+    def __pre_physics_step(self, actions: Action) -> Dict():
         """
         Pre-physics step, apply transforms to actions and put actions into correct dict format.
 
         Args:
             actions: The actions to take
         """
+
+        for callback in self.pre_physics_step_callback:
+            callback(actions)
 
         actions_dict = {
             "robots": {
@@ -115,12 +143,9 @@ class BaseTaskWrapper:
             }
         }
 
-        for callback in self.pre_physics_step_callback:
-            callback(actions_dict)
-
         return actions_dict
 
-    def _physics_step(self, actions_dict: dict) -> tuple[Obs, Extra | None]:
+    def __physics_step(self, actions_dict: dict) -> tuple[Obs, Extra | None]:
         """
         Physics step.
         """
@@ -134,7 +159,7 @@ class BaseTaskWrapper:
 
         return self.env.get_states(), None
 
-    def _post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
+    def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
         """
         Post-physics step.
         """
@@ -159,9 +184,9 @@ class BaseTaskWrapper:
             actions: The actions to take
         """
 
-        actions_dict = self._pre_physics_step(actions)
-        env_states, _ = self._physics_step(actions_dict)
-        obs, priv_obs, reward, terminated, time_out, _ = self._post_physics_step(env_states)
+        actions_dict = self.__pre_physics_step(actions)
+        env_states, _ = self.__physics_step(actions_dict)
+        obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
 
         return obs, priv_obs, reward, terminated, time_out, None
 
@@ -191,4 +216,21 @@ class BaseTaskWrapper:
         """
         Close the environment.
         """
+        for callback in self.close_callback:
+            callback()
+
         self.env.close()
+
+    @property
+    def observation_space(self) -> gym.Space:
+        """
+        Get the observation space of the environment.
+        """
+        return self._observation_space()
+
+    @property
+    def action_space(self) -> gym.Space:
+        """
+        Get the action space of the environment.
+        """
+        return self._action_space()
