@@ -1,14 +1,12 @@
 import numpy as np
 from base import BaseTaskWrapper
 
-from metasim.cfg.objects import (ArticulationObjCfg, PrimitiveCubeCfg,
-                                 PrimitiveSphereCfg, RigidObjCfg)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 
 if __name__ == "__main__":
-
     # initialize scenario
     scenario = ScenarioCfg(
         robots=["franka"],
@@ -55,6 +53,4 @@ if __name__ == "__main__":
     task = BaseTaskWrapper(scenario)
 
     for i in range(10):
-        task.step(
-            np.zeros(9)
-        )
+        task.step(np.zeros(9))

@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
-from collections import deque
-from copy import deepcopy
 from typing import Callable
 
 import gymnasium as gym
 import numpy as np
-import torch
 from traitlets import Dict
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import (Action, EnvState, Extra, Obs, Reward, Success,
-                           Termination, TimeOut)
+from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.setup_util import get_sim_handler_class
 from metasim.utils.state import TensorState
 
 
-class BaseTaskWrapper() :
+class BaseTaskWrapper:
     def __init__(self, scenario: BaseSimHandler | ScenarioCfg) -> None:
         """
         Initialize the task wrapper.
@@ -113,7 +109,8 @@ class BaseTaskWrapper() :
             "robots": {
                 self.env.robots[0].name: {
                     "dof_pos_target": {
-                        joint_name: action for joint_name, action in zip(self.env.get_joint_names(self.env.robots[0].name), actions)
+                        joint_name: action
+                        for joint_name, action in zip(self.env.get_joint_names(self.env.robots[0].name), actions)
                     }
                 }
             }
