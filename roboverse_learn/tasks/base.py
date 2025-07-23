@@ -11,10 +11,8 @@ from traitlets import Dict
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import (Action, EnvState, Extra, Obs, Reward, Success,
-                           Termination, TimeOut)
+from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.setup_util import get_sim_handler_class
-from metasim.utils.state import TensorState
 
 
 class BaseTaskWrapper:
@@ -122,7 +120,7 @@ class BaseTaskWrapper:
 
         return actions_dict
 
-    def _physics_step(self, actions_dict: dict) -> tuple[EnvState, Extra]:
+    def _physics_step(self, actions_dict: dict) -> tuple[EnvState, Extra | None]:
         """
         Physics step.
         """
@@ -136,7 +134,7 @@ class BaseTaskWrapper:
 
         return self.env.get_states(), None
 
-    def _post_physics_step(self, env_states: EnvState) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra]:
+    def _post_physics_step(self, env_states: EnvState) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
         """
         Post-physics step.
         """
@@ -153,7 +151,7 @@ class BaseTaskWrapper:
             None,
         )
 
-    def step(self, actions: Action) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
         """
         Step the environment.
 
