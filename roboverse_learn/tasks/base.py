@@ -11,7 +11,7 @@ from traitlets import Dict
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination, TimeOut
+from metasim.types import Action, Extra, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.setup_util import get_sim_handler_class
 
 
@@ -66,31 +66,31 @@ class BaseTaskWrapper:
         """
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))
 
-    def observation(self) -> Obs:
+    def _observation(self, env_states: Obs) -> Obs:
         """
         Get the observation of the environment.
         """
-        return self.env.get_states()
+        return env_states
 
-    def privileged_observation(self) -> Obs:
+    def _privileged_observation(self, env_states: Obs) -> Obs:
         """
         Get the privileged observation of the environment.
         """
-        return self.env.get_states()
+        return env_states
 
-    def reward(self) -> Reward:
+    def _reward(self, env_states: Obs) -> Reward:
         """
         Get the reward of the environment.
         """
         return [0.0] * self.env.num_envs
 
-    def terminated(self) -> Termination:
+    def _terminated(self, env_states: Obs) -> Termination:
         """
         Get the terminated of the environment.
         """
         return [False] * self.env.num_envs
 
-    def time_out(self) -> TimeOut:
+    def _time_out(self, env_states: Obs) -> TimeOut:
         """
         Get the time out of the environment.
         """
@@ -120,7 +120,7 @@ class BaseTaskWrapper:
 
         return actions_dict
 
-    def _physics_step(self, actions_dict: dict) -> tuple[EnvState, Extra | None]:
+    def _physics_step(self, actions_dict: dict) -> tuple[Obs, Extra | None]:
         """
         Physics step.
         """
@@ -134,7 +134,7 @@ class BaseTaskWrapper:
 
         return self.env.get_states(), None
 
-    def _post_physics_step(self, env_states: EnvState) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
+    def _post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
         """
         Post-physics step.
         """
@@ -143,11 +143,11 @@ class BaseTaskWrapper:
             callback(env_states)
 
         return (
-            self.observation(),
-            self.privileged_observation(),
-            self.reward(),
-            self.terminated(),
-            self.time_out(),
+            self._observation(env_states),
+            self._privileged_observation(env_states),
+            self._reward(env_states),
+            self._terminated(env_states),
+            self._time_out(env_states),
             None,
         )
 
@@ -165,14 +165,27 @@ class BaseTaskWrapper:
 
         return obs, priv_obs, reward, terminated, time_out, None
 
-    def reset(self) -> tuple[Obs, Obs, Extra]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Obs, Extra | None]:
         """
-        Reset the environment.
-        """
-        for callback in self.reset_callback:
-            callback()
+        Reset the environment. This base implementation does not do anything.
 
-        return self.observation(), self.privileged_observation(), None
+        Args:
+            env_ids: The environment ids to reset
+
+        Returns:
+            obs: The observation
+            priv_obs: The privileged observation
+            info: The info
+        """
+        if env_ids is None:
+            env_ids = list(range(self.env.num_envs))
+
+        for callback in self.reset_callback:
+            callback(env_ids)
+
+        env_states = self.env.get_states(env_ids=env_ids)
+
+        return self._observation(env_states), self._privileged_observation(env_states), None
 
     def close(self) -> None:
         """
