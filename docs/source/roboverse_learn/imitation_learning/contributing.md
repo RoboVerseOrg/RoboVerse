@@ -88,7 +88,7 @@ log_interval: 10
 
 ---
 
-### `configs/eval_config/\<policy\>_eval.yaml`
+### configs/eval_config/\<policy\>_eval.yaml
 
 Evaluation configurations:
 
@@ -102,7 +102,7 @@ output_dir: "./eval_results"
 
 ---
 
-### `configs/\<policy\>_runner.yaml`
+### configs/\<policy\>_runner.yaml
 
 Entrance to the configuration:
 
@@ -113,8 +113,7 @@ defaults:
   - model_config: <policy>_model
   - eval_config: <policy>_eval
   - train_config: <policy>_train
-
-# Remaining params
+...
 ```
 
 ---
