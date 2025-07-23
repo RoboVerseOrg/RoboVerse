@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Evaluate one BC checkpoint with HDCWrapper + MetaSim.
 """
@@ -15,8 +14,8 @@ import hydra
 import numpy as np
 from easydict import EasyDict
 from omegaconf import DictConfig, OmegaConf
+from wrapper import HDCWrapper  # noqa: F401
 from rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
-from wrapper import HDCWrapper
 
 from metasim.cfg.scenario import ScenarioCfg
 

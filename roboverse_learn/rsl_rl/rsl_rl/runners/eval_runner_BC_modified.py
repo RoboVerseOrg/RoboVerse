@@ -41,7 +41,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from phc.phc.smpllib.smpl_eval import compute_metrics_lite
+from phc.smpllib.smpl_eval import compute_metrics_lite
 from rsl_rl.env import VecEnv
 
 

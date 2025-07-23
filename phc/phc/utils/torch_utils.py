@@ -27,9 +27,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+from isaacgym.torch_utils import *  # noqa
 import torch
 import torch.nn.functional as F
-from isaacgym.torch_utils import *
 from torch import nn
 
 import phc.utils.pytorch3d_transforms as ptr

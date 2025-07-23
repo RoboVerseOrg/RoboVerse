@@ -22,7 +22,7 @@ from metasim.utils.humanoid_robot_util import (
     robot_velocity_tensor,
 )
 from metasim.utils.math import quat_apply, quat_rotate_inverse
-from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+from roboverse_learn.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from roboverse_learn.skillblender_rl.utils import (
     get_body_reindexed_indices_from_substring,
     get_joint_reindexed_indices_from_substring,

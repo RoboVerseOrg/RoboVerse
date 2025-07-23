@@ -106,6 +106,8 @@ extend-exclude = [
     "roboverse_learn/rl/algos/ppo",
     "roboverse_learn/rl/algos/sac",
     "roboverse_learn/rsl_rl",
+    "roboverse_learn/hdc",
+    "phc",
     "wandb",
     "third_party",
     "tmp",
