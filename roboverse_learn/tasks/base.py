@@ -11,7 +11,8 @@ from traitlets import Dict
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination, TimeOut
+from metasim.types import (Action, EnvState, Extra, Obs, Reward, Success,
+                           Termination, TimeOut)
 from metasim.utils.setup_util import get_sim_handler_class
 from metasim.utils.state import TensorState
 
@@ -135,7 +136,7 @@ class BaseTaskWrapper:
 
         return self.env.get_states(), None
 
-    def _post_physics_step(self, env_states: EnvState) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+    def _post_physics_step(self, env_states: EnvState) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra]:
         """
         Post-physics step.
         """
@@ -143,7 +144,14 @@ class BaseTaskWrapper:
         for callback in self.post_physics_step_callback:
             callback(env_states)
 
-        return self.env.get_states(), self.reward(), self.terminated(), self.time_out(), None
+        return (
+            self.observation(),
+            self.privileged_observation(),
+            self.reward(),
+            self.terminated(),
+            self.time_out(),
+            None,
+        )
 
     def step(self, actions: Action) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         """
@@ -155,18 +163,18 @@ class BaseTaskWrapper:
 
         actions_dict = self._pre_physics_step(actions)
         env_states, _ = self._physics_step(actions_dict)
-        obs, reward, terminated, time_out, _ = self._post_physics_step(env_states)
+        obs, priv_obs, reward, terminated, time_out, _ = self._post_physics_step(env_states)
 
-        return obs, reward, terminated, time_out, None
+        return obs, priv_obs, reward, terminated, time_out, None
 
-    def reset(self) -> tuple[TensorState, Extra]:
+    def reset(self) -> tuple[Obs, Obs, Extra]:
         """
         Reset the environment.
         """
         for callback in self.reset_callback:
             callback()
 
-        return self.env.get_states(), None
+        return self.observation(), self.privileged_observation(), None
 
     def close(self) -> None:
         """
