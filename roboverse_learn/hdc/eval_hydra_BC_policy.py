@@ -1,21 +1,24 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Evaluate one BC checkpoint with HDCWrapper + MetaSim.
 """
 
-import os
-import csv
-import pathlib
-import numpy as np
-import torch
-import hydra
-from omegaconf import DictConfig, OmegaConf
-from easydict import EasyDict
+import rootutils
 
+rootutils.setup_root(__file__, pythonpath=True)
+
+import csv
+import os
+import pathlib
+
+import hydra
+import numpy as np
+from easydict import EasyDict
+from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
-from metasim.cfg.scenario import ScenarioCfg
 from wrapper import HDCWrapper
+
+from metasim.cfg.scenario import ScenarioCfg
 
 
 # ---------- helpers -------------------------------------------------

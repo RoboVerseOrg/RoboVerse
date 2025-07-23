@@ -6,13 +6,14 @@ Fill in the TODO blocks as you port features.
 
 from __future__ import annotations
 
-from typing import Callable, List
-
+try:
+    from isaacgym.torch_utils import *
+except ImportError:
+    pass
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from isaacgym.torch_utils import *
 
 from metasim.cfg.scenario import ScenarioCfg
 from phc.utils import torch_utils
@@ -241,7 +242,7 @@ class HDCWrapper(HumanoidBaseWrapper):
 
     def _physics_step(self, actions: torch.Tensor):
         """
-        Isaac/MetaSim env.step – must return terminated / timeout flags.
+        Isaac/MetaSim env.step must return terminated / timeout flags.
         Only terminated|timeout are required here.
         """
         env_state, _, term, tout, _ = self.env.step(actions)
@@ -316,7 +317,7 @@ class HDCWrapper(HumanoidBaseWrapper):
         obs, priv, rew = self._post_physics_step(st)
         return obs, priv, rew, self.reset_buf, {}
 
-    def reset(self, env_ids: List[int] | None = None):
+    def reset(self, env_ids: list[int] | None = None):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         if not env_ids:
@@ -333,16 +334,16 @@ class HDCWrapper(HumanoidBaseWrapper):
     # ------------------------------------------------------------------ #
     # 5. reward functions (skeleton)                                     #
     # ------------------------------------------------------------------ #
-    def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
-        """Register reward fns according to cfg.scales dict."""
-        self.reward_scales: dict[str, float] = task.reward_weights
-        self.reward_fns: dict[str, Callable] = {}  # name → callable
-        for name, scale in self.reward_scales.items():
-            fn_name = f"reward_{name}"
-            if hasattr(self, fn_name):
-                self.reward_fns[name] = getattr(self, fn_name)
-            else:
-                print(f"[H2OWrapper] WARNING: reward fn {fn_name} missing")
+    # def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
+    #     """Register reward fns according to cfg.scales dict."""
+    #     self.reward_scales: dict[str, float] = task.reward_weights
+    #     self.reward_fns: dict[str, Callable] = {}  # name → callable
+    #     for name, scale in self.reward_scales.items():
+    #         fn_name = f"reward_{name}"
+    #         if hasattr(self, fn_name):
+    #             self.reward_fns[name] = getattr(self, fn_name)
+    #         else:
+    #             print(f"[H2OWrapper] WARNING: reward fn {fn_name} missing")
 
     # Example reward stub
     def reward_alive(self, env_state, robot, cfg):
