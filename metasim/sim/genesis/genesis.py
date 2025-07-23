@@ -13,6 +13,24 @@ from metasim.sim import BaseSimHandler, GymEnvWrapper
 from metasim.types import Action, EnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
+# Apply IGL compatibility patch
+try:
+    import genesis.engine.entities.rigid_entity.rigid_geom as _rigid_geom_module
+    import igl as _igl
+
+    _original_compute_sd = _rigid_geom_module.RigidGeom._compute_sd
+
+    def _patched_compute_sd(self, query_points):
+        """Patched version that handles different IGL return values"""
+        result = _igl.signed_distance(query_points, self._sdf_verts, self._sdf_faces)
+        if isinstance(result, tuple):
+            return result[0] if len(result) > 0 else None
+        return result
+
+    _rigid_geom_module.RigidGeom._compute_sd = _patched_compute_sd
+except Exception:
+    pass
+
 
 class GenesisHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
@@ -39,7 +57,12 @@ class GenesisHandler(BaseSimHandler):
         )
 
         ## Add ground
-        self.scene_inst.add_entity(gs.morphs.Plane())
+        try:
+            self.scene_inst.add_entity(gs.morphs.Plane())
+        except (ValueError, Exception) as e:
+            # Fallback if Plane has issues
+            log.warning(f"Could not add ground plane: {e}")
+            pass
 
         ## Add robot
         self.robot_inst: RigidEntity = self.scene_inst.add_entity(
@@ -152,7 +175,9 @@ class GenesisHandler(BaseSimHandler):
                 joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_effort_target=self._get_effort_targets()
+                if self._get_control_mode(obj.name) == "effort"
+                else None,
             )
             robot_states[obj.name] = state
 
@@ -201,27 +226,48 @@ class GenesisHandler(BaseSimHandler):
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
-        position = [
-            [
-                actions[env_id][self.robot.name]["dof_pos_target"][jn]
-                for jn in self.get_joint_names(obj_name, sort=False)
+
+        control_mode = self._get_control_mode(obj_name)
+        joint_names = self.get_joint_names(obj_name, sort=False)
+
+        if control_mode == "effort":
+            effort = [
+                [actions[env_id][self.robot.name]["dof_effort_target"][jn] for jn in joint_names]
+                for env_id in range(self.num_envs)
             ]
-            for env_id in range(self.num_envs)
-        ]
-        if self.object_dict[obj_name].fix_base_link:
-            self.robot_inst.control_dofs_position(
-                position=position,
-                dofs_idx_local=[j.dof_idx_local for j in self.robot_inst.joints if j.dof_idx_local is not None],
-            )
+            if self.object_dict[obj_name].fix_base_link:
+                self.robot_inst.control_dofs_force(
+                    force=effort,
+                    dofs_idx_local=[j.dof_idx_local for j in self.robot_inst.joints if j.dof_idx_local is not None],
+                )
+            else:
+                self.robot_inst.control_dofs_force(
+                    force=effort,
+                    dofs_idx_local=[
+                        j.dof_idx_local
+                        for j in self.robot_inst.joints
+                        if j.dof_idx_local is not None and j.name != self.robot_inst.base_joint.name
+                    ],
+                )
         else:
-            self.robot_inst.control_dofs_position(
-                position=position,
-                dofs_idx_local=[
-                    j.dof_idx_local
-                    for j in self.robot_inst.joints
-                    if j.dof_idx_local is not None and j.name != self.robot_inst.base_joint.name
-                ],
-            )
+            position = [
+                [actions[env_id][self.robot.name]["dof_pos_target"][jn] for jn in joint_names]
+                for env_id in range(self.num_envs)
+            ]
+            if self.object_dict[obj_name].fix_base_link:
+                self.robot_inst.control_dofs_position(
+                    position=position,
+                    dofs_idx_local=[j.dof_idx_local for j in self.robot_inst.joints if j.dof_idx_local is not None],
+                )
+            else:
+                self.robot_inst.control_dofs_position(
+                    position=position,
+                    dofs_idx_local=[
+                        j.dof_idx_local
+                        for j in self.robot_inst.joints
+                        if j.dof_idx_local is not None and j.name != self.robot_inst.base_joint.name
+                    ],
+                )
 
     def _simulate(self):
         for _ in range(self.scenario.decimation):
@@ -235,6 +281,31 @@ class GenesisHandler(BaseSimHandler):
 
     def close(self):
         pass
+
+    def _get_effort_targets(self) -> torch.Tensor | None:
+        """Get the effort targets from cached actions."""
+        if not hasattr(self, "_actions_cache") or not self._actions_cache:
+            return None
+
+        joint_names = self.get_joint_names(self.robot.name, sort=False)
+        effort_targets = []
+        for action in self._actions_cache:
+            if "dof_effort_target" in action[self.robot.name] and action[self.robot.name]["dof_effort_target"]:
+                effort_values = [action[self.robot.name]["dof_effort_target"][jn] for jn in joint_names]
+                effort_targets.append(effort_values)
+
+        if effort_targets:
+            return torch.tensor(effort_targets, dtype=torch.float32)
+        return None
+
+    def _get_control_mode(self, obj_name: str) -> str:
+        """Get the control mode for the object."""
+        if hasattr(self.object_dict[obj_name], "control_type"):
+            control_types = list(set(self.object_dict[obj_name].control_type.values()))
+            if len(control_types) > 1:
+                raise ValueError(f"Multiple control types not supported: {control_types}")
+            return control_types[0] if control_types else "position"
+        return "position"
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
