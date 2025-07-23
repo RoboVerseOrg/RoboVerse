@@ -23,7 +23,7 @@ args = parser.parse_args()
 # ---------------------------------------------------------------------
 # Fixed overrides
 # ---------------------------------------------------------------------
-SCRIPT_PATH      = "legged_gym/scripts/eval_hydra_BC_policy.py"
+SCRIPT_PATH = "roboverse_learn/h2o/eval_hydra_BC_policy.py"
 CONFIG_NAME      = "config_teleop_humanoid_data_gene_student_obs_for_play_8_4_transformer_15_step_x0_delay_data_8_8_256_0"
 TASK             = "h1:teleop"
 ENV_NUM_OBS      = 913

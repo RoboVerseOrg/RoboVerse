@@ -38,7 +38,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_cfgs
+from roboverse_learn.rsl_rl.rsl_rl.utils import get_cfgs
 
 
 class ActorCriticHierarchical(nn.Module):
@@ -122,7 +122,7 @@ class ActorCriticHierarchical(nn.Module):
         ]
 
     def _get_one_policy(self, args, device, task, experiment_name, load_run, checkpoint):
-        from roboverse_learn.rl.rsl_rl.rsl_rl.utils import get_load_path
+        from roboverse_learn.rsl_rl.rsl_rl.utils import get_load_path
         from rsl_rl.modules import ActorCritic
 
         # get skill arguments
