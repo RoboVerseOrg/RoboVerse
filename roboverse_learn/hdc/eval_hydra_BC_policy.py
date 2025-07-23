@@ -49,8 +49,9 @@ def load_BC_workspace(train_cfg, checkpoint_path):
 
 
 # ---------- main ----------------------------------------------------
-@hydra.main(version_base=None, config_path="../cfg", config_name="config_base")
+@hydra.main(version_base=None, config_path="./cfg", config_name="config_base")
 def play(cfg: DictConfig) -> None:
+    OmegaConf.register_new_resolver("eval", eval, replace=True)
     cfg = EasyDict(OmegaConf.to_container(cfg, resolve=True))
 
     # scenario & env

@@ -6,15 +6,14 @@ Fill in the TODO blocks as you port features.
 
 from __future__ import annotations
 
-# except ImportError:
-# pass
+from isaacgym.torch_utils import * # noqa
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
 # try:
-from isaacgym.torch_utils import *
 
 from metasim.cfg.scenario import ScenarioCfg
 from phc.utils import torch_utils

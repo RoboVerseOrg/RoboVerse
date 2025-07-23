@@ -77,7 +77,7 @@ for ck in ckpts:
         f"BC_ckpt_path={ck}",
     ]
     # append extra fixed overrides
-    cmd.extend(f"{k.replace('_', '.')}={v}" for k, v in EXTRA_OVERRIDES.items())
+    # cmd.extend(f"{k.replace('_', '.')}={v}" for k, v in EXTRA_OVERRIDES.items())
 
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, check=True)
