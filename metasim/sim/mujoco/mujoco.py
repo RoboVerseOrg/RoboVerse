@@ -176,6 +176,18 @@ class MujocoHandler(BaseSimHandler):
                 if len(pos) >= 3:
                     joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
 
+    def _set_framebuffer_size(self, mjcf_model, width, height):
+        visual_elem = mjcf_model.visual
+        global_elem = None
+        for child in visual_elem._children:
+            if child.tag == "global":
+                global_elem = child
+                break
+        if global_elem is None:
+            global_elem = visual_elem.add("global")
+        global_elem.offwidth = width
+        global_elem.offheight = height
+
     def _create_primitive_xml(self, obj):
         if isinstance(obj, PrimitiveCubeCfg):
             size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
@@ -229,11 +241,13 @@ class MujocoHandler(BaseSimHandler):
                 "mode": "fixed",
                 "fovy": camera.vertical_fov,
                 "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
-                "resolution": f"{camera.width} {camera.height}",
             }
             mjcf_model.worldbody.add("camera", name=f"{camera.name}_custom", **camera_params)
             camera_max_width = max(camera_max_width, camera.width)
             camera_max_height = max(camera_max_height, camera.height)
+
+        if camera_max_width > 640 or camera_max_height > 480:
+            self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
         if self.scenario.try_add_table:
             mjcf_model.asset.add(
