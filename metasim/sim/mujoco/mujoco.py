@@ -7,19 +7,16 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import (
-    ArticulationObjCfg,
-    PrimitiveCubeCfg,
-    PrimitiveCylinderCfg,
-    PrimitiveSphereCfg,
-)
+from metasim.cfg.objects import (ArticulationObjCfg, PrimitiveCubeCfg,
+                                 PrimitiveCylinderCfg, PrimitiveSphereCfg)
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import (CameraState, ObjectState, RobotState,
+                                 TensorState)
 
 
 class MujocoHandler(BaseSimHandler):
@@ -234,6 +231,13 @@ class MujocoHandler(BaseSimHandler):
             mjcf_model.worldbody.add("camera", name=f"{camera.name}_custom", **camera_params)
             camera_max_width = max(camera_max_width, camera.width)
             camera_max_height = max(camera_max_height, camera.height)
+
+        # Update rendering buffer
+        getattr(mjcf_model.visual, 'global').offwidth = camera_max_width
+        getattr(mjcf_model.visual, 'global').offheight = camera_max_height
+        # <visual>
+        #     <global offwidth="1920" offheight="1080"/>
+        # </visual>
 
         if self.scenario.try_add_table:
             mjcf_model.asset.add(
