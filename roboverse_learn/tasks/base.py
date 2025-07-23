@@ -11,10 +11,8 @@ from traitlets import Dict
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import (Action, EnvState, Extra, Obs, Reward, Success,
-                           Termination, TimeOut)
+from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.setup_util import get_sim_handler_class
-from metasim.utils.state import TensorState
 
 
 class BaseTaskWrapper:
