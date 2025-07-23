@@ -53,4 +53,5 @@ if __name__ == "__main__":
     task = BaseTaskWrapper(scenario)
 
     for i in range(10):
-        task.step(np.zeros(9))
+        tmp = task.step(np.zeros(9))
+        print(tmp)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
@@ -121,7 +121,7 @@ class BaseTaskWrapper:
         """
         return [False] * self.env.num_envs
 
-    def __pre_physics_step(self, actions: Action) -> Dict():
+    def __pre_physics_step(self, actions: Action) -> Dict[str, Any]:
         """
         Pre-physics step, apply transforms to actions and put actions into correct dict format.
 
@@ -145,7 +145,7 @@ class BaseTaskWrapper:
 
         return actions_dict
 
-    def __physics_step(self, actions_dict: dict) -> tuple[Obs, Extra | None]:
+    def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Extra | None]:
         """
         Physics step.
         """
