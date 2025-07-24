@@ -7,12 +7,7 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import (
-    ArticulationObjCfg,
-    PrimitiveCubeCfg,
-    PrimitiveCylinderCfg,
-    PrimitiveSphereCfg,
-)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import TaskType
