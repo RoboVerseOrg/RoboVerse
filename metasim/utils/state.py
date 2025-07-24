@@ -136,7 +136,7 @@ class TensorState:
     sensors: dict[str, SensorState]
     """States of all sensors."""
     extras: dict = field(default_factory=dict)
-    """Extra information"""
+    """States of Extra information"""
 
 
 def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:

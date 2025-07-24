@@ -44,3 +44,7 @@ class SpoonCfg(HumanoidTaskCfg):
     checker = _SpoonChecker()
     reward_weights = [1.0]
     reward_functions = [SpoonReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

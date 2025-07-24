@@ -61,3 +61,7 @@ class PowerliftCfg(HumanoidTaskCfg):
     checker = _PowerliftChecker()
     reward_weights = [1.0]
     reward_functions = [PowerliftReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

@@ -24,11 +24,11 @@ class MujocoQuerier:
     @classmethod
     def query(cls, q, handler):
         fn_name = cls.QUERY_MAP[type(q)]
-        return getattr(cls, f"_{fn_name}")(q, handler)
+        return getattr(cls, fn_name)(q, handler)
 
     # query func collection ------------------------------------------------------------
     @classmethod
-    def _site_pos(cls, q: SitePos, handler):
+    def site_pos(cls, q: SitePos, handler):
         """Return (N_env, 3) site position."""
         key = id(handler._mj_model)
         cache = cls._site_cache.setdefault(key, {})
@@ -42,8 +42,8 @@ class MujocoQuerier:
         return handler._data.site_xpos[:, sid]
 
     @classmethod
-    def _contact_force(cls, q: ContactForce, handler):
-        """Return (N_env, 6) force‑torque of one body."""
+    def contact_force(cls, q: ContactForce, handler):
+        """Return (N_env, 6) force torque of one body."""
         key = id(handler._mj_model)
         cache = cls._body_cache.setdefault(key, {})
         if not cache:

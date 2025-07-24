@@ -204,10 +204,12 @@ class MJXHandler(BaseSimHandler):
             # Convert JAX → PyTorch; result shape (batch, dim)
             sensors[name] = j2t(sens_batch[:, sl])
 
-        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors)
+        extras = self.get_extra()  # extra observations
+        return TensorState(objects=objects, robots=robots, sensors=sensors, cameras=camera_states, extras=extras)
 
-    def get_extra(self, spec):
-        return {k: MJXQuerier.query(v, self) for k, v in spec.items()}
+    def get_extra(self):
+        robot_name = self.robots[0].name
+        return {k: MJXQuerier.query(v, self, robot_name) for k, v in (self.spec or {}).items() if v is not None}
 
     def _set_states(
         self,

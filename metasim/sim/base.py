@@ -38,6 +38,13 @@ class BaseSimHandler(ABC):
         """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
         self._state_cache_expire = True
 
+        self.spec = {}
+        # Check if task is defined and there is extra specification
+        if self.task is not None:
+            extra_fn = getattr(self.task, "extra_spec", None)
+            if callable(extra_fn):
+                self.spec = extra_fn() or {}
+
     def launch(self) -> None:
         """Launch the simulation."""
         raise NotImplementedError

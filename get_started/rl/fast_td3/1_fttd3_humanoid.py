@@ -11,8 +11,8 @@ CONFIG: dict[str, Any] = {
     # Environment
     # -------------------------------------------------------------------------------
     "sim": "mjx",
-    "robots": ["h1"],
-    "task": "humanoidbench:Walk",
+    "robots": ["h1_body_collision"],
+    "task": "humanoidbench:Crawl",
     "decimation": 10,
     "train_or_eval": "train",
     # -------------------------------------------------------------------------------
@@ -27,7 +27,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1200,
+    "total_timesteps": 3600,
     "learning_starts": 10,
     "num_steps": 1,
     # -------------------------------------------------------------------------------
@@ -79,8 +79,8 @@ CONFIG: dict[str, Any] = {
     "exp_name": "get_started_fttd3",
     "use_wandb": False,
     "checkpoint_path": None,
-    "eval_interval": 1200,
-    "save_interval": 1200,
+    "eval_interval": 3600,
+    "save_interval": 3600,
     "video_width": 1024,
     "video_height": 1024,
 }
