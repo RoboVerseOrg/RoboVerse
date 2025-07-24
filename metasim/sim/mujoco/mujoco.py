@@ -16,6 +16,8 @@ from metasim.sim.parallel import ParallelSimWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
+from .mujoco_querier import MujocoQuerier
+
 
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg):
@@ -418,8 +420,8 @@ class MujocoHandler(BaseSimHandler):
                 depth = torch.from_numpy(depth.copy()).unsqueeze(0)
             state = CameraState(rgb=rgb, depth=depth)
             camera_states[camera.name] = state
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
+        extras = self.get_extra()
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
         """Set root position and rotation."""
@@ -480,6 +482,9 @@ class MujocoHandler(BaseSimHandler):
             self._set_root_state(obj_name, obj_state, zero_vel)
             self._set_joint_state(obj_name, obj_state, zero_vel)
         self.physics.forward()
+
+    def get_extra(self):
+        return {k: MujocoQuerier.query(v, self) for k, v in (self.spec or {}).items() if v is not None}
 
     def _disable_robotgravity(self):
         gravity_vec = np.array([0.0, 0.0, -9.81])

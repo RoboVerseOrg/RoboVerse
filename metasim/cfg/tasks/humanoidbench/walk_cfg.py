@@ -23,3 +23,7 @@ class WalkCfg(HumanoidTaskCfg):
     checker = _WalkChecker()
     reward_functions = [WalkReward]
     reward_weights = [1.0]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

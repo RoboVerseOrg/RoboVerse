@@ -56,13 +56,6 @@ def neck_height(envstate, robot_name: str):
     ) / 2
 
 
-def robot_site_pos_tensor(envstate, robot_name: str, site_name):
-    """Returns the height of the neck."""
-    key = f"{robot_name}/{site_name}"
-    site_pos = envstate.extras["sites"][key]["position"]
-    return site_pos
-
-
 def neck_height_tensor(envstate, robot_name: str):
     """Returns the height of the neck."""
     robot_body_name = envstate.robots[robot_name].body_names

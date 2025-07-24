@@ -91,3 +91,7 @@ class PushCfg(HumanoidTaskCfg):
     checker = _PushChecker()
     reward_weights = [1000, 1, 0.1]  # αs, αt, αh
     reward_functions = [SuccessReward, GoalDistanceReward, HandDistanceReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

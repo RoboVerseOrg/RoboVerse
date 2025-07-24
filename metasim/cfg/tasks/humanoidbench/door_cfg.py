@@ -85,3 +85,7 @@ class DoorCfg(HumanoidTaskCfg):
     checker = _DoorChecker()
     reward_weights = [1.0]
     reward_functions = [DoorReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

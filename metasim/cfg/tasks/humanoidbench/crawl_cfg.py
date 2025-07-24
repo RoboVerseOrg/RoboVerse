@@ -6,13 +6,13 @@ import torch
 
 from metasim.cfg.checkers import _CrawlChecker
 from metasim.cfg.objects import RigidObjCfg
+from metasim.cfg.query_type import SitePos
 from metasim.constants import PhysicStateType
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance_tensor
 from metasim.utils.humanoid_robot_util import (
     actuator_forces_tensor,
     robot_rotation_tensor,
-    robot_site_pos_tensor,
     robot_velocity_tensor,
 )
 
@@ -33,7 +33,7 @@ class CrawlReward(HumanoidBaseReward):
     def __call__(self, states):
         """Vectorised HumanoidBench-style sitting reward."""
         # ---------------- core state tensors -------------------------     # (B, 3)
-        imu_pos = robot_site_pos_tensor(states, self.robot_name, "imu")  # (B, 3)
+        imu_pos = states.extras["imu_pos"]  # (B, 3)
 
         pelvis_q = robot_rotation_tensor(states, self.robot_name)  # (B, 4)
         com_vx = robot_velocity_tensor(states, self.robot_name)[:, 0]  # (B,)
@@ -60,7 +60,7 @@ class CrawlReward(HumanoidBaseReward):
         # ---------------- 3) crawling-height terms --------------------
         height_bounds = (self._crawl_height - 0.2, self._crawl_height + 0.2)
 
-        head_z = robot_site_pos_tensor(states, self.robot_name, "head")[:, 2]
+        head_z = states.extras["head_pos"][:, 2]
         crawling_head = tolerance_tensor(head_z, bounds=height_bounds, margin=1.0)
 
         crawling_imu = tolerance_tensor(imu_pos[:, 2], bounds=height_bounds, margin=1.0)
@@ -101,3 +101,10 @@ class CrawlCfg(HumanoidTaskCfg):
     checker = _CrawlChecker()
     reward_weights = [1.0]
     reward_functions = [CrawlReward]
+
+    def extra_spec(self):
+        """Declare extra observations needed by CrawlReward."""
+        return {
+            "imu_pos": SitePos("imu"),
+            "head_pos": SitePos("head"),
+        }

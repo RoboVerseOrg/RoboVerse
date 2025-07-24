@@ -38,47 +38,6 @@ G1_STAND_NECK_HEIGHT = 1.0
 G1_CRAWL_HEAD_HEIGHT = 0.6
 
 
-@configclass
-class HumanoidTaskCfg(BaseRLTaskCfg):
-    """Base class for humanoid tasks."""
-
-    decimation: int = 10
-    source_benchmark = BenchmarkType.HUMANOIDBENCH
-    task_type = TaskType.LOCOMOTION
-    episode_length = 800  # TODO: may change
-    objects = []
-    reward_weights = [1.0]
-    sim_params = SimParamCfg(
-        dt=0.002,
-        contact_offset=0.01,
-        num_position_iterations=8,
-        num_velocity_iterations=0,
-        bounce_threshold_velocity=0.5,
-        replace_cylinder_with_capsule=True,
-    )
-    control = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
-
-    # @staticmethod
-    def humanoid_obs_flatten_func(self, envstates: list[EnvState]) -> torch.Tensor:
-        """Observation function for humanoid tasks.
-
-        Args:
-            envstates (list[EnvState]): List of environment states to process.
-
-        Returns:
-            torch.Tensor: Flattened observations for all environments.
-        """
-        env_obs = []
-        results_state = []
-        for _, object_state in sorted(envstates.objects.items()):
-            results_state.append(object_state.root_state)
-        for _, robot_state in sorted(envstates.robots.items()):
-            results_state.append(robot_state.root_state)
-            results_state.append(robot_state.joint_pos)
-            results_state.append(robot_state.joint_vel)
-        return torch.cat(results_state, dim=1)
-
-
 class HumanoidBaseReward:
     """Base class for humanoid rewards."""
 
@@ -173,3 +132,48 @@ class BaseLocomotionReward(HumanoidBaseReward):
             move = (5 * move + 1) / 6
             moving_reward = move
         return stable_rewards * moving_reward
+
+
+@configclass
+class HumanoidTaskCfg(BaseRLTaskCfg):
+    """Base class for humanoid tasks."""
+
+    decimation: int = 10
+    source_benchmark = BenchmarkType.HUMANOIDBENCH
+    task_type = TaskType.LOCOMOTION
+    episode_length = 800  # TODO: may change
+    objects = []
+    reward_weights = [1.0]
+    sim_params = SimParamCfg(
+        dt=0.002,
+        contact_offset=0.01,
+        num_position_iterations=8,
+        num_velocity_iterations=0,
+        bounce_threshold_velocity=0.5,
+        replace_cylinder_with_capsule=True,
+    )
+    control = ControlCfg(action_scale=0.5, action_offset=True, torque_limit_scale=0.85)
+
+    # @staticmethod
+    def humanoid_obs_flatten_func(self, envstates: list[EnvState]) -> torch.Tensor:
+        """Observation function for humanoid tasks.
+
+        Args:
+            envstates (list[EnvState]): List of environment states to process.
+
+        Returns:
+            torch.Tensor: Flattened observations for all environments.
+        """
+        env_obs = []
+        results_state = []
+        for _, object_state in sorted(envstates.objects.items()):
+            results_state.append(object_state.root_state)
+        for _, robot_state in sorted(envstates.robots.items()):
+            results_state.append(robot_state.root_state)
+            results_state.append(robot_state.joint_pos)
+            results_state.append(robot_state.joint_vel)
+        return torch.cat(results_state, dim=1)
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}
