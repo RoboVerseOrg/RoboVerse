@@ -48,6 +48,8 @@ class HDCWrapper(RslRlWrapper):
     def __init__(self,cfg:LeggedRobotCfg,  scenario: ScenarioCfg):
         super().__init__(scenario)
 
+        self._init_buffers()
+
         # self.cfg = LeggedRobotCfg()
         self.cfg = cfg
         self.height_samples = None
@@ -130,12 +132,11 @@ class HDCWrapper(RslRlWrapper):
     def _init_buffers(self):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
 
-        super()._init_buffers()
-        env_states, _ = self.env.handler.reset()
-        self._rigid_body_pos = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 0:3]
-        self._rigid_body_rot = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 3:7]
-        self._rigid_body_vel = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 7:10]
-        self._rigid_body_ang_vel = env_states.robot[self.robot.name].body_state[..., : self.num_bodies, 10:13]
+        env_states, _ = self.env.reset()
+        self._rigid_body_pos = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 0:3]
+        self._rigid_body_rot = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 3:7]
+        self._rigid_body_vel = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 7:10]
+        self._rigid_body_ang_vel = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 10:13]
 
         # Init for motion reference
         if self.cfg.motion.teleop:
@@ -883,9 +884,9 @@ class HDCWrapper(RslRlWrapper):
         dist_feet = torch.norm(left_foot_pos - right_foot_pos, dim=-1, keepdim=True)
         return dist_feet
 
-    @property
-    def _motion_lib(self):
-        return self._motion_lib
+    # @property
+    # def _motion_lib(self):
+    #     return self._motion_lib
 
     @property
     def default_dof_pos(self):

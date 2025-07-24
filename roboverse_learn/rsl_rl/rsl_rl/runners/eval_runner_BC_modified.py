@@ -60,7 +60,7 @@ class EvalRunnerBCModified:
             num_critic_obs = self.env.num_privileged_obs
         else:
             num_critic_obs = self.env.num_obs
-        actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
+        # actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
         self.log_dir = log_dir
         self.writer = None
         self.tot_timesteps = 0
@@ -143,7 +143,7 @@ class EvalRunnerBCModified:
             0.0500,
         ]
         self.noise_vec = torch.tensor(noise_vec).to(self.env.device)
-        # TODO algin this hardcoding 
+        # TODO algin this hardcoding
         # if self.clip_actions:
         #     for i in range(len(self.env.dof_pos_limits)):
         #         soft_lower = self.env.dof_pos_limits[i, 0]
