@@ -1,8 +1,8 @@
 FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
 
-ARG DOCKER_UID=1000
-ARG DOCKER_GID=1000
-ARG DOCKER_USER=user
+ARG DOCKER_UID
+ARG DOCKER_GID
+ARG DOCKER_USER
 ARG HOME=/home/${DOCKER_USER}
 
 RUN groupadd -g $DOCKER_GID $DOCKER_USER \
@@ -90,6 +90,7 @@ RUN cd ${HOME}/RoboVerse \
     && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
     && uv pip install -e ".[isaaclab,mujoco,sapien3,pybullet]" \
+    && pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html \
     && uv cache clean
 
 # Test proxy connection
