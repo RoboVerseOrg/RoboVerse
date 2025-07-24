@@ -52,6 +52,7 @@ def load_BC_workspace(train_cfg, checkpoint_path):
 @hydra.main(version_base=None, config_path="./cfg", config_name="config_base")
 def play(cfg: DictConfig) -> None:
     OmegaConf.register_new_resolver("eval", eval, replace=True)
+    cfg_humanoid_workspace = cfg.humanoid_workspace
     cfg = EasyDict(OmegaConf.to_container(cfg, resolve=True))
 
     # scenario & env
@@ -64,7 +65,7 @@ def play(cfg: DictConfig) -> None:
         objects=[],
         cameras=[],
     )
-    env = HDCWrapper(scenario)
+    env = HDCWrapper(cfg,scenario)
 
     # tweak env cfg for eval
     env_cfg, train_cfg = cfg, cfg.train
@@ -76,9 +77,12 @@ def play(cfg: DictConfig) -> None:
     env_cfg.env.episode_length_s = 20
     env_cfg.env.test = True
 
+
+
+
     # load policy
     train_cfg.runner.resume = True
-    ws = load_BC_workspace(cfg.humanoid_workspace, cfg.BC_ckpt_path)
+    ws = load_BC_workspace(cfg_humanoid_workspace, cfg.BC_ckpt_path)
     policy = ws.model.to(env.device)
 
     # run evaluation

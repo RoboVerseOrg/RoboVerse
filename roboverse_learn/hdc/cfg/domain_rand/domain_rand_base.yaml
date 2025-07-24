@@ -5,9 +5,9 @@ base_com_range:
   z : [-0.2, 0.2]
 randomize_link_mass : False
 randomize_link_body_names : [
-    'world', 'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link', 
-    'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 
-    'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 
+    'world', 'pelvis', 'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link',
+    'left_ankle_link', 'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link',
+    'right_ankle_link', 'torso_link', 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link',
     'left_elbow_link', 'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link'
 ]
 link_mass_range : [0.75, 1.25]
@@ -28,3 +28,6 @@ rfi_lim_range : [0.5, 1.5]
 
 randomize_ctrl_delay : False
 ctrl_delay_step_range : [0, 4] # integer max real delay is 90ms
+
+
+aaaa: 1

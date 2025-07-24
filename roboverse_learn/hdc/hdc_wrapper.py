@@ -45,10 +45,11 @@ class HDCWrapper(RslRlWrapper):
     # ------------------------------------------------------------------ #
     # 1. ctor & indices                                                  #
     # ------------------------------------------------------------------ #
-    def __init__(self,  scenario: ScenarioCfg):
+    def __init__(self,cfg:LeggedRobotCfg,  scenario: ScenarioCfg):
         super().__init__(scenario)
 
-        self.cfg = LeggedRobotCfg()
+        # self.cfg = LeggedRobotCfg()
+        self.cfg = cfg
         self.height_samples = None
         self.debug_viz = self.cfg.viewer.debug_viz
         if self.cfg.domain_rand.motion_package_loss:
@@ -80,6 +81,9 @@ class HDCWrapper(RslRlWrapper):
                 num_joints=self.num_envs * self.num_actions,
                 device=self.device,
             )
+
+
+        self._body_list = self.env.handler.get_body_names(self.robot.name)
 
         if self.cfg.motion.teleop:
             self.extend_body_parent_ids = [15, 19]
