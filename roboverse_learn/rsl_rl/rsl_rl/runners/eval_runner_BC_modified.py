@@ -143,20 +143,21 @@ class EvalRunnerBCModified:
             0.0500,
         ]
         self.noise_vec = torch.tensor(noise_vec).to(self.env.device)
-        if self.clip_actions:
-            for i in range(len(self.env.dof_pos_limits)):
-                soft_lower = self.env.dof_pos_limits[i, 0]
-                soft_upper = self.env.dof_pos_limits[i, 1]
-                m = (soft_lower + soft_upper) / 2
-                r_soft = soft_upper - soft_lower
-                soft_factor = 0.85
+        # TODO algin this hardcoding 
+        # if self.clip_actions:
+        #     for i in range(len(self.env.dof_pos_limits)):
+        #         soft_lower = self.env.dof_pos_limits[i, 0]
+        #         soft_upper = self.env.dof_pos_limits[i, 1]
+        #         m = (soft_lower + soft_upper) / 2
+        #         r_soft = soft_upper - soft_lower
+        #         soft_factor = 0.85
 
-                r = r_soft / soft_factor
-                lower = m - 0.5 * r
-                upper = m + 0.5 * r
-                self.env.dof_pos_limits[i, 0] = lower
-                self.env.dof_pos_limits[i, 1] = upper
-            self.env.dof_pos_limits[[4, 9],] *= 100
+        #         r = r_soft / soft_factor
+        #         lower = m - 0.5 * r
+        #         upper = m + 0.5 * r
+        #         self.env.dof_pos_limits[i, 0] = lower
+        #         self.env.dof_pos_limits[i, 1] = upper
+        #     self.env.dof_pos_limits[[4, 9],] *= 100
 
         # _, _ = self.env.reset()
 

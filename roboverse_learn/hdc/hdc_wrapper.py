@@ -24,23 +24,33 @@ from phc.utils import torch_utils
 # -------------------------------------------------------------------------
 from roboverse_learn.hdc.lpf import ActionFilterButterTorch
 from roboverse_learn.rsl_rl.rsl_rl.modules.velocity_estimator import VelocityEstimatorGRU
-from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
+# from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
+
+from roboverse_learn.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from roboverse_learn.skillblender_rl.utils import (
     get_body_reindexed_indices_from_substring,
     get_joint_reindexed_indices_from_substring,
 )
 
+from phc.utils.motion_lib_h1 import MotionLibH1
+from phc.learning.network_loader import load_mcp_mlp
+from poselib.skeleton.skeleton3d import SkeletonTree
+from termcolor import colored
 
-class HDCWrapper(HumanoidBaseWrapper):
+from .envs.base.legged_robot_config import LeggedRobotCfg
+
+class HDCWrapper(RslRlWrapper):
     """rsl_rl vector-env wrapper for H2O."""
 
     # ------------------------------------------------------------------ #
     # 1. ctor & indices                                                  #
     # ------------------------------------------------------------------ #
-    def __init__(self, scenario: ScenarioCfg):
+    def __init__(self,  scenario: ScenarioCfg):
         super().__init__(scenario)
-        self.up_axis_idx = 2  # z-up world
 
+        self.cfg = LeggedRobotCfg()
+        self.height_samples = None
+        self.debug_viz = self.cfg.viewer.debug_viz
         if self.cfg.domain_rand.motion_package_loss:
             offset = self.env_origins + self.env_origins_init_3Doffset
             motion_times = (self.episode_length_buf) * self.dt + self.motion_start_times  # next frames so +1
@@ -382,7 +392,10 @@ class HDCWrapper(HumanoidBaseWrapper):
         pass
 
     def begin_seq_motion_samples(self):
-        pass
+        self.start_idx = 0
+        self._motion_lib.load_motions(skeleton_trees=self.skeleton_trees, gender_betas=[torch.zeros(17)] * self.num_envs, limb_weights=[np.zeros(10)] * self.num_envs, random_sample=False, start_idx=self.start_idx)
+        self.reset()
+
 
     def forward_motion_samples(self):
         pass
@@ -829,6 +842,27 @@ class HDCWrapper(HumanoidBaseWrapper):
             self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
 
         self.reset_buf |= self.time_out_buf
+
+
+    def _load_motion(self):
+        # motion_path = self.cfg.motion.motion_file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
+        motion_path = "roboverse_data/hdc_3/stable_punch.pkl"
+        # skeleton_path = self.cfg.motion.skeleton_file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
+        skeleton_path = 'roboverse_data/hdc_3/h1.xml'
+        self._motion_lib = MotionLibH1(motion_file=motion_path, device=self.device, masterfoot_conifg=None, fix_height=False,multi_thread=False,mjcf_file=skeleton_path, extend_head=self.cfg.motion.extend_head) #multi_thread=True doesn't work
+        sk_tree = SkeletonTree.from_mjcf(skeleton_path)
+
+        self.skeleton_trees = [sk_tree] * self.num_envs
+        if self.cfg.env.test:
+            if self.cfg.play_in_order:
+                self._motion_lib.load_motions(skeleton_trees=self.skeleton_trees, gender_betas=[torch.zeros(17)] * self.num_envs, limb_weights=[np.zeros(10)] * self.num_envs, random_sample=True ,selected_idxes= self.motion_idxes)
+            else:
+                self._motion_lib.load_motions(skeleton_trees=self.skeleton_trees, gender_betas=[torch.zeros(17)] * self.num_envs, limb_weights=[np.zeros(10)] * self.num_envs, random_sample=True )
+        else:
+            self._motion_lib.load_motions(skeleton_trees=self.skeleton_trees, gender_betas=[torch.zeros(17)] * self.num_envs, limb_weights=[np.zeros(10)] * self.num_envs, random_sample=True)
+        self.motion_dt = self._motion_lib._motion_dt
+
+
 
     # ------------ helper functions ---------------
     @property

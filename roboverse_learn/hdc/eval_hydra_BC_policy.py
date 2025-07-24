@@ -14,7 +14,7 @@ import hydra
 import numpy as np
 from easydict import EasyDict
 from omegaconf import DictConfig, OmegaConf
-from wrapper import HDCWrapper  # noqa: F401
+from roboverse_learn.hdc.hdc_wrapper import HDCWrapper  # noqa: F401
 from rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
 
 from metasim.cfg.scenario import ScenarioCfg
@@ -56,14 +56,15 @@ def play(cfg: DictConfig) -> None:
 
     # scenario & env
     scenario = ScenarioCfg(
-        task="hdc_eval",
-        robots="h1_teleporation",
+        task="hdc:eval",
+        robots=["h1_verse"],
         sim="isaacgym",
         num_envs=1,
         headless=False,
+        objects=[],
         cameras=[],
     )
-    env = HDCWrapper(scenario, device="cuda")
+    env = HDCWrapper(scenario)
 
     # tweak env cfg for eval
     env_cfg, train_cfg = cfg, cfg.train

@@ -52,7 +52,7 @@ class RslRlWrapper(VecEnv):
         self.cfg = scenario.task
         from metasim.utils.dict import class_to_dict
 
-        self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
+        # self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
 
     def _get_init_states(self, scenario):
         """Get initial states from the scenario configuration."""
