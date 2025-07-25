@@ -15,7 +15,7 @@ import numpy as np
 from easydict import EasyDict
 from omegaconf import DictConfig, OmegaConf
 from roboverse_learn.hdc.hdc_wrapper import HDCWrapper  # noqa: F401
-from rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
+from roboverse_learn.rsl_rl.rsl_rl.runners.eval_runner_BC_modified import EvalRunnerBCModified
 
 from metasim.cfg.scenario import ScenarioCfg
 

@@ -36,7 +36,7 @@ class RslRlWrapper(VecEnv):
         # load simulator handler
         env_class = get_sim_env_class(SimType(scenario.sim))
         self.env: EnvWrapper = env_class(scenario)
-        self._parse_cfg(scenario)
+        self._parse_cfg_metaconfig(scenario)
 
         init_states_list = getattr(scenario.task, "init_states", None)
         if init_states_list is None:
@@ -44,7 +44,7 @@ class RslRlWrapper(VecEnv):
 
         self._get_init_states(init_states_list)
 
-    def _parse_cfg(self, scenario: ScenarioCfg):
+    def _parse_cfg_metaconfig(self, scenario: ScenarioCfg):
         # loading task-specific configuration
         self.scenario = scenario
         self.robot = scenario.robots[0]

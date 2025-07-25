@@ -251,7 +251,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # check whether torch.clone is necessary
         self.last_last_actions[:] = torch.clone(self.last_actions[:])
         self.last_actions[:] = self.actions[:]
-        self.last_dof_vel[:] = dof_vel_tensor(envstate, self.robot.name)[:]
+        self.last_dof_vel[:] = envstate.robots[self.robot_name].joint_vel[:]
         self.last_root_vel[:] = robot_root_state_tensor(envstate, self.robot.name)[:, 7:13]
 
     def _parse_gait_phase(self, envstate):
@@ -410,10 +410,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _update_refreshed_tensors(self, env_states):
         """Update tensors from are refreshed tensors after physics step."""
-        self.base_quat[:] = robot_rotation_tensor(env_states, self.robot.name)
-        self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, robot_velocity_tensor(env_states, self.robot.name))
+        self.base_quat[:] = env_states.robots[self.robot.name].root_state[:, 3:7]
+        self.base_lin_vel[:] = quat_rotate_inverse(
+            self.base_quat, env_states.robots[self.robot.name].root_state[:, 7:10]
+        )
         self.base_ang_vel[:] = quat_rotate_inverse(
-            self.base_quat, robot_ang_velocity_tensor(env_states, self.robot.name)
+            self.base_quat, env_states.robots[self.robot.name].root_state[:, 10:13]
         )
         # print(self.base_ang_vel)
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)

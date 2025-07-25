@@ -285,6 +285,31 @@ class IsaacgymHandler(BaseSimHandler):
 
         robot_lower_limits = robot_dof_props["lower"]
         robot_upper_limits = robot_dof_props["upper"]
+
+
+        self.dof_pos_limits = torch.zeros(
+            len(robot_dof_props["lower"]), 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.dof_vel_limits = torch.zeros(
+            len(robot_dof_props["lower"]), dtype=torch.float, device=self.device, requires_grad=False
+        )
+        # self.torque_limits = torch.zeros(len(robot_dof_props["lower"]), dtype=torch.float, device=self.device, requires_grad=False)
+        for i in range(len(robot_dof_props)):
+            self.dof_pos_limits[i, 0] = robot_dof_props["lower"][i].item()
+            self.dof_pos_limits[i, 1] = robot_dof_props["upper"][i].item()
+            self.dof_vel_limits[i] = robot_dof_props["velocity"][i].item()
+            # self.torque_limits[i] = robot_dof_props["effort"][i].item()
+            # soft limits
+            m = (self.dof_pos_limits[i, 0] + self.dof_pos_limits[i, 1]) / 2
+            r = self.dof_pos_limits[i, 1] - self.dof_pos_limits[i, 0]
+            # TODO fix hard coding
+            self.dof_pos_limits[i, 0] = m - 0.5 * r * 1
+            self.dof_pos_limits[i, 1] = m + 0.5 * r * 1
+
+        self.robot_low_joint_limits = robot_lower_limits
+        self.robot_high_joint_limits = robot_upper_limits
+
+
         robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
         num_actions = 0
         default_dof_pos = []

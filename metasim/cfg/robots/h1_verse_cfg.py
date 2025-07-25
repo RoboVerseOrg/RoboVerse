@@ -9,7 +9,8 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class H1VerseCfg(BaseRobotCfg):
     name: str = "h1_verse"
     num_joints: int = 19
-    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_verse.urdf"
+    # urdf_path: str = "roboverse_data/robots/h1/urdf/h1_verse.urdf"
+    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist.urdf"
     enabled_gravity = True
     fix_base_link = False
     collapse_fixed_joints = True

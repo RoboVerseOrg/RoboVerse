@@ -175,7 +175,7 @@ class EvalRunnerBCModified:
 
     def run_eval_loop(self):
         print("############################ Evaluation ############################")
-        
+
         self.env.begin_seq_motion_samples()
         self.env.compute_observations()
         # import ipdb;ipdb.set_trace()
@@ -233,11 +233,11 @@ class EvalRunnerBCModified:
             if self.clip_actions:
                 actions = (
                     torch.clip(
-                        actions * 0.25 + self.env.default_dof_pos,
-                        self.env.dof_pos_limits[:, 0],
-                        self.env.dof_pos_limits[:, 1],
-                    )
-                    - self.env.default_dof_pos
+                        actions * 0.25 + self.env.env.handler.default_dof_pos,
+                        self.env.env.handler.dof_pos_limits[:, 0],
+                        self.env.env.handler.dof_pos_limits[:, 1],
+                )
+                    - self.env.env.handler.default_dof_pos
                 ) * 4
             obs, _, rews, dones, infos = self.env.step(actions.detach())
             timestep += 1
