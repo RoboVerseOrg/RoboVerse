@@ -37,7 +37,12 @@ class RslRlWrapper(VecEnv):
         env_class = get_sim_env_class(SimType(scenario.sim))
         self.env: EnvWrapper = env_class(scenario)
         self._parse_cfg(scenario)
-        self._get_init_states(scenario)
+
+        init_states_list = getattr(scenario.task, "init_states", None)
+        if init_states_list is None:
+            raise AttributeError("'task cfg' has no attribute 'init_states', please add it in your scenario config!")
+
+        self._get_init_states(init_states_list)
 
     def _parse_cfg(self, scenario: ScenarioCfg):
         # loading task-specific configuration
@@ -54,12 +59,9 @@ class RslRlWrapper(VecEnv):
 
         # self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
 
-    def _get_init_states(self, scenario):
+    def _get_init_states(self, init_states_list):
         """Get initial states from the scenario configuration."""
 
-        init_states_list = getattr(scenario.task, "init_states", None)
-        if init_states_list is None:
-            raise AttributeError("'task cfg' has no attribute 'init_states', please add it in your scenario config!")
 
         if len(init_states_list) < self.num_envs:
             init_states_list = (
@@ -71,7 +73,7 @@ class RslRlWrapper(VecEnv):
 
         self.init_states = init_states_list
 
-        if scenario.sim == SimType.ISAACGYM:
+        if self.scenario.sim == SimType.ISAACGYM:
             # tensorize the initial states as TensorState, now we only support IsaacGym
             self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
 

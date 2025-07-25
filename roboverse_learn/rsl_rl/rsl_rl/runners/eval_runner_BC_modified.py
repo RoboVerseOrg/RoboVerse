@@ -175,6 +175,7 @@ class EvalRunnerBCModified:
 
     def run_eval_loop(self):
         print("############################ Evaluation ############################")
+        
         self.env.begin_seq_motion_samples()
         self.env.compute_observations()
         # import ipdb;ipdb.set_trace()
@@ -260,7 +261,7 @@ class EvalRunnerBCModified:
 
             for env_idx in range(self.env.num_envs):
                 if dones[env_idx]:
-                    self.env.compute_observations()
+                    self.compute_observations()
                     current_obs = self.env.obs_buf[env_idx]
                     for t in range(self.To):
                         obs_window[t][env_idx] = current_obs
@@ -269,7 +270,7 @@ class EvalRunnerBCModified:
             if dones.sum() == self.env.num_envs:
                 # import ipdb;ipdb.set_trace()
                 self.env.reset()
-                self.env.compute_observations()
+                self.compute_observations()
                 obs_reset = self.env.obs_buf.clone()
                 obs_window.clear()
                 for _ in range(self.To):

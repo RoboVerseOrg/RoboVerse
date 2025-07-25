@@ -55,6 +55,7 @@ def play(cfg: DictConfig) -> None:
     cfg_humanoid_workspace = cfg.humanoid_workspace
     cfg = EasyDict(OmegaConf.to_container(cfg, resolve=True))
 
+
     # scenario & env
     scenario = ScenarioCfg(
         task="hdc:eval",
@@ -65,6 +66,8 @@ def play(cfg: DictConfig) -> None:
         objects=[],
         cameras=[],
     )
+
+
     env = HDCWrapper(cfg,scenario)
 
     # tweak env cfg for eval

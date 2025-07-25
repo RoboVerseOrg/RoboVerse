@@ -45,13 +45,17 @@ class HDCWrapper(RslRlWrapper):
     # ------------------------------------------------------------------ #
     # 1. ctor & indices                                                  #
     # ------------------------------------------------------------------ #
-    def __init__(self,cfg:LeggedRobotCfg,  scenario: ScenarioCfg):
+    def __init__(self, cfg:LeggedRobotCfg,  scenario: ScenarioCfg):
         super().__init__(scenario)
 
+        # hydra config override
+        self.cfg = cfg
+        self.dt = scenario.decimation * scenario.sim_params.dt
+        self._get_env_origins()
         self._init_buffers()
 
+
         # self.cfg = LeggedRobotCfg()
-        self.cfg = cfg
         self.height_samples = None
         self.debug_viz = self.cfg.viewer.debug_viz
         if self.cfg.domain_rand.motion_package_loss:
@@ -128,16 +132,57 @@ class HDCWrapper(RslRlWrapper):
             self.env.handler, robot_cfg.name, robot_cfg.upper_body_joints, device=self.device
         )
 
+
     # ----------------------------------------
     def _init_buffers(self):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
 
-        env_states, _ = self.env.reset()
-        self._rigid_body_pos = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 0:3]
-        self._rigid_body_rot = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 3:7]
-        self._rigid_body_vel = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 7:10]
-        self._rigid_body_ang_vel = env_states.robots[self.robot.name].body_state[..., : self.num_bodies, 10:13]
+        init_state_list = [
+        {
+            "objects": {},
+            "robots": {
+                "h1_verse": {
+                    "pos": torch.tensor([0.0, 0.0, 1.0]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "left_hip_yaw": 0.0,
+                        "left_hip_roll": 0.0,
+                        "left_hip_pitch": -0.4,
+                        "left_knee": 0.8,
+                        "left_ankle": -0.4,
+                        "right_hip_yaw": 0.0,
+                        "right_hip_roll": 0.0,
+                        "right_hip_pitch": -0.4,
+                        "right_knee": 0.8,
+                        "right_ankle": -0.4,
+                        "torso": 0.0,
+                        "left_shoulder_pitch": 0.0,
+                        "left_shoulder_roll": 0.0,
+                        "left_shoulder_yaw": 0.0,
+                        "left_elbow": 0.0,
+                        "right_shoulder_pitch": 0.0,
+                        "right_shoulder_roll": 0.0,
+                        "right_shoulder_yaw": 0.0,
+                        "right_elbow": 0.0,
+                    },
+                },
+            }
+        }
+        ]
 
+        self._get_init_states(init_state_list)
+
+        env_states, _ = self.env.reset()
+        self._rigid_body_pos = env_states.robots[self.robot.name].body_state[..., : , 0:3]
+        self._rigid_body_rot = env_states.robots[self.robot.name].body_state[..., : , 3:7]
+        self._rigid_body_vel = env_states.robots[self.robot.name].body_state[..., : , 7:10]
+        self._rigid_body_ang_vel = env_states.robots[self.robot.name].body_state[..., : , 10:13]
+
+        self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.bool)
+        self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.int)
+
+
+        self.num_dofs = len(self.env.handler.get_joint_names(self.robot.name))
         # Init for motion reference
         if self.cfg.motion.teleop:
             self.ref_motion_cache = {}
@@ -218,33 +263,57 @@ class HDCWrapper(RslRlWrapper):
         """Sets environment origins. On rough terrain the origins are defined by the terrain platforms.
         Otherwise create a grid.
         """
-        if self.cfg.terrain.mesh_type in ["heightfield", "trimesh"]:
-            self.custom_origins = True
-            self.env_origins = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
-            # put robots at the origins defined by the terrain
-            max_init_level = self.cfg.terrain.max_init_terrain_level
-            if not self.cfg.terrain.curriculum:
-                max_init_level = self.cfg.terrain.num_rows - 1
-            self.terrain_levels = torch.randint(0, max_init_level + 1, (self.num_envs,), device=self.device)
-            self.terrain_types = torch.div(
-                torch.arange(self.num_envs, device=self.device),
-                (self.num_envs / self.cfg.terrain.num_cols),
-                rounding_mode="floor",
-            ).to(torch.long)
-            self.max_terrain_level = self.cfg.terrain.num_rows
-            self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
-            self.env_origins[:] = self.terrain_origins[self.terrain_levels, self.terrain_types]
+        # if self.cfg.terrain.mesh_type in ["heightfield", "trimesh"]:
+        #     self.custom_origins = True
+        #     self.env_origins = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
+        #     # put robots at the origins defined by the terrain
+        #     max_init_level = self.cfg.terrain.max_init_terrain_level
+        #     if not self.cfg.terrain.curriculum:
+        #         max_init_level = self.cfg.terrain.num_rows - 1
+        #     self.terrain_levels = torch.randint(0, max_init_level + 1, (self.num_envs,), device=self.device)
+        #     self.terrain_types = torch.div(
+        #         torch.arange(self.num_envs, device=self.device),
+        #         (self.num_envs / self.cfg.terrain.num_cols),
+        #         rounding_mode="floor",
+        #     ).to(torch.long)
+        #     self.max_terrain_level = self.cfg.terrain.num_rows
+        #     self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
+        #     self.env_origins[:] = self.terrain_origins[self.terrain_levels, self.terrain_types]
+        # else:
+        self.custom_origins = False
+        self.env_origins = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
+        # create a grid of robots
+        num_cols = np.floor(np.sqrt(self.num_envs))
+        num_rows = np.ceil(self.num_envs / num_cols)
+        xx, yy = torch.meshgrid(torch.arange(num_rows), torch.arange(num_cols))
+        spacing = self.cfg.env.env_spacing
+        self.env_origins[:, 0] = spacing * xx.flatten()[: self.num_envs]
+        self.env_origins[:, 1] = spacing * yy.flatten()[: self.num_envs]
+        self.env_origins[:, 2] = 0.0
+
+
+    def _resample_motion_times(self, env_ids):
+        if len(env_ids) == 0:
+            return
+        # self.motion_ids[env_ids] = self._motion_lib.sample_motions(len(env_ids))
+        # self.motion_ids[env_ids] = torch.randint(0, self._motion_lib._num_unique_motions, (len(env_ids),), device=self.device)
+        # print(self.motion_ids[:10])
+        self.motion_len[env_ids] = self._motion_lib.get_motion_length(self.motion_ids[env_ids])
+        # self.env_origins_init_3Doffset[env_ids, :2] = torch_rand_float(-1., 1., (len(env_ids), 2), device=self.device) # xy position within 1m of the center
+        if self.cfg.env.test:
+            self.motion_start_times[env_ids] = 0
         else:
-            self.custom_origins = False
-            self.env_origins = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
-            # create a grid of robots
-            num_cols = np.floor(np.sqrt(self.num_envs))
-            num_rows = np.ceil(self.num_envs / num_cols)
-            xx, yy = torch.meshgrid(torch.arange(num_rows), torch.arange(num_cols))
-            spacing = self.cfg.env.env_spacing
-            self.env_origins[:, 0] = spacing * xx.flatten()[: self.num_envs]
-            self.env_origins[:, 1] = spacing * yy.flatten()[: self.num_envs]
-            self.env_origins[:, 2] = 0.0
+            self.motion_start_times[env_ids] = self._motion_lib.sample_time(self.motion_ids[env_ids])
+        # self.motion_start_times[env_ids] = self._motion_lib.sample_time(self.motion_ids[env_ids])
+        offset=(self.env_origins + self.env_origins_init_3Doffset)
+        motion_times = (self.episode_length_buf ) * self.dt + self.motion_start_times # next frames so +1
+        # motion_res = self._get_state_from_motionlib_cache(self.motion_ids, motion_times, offset= offset)
+        motion_res = self._get_state_from_motionlib_cache_trimesh(self.motion_ids, motion_times, offset= offset)
+
+        self.ref_base_pos_init[env_ids] = motion_res["root_pos"][env_ids]
+        self.ref_base_rot_init[env_ids] = motion_res["root_rot"][env_ids]
+        self.ref_base_vel_init[env_ids] = motion_res["root_vel"][env_ids]
+        self.ref_base_ang_vel_init[env_ids] = motion_res["root_ang_vel"][env_ids]
 
     def clip_actions(self, a: torch.Tensor) -> torch.Tensor:
         lim = self.cfg.normalization.clip_actions
@@ -339,12 +408,10 @@ class HDCWrapper(RslRlWrapper):
             return
         self.env.reset(self.init_states, env_ids)
         self.reset_buf[env_ids] = False
-        # clear history
-        for h in self.obs_history:
-            h[env_ids] = 0
 
-    def _compute_observations(self, env_state):
-        self.obs_buf = self.compute_self_and_task_obs()
+    def compute_observations(self):
+        env_states = self.env.handler.get_states()
+        self.obs_buf = self.compute_self_and_task_obs(env_states)
 
     # ------------------------------------------------------------------ #
     # 5. reward functions (skeleton)                                     #
