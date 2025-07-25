@@ -73,7 +73,7 @@ class RslRlWrapper(VecEnv):
 
         self.init_states = init_states_list
 
-        if self.scenario.sim == SimType.ISAACGYM:
+        if self.scenario.sim == SimType.ISAACGYM or self.scenario.sim == 'isaacgym':
             # tensorize the initial states as TensorState, now we only support IsaacGym
             self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
 

@@ -11,9 +11,9 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class H1WristCfg(BaseRobotCfg):
     name: str = "h1_wrist"
     num_joints: int = 19  # 19 revolute, 4 fixed
-    usd_path: str = "roboverse_data/robots/h1/usd/h1_wrist.usd"
-    mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
-    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_wrist.urdf"
+    # usd_path: str = "roboverse_data/robots/h1/usd/h1_wrist.usd"
+    # mjcf_path: str = "roboverse_data/robots/h1/mjcf/h1.xml"
+    urdf_path: str = "roboverse_data/robots/h1/urdf/h1_verse.urdf"
     # urdf_path: str = "/home/panwei/RoboVerse/roboverse_data/robots/h1/urdf/h1_wrist_copy.urdf"
     enabled_gravity: bool = True
     fix_base_link: bool = False

@@ -53,6 +53,7 @@ class HDCWrapper(RslRlWrapper):
     def __init__(self, cfg:LeggedRobotCfg,  scenario: ScenarioCfg):
         super().__init__(scenario)
 
+        _, _ = self.env.reset(self.init_states)
         # hydra config override
         self.cfg = cfg
         # self.sim_params = sim_params
@@ -249,7 +250,32 @@ class HDCWrapper(RslRlWrapper):
         {
             "objects": {},
             "robots": {
-                "h1_verse": {
+                # "h1_verse": {
+                #     "pos": torch.tensor([0.0, 0.0, 1.0]),
+                #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                #     "dof_pos": {
+                #         "left_hip_yaw": 0.0,
+                #         "left_hip_roll": 0.0,
+                #         "left_hip_pitch": -0.4,
+                #         "left_knee": 0.8,
+                #         "left_ankle": -0.4,
+                #         "right_hip_yaw": 0.0,
+                #         "right_hip_roll": 0.0,
+                #         "right_hip_pitch": -0.4,
+                #         "right_knee": 0.8,
+                #         "right_ankle": -0.4,
+                #         "torso": 0.0,
+                #         "left_shoulder_pitch": 0.0,
+                #         "left_shoulder_roll": 0.0,
+                #         "left_shoulder_yaw": 0.0,
+                #         "left_elbow": 0.0,
+                #         "right_shoulder_pitch": 0.0,
+                #         "right_shoulder_roll": 0.0,
+                #         "right_shoulder_yaw": 0.0,
+                #         "right_elbow": 0.0,
+                #     },
+                # },
+                "h1_wrist": {
                     "pos": torch.tensor([0.0, 0.0, 1.0]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
@@ -550,19 +576,6 @@ class HDCWrapper(RslRlWrapper):
         env_states = self.env.handler.get_states()
         self.obs_buf = self.compute_self_and_task_obs(env_states)
 
-    # ------------------------------------------------------------------ #
-    # 5. reward functions (skeleton)                                     #
-    # ------------------------------------------------------------------ #
-    # def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
-    #     """Register reward fns according to cfg.scales dict."""
-    #     self.reward_scales: dict[str, float] = task.reward_weights
-    #     self.reward_fns: dict[str, Callable] = {}  # name → callable
-    #     for name, scale in self.reward_scales.items():
-    #         fn_name = f"reward_{name}"
-    #         if hasattr(self, fn_name):
-    #             self.reward_fns[name] = getattr(self, fn_name)
-    #         else:
-    #             print(f"[H2OWrapper] WARNING: reward fn {fn_name} missing")
 
     # Example reward stub
     def reward_alive(self, env_state, robot, cfg):
