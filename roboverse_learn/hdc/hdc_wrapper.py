@@ -469,6 +469,8 @@ class HDCWrapper(RslRlWrapper):
             ref_body_pos_extend = motion_res["rg_pos_t"]
 
             body_rot = envstates.robots[self.robot.name].body_state[:, :, 3:7]
+            # from wxyz to xyzw
+            body_rot = torch.cat([body_rot[:, :,1:4], body_rot[:,:, 0:1]], dim=-1)
             body_pos = envstates.robots[self.robot.name].body_state[:, :, 0:3]
 
             extend_curr_pos = (
@@ -498,6 +500,9 @@ class HDCWrapper(RslRlWrapper):
     def _update_refreshed_tensors(self, env_states):
         """Update tensors from are refreshed tensors after physics step."""
         self.base_quat[:] = env_states.robots[self.robot.name].root_state[:, 3:7]
+        # from wxyz to xyzw
+        self.base_quat = self.base_quat[:, [1, 2, 3, 0]]
+
         self.base_lin_vel[:] = quat_rotate_inverse(
             self.base_quat, env_states.robots[self.robot.name].root_state[:, 7:10]
         )
@@ -544,6 +549,7 @@ class HDCWrapper(RslRlWrapper):
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
         self._push_robots()
+
 
     def reset(self, env_ids: list[int] | None = None):
         if env_ids is None:
@@ -706,7 +712,7 @@ class HDCWrapper(RslRlWrapper):
             # sorted order --> isaacgym order since ckpt is trained
             body_pos = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 0:3]
             body_rot = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 3:7]
-            # from wxyz to xyzw to fit isaacgym
+            # from wxyz to xyzw
             body_rot = torch.cat([body_rot[:, :,1:4], body_rot[:,:, 0:1]], dim=-1)
             body_vel = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 7:10]
             body_ang_vel = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 10:13]

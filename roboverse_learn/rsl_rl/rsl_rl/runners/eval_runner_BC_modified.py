@@ -270,7 +270,7 @@ class EvalRunnerBCModified:
             if dones.sum() == self.env.num_envs:
                 # import ipdb;ipdb.set_trace()
                 self.env.reset()
-                self.compute_observations()
+                self.env.compute_observations()
                 obs_reset = self.env.obs_buf.clone()
                 obs_window.clear()
                 for _ in range(self.To):
