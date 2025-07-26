@@ -1002,8 +1002,9 @@ class IsaacgymHandler(BaseSimHandler):
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = list(self._joint_info[obj_name]["names"])
             if sort:
-                joint_names.sort()
-            return joint_names
+                return sorted(joint_names)
+            else:
+                return joint_names
         else:
             return []
 
@@ -1011,8 +1012,9 @@ class IsaacgymHandler(BaseSimHandler):
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = self._body_info[obj_name]["names"]
             if sort:
-                body_names.sort()
-            return body_names
+                return sorted(body_names)
+            else:
+                return body_names
         else:
             return []
 

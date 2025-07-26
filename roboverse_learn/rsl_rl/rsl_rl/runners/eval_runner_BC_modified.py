@@ -234,12 +234,13 @@ class EvalRunnerBCModified:
                 actions = (
                     torch.clip(
                         actions * 0.25 + self.env.env.handler.default_dof_pos,
+                        # urdf order
                         self.env.env.handler.dof_pos_limits[:, 0],
                         self.env.env.handler.dof_pos_limits[:, 1],
-                )
+                )   # urdf order
                     - self.env.env.handler.default_dof_pos
                 ) * 4
-            obs, _, rews, dones, infos = self.env.step(actions.detach())
+            _, _, rews, dones, infos = self.env.step(actions.detach())
             timestep += 1
             if (dones & (terminate_step_counts == 0)).sum():
                 pass
