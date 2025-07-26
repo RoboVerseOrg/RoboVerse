@@ -261,7 +261,6 @@ class EvalRunnerBCModified:
 
             for env_idx in range(self.env.num_envs):
                 if dones[env_idx]:
-g                    self.compute_observations()
                     current_obs = self.env.obs_buf[env_idx]
                     for t in range(self.To):
                         obs_window[t][env_idx] = current_obs

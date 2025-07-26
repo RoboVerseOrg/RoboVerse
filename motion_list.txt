@@ -93,3 +93,34 @@
 0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
 0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
 0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1,  , -,  ,  , J, a, b,  , l, e, f, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 4, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1, 0,  , -,  , b, o, d, y,  , h, o, o, k,  , r, i, g, h, t, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1, 4,  , -,  , b, o, d, y,  , c, r, o, s, s,  , r, i, g, h, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 5, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1, 2,  , -,  , b, a, c, k, f, i, s, t,  , r, i, g, h, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1, 1,  , -,  , b, o, d, y,  , h, o, o, k,  , r, i, g, h, t,  , t, 2, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 2, 9, 1, _, p, u, n, c, h, i, n, g, 0, 3, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1, 6,  , -,  , b, o, d, y,  , j, a, b,  , l, e, f, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 4,  , -,  ,  , c, r, o, s, s,  , r, i, g, h, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 5, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 1,  , -,  ,  , J, a, b,  , l, e, f, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 4, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, A, C, C, A, D, _, M, a, l, e, 2, M, a, r, t, i, a, l, A, r, t, s, P, u, n, c, h, e, s, _, c, 3, d, _, E, 2,  , -,  ,  , J, a, b,  , r, i, g, h, t, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 4, 4, 2, _, P, u, n, c, h, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s
+0, -, K, I, T, _, 3, _, p, u, n, c, h, _, l, e, f, t, 0, 4, _, p, o, s, e, s
+0, -, K, I, T, _, 5, 7, 2, _, p, u, n, c, h, _, r, i, g, h, t, 0, 1, _, p, o, s, e, s

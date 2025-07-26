@@ -97,12 +97,17 @@ class HDCWrapper(RslRlWrapper):
                 device=self.device,
             )
 
-
+        #
         self._body_list = self.env.handler.get_body_names(self.robot.name)
+        self._body_list_2= self.env.handler.get_body_names(self.robot.name, sort=False)
 
+
+        # no need to change because we should input unsorted order obs input policy
         if self.cfg.motion.teleop:
             # TODO aligned this id
             self.extend_body_parent_ids = [15, 19]
+            # link left_elbow_link right_elbow_link
+            # self.extend_body_parent_ids = [1, 11]
             self._track_bodies_id = [
                 self._body_list.index(body_name) for body_name in self.cfg.motion.teleop_selected_keypoints_names
             ]
@@ -110,7 +115,9 @@ class HDCWrapper(RslRlWrapper):
             self._track_bodies_extend_id = self._track_bodies_id + [len(self._body_list), len(self._body_list) + 1]
             self.extend_body_pos = torch.tensor([[0.3, 0, 0], [0.3, 0, 0]]).repeat(self.num_envs, 1, 1).to(self.device)
             if self.cfg.motion.extend_head:
+                # pelvis
                 self.extend_body_parent_ids += [0]
+                # self.extend_body_parent_ids += [9]
                 self._track_bodies_id += [len(self._body_list)]
                 self._track_bodies_extend_id += [len(self._body_list) + 2]
                 self.extend_body_pos = (
@@ -215,6 +222,7 @@ class HDCWrapper(RslRlWrapper):
                 ))
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
+        # TODO aligned actions with
         # store globally for reset update and pass to obs and privileged_obs
         self.actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
@@ -503,8 +511,10 @@ class HDCWrapper(RslRlWrapper):
             self.extras["body_pos"] = body_pos_extend.cpu().numpy()
             self.extras["body_pos_gt"] = ref_body_pos_extend.cpu().numpy()
 
-    # public API
     def step(self, actions):
+        # since the checkpoint is unsorted format, we should trun it into sorted format
+        reindex = self.env.handler.get_joint_reindex(self.robot.name)
+        actions = actions[:, reindex]
         acts = self._pre_physics_step(actions)
         st = self._physics_step(acts)
         obs, priv, rew = self._post_physics_step(st)
@@ -720,13 +730,19 @@ class HDCWrapper(RslRlWrapper):
         self.marker_coords[:] = ref_body_pos_extend.reshape(B, -1, 3)
 
         if self.cfg.motion.teleop_obs_version == "v-teleop-extend-max-full":
-            # TODO  speicify body state for every component
-            body_pos = envstate.robots[self.robot.name].body_state[:, :, 0:3]
-            body_rot = envstate.robots[self.robot.name].body_state[:, :, 3:7]
-            body_vel = envstate.robots[self.robot.name].body_state[:, :, 7:10]
-            body_ang_vel = envstate.robots[self.robot.name].body_state[:, :, 10:13]
-            dof_pos = envstate.robots[self.robot.name].joint_pos
-            dof_vel = envstate.robots[self.robot.name].joint_vel
+
+            body_reverse_index = self.env.handler.get_body_reindex(self.robot.name, inverse=True)
+            # sorted order --> isaacgym order since ckpt is trained
+            body_pos = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 0:3]
+            body_rot = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 3:7]
+            # from wxyz to xyzw to fit isaacgym
+            body_rot = torch.cat([body_rot[:, :,1:4], body_rot[:,:, 0:1]], dim=-1)
+            body_vel = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 7:10]
+            body_ang_vel = envstate.robots[self.robot.name].body_state[:, body_reverse_index, 10:13]
+
+            joint_reverse_reindex = self.env.handler.get_joint_reindex(self.robot.name, inverse=True)
+            dof_pos = envstate.robots[self.robot.name].joint_pos[:, joint_reverse_reindex]
+            dof_vel = envstate.robots[self.robot.name].joint_vel[:, joint_reverse_reindex]
 
             # robot
             base_vel = self.base_lin_vel
