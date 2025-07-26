@@ -19,6 +19,8 @@ from roboverse_learn.rsl_rl.rsl_rl.runners.eval_runner_BC_modified import EvalRu
 
 from metasim.cfg.scenario import ScenarioCfg
 
+from metasim.cfg.control import ControlCfg
+
 
 # ---------- helpers -------------------------------------------------
 def to_py(obj):
@@ -56,6 +58,7 @@ def play(cfg: DictConfig) -> None:
     cfg = EasyDict(OmegaConf.to_container(cfg, resolve=True))
 
 
+    control: ControlCfg = ControlCfg(action_scale=0.25, action_offset=True, torque_limit_scale=0.85)
     # scenario & env
     scenario = ScenarioCfg(
         task="hdc:eval",
@@ -68,8 +71,10 @@ def play(cfg: DictConfig) -> None:
         cameras=[],
     )
 
+    scenario.control = control
 
-    env = HDCWrapper(cfg,scenario)
+
+    env = HDCWrapper(cfg, scenario)
 
     # tweak env cfg for eval
     env_cfg, train_cfg = cfg, cfg.train
