@@ -1,5 +1,5 @@
 # Achitecture Overview
-## `metasim` Module Overview
+## Metasim Overview
 
 **Metasim** is a standalone simulator layer designed to provide a unified interface to different underlying physics backends (e.g. MuJoCo, Isaac). It is simulator-agnostic, and only contains code and configuration necessary for simulating scenes and extracting structured state information.
 
