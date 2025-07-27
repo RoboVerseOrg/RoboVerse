@@ -1,7 +1,7 @@
 # mjx_query_helper.py
 
-import jax.numpy as jnp
 import mujoco
+import numpy as np
 
 from metasim.cfg.query_type import ContactForce, SitePos
 
@@ -54,7 +54,7 @@ class MujocoQuerier:
             })
         bid = cache[q.sensor_name]
 
-        contact_force = handler._data.cfrc_ext[:, jnp.asarray([bid], jnp.int32)]
+        contact_force = handler._data.cfrc_ext[:, np.asarray([bid], np.int32)]
         return contact_force[:, 0, :]  # (N_env, 6)
 
 
