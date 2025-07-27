@@ -1,4 +1,5 @@
-## 📦 `metasim` Module Overview
+# Achitecture Overview
+## `metasim` Module Overview
 
 **Metasim** is a standalone simulator layer designed to provide a unified interface to different underlying physics backends (e.g. MuJoCo, Isaac). It is simulator-agnostic, and only contains code and configuration necessary for simulating scenes and extracting structured state information.
 
@@ -78,7 +79,7 @@ The **two most important folders** in Metasim are:
    This is often used for:
 
    - Episode resets to a known state
-   - State injection during training
+   - State injection during training 
    - Replaying trajectories
 
    Internally this maps the unified `TensorState` back to simulator-specific structures (`qpos`, `qvel`, `ctrl`, etc.)
@@ -130,7 +131,7 @@ The **two most important folders** in Metasim are:
 
    ```python
    from metasim.cfg.query_type import SitePos, SensorData, GeomCollision, BodyMass
-
+   
    def extra_spec(self):
        return {
            "head_pos"        : SitePos(["head"]),
@@ -155,7 +156,7 @@ The **two most important folders** in Metasim are:
 
    Each value is resolved independently via the corresponding query type and handler logic.
 
-
+   
 
 2. ### `cfg/` — Simulator Configuration
 
@@ -198,3 +199,5 @@ The **two most important folders** in Metasim are:
    - Reuse one config across multiple RL tasks
    - Load the same config for visualization, trajectory replay, or debugging
    - Build new tasks without touching simulator configs
+
+   
