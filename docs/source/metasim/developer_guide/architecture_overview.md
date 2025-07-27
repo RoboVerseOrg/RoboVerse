@@ -11,7 +11,7 @@
 
 ------
 
-##  Directory Structure
+###  Directory Structure
 
 Inside the `metasim/` folder:
 
@@ -28,11 +28,11 @@ Inside the `metasim/` folder:
 
 ------
 
-##  Core Components
+###  Core Components
 
 The **two most important folders** in Metasim are:
 
-1. ### sim folder — Simulator Adapters
+1. #### sim folder — Simulator Adapters
 
    The `sim/` module defines simulation-specific handlers that bridge between low-level simulators (like MuJoCo, IsaacGym) and RoboVerse’s unified task interface.
 
@@ -40,7 +40,7 @@ The **two most important folders** in Metasim are:
 
    ------
 
-   ####  Handler Lifecycle
+   #####  Handler Lifecycle
 
    Every handler follows a common lifecycle:
 
@@ -54,7 +54,7 @@ The **two most important folders** in Metasim are:
 
    ------
 
-   ####  Key Interface Functions
+   #####  Key Interface Functions
 
    1. `get_state() → TensorState`
 
@@ -111,7 +111,7 @@ The **two most important folders** in Metasim are:
      ......
 
 
-   ### Usage overview
+   #### Usage overview
 
    The full pipeline looks like this:
 
@@ -128,7 +128,7 @@ The **two most important folders** in Metasim are:
    Querier.query(query_obj, handler)       # Resolves each field
    ```
 
-   ### Task-level declaration
+   #### Task-level declaration
 
    ```python
    from metasim.cfg.query_type import SitePos, SensorData, GeomCollision, BodyMass
@@ -142,7 +142,7 @@ The **two most important folders** in Metasim are:
        }
    ```
 
-   ### Output from `get_extras()`
+   #### Output from `get_extras()`
 
    The returned dictionary will look like:
 
@@ -159,9 +159,9 @@ The **two most important folders** in Metasim are:
 
    
 
-2. ### cfg folder — Simulator Configuration
+2. #### cfg folder — Simulator Configuration
 
-   #### What Belongs in Config
+   ##### What Belongs in Config
 
    Each config file under `cfg/` specifies *only* information required to build and launch the simulation. This includes:
 
@@ -176,7 +176,7 @@ The **two most important folders** in Metasim are:
 
    ------
 
-   ####  What Does Not Belong in Config
+   #####  What Does Not Belong in Config
 
    To keep `cfg/` clean and portable across tasks and RL settings, the following things are **explicitly excluded**:
 
@@ -190,7 +190,7 @@ The **two most important folders** in Metasim are:
 
    ------
 
-   ####  Integration with ScenarioCfg
+   #####  Integration with ScenarioCfg
 
    Every handler is initialized with a `ScenarioCfg` object parsed from these configs.
     The `ScenarioCfg` aggregates all static config elements (robot, objects, lights, etc.), and passes them to the simulation backend during launch.
