@@ -1,6 +1,9 @@
 # mjx_query_helper.py
 
-import jax.numpy as jnp
+try:
+    import jax.numpy as jnp
+except ImportError:
+    pass
 import mujoco
 
 from metasim.cfg.query_type import ContactForce, SitePos
