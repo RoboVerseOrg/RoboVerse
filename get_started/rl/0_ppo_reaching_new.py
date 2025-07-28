@@ -284,9 +284,11 @@ def train_ppo():
     for _ in range(100):
         actions, _ = model.predict(obs.cpu().numpy(), deterministic=True)
         action_dicts = [
-            {metasim_env_video.scenario.robots[0].name: {
-                "dof_pos_target": dict(zip(metasim_env_video.scenario.robots[0].joint_limits.keys(), action))
-            }}
+            {
+                metasim_env_video.scenario.robots[0].name: {
+                    "dof_pos_target": dict(zip(metasim_env_video.scenario.robots[0].joint_limits.keys(), action))
+                }
+            }
             for action in actions
         ]
         obs, _, _, _, _ = metasim_env_video.step(action_dicts)
