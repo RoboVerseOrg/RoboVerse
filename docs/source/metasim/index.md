@@ -57,6 +57,7 @@ user_guide/cross_sim
 :titlesonly:
 
 developer_guide/precommit_hooks
+developer_guide/architecture_overview
 developer_guide/state
 developer_guide/data_structure
 developer_guide/new_task/index
