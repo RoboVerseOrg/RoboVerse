@@ -7,7 +7,6 @@ try:
 except ImportError:
     pass
 
-import random
 from dataclasses import dataclass
 from typing import Literal
 
@@ -17,7 +16,6 @@ import rootutils
 import torch
 import tyro
 from gymnasium import spaces
-from gymnasium.vector import VectorEnv
 from loguru import logger as log
 from packaging.version import Version
 from rich.logging import RichHandler
@@ -28,12 +26,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
-from metasim.constants import SimType
-from metasim.sim import BaseSimHandler, EnvWrapper
-from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_env_class, register_task
+from metasim.utils.setup_util import register_task
+from metasim.wrapper.gym_vec_env import MetaSimVecEnv
 
 
 @dataclass
@@ -47,90 +41,6 @@ class Args:
 
 
 args = tyro.cli(Args)
-
-
-class MetaSimVecEnv(VectorEnv):
-    """Vectorized environment for MetaSim that supports parallel RL training."""
-
-    def __init__(
-        self,
-        scenario: ScenarioCfg | None = None,
-        sim: str = "isaaclab",
-        task_name: str | None = None,
-        num_envs: int | None = 4,
-    ):
-        """Initialize the environment."""
-        if scenario is None:
-            scenario = ScenarioCfg(task="pick_cube", robots=["franka"])
-            scenario.task = task_name
-            scenario.num_envs = num_envs
-            scenario = ScenarioCfg(**vars(scenario))
-        self.num_envs = scenario.num_envs
-        env_class = get_sim_env_class(SimType(sim))
-        env = env_class(scenario)
-        self.env: EnvWrapper[BaseSimHandler] = env
-        self.render_mode = None  # XXX
-        self.scenario = scenario
-
-        # Get candidate states
-        self.candidate_init_states, _, _ = get_traj(scenario.task, scenario.robots[0])
-
-        # XXX: is the inf space ok?
-        self.single_observation_space = spaces.Box(-np.inf, np.inf)
-        self.single_action_space = spaces.Box(-np.inf, np.inf)
-
-    ############################################################
-    ## Gym-like interface
-    ############################################################
-    def reset(self, env_ids: list[int] | None = None, seed: int | None = None):
-        """Reset the environment."""
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-        init_states = self.unwrapped._get_default_states(seed)
-        self.env.reset(states=init_states, env_ids=env_ids)
-        return self.unwrapped._get_obs(), {}
-
-    def step(self, actions: list[dict]):
-        """Step the environment."""
-        _, _, success, timeout, _ = self.env.step(actions)
-        obs = self.unwrapped._get_obs()
-        rewards = self.unwrapped._calculate_rewards()
-        return obs, rewards, success, timeout, {}
-
-    def render(self):
-        """Render the environment."""
-        return self.env.render()
-
-    def close(self):
-        """Close the environment."""
-        self.env.close()
-
-    ############################################################
-    ## Helper methods
-    ############################################################
-    def _get_obs(self):
-        ## TODO: put this function into task definition?
-        ## TODO: use torch instead of numpy
-        """Get current observations for all environments."""
-        states = self.env.handler.get_states()
-        joint_pos = states.robots["franka"].joint_pos
-        panda_hand_index = states.robots["franka"].body_names.index("panda_hand")
-        ee_pos = states.robots["franka"].body_state[:, panda_hand_index, :3]
-
-        return torch.cat([joint_pos, ee_pos], dim=1)
-
-    def _calculate_rewards(self):
-        """Calculate rewards based on distance to origin."""
-        states = self.env.handler.get_states()
-        tot_reward = torch.zeros(self.num_envs, device=self.env.handler.device)
-        for reward_fn, weight in zip(self.scenario.task.reward_functions, self.scenario.task.reward_weights):
-            tot_reward += weight * reward_fn(states, self.scenario.robots[0].name)
-        return tot_reward
-
-    def _get_default_states(self, seed: int | None = None):
-        """Generate default reset states."""
-        ## TODO: use non-reqeatable random choice when there is enough candidate states?
-        return random.Random(seed).choices(self.candidate_init_states, k=self.num_envs)
 
 
 class StableBaseline3VecEnv(VecEnv):
@@ -233,15 +143,13 @@ class StableBaseline3VecEnv(VecEnv):
 
 def train_ppo():
     """Train PPO for reaching task."""
-    # Register the task and use gym.make to initialize the environment
     register_task(args.task)
     if Version(gym.__version__) < Version("1"):
-        metasim_env = gym.make(args.task, num_envs=args.num_envs)
+        metasim_env = gym.make(args.task, num_envs=args.num_envs, sim=args.sim)
     else:
-        metasim_env = gym.make_vec(args.task, num_envs=args.num_envs)
-
+        metasim_env = gym.make_vec(args.task, num_envs=args.num_envs, sim=args.sim)
+    scenario = metasim_env.scenario
     env = StableBaseline3VecEnv(metasim_env)
-
     # PPO configuration
     model = PPO(
         "MlpPolicy",
@@ -261,42 +169,35 @@ def train_ppo():
     model.learn(total_timesteps=1_000_000)
 
     # Save the model
-    task_name = metasim_env.scenario.task.__class__.__name__[:-3]
+    task_name = scenario.task.__class__.__name__[:-3]
     model.save(f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}")
 
     env.close()
 
     # Inference and Save Video
-    # For video recording, we still need to use scenario approach to add cameras
-    scenario = ScenarioCfg(task=args.task, robots=[args.robot], sim=args.sim, num_envs=args.num_envs)
-    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
-    metasim_env_video = MetaSimVecEnv(scenario, task_name=args.task, num_envs=args.num_envs, sim=args.sim)
+    # add cameras to the scenario
+    args.num_envs = 16
+    metasim_env = gym.make(args.task, num_envs=args.num_envs, sim=args.sim)
     task_name = scenario.task.__class__.__name__[:-3]
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}.mp4")
-
-    # Load the model
+    # load the model
     model = PPO.load(f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}")
 
-    # Inference
-    obs, _ = metasim_env_video.reset()
-    obs_orin = metasim_env_video.env.handler.get_states()
+    # inference
+    obs, _ = metasim_env.reset()
+    obs_orin = metasim_env.env.handler.get_states()
     obs_saver.add(obs_orin)
     for _ in range(100):
         actions, _ = model.predict(obs.cpu().numpy(), deterministic=True)
         action_dicts = [
-            {
-                metasim_env_video.scenario.robots[0].name: {
-                    "dof_pos_target": dict(zip(metasim_env_video.scenario.robots[0].joint_limits.keys(), action))
-                }
-            }
+            {"dof_pos_target": dict(zip(metasim_env.scenario.robots[0].joint_limits.keys(), action))}
             for action in actions
         ]
-        obs, _, _, _, _ = metasim_env_video.step(action_dicts)
+        obs, _, _, _, _ = metasim_env.step(action_dicts)
 
-        obs_orin = metasim_env_video.env.handler.get_states()
+        obs_orin = metasim_env.env.handler.get_states()
         obs_saver.add(obs_orin)
     obs_saver.save()
-    metasim_env_video.close()
 
 
 if __name__ == "__main__":
