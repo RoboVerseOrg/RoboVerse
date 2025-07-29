@@ -9,7 +9,7 @@ env:
   EC2_USER_NAME: ec2-user
 
 jobs:
-  pre_build:
+  pre-merge-tests:
     runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
     - run: aws --version
@@ -63,6 +63,7 @@ jobs:
     ############# Build #############
     - name: build
       run: |
+        echo $EC2_INSTANCE_IP
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@$EC2_INSTANCE_IP "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
