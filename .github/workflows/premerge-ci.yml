@@ -10,64 +10,57 @@ jobs:
   pre_build:
     runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-        - uses: actions/checkout@v4
-        - run: aws --version
-        - run: |
-            # Get AWS account ID
-            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            if [ -z "$AWS_ACCOUNT_ID" ]; then
-              echo "Error: Failed to get AWS account ID"
-              exit 1
-            fi
-            echo $AWS_ACCOUNT_ID
-
-            echo "Launching EC2 instance to run tests..."
-            INSTANCE_ID=$(aws ec2 run-instances \
-              --image-id ami-054b7fc3c333ac6d2 \
-              --instance-type g5.2xlarge \
-              --region $REGION \
-              --key-name $KEY_NAME \
-              --output text \
-              --query 'Instances[0].InstanceId')
-
-            echo "Waiting for instance $INSTANCE_ID to be running..."
-            aws ec2 wait instance-running \
-              --instance-ids $INSTANCE_ID \
-              --region $REGION
-
-            echo "Getting instance IP address..."
-            EC2_INSTANCE_IP=$(aws ec2 describe-instances \
-              --region $REGION \
-              --filters "Name=instance-state-name,Values=running" "Name=instance-id,Values=$INSTANCE_ID" \
-              --query 'Reservations[*].Instances[*].[PrivateIpAddress]' \
-              --output text)
-
-            echo "Setting up SSH configuration..."
-            mkdir -p ~/.ssh
-            aws ec2 describe-key-pairs \
-              --include-public-key --key-name $KEY_NAME \
-              --query 'KeyPairs[0].PublicKey' \
-              --output text > ~/.ssh/id_rsa.pub
-            echo "$SSH_KEY" > ~/.ssh/id_rsa
-            chmod 400 ~/.ssh/id_*
-            echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
-
-  build:
-    needs: pre_build
-    runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
+    - uses: actions/checkout@v4
+    - run: aws --version
     - run: |
+        ############# Prebuild #############
+        # Get AWS account ID
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        if [ -z "$AWS_ACCOUNT_ID" ]; then
+          echo "Error: Failed to get AWS account ID"
+          exit 1
+        fi
+        echo $AWS_ACCOUNT_ID
+
+        echo "Launching EC2 instance to run tests..."
+        INSTANCE_ID=$(aws ec2 run-instances \
+          --image-id ami-054b7fc3c333ac6d2 \
+          --instance-type g5.2xlarge \
+          --region $REGION \
+          --key-name $KEY_NAME \
+          --output text \
+          --query 'Instances[0].InstanceId')
+
+        echo "Waiting for instance $INSTANCE_ID to be running..."
+        aws ec2 wait instance-running \
+          --instance-ids $INSTANCE_ID \
+          --region $REGION
+
+        echo "Getting instance IP address..."
+        EC2_INSTANCE_IP=$(aws ec2 describe-instances \
+          --region $REGION \
+          --filters "Name=instance-state-name,Values=running" "Name=instance-id,Values=$INSTANCE_ID" \
+          --query 'Reservations[*].Instances[*].[PrivateIpAddress]' \
+          --output text)
+
+        echo "Setting up SSH configuration..."
+        mkdir -p ~/.ssh
+        aws ec2 describe-key-pairs \
+          --include-public-key --key-name $KEY_NAME \
+          --query 'KeyPairs[0].PublicKey' \
+          --output text > ~/.ssh/id_rsa.pub
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 400 ~/.ssh/id_*
+        echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
+
+        ############# Build #############
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@$EC2_INSTANCE_IP "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
-  post_build:
-    needs: build
-    runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - run: |
-          echo "Cleaning up resources..."
-          if [ ! -z "$INSTANCE_ID" ]; then
-              echo "Terminating EC2 instance $INSTANCE_ID..."
-              aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
-          fi
+        ############# Postbuild #############
+        echo "Cleaning up resources..."
+        if [ ! -z "$INSTANCE_ID" ]; then
+            echo "Terminating EC2 instance $INSTANCE_ID..."
+            aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
+        fi
