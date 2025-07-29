@@ -31,13 +31,13 @@ class Transformer(latent_generator.AbstractLatentGenerator):
         self.focal_loss_gamma = focal_loss_gamma
         self.offset_loss_scale = offset_loss_scale
         self.action_dim = action_dim
-    
+
     def get_optimizer(self, **kwargs) -> torch.optim.Optimizer:
         return self.model.configure_optimizers(**kwargs)
-    
-    def get_latent_and_loss(self, 
-            obs_rep: torch.Tensor, 
-            target_latents: torch.Tensor, 
+
+    def get_latent_and_loss(self,
+            obs_rep: torch.Tensor,
+            target_latents: torch.Tensor,
             return_loss_components=True,
             ) -> Tuple[torch.Tensor, torch.Tensor]:
         target_latents, target_offsets = target_latents

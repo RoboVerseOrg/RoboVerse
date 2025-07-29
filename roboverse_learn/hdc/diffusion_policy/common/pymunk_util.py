@@ -25,8 +25,8 @@ def create_rectangle(space,
     return body, shape
 
 
-def create_rectangle_bb(space, 
-        left, bottom, right, top, 
+def create_rectangle_bb(space,
+        left, bottom, right, top,
         **kwargs):
     pos_x = (left + right) / 2
     pos_y = (top + bottom) / 2

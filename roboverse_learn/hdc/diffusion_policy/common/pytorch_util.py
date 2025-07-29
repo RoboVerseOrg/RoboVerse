@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 def dict_apply(
-        x: Dict[str, torch.Tensor], 
+        x: Dict[str, torch.Tensor],
         func: Callable[[torch.Tensor], torch.Tensor]
         ) -> Dict[str, torch.Tensor]:
     result = dict()
@@ -20,7 +20,7 @@ def pad_remaining_dims(x, target):
     return x.reshape(x.shape + (1,)*(len(target.shape) - len(x.shape)))
 
 def dict_apply_split(
-        x: Dict[str, torch.Tensor], 
+        x: Dict[str, torch.Tensor],
         split_func: Callable[[torch.Tensor], Dict[str, torch.Tensor]]
         ) -> Dict[str, torch.Tensor]:
     results = collections.defaultdict(dict)
@@ -41,8 +41,8 @@ def dict_apply_reduce(
 
 
 def replace_submodules(
-        root_module: nn.Module, 
-        predicate: Callable[[nn.Module], bool], 
+        root_module: nn.Module,
+        predicate: Callable[[nn.Module], bool],
         func: Callable[[nn.Module], nn.Module]) -> nn.Module:
     """
     predicate: Return true if the module is to be replaced.
@@ -51,8 +51,8 @@ def replace_submodules(
     if predicate(root_module):
         return func(root_module)
 
-    bn_list = [k.split('.') for k, m 
-        in root_module.named_modules(remove_duplicate=True) 
+    bn_list = [k.split('.') for k, m
+        in root_module.named_modules(remove_duplicate=True)
         if predicate(m)]
     for *parent, k in bn_list:
         parent_module = root_module
@@ -68,8 +68,8 @@ def replace_submodules(
         else:
             setattr(parent_module, k, tgt_module)
     # verify that all BN are replaced
-    bn_list = [k.split('.') for k, m 
-        in root_module.named_modules(remove_duplicate=True) 
+    bn_list = [k.split('.') for k, m
+        in root_module.named_modules(remove_duplicate=True)
         if predicate(m)]
     assert len(bn_list) == 0
     return root_module

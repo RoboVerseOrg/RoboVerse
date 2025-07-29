@@ -30,7 +30,7 @@ dataset:
   val_zarr_path: YOUR_ZARR_PATH
   #/scratch2/generalvision/wangyunshen/kit_val_first30_tuning_1k.zarr
   #_target_: diffusion_policy.dataset.humanoid_dataset.HumanoidDataset
-  #zarr_path: 
+  #zarr_path:
   horizon: ${horizon}
   pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
   pad_after: ${eval:'${n_action_steps}-1'}

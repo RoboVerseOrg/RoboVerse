@@ -1,6 +1,6 @@
 name: humanoid
 
-obs_dim: 251 
+obs_dim: 251
 action_dim: 19
 keypoint_dim: 0
 

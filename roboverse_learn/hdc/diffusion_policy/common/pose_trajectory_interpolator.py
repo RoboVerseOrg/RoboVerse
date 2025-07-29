@@ -39,17 +39,17 @@ class PoseTrajectoryInterpolator:
             pos = poses[:,:3]
             rot = st.Rotation.from_rotvec(poses[:,3:])
 
-            self.pos_interp = si.interp1d(times, pos, 
+            self.pos_interp = si.interp1d(times, pos,
                 axis=0, assume_sorted=True)
             self.rot_interp = st.Slerp(times, rot)
-    
+
     @property
     def times(self) -> np.ndarray:
         if self.single_step:
             return self._times
         else:
             return self.pos_interp.x
-    
+
     @property
     def poses(self) -> np.ndarray:
         if self.single_step:
@@ -61,7 +61,7 @@ class PoseTrajectoryInterpolator:
             poses[:,3:] = self.rot_interp(self.times).as_rotvec()
             return poses
 
-    def trim(self, 
+    def trim(self,
             start_t: float, end_t: float
             ) -> "PoseTrajectoryInterpolator":
         assert start_t <= end_t
@@ -74,16 +74,16 @@ class PoseTrajectoryInterpolator:
         # interpolate
         all_poses = self(all_times)
         return PoseTrajectoryInterpolator(times=all_times, poses=all_poses)
-    
-    def drive_to_waypoint(self, 
+
+    def drive_to_waypoint(self,
             pose, time, curr_time,
-            max_pos_speed=np.inf, 
+            max_pos_speed=np.inf,
             max_rot_speed=np.inf
         ) -> "PoseTrajectoryInterpolator":
         assert(max_pos_speed > 0)
         assert(max_rot_speed > 0)
         time = max(time, curr_time)
-        
+
         curr_pose = self(curr_time)
         pos_dist, rot_dist = pose_distance(curr_pose, pose)
         pos_min_duration = pos_dist / max_pos_speed
@@ -103,8 +103,8 @@ class PoseTrajectoryInterpolator:
         return final_interp
 
     def schedule_waypoint(self,
-            pose, time, 
-            max_pos_speed=np.inf, 
+            pose, time,
+            max_pos_speed=np.inf,
             max_rot_speed=np.inf,
             curr_time=None,
             last_waypoint_time=None
@@ -146,7 +146,7 @@ class PoseTrajectoryInterpolator:
         # start_time <= end_time <= time (proven by zhenjia)
         # curr_time <= start_time (proven by zhenjia)
         # curr_time <= time (proven by zhenjia)
-        
+
         # time can't change
         # last_waypoint_time can't change
         # curr_time can't change
@@ -190,7 +190,7 @@ class PoseTrajectoryInterpolator:
         if isinstance(t, numbers.Number):
             is_single = True
             t = np.array([t])
-        
+
         pose = np.zeros((len(t), 6))
         if self.single_step:
             pose[:] = self._poses[0]

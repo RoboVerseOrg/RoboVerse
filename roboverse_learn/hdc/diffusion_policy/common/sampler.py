@@ -6,11 +6,11 @@ from diffusion_policy.common.replay_buffer import ReplayBuffer
 
 @numba.jit(nopython=True)
 def create_indices(
-    episode_ends:np.ndarray, sequence_length:int, 
+    episode_ends:np.ndarray, sequence_length:int,
     episode_mask: np.ndarray,
     pad_before: int=0, pad_after: int=0,
     debug:bool=True) -> np.ndarray:
-    episode_mask.shape == episode_ends.shape        
+    episode_mask.shape == episode_ends.shape
     pad_before = min(max(pad_before, 0), sequence_length-1)
     pad_after = min(max(pad_after, 0), sequence_length-1)
 
@@ -24,10 +24,10 @@ def create_indices(
             start_idx = episode_ends[i-1]
         end_idx = episode_ends[i]
         episode_length = end_idx - start_idx
-        
+
         min_start = -pad_before
         max_start = episode_length - sequence_length + pad_after
-        
+
         # range stops one idx before end
         for idx in range(min_start, max_start+1):
             buffer_start_idx = max(idx, 0) + start_idx
@@ -41,7 +41,7 @@ def create_indices(
                 assert(end_offset >= 0)
                 assert (sample_end_idx - sample_start_idx) == (buffer_end_idx - buffer_start_idx)
             indices.append([
-                buffer_start_idx, buffer_end_idx, 
+                buffer_start_idx, buffer_end_idx,
                 sample_start_idx, sample_end_idx])
     indices = np.array(indices)
     return indices
@@ -75,8 +75,8 @@ def downsample_mask(mask, max_n, seed=0):
     return train_mask
 
 class SequenceSampler:
-    def __init__(self, 
-        replay_buffer: ReplayBuffer, 
+    def __init__(self,
+        replay_buffer: ReplayBuffer,
         sequence_length:int,
         pad_before:int=0,
         pad_after:int=0,
@@ -93,14 +93,14 @@ class SequenceSampler:
         assert(sequence_length >= 1)
         if keys is None:
             keys = list(replay_buffer.keys())
-        
+
         episode_ends = replay_buffer.episode_ends[:]
         if episode_mask is None:
             episode_mask = np.ones(episode_ends.shape, dtype=bool)
         if np.any(episode_mask):
-            indices = create_indices(episode_ends, 
-                sequence_length=sequence_length, 
-                pad_before=pad_before, 
+            indices = create_indices(episode_ends,
+                sequence_length=sequence_length,
+                pad_before=pad_before,
                 pad_after=pad_after,
                 episode_mask=episode_mask
                 )
@@ -108,15 +108,15 @@ class SequenceSampler:
             indices = np.zeros((0,4), dtype=np.int64)
 
         # (buffer_start_idx, buffer_end_idx, sample_start_idx, sample_end_idx)
-        self.indices = indices 
+        self.indices = indices
         self.keys = list(keys) # prevent OmegaConf list performance problem
         self.sequence_length = sequence_length
         self.replay_buffer = replay_buffer
         self.key_first_k = key_first_k
-    
+
     def __len__(self):
         return len(self.indices)
-        
+
     def sample_sequence(self, idx):
         buffer_start_idx, buffer_end_idx, sample_start_idx, sample_end_idx \
             = self.indices[idx]
@@ -132,7 +132,7 @@ class SequenceSampler:
                 k_data = min(self.key_first_k[key], n_data)
                 # fill value with Nan to catch bugs
                 # the non-loaded region should never be used
-                sample = np.full((n_data,) + input_arr.shape[1:], 
+                sample = np.full((n_data,) + input_arr.shape[1:],
                     fill_value=np.nan, dtype=input_arr.dtype)
                 try:
                     sample[:k_data] = input_arr[buffer_start_idx:buffer_start_idx+k_data]

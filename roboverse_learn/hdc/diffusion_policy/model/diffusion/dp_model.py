@@ -31,7 +31,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
         # compute number of tokens for main trunk and condition encoder
         if n_obs_steps is None:
             n_obs_steps = horizon
-        
+
         T = horizon
         T_cond = 1
         if not time_as_cond:
@@ -50,7 +50,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
         # cond encoder
         self.time_emb = SinusoidalPosEmbSingle(n_emb)
         self.cond_obs_emb = None
-        
+
         if obs_as_cond:
             self.cond_obs_emb = nn.Linear(cond_dim, n_emb)
 
@@ -121,7 +121,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
             mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
             mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
             self.register_buffer("mask", mask)
-            
+
             if time_as_cond and obs_as_cond:
                 S = T_cond
                 t, s = torch.meshgrid(
@@ -141,7 +141,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
         # decoder head
         self.ln_f = nn.LayerNorm(n_emb)
         self.head = nn.Linear(n_emb, output_dim)
-            
+
         # constants
         self.T = T
         self.T_cond = T_cond
@@ -157,9 +157,9 @@ class TransformerForDiffusion(ModuleAttrMixin):
         )
 
     def _init_weights(self, module):
-        ignore_types = (nn.Dropout, 
-            SinusoidalPosEmbSingle, 
-            nn.TransformerEncoderLayer, 
+        ignore_types = (nn.Dropout,
+            SinusoidalPosEmbSingle,
+            nn.TransformerEncoderLayer,
             nn.TransformerDecoderLayer,
             nn.TransformerEncoder,
             nn.TransformerDecoder,
@@ -177,7 +177,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
                 weight = getattr(module, name)
                 if weight is not None:
                     torch.nn.init.normal_(weight, mean=0.0, std=0.02)
-            
+
             bias_names = ['in_proj_bias', 'bias_k', 'bias_v']
             for name in bias_names:
                 bias = getattr(module, name)
@@ -195,7 +195,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
             pass
         else:
             raise RuntimeError("Unaccounted module {}".format(module))
-    
+
     def get_optim_groups(self, weight_decay: float=1e-3):
         """
         This long function is unfortunately doing something very simple and is being very defensive:
@@ -259,22 +259,22 @@ class TransformerForDiffusion(ModuleAttrMixin):
         return optim_groups
 
 
-    def configure_optimizers(self, 
-            learning_rate: float=1e-4, 
+    def configure_optimizers(self,
+            learning_rate: float=1e-4,
             weight_decay: float=1e-3,
             betas: Tuple[float, float]=(0.9,0.95)):
 
         # assert False,'aaa'
-        
+
         optim_groups = self.get_optim_groups(weight_decay=weight_decay)
         optimizer = torch.optim.AdamW(
             optim_groups, lr=learning_rate, betas=betas
         )
         return optimizer
 
-    def forward(self, 
-        sample: torch.Tensor, 
-        timestep: Union[torch.Tensor, float, int], 
+    def forward(self,
+        sample: torch.Tensor,
+        timestep: Union[torch.Tensor, float, int],
         cond: Optional[torch.Tensor]=None, **kwargs):
         """
         x: (B,T,input_dim)
@@ -325,7 +325,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
             x = self.encoder(x)
             memory = x
             # (B,T_cond,n_emb)
-            
+
             # decoder
             token_embeddings = input_emb
             t = token_embeddings.shape[1]
@@ -341,7 +341,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
                 memory_mask=self.memory_mask
             )
             # (B,T,n_emb)
-        
+
         # head
         x = self.ln_f(x)
         x = self.head(x)
@@ -366,7 +366,7 @@ def test():
     timestep = torch.tensor(0)
     sample = torch.zeros((4,8,16))
     out = transformer(sample, timestep)
-    
+
 
     # GPT with time embedding and obs cond
     transformer = TransformerForDiffusion(
@@ -380,7 +380,7 @@ def test():
         # n_cond_layers=4
     )
     opt = transformer.configure_optimizers()
-    
+
     timestep = torch.tensor(0)
     sample = torch.zeros((4,8,16))
     cond = torch.zeros((4,4,10))
@@ -398,7 +398,7 @@ def test():
         n_cond_layers=4
     )
     opt = transformer.configure_optimizers()
-    
+
     timestep = torch.tensor(0)
     sample = torch.zeros((4,8,16))
     cond = torch.zeros((4,4,10))
@@ -452,7 +452,7 @@ def test():
 #         # compute number of tokens for main trunk and condition encoder
 #         if n_obs_steps is None:
 #             n_obs_steps = horizon
-        
+
 #         T = horizon
 #         T_cond = 0
 #         if not time_as_cond:
@@ -471,7 +471,7 @@ def test():
 #         # cond encoder
 #         self.time_emb = SinusoidalPosEmb(n_emb)
 #         self.cond_obs_emb = None
-        
+
 #         if obs_as_cond:
 #             self.cond_obs_emb = nn.Linear(cond_dim, n_emb)
 
@@ -542,7 +542,7 @@ def test():
 #             mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
 #             mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
 #             self.register_buffer("mask", mask)
-            
+
 #             if time_as_cond and obs_as_cond:
 #                 S = T_cond
 #                 t, s = torch.meshgrid(
@@ -562,7 +562,7 @@ def test():
 #         # decoder head
 #         self.ln_f = nn.LayerNorm(n_emb)
 #         self.head = nn.Linear(n_emb, output_dim)
-            
+
 #         # constants
 #         self.T = T
 #         self.T_cond = T_cond
@@ -578,9 +578,9 @@ def test():
 #         )
 
 #     def _init_weights(self, module):
-#         ignore_types = (nn.Dropout, 
-#             SinusoidalPosEmb, 
-#             nn.TransformerEncoderLayer, 
+#         ignore_types = (nn.Dropout,
+#             SinusoidalPosEmb,
+#             nn.TransformerEncoderLayer,
 #             nn.TransformerDecoderLayer,
 #             nn.TransformerEncoder,
 #             nn.TransformerDecoder,
@@ -598,7 +598,7 @@ def test():
 #                 weight = getattr(module, name)
 #                 if weight is not None:
 #                     torch.nn.init.normal_(weight, mean=0.0, std=0.02)
-            
+
 #             bias_names = ['in_proj_bias', 'bias_k', 'bias_v']
 #             for name in bias_names:
 #                 bias = getattr(module, name)
@@ -616,7 +616,7 @@ def test():
 #             pass
 #         else:
 #             raise RuntimeError("Unaccounted module {}".format(module))
-    
+
 #     def get_optim_groups(self, weight_decay: float=1e-3):
 #         """
 #         This long function is unfortunately doing something very simple and is being very defensive:
@@ -680,8 +680,8 @@ def test():
 #         return optim_groups
 
 
-#     def configure_optimizers(self, 
-#             learning_rate: float=1e-4, 
+#     def configure_optimizers(self,
+#             learning_rate: float=1e-4,
 #             weight_decay: float=1e-3,
 #             betas: Tuple[float, float]=(0.9,0.95)):
 #         optim_groups = self.get_optim_groups(weight_decay=weight_decay)
@@ -690,9 +690,9 @@ def test():
 #         )
 #         return optimizer
 
-#     def forward(self, 
-#         sample: torch.Tensor, 
-#         timestep: Union[torch.Tensor, float, int], 
+#     def forward(self,
+#         sample: torch.Tensor,
+#         timestep: Union[torch.Tensor, float, int],
 #         cond: Optional[torch.Tensor]=None, **kwargs):
 #         """
 #         x: (B,T,input_dim)
@@ -749,7 +749,7 @@ def test():
 #             x = self.encoder(x)
 #             memory = x
 #             # (B,T_cond,n_emb)
-            
+
 #             # decoder
 #             token_embeddings = input_emb
 #             t = token_embeddings.shape[1]
@@ -766,7 +766,7 @@ def test():
 #                 memory_mask=self.memory_mask
 #             )
 #             # (B,T,n_emb)
-        
+
 #         # head
 #         x = self.ln_f(x)
 #         x = self.head(x)
@@ -791,7 +791,7 @@ def test():
 #     timestep = torch.tensor(0)
 #     sample = torch.zeros((4,8,16))
 #     out = transformer(sample, timestep)
-    
+
 
 #     # GPT with time embedding and obs cond
 #     transformer = TransformerForDiffusion(
@@ -805,7 +805,7 @@ def test():
 #         # n_cond_layers=4
 #     )
 #     opt = transformer.configure_optimizers()
-    
+
 #     timestep = torch.tensor(0)
 #     sample = torch.zeros((4,8,16))
 #     cond = torch.zeros((4,4,10))
@@ -823,7 +823,7 @@ def test():
 #         n_cond_layers=4
 #     )
 #     opt = transformer.configure_optimizers()
-    
+
 #     timestep = torch.tensor(0)
 #     sample = torch.zeros((4,8,16))
 #     cond = torch.zeros((4,4,10))

@@ -13,8 +13,8 @@ from diffusion_policy.dataset.humanoid_val_dataset import HumanoidValDataset
 from typing import Dict, List
 
 class HumanoidTrainValDataset(BaseLowdimDataset):
-    def __init__(self, 
-                 train_zarr_path, 
+    def __init__(self,
+                 train_zarr_path,
                  val_zarr_path=None,
                  horizon=1,
                  pad_before=0,
@@ -26,20 +26,20 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
                  max_val_episodes=None):
         super().__init__()
         print(f"Initializing HumanoidTrainValDataset with train_zarr_path: {train_zarr_path}")
-        
+
         if not train_zarr_path:
             raise ValueError("train_zarr_path is empty.")
         if not os.path.exists(train_zarr_path):
             raise FileNotFoundError(f"Train Zarr path {train_zarr_path} does not exist.")
-        
+
         # 加载训练集
         self.train_replay_buffer = ReplayBuffer.copy_from_path(
             train_zarr_path, keys=[obs_key, action_key])
         #self.train_replay_buffer = ReplayBuffer.create_from_path(train_zarr_path)
         print("Training ReplayBuffer loaded successfully.")
-        
+
         #print(f"Loaded {len(self.train_replay_buffer.meta['motion_id'][:])} motion_ids.")
-        
+
         # 加载验证集
         self.val_replay_buffer = None
         if val_zarr_path:
@@ -50,7 +50,7 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
                 val_zarr_path, keys=[obs_key, action_key])
             #self.val_replay_buffer = ReplayBuffer.create_from_path(val_zarr_path)
             print("Validation ReplayBuffer loaded successfully.")
-        
+
         #print(f"Loaded {len(self.val_replay_buffer.meta['motion_id'][:])} motion_ids.")
 
         # 初始化采样器
@@ -66,7 +66,7 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
             )
         )
         print(f"Train Sampler initialized with {len(self.train_sampler)} samples.")
-        
+
         self.val_sampler = None
         if self.val_replay_buffer:
             self.val_sampler = SequenceSampler(
@@ -81,7 +81,7 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
                 )
             )
             print(f"Validation Sampler initialized with {len(self.val_sampler)} samples.")
-        
+
         # 保存其他参数
         self.obs_key = obs_key
         self.action_key = action_key
@@ -113,7 +113,7 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
 
     def get_validation_dataset(self):
         return HumanoidValDataset(
-                 zarr_path = self.val_zarr_path, 
+                 zarr_path = self.val_zarr_path,
                  horizon=self.horizon,
                  pad_before=self.pad_before,
                  pad_after=self.pad_after,
@@ -139,7 +139,7 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
             combined_data = train_data
 
 
-            
+
         # 基于合并后的数据构建 Normalizer
         normalizer = LinearNormalizer()
         normalizer.fit(data=combined_data, last_n_dims=1, mode=mode, **kwargs)
@@ -179,5 +179,5 @@ class HumanoidTrainValDataset(BaseLowdimDataset):
         data = self._sample_to_data(sample)
         torch_data = dict_apply(data, torch.from_numpy)
         torch_data['obs'] = torch_data['obs'].squeeze(1)        # Shape: [10,1,1665] -> [10, 1665]
-        torch_data['action'] = torch_data['action'].squeeze(1) 
+        torch_data['action'] = torch_data['action'].squeeze(1)
         return torch_data

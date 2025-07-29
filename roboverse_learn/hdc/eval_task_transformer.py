@@ -100,6 +100,5 @@ for ck in ckpts:
     ]
 
     print("Running:", " ".join(cmd))
-    # exit()
-    subprocess.run(cmd, check=True)
 
+    subprocess.run(cmd, check=True)

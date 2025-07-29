@@ -15,7 +15,7 @@ def get_module_device(m: nn.Module):
 def get_output_shape(
         input_shape: Tuple[int],
         net: Callable[[torch.Tensor], torch.Tensor]
-    ):  
+    ):
         device = get_module_device(net)
         test_input = torch.zeros((1,)+tuple(input_shape), device=device)
         test_output = net(test_input)

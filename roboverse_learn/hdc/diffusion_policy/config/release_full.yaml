@@ -41,7 +41,7 @@ policy:
     time_as_cond: True # if false, use BERT like encoder only arch, time as input
     obs_as_cond: ${obs_as_cond}
     n_cond_layers: 0 # >0: use transformer encoder for cond, otherwise use MLP
-  
+
   noise_scheduler:
     _target_: diffusion_policy.policy.schedulers.DDPMTEDiScheduler
     num_train_timesteps: 15
@@ -104,7 +104,7 @@ training:
   seed: 42
   debug: False
   resume: True
-  resume_ckpt: None 
+  resume_ckpt: None
   lr_scheduler: cosine
   lr_warmup_steps: 1000
   num_epochs: 100

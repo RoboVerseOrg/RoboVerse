@@ -35,4 +35,4 @@ class DictOfTensorMixin(nn.Module):
 
         self.params_dict = load_dict(state_dict, prefix + 'params_dict')
         self.params_dict.requires_grad_(False)
-        return 
+        return

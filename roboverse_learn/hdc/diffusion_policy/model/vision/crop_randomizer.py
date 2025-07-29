@@ -10,8 +10,8 @@ class CropRandomizer(nn.Module):
     def __init__(
         self,
         input_shape,
-        crop_height, 
-        crop_width, 
+        crop_height,
+        crop_width,
         num_crops=1,
         pos_enc=False,
     ):
@@ -44,7 +44,7 @@ class CropRandomizer(nn.Module):
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
@@ -65,13 +65,13 @@ class CropRandomizer(nn.Module):
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
             out_shape ([int]): list of integers corresponding to output shape
         """
-        
+
         # since the forward_out operation splits [B * N, ...] -> [B, N, ...]
         # and then pools to result in [B, ...], only the batch dimension changes,
         # and so the other dimensions retain their shape.
@@ -87,8 +87,8 @@ class CropRandomizer(nn.Module):
             # generate random crops
             out, _ = sample_random_image_crops(
                 images=inputs,
-                crop_height=self.crop_height, 
-                crop_width=self.crop_width, 
+                crop_height=self.crop_height,
+                crop_width=self.crop_width,
                 num_crops=self.num_crops,
                 pos_enc=self.pos_enc,
             )
@@ -114,10 +114,10 @@ class CropRandomizer(nn.Module):
             return inputs
         else:
             batch_size = (inputs.shape[0] // self.num_crops)
-            out = tu.reshape_dimensions(inputs, begin_axis=0, end_axis=0, 
+            out = tu.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
                 target_dims=(batch_size, self.num_crops))
             return out.mean(dim=1)
-    
+
     def forward(self, inputs):
         return self.forward_in(inputs)
 
@@ -131,7 +131,7 @@ class CropRandomizer(nn.Module):
 
 def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
     """
-    Crops images at the locations specified by @crop_indices. Crops will be 
+    Crops images at the locations specified by @crop_indices. Crops will be
     taken across all channels.
 
     Args:
@@ -198,7 +198,7 @@ def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
     all_crop_inds = crop_indices.unsqueeze(-2).unsqueeze(-2) + crop_in_grid.reshape(grid_reshape)
 
     # For using @torch.gather, convert to flat indices from 2D indices, and also
-    # repeat across the channel dimension. To get flat index of each pixel to grab for 
+    # repeat across the channel dimension. To get flat index of each pixel to grab for
     # each sampled crop, we just use the mapping: ind = h_ind * @image_w + w_ind
     all_crop_inds = all_crop_inds[..., 0] * image_w + all_crop_inds[..., 1] # shape [..., N, CH, CW]
     all_crop_inds = tu.unsqueeze_expand_at(all_crop_inds, size=image_c, dim=-3) # shape [..., N, C, CH, CW]
@@ -210,7 +210,7 @@ def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
     crops = torch.gather(images_to_crop, dim=-1, index=all_crop_inds)
     # [..., N, C, CH * CW] -> [..., N, C, CH, CW]
     reshape_axis = len(crops.shape) - 1
-    crops = tu.reshape_dimensions(crops, begin_axis=reshape_axis, end_axis=reshape_axis, 
+    crops = tu.reshape_dimensions(crops, begin_axis=reshape_axis, end_axis=reshape_axis,
                     target_dims=(crop_height, crop_width))
 
     if is_padded:
@@ -227,18 +227,18 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
         images (torch.Tensor): batch of images of shape [..., C, H, W]
 
         crop_height (int): height of crop to take
-        
+
         crop_width (int): width of crop to take
 
         num_crops (n): number of crops to sample
 
-        pos_enc (bool): if True, also add 2 channels to the outputs that gives a spatial 
+        pos_enc (bool): if True, also add 2 channels to the outputs that gives a spatial
             encoding of the original source pixel locations. This means that the
-            output crops will contain information about where in the source image 
+            output crops will contain information about where in the source image
             it was sampled from.
 
     Returns:
-        crops (torch.Tensor): crops of shape (..., @num_crops, C, @crop_height, @crop_width) 
+        crops (torch.Tensor): crops of shape (..., @num_crops, C, @crop_height, @crop_width)
             if @pos_enc is False, otherwise (..., @num_crops, C + 2, @crop_height, @crop_width)
 
         crop_inds (torch.Tensor): sampled crop indices of shape (..., N, 2)
@@ -269,7 +269,7 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
     max_sample_w = image_w - crop_width
 
     # Sample crop locations for all tensor dimensions up to the last 3, which are [C, H, W].
-    # Each gets @num_crops samples - typically this will just be the batch dimension (B), so 
+    # Each gets @num_crops samples - typically this will just be the batch dimension (B), so
     # we will sample [B, N] indices, but this supports having more than one leading dimension,
     # or possibly no leading dimension.
     #
@@ -279,10 +279,10 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
     crop_inds = torch.cat((crop_inds_h.unsqueeze(-1), crop_inds_w.unsqueeze(-1)), dim=-1) # shape [..., N, 2]
 
     crops = crop_image_from_indices(
-        images=source_im, 
-        crop_indices=crop_inds, 
-        crop_height=crop_height, 
-        crop_width=crop_width, 
+        images=source_im,
+        crop_indices=crop_inds,
+        crop_height=crop_height,
+        crop_width=crop_width,
     )
 
     return crops, crop_inds

@@ -15,7 +15,7 @@ def render_env_video(env, states, actions=None):
         if actions is not None:
             action = actions[i]
             coord = (action / 512 * 96).astype(np.int32)
-            cv2.drawMarker(img, coord, 
+            cv2.drawMarker(img, coord,
                 color=(255,0,0), markerType=cv2.MARKER_CROSS,
                 markerSize=8, thickness=1)
         imgs.append(img)

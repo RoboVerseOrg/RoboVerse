@@ -85,7 +85,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
         assert isinstance(dataset, BaseLowdimDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
         #normalizer = dataset.get_normalizer()
-        
+
         # compute normalizer on the main process and save to disk
         normalizer_path = os.path.join(self.output_dir, 'normalizer.pkl')
         if accelerator.is_main_process:
@@ -101,7 +101,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
         val_dataloader = DataLoader(val_dataset, **cfg.val_dataloader)
         print('train dataset:', len(dataset), 'train dataloader:', len(train_dataloader))
         print('val dataset:', len(val_dataset), 'val dataloader:', len(val_dataloader))
-        
+
         self.model.set_normalizer(normalizer)
         if cfg.training.use_ema:
             self.ema_model.set_normalizer(normalizer)
@@ -183,7 +183,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
-                with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
+                with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}",
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
                         # device transfer
@@ -202,7 +202,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                             self.optimizer.step()
                             self.optimizer.zero_grad()
                             lr_scheduler.step()
-                        
+
                         # update ema
                         if cfg.training.use_ema:
                             ema.step(accelerator.unwrap_model(self.model))
@@ -228,20 +228,20 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                         if (cfg.training.max_train_steps is not None) \
                             and batch_idx >= (cfg.training.max_train_steps-1):
                             break
-                
+
                 # at the end of each epoch
                 # replace train_loss with epoch average
                 train_loss = np.mean(train_losses)
                 step_log['train_loss'] = train_loss
 
                 # # ========= eval for this epoch ==========
-                policy = accelerator.unwrap_model(self.model)                
+                policy = accelerator.unwrap_model(self.model)
                 if cfg.training.use_ema:
                     policy = self.ema_model
                 policy.eval()
 
                 # # run rollout
-                # TODO: need to write a Humanoid env_runner and validation! now I comment them all 
+                # TODO: need to write a Humanoid env_runner and validation! now I comment them all
                 # # if (self.epoch % cfg.training.rollout_every) == 0:
                 # #     policy.reset_buffer()
                 # #     runner_log = env_runner.run(policy)
@@ -252,7 +252,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                 # if (self.epoch % cfg.training.val_every) == 2  and accelerator.is_main_process:
                 #     with torch.no_grad():
                 #         val_losses = list()
-                #         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
+                #         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}",
                 #                 leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                 #             for batch_idx, batch in enumerate(tepoch):
                 #                 batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
@@ -288,7 +288,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                         batch = train_sampling_batch
                         obs_dict = {'obs': batch['obs']}
                         gt_action = batch['action']
-                        
+
                         policy.reset_buffer()
                         result = policy.predict_action(obs_dict)
                         # In contrast to Diffusion Policy, we are only interested in the validation loss on the predicted actions
@@ -299,7 +299,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                         start = cfg.n_obs_steps - 1
                         end = start + cfg.n_action_steps
                         gt_action = gt_action[:,start:end]
-                        
+
                         mse = torch.nn.functional.mse_loss(pred_action, gt_action)
                         # log
                         step_log['train_action_mse_error'] = mse.item()
@@ -310,7 +310,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                         del result
                         del pred_action
                         del mse
-                
+
                 # checkpoint
                 if (self.epoch % cfg.training.checkpoint_every) == 0 and accelerator.is_main_process:
                     # checkpointing
@@ -326,14 +326,14 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
                     for key, value in step_log.items():
                         new_key = key.replace('/', '_')
                         metric_dict[new_key] = value
-                    
+
                     # We can't copy the last checkpoint here
                     # since save_checkpoint uses threads.
                     # therefore at this point the file might have been empty!
                     # topk_ckpt_path = topk_manager.get_ckpt_path(metric_dict)
-                    
-                    # TODO Perkins: shoul save top k ckpts in the future ! 
-                    
+
+                    # TODO Perkins: shoul save top k ckpts in the future !
+
                     # if topk_ckpt_path is not None:
                     #     self.save_checkpoint(path=topk_ckpt_path)
                     self.model = model_ddp
@@ -352,7 +352,7 @@ class HumanoidWorkspaceTransformer(BaseWorkspace):
 
 @hydra.main(
     version_base=None,
-    config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
+    config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")),
     config_name=pathlib.Path(__file__).stem)
 def main(cfg):
     workspace = TEDiTransformerLowdimPolicy(cfg)

@@ -82,8 +82,8 @@ def draw_text(
 
 
 def get_image_transform(
-        input_res: Tuple[int,int]=(1280,720), 
-        output_res: Tuple[int,int]=(640,480), 
+        input_res: Tuple[int,int]=(1280,720),
+        output_res: Tuple[int,int]=(640,480),
         bgr_to_rgb: bool=False):
 
     iw, ih = input_res
@@ -102,7 +102,7 @@ def get_image_transform(
         rh = math.ceil(rw / iw * ih)
         if ow > iw:
             interp_method = cv2.INTER_LINEAR
-    
+
     w_slice_start = (rw - ow) // 2
     w_slice = slice(w_slice_start, w_slice_start + ow)
     h_slice_start = (rh - oh) // 2
@@ -127,7 +127,7 @@ def optimal_row_cols(
     ):
     out_w, out_h = max_resolution
     out_wh_ratio = out_w / out_h
-    
+
     n_rows = np.arange(n_cameras,dtype=np.int64) + 1
     n_cols = np.ceil(n_cameras / n_rows).astype(np.int64)
     cat_wh_ratio = in_wh_ratio * (n_cols / n_rows)
@@ -145,6 +145,6 @@ def optimal_row_cols(
     else:
         rh = math.floor(out_h / best_n_row)
         rw = math.floor(rh * in_wh_ratio)
-    
+
     # crop_resolution = (rw, rh)
     return rw, rh, best_n_col, best_n_row

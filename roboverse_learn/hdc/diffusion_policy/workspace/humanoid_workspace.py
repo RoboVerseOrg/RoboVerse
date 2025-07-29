@@ -39,16 +39,16 @@ class HumanoidWorkspace(BaseWorkspace):
 
         #set seed
         seed = cfg.training.seed
-        #import ipdb;ipdb.set_trace()    
+        #import ipdb;ipdb.set_trace()
         # cpu_rng_state = torch.get_rng_state()
-        # cuda_rng_state = torch.cuda.get_rng_state() 
+        # cuda_rng_state = torch.cuda.get_rng_state()
         torch.manual_seed(seed)
         # action_load_from_dataloader = torch.zeros(3,3,device="cpu")
-        # noise = torch.randn_like(action_load_from_dataloader) 
-        # noise_2 = torch.randn_like(action_load_from_dataloader) 
+        # noise = torch.randn_like(action_load_from_dataloader)
+        # noise_2 = torch.randn_like(action_load_from_dataloader)
         # torch.set_rng_state(cpu_rng_state)
-        # torch.cuda.set_rng_state(cuda_rng_state) 
-        np.random.seed(seed)    
+        # torch.cuda.set_rng_state(cuda_rng_state)
+        np.random.seed(seed)
         random.seed(seed)
 
         # configure model
@@ -163,7 +163,7 @@ class HumanoidWorkspace(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
-                with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
+                with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}",
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
                         # device transfer
@@ -181,7 +181,7 @@ class HumanoidWorkspace(BaseWorkspace):
                             self.optimizer.step()
                             self.optimizer.zero_grad()
                             lr_scheduler.step()
-                        
+
                         # update ema
                         if cfg.training.use_ema:
                             ema.step(self.model)
@@ -207,7 +207,7 @@ class HumanoidWorkspace(BaseWorkspace):
                         if (cfg.training.max_train_steps is not None) \
                             and batch_idx >= (cfg.training.max_train_steps-1):
                             break
-                
+
                 # at the end of each epoch
                 # replace train_loss with epoch average
                 train_loss = np.mean(train_losses)
@@ -220,7 +220,7 @@ class HumanoidWorkspace(BaseWorkspace):
                 policy.eval()
 
                 # # run rollout
-                # TODO: need to write a Humanoid env_runner and validation! now I comment them all 
+                # TODO: need to write a Humanoid env_runner and validation! now I comment them all
                 # # if (self.epoch % cfg.training.rollout_every) == 0:
                 # #     policy.reset_buffer()
                 # #     runner_log = env_runner.run(policy)
@@ -231,7 +231,7 @@ class HumanoidWorkspace(BaseWorkspace):
                 if (self.epoch % cfg.training.val_every) == 0:
                     with torch.no_grad():
                         val_losses = list()
-                        with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
+                        with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}",
                                 leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
@@ -252,7 +252,7 @@ class HumanoidWorkspace(BaseWorkspace):
                         batch = train_sampling_batch
                         obs_dict = {'obs': batch['obs']}
                         gt_action = batch['action']
-                        
+
                         policy.reset_buffer()
                         result = policy.predict_action(obs_dict)
                         # In contrast to Diffusion Policy, we are only interested in the validation loss on the predicted actions
@@ -263,7 +263,7 @@ class HumanoidWorkspace(BaseWorkspace):
                         start = cfg.n_obs_steps - 1
                         end = start + cfg.n_action_steps
                         gt_action = gt_action[:,start:end]
-                        
+
                         mse = torch.nn.functional.mse_loss(pred_action, gt_action)
                         # log
                         step_log['train_action_mse_error'] = mse.item()
@@ -274,7 +274,7 @@ class HumanoidWorkspace(BaseWorkspace):
                         del result
                         del pred_action
                         del mse
-                
+
                 # checkpoint
                 if (self.epoch % cfg.training.checkpoint_every) == 0:
                     # checkpointing
@@ -288,14 +288,14 @@ class HumanoidWorkspace(BaseWorkspace):
                     for key, value in step_log.items():
                         new_key = key.replace('/', '_')
                         metric_dict[new_key] = value
-                    
+
                     # We can't copy the last checkpoint here
                     # since save_checkpoint uses threads.
                     # therefore at this point the file might have been empty!
                     # topk_ckpt_path = topk_manager.get_ckpt_path(metric_dict)
-                    
-                    # TODO Perkins: shoul save top k ckpts in the future ! 
-                    
+
+                    # TODO Perkins: shoul save top k ckpts in the future !
+
                     # if topk_ckpt_path is not None:
                     #     self.save_checkpoint(path=topk_ckpt_path)
                 # ========= eval end for this epoch ==========
@@ -310,7 +310,7 @@ class HumanoidWorkspace(BaseWorkspace):
 
 @hydra.main(
     version_base=None,
-    config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
+    config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")),
     config_name=pathlib.Path(__file__).stem)
 def main(cfg):
     workspace = TrainTEDiUnetLowdimWorkspace(cfg)

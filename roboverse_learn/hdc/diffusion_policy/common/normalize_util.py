@@ -76,7 +76,7 @@ def robomimic_abs_action_normalizer_from_stat(stat, rotation_transformer):
             'std': np.ones_like(example)
         }
         return {'scale': scale, 'offset': offset}, info
-    
+
     def get_gripper_param_info(stat):
         example = stat['max']
         scale = np.ones_like(example)
@@ -94,10 +94,10 @@ def robomimic_abs_action_normalizer_from_stat(stat, rotation_transformer):
     gripper_param, gripper_info = get_gripper_param_info(result['gripper'])
 
     param = dict_apply_reduce(
-        [pos_param, rot_param, gripper_param], 
+        [pos_param, rot_param, gripper_param],
         lambda x: np.concatenate(x,axis=-1))
     info = dict_apply_reduce(
-        [pos_info, rot_info, gripper_info], 
+        [pos_info, rot_info, gripper_info],
         lambda x: np.concatenate(x,axis=-1))
 
     return SingleFieldLinearNormalizer.create_manual(
@@ -127,7 +127,7 @@ def robomimic_abs_action_only_normalizer_from_stat(stat):
 
         return {'scale': scale, 'offset': offset}, stat
 
-    
+
     def get_other_param_info(stat):
         example = stat['max']
         scale = np.ones_like(example)
@@ -144,10 +144,10 @@ def robomimic_abs_action_only_normalizer_from_stat(stat):
     other_param, other_info = get_other_param_info(result['other'])
 
     param = dict_apply_reduce(
-        [pos_param, other_param], 
+        [pos_param, other_param],
         lambda x: np.concatenate(x,axis=-1))
     info = dict_apply_reduce(
-        [pos_info, other_info], 
+        [pos_info, other_info],
         lambda x: np.concatenate(x,axis=-1))
 
     return SingleFieldLinearNormalizer.create_manual(
@@ -181,7 +181,7 @@ def robomimic_abs_action_only_dual_arm_normalizer_from_stat(stat):
 
         return {'scale': scale, 'offset': offset}, stat
 
-    
+
     def get_other_param_info(stat):
         example = stat['max']
         scale = np.ones_like(example)
@@ -200,10 +200,10 @@ def robomimic_abs_action_only_dual_arm_normalizer_from_stat(stat):
     other1_param, other1_info = get_other_param_info(result['other1'])
 
     param = dict_apply_reduce(
-        [pos0_param, other0_param, pos1_param, other1_param], 
+        [pos0_param, other0_param, pos1_param, other1_param],
         lambda x: np.concatenate(x,axis=-1))
     info = dict_apply_reduce(
-        [pos0_info, other0_info, pos1_info, other1_info], 
+        [pos0_info, other0_info, pos1_info, other1_info],
         lambda x: np.concatenate(x,axis=-1))
 
     return SingleFieldLinearNormalizer.create_manual(

@@ -195,9 +195,9 @@ class DDPMTEDiScheduler(SchedulerMixin, ConfigMixin):
         alpha_prod_t = self.alphas_cumprod[t]
         #alpha_prod_t_prev = self.alphas_cumprod[t - 1] if t > 0 else self.one
         t_prev_indices = torch.maximum(t-1, torch.zeros_like(t)) #(B,T)
-        alpha_prod_t_prev = torch.where(t>0, 
-            self.alphas_cumprod[t_prev_indices], 
-            torch.ones_like(t, 
+        alpha_prod_t_prev = torch.where(t>0,
+            self.alphas_cumprod[t_prev_indices],
+            torch.ones_like(t,
                 dtype=self.alphas_cumprod.dtype
             )
         ) #(B,T)
@@ -285,9 +285,9 @@ class DDPMTEDiScheduler(SchedulerMixin, ConfigMixin):
         #alpha_prod_t_prev = self.alphas_cumprod[t - 1] if t > 0 else self.one
         alpha_prod_t = self.alphas_cumprod[t] #(B, T)
         t_prev_indices = torch.maximum(t-1, torch.zeros_like(t, device=t.device, dtype=t.dtype)) #(B,T)
-        alpha_prod_t_prev = torch.where(t>0, 
-            self.alphas_cumprod[t_prev_indices], 
-            torch.ones_like(t, 
+        alpha_prod_t_prev = torch.where(t>0,
+            self.alphas_cumprod[t_prev_indices],
+            torch.ones_like(t,
                 dtype=self.alphas_cumprod.dtype,
                 device=self.alphas_cumprod.device
             )
@@ -297,7 +297,7 @@ class DDPMTEDiScheduler(SchedulerMixin, ConfigMixin):
 
         beta_prod_t = beta_prod_t.unsqueeze(-1) # (B, T, 1)
         alpha_prod_t = alpha_prod_t.unsqueeze(-1) # (B, T, 1)
-        
+
 
         # 2. compute predicted original sample from predicted noise also called
         # "predicted x_0" of formula (15) from https://arxiv.org/pdf/2006.11239.pdf
@@ -329,7 +329,7 @@ class DDPMTEDiScheduler(SchedulerMixin, ConfigMixin):
         # 6. Add noise
         variance = 0
         t_clamped = torch.maximum(t, torch.ones_like(t, dtype=t.dtype, device=t.device))
-        
+
         device = model_output.device
         if device.type == "mps":
             # randn does not work reproducibly on mps
@@ -366,7 +366,7 @@ class DDPMTEDiScheduler(SchedulerMixin, ConfigMixin):
         timesteps = timesteps.to(original_samples.device)
         #import ipdb;ipdb.set_trace()
         sqrt_alpha_prod = self.alphas_cumprod[timesteps] ** 0.5 # (B, T)
-        #sqrt_alpha_prod = sqrt_alpha_prod.flatten() 
+        #sqrt_alpha_prod = sqrt_alpha_prod.flatten()
         while len(sqrt_alpha_prod.shape) < len(original_samples.shape):
             sqrt_alpha_prod = sqrt_alpha_prod.unsqueeze(-1) #(B, T, 1)
 
@@ -558,12 +558,12 @@ class DDIMTEDiScheduler(SchedulerMixin, ConfigMixin):
         return sample
 
     def _get_variance(self, timestep, prev_timestep):
-        alpha_prod_t = self.alphas_cumprod[timestep] 
+        alpha_prod_t = self.alphas_cumprod[timestep]
         #alpha_prod_t_prev = self.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.final_alpha_cumprod
         alpha_prod_t_prev = torch.where(prev_timestep >= 0,
                                         self.alphas_cumprod[prev_timestep],
                                         self.final_alpha_cumprod)
-        
+
         beta_prod_t = 1 - alpha_prod_t
         beta_prod_t_prev = 1 - alpha_prod_t_prev
 
@@ -640,7 +640,7 @@ class DDIMTEDiScheduler(SchedulerMixin, ConfigMixin):
         # - pred_sample_direction -> "direction pointing to x_t"
         # - pred_prev_sample -> "x_t-1"
 
-        # Move to device 
+        # Move to device
         self.final_alpha_cumprod = self.final_alpha_cumprod.to(device=model_output.device, dtype=model_output.dtype)
         self.alphas_cumprod = self.alphas_cumprod.to(device=model_output.device, dtype=model_output.dtype)
 

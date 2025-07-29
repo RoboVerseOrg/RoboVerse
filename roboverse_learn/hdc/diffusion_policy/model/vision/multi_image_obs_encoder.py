@@ -57,18 +57,18 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                         assert isinstance(rgb_model, nn.Module)
                         # have a copy of the rgb model
                         this_model = copy.deepcopy(rgb_model)
-                
+
                 if this_model is not None:
                     if use_group_norm:
                         this_model = replace_submodules(
                             root_module=this_model,
                             predicate=lambda x: isinstance(x, nn.BatchNorm2d),
                             func=lambda x: nn.GroupNorm(
-                                num_groups=x.num_features//16, 
+                                num_groups=x.num_features//16,
                                 num_channels=x.num_features)
                         )
                     key_model_map[key] = this_model
-                
+
                 # configure resize
                 input_shape = shape
                 this_resizer = nn.Identity()
@@ -106,7 +106,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 if imagenet_norm:
                     this_normalizer = torchvision.transforms.Normalize(
                         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                
+
                 this_transform = nn.Sequential(this_resizer, this_randomizer, this_normalizer)
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
@@ -163,7 +163,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
                 features.append(feature)
-        
+
         # process lowdim input
         for key in self.low_dim_keys:
             data = obs_dict[key]
@@ -173,11 +173,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 assert batch_size == data.shape[0]
             assert data.shape[1:] == self.key_shape_map[key]
             features.append(data)
-        
+
         # concatenate all features
         result = torch.cat(features, dim=-1)
         return result
-    
+
     @torch.no_grad()
     def output_shape(self):
         example_obs_dict = dict()
@@ -186,7 +186,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         for key, attr in obs_shape_meta.items():
             shape = tuple(attr['shape'])
             this_obs = torch.zeros(
-                (batch_size,) + shape, 
+                (batch_size,) + shape,
                 dtype=self.dtype,
                 device=self.device)
             example_obs_dict[key] = this_obs

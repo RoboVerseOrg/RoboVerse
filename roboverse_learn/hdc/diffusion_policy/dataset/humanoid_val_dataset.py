@@ -12,8 +12,8 @@ from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 from typing import Dict, List
 
 class HumanoidValDataset(BaseLowdimDataset):
-    def __init__(self, 
-                 zarr_path, 
+    def __init__(self,
+                 zarr_path,
                  horizon=1,
                  pad_before=0,
                  pad_after=0,
@@ -30,25 +30,25 @@ class HumanoidValDataset(BaseLowdimDataset):
             raise ValueError("zarr_path is empty.")
         if not os.path.exists(zarr_path):
             raise FileNotFoundError(f"Zarr path {zarr_path} does not exist.")
-        
+
         # 加载指定的 keys 以及 motion_id
         self.replay_buffer = ReplayBuffer.copy_from_path(
-            zarr_path, keys=[obs_key,  action_key],    
+            zarr_path, keys=[obs_key,  action_key],
         #     chunks={
         # 'actions': (100, 19),
         # 'obs': (100, 71)}
         )
         print("ReplayBuffer loaded successfully.")
-        
+
         # 加载 motion_id
         # self.motion_ids = self.replay_buffer.meta['motion_id'][:]
         # print(f"Loaded {len(self.motion_ids)} motion_ids.")
-        
+
         # 初始化采样器
         self.sampler = SequenceSampler(
-            replay_buffer=self.replay_buffer, 
+            replay_buffer=self.replay_buffer,
             sequence_length=horizon,
-            pad_before=pad_before, 
+            pad_before=pad_before,
             pad_after=pad_after,
             episode_mask=downsample_mask(
                 mask=np.ones(self.replay_buffer.n_episodes, dtype=bool),
@@ -57,11 +57,11 @@ class HumanoidValDataset(BaseLowdimDataset):
             )
         )
         print(f"Sampler initialized with {len(self.sampler)} samples.")
-        
+
         # 预先计算每个样本对应的 episode index
         self.episode_indices = self._compute_episode_indices()
         print("Episode indices computed.")
-        
+
         # 保存其他参数
         self.obs_key = obs_key
         #self.state_key = state_key
@@ -91,8 +91,8 @@ class HumanoidValDataset(BaseLowdimDataset):
     def _sample_to_data(self, sample):
         obs = sample[self.obs_key]
         data = {
-            'obs': obs, 
-            'action': sample[self.action_key], 
+            'obs': obs,
+            'action': sample[self.action_key],
         }
         return data
 
@@ -103,5 +103,3 @@ class HumanoidValDataset(BaseLowdimDataset):
         torch_data['obs'] = torch_data['obs'].squeeze(1)        # Shape: [10,1,1665] -> [10, 1665]
         torch_data['action'] = torch_data['action'].squeeze(1)  # Shape: [10,1 , 19] -> [10,19]
         return torch_data
-
-
