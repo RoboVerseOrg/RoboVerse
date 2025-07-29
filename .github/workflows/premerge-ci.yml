@@ -60,11 +60,16 @@ jobs:
           --ssh-public-key file://~/.ssh/id_rsa.pub \
           --instance-os-user $EC2_USER_NAME
 
+        echo "EC2_INSTANCE_IP=$EC2_INSTANCE_IP" >> $GITHUB_ENV
+
     ############# Build #############
     - name: build
       run: |
-        echo $EC2_INSTANCE_IP
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@$EC2_INSTANCE_IP "
+        echo "username: $EC2_USER_NAME"
+        echo "username: ${{ env.EC2_USER_NAME }}"
+        echo "ip: $EC2_INSTANCE_IP"
+        echo "ip: ${{ env.EC2_INSTANCE_IP }}"
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@${{ env.EC2_INSTANCE_IP }} "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
