@@ -6,6 +6,7 @@ env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
   INSTANCE_TYPE: t2.micro
+  EC2_USER_NAME: ec2-user
 
 jobs:
   pre_build:
@@ -13,15 +14,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - run: aws --version
-    - run: |
-        ############# Prebuild #############
+    ############# Prebuild #############
+    - name: pre_build
+      run: |
         # Get AWS account ID
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         if [ -z "$AWS_ACCOUNT_ID" ]; then
           echo "Error: Failed to get AWS account ID"
           exit 1
         fi
-        echo $AWS_ACCOUNT_ID
 
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
@@ -54,12 +55,22 @@ jobs:
         chmod 400 ~/.ssh/id_*
         echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
 
-        ############# Build #############
+        echo "Sending SSH public key to instance..."
+        aws ec2-instance-connect send-ssh-public-key \
+          --instance-id $INSTANCE_ID \
+          --ssh-public-key file://~/.ssh/id_rsa.pub \
+          --instance-os-user $EC2_USER_NAME
+
+    ############# Build #############
+    - name: build
+      run: |
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@$EC2_INSTANCE_IP "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
-        ############# Postbuild #############
+    ############# Postbuild #############
+    - name: post_build
+      run: |
         echo "Cleaning up resources..."
         if [ ! -z "$INSTANCE_ID" ]; then
             echo "Terminating EC2 instance $INSTANCE_ID..."
