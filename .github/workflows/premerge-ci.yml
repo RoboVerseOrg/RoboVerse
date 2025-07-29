@@ -1,0 +1,17 @@
+name: metasim GPU CI Checks on GitHub
+
+on: [push]
+
+jobs:
+  integration-tests:
+    runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+        - uses: actions/checkout@v4
+        - run: aws --version
+        - run: |
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            if [ -z "$AWS_ACCOUNT_ID" ]; then
+              echo "Error: Failed to get AWS account ID"
+              exit 1
+            fi
+            echo $AWS_ACCOUNT_ID
