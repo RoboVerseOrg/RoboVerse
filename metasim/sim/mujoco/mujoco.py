@@ -421,7 +421,8 @@ class MujocoHandler(BaseSimHandler):
             state = CameraState(rgb=rgb, depth=depth)
             camera_states[camera.name] = state
         extras = self.get_extra()
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
+
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={}, extras=extras)
 
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
         """Set root position and rotation."""
@@ -635,10 +636,18 @@ class MujocoHandler(BaseSimHandler):
                 if joint_name:
                     robot_actuator_names.append(joint_name)
 
-        joint_names = self.get_joint_names(robot_name)
-        assert set(robot_actuator_names) == set(joint_names), (
-            f"Actuator names {robot_actuator_names} do not match joint names {joint_names}"
+        all_joint_names = self.get_joint_names(robot_name)
+
+        actuated_joint_names = []
+        for joint_name in all_joint_names:
+            if joint_name in self.robot.actuators:
+                if self.robot.actuators[joint_name].fully_actuated is not False:
+                    actuated_joint_names.append(joint_name)
+
+        assert set(robot_actuator_names) == set(actuated_joint_names), (
+            f"Actuator names {robot_actuator_names} do not match joint names {actuated_joint_names}"
         )
+
         return robot_actuator_names
 
     def _get_actuator_reindex(self, robot_name: str) -> list[int]:
