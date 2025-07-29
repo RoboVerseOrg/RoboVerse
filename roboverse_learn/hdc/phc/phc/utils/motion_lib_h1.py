@@ -262,7 +262,7 @@ class MotionLibH1(MotionLibBase):
         else:
             print(self.curr_motion_keys[:30], ".....")
         print("*********************************************************************************\n")
-        with open("./motion_list.txt", "a") as file:
+        with open("./roboverse_learn/hdc/motion_list.txt", "a") as file:
             file.write(", ".join(map(str, self.curr_motion_keys)) + "\n")
 
         motion_data_list = self._motion_data_list[sample_idxes.cpu().numpy()]
