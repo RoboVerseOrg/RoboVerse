@@ -62,8 +62,7 @@ def play(cfg: DictConfig) -> None:
     # scenario & env
     scenario = ScenarioCfg(
         task="hdc:eval",
-        # robots=["h1_verse"],
-        robots=["h1_wrist"],
+        robots=["h1_verse"],
         sim="isaacgym",
         num_envs=1,
         headless=False,
