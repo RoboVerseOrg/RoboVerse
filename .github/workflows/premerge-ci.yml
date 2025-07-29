@@ -1,4 +1,4 @@
-name: metasim GPU CI Checks on GitHub
+name: MetaSim Pre-Merge CI Checks
 
 on: [push]
 
@@ -6,7 +6,9 @@ jobs:
   integration-tests:
     runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
+        - run: ls -al
         - uses: actions/checkout@v4
+        - run: ls -al
         - run: aws --version
         - run: |
             AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
