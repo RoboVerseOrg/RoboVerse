@@ -12,7 +12,6 @@ jobs:
   pre_build:
     runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-    - uses: actions/checkout@v4
     - run: aws --version
     ############# Prebuild #############
     - name: pre_build
