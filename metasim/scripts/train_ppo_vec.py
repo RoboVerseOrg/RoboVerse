@@ -5,7 +5,6 @@ try:
 except ImportError:
     pass
 
-import random
 from dataclasses import dataclass
 from typing import Literal
 
@@ -14,18 +13,14 @@ import numpy as np
 import torch
 import tyro
 from gymnasium import spaces
-from gymnasium.vector import VectorEnv
 from loguru import logger as log
 from packaging.version import Version
 from rich.logging import RichHandler
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecEnv
 
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.constants import SimType
-from metasim.sim import BaseSimHandler, EnvWrapper
-from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_env_class, register_task
+from metasim.utils.setup_util import register_task
+from metasim.wrapper.gym_vec_env import MetaSimVecEnv
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -39,86 +34,6 @@ class Args:
 
 
 args = tyro.cli(Args)
-
-
-class MetaSimVecEnv(VectorEnv):
-    """Vectorized environment for MetaSim that supports parallel RL training"""
-
-    def __init__(
-        self,
-        scenario: ScenarioCfg | None = None,
-        sim: str = "isaaclab",
-        task_name: str | None = None,
-        num_envs: int | None = 4,
-    ):
-        if scenario is None:
-            scenario = ScenarioCfg(task=task_name, robots=["franka"])
-            scenario.num_envs = num_envs
-            scenario = ScenarioCfg(**vars(scenario))
-        self.num_envs = scenario.num_envs
-        env_class = get_sim_env_class(SimType(sim))
-        env = env_class(scenario)
-        self.env: EnvWrapper[BaseSimHandler] = env
-        self.render_mode = None  # XXX
-        self.scenario = scenario
-
-        # Get candidate states
-        self.candidate_init_states, _, _ = get_traj(scenario.task, scenario.robots[0])
-
-        # XXX: is the inf space ok?
-        self.single_observation_space = spaces.Box(-np.inf, np.inf)
-        self.single_action_space = spaces.Box(-np.inf, np.inf)
-        self.observation_space = spaces.Box(-np.inf, np.inf)
-        self.action_space = spaces.Box(-np.inf, np.inf)
-
-    ############################################################
-    ## Gym-like interface
-    ############################################################
-    def reset(self, env_ids: list[int] | None = None, seed: int | None = None):
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-        init_states = self.unwrapped._get_default_states(seed)
-        self.env.reset(states=init_states, env_ids=env_ids)
-        return self.unwrapped._get_obs(), {}
-
-    def step(self, actions: list[dict]):
-        _, _, success, timeout, _ = self.env.step(actions)
-        obs = self.unwrapped._get_obs()
-        rewards = self.unwrapped._calculate_rewards()
-        return obs, rewards, success, timeout, {}
-
-    def render(self):
-        return self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    ############################################################
-    ## Helper methods
-    ############################################################
-    def _get_obs(self):
-        ## TODO: put this function into task definition?
-        ## TODO: use torch instead of numpy
-        """Get current observations for all environments"""
-        states = self.env.handler.get_states()
-        joint_pos = states.robots["franka"].joint_pos
-        panda_hand_index = states.robots["franka"].body_names.index("panda_hand")
-        ee_pos = states.robots["franka"].body_state[:, panda_hand_index, :3]
-
-        return torch.cat([joint_pos, ee_pos], dim=1)
-
-    def _calculate_rewards(self):
-        """Calculate rewards based on distance to origin"""
-        states = self.env.handler.get_states()
-        tot_reward = torch.zeros(self.num_envs, device=self.env.handler.device)
-        for reward_fn, weight in zip(self.scenario.task.reward_functions, self.scenario.task.reward_weights):
-            tot_reward += weight * reward_fn(states, self.scenario.robots[0].name)
-        return tot_reward
-
-    def _get_default_states(self, seed: int | None = None):
-        """Generate default reset states"""
-        ## TODO: use non-reqeatable random choice when there is enough candidate states?
-        return random.Random(seed).choices(self.candidate_init_states, k=self.num_envs)
 
 
 class StableBaseline3VecEnv(VecEnv):
@@ -211,9 +126,9 @@ def train_ppo():
     ## Choice 2: use gym.make to initialize the environment
     register_task(args.task)
     if Version(gym.__version__) < Version("1"):
-        metasim_env = gym.make(args.task, num_envs=args.num_envs)
+        metasim_env = gym.make(args.task, num_envs=args.num_envs, sim=args.sim)
     else:
-        metasim_env = gym.make_vec(args.task, num_envs=args.num_envs)
+        metasim_env = gym.make_vec(args.task, num_envs=args.num_envs, sim=args.sim)
     env = StableBaseline3VecEnv(metasim_env)
 
     # PPO configuration
