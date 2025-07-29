@@ -5,6 +5,7 @@ on: [push]
 env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
+  INSTANCE_TYPE: t2.micro
 
 jobs:
   pre_build:
@@ -25,7 +26,7 @@ jobs:
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
           --image-id ami-054b7fc3c333ac6d2 \
-          --instance-type g5.2xlarge \
+          --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
           --output text \
