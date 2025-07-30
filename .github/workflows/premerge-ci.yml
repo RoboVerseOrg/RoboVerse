@@ -86,24 +86,23 @@ jobs:
     - name: build
       run: |
         echo "Copying source code..."
-        # SRC_DIR=$(basename $GITHUB_WORKSPACE)
-        SRC_DIR=$(basename $CODEBUILD_SRC_DIR)
+        wait_time=$RETRY_WAIT_TIME
+        SRC_DIR=$(basename $GITHUB_WORKSPACE)
 
         echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-        ls ./
-        ls $GITHUB_WORKSPACE
         echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
-        ls $CODEBUILD_SRC_DIR
-        echo "SRC_DIR=$SRC_DIR"
         echo "EC2_USER_NAME=$EC2_USER_NAME"
+        echo "SRC_DIR=$SRC_DIR"
         echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
         echo "MAX_RETRIES=$MAX_RETRIES"
-
-
-
+        echo "====FILES_CHECK BEINGS===="
+        ls ./
+        echo "====FILES_CHECK ENDS===="
 
         retry_count=0
-        wait_time=$RETRY_WAIT_TIME
+
+        # change to parent directory t
+        cd ..
 
         while [ $retry_count -lt $MAX_RETRIES ]; do
           if [ $retry_count -gt 0 ]; then
@@ -112,7 +111,7 @@ jobs:
             sleep $wait_time
           fi
 
-          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r ./ ubuntu@$EC2_INSTANCE_IP:~; then
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR ubuntu@$EC2_INSTANCE_IP:~; then
             echo "SCP command succeeded"
             break
           fi
