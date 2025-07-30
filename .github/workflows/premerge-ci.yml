@@ -46,7 +46,7 @@ jobs:
         EC2_INSTANCE_IP=$(aws ec2 describe-instances \
           --region $REGION \
           --filters "Name=instance-state-name,Values=running" "Name=instance-id,Values=$INSTANCE_ID" \
-          --query 'Reservations[*].Instances[*].[PublicIpAddress]' \
+          --query 'Reservations[*].Instances[*].[PrivateIpAddress]' \
           --output text)
 
         echo "Setting up SSH configuration..."
