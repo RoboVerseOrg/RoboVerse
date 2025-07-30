@@ -18,7 +18,7 @@ env:
 
 jobs:
   pre-merge-tests:
-    runs-on: codebuild-EC2_Launcher-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
     - run: aws --version
     ############# Prebuild #############
