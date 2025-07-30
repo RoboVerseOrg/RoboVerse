@@ -22,6 +22,9 @@ jobs:
   pre-merge-tests:
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
+      # checkout code so that it can be copy to the EC2 instance
+    - name: Checkout code
+      uses: actions/checkout@v4
     - run: aws --version
     ############# Prebuild #############
     - name: pre_build
@@ -87,6 +90,7 @@ jobs:
         SRC_DIR=$(basename $CODEBUILD_SRC_DIR)
 
         echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+        ls ./
         ls $GITHUB_WORKSPACE
         echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
         ls $CODEBUILD_SRC_DIR
@@ -108,7 +112,7 @@ jobs:
             sleep $wait_time
           fi
 
-          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR ubuntu@$EC2_INSTANCE_IP:~; then
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r ./ ubuntu@$EC2_INSTANCE_IP:~; then
             echo "SCP command succeeded"
             break
           fi
