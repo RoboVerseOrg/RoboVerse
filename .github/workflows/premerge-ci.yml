@@ -29,6 +29,7 @@ jobs:
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
+          --security-group-ids sg-0fa5cb36717ec079d \
           --output text \
           --query 'Instances[0].InstanceId')
 
@@ -65,11 +66,8 @@ jobs:
     ############# Build #############
     - name: build
       run: |
-        echo "username: $EC2_USER_NAME"
-        echo "username: ${{ env.EC2_USER_NAME }}"
-        echo "ip: $EC2_INSTANCE_IP"
-        echo "ip: ${{ env.EC2_INSTANCE_IP }}"
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@${{ env.EC2_INSTANCE_IP }} "
+        echo "Running tests on EC2 instance..."
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
