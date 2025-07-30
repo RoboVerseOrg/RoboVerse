@@ -12,7 +12,7 @@ env:
   ## t2.micro: for quick cpu testing
   ## g5.xlarge: for GPU test
   ## g5.2xlarge: for resource-intensive GPU test. TODO: please set as default when CI/CD is ready
-  INSTANCE_TYPE: t2.micro
+  INSTANCE_TYPE: g5.xlarge
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
 
@@ -35,12 +35,13 @@ jobs:
 
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
-          --image-id ami-0ec1bf4a8f92e7bd1 \
+          --image-id ami-08071d2876b06efa2 \
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
           --security-group-ids sg-03f9110d8d39282ad \
           --subnet-id subnet-0c56793ce29caa78b \
+           --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":500}}]' \
           --output text \
           --query 'Instances[0].InstanceId')
         echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
@@ -81,9 +82,57 @@ jobs:
       run: |
         echo "Running tests on EC2 instance..."
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
-          # TODO: add test scripts here
+
           echo hello_world
           curl google.com
+
+
+        echo "Copy repo to EC2 (retry x5)…"
+        success=false
+        for i in {1..5}; do
+          scp -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
+              -r "$GITHUB_WORKSPACE" \
+              "${EC2_USER_NAME}@${EC2_INSTANCE_IP}:~" && { success=true; break; }
+          echo "SCP failed ($i/5), retrying in $((i*30)) s…"
+          sleep $((i*30))
+        done
+
+        $success || { echo "SCP failed after 5 attempts"; exit 1; }
+
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+        "${EC2_USER_NAME}@${EC2_INSTANCE_IP}" "
+
+          set -euo pipefail
+
+          cd \"\$HOME/${SRC_DIR}\"
+          echo '== path check =='
+          ls -al
+
+          # docker build
+          echo '== docker compose start =='
+          docker compose pull || true
+          docker compose up --build -d
+
+          # run all tests
+          echo '== run tests =='
+          docker compose exec -T metasim bash -c '
+            set -euo pipefail
+
+            #   SAPIEN3 & IsaacLab
+            conda activate metasim
+            python metasim/test/state_consistency.py --sim=sapien3      --headless
+            python metasim/test/state_consistency.py --sim=isaaclab     --headless
+
+            #   Genesis
+            conda activate metasim_genesis
+            python metasim/test/state_consistency.py --sim=metasim_genesis --headless
+
+            #  IsaacGym
+            conda activate metasim_isaacgym
+            python metasim/test/state_consistency.py --sim=isaacgym     --headless
+          '
+
+
         " || { echo "Test execution failed"; exit 1; }
 
     ############# Postbuild #############
