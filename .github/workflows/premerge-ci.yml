@@ -83,6 +83,10 @@ jobs:
         echo "Copying source code..."
         SRC_DIR=$(basename $GITHUB_WORKSPACE)
 
+        echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+        echo "SRC_DIR=$SRC_DIR"
+
+
         echo "Copy repo to EC2 (retry x5)…"
         success=false
         for i in {1..5}; do
@@ -94,18 +98,16 @@ jobs:
         done
         $success || { echo "SCP failed after 5 attempts"; exit 1; }
 
-
         echo "Running tests on EC2 instance..."
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
-
-          echo hello_world
-          curl google.com
 
           set -euo pipefail
 
           cd \"\$HOME/${SRC_DIR}\"
           echo '== path check =='
-          ls -al
+          ls .
+
+          # pwd
 
           # docker build
           echo '== docker compose start =='
