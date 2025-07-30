@@ -32,7 +32,7 @@ jobs:
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
-          --security-group-ids sg-0fa5cb36717ec079d \
+          --security-group-ids sg-03f9110d8d39282ad \
           --subnet-id subnet-0c56793ce29caa78b \
           --output text \
           --query 'Instances[0].InstanceId')
