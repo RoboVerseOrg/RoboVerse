@@ -48,6 +48,7 @@ jobs:
           --output text)
 
         echo "Setting up SSH configuration..."
+        echo "$SSH_KEY" | head -n 2
         echo "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 400 ~/.ssh/id_rsa
         ssh-add ~/.ssh/id_rsa
