@@ -6,7 +6,7 @@ env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
   INSTANCE_TYPE: t2.micro
-  EC2_USER_NAME: ec2-user
+  EC2_USER_NAME: ubuntu
   AZ: us-west-2a
 
 jobs:
