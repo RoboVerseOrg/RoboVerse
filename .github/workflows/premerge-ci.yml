@@ -107,7 +107,7 @@ jobs:
           echo '== path check =='
           ls .
 
-          # pwd
+          pwd
 
           # docker build
           echo '== docker compose start =='
