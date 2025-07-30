@@ -15,6 +15,8 @@ env:
   INSTANCE_TYPE: g5.xlarge
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
+  MAX_RETRIES: "5"
+  RETRY_WAIT_TIME: "30"
 
 jobs:
   pre-merge-tests:
@@ -85,18 +87,34 @@ jobs:
 
         echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
         echo "SRC_DIR=$SRC_DIR"
+        echo "EC2_USER_NAME=$EC2_USER_NAME"
+        echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
+        echo "MAX_RETRIES=$MAX_RETRIES"
 
 
-        echo "Copy repo to EC2 (retry x5)…"
-        success=false
-        for i in {1..5}; do
-          scp -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
-              -r "$GITHUB_WORKSPACE" \
-              "${EC2_USER_NAME}@${EC2_INSTANCE_IP}:~" && { success=true; break; }
-          echo "SCP failed ($i/5), retrying in $((i*30)) s…"
-          sleep $((i*30))
+        retry_count=0
+        wait_time=$RETRY_WAIT_TIME
+
+        while [ $retry_count -lt $MAX_RETRIES ]; do
+          if [ $retry_count -gt 0 ]; then
+            wait_time=$((wait_time * 2))
+            echo "Retry attempt $((retry_count + 1))/$MAX_RETRIES. Waiting $wait_time seconds..."
+            sleep $wait_time
+          fi
+
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR ubuntu@$EC2_INSTANCE_IP:~; then
+            echo "SCP command succeeded"
+            break
+          fi
+
+          retry_count=$((retry_count + 1))
         done
-        $success || { echo "SCP failed after 5 attempts"; exit 1; }
+
+        if [ $retry_count -eq $MAX_RETRIES ]; then
+          echo "SCP command failed after $MAX_RETRIES attempts"
+          exit 1
+        fi
+
 
         echo "Running tests on EC2 instance..."
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
