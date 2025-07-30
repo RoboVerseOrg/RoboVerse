@@ -74,7 +74,6 @@ jobs:
     - name: build
       run: |
         echo "Running tests on EC2 instance..."
-        nc -vz $EC2_INSTANCE_IP 22
         ssh -vvv -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
           echo hello_world
         " || { echo "Test execution failed"; exit 1; }
