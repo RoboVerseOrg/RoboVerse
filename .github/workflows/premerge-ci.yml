@@ -80,12 +80,8 @@ jobs:
     ############# Build #############
     - name: build
       run: |
-        echo "Running tests on EC2 instance..."
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
-
-          echo hello_world
-          curl google.com
-
+        echo "Copying source code..."
+        SRC_DIR=$(basename $GITHUB_WORKSPACE)
 
         echo "Copy repo to EC2 (retry x5)…"
         success=false
@@ -96,11 +92,14 @@ jobs:
           echo "SCP failed ($i/5), retrying in $((i*30)) s…"
           sleep $((i*30))
         done
-
         $success || { echo "SCP failed after 5 attempts"; exit 1; }
 
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-        "${EC2_USER_NAME}@${EC2_INSTANCE_IP}" "
+
+        echo "Running tests on EC2 instance..."
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+
+          echo hello_world
+          curl google.com
 
           set -euo pipefail
 
@@ -131,7 +130,6 @@ jobs:
             conda activate metasim_isaacgym
             python metasim/test/state_consistency.py --sim=isaacgym     --headless
           '
-
 
         " || { echo "Test execution failed"; exit 1; }
 
