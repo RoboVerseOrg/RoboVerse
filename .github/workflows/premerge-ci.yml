@@ -1,6 +1,9 @@
 name: MetaSim Pre-Merge CI Checks
 
-on: [push]
+on:
+  push:  # TODO: remove this when CI/CD is ready
+  merge_group:
+    types: [checks_requested]
 
 env:
   REGION: us-west-2
@@ -8,8 +11,8 @@ env:
   ## DEBUG: choose from the following options
   ## t2.micro: for quick cpu testing
   ## g5.xlarge: for GPU test
-  ## g5.2xlarge: for resource-intensive GPU test
-  INSTANCE_TYPE: g5.xlarge
+  ## g5.2xlarge: for resource-intensive GPU test. TODO: please set as default when CI/CD is ready
+  INSTANCE_TYPE: t2.micro
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
 
