@@ -7,6 +7,7 @@ env:
   KEY_NAME: Github_CI_SSH_KEY_PAIR
   INSTANCE_TYPE: t2.micro
   EC2_USER_NAME: ec2-user
+  AZ: us-west-2a
 
 jobs:
   pre-merge-tests:
@@ -59,6 +60,7 @@ jobs:
         echo "Sending SSH public key to instance..."
         aws ec2-instance-connect send-ssh-public-key \
           --instance-id $INSTANCE_ID \
+          --availability-zone $AZ \
           --ssh-public-key file://~/.ssh/id_rsa.pub \
           --instance-os-user $EC2_USER_NAME
 
