@@ -48,13 +48,12 @@ jobs:
           --output text)
 
         echo "Setting up SSH configuration..."
+        eval $(ssh-agent -s)
+        echo "$SSH_KEY" | tr -d '\r' | ssh-add -
         mkdir -p ~/.ssh
-        aws ec2 describe-key-pairs \
-          --include-public-key --key-name $KEY_NAME \
-          --query 'KeyPairs[0].PublicKey' \
-          --output text > ~/.ssh/id_rsa.pub
-        echo "$SSH_KEY" > ~/.ssh/id_rsa
-        chmod 400 ~/.ssh/id_*
+        touch ~/.ssh/config
+        touch ~/.ssh/known_hosts
+        chmod -R 400 ~/.ssh
         echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
 
         echo "Sending SSH public key to instance..."
