@@ -85,7 +85,6 @@ jobs:
           # TODO: add test scripts here
           echo hello_world
           curl google.com
-          sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
     ############# Postbuild #############
