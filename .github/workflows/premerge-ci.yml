@@ -25,7 +25,7 @@ jobs:
 
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
-          --image-id ami-054b7fc3c333ac6d2 \
+          --image-id ami-0ec1bf4a8f92e7bd1 \
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
@@ -67,7 +67,7 @@ jobs:
     - name: build
       run: |
         echo "Running tests on EC2 instance..."
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+        ssh -vvv -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
           sudo apt update
         " || { echo "Test execution failed"; exit 1; }
 
