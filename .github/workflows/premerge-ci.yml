@@ -5,6 +5,10 @@ on: [push]
 env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
+  ## DEBUG: choose from the following options
+  ## t2.micro: for quick cpu testing
+  ## g5.xlarge: for GPU test
+  ## g5.2xlarge: for resource-intensive GPU test
   INSTANCE_TYPE: t2.micro
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
@@ -74,7 +78,8 @@ jobs:
     - name: build
       run: |
         echo "Running tests on EC2 instance..."
-        ssh -vvv -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+          # TODO: add test scripts here
           echo hello_world
         " || { echo "Test execution failed"; exit 1; }
 
