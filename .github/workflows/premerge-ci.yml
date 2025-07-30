@@ -8,6 +8,8 @@ env:
   INSTANCE_TYPE: t2.micro
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
+  SSH_KEY: ${{ secrets.SSH_KEY }}
+  SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
 
 jobs:
   pre-merge-tests:
