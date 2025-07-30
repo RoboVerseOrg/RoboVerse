@@ -81,6 +81,7 @@ jobs:
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
           # TODO: add test scripts here
           echo hello_world
+          curl google.com
         " || { echo "Test execution failed"; exit 1; }
 
     ############# Postbuild #############
