@@ -9,7 +9,7 @@ env:
   ## t2.micro: for quick cpu testing
   ## g5.xlarge: for GPU test
   ## g5.2xlarge: for resource-intensive GPU test
-  INSTANCE_TYPE: t2.micro
+  INSTANCE_TYPE: g5.xlarge
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
 
@@ -87,6 +87,7 @@ jobs:
 
     ############# Postbuild #############
     - name: post_build
+      if: always()  # always try to terminate the instance
       run: |
         echo "Cleaning up resources..."
         if [ ! -z "$INSTANCE_ID" ]; then
