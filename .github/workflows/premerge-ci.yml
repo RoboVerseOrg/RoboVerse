@@ -102,7 +102,7 @@ jobs:
             sleep $wait_time
           fi
 
-          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR ubuntu@$EC2_INSTANCE_IP:~; then
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $GITHUB_WORKSPACE ubuntu@$EC2_INSTANCE_IP:~; then
             echo "SCP command succeeded"
             break
           fi
