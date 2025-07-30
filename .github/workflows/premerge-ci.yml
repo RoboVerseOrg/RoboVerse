@@ -8,8 +8,6 @@ env:
   INSTANCE_TYPE: t2.micro
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
-  SSH_KEY: ${{ secrets.SSH_KEY }}
-  SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
 
 jobs:
   pre-merge-tests:
@@ -50,8 +48,8 @@ jobs:
           --output text)
 
         echo "Setting up SSH configuration..."
-        echo "$SSH_KEY" | head -n 2
-        echo "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        echo ${{ secrets.EC2_SSH_KEY }} | head -n 2
+        echo ${{ secrets.EC2_SSH_KEY }} | tr -d '\r' > ~/.ssh/id_rsa
         chmod 400 ~/.ssh/id_rsa
         ssh-add ~/.ssh/id_rsa
         ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
