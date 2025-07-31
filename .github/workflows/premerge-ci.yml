@@ -136,9 +136,17 @@ jobs:
 
           pwd
 
-          # docker build
+          # set docker env variables
           echo '== docker compose start =='
-          printf "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER\n" > .env
+          cat > .env << 'EOT'
+          DOCKER_UID=1000
+          DOCKER_GID=1000
+          DOCKER_USER=ubuntu
+          EOT
+          echo "== .env file =="
+          cat .env
+          # docker build
+
           docker compose up --build -d
 
           # run all tests
@@ -146,14 +154,14 @@ jobs:
           docker compose exec -T metasim bash -c '
             set -euo pipefail
 
-            #   SAPIEN3 & IsaacLab
+            # SAPIEN3 & IsaacLab
             /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py --sim=sapien3      --headless
             /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaaclab     --headless
 
-            #   Genesis
+            # Genesis
             /home/ubuntu/conda/envs/metasim_genesis/bin/python metasim/test/state_consistency.py --sim=metasim_genesis --headless
 
-            #  IsaacGym
+            # IsaacGym
             /home/ubuntu/conda/envs/metasim_isaacgym/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaacgym     --headless
           '
 
