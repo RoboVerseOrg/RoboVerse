@@ -138,7 +138,7 @@ jobs:
 
           # docker build
           echo '== docker compose start =='
-          docker compose pull || true
+          printf "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER\n" > .env
           docker compose up --build -d
 
           # run all tests
@@ -147,17 +147,14 @@ jobs:
             set -euo pipefail
 
             #   SAPIEN3 & IsaacLab
-            conda activate metasim
-            python metasim/test/state_consistency.py --sim=sapien3      --headless
-            python metasim/test/state_consistency.py --sim=isaaclab     --headless
+            /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py --sim=sapien3      --headless
+            /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaaclab     --headless
 
             #   Genesis
-            conda activate metasim_genesis
-            python metasim/test/state_consistency.py --sim=metasim_genesis --headless
+            /home/ubuntu/conda/envs/metasim_genesis/bin/python metasim/test/state_consistency.py --sim=metasim_genesis --headless
 
             #  IsaacGym
-            conda activate metasim_isaacgym
-            python metasim/test/state_consistency.py --sim=isaacgym     --headless
+            /home/ubuntu/conda/envs/metasim_isaacgym/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaacgym     --headless
           '
 
         " || { echo "Test execution failed"; exit 1; }
