@@ -8,10 +8,6 @@ on:
 env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
-  ## DEBUG: choose from the following options
-  ## t2.micro: for quick cpu testing
-  ## g5.xlarge: for GPU test
-  ## g5.2xlarge: for resource-intensive GPU test. TODO: please set as default when CI/CD is ready
   INSTANCE_TYPE: g5.xlarge
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
@@ -40,7 +36,7 @@ jobs:
 
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
-          --image-id ami-08071d2876b06efa2 \
+          --image-id ami-0b7f5f52689b2c0d0 \
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
@@ -124,48 +120,42 @@ jobs:
           exit 1
         fi
 
-
         echo "Running tests on EC2 instance..."
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
 
           set -euo pipefail
 
           cd \"\$HOME/${SRC_DIR}\"
-          echo '== path check =='
-          ls .
 
-          pwd
-
-          # set docker env variables
-          echo '== docker compose start =='
-          cat > .env << 'EOT'
-          DOCKER_UID=1000
-          DOCKER_GID=1000
-          DOCKER_USER=ubuntu
-          EOT
-          echo "== .env file =="
-          cat .env
           # docker build
+          docker buildx build --progress=plain --platform linux/amd64 -t metasim \
+          --build-arg DOCKER_UID=1000 \
+          --build-arg DOCKER_GID=1000 \
+          --build-arg DOCKER_USER=ubuntu \
+          -f Dockerfile \
+          --load .
+          # --cache-to type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max,ignore-error=true \
+          # --cache-from type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest \
 
-          docker compose up --build -d
+          # run all test
+          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+          --name metasim-autotest \
+          --user 1000:1000 --privileged \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+          -v /usr/local/cuda:/usr/local/cuda \
+          -v "$(pwd)":/home/ubuntu/RoboVerse \
+          metasim:latest \
+          -c "/home/ubuntu/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
+          || TEST_EXIT_CODE=$?
 
-          # run all tests
-          echo '== run tests =='
-          docker compose exec -T metasim bash -c '
-            set -euo pipefail
-
-            # SAPIEN3 & IsaacLab
-            /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py --sim=sapien3      --headless
-            /home/ubuntu/conda/envs/metasim/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaaclab     --headless
-
-            # Genesis
-            /home/ubuntu/conda/envs/metasim_genesis/bin/python metasim/test/state_consistency.py --sim=metasim_genesis --headless
-
-            # IsaacGym
-            /home/ubuntu/conda/envs/metasim_isaacgym/bin/python metasim/test/state_consistency.py metasim/test/state_consistency.py --sim=isaacgym     --headless
-          '
-
+          echo "Test exit code: $TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
         " || { echo "Test execution failed"; exit 1; }
+
+        if [ "$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)" != "0" ]; then
+          echo "Tests failed with exit code $(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)"
+          exit 1
+        fi
 
     ############# Postbuild #############
     - name: post_build
