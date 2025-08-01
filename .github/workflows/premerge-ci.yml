@@ -19,7 +19,7 @@
     pre-merge-tests:
       runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
       steps:
-        # checkout code so that it can be copy to the EC2 instance
+        # change to the source code directory
       - name: Checkout code
         uses: actions/checkout@v4
       - run: aws --version
