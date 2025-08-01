@@ -23,7 +23,7 @@
       - name: Checkout code
         uses: actions/checkout@v4
       - run: aws --version
-      ############# Prebuild #############
+      ############# Prebuild ############
       - name: pre_build
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
