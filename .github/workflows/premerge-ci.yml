@@ -8,7 +8,7 @@
   env:
     REGION: us-west-2
     KEY_NAME: Github_CI_SSH_KEY_PAIR
-    INSTANCE_TYPE: g5.xlarge
+    INSTANCE_TYPE: g5.2xlarge
     EC2_USER_NAME: ubuntu
     AZ: us-west-2a
     MAX_RETRIES: "5"
@@ -149,7 +149,7 @@
           fi
 
           echo "Running tests on EC2 instance..."
-          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o ServerAliveInterval=120 -o ServerAliveCountMax=5 $EC2_USER_NAME@$EC2_INSTANCE_IP "
 
             set -euo pipefail
 
