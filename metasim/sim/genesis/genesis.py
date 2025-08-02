@@ -9,6 +9,7 @@ from loguru import logger as log
 
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg, _FileBasedMixin
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, GymEnvWrapper
 from metasim.types import Action, EnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -33,8 +34,8 @@ except Exception:
 
 
 class GenesisHandler(BaseSimHandler):
-    def __init__(self, scenario: ScenarioCfg):
-        super().__init__(scenario)
+    def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
+        super().__init__(scenario, optional_queries)
         self._actions_cache: list[Action] = []
         self.object_inst_dict: dict[str, RigidEntity] = {}
         self.camera_inst_dict: dict[str, Camera] = {}

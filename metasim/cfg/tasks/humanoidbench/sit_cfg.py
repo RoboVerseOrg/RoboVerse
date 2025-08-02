@@ -6,8 +6,8 @@ import torch
 
 from metasim.cfg.checkers import _SitChecker
 from metasim.cfg.objects import RigidObjCfg
-from metasim.cfg.query_type import SitePos
 from metasim.constants import PhysicStateType
+from metasim.queries.site import SitePos
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance_tensor
 from metasim.utils.humanoid_robot_util import (

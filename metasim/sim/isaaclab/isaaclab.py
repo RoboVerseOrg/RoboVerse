@@ -16,6 +16,7 @@ from metasim.cfg.objects import (
 )
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import ContactForceSensorCfg
+from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.dict import deep_get
@@ -36,8 +37,8 @@ except:
 
 
 class IsaaclabHandler(BaseSimHandler):
-    def __init__(self, scenario: ScenarioCfg):
-        super().__init__(scenario)
+    def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
+        super().__init__(scenario, optional_queries)
         self._actions_cache: list[Action] = []
 
     ############################################################
