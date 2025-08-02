@@ -199,7 +199,7 @@
             exit 1
           fi
 
-      ############# Postbuild #############
+      ########### Postbuild ############
       - name: post_build
         if: always()  # always try to terminate the instance
         run: |
