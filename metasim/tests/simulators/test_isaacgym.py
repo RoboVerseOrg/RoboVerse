@@ -19,7 +19,7 @@ from metasim.utils.state import TensorState
 
 isaacgym = pytest.importorskip("isaacgym")
 
-from metasim.sim.isaacgym.isaacgym import IsaacGymHandler
+from metasim.sim.isaacgym.isaacgym import IsaacgymHandler
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ def isaacgym_scenario():
 
 
 @pytest.mark.gpu
-class TestIsaacGymHandler:
+class TestIsaacgymHandler:
     """Test Isaac Gym-specific functionality."""
 
     def test_gpu_requirement(self, isaacgym_scenario):
@@ -120,7 +120,7 @@ class TestIsaacGymHandler:
         if not torch.cuda.is_available():
             pytest.skip("GPU not available")
 
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert handler.device.type == "cuda"
@@ -129,7 +129,7 @@ class TestIsaacGymHandler:
 
     def test_multi_env_support(self, isaacgym_scenario):
         """Test Isaac Gym's efficient multi-environment support."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert handler.num_envs == 4
@@ -140,7 +140,7 @@ class TestIsaacGymHandler:
 
     def test_physics_params_configuration(self, isaacgym_scenario):
         """Test physics parameters configuration."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         sim_params = handler.sim_params
@@ -151,7 +151,7 @@ class TestIsaacGymHandler:
 
     def test_primitive_creation_with_physics(self, isaacgym_scenario):
         """Test creation of primitives with physics properties."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert "cube" in handler.obj_actors
@@ -167,7 +167,7 @@ class TestIsaacGymHandler:
 
     def test_camera_sensor_creation(self, isaacgym_scenario):
         """Test camera sensor creation and configuration."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert len(handler.cam_sensors) > 0
@@ -181,7 +181,7 @@ class TestIsaacGymHandler:
 
     def test_tensor_state_management(self, isaacgym_scenario):
         """Test Isaac Gym's tensor-based state management."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         states = handler._get_states()
@@ -201,7 +201,7 @@ class TestIsaacGymHandler:
 
     def test_action_tensor_handling(self, isaacgym_scenario):
         """Test that Isaac Gym handles tensor actions efficiently."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         action_tensor = torch.tensor(
@@ -236,7 +236,7 @@ class TestIsaacGymHandler:
 
     def test_gpu_pipeline_rendering(self, isaacgym_scenario):
         """Test GPU pipeline rendering capabilities."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert handler.use_gpu_pipeline is not None
@@ -258,7 +258,7 @@ class TestIsaacGymHandler:
 
     def test_contact_force_handling(self, isaacgym_scenario):
         """Test contact force computation."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         actions = [{"robot": {"dof_pos_target": {"joint1": 0.0, "joint2": 0.0}}}] * 4
@@ -272,7 +272,7 @@ class TestIsaacGymHandler:
 
     def test_jacobian_computation(self, isaacgym_scenario):
         """Test Jacobian computation capabilities."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         if hasattr(handler.gym, "acquire_jacobian_tensor"):
@@ -283,7 +283,7 @@ class TestIsaacGymHandler:
 
     def test_mass_matrix_computation(self, isaacgym_scenario):
         """Test mass matrix computation."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         if hasattr(handler.gym, "acquire_mass_matrix_tensor"):
@@ -294,7 +294,7 @@ class TestIsaacGymHandler:
 
     def test_domain_randomization(self, isaacgym_scenario):
         """Test domain randomization capabilities."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         if hasattr(handler, "randomize_rigid_body_props"):
@@ -306,7 +306,7 @@ class TestIsaacGymHandler:
         """Test viewer integration when not headless."""
         isaacgym_scenario.headless = False
 
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         assert handler.viewer is not None
@@ -318,7 +318,7 @@ class TestIsaacGymHandler:
 
     def test_force_torque_sensors(self, isaacgym_scenario):
         """Test force/torque sensor support."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         if hasattr(handler.gym, "acquire_force_sensor_tensor"):
@@ -335,7 +335,7 @@ class TestIsaacGymHandler:
         )
         isaacgym_scenario.objects.append(articulated_obj)
 
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         if hasattr(handler, "dof_props"):
@@ -345,7 +345,7 @@ class TestIsaacGymHandler:
 
     def test_env_reset_subset(self, isaacgym_scenario):
         """Test resetting subset of environments."""
-        handler = IsaacGymHandler(isaacgym_scenario)
+        handler = IsaacgymHandler(isaacgym_scenario)
         handler.launch()
 
         obs, _ = handler.reset(env_ids=[0, 2])
@@ -362,7 +362,7 @@ def test_physics_engine_types(isaacgym_scenario, sim_type):
     if sim_type == isaacgym.SimType.SIM_FLEX:
         pytest.skip("Flex support may not be available")
 
-    handler = IsaacGymHandler(isaacgym_scenario)
+    handler = IsaacgymHandler(isaacgym_scenario)
     handler.launch()
 
     assert handler.sim is not None
@@ -374,7 +374,7 @@ def test_performance_optimizations(isaacgym_scenario):
     """Test Isaac Gym performance optimizations."""
     isaacgym_scenario.num_envs = 64
 
-    handler = IsaacGymHandler(isaacgym_scenario)
+    handler = IsaacgymHandler(isaacgym_scenario)
     handler.launch()
 
     states = handler._get_states()
@@ -398,7 +398,7 @@ def test_performance_optimizations(isaacgym_scenario):
 
 def test_api_compliance_issues(isaacgym_scenario):
     """Test and document API compliance issues."""
-    handler = IsaacGymHandler(isaacgym_scenario)
+    handler = IsaacgymHandler(isaacgym_scenario)
 
     compliance_issues = []
 
