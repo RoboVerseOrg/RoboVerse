@@ -109,19 +109,19 @@
       ############# Build #############
       - name: build
         run: |
-          echo "Copying source code..."
+          echo "====Copying source code...===="
           wait_time=$RETRY_WAIT_TIME
           SRC_DIR=$(basename $GITHUB_WORKSPACE)
-
+          echo ""====Check environment variables..."===="
           echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
           echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
           echo "EC2_USER_NAME=$EC2_USER_NAME"
           echo "SRC_DIR=$SRC_DIR"
           echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
           echo "MAX_RETRIES=$MAX_RETRIES"
-          echo "====FILES_CHECK BEINGS===="
+          echo "====Repo file check...===="
           ls ./
-          echo "====FILES_CHECK ENDS===="
+
 
           retry_count=0
 
@@ -148,7 +148,7 @@
             exit 1
           fi
 
-          echo "Running tests on EC2 instance..."
+          echo "====Running tests on EC2 instance...===="
           ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
 
             set -euo pipefail
