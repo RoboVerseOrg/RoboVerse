@@ -8,9 +8,11 @@ from multiprocessing import Pool
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from metasim.cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.cfg.objects import (BaseObjCfg, PrimitiveCubeCfg,
+                                 PrimitiveCylinderCfg, PrimitiveSphereCfg)
 
-from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
+from .parse_util import (extract_mesh_paths_from_mjcf,
+                         extract_mesh_paths_from_urdf)
 
 ## This is to avoid circular import
 try:
@@ -106,7 +108,7 @@ class FileDownloader:
 
     def _add_from_scenario(self):
         ## TODO: delete this line after scenario is automatically overwritten by task
-        objects = self.scenario.task.objects if self.scenario.task is not None else self.scenario.objects
+        objects = self.scenario.objects
 
         for obj in objects:
             self._add_from_object(obj)
@@ -114,20 +116,20 @@ class FileDownloader:
             self._add_from_object(robot)
         if self.scenario.scene is not None:
             self._add_from_object(self.scenario.scene)
-        if self.scenario.task is not None:
-            traj_filepath = self.scenario.task.traj_filepath
-            if traj_filepath is None:
-                return
+        # if self.scenario.task is not None:
+        #     traj_filepath = self.scenario.task.traj_filepath
+        #     if traj_filepath is None:
+        #         return
 
-            ## HACK: This is hacky
-            if (
-                traj_filepath.find(".pkl") == -1
-                and traj_filepath.find(".json") == -1
-                and traj_filepath.find(".yaml") == -1
-                and traj_filepath.find(".yml") == -1
-            ):
-                traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
-            self._add(traj_filepath)
+        #     ## HACK: This is hacky
+        #     if (
+        #         traj_filepath.find(".pkl") == -1
+        #         and traj_filepath.find(".json") == -1
+        #         and traj_filepath.find(".yaml") == -1
+        #         and traj_filepath.find(".yml") == -1
+        #     ):
+        #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
+        #     self._add(traj_filepath)
 
     def _add_from_object(self, obj: BaseObjCfg):
         ## TODO: add a primitive base object class?
@@ -138,15 +140,15 @@ class FileDownloader:
         ):
             return
 
-        if self.scenario.sim in ["isaaclab"]:
+        if self.scenario.simulator in ["isaaclab"]:
             self._add(obj.usd_path)
-        elif self.scenario.sim in ["pybullet", "sapien2", "sapien3", "genesis"] or (
-            self.scenario.sim == "isaacgym" and not obj.isaacgym_read_mjcf
+        elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
+            self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
         ):
             self._add(obj.urdf_path)
-        elif self.scenario.sim in ["mujoco"] or (self.scenario.sim == "isaacgym" and obj.isaacgym_read_mjcf):
+        elif self.scenario.simulator in ["mujoco"] or (self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf):
             self._add(obj.mjcf_path)
-        elif self.scenario.sim in ["mjx"]:
+        elif self.scenario.simulator in ["mjx"]:
             self._add(obj.mjx_mjcf_path)
 
     def _add(self, filepath: str):

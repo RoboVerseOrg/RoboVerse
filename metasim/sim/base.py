@@ -1,47 +1,37 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import torch
 from loguru import logger as log
 
-from metasim.cfg.randomization import FrictionRandomCfg
 from metasim.cfg.robots import BaseRobotCfg
 
 if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
+
 from metasim.queries.base import BaseQueryType
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
-from metasim.utils.state import TensorState, state_tensor_to_nested
+from metasim.types import EnvState, TensorState
 
 
 class BaseSimHandler(ABC):
     """Base class for simulation handler."""
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
-        ## Overwrite scenario with task, TODO: this should happen in scenario class post_init
-        if scenario.task is not None:
-            scenario.objects = scenario.task.objects
-            scenario.checker = scenario.task.checker
-            scenario.decimation = scenario.task.decimation
-            scenario.episode_length = scenario.task.episode_length
 
         self.scenario = scenario
-        self._num_envs = scenario.num_envs
-        self.headless = scenario.headless
         self.optional_queries = optional_queries
 
         ## For quick reference
-        self.task = scenario.task
         self.robots = scenario.robots
         self.cameras = scenario.cameras
         self.sensors = scenario.sensors
         self.objects = scenario.objects
-        self.checker = scenario.checker
-        self.object_dict = {obj.name: obj for obj in self.objects + self.robots + self.checker.get_debug_viewers()}
-        """A dict mapping object names to object cfg instances. It includes objects, robot, and checker debug viewers."""
-        self._state_cache_expire = True
+        self._num_envs = scenario.num_envs
+        self.decimation = scenario.decimation
+        self.headless = scenario.headless
+        self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -50,24 +40,6 @@ class BaseSimHandler(ABC):
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
         # raise NotImplementedError
-
-    ############################################################
-    ## Gymnasium main methods
-    ############################################################
-    def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
-        raise NotImplementedError
-
-    def reset(self, env_ids: list[int] | None = None) -> tuple[TensorState, Extra]:
-        """Reset the environment.
-
-        Args:
-            env_ids: The indices of the environments to reset. If None, all environments are reset.
-
-        Return:
-            obs: The observation of the environment. Currently all the environments are returned. Do we need to return only the reset environments?
-            extra: Extra information. Currently is empty.
-        """
-        raise NotImplementedError
 
     def render(self) -> None:
         raise NotImplementedError
@@ -79,37 +51,25 @@ class BaseSimHandler(ABC):
     ############################################################
     ## Set states
     ############################################################
-    def set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    @abstractmethod
+    def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment.
 
         Args:
             states (dict): A dictionary containing the states of the environment
             env_ids (list[int]): List of environment ids to set the states. If None, set the states of all environments
         """
-        self._state_cache_expire = True
-        self._set_states(states, env_ids=env_ids)
-
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
         raise NotImplementedError
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
-        """Set the dof targets of the robot.
-
-        Args:
-            obj_name (str): The name of the robot
-            actions (list[Action]): The target actions for the robot
-        """
-        raise NotImplementedError
-
-    def set_pose(self, obj_name: str, pos: torch.Tensor, rot: torch.Tensor, env_ids: list[int] | None = None) -> None:
-        states = [{obj_name: {"pos": pos[env_id], "rot": rot[env_id]}} for env_id in range(self.num_envs)]
-        self.set_states(states, env_ids=env_ids)
+    def set_states(self, states: TensorState | dict, env_ids: list[int] | None = None) -> None:
+        """Set the states of the environment."""
+        self._set_states(states, env_ids)
 
     ############################################################
     ## Get states
     ############################################################
     @abstractmethod
-    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get the states of the environment.
 
         Args:
@@ -118,14 +78,16 @@ class BaseSimHandler(ABC):
         Returns:
             dict: A dictionary containing the states of the environment
         """
-        pass
+        raise NotImplementedError
 
-    def get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
-        if self._state_cache_expire:
-            self._states = self._get_states(env_ids=env_ids)
-            self._state_cache_expire = False
-        return self._states
+    def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor") -> TensorState | dict:
+        """Get the states of the environment."""
+        # TODO: do type change here
+        return self._get_states(env_ids)
 
+    ############################################################
+    ## Get extra queries
+    ############################################################
     def get_extra(self):
         """Get the extra information of the environment."""
         ret_dict = {}
@@ -133,101 +95,17 @@ class BaseSimHandler(ABC):
             ret_dict[query_name] = query_type()
         return ret_dict
 
-    def get_vel(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
-        if self.num_envs > 1:
-            log.warning(
-                "You are using the unoptimized get_pos method, which could be slow, please contact the maintainer to"
-                " support the optimized version if necessary"
-            )
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        states = self.get_states(env_ids=env_ids)
-        if obj_name in states.objects:
-            return states.objects[obj_name].root_state[:, 7:10]
-        elif obj_name in states.robots:
-            return states.robots[obj_name].root_state[:, 7:10]
-        else:
-            raise ValueError(f"Object {obj_name} not found in states")
-
-    def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
-        if self.num_envs > 1:
-            log.warning(
-                "You are using the unoptimized get_pos method, which could be slow, please contact the maintainer to"
-                " support the optimized version if necessary"
-            )
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        states = self.get_states(env_ids=env_ids)
-        if obj_name in states.objects:
-            return states.objects[obj_name].root_state[:, :3]
-        elif obj_name in states.robots:
-            return states.robots[obj_name].root_state[:, :3]
-        else:
-            raise ValueError(f"Object {obj_name} not found in states")
-
-    def get_rot(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
-        if self.num_envs > 1:
-            log.warning(
-                "You are using the unoptimized get_rot method, which could be slow, please contact the maintainer to"
-                " support the optimized version if necessary"
-            )
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        states = self.get_states(env_ids=env_ids)
-        if obj_name in states.objects:
-            return states.objects[obj_name].root_state[:, 3:7]
-        elif obj_name in states.robots:
-            return states.robots[obj_name].root_state[:, 3:7]
-        else:
-            raise ValueError(f"Object {obj_name} not found in states")
-
-    def get_dof_pos(self, obj_name: str, joint_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
-        if self.num_envs > 1:
-            log.warning(
-                "You are using the unoptimized get_dof_pos method, which could be slow, please contact the maintainer"
-                " to support the optimized version if necessary"
-            )
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        states = self.get_states(env_ids=env_ids)
-        states = state_tensor_to_nested(self, states)
-        return torch.tensor([
-            {**env_state["objects"], **env_state["robots"]}[obj_name]["dof_pos"][joint_name] for env_state in states
-        ])
-
     ############################################################
     ## Simulate
     ############################################################
     @abstractmethod
-    def _simulate(self):
-        pass
-
     def simulate(self):
-        """Simulate the environment."""
-        self._state_cache_expire = True
-        self._simulate()
-
-    ############################################################
-    ## Domain Randomization
-    ############################################################
-    def rand_rigid_body_fric(self, cfg: FrictionRandomCfg):
-        raise NotImplementedError
-
-    ############################################################
-    ## Utils
-    ############################################################
-    def refresh_render(self) -> None:
-        """Refresh the render."""
-        raise NotImplementedError
+        pass
 
     ############################################################
     ## Misc
     ############################################################
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object.
 
         Note:
@@ -242,7 +120,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
+    def _get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
         """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
 
         Args:
@@ -270,14 +148,14 @@ class BaseSimHandler(ABC):
             self._joint_reindex_cache_inverse = {}
 
         if obj_name not in self._joint_reindex_cache:
-            origin_joint_names = self.get_joint_names(obj_name, sort=False)
-            sorted_joint_names = self.get_joint_names(obj_name, sort=True)
+            origin_joint_names = self._get_joint_names(obj_name, sort=False)
+            sorted_joint_names = self._get_joint_names(obj_name, sort=True)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
             self._joint_reindex_cache_inverse[obj_name] = [sorted_joint_names.index(jn) for jn in origin_joint_names]
 
         return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.
 
         Note:
@@ -292,7 +170,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def get_body_reindex(self, obj_name: str) -> list[int]:
+    def _get_body_reindex(self, obj_name: str) -> list[int]:
         """Get the reindexing order for body indices of a given object. The returned indices can be used to reorder the bodies such that they are sorted alphabetically by their names.
 
         Args:
@@ -316,8 +194,8 @@ class BaseSimHandler(ABC):
             self._body_reindex_cache = {}
 
         if obj_name not in self._body_reindex_cache:
-            origin_body_names = self.get_body_names(obj_name, sort=False)
-            sorted_body_names = self.get_body_names(obj_name, sort=True)
+            origin_body_names = self._get_body_names(obj_name, sort=False)
+            sorted_body_names = self._get_body_names(obj_name, sort=True)
             self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
 
         return self._body_reindex_cache[obj_name]
@@ -327,26 +205,5 @@ class BaseSimHandler(ABC):
         return self._num_envs
 
     @property
-    def episode_length_buf(self) -> list[int]:
-        """The timestep of each environment, restart from 0 when reset, plus 1 at each step."""
-        raise NotImplementedError
-
-    @property
-    def actions_cache(self) -> list[Action]:
-        """Cache of actions."""
-        raise NotImplementedError
-
-    @property
     def device(self) -> torch.device:
         raise NotImplementedError
-
-    ############################################################
-    ## Temporary
-    ############################################################
-
-    @property
-    def robot(self) -> BaseRobotCfg:
-        """The robot in the scenario. This is only for temporary use, we should remove this property in the future."""
-        if len(self.robots) > 1:
-            log.warning("Only the first robot is used for now, the others are ignored")
-        return self.robots[0]
