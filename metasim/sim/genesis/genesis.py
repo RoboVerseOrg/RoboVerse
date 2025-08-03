@@ -192,7 +192,7 @@ class GenesisHandler(BaseSimHandler):
             )
             camera_states[camera.name] = state
 
-        extras = self.get_extra()  # extra observations TODO: add extra observations    
+        extras = self.get_extra()  # extra observations TODO: add extra observations
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
