@@ -77,7 +77,7 @@
 
           echo "Waiting for instance $INSTANCE_ID to be running..."
           aws ec2 wait instance-running \
-            --instance-ids $INSTANCE_ID \f
+            --instance-ids $INSTANCE_ID \
             --region $REGION
 
           echo "Getting instance IP address..."
