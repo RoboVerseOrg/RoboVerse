@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
 from metasim.sim.base import BaseSimHandler
-from metasim.types import EnvState, TensorState
+from metasim.types import DictEnvState, TensorState
 from metasim.utils.state import join_tensor_states
 
 
@@ -141,7 +141,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                 process.join()
             self.closed = True
 
-        def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+        def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 

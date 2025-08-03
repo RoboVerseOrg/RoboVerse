@@ -12,7 +12,7 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveS
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination
+from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, Termination
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.math import matrix_from_quat
 
@@ -63,7 +63,7 @@ class BlenderHandler(BaseSimHandler):
 
         self._add_camera()
 
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         assert env_ids == [0]

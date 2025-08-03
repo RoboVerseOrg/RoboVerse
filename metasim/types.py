@@ -24,7 +24,7 @@ class RobotAction(TypedDict):
 Action = Dict[str, RobotAction]
 
 
-class ObjectState(TypedDict):
+class DictObjectState(TypedDict):
     """State of the object."""
 
     pos: torch.Tensor
@@ -37,7 +37,7 @@ class ObjectState(TypedDict):
     com_vel: torch.Tensor | None
 
 
-class RobotState(ObjectState):
+class DictRobotState(DictObjectState):
     """State of the robot."""
 
     dof_pos: Dof | None
@@ -48,11 +48,11 @@ class RobotState(ObjectState):
     dof_torque: Dof | None
 
 
-class EnvState(TypedDict):
+class DictEnvState(TypedDict):
     """State of the environment."""
 
-    objects: dict[str, ObjectState]
-    robots: dict[str, RobotState]
+    objects: dict[str, DictObjectState]
+    robots: dict[str, DictRobotState]
     cameras: dict[str, dict[str, torch.Tensor]]
 
 

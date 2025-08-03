@@ -10,7 +10,7 @@ import imageio as iio
 import numpy as np
 import torch
 
-from metasim.types import EnvState
+from metasim.types import DictEnvState
 from metasim.utils.io_util import write_16bit_depth_video
 
 
@@ -18,12 +18,12 @@ def _normalize_depth(depth: np.ndarray) -> np.ndarray:
     return (depth - depth.min()) / (depth.max() - depth.min())
 
 
-def is_v2_demo(demo: list[EnvState]) -> bool:
+def is_v2_demo(demo: list[DictEnvState]) -> bool:
     """Check if the demo is in the v2 format. Demo should be v3 state format."""
     return "robots" in demo[0]
 
 
-def save_demo_v2(save_dir: str, demo: list[EnvState]):
+def save_demo_v2(save_dir: str, demo: list[DictEnvState]):
     """Save a demo to a directory.
 
     Args:

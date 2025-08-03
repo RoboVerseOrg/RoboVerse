@@ -24,8 +24,6 @@ from metasim.types import CameraState, ObjectState, RobotState, TensorState
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
-        self._actions_cache: list[Action] = []
-
         if scenario.num_envs > 1:
             raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
 
@@ -529,11 +527,8 @@ class MujocoHandler(BaseSimHandler):
             actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
             self.physics.data.ctrl[actuator_id] = effort[i]
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
-
-        raise NotImplementedError(
-            "set_dof_targets is deprecated, use set_states instead"
-        )
+    def set_dof_targets(self, obj_name: str, actions: list) -> None:
+        raise NotImplementedError("set_dof_targets is deprecated, use set_states instead")
 
     # def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
     #     self._actions_cache = actions

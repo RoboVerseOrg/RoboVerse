@@ -18,7 +18,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import ContactForceSensorCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ContactForceState, ObjectState, RobotState, TensorState
 
@@ -176,7 +176,7 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
-    def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[list[DictEnvState], Extra]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -286,7 +286,7 @@ class IsaaclabHandler(BaseSimHandler):
         obj_inst.write_joint_state_to_sim(pos, vel, env_ids=torch.tensor(env_ids, device=self.env.device))
         obj_inst.write_data_to_sim()
 
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 

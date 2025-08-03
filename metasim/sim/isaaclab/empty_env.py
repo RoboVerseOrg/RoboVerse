@@ -13,8 +13,7 @@ except ModuleNotFoundError:
     from isaaclab.sim import PhysxCfg, SimulationCfg
     from isaaclab.utils import configclass
 
-
-from metasim.types import EnvState
+from metasim.types import DictEnvState
 
 from .utils.custom_direct_rl_env import CustomDirectRLEnv
 
@@ -40,7 +39,7 @@ class EmptyEnvCfg(DirectRLEnvCfg):
 
 class EmptyEnv(CustomDirectRLEnv):
     cfg: EmptyEnvCfg
-    init_states: list[EnvState]
+    init_states: list[DictEnvState]
 
     def __init__(self, cfg: EmptyEnvCfg, render_mode: str | None = None, **kwargs):
         self.func = {
