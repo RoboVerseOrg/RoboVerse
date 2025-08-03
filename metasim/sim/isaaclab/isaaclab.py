@@ -15,12 +15,11 @@ from metasim.cfg.objects import (
     PrimitiveFrameCfg,
 )
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import ContactForceSensorCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.dict import deep_get
-from metasim.utils.state import CameraState, ContactForceState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
 from .isaaclab_helper import _update_tiled_camera_pose, get_pose

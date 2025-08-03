@@ -21,10 +21,10 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
+from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_env_class

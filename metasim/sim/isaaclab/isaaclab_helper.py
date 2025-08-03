@@ -3,6 +3,7 @@ import os
 import torch
 from loguru import logger as log
 
+from metasim.cfg.cameras import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
 from metasim.cfg.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
 from metasim.cfg.objects import (
     ArticulationObjCfg,
@@ -14,7 +15,6 @@ from metasim.cfg.objects import (
     RigidObjCfg,
 )
 from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.cameras import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
 from metasim.utils.math import convert_camera_frame_orientation_convention
 
 try:

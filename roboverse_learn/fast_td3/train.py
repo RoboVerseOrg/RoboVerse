@@ -37,8 +37,8 @@ from tensordict import TensorDict
 from torch.amp import GradScaler, autocast
 from wrapper import FastTD3EnvWrapper
 
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.cameras import PinholeCameraCfg
+from metasim.cfg.scenario import ScenarioCfg
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 torch.set_float32_matmul_precision("high")

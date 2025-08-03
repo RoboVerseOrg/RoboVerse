@@ -118,8 +118,8 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 from torchvision.utils import make_grid
 
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.cameras import PinholeCameraCfg
+from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
