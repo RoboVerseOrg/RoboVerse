@@ -5,12 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import (
-    contact_forces_tensor,
-    dof_pos_tensor,
-    dof_vel_tensor,
-)
+from metasim.types import DictEnvState
+from metasim.utils.humanoid_robot_util import contact_forces_tensor, dof_pos_tensor, dof_vel_tensor
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
@@ -31,12 +27,12 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
         self.front_table_root_states = env_states.objects["front_table"].root_state.clone()
         self.back_table_root_states = env_states.objects["back_table"].root_state.clone()
 
-    def _parse_box_goal_pos(self, envstate: EnvState):
+    def _parse_box_goal_pos(self, envstate: DictEnvState):
         """Parse box goal position from envstate"""
         envstate.objects["box"].extra = {}
         envstate.objects["box"].extra["box_goal_pos"] = self.box_goal_pos
 
-    def _parse_state_for_reward(self, envstate: EnvState) -> None:
+    def _parse_state_for_reward(self, envstate: DictEnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
@@ -44,7 +40,7 @@ class TaskTransferWrapper(HumanoidBaseWrapper):
         super()._parse_state_for_reward(envstate)
         self._parse_box_goal_pos(envstate)
 
-    def _compute_observations(self, envstates: EnvState) -> None:
+    def _compute_observations(self, envstates: DictEnvState) -> None:
         """Add observation into states"""
 
         # humanoid observations

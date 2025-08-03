@@ -5,12 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import (
-    contact_forces_tensor,
-    dof_pos_tensor,
-    dof_vel_tensor,
-)
+from metasim.types import DictEnvState
+from metasim.utils.humanoid_robot_util import contact_forces_tensor, dof_pos_tensor, dof_vel_tensor
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
@@ -34,12 +30,12 @@ class TaskBallWrapper(HumanoidBaseWrapper):
         # HACK This is a hack to get the goal position for checker
         self.cfg.goal_pos = self.goal_pos
 
-    def _parse_goal_pos(self, envstate: EnvState):
+    def _parse_goal_pos(self, envstate: DictEnvState):
         """Parse goal position from envstate"""
         envstate.robots[self.robot.name].extra["goal_pos"] = self.goal_pos
         envstate.robots[self.robot.name].extra["ori_ball_pos"] = self.ori_ball_pos
 
-    def _parse_state_for_reward(self, envstate: EnvState) -> None:
+    def _parse_state_for_reward(self, envstate: DictEnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
@@ -47,7 +43,7 @@ class TaskBallWrapper(HumanoidBaseWrapper):
         super()._parse_state_for_reward(envstate)
         self._parse_goal_pos(envstate)
 
-    def _compute_observations(self, envstates: EnvState) -> None:
+    def _compute_observations(self, envstates: DictEnvState) -> None:
         """Add observation into states"""
 
         # humanoid observations

@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from loguru import logger as log
-
 from metasim.utils.configclass import configclass
 from metasim.utils.hf_util import FileDownloader
-from metasim.utils.setup_util import get_robot, get_scene, get_task
+from metasim.utils.setup_util import get_robot, get_scene
 
-from .lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
+from .lights import BaseLightCfg, DistantLightCfg
 from .objects import BaseObjCfg
 from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
@@ -41,9 +39,9 @@ class ScenarioCfg:
 
         FileDownloader(self).do_it()
 
-# @configclass
-# class SimulationCfg:
-#     """Simulation configuration."""
+    # @configclass
+    # class SimulationCfg:
+    #     """Simulation configuration."""
     # scenario: ScenarioCfg = ScenarioCfg()
 
     render: RenderCfg = RenderCfg()

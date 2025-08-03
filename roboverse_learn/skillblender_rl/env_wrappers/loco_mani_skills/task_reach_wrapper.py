@@ -5,13 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import (
-    contact_forces_tensor,
-    dof_pos_tensor,
-    dof_vel_tensor,
-    sample_wp,
-)
+from metasim.types import DictEnvState
+from metasim.utils.humanoid_robot_util import contact_forces_tensor, dof_pos_tensor, dof_vel_tensor, sample_wp
 from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
@@ -27,10 +22,10 @@ class TaskReachWrapper(HumanoidBaseWrapper):
         self.env.handler.simulate()
         self._init_target_wp(env_states)
 
-    def _parse_ref_wrist_pos(self, envstate: EnvState):
+    def _parse_ref_wrist_pos(self, envstate: DictEnvState):
         envstate.robots[self.robot.name].extra["ref_wrist_pos"] = self.ref_wrist_pos
 
-    def _init_target_wp(self, envstate: EnvState) -> None:
+    def _init_target_wp(self, envstate: DictEnvState) -> None:
         self.ori_wrist_pos = (
             envstate.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
         )  # [num_envs, 2, 7], two hands
@@ -57,7 +52,7 @@ class TaskReachWrapper(HumanoidBaseWrapper):
         self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
         self.update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
 
-    def _post_physics_step(self, env_states: EnvState) -> None:
+    def _post_physics_step(self, env_states: DictEnvState) -> None:
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
         # update episode length from env_wrapper
         self.episode_length_buf = self.env.episode_length_buf_tensor
@@ -106,7 +101,7 @@ class TaskReachWrapper(HumanoidBaseWrapper):
             resample_i, torch.randint(0, self.num_pairs, (self.num_envs,), device=self.device), self.target_wp_i
         )
 
-    def _parse_state_for_reward(self, envstate: EnvState) -> None:
+    def _parse_state_for_reward(self, envstate: DictEnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
         """
@@ -114,7 +109,7 @@ class TaskReachWrapper(HumanoidBaseWrapper):
         super()._parse_state_for_reward(envstate)
         self._parse_ref_wrist_pos(envstate)
 
-    def _compute_observations(self, envstates: EnvState) -> None:
+    def _compute_observations(self, envstates: DictEnvState) -> None:
         """Add observation into states"""
 
         phase = self._get_phase()

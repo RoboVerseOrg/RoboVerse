@@ -5,12 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import (
-    contact_forces_tensor,
-    dof_pos_tensor,
-    dof_vel_tensor,
-)
+from metasim.types import DictEnvState
+from metasim.utils.humanoid_robot_util import contact_forces_tensor, dof_pos_tensor, dof_vel_tensor
 from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
@@ -28,7 +24,7 @@ class TaskCabinetWrapper(HumanoidBaseWrapper):
         super()._init_buffers()
         self.arti_obj_dof_goal = 0.0
 
-    def _compute_observations(self, envstates: EnvState) -> None:
+    def _compute_observations(self, envstates: DictEnvState) -> None:
         """Add observation into states"""
 
         # humanoid observations
