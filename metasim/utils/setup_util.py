@@ -10,8 +10,7 @@ from loguru import logger as log
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.cfg.scenes import SceneCfg
 from metasim.constants import SimType
-from metasim.utils import (is_camel_case, is_snake_case, to_camel_case,
-                           to_snake_case)
+from metasim.utils import is_camel_case, is_snake_case, to_camel_case, to_snake_case
 
 
 def get_sim_handler_class(sim: SimType):
