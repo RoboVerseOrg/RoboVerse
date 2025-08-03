@@ -11,7 +11,7 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveS
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, GymEnvWrapper
-from metasim.types import Action, EnvState
+from metasim.types import Action, DictEnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 # Apply IGL compatibility patch
@@ -118,7 +118,7 @@ class GenesisHandler(BaseSimHandler):
             n_envs=self.scenario.num_envs, env_spacing=(self.scenario.env_spacing, self.scenario.env_spacing)
         )
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> list[DictEnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -194,7 +194,7 @@ class GenesisHandler(BaseSimHandler):
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
 
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         states_flat = [state["objects"] | state["robots"] for state in states]

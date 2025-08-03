@@ -54,4 +54,4 @@ class ScenarioCfg:
     env_spacing: float = 1.0
     decimation: int = 25
 
-    trajectory: TrajectoryCfg | None = None
+    # trajectory: TrajectoryCfg | None = None

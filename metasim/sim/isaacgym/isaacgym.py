@@ -20,7 +20,7 @@ from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import Action, EnvState
+from metasim.types import Action, DictEnvState
 from metasim.utils.dict import class_to_dict
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -558,7 +558,7 @@ class IsaacgymHandler(BaseSimHandler):
             else state[..., [0, 1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 11, 12]]
         )
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[EnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> list[DictEnvState]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         object_states = {}
@@ -787,12 +787,12 @@ class IsaacgymHandler(BaseSimHandler):
             effort = torch.cat((obj_force_placeholder, effort), dim=1)
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
 
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None):
+    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        # if states is list[EnvState], iterate over it and set state
+        # if states is list[DictEnvState], iterate over it and set state
         if isinstance(states, list):
             assert len(states) == self.num_envs, (
                 f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
@@ -896,7 +896,7 @@ class IsaacgymHandler(BaseSimHandler):
                 len(env_ids),
             )
         else:
-            raise Exception("Unsupported state type, must be EnvState or TensorState")
+            raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
         # Refresh tensors
         self.gym.refresh_rigid_body_state_tensor(self.sim)

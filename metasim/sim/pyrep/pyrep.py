@@ -10,7 +10,7 @@ from pyrep.robots.end_effectors.panda_gripper import PandaGripper
 from rlbench.backend.robot import Robot
 
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils import to_snake_case
 
 # TODO: try best to be independent from RLBench
@@ -69,7 +69,7 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Set states
     ############################################################
-    def _set_states(self, states: list[EnvState]) -> None:
+    def _set_states(self, states: list[DictEnvState]) -> None:
         assert len(states) == 1  # PyRep only supports one env
         state = states[0]
 
@@ -93,5 +93,5 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def _get_states(self) -> list[EnvState]:
+    def _get_states(self) -> list[DictEnvState]:
         pass

@@ -20,7 +20,7 @@ from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import Action, EnvState
+from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -310,7 +310,7 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def _get_states(self, env_ids=None) -> list[EnvState]:
+    def _get_states(self, env_ids=None) -> list[DictEnvState]:
         """Get the states of the environment.
 
         Returns:

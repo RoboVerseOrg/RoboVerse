@@ -29,7 +29,7 @@ from metasim.cfg.robots import BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import Action, EnvState
+from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -392,7 +392,7 @@ class Sapien3Handler(BaseSimHandler):
         link_state_tensor = torch.cat(link_state_list, dim=0)
         return link_name_list, link_state_tensor
 
-    def _get_states(self, env_ids=None) -> list[EnvState]:
+    def _get_states(self, env_ids=None) -> list[DictEnvState]:
         object_states = {}
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
