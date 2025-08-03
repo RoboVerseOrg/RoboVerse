@@ -529,6 +529,12 @@ class MujocoHandler(BaseSimHandler):
             actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
             self.physics.data.ctrl[actuator_id] = effort[i]
 
+    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+
+        raise NotImplementedError(
+            "set_dof_targets is deprecated, use set_states instead"
+        )
+
     # def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
     #     self._actions_cache = actions
 
