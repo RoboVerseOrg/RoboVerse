@@ -69,7 +69,7 @@
             --key-name $KEY_NAME \
             --security-group-ids sg-03f9110d8d39282ad \
             --subnet-id subnet-0c56793ce29caa78b \
-            --iam-instance-profile Name="codebuild-EC2-Launcher-service-role" \
+            --iam-instance-profile Name="RoboverseCi" \
             --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":500}}]' \
             --output text \
             --query 'Instances[0].InstanceId')
