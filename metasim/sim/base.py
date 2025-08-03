@@ -4,22 +4,18 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
 import torch
-from loguru import logger as log
-
-from metasim.cfg.robots import BaseRobotCfg
 
 if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
-from metasim.types import EnvState, TensorState
+from metasim.types import TensorState
 
 
 class BaseSimHandler(ABC):
     """Base class for simulation handler."""
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
-
         self.scenario = scenario
         self.optional_queries = optional_queries
 
@@ -80,7 +76,9 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor") -> TensorState | dict:
+    def get_states(
+        self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"
+    ) -> TensorState | dict:
         """Get the states of the environment."""
         # TODO: do type change here
         return self._get_states(env_ids)

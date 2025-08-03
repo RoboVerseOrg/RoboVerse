@@ -8,11 +8,9 @@ from multiprocessing import Pool
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from metasim.cfg.objects import (BaseObjCfg, PrimitiveCubeCfg,
-                                 PrimitiveCylinderCfg, PrimitiveSphereCfg)
+from metasim.cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
-from .parse_util import (extract_mesh_paths_from_mjcf,
-                         extract_mesh_paths_from_urdf)
+from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
 
 ## This is to avoid circular import
 try:
@@ -146,7 +144,9 @@ class FileDownloader:
             self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
         ):
             self._add(obj.urdf_path)
-        elif self.scenario.simulator in ["mujoco"] or (self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf):
+        elif self.scenario.simulator in ["mujoco"] or (
+            self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf
+        ):
             self._add(obj.mjcf_path)
         elif self.scenario.simulator in ["mjx"]:
             self._add(obj.mjx_mjcf_path)

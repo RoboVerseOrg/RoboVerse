@@ -9,14 +9,12 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import (ArticulationObjCfg, PrimitiveCubeCfg,
-                                 PrimitiveCylinderCfg, PrimitiveSphereCfg)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.cfg.robots import BaseRobotCfg
 
 if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
-from metasim.constants import TaskType
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.sim.parallel import ParallelSimWrapper
@@ -48,7 +46,7 @@ class MujocoHandler(BaseSimHandler):
         # else:
         #     log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
         #     self.decimation = 25
-        decimation = self,scenario.decimation
+        decimation = self, scenario.decimation
 
         self._manual_pd_on = False
         self._p_gains = None
@@ -485,9 +483,11 @@ class MujocoHandler(BaseSimHandler):
     def _set_states(self, states: dict, env_ids=None, zero_vel=True):
         if len(states) > 1:
             raise ValueError("MujocoHandler only supports single env state setting")
+
         def dict_merge(d1, d2):
             d1.update(d2)
             return d1
+
         states_flat = [dict_merge(state["objects"], state["robots"]) for state in states]
         for obj_name, obj_state in states_flat[0].items():
             self._set_root_state(obj_name, obj_state, zero_vel)
