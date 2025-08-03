@@ -38,7 +38,7 @@ from scipy.spatial.transform import Rotation as R
 from get_started.utils import ObsSaver, get_pcd_from_rgbd
 from metasim.cfg.objects import RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
+from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 

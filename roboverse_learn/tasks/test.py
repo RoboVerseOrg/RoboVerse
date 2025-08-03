@@ -3,7 +3,7 @@ from base import BaseTaskWrapper
 
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
+from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.constants import PhysicStateType
 
 if __name__ == "__main__":

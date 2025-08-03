@@ -74,7 +74,7 @@ def main():
     num_envs: int = args.num_envs
 
     from metasim.cfg.scenario import RandomizationCfg
-    from metasim.cfg.sensors import PinholeCameraCfg
+    from metasim.cfg.cameras import PinholeCameraCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_sim_env_class

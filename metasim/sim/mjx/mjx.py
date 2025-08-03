@@ -212,16 +212,9 @@ class MJXHandler(BaseSimHandler):
                     rgb=rgb_tensor if want_rgb else None,
                     depth=dep_tensor if want_dep else None,
                 )
-        # ===================== Sensors ==================================
-        sensors: dict[str, torch.Tensor] = {}
-        # `sens_batch` has shape (batch, total_dim)
-        sens_batch = data.sensordata[idx]
-        for name, sl in self._sensor_slices:
-            # Convert JAX → PyTorch; result shape (batch, dim)
-            sensors[name] = j2t(sens_batch[:, sl])
 
         extras = self.get_extra()  # extra observations
-        return TensorState(objects=objects, robots=robots, sensors=sensors, cameras=camera_states, extras=extras)
+        return TensorState(objects=objects, robots=robots, cameras=camera_states, extras=extras)
 
     def _set_states(
         self,

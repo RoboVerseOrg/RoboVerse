@@ -47,7 +47,7 @@ def main():
         from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 
     from metasim.cfg.scenario import ScenarioCfg
-    from metasim.cfg.sensors import PinholeCameraCfg
+    from metasim.cfg.cameras import PinholeCameraCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_sim_env_class

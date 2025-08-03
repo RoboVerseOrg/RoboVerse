@@ -408,19 +408,19 @@ class IsaaclabHandler(BaseSimHandler):
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
 
-        sensor_states = {}
-        for sensor in self.sensors:
-            if isinstance(sensor, ContactForceSensorCfg):
-                sensor_inst = self.env.scene.sensors[sensor.name]
-                if sensor.source_link is None:
-                    force = sensor_inst.data.net_forces_w.squeeze(1)
-                else:
-                    force = sensor_inst.data.force_matrix_w.squeeze((1, 2))
-                sensor_states[sensor.name] = ContactForceState(force=force)
-            else:
-                raise ValueError(f"Unknown sensor type: {type(sensor)}")
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors=sensor_states)
+        # sensor_states = {}
+        # for sensor in self.sensors:
+        #     if isinstance(sensor, ContactForceSensorCfg):
+        #         sensor_inst = self.env.scene.sensors[sensor.name]
+        #         if sensor.source_link is None:
+        #             force = sensor_inst.data.net_forces_w.squeeze(1)
+        #         else:
+        #             force = sensor_inst.data.force_matrix_w.squeeze((1, 2))
+        #         sensor_states[sensor.name] = ContactForceState(force=force)
+        #     else:
+        #         raise ValueError(f"Unknown sensor type: {type(sensor)}")
+        extras = self.get_extra()  # extra observationsq
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if env_ids is None:
