@@ -42,6 +42,9 @@ class RobotState(ObjectState):
 
     dof_pos: Dof | None
     dof_vel: Dof | None
+
+    dof_pos_target: Dof | None
+    dof_vel_target: Dof | None
     dof_torque: Dof | None
 
 

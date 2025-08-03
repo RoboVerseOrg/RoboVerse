@@ -61,7 +61,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def set_states(self, states: TensorState | dict, env_ids: list[int] | None = None) -> None:
+    def set_states(self, states: TensorState | EnvState, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
         self._set_states(states, env_ids)
 
@@ -80,7 +80,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor") -> TensorState | dict:
+    def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor") -> TensorState | EnvState:
         """Get the states of the environment."""
         # TODO: do type change here
         return self._get_states(env_ids)
