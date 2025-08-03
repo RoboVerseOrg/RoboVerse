@@ -426,7 +426,7 @@ class MujocoHandler(BaseSimHandler):
             camera_states[camera.name] = state
         extras = self.get_extra()
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={}, extras=extras)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
         """Set root position and rotation."""

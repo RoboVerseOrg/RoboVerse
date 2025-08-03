@@ -383,7 +383,8 @@ class SinglePybulletHandler(BaseSimHandler):
             )
             camera_states[camera.name] = state
 
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
+        extras = self.get_extra()  # extra observations
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     ############################################################
     ## Utils

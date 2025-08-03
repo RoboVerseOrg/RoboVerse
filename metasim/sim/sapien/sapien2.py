@@ -457,8 +457,8 @@ class Sapien2Handler(BaseSimHandler):
             depth = torch.from_numpy(depth.copy())
             state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
             camera_states[camera.name] = state
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
+        extras = self.get_extra()  # extra observations
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _set_states(self, states, env_ids=None):
         states_flat = [state["objects"] | state["robots"] for state in states]

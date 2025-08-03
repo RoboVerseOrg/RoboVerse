@@ -172,7 +172,5 @@ class TensorState:
     """States of all robots."""
     cameras: dict[str, CameraState]
     """States of all cameras."""
-    sensors: dict[str, SensorState]
-    """States of all sensors."""
     extras: dict = field(default_factory=dict)
     """States of Extra information"""
