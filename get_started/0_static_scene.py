@@ -9,9 +9,7 @@ try:
 except ImportError:
     pass
 
-import os
 
-import imageio
 import rootutils
 import torch
 import tyro
@@ -22,15 +20,14 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.cfg.objects import (ArticulationObjCfg, PrimitiveCubeCfg,
-                                 PrimitiveSphereCfg, RigidObjCfg)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class, get_sim_handler_class
+from metasim.utils.setup_util import get_sim_handler_class
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     @configclass
     class Args:
@@ -49,16 +46,10 @@ if __name__ == "__main__" :
             """Post-initialization configuration."""
             log.info(f"Args: {self}")
 
-
     args = tyro.cli(Args)
 
     # initialize scenario
-    scenario = ScenarioCfg(
-        robots=[args.robot],
-        headless=args.headless,
-        num_envs=args.num_envs,
-        simulator=args.sim
-    )
+    scenario = ScenarioCfg(robots=[args.robot], headless=args.headless, num_envs=args.num_envs, simulator=args.sim)
 
     # add cameras
     scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
@@ -93,7 +84,6 @@ if __name__ == "__main__" :
             mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
-
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_handler_class(SimType(args.sim))
@@ -141,7 +131,7 @@ if __name__ == "__main__" :
     ]
     env.launch()
     env.set_states(init_states)
-    while True :
+    while True:
         env.simulate()
     # obs = env.get_states(mode="dict")
     # os.makedirs("get_started/output", exist_ok=True)
