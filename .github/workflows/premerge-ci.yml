@@ -109,6 +109,7 @@
 
       - name: Verify credentials inside instance
         run: |
+          echo "====Verify credentials inside instance...===="
           set -euo pipefail
           ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_IP \
             "aws sts get-caller-identity"
