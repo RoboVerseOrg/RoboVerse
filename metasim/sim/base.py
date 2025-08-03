@@ -50,6 +50,7 @@ class BaseSimHandler(ABC):
     @abstractmethod
     def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment.
+        For a new simulator, you should implement this method.
 
         Args:
             states (dict): A dictionary containing the states of the environment
@@ -67,6 +68,7 @@ class BaseSimHandler(ABC):
     @abstractmethod
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get the states of the environment.
+        For a new simulator, you should implement this method.
 
         Args:
             env_ids: List of environment ids to get the states from. If None, get the states of all environments.
@@ -97,14 +99,22 @@ class BaseSimHandler(ABC):
     ## Simulate
     ############################################################
     @abstractmethod
+    def _simulate(self):
+        """Simulate the environment for one time step.
+        For a new simulator, you should implement this method.
+        """
+        raise NotImplementedError
+
     def simulate(self):
-        pass
+        """Simulate the environment."""
+        self._simulate()
 
     ############################################################
     ## Misc
     ############################################################
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object.
+        For a new simulator, you should implement this method.
 
         Note:
             Different simulators may have different joint order, but joint names should be the same.
@@ -118,7 +128,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def _get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
+    def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
         """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
 
         Args:
@@ -155,6 +165,7 @@ class BaseSimHandler(ABC):
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.
+        For a new simulator, you should implement this method.
 
         Note:
             Different simulators may have different body order, but body names should be the same.
@@ -168,7 +179,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def _get_body_reindex(self, obj_name: str) -> list[int]:
+    def get_body_reindex(self, obj_name: str) -> list[int]:
         """Get the reindexing order for body indices of a given object. The returned indices can be used to reorder the bodies such that they are sorted alphabetically by their names.
 
         Args:

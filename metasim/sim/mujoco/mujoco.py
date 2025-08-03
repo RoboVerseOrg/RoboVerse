@@ -576,7 +576,7 @@ class MujocoHandler(BaseSimHandler):
     #     if self.viewer is not None:
     #         self.viewer.sync()
 
-    def simulate(self):
+    def _simulate(self):
         if self._gravity_compensation:
             self._disable_robotgravity()
 
@@ -701,7 +701,7 @@ class MujocoHandler(BaseSimHandler):
                 if self.physics.model.body(bi).name.split("/")[0] == model_name
                 and self.physics.model.body(bi).name != f"{model_name}/"
             ]
-            body_ids_reindex = [body_ids_origin[i] for i in self._get_body_reindex(obj_name)]
+            body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
             self._body_ids_reindex_cache[obj_name] = body_ids_reindex
         return self._body_ids_reindex_cache[obj_name]
 
