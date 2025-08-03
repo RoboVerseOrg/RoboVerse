@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import sys
-import time
 import traceback
 from copy import deepcopy
 from functools import partial
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, EnvState, TensorState
+from metasim.types import EnvState, TensorState
 from metasim.utils.state import join_tensor_states
 
 
