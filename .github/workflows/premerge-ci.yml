@@ -197,7 +197,7 @@
               # -f Dockerfile \
               # --load .
             else
-              echo "Starting docker build."
+              echo "===Starting docker build.==="
               docker buildx build --progress=plain --platform linux/amd64 \
               -t "$IMAGE_URI" \
               --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
@@ -229,7 +229,7 @@
             echo "$TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
           " || { echo "Test execution failed"; exit 1; }
 
-          echo "Copying test reports..."
+          echo "===Copying test reports...==="
           scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
 
           EXIT_CODE=$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)
@@ -237,8 +237,8 @@
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo "Tests failed with exit code $EXIT_CODE"
             exit 1
-          else:
-            echo "All tests passed!"
+          else
+            echo "===All tests passed!==="
           fi
 
       ########### Postbuild #########
