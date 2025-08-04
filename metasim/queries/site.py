@@ -1,8 +1,10 @@
 # metasim/queries/mjx_queries.py
 from __future__ import annotations
+
 try:
     import jax
     import mujoco
+
     from metasim.sim.mjx import MJXHandler
     from metasim.sim.mujoco import MujocoHandler
 except:

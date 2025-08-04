@@ -94,6 +94,12 @@ class MetaSimVecEnv(VectorEnv):
         """Calculate rewards based on distance to origin."""
         states = self.env.handler.get_states()
         tot_reward = torch.zeros(self.num_envs, device=self.env.handler.device)
+
+        from dataclasses import _MISSING_TYPE
+
+        if isinstance(self.scenario.task.reward_functions, _MISSING_TYPE):
+            return tot_reward
+
         for reward_fn, weight in zip(self.scenario.task.reward_functions, self.scenario.task.reward_weights):
             tot_reward += weight * reward_fn(states, self.scenario.robots[0].name)
         return tot_reward
