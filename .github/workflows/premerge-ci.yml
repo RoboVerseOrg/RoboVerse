@@ -14,6 +14,7 @@
     MAX_RETRIES: "5"
     RETRY_WAIT_TIME: "30"
     CACHE_BUCKET_PREFIX: "metasim-build-cache"
+    ECR_REPOSITORY: "roboverse-dev"
 
   jobs:
     pre-merge-tests:
@@ -75,10 +76,14 @@
             --query 'Instances[0].InstanceId')
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-          echo "Waiting for instance $INSTANCE_ID to be running..."
-          aws ec2 wait instance-running \
-            --instance-ids $INSTANCE_ID \
-            --region $REGION
+
+          # Create ECR repository if it doesn't exist
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
+            aws ecr create-repository --repository-name $ECR_REPOSITORY
+            echo "Waiting for instance $INSTANCE_ID to be running..."
+            aws ec2 wait instance-running \
+              --instance-ids $INSTANCE_ID \
+              --region $REGION
 
           echo "Getting instance IP address..."
           EC2_INSTANCE_IP=$(aws ec2 describe-instances \
@@ -106,15 +111,6 @@
             --ssh-public-key file://~/.ssh/id_rsa.pub \
             --instance-os-user $EC2_USER_NAME
 
-
-      # - name: Verify credentials inside instance
-      #   run: |
-      #     echo "====Verify credentials inside instance...===="
-      #     set -euo pipefail
-      #     ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_IP \
-      #       "aws sts get-caller-identity"
-      #   env:
-      #     EC2_IP: ${{ env.EC2_IP }}
       ############# Build #############
       - name: build
         run: |
@@ -131,6 +127,10 @@
           echo "====Repo file check...===="
           ls ./
 
+          # ==== before buildx build ====
+          DOCKERFILE_HASH=$(sha256sum Dockerfile | cut -c1-16)
+          IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:df-$DOCKERFILE_HASH"
+          echo "IMAGE_URI=$IMAGE_URI"
 
           retry_count=0
 
@@ -176,26 +176,30 @@
             cd \"\$HOME/${SRC_DIR}\"
 
             # docker build
-            docker buildx build --progress=plain --platform linux/amd64 -t metasim \
-            --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
-            --cache-to   type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max,ignore-error=true \
-            --build-arg DOCKER_UID=1000 \
-            --build-arg DOCKER_GID=1000 \
-            --build-arg DOCKER_USER=ubuntu \
-            -f Dockerfile \
-            --load .
-            # --cache-to type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max,ignore-error=true \
-            # --cache-from type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest \
+            if docker pull "$IMAGE_URI" 2>/dev/null ; then
+              echo "Image $IMAGE_URI already exists. Skipping build."
+            else
+              docker buildx build --progress=plain --platform linux/amd64 \
+              -t "$IMAGE_URI" \
+              -t "$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest" \
+              --push \
+              --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
+              --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
+              --build-arg DOCKER_UID=1000 \
+              --build-arg DOCKER_GID=1000 \
+              --build-arg DOCKER_USER=ubuntu \
+              -f Dockerfile \
+              --load .
 
             # run all test
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
             --name metasim-autotest \
             --user 1000:1000 --privileged \
-            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
             -v "$(pwd)":/home/ubuntu/RoboVerse \
-            metasim:latest \
+            "$IMAGE_URI"
             -c "/home/ubuntu/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
             || TEST_EXIT_CODE=$?
 
