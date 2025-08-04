@@ -158,10 +158,16 @@
             exit 1
           fi
 
+          # login
+          ECR_LOGIN_TOKEN=$(aws ecr get-login-password --region $REGION)
+
           echo "====Running tests on EC2 instance...===="
           ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
 
             set -euo pipefail
+
+            # Login to ECR using token from CodeBuild
+            echo \"$ECR_LOGIN_TOKEN\" | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
             # Configure BuildKit environment
             export DOCKER_BUILDKIT=1
