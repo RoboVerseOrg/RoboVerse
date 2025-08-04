@@ -199,8 +199,13 @@
             -c "/home/ubuntu/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
             || TEST_EXIT_CODE=$?
 
+            # TODO check if test_exit_code necessary
+            touch ~/$SRC_DIR/test_exit_code.txt
             echo "Test exit code: $TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
           " || { echo "Test execution failed"; exit 1; }
+
+          echo "Copying test reports..."
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
 
           if [ "$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)" != "0" ]; then
             echo "Tests failed with exit code $(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)"
