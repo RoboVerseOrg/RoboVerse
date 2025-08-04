@@ -32,6 +32,7 @@
         run: |
           # Get AWS account ID
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
           if [ -z "$AWS_ACCOUNT_ID" ]; then
             echo "Error: Failed to get AWS account ID"
             exit 1
@@ -190,6 +191,7 @@
               --build-arg DOCKER_USER=ubuntu \
               -f Dockerfile \
               --load .
+            fi
 
             # run all test
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
@@ -199,7 +201,7 @@
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
             -v "$(pwd)":/home/ubuntu/RoboVerse \
-            "$IMAGE_URI"
+            "$IMAGE_URI" \
             -c "/home/ubuntu/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
             || TEST_EXIT_CODE=$?
 
