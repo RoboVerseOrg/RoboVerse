@@ -190,7 +190,7 @@
               --build-arg DOCKER_GID=1000 \
               --build-arg DOCKER_USER=ubuntu \
               -f Dockerfile \
-              --load .
+              .
             fi
 
             # run all test
