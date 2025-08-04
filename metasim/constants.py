@@ -2,20 +2,6 @@
 
 import enum
 
-
-class TaskType(enum.IntEnum):
-    """Task type."""
-
-    TABLETOP_MANIPULATION = 0
-    """Fixed manipulation"""
-    MOBILE_MANIPULATION = 1
-    """Mobile manipulation"""
-    LOCOMOTION = 2
-    """Locomotion"""
-    NAVIGATION = 3
-    """Navigation"""
-
-
 class BenchmarkType(enum.Enum):
     """Benchmark type."""
 

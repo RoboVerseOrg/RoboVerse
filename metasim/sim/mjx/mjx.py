@@ -30,9 +30,8 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveC
 if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
-from metasim.constants import TaskType
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -74,7 +73,7 @@ class MJXHandler(BaseSimHandler):
         self._fix_path_cache: dict[str, int] = {}
         self._gravity_compensation = not self._robot.enabled_gravity
 
-        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
+        if self.scenario.sim_params.dt is not None:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")

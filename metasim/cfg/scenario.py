@@ -13,7 +13,7 @@ from .objects import BaseObjCfg
 from .render import RenderCfg
 from .robots.base_robot_cfg import BaseRobotCfg
 from .scenes.base_scene_cfg import SceneCfg
-from .sensors import BaseCameraCfg, BaseSensorCfg
+from .cameras import BaseCameraCfg
 from .simulator_params import SimParamCfg
 
 
@@ -26,7 +26,7 @@ class ScenarioCfg:
     lights: list[BaseLightCfg] = [DistantLightCfg()]
     objects: list[BaseObjCfg] = []
     cameras: list[BaseCameraCfg] = []
-    sensors: list[BaseSensorCfg] = []
+
 
     def __post_init__(self):
         """Post-initialization configuration."""
