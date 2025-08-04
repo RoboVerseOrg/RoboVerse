@@ -1,13 +1,15 @@
 # metasim/queries/mjx_queries.py
 from __future__ import annotations
-
-import jax
-import mujoco
+try:
+    import jax
+    import mujoco
+    from metasim.sim.mjx import MJXHandler
+    from metasim.sim.mujoco import MujocoHandler
+except:
+    pass
 import torch
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim.mjx import MJXHandler
-from metasim.sim.mujoco import MujocoHandler
 
 # ------------------------ util cache ------------------------
 _site_cache = {}
@@ -24,7 +26,7 @@ def _get_site_id(model: mujoco.MjModel, name: str) -> int:
 class SitePos(BaseQueryType):
     """World frame position of a MuJoCo site."""
 
-    supported_handlers = [MJXHandler, MujocoHandler]
+    # supported_handlers = [MJXHandler, MujocoHandler]
 
     def __init__(self, site_name: str):
         super().__init__()
