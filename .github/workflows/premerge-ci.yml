@@ -145,7 +145,7 @@ jobs:
             sleep $wait_time
           fi
 
-          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR ubuntu@$EC2_INSTANCE_IP:~; then
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR $EC2_USER_NAME@$EC2_INSTANCE_IP:~; then
             echo "SCP command succeeded"
             break
           fi
@@ -193,7 +193,7 @@ jobs:
             # --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
             # --build-arg DOCKER_UID=1000 \
             # --build-arg DOCKER_GID=1000 \
-            # --build-arg DOCKER_USER=ubuntu \
+            # --build-arg DOCKER_USER=$EC2_USER_NAME \
             # -f Dockerfile \
             # --load .
           else
@@ -204,7 +204,7 @@ jobs:
             --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
             --build-arg DOCKER_UID=1000 \
             --build-arg DOCKER_GID=1000 \
-            --build-arg DOCKER_USER=ubuntu \
+            --build-arg DOCKER_USER=$EC2_USER_NAME \
             -f Dockerfile \
             --load .
 
@@ -219,9 +219,9 @@ jobs:
           -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
           -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
           -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/ubuntu/RoboVerse \
+          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
           "$IMAGE_URI" \
-          -c "/home/ubuntu/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
+          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
           || TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary
@@ -230,7 +230,7 @@ jobs:
         " || { echo "Test execution failed"; exit 1; }
 
         echo "===Copying test reports...==="
-        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
 
         EXIT_CODE=$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)
 
