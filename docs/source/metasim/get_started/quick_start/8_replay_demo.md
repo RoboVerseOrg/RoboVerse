@@ -76,4 +76,3 @@ Note: only single environment is supported for adding scene.
 ```bash
 python metasim/scripts/replay_demo.py --sim=isaaclab --task=CloseBox --num_envs 1 --scene=tapwater_scene_131
 ```
-
