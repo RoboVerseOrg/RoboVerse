@@ -185,22 +185,11 @@ jobs:
           # docker build
           if docker pull "$IMAGE_URI" 2>/dev/null ; then
             echo "Image $IMAGE_URI already exists. Skipping build."
-            # echo "Use cached Image $IMAGE_URI"
-            # docker buildx build --progress=plain --platform linux/amd64 \
-            # -t "$IMAGE_URI" \
-            # # -t "$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest" \ #TODO add latest for image release
-            # --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
-            # --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
-            # --build-arg DOCKER_UID=1000 \
-            # --build-arg DOCKER_GID=1000 \
-            # --build-arg DOCKER_USER=$EC2_USER_NAME \
-            # -f Dockerfile \
-            # --load .
           else
             echo "===Starting docker build.==="
             docker buildx build --progress=plain --platform linux/amd64 \
             -t "$IMAGE_URI" \
-            --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
+            --cache-from type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
             --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
             --build-arg DOCKER_UID=1000 \
             --build-arg DOCKER_GID=1000 \
