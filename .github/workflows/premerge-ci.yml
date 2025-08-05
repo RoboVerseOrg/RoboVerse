@@ -1,54 +1,90 @@
 name: MetaSim Pre-Merge CI Checks
 
 on:
-  push:  # TODO: remove this when CI/CD is ready
+  workflow_dispatch:
   merge_group:
     types: [checks_requested]
 
 env:
   REGION: us-west-2
   KEY_NAME: Github_CI_SSH_KEY_PAIR
-  ## DEBUG: choose from the following options
-  ## t2.micro: for quick cpu testing
-  ## g5.xlarge: for GPU test
-  ## g5.2xlarge: for resource-intensive GPU test. TODO: please set as default when CI/CD is ready
-  INSTANCE_TYPE: t2.micro
+  INSTANCE_TYPE: g5.2xlarge
   EC2_USER_NAME: ubuntu
   AZ: us-west-2a
+  MAX_RETRIES: "5"
+  RETRY_WAIT_TIME: "30"
+  CACHE_BUCKET_PREFIX: "metasim-build-cache"
+  ECR_REPOSITORY: "roboverse-dev"
 
 jobs:
   pre-merge-tests:
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 720
     steps:
+      # change to the source code directory
+    - name: Checkout code
+      uses: actions/checkout@v4
     - run: aws --version
-    ############# Prebuild #############
+    ############# Prebuild ############
     - name: pre_build
       env:
         SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
       run: |
         # Get AWS account ID
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
         if [ -z "$AWS_ACCOUNT_ID" ]; then
           echo "Error: Failed to get AWS account ID"
           exit 1
         fi
 
+        echo "Preparing S3 bucket..."
+        CACHE_BUCKET="${CACHE_BUCKET_PREFIX}-${AWS_ACCOUNT_ID}"
+        aws s3api head-bucket --bucket $CACHE_BUCKET || \
+          aws s3 mb s3://$CACHE_BUCKET --region $REGION
+
+        # Configure S3 bucket lifecycle rule for cache expiration
+        aws s3api put-bucket-lifecycle-configuration \
+          --bucket $CACHE_BUCKET \
+          --lifecycle-configuration '{
+            "Rules": [
+              {
+                "ID": "ExpireBuildKitCache",
+                "Status": "Enabled",
+                "Filter": {
+                  "Prefix": ""
+                },
+                "Expiration": {
+                  "Days": 14
+                }
+              }
+            ]
+          }'
+        echo "CACHE_BUCKET=$CACHE_BUCKET" >> $GITHUB_ENV
+
+
         echo "Launching EC2 instance to run tests..."
         INSTANCE_ID=$(aws ec2 run-instances \
-          --image-id ami-0ec1bf4a8f92e7bd1 \
+          --image-id ami-0b7f5f52689b2c0d0 \
           --instance-type $INSTANCE_TYPE \
           --region $REGION \
           --key-name $KEY_NAME \
           --security-group-ids sg-03f9110d8d39282ad \
           --subnet-id subnet-0c56793ce29caa78b \
+          --iam-instance-profile Name="RoboverseCi" \
+          --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":500}}]' \
           --output text \
           --query 'Instances[0].InstanceId')
         echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-        echo "Waiting for instance $INSTANCE_ID to be running..."
-        aws ec2 wait instance-running \
-          --instance-ids $INSTANCE_ID \
-          --region $REGION
+
+        # Create ECR repository if it doesn't exist
+        aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY
+          echo "Waiting for instance $INSTANCE_ID to be running..."
+          aws ec2 wait instance-running \
+            --instance-ids $INSTANCE_ID \
+            --region $REGION
 
         echo "Getting instance IP address..."
         EC2_INSTANCE_IP=$(aws ec2 describe-instances \
@@ -79,14 +115,133 @@ jobs:
     ############# Build #############
     - name: build
       run: |
-        echo "Running tests on EC2 instance..."
+        echo "====Copying source code...===="
+        wait_time=$RETRY_WAIT_TIME
+        SRC_DIR=$(basename $GITHUB_WORKSPACE)
+        echo ""====Check environment variables..."===="
+        echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+        echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
+        echo "EC2_USER_NAME=$EC2_USER_NAME"
+        echo "SRC_DIR=$SRC_DIR"
+        echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
+        echo "MAX_RETRIES=$MAX_RETRIES"
+        echo "====Repo file check...===="
+        ls ./
+
+        # ==== before buildx build ====
+        DOCKERFILE_HASH=$(sha256sum Dockerfile | cut -c1-16)
+        IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:df-$DOCKERFILE_HASH"
+        echo "IMAGE_URI=$IMAGE_URI"
+
+        retry_count=0
+
+        # change to parent directory t
+        cd ..
+
+        while [ $retry_count -lt $MAX_RETRIES ]; do
+          if [ $retry_count -gt 0 ]; then
+            wait_time=$((wait_time * 2))
+            echo "Retry attempt $((retry_count + 1))/$MAX_RETRIES. Waiting $wait_time seconds..."
+            sleep $wait_time
+          fi
+
+          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR $EC2_USER_NAME@$EC2_INSTANCE_IP:~; then
+            echo "SCP command succeeded"
+            break
+          fi
+
+          retry_count=$((retry_count + 1))
+        done
+
+        if [ $retry_count -eq $MAX_RETRIES ]; then
+          echo "SCP command failed after $MAX_RETRIES attempts"
+          exit 1
+        fi
+
+        # login
+        ECR_LOGIN_TOKEN=$(aws ecr get-login-password --region $REGION)
+
+        echo "====Running tests on EC2 instance...===="
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
-          # TODO: add test scripts here
-          echo hello_world
-          curl google.com
+
+          set -euo pipefail
+
+          # Login to ECR using token from CodeBuild
+          echo \"$ECR_LOGIN_TOKEN\" | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+          # Configure BuildKit environment
+          export DOCKER_BUILDKIT=1
+          export BUILDKIT_INLINE_CACHE=1
+
+          docker buildx create --name metasim-builder --driver docker-container \
+            --driver-opt env.AWS_REGION=$REGION \
+            --driver-opt env.AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+            --driver-opt env.AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+            --bootstrap
+          docker buildx use metasim-builder
+
+          cd \"\$HOME/${SRC_DIR}\"
+
+          # docker build
+          if docker pull "$IMAGE_URI" 2>/dev/null ; then
+            echo "Image $IMAGE_URI already exists. Skipping build."
+            # echo "Use cached Image $IMAGE_URI"
+            # docker buildx build --progress=plain --platform linux/amd64 \
+            # -t "$IMAGE_URI" \
+            # # -t "$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest" \ #TODO add latest for image release
+            # --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
+            # --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
+            # --build-arg DOCKER_UID=1000 \
+            # --build-arg DOCKER_GID=1000 \
+            # --build-arg DOCKER_USER=$EC2_USER_NAME \
+            # -f Dockerfile \
+            # --load .
+          else
+            echo "===Starting docker build.==="
+            docker buildx build --progress=plain --platform linux/amd64 \
+            -t "$IMAGE_URI" \
+            --cache-from type=s3,region=$REGION,bucket=$CACHE_BUCKET,mode=max \
+            --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
+            --build-arg DOCKER_UID=1000 \
+            --build-arg DOCKER_GID=1000 \
+            --build-arg DOCKER_USER=$EC2_USER_NAME \
+            -f Dockerfile \
+            --load .
+
+            docker push "$IMAGE_URI"
+          fi
+
+          # begin run test
+          # run all test
+          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+          --name metasim-autotest \
+          --user 1000:1000 --privileged \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
+          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+          -v /usr/local/cuda:/usr/local/cuda \
+          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+          "$IMAGE_URI" \
+          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
+          || TEST_EXIT_CODE=$?
+
+          # TODO check if test_exit_code necessary
+          touch ~/$SRC_DIR/test_exit_code.txt
+          echo "$TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
         " || { echo "Test execution failed"; exit 1; }
 
-    ############# Postbuild #############
+        echo "===Copying test reports...==="
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
+
+        EXIT_CODE=$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)
+
+        if [ "$EXIT_CODE" -ne 0 ]; then
+          echo "Tests failed with exit code $EXIT_CODE"
+          exit 1
+        else
+          echo "===All tests passed!==="
+        fi
+
+    ########### Postbuild #########
     - name: post_build
       if: always()  # always try to terminate the instance
       run: |
