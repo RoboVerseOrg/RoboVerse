@@ -1,4 +1,4 @@
-#  8. Adding Camera
+#  10. Adding Camera
 In this tutorial, we demonstrate how to add and mount cameras in MetaSim.
 --sim <simulator>
 ## Common Usage
