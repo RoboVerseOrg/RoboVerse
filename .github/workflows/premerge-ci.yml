@@ -1,7 +1,7 @@
 name: MetaSim Pre-Merge CI Checks
 
 on:
-  push:  # TODO: remove this when CI/CD is ready
+  workflow_dispatch:
   merge_group:
     types: [checks_requested]
 
