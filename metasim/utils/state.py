@@ -338,5 +338,4 @@ def list_state_to_tensor(
         objects=objects,
         robots=robots,
         cameras=cameras,
-        sensors={},
     )

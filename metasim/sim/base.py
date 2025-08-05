@@ -22,7 +22,6 @@ class BaseSimHandler(ABC):
         ## For quick reference
         self.robots = scenario.robots
         self.cameras = scenario.cameras
-        self.sensors = scenario.sensors
         self.objects = scenario.objects
         self._num_envs = scenario.num_envs
         self.decimation = scenario.decimation
