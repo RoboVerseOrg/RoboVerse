@@ -72,7 +72,7 @@ class IsaaclabEnvOverwriter:
 
                 camera = randomize_camera_pose(camera, obj_pos.tolist(), robot_quat.tolist(), "front_select", self.task)
 
-            if self.first_reset or self.scenario.random.camera:
+            if (self.first_reset or self.scenario.random.camera) and camera.mount_to is None:
                 eyes = torch.tensor(camera.pos, dtype=torch.float32, device=env.device)[None, :]
                 targets = torch.tensor(camera.look_at, dtype=torch.float32, device=env.device)[None, :]
                 eyes = eyes + env.scene.env_origins

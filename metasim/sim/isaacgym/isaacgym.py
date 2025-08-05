@@ -183,10 +183,10 @@ class IsaacgymHandler(BaseSimHandler):
                 camera_lookat = gymapi.Vec3(*cam_cfg.look_at)
                 self.gym.set_camera_location(camera_handle, self._envs[i_env], camera_eye, camera_lookat)
                 if cam_cfg.mount_to is not None:
-                    if isinstance(cam_cfg.mount_to, str):
-                        mount_handle = self._robot_link_dict[cam_cfg.mount_to]
-                    elif isinstance(cam_cfg.mount_to, tuple):
-                        mount_handle = self._robot_link_dict[cam_cfg.mount_to[1]]
+                    if isinstance(cam_cfg.mount_link, str):
+                        mount_handle = self._robot_link_dict[cam_cfg.mount_link]
+                    elif isinstance(cam_cfg.mount_link, tuple):
+                        mount_handle = self._robot_link_dict[cam_cfg.mount_link[1]]
                     camera_pose = gymapi.Transform(
                         gymapi.Vec3(*cam_cfg.mount_pos), gymapi.Quat(*cam_cfg.mount_quat[1:], cam_cfg.mount_quat[0])
                     )
