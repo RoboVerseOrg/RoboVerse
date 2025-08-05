@@ -29,21 +29,3 @@ class SimType(enum.Enum):
     MJX = "mjx"
 
 
-class RobotType(enum.Enum):
-    """Robot type."""
-
-    FRANKA = "franka"
-    IIWA = "iiwa"
-    UR5E_ROBOTIQ_2F_85 = "ur5e_robotiq_2f_85"
-
-
-class StateKey(enum.Enum):
-    """State key."""
-
-    POS = "pos"
-    ROT = "rot"
-    VEL = "vel"
-    ANG_VEL = "ang_vel"
-    DOF_POS = "dof_pos"
-    DOF_VEL = "dof_vel"
-    DOF_POS_TARGET = "dof_pos_target"
