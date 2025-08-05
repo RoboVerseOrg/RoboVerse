@@ -1,1 +1,1 @@
-from .isaaclab import IsaaclabEnv, IsaaclabHandler  # noqa: F401
+from .isaaclab import  IsaaclabHandler  # noqa: F401
