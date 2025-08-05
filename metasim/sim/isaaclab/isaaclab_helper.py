@@ -275,12 +275,6 @@ def _add_contact_force_sensor(env: "EmptyEnv", sensor: ContactForceSensorCfg) ->
         )
 
 
-def add_sensors(env: "EmptyEnv", sensors: list[BaseSensorCfg]) -> None:
-    for sensor in sensors:
-        if isinstance(sensor, ContactForceSensorCfg):
-            _add_contact_force_sensor(env, sensor)
-
-
 def _add_pinhole_camera(env: "EmptyEnv", camera: PinholeCameraCfg) -> None:
     try:
         import omni.isaac.lab.sim as sim_utils

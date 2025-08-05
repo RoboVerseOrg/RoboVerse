@@ -2,47 +2,6 @@
 
 import enum
 
-class BenchmarkType(enum.Enum):
-    """Benchmark type."""
-
-    ## Tabletop Manipulation
-    MANISKILL = "ManiSkill"
-    METAWORLD = "MetaWorld"
-    RLBENCH = "RLbench"
-    GAPARTNET = "GAPartNet"
-    GAPARTMANIP = "GAPartManip"
-    ARNOLD = "ARNOLD"
-    CALVIN = "CALVIN"
-    UNIDOORMANIP = "UniDoorManip"
-    GARMENTLAB = "GarmentLab"
-    ROBOSUITE = "RoboSuite"
-    ROBOCASA = "RoboCasa"
-    OPEN6DOR = "Open6DOR"
-    GRASPNET = "GraspNet"
-    LIBERO = "Libero"
-    GPT = "GPT"
-
-    ## Locomotion
-    UH1 = "UH1"
-
-    ## RLAfford
-    RLAOPENDOOR = "RLAffordOpenDoor"
-
-    ## SimplerEnv
-    SIMPLERENV = "SimperEnv"
-
-    ## humanoid
-    HUMANOIDBENCH = "HumanoidBench"
-
-    ## dm_control
-    DMCONTROL = "DMControl"
-
-    ## OGBench
-    OGBENCH = "OGBench"
-
-    ## Debug
-    DEBUG = "Debug"
-
 
 class PhysicStateType(enum.IntEnum):
     """Physic state type."""

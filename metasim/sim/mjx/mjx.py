@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
 from .mjx_helper import (
     j2t,
@@ -217,14 +217,14 @@ class MJXHandler(BaseSimHandler):
 
     def _set_states(
         self,
-        ts: TensorState,
+        ts: TensorState | list[TensorState],
         env_ids: list[int] | None = None,
         *,
         zero_vel: bool = True,
     ) -> None:
-        # ts = list_state_to_tensor(self, ts)
+        if isinstance(ts, list):
+            ts = list_state_to_tensor(self, ts)
         self._init_mjx_once(ts)
-
         data = self._data
         model = self._mjx_model
 
@@ -315,6 +315,7 @@ class MJXHandler(BaseSimHandler):
             return
 
         def _write_fixed_body(name, root_state):
+            """Write the root state of a fixed body to the MJX model."""
             pos = root_state[0, :3].cpu().numpy()
             quat = root_state[0, 3:7].cpu().numpy()
             full = self._fix_path_cache[name]
@@ -629,6 +630,3 @@ class MJXHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-MJXEnv: type[EnvWrapper[MJXHandler]] = GymEnvWrapper(MJXHandler)
