@@ -56,16 +56,6 @@ class DictEnvState(TypedDict):
     cameras: dict[str, dict[str, torch.Tensor]]
 
 
-@dataclass
-class ContactForceState:
-    """State of a single contact force sensor."""
-
-    force: torch.Tensor
-    """Contact force. Shape is (num_envs, 3)."""
-
-
-SensorState = ContactForceState
-
 
 @dataclass
 class ObjectState:
