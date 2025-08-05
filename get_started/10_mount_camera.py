@@ -245,7 +245,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/8_mount_camera_{args.sim}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/10_mount_camera_{args.sim}.mp4")
 obs_saver.add(obs)
 
 step = 0
