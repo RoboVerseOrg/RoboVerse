@@ -30,8 +30,7 @@ from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
-from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @dataclass
@@ -64,14 +63,16 @@ class MetaSimVecEnv(VectorEnv):
             scenario.num_envs = num_envs
             scenario = ScenarioCfg(**vars(scenario))
         self.num_envs = scenario.num_envs
-        env_class = get_sim_env_class(SimType(sim))
-        env = env_class(scenario)
-        self.env: EnvWrapper[BaseSimHandler] = env
+
+        handler_class = get_sim_handler_class(SimType(scenario.sim))
+        self.env: BaseSimHandler = handler_class(scenario, self.extra_spec)
+        self.env.launch()
+        
         self.render_mode = None  # XXX
         self.scenario = scenario
 
         # Get candidate states
-        self.candidate_init_states, _, _ = get_traj(scenario.task, scenario.robots[0])
+        self.candidate_init_states=
 
         # XXX: is the inf space ok?
         self.single_observation_space = spaces.Box(-np.inf, np.inf)
