@@ -118,13 +118,9 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 from torchvision.utils import make_grid
 
-from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.scenario import ScenarioCfg
-from metasim.constants import SimType
-from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import list_state_to_tensor
-
+from metasim.cfg.cameras import PinholeCameraCfg
 
 class FastTD3EnvWrapper:
     def __init__(
@@ -136,14 +132,13 @@ class FastTD3EnvWrapper:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
         # Build the underlying MetaSim environment
-        EnvironmentClass = get_sim_env_class(SimType(scenario.sim))
+        EnvironmentClass =
         self.env = EnvironmentClass(scenario, optional_queries=scenario.task.extra_spec())
 
         self.num_envs = scenario.num_envs
         self.robot = scenario.robots[0]
-        self.task = scenario.task
         # ----------- initial states --------------------------------------------------
-        initial_states, _, _ = get_traj(self.task, self.robot, self.env.handler)
+        initial_states=
         # Duplicate / trim list so that its length matches num_envs
         if len(initial_states) < self.num_envs:
             k = self.num_envs // len(initial_states)

@@ -81,7 +81,7 @@ class BaseTaskWrapper:
         self.reset_callback: list[Callable] = []
         self.close_callback: list[Callable] = []
 
-    def _observation_space(self) -> gym.Space:
+    def _observation_space(self) from metasim.constants import SimType-> gym.Space:
         """
         Get the observation space of the environment.
         """
