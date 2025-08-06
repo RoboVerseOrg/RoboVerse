@@ -18,7 +18,9 @@ from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+import os
 
+import imageio
 
 from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
@@ -36,7 +38,7 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mjx"
+        sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
 
         ## Others
         num_envs: int = 1
@@ -131,10 +133,10 @@ if __name__ == "__main__":
     ]
     env.launch()
     env.set_states(init_states)
-    while True:
-        env.simulate()
-    # obs = env.get_states(mode="dict")
-    # os.makedirs("get_started/output", exist_ok=True)
-    # save_path = f"get_started/output/0_static_scene_{args.sim}.png"
-    # log.info(f"Saving image to {save_path}")
-    # imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())
+    # while True:
+    #     env.simulate()
+    obs = env.get_states(mode="dict")
+    os.makedirs("get_started/output", exist_ok=True)
+    save_path = f"get_started/output/0_static_scene_{args.sim}.png"
+    log.info(f"Saving image to {save_path}")
+    imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())
