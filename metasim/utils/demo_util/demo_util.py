@@ -7,7 +7,6 @@ import os
 from loguru import logger as log
 
 from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.sim import BaseSimHandler
 
 from .demo_util_v1 import get_traj_v1
@@ -15,7 +14,7 @@ from .demo_util_v2 import get_traj_v2
 from .demo_util_v3 import convert_traj_v2_to_v3
 
 
-def get_traj(task: BaseTaskCfg, robot: BaseRobotCfg, handler: BaseSimHandler | None = None, v2_as_v3: bool = True):
+def get_traj(task, robot: BaseRobotCfg, handler: BaseSimHandler | None = None, v2_as_v3: bool = True):
     """Get the trajectory data.
 
     Args:
