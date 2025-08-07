@@ -99,7 +99,7 @@ scenario.objects = [
 log.info(f"Using simulator: {args.sim}")
 env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
-
+env.launch()
 init_states = [
     {
         "objects": {

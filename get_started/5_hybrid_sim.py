@@ -26,9 +26,9 @@ from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
-from metasim.sim import HybridSimEnv
+from metasim.sim import HybridSimHandler
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -39,7 +39,7 @@ class Args:
 
     ## Handlers
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
-    renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
+    render: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
 
     ## Others
     num_envs: int = 1
@@ -55,9 +55,8 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
-    renderer=args.renderer,
+    simulator=args.sim,
+    render=args.render,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -97,17 +96,17 @@ scenario.objects = [
 ]
 
 
-if scenario.renderer is None:
-    log.info(f"Using simulator: {scenario.sim}")
-    env_class = get_sim_env_class(SimType(scenario.sim))
+if scenario.render is None:
+    log.info(f"Using simulator: {scenario.simulator}")
+    env_class = get_sim_handler_class(SimType(scenario.simulator))
     env = env_class(scenario)
 else:
-    log.info(f"Using simulator: {scenario.sim}, renderer: {scenario.renderer}")
-    env_class_render = get_sim_env_class(SimType(scenario.renderer))
+    log.info(f"Using simulator: {scenario.simulator}, render: {scenario.render}")
+    env_class_render = get_sim_handler_class(SimType(scenario.render))
     env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-    env_class_physics = get_sim_env_class(SimType(scenario.sim))
+    env_class_physics = get_sim_handler_class(SimType(scenario.simulator))
     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    env = HybridSimEnv(env_physics, env_render)
+    env = HybridSimHandler(scenario, env_physics, env_render)
 
 init_states = [
     {
@@ -149,12 +148,14 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.renderer}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.render}.mp4")
 obs_saver.add(obs)
 
 step = 0
@@ -175,7 +176,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(robot.name, actions)
+    env.simulate()
+    obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     step += 1
 

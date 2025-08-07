@@ -28,7 +28,7 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveS
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -38,7 +38,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -54,8 +54,7 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -99,7 +98,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -142,7 +141,9 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states()
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/multiple_cameras_{args.sim}.png"
 log.info(f"Saving image to {save_path}")

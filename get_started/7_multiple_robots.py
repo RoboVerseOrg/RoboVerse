@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from metasim.cfg.robots import FrankaCfg, H1Cfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -26,7 +26,7 @@ H1_CFG = H1Cfg()
 @dataclass
 class Args:
     num_envs: int = 1
-    sim: str = "isaaclab"
+    sim: str = "mujoco"
     z_pos: float = 0.0
     decimation: int = 20
 
@@ -40,14 +40,15 @@ def main():
             H1_CFG.replace(name="h1_1"),
             H1_CFG.replace(name="h1_2"),
         ],
-        sim=args.sim,
+        simulator=args.sim,
         num_envs=args.num_envs,
         decimation=args.decimation,
     )
 
     log.info(f"Using simulator: {args.sim}")
-    env_class = get_sim_env_class(SimType(args.sim))
+    env_class = get_sim_handler_class(SimType(args.sim))
     env = env_class(scenario)
+    env.launch()
 
     init_states = [
         {
@@ -60,7 +61,7 @@ def main():
             "objects": {},
         }
     ] * scenario.num_envs
-    env.reset(states=init_states)
+    env.set_states(init_states)
 
     step = 0
     while True:
@@ -81,11 +82,10 @@ def main():
             }
             for _ in range(scenario.num_envs)
         ]
-        env.step(actions)
-        env.render()
+        for robot, action in zip(scenario.robots, actions):
+            env.set_dof_targets(robot.name, action)
+        env.simulate()
         step += 1
-
-    env.handler.close()
 
 
 if __name__ == "__main__":
