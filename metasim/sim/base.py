@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
-from metasim.types import DictEnvState, TensorState
+from metasim.types import DictEnvState, TensorState, Action
+
 
 
 class BaseSimHandler(ABC):
@@ -60,6 +61,16 @@ class BaseSimHandler(ABC):
     def set_states(self, states: TensorState | DictEnvState, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
         self._set_states(states, env_ids)
+
+    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        """Set the dof targets of the robot.
+
+        Args:
+            obj_name (str): The name of the robot
+            actions (list[Action]): The target actions for the robot
+        """
+        raise NotImplementedError
+
 
     ############################################################
     ## Get states
