@@ -26,7 +26,7 @@ from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveS
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -36,7 +36,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 4
@@ -52,8 +52,7 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -94,7 +93,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -138,10 +137,11 @@ init_states = [
     }
     for _ in range(args.num_envs)
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
 os.makedirs("get_started/output", exist_ok=True)
 
-
+obs = env.get_states(mode="dict")
 ## Main loop
 obs_saver = ObsSaver(video_path=f"get_started/output/3_parallel_envs_{args.sim}.mp4")
 obs_saver.add(obs)
@@ -164,7 +164,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(robot.name, actions)
+    env.simulate()
+    obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     step += 1
 

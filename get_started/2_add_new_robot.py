@@ -27,7 +27,7 @@ from metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -35,7 +35,7 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -105,8 +105,7 @@ robot = BaseRobotCfg(
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -147,7 +146,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -200,7 +199,9 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -226,7 +227,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(robot.name, actions)
+    env.simulate()
+    obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     step += 1
 
