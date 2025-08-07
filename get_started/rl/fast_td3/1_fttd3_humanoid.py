@@ -118,11 +118,13 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 from torchvision.utils import make_grid
 
+from metasim.cfg.cameras import PinholeCameraCfg
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.utils.state import list_state_to_tensor
-from metasim.cfg.cameras import PinholeCameraCfg
+from roboverse_learn.tasks.base import BaseTaskWrapper
 
-class FastTD3EnvWrapper:
+
+class FastTD3EnvWrapper(BaseTaskWrapper):
     def __init__(
         self,
         scenario: ScenarioCfg,
@@ -131,29 +133,36 @@ class FastTD3EnvWrapper:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
-        # Build the underlying MetaSim environment
-        EnvironmentClass =
-        self.env = EnvironmentClass(scenario, optional_queries=scenario.task.extra_spec())
+
+        # Initialize the base class
+        super().__init__(scenario)
 
         self.num_envs = scenario.num_envs
         self.robot = scenario.robots[0]
+
         # ----------- initial states --------------------------------------------------
-        initial_states=
+        # Get initial states from the environment
+        initial_states = self.env.get_initial_states() if hasattr(self.env, "get_initial_states") else []
         # Duplicate / trim list so that its length matches num_envs
         if len(initial_states) < self.num_envs:
             k = self.num_envs // len(initial_states)
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
         if scenario.sim == "mjx":
-            self._initial_states = list_state_to_tensor(self.env.handler, self._initial_states)
-        self.env.reset(states=self._initial_states)
-        states = self.env.handler.get_states()
-        first_obs = self.get_humanoid_observation(states)
+            self._initial_states = list_state_to_tensor(self.env, self._initial_states)
+
+        # Reset environment with initial states
+        self.reset(env_ids=list(range(self.num_envs)))
+
+        # Get first observation to determine observation space
+        states = self.env.get_states()
+        first_obs = self._observation(states)
         self.num_obs = first_obs.shape[-1]
         self._raw_observation_cache = first_obs.clone()
 
+        # Set up action space
         limits = self.robot.joint_limits  # dict: {joint_name: (low, high)}
-        self.joint_names = self.env.handler.get_joint_names(self.robot.name)
+        self.joint_names = self.env.get_joint_names(self.robot.name)
 
         self._action_low = torch.tensor(
             [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.device
@@ -162,23 +171,73 @@ class FastTD3EnvWrapper:
             [limits[j][1] for j in self.joint_names], dtype=torch.float32, device=self.device
         )
         self.num_actions = self._action_low.shape[0]
-        self.max_episode_steps = self.env.handler.task.episode_length
+        self.max_episode_steps = self.env.task.episode_length if hasattr(self.env.task, "episode_length") else 1000
         self.asymmetric_obs = False  # privileged critic input not used (for now)
 
-    def reset(self) -> torch.Tensor:
-        self.env.reset(states=self._initial_states)
-        states = self.env.handler.get_states()
-        observation = self.get_humanoid_observation(states)
+    def _observation_space(self) -> dict:
+        """Get the observation space of the environment."""
+        return {"shape": (self.num_obs,), "low": -np.inf, "high": np.inf, "dtype": torch.float32}
+
+    def _action_space(self) -> dict:
+        """Get the action space of the environment."""
+        return {"shape": (self.num_actions,), "low": -1.0, "high": 1.0, "dtype": torch.float32}
+
+    def _observation(self, env_states) -> torch.Tensor:
+        """Flatten humanoid states and move them onto the training device."""
+        if hasattr(self.env.task, "humanoid_obs_flatten_func"):
+            return self.env.task.humanoid_obs_flatten_func(env_states).to(self.device)
+        else:
+            # Fallback: return flattened states
+            return torch.tensor(env_states, device=self.device).flatten(start_dim=1)
+
+    def _privileged_observation(self, env_states) -> torch.Tensor:
+        """Get the privileged observation of the environment."""
+        return self._observation(env_states)
+
+    def _reward(self, env_states) -> torch.Tensor:
+        """Get the reward of the environment."""
+        total_reward = torch.zeros(self.num_envs, device=self.device)
+        if hasattr(self.env.task, "reward_functions") and hasattr(self.env.task, "reward_weights"):
+            for reward_fn, weight in zip(self.env.task.reward_functions, self.env.task.reward_weights):
+                total_reward += reward_fn(self.robot.name)(env_states).to(self.device) * weight
+        else:
+            # Fallback: return zero reward
+            total_reward = torch.zeros(self.num_envs, device=self.device)
+        return total_reward
+
+    def _terminated(self, env_states) -> torch.Tensor:
+        """Get the terminated flag of the environment."""
+        # This should be implemented based on your task's termination conditions
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+    def _time_out(self, env_states) -> torch.Tensor:
+        """Get the timeout flag of the environment."""
+        # This should be implemented based on your task's timeout conditions
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+    def reset(self, env_ids: list[int] | None = None) -> torch.Tensor:
+        """Reset the environment and return initial observation."""
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        # Reset with initial states
+        self.env.reset(states=self._initial_states, env_ids=env_ids)
+        states = self.env.get_states()
+        observation = self._observation(states)
         observation = observation.to(self.device)
         self._raw_observation_cache.copy_(observation)
         return observation
 
     def step(self, actions: torch.Tensor):
+        """Step the environment with normalized actions."""
+        # Convert normalized actions to real actions
         real_action = self._unnormalise_action(actions)
+
+        # Use the step_actions method for compatibility
         states, _, terminated, truncated, _ = self.env.step_actions(real_action)
 
-        obs_now = self.get_humanoid_observation(states).to(self.device)
-        reward_now = self.get_humanoid_reward(states).to(self.device)
+        obs_now = self._observation(states).to(self.device)
+        reward_now = self._reward(states).to(self.device)
 
         done_flag = terminated.to(self.device, torch.bool)
         time_out_flag = truncated.to(self.device, torch.bool)
@@ -189,9 +248,9 @@ class FastTD3EnvWrapper:
         }
 
         if (done_indices := (done_flag | time_out_flag).nonzero(as_tuple=False).squeeze(-1)).numel():
-            self.env.reset(states=self._initial_states, env_ids=done_indices.tolist())
-            reset_states = self.env.handler.get_states()
-            reset_obs_full = self.get_humanoid_observation(reset_states).to(self.device)
+            self.reset(env_ids=done_indices.tolist())
+            reset_states = self.env.get_states()
+            reset_obs_full = self._observation(reset_states).to(self.device)
             obs_now[done_indices] = reset_obs_full[done_indices]
             self._raw_observation_cache[done_indices] = reset_obs_full[done_indices]
         else:
@@ -200,26 +259,14 @@ class FastTD3EnvWrapper:
 
         return obs_now, reward_now, done_flag, info
 
-    def render(self) -> None:
-        state = self.env.handler.get_states()
+    def render(self) -> np.ndarray:
+        """Render the environment and return RGB image."""
+        state = self.env.get_states()
         rgb_data = next(iter(state.cameras.values())).rgb
         image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
         image = image.cpu().numpy().transpose(1, 2, 0)  # (H, W, C)
         image = (image * 255).astype(np.uint8)
         return image
-
-    def close(self) -> None:
-        self.env.close()
-
-    def get_humanoid_observation(self, states) -> torch.Tensor:
-        """Flatten humanoid states and move them onto the training device."""
-        return self.task.humanoid_obs_flatten_func(states).to(self.device)
-
-    def get_humanoid_reward(self, states) -> torch.Tensor:
-        total_reward = torch.zeros(self.num_envs, device=self.device)
-        for reward_fn, weight in zip(self.task.reward_functions, self.task.reward_weights):
-            total_reward += reward_fn(self.robot.name)(states).to(self.device) * weight
-        return total_reward
 
     def _unnormalise_action(self, action: torch.Tensor) -> torch.Tensor:
         """Map actions from [-1, 1] to the robot's joint-limit range."""

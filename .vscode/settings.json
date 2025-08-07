@@ -265,4 +265,5 @@
         "${workspaceFolder}/third_party/IsaacLab2/_isaac_sim/exts/isaacsim.xr.openxr",
 
     ],
+    "python.languageServer": "None",
 }

@@ -161,7 +161,8 @@ class BaseTaskWrapper:
         # self.env.set_states(actions_dict)
 
         for robot in self.env.robots:
-            self.env.set_dof_targets(robot.name, [actions_dict["robots"]])
+            robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
+            self.env.set_dof_targets(robot.name, list(robot_actions.values()))
 
         self.env.simulate()
 
@@ -197,6 +198,13 @@ class BaseTaskWrapper:
         obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
 
         return obs, priv_obs, reward, terminated, time_out, None
+
+    def step_actions(self, actions: Action) -> tuple[Obs, Extra | None, Success, TimeOut, Extra | None]:
+        """
+        Step the environment with actions (compatibility method).
+        """
+        obs, priv_obs, reward, terminated, time_out, extra = self.step(actions)
+        return obs, extra, terminated, time_out, extra
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Obs, Extra | None]:
         """
