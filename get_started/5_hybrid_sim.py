@@ -39,7 +39,7 @@ class Args:
 
     ## Handlers
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
-    render: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
+    renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
 
     ## Others
     num_envs: int = 1
@@ -56,7 +56,7 @@ args = tyro.cli(Args)
 scenario = ScenarioCfg(
     robots=[args.robot],
     simulator=args.sim,
-    render=args.render,
+    renderer=args.renderer,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -101,12 +101,12 @@ if scenario.render is None:
     env_class = get_sim_handler_class(SimType(scenario.simulator))
     env = env_class(scenario)
 else:
-    log.info(f"Using simulator: {scenario.simulator}, render: {scenario.render}")
-    env_class_render = get_sim_handler_class(SimType(scenario.render))
-    env_render = env_class_render(scenario)  # Isaaclab must launch right after import
+    log.info(f"Using simulator: {scenario.simulator}, render: {scenario.renderer}")
+    env_class_renderer = get_sim_handler_class(SimType(scenario.renderer))
+    env_renderer = env_class_renderer(scenario)  # Isaaclab must launch right after import
     env_class_physics = get_sim_handler_class(SimType(scenario.simulator))
     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    env = HybridSimHandler(scenario, env_physics, env_render)
+    env = HybridSimHandler(scenario, env_physics, env_renderer)
 
 init_states = [
     {
@@ -155,7 +155,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.render}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.renderer}.mp4")
 obs_saver.add(obs)
 
 step = 0

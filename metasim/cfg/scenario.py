@@ -46,6 +46,7 @@ class ScenarioCfg:
     render: RenderCfg = RenderCfg()
     sim_params: SimParamCfg = SimParamCfg()
     simulator: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] = "isaaclab"
+    renderer: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] | None = None
     ## Others
     num_envs: int = 1
     headless: bool = False
