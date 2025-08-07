@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import TensorState
-
+from metasim.types import TensorState, Action
+from metasim.utils.state import TensorState, state_tensor_to_nested
 
 class HybridSimHandler(BaseSimHandler):
     """Hybrid simulation handler that uses one simulator for physics and another for rendering."""
@@ -41,6 +41,10 @@ class HybridSimHandler(BaseSimHandler):
         self.physics_handler.close()
         self.render_handler.close()
 
+    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        """Set the dof targets of the robot in the physics handler."""
+        self.physics_handler.set_dof_targets(obj_name, actions)
+
     def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set states in both physics and render handlers."""
         self.physics_handler._set_states(states, env_ids)
@@ -57,7 +61,8 @@ class HybridSimHandler(BaseSimHandler):
 
         # Get states from physics and sync to render
         physics_states = self.physics_handler._get_states()
-        self.render_handler._set_states(physics_states)
+        states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
+        self.render_handler._set_states(states_nested)
         self.render_handler.refresh_render()
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
