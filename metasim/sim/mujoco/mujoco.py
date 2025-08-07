@@ -15,10 +15,8 @@ from metasim.cfg.robots import BaseRobotCfg
 if TYPE_CHECKING:
     from metasim.cfg.scenario import ScenarioCfg
 
-from metasim.constants import TaskType
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.sim.parallel import ParallelSimWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
@@ -33,8 +31,10 @@ class MujocoHandler(BaseSimHandler):
 
         self._mujoco_robot_name = None
         self._robot_num_dof = None
-        self._robot_path = self.robot.mjcf_path
-        self._gravity_compensation = not self.robot.enabled_gravity
+
+        # FIXME: hard code for only one robot
+        self._robot_path = self.robots[0].mjcf_path
+        self._gravity_compensation = not self.robots[0].enabled_gravity
 
         self.viewer = None
         self.cameras = []
@@ -43,19 +43,13 @@ class MujocoHandler(BaseSimHandler):
         self._episode_length_buf = 0
 
         # FIXME: hard code decimation for now
-        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
-            self.decimation = self.scenario.decimation
-        else:
-            log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
-            self.decimation = 25
+        self.decimation = 25
 
         self._manual_pd_on = False
         self._p_gains = None
         self._d_gains = None
         self._torque_limits = None
         self._robot_default_dof_pos = None
-        self._action_scale = scenario.control.action_scale
-        self._action_offset = scenario.control.action_offset
         self._effort_controlled_joints = []
         self._position_controlled_joints = []
         self._current_action = None
@@ -84,23 +78,23 @@ class MujocoHandler(BaseSimHandler):
 
     def _init_torque_control(self):
         """Initialize torque control parameters based on robot configuration."""
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
+        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
         self._robot_num_dof = len(joint_names)
 
         self._p_gains = np.zeros(self._robot_num_dof)
         self._d_gains = np.zeros(self._robot_num_dof)
         self._torque_limits = np.zeros(self._robot_num_dof)
 
-        self._manual_pd_on = any(mode == "effort" for mode in self.robot.control_type.values())
+        self._manual_pd_on = any(mode == "effort" for mode in self.robots[0].control_type.values())
 
         default_dof_pos = []
 
         for i, joint_name in enumerate(joint_names):
-            i_actuator_cfg = self.robot.actuators[joint_name]
-            i_control_mode = self.robot.control_type.get(joint_name, "position")
+            i_actuator_cfg = self.robots[0].actuators[joint_name]
+            i_control_mode = self.robots[0].control_type.get(joint_name, "position")
 
-            if joint_name in self.robot.default_joint_positions:
-                default_pos = self.robot.default_joint_positions[joint_name]
+            if joint_name in self.robots[0].default_joint_positions:
+                default_pos = self.robots[0].default_joint_positions[joint_name]
             else:
                 joint_id = self.physics.model.joint(f"{self._mujoco_robot_name}{joint_name}").id
                 joint_range = self.physics.model.jnt_range[joint_id]
@@ -255,6 +249,8 @@ class MujocoHandler(BaseSimHandler):
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
+        # FIXME: hard code for adding table
+        self.scenario.try_add_table = True
         if self.scenario.try_add_table:
             mjcf_model.asset.add(
                 "texture",
@@ -300,14 +296,15 @@ class MujocoHandler(BaseSimHandler):
 
         robot_xml = mjcf.from_path(self._robot_path)
 
-        if hasattr(self.robot, "scale") and self.robot.scale != (1.0, 1.0, 1.0):
-            self._apply_scale_to_mjcf(robot_xml, self.robot.scale)
+        # FIXME: hard code for only one robot
+        if hasattr(self.robots[0], "scale") and self.robots[0].scale != (1.0, 1.0, 1.0):
+            self._apply_scale_to_mjcf(robot_xml, self.robots[0].scale)
 
         robot_attached = mjcf_model.attach(robot_xml)
-        if not self.robot.fix_base_link:
+        if not self.robots[0].fix_base_link:
             robot_attached.add("freejoint")
         self.robot_attached = robot_attached
-        self.mj_objects[self.robot.name] = robot_xml
+        self.mj_objects[self.robots[0].name] = robot_xml
         self._mujoco_robot_name = robot_xml.full_identifier
         return mjcf_model
 
@@ -391,7 +388,7 @@ class MujocoHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for robot in [self.robot]:
+        for robot in self.robots:
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = self.get_joint_names(robot.name, sort=True)
@@ -438,8 +435,8 @@ class MujocoHandler(BaseSimHandler):
         if "pos" not in obj_state and "rot" not in obj_state:
             return
 
-        if obj_name == self.robot.name:
-            if not self.robot.fix_base_link:
+        if obj_name == self.robots[0].name:
+            if not self.robots[0].fix_base_link:
                 root_joint = self.physics.data.joint(self._mujoco_robot_name)
                 root_joint.qpos[:3] = obj_state.get("pos", [0, 0, 0])
                 root_joint.qpos[3:7] = obj_state.get("rot", [1, 0, 0, 0])
@@ -471,7 +468,9 @@ class MujocoHandler(BaseSimHandler):
 
         for joint_name, joint_pos in obj_state["dof_pos"].items():
             full_joint_name = (
-                f"{self._mujoco_robot_name}{joint_name}" if obj_name == self.robot.name else f"{obj_name}/{joint_name}"
+                f"{self._mujoco_robot_name}{joint_name}"
+                if obj_name == self.robots[0].name
+                else f"{obj_name}/{joint_name}"
             )
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
@@ -505,8 +504,9 @@ class MujocoHandler(BaseSimHandler):
 
     def _compute_effort(self, actions):
         """Compute effort from actions using PD controller."""
+        # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
         action_scaled = self._action_scale * actions
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
+        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
         robot_dof_pos = np.array([
             self.physics.data.joint(f"{self._mujoco_robot_name}{jn}").qpos[0] for jn in joint_names
         ])
@@ -530,7 +530,7 @@ class MujocoHandler(BaseSimHandler):
         """Apply torque control using computed efforts."""
         effort = self._compute_effort(actions)
 
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
+        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
         for i in self._effort_controlled_joints:
             joint_name = joint_names[i]
             actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
@@ -542,7 +542,7 @@ class MujocoHandler(BaseSimHandler):
         # Extract velocity targets if present
         vel_targets = actions[0][obj_name].get("dof_vel_target", None)
         if vel_targets:
-            joint_names = self.get_joint_names(self.robot.name, sort=True)
+            joint_names = self.get_joint_names(self.robots[0].name, sort=True)
             self._current_vel_target = np.zeros(self._robot_num_dof)
             for i, joint_name in enumerate(joint_names):
                 if joint_name in vel_targets:
@@ -552,7 +552,7 @@ class MujocoHandler(BaseSimHandler):
 
         if self._manual_pd_on:
             joint_targets = actions[0][obj_name]["dof_pos_target"]
-            joint_names = self.get_joint_names(self.robot.name, sort=True)
+            joint_names = self.get_joint_names(self.robots[0].name, sort=True)
 
             self._current_action = np.zeros(self._robot_num_dof)
             for i, joint_name in enumerate(joint_names):
@@ -608,7 +608,7 @@ class MujocoHandler(BaseSimHandler):
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
             self.object_dict[obj_name], BaseRobotCfg
         ):
-            if obj_name == self.robot.name:
+            if obj_name == self.robots[0].name:
                 prefix = self._mujoco_robot_name
             else:
                 prefix = obj_name + "/"
@@ -619,7 +619,7 @@ class MujocoHandler(BaseSimHandler):
                 if self.physics.model.joint(joint_id).name.startswith(prefix)
             ]
 
-            if obj_name == self.robot.name:
+            if obj_name == self.robots[0].name:
                 joint_names = [name[len(prefix) :] for name in joint_names]
             else:
                 joint_names = [name.split("/")[-1] for name in joint_names]
@@ -721,7 +721,3 @@ class MujocoHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cpu")
-
-
-MujocoParallelHandler = ParallelSimWrapper(MujocoHandler)
-MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoParallelHandler)
