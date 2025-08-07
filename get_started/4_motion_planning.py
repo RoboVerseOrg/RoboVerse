@@ -39,7 +39,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -136,20 +136,20 @@ init_states = [
                     "panda_finger_joint2": 0.04,
                 },
             },
-            "kinova_gen3_robotiq_2f85": {
-                "pos": torch.tensor([0.0, 0.0, 0.0]),
-                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                "dof_pos": {
-                    "joint_1": 0.0,
-                    "joint_2": math.pi / 6,
-                    "joint_3": 0.0,
-                    "joint_4": math.pi / 2,
-                    "joint_5": 0.0,
-                    "joint_6": 0.0,
-                    "joint_7": 0.0,
-                    "finger_joint": 0.0,
-                },
-            },
+            # "kinova_gen3_robotiq_2f85": {
+            #     "pos": torch.tensor([0.0, 0.0, 0.0]),
+            #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            #     "dof_pos": {
+            #         "joint_1": 0.0,
+            #         "joint_2": math.pi / 6,
+            #         "joint_3": 0.0,
+            #         "joint_4": math.pi / 2,
+            #         "joint_5": 0.0,
+            #         "joint_6": 0.0,
+            #         "joint_7": 0.0,
+            #         "finger_joint": 0.0,
+            #     },
+            # },
         },
     }
     for _ in range(args.num_envs)
@@ -174,7 +174,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(200):
     log.debug(f"Step {step}")
-    states = env.handler.get_states()
+    states = env.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
     seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
