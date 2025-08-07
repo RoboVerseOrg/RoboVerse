@@ -485,7 +485,7 @@ class Sapien2Handler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.object_joint_order[obj_name])
             if sort:
@@ -494,7 +494,7 @@ class Sapien2Handler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name, sort=True):
+    def _get_body_names(self, obj_name, sort=True):
         body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
         if sort:
             return sorted(body_names)

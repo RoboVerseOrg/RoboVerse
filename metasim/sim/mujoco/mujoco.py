@@ -78,7 +78,7 @@ class MujocoHandler(BaseSimHandler):
 
     def _init_torque_control(self):
         """Initialize torque control parameters based on robot configuration."""
-        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+        joint_names = self._get_joint_names(self.robots[0].name, sort=True)
         self._robot_num_dof = len(joint_names)
 
         self._p_gains = np.zeros(self._robot_num_dof)
@@ -363,14 +363,14 @@ class MujocoHandler(BaseSimHandler):
 
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             if isinstance(obj, ArticulationObjCfg):
-                joint_names = self.get_joint_names(obj.name, sort=True)
+                joint_names = self._get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
                 root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
 
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
@@ -391,14 +391,14 @@ class MujocoHandler(BaseSimHandler):
         for robot in self.robots:
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
-            joint_names = self.get_joint_names(robot.name, sort=True)
+            joint_names = self._get_joint_names(robot.name, sort=True)
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
 
             root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
 
             state = RobotState(
-                body_names=self.get_body_names(robot.name),
+                body_names=self._get_body_names(robot.name),
                 root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                 body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                 joint_pos=torch.tensor([
@@ -506,7 +506,7 @@ class MujocoHandler(BaseSimHandler):
         """Compute effort from actions using PD controller."""
         # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
         action_scaled = self._action_scale * actions
-        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+        joint_names = self._get_joint_names(self.robots[0].name, sort=True)
         robot_dof_pos = np.array([
             self.physics.data.joint(f"{self._mujoco_robot_name}{jn}").qpos[0] for jn in joint_names
         ])
@@ -530,7 +530,7 @@ class MujocoHandler(BaseSimHandler):
         """Apply torque control using computed efforts."""
         effort = self._compute_effort(actions)
 
-        joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+        joint_names = self._get_joint_names(self.robots[0].name, sort=True)
         for i in self._effort_controlled_joints:
             joint_name = joint_names[i]
             actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
@@ -542,7 +542,7 @@ class MujocoHandler(BaseSimHandler):
         # Extract velocity targets if present
         vel_targets = actions[0][obj_name].get("dof_vel_target", None)
         if vel_targets:
-            joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+            joint_names = self._get_joint_names(self.robots[0].name, sort=True)
             self._current_vel_target = np.zeros(self._robot_num_dof)
             for i, joint_name in enumerate(joint_names):
                 if joint_name in vel_targets:
@@ -552,7 +552,7 @@ class MujocoHandler(BaseSimHandler):
 
         if self._manual_pd_on:
             joint_targets = actions[0][obj_name]["dof_pos_target"]
-            joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+            joint_names = self._get_joint_names(self.robots[0].name, sort=True)
 
             self._current_action = np.zeros(self._robot_num_dof)
             for i, joint_name in enumerate(joint_names):
@@ -604,7 +604,7 @@ class MujocoHandler(BaseSimHandler):
     ############################################################
     ## Utils
     ############################################################
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
             self.object_dict[obj_name], BaseRobotCfg
         ):
@@ -642,7 +642,7 @@ class MujocoHandler(BaseSimHandler):
                 if joint_name:
                     robot_actuator_names.append(joint_name)
 
-        joint_names = self.get_joint_names(robot_name)
+        joint_names = self._get_joint_names(robot_name)
         assert set(robot_actuator_names) == set(joint_names), (
             f"Actuator names {robot_actuator_names} do not match joint names {joint_names}"
         )
@@ -654,7 +654,7 @@ class MujocoHandler(BaseSimHandler):
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]

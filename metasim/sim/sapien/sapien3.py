@@ -518,7 +518,7 @@ class Sapien3Handler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name, sort=True):
+    def _get_body_names(self, obj_name, sort=True):
         body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
         if sort:
             return sorted(body_names)
