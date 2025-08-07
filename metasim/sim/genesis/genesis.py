@@ -209,14 +209,14 @@ class GenesisHandler(BaseSimHandler):
                         np.array([
                             [
                                 states_flat[env_id][obj.name]["dof_pos"][jn]
-                                for jn in self.get_joint_names(obj.name, sort=False)
+                                for jn in self._get_joint_names(obj.name, sort=False)
                             ]
                             for env_id in env_ids
                         ]),
                         envs_idx=env_ids,
                     )
                 else:
-                    joint_names = self.get_joint_names(obj.name, sort=False)
+                    joint_names = self._get_joint_names(obj.name, sort=False)
                     qs_idx_local = torch.arange(1, 1 + len(joint_names), dtype=torch.int32, device=gs.device).tolist()
                     obj_inst.set_qpos(
                         np.array([
@@ -230,7 +230,7 @@ class GenesisHandler(BaseSimHandler):
         self._actions_cache = actions
 
         control_mode = self._get_control_mode(obj_name)
-        joint_names = self.get_joint_names(obj_name, sort=False)
+        joint_names = self._get_joint_names(obj_name, sort=False)
 
         if control_mode == "effort":
             effort = [
@@ -289,7 +289,7 @@ class GenesisHandler(BaseSimHandler):
         if not hasattr(self, "_actions_cache") or not self._actions_cache:
             return None
 
-        joint_names = self.get_joint_names(self.robot.name, sort=False)
+        joint_names = self._get_joint_names(self.robot.name, sort=False)
         effort_targets = []
         for action in self._actions_cache:
             if "dof_effort_target" in action[self.robot.name] and action[self.robot.name]["dof_effort_target"]:
@@ -309,7 +309,7 @@ class GenesisHandler(BaseSimHandler):
             return control_types[0] if control_types else "position"
         return "position"
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
             joint_names = [

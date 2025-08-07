@@ -341,7 +341,7 @@ class MJXHandler(BaseSimHandler):
         self._actions_cache = actions
 
         # -------- build (N, J) tensor ---------------------------------
-        jnames_local = self.get_joint_names(obj_name, sort=True)
+        jnames_local = self._get_joint_names(obj_name, sort=True)
         tgt_torch = torch.stack(
             [
                 torch.tensor(
@@ -486,7 +486,7 @@ class MJXHandler(BaseSimHandler):
 
         self._viewer.sync()
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self._mj_model.body(i).name for i in range(self._mj_model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
@@ -497,7 +497,7 @@ class MJXHandler(BaseSimHandler):
         else:
             return []
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = [
                 self._mj_model.joint(joint_id).name

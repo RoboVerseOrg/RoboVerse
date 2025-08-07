@@ -1,7 +1,6 @@
 import argparse
 import time
 from copy import deepcopy
-from typing import Type
 
 import gymnasium as gym
 import torch
@@ -16,7 +15,6 @@ from metasim.cfg.objects import (
 )
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.dict import deep_get
@@ -131,7 +129,7 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     ## Gymnasium main methods
     ############################################################
-    def step(self, action: list[Action] | torch.Tensor) :
+    def step(self, action: list[Action] | torch.Tensor):
         self._actions_cache = action
 
         if isinstance(action, torch.Tensor):
@@ -292,7 +290,7 @@ class IsaaclabHandler(BaseSimHandler):
 
         states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
         for obj in self.objects + self.robots:
-        # for obj in self.objects + self.robots + self.checker:
+            # for obj in self.objects + self.robots + self.checker:
             if obj.name not in states_flat[0]:
                 log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
                 pos, rot = get_pose(self.env, obj.name, env_ids=env_ids)
@@ -313,7 +311,7 @@ class IsaaclabHandler(BaseSimHandler):
                     log.warning(f"No dof_pos found for {obj.name}")
                 else:
                     dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
-                    joint_names = self.get_joint_names(obj.name, sort=False)
+                    joint_names = self._get_joint_names(obj.name, sort=False)
                     joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.env.device)
                     for i, joint_name in enumerate(joint_names):
                         if joint_name in dof_dict[0]:
@@ -348,7 +346,7 @@ class IsaaclabHandler(BaseSimHandler):
                 body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=body_state,
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -374,7 +372,7 @@ class IsaaclabHandler(BaseSimHandler):
             body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
             state = RobotState(
                 root_state=root_state,
-                body_names=self.get_body_names(obj.name),
+                body_names=self._get_body_names(obj.name),
                 body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -442,7 +440,7 @@ class IsaaclabHandler(BaseSimHandler):
     def _simulate(self):
         pass
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.env.scene.articulations[obj_name].joint_names)
             if sort:
@@ -451,7 +449,7 @@ class IsaaclabHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = deepcopy(self.env.scene.articulations[obj_name].body_names)
             if sort:

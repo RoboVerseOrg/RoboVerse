@@ -572,7 +572,7 @@ class IsaacgymHandler(BaseSimHandler):
                 body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=body_state,
                     joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 0],
                     joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
@@ -596,7 +596,7 @@ class IsaacgymHandler(BaseSimHandler):
 
             state = RobotState(
                 root_state=root_state,
-                body_names=self.get_body_names(robot.name),
+                body_names=self._get_body_names(robot.name),
                 body_state=body_state,
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
@@ -989,7 +989,7 @@ class IsaacgymHandler(BaseSimHandler):
     ############################################################
     ## Utils
     ############################################################
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = list(self._joint_info[obj_name]["names"])
             if sort:
@@ -998,7 +998,7 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = self._body_info[obj_name]["names"]
             if sort:
@@ -1008,10 +1008,10 @@ class IsaacgymHandler(BaseSimHandler):
             return []
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
-        return [self._body_info[obj_name]["global_indices"][bn] for bn in self.get_body_names(obj_name)]
+        return [self._body_info[obj_name]["global_indices"][bn] for bn in self._get_body_names(obj_name)]
 
     def _get_joint_ids_reindex(self, obj_name: str) -> list[int]:
-        return [self._joint_info[obj_name]["global_indices"][jn] for jn in self.get_joint_names(obj_name)]
+        return [self._joint_info[obj_name]["global_indices"][jn] for jn in self._get_joint_names(obj_name)]
 
     def rand_rigid_body_fric(self, cfg: FrictionRandomCfg, env_id: int, props: list[gymapi.RigidShapeProperties]):
         """Randomize the friction of the rigid bodies."""
