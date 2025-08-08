@@ -7,11 +7,11 @@ from gymnasium import spaces
 from loguru import logger as log
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 from metasim.utils.state import list_state_to_tensor
+from scenario_cfg.scenario import ScenarioCfg
 
 
 class Sb3EnvWrapper(VecEnv):
@@ -284,10 +284,10 @@ def check_metasim_env(sim_type: SimType = SimType.ISAACGYM, num_envs: int = 2):
 if __name__ == "__main__":
     from gymnasium.envs import register
 
-    from scenario_cfg.scenario import ScenarioCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+    from scenario_cfg.scenario import ScenarioCfg
 
     task = get_task("humanoidbench:Walk")
     robot = get_robot("h1")

@@ -1,10 +1,10 @@
 import numpy as np
 from base import BaseTaskWrapper
 
+from metasim.constants import PhysicStateType
 from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from scenario_cfg.scenario import ScenarioCfg
-from metasim.constants import PhysicStateType
 
 if __name__ == "__main__":
     # initialize scenario

@@ -4,11 +4,11 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
 from metasim.utils.state import list_state_to_tensor
+from scenario_cfg.scenario import ScenarioCfg
 
 
 class FastTD3EnvWrapper:

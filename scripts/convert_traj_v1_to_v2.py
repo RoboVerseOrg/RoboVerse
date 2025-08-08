@@ -6,9 +6,6 @@ import numpy as np
 import torch
 from loguru import logger as log
 
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
-from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler
 from metasim.utils.demo_util import save_traj_file
@@ -18,6 +15,9 @@ from metasim.utils.demo_util.demo_util_v1 import (
     get_init_states,
 )
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.scenario import ScenarioCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 
 def parse_args():

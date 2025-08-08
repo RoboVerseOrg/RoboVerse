@@ -22,12 +22,12 @@ import os
 
 import imageio
 
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_handler_class
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.scenario import ScenarioCfg
 
 if __name__ == "__main__":
 

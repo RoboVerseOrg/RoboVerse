@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 
-from scenario_cfg.scenario import ScenarioCfg
 from roboverse_learn.tasks.base import BaseTaskWrapper
+from scenario_cfg.scenario import ScenarioCfg
 
 
 class RLTaskWrapper(BaseTaskWrapper):

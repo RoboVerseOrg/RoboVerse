@@ -4,8 +4,8 @@ import pickle
 import torch
 import yaml
 
-from scenario_cfg.policy import ACTPolicyCfg
 from roboverse_learn.algorithms.act.policy import ACTPolicy
+from scenario_cfg.policy import ACTPolicyCfg
 
 from .base_runner import PolicyRunner
 
