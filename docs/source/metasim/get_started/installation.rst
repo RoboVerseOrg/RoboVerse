@@ -8,7 +8,7 @@ First, clone the RoboVerse project:
     git clone git@github.com:RoboVerseOrg/RoboVerse.git
     cd RoboVerse
 
-MetaSim uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies.
+RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies.
 
 To install ``uv``, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
 
@@ -71,8 +71,8 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
-Install IsaacLab v1.4.1 (IsaacSim v4.2.0.2, **Recommended**)
-------------------------------------------------------------
+Install IsaacLab v1.4.1 (IsaacSim v4.2, Recommended)
+----------------------------------------------------
 
 .. code-block:: bash
 
@@ -86,8 +86,8 @@ Install IsaacLab v1.4.1 (IsaacSim v4.2.0.2, **Recommended**)
    1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
    2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
 
-Install IsaacLab v2.1.1 (IsaacSim v4.5.0)
------------------------------------------
+Install IsaacLab v2.1.1 (IsaacSim v4.5)
+---------------------------------------
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
@@ -103,8 +103,8 @@ Install IsaacLab v2.1.1 (IsaacSim v4.5.0)
    1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
    2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
 
-Install IsaacLab v2.2.0 (IsaacSim v5.0.0, Latest)
--------------------------------------------------
+Install IsaacLab v2.2.0 (IsaacSim v5.0, Latest)
+-----------------------------------------------
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
@@ -162,10 +162,10 @@ Install IsaacGym
    where ``$CONDA_HOME`` is the path to your conda installation. It is typically ``~/anaconda3``, ``~/miniconda3`` or ``~/miniforge3``.
    You can also add it to your ``~/.bashrc`` to make it permanent.
 
-Combine Simulators
-------------------
+Multiple Simulators
+-------------------
 
-Feel free to combine the above commands. For example, if you want to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
+Feel free to combine the above commands to install multiple simulators in one environment. For example, if you want to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
 
 .. code-block:: bash
 
@@ -176,7 +176,7 @@ Feel free to combine the above commands. For example, if you want to install MuJ
     ./isaaclab.sh -i
 
 .. note::
-   Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, if you want to install MuJoCo, SAPIEN3, and Genesis at the same time, you should run:
+   Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, to install MuJoCo, SAPIEN3, and Genesis at the same time, you should run:
 
    .. code-block:: bash
 
