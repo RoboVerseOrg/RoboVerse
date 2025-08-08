@@ -28,10 +28,15 @@ isaaclab = [
     "isaacsim-extscache-kit==4.2.0.2",
     "isaacsim-extscache-kit-sdk==4.2.0.2",
 ]
-isaaclab2 = [
+isaaclab211 = [
     "torch==2.5.1+cu118",
     "torchvision==0.20.1+cu118",
     "isaacsim[all,extscache]==4.5.0",
+]
+isaaclab2 = [
+    "torch==2.7.0",
+    "torchvision==0.22.0",
+    "isaacsim[all,extscache]==5.0.0",
 ]
 isaacgym = [
     "numpy<2",

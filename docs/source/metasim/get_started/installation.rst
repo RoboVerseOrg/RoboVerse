@@ -49,14 +49,18 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - ``uv pip install -e ".[pybullet]"``
      - 3.6-3.11
      - 3.10
-   * - IsaacLab v1.4
+   * - IsaacLab v1.4.1
      - See below
      - 3.10
      - 3.10
-   * - IsaacLab v2
+   * - IsaacLab v2.1.1
      - See below
      - 3.10
      - 3.10
+   * - IsaacLab v2.2.0
+     - See below
+     - 3.11
+     - 3.11
    * - IsaacGym
      - See below
      - 3.6-3.8
@@ -67,8 +71,8 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
-Install IsaacLab v1.4
----------------------
+Install IsaacLab v1.4.1 (IsaacSim v4.2.0.2, **Recommended**)
+------------------------------------------------------------
 
 .. code-block:: bash
 
@@ -82,8 +86,8 @@ Install IsaacLab v1.4
    1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
    2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
 
-Install IsaacLab v2
--------------------
+Install IsaacLab v2.1.1 (IsaacSim v4.5.0)
+-----------------------------------------
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
@@ -92,12 +96,38 @@ Install IsaacLab v2
 
     uv pip install -e ".[isaaclab2]"
     cd third_party
-    git clone --depth 1 --branch v2.0.2 git@github.com:isaac-sim/IsaacLab.git IsaacLab2 && cd IsaacLab2
+    git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
     ./isaaclab.sh -i
 
 .. note::
    1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
    2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
+
+Install IsaacLab v2.2.0 (IsaacSim v5.0.0, Latest)
+-------------------------------------------------
+
+.. warning::
+   We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
+
+.. code-block:: bash
+
+    uv pip install -e ".[isaaclab2]"
+    cd third_party
+    git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
+    ./isaaclab.sh -i none
+
+.. note::
+   1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
+   2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
+   3. Comment out the following lines in both ``step`` and ``reset`` methods in ``third_party/IsaacLab220/source/isaaclab/isaaclab/sim/simulation_context.py`` could help fix running issue:
+
+   .. code-block:: python
+
+      # check if we need to raise an exception that was raised in a callback
+      # if builtins.ISAACLAB_CALLBACK_EXCEPTION is not None:
+      #     exception_to_raise = builtins.ISAACLAB_CALLBACK_EXCEPTION
+      #     builtins.ISAACLAB_CALLBACK_EXCEPTION = None
+      #     raise exception_to_raise
 
 Install IsaacGym
 ----------------
