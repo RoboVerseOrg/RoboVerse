@@ -79,7 +79,7 @@ The **two most important folders** in Metasim are:
    This is often used for:
 
    - Episode resets to a known state
-   - State injection during training 
+   - State injection during training
    - Replaying trajectories
 
    Internally this maps the unified `TensorState` back to simulator-specific structures (`qpos`, `qvel`, `ctrl`, etc.)
@@ -131,8 +131,8 @@ The **two most important folders** in Metasim are:
    #### Task-level declaration
 
    ```python
-   from metasim.cfg.query_type import SitePos, SensorData, GeomCollision, BodyMass
-   
+   from scenario_cfg.query_type import SitePos, SensorData, GeomCollision, BodyMass
+
    def extra_spec(self):
        return {
            "head_pos"        : SitePos(["head"]),
@@ -157,7 +157,7 @@ The **two most important folders** in Metasim are:
 
    Each value is resolved independently via the corresponding query type and handler logic.
 
-   
+
 
 2. #### cfg folder — Simulator Configuration
 
@@ -204,11 +204,11 @@ The **two most important folders** in Metasim are:
 
 ## RoboVerse Learn  Overeview
 
-RoboVerse Learn consists of Task Wrappers and Learning Framework.  
+RoboVerse Learn consists of Task Wrappers and Learning Framework.
 Its goal is to present *one* standard interface that:
 
-* Lets any algorithm (PPO, SAC, BC, etc.) work with any task  
-* Hides simulator & task differences, so you can swap tasks, simulators or algorithms with minimal friction  
+* Lets any algorithm (PPO, SAC, BC, etc.) work with any task
+* Hides simulator & task differences, so you can swap tasks, simulators or algorithms with minimal friction
 
 ---
 

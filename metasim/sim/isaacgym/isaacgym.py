@@ -7,7 +7,7 @@ import torch
 from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 from loguru import logger as log
 
-from metasim.cfg.objects import (
+from scenario_cfg.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
     PrimitiveCubeCfg,
@@ -15,8 +15,8 @@ from metasim.cfg.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
-from metasim.cfg.randomization import FrictionRandomCfg, MassRandomCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.randomization import FrictionRandomCfg, MassRandomCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper

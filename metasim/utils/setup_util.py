@@ -7,8 +7,8 @@ import importlib
 import gymnasium as gym
 from loguru import logger as log
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.scenes import SceneCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.scenes import SceneCfg
 from metasim.constants import SimType
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case, to_snake_case
 
@@ -117,7 +117,7 @@ def register_task(task_id: str):
     if ":" in task_id:
         log.warning(
             "Currently we don't support task_id with leading benchmark name and colon. However, you can use module path as prefix. "
-            "For example, `debug:reach_origin` is invalid, but `metasim.cfg.tasks.debug:reach_origin` is valid."
+            "For example, `debug:reach_origin` is invalid, but `scenario_cfg.tasks.debug:reach_origin` is valid."
         )
         prefix, task_name = task_id.split(":", 1)
     else:
@@ -160,7 +160,7 @@ def get_robot(robot_name: str) -> BaseRobotCfg:
         RobotName = to_camel_case(robot_name)
     else:
         raise ValueError(f"Invalid robot name: {robot_name}, should be in either camel case or snake case")
-    module = importlib.import_module("metasim.cfg.robots")
+    module = importlib.import_module("scenario_cfg.robots")
     robot_cls = getattr(module, f"{RobotName}Cfg")
     return robot_cls()
 
@@ -177,7 +177,7 @@ def get_scene(scene_name: str) -> SceneCfg:
     if is_snake_case(scene_name):
         scene_name = to_camel_case(scene_name)
     try:
-        module = importlib.import_module("metasim.cfg.scenes")
+        module = importlib.import_module("scenario_cfg.scenes")
         scene_cls = getattr(module, f"{scene_name}Cfg")
         return scene_cls()
     except (ImportError, AttributeError) as e:

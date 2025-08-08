@@ -8,9 +8,9 @@ This guide walks you through the full process of integrating a new task into Rob
 
 To add a new task, you need to complete the following four components:
 
-1. **Trajectory** — Prepare a demonstration file in the v2 format  
-2. **Assets** — Convert and organize USD assets  
-3. **Configuration File** — Write a task config class in Python  
+1. **Trajectory** — Prepare a demonstration file in the v2 format
+2. **Assets** — Convert and organize USD assets
+3. **Configuration File** — Write a task config class in Python
 4. **Docstring** — Add structured documentation for your task
 
 Each part is explained in detail below.
@@ -111,7 +111,7 @@ roboverse_data/
 
 ---
 
-### A. USD Assets 
+### A. USD Assets
 
 
 #### Texture Guidelines
@@ -150,7 +150,7 @@ By default, this loads the asset as a rigid object.
 
 ---
 
-## ⚙️ 3. Write a Configuration File 
+## ⚙️ 3. Write a Configuration File
 
 Create a new Python file under:
 
@@ -161,7 +161,7 @@ metasim/cfg/tasks/<benchmark_name>/<your_task>_cfg.py
 It should define a task config class inheriting from `BaseTaskCfg`. Example:
 
 ```python
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 class PickCubeCfg(BaseTaskCfg):
     task_name = "pick_cube"
@@ -248,7 +248,7 @@ Imported from ManiSkill and adapted to IsaacLab format.
 Also add your task to the documentation index:
 
 ```text
-docs/source/metasim/api/metasim/metasim.cfg.tasks.rst
+docs/source/metasim/api/metasim/scenario_cfg.tasks.rst
 ```
 
 ---
@@ -275,4 +275,3 @@ The following resources may be useful when migrating existing datasets or assets
 
 -  [**Data Format v1 (Deprecated)**](./data_format_v1.md)\
   Full reference for the legacy v1 demonstration format and conversion guidance.
-

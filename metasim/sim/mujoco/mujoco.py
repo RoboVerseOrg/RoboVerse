@@ -9,11 +9,11 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
-from metasim.cfg.robots import BaseRobotCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from scenario_cfg.robots import BaseRobotCfg
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from scenario_cfg.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler

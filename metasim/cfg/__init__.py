@@ -1,1 +1,0 @@
-"""MetaSim configurations."""

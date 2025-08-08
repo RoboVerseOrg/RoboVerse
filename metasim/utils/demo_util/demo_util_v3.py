@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.types import Action, RobotAction
 
 

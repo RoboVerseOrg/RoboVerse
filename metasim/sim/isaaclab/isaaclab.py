@@ -6,14 +6,14 @@ import gymnasium as gym
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import (
+from scenario_cfg.objects import (
     ArticulationObjCfg,
     BaseArticulationObjCfg,
     BaseObjCfg,
     BaseRigidObjCfg,
     PrimitiveFrameCfg,
 )
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState

@@ -1,5 +1,5 @@
-﻿metasim.cfg.sensors
+﻿scenario_cfg.sensors
 ===========================
 
-.. automodule:: metasim.cfg.sensors.cameras
+.. automodule:: scenario_cfg.sensors.cameras
    :members:

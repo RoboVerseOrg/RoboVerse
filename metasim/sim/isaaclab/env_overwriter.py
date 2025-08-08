@@ -1,8 +1,8 @@
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.scenario import ScenarioCfg
 
 from .isaaclab_helper import add_cameras, add_lights, add_objects, add_robots, get_pose
 

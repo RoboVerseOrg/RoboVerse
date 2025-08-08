@@ -8,8 +8,8 @@ from glob import glob
 import torch
 from loguru import logger as log
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 from .loader import load_traj_file
 

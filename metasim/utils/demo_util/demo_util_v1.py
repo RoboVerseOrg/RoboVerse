@@ -7,9 +7,9 @@ import pickle as pkl
 import numpy as np
 import torch
 
-from metasim.cfg.objects import ArticulationObjCfg
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from scenario_cfg.objects import ArticulationObjCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.sim import BaseSimHandler
 
 

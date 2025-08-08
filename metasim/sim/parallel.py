@@ -14,7 +14,7 @@ import torch
 from loguru import logger as log
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from scenario_cfg.scenario import ScenarioCfg
 
 from metasim.sim.base import BaseSimHandler
 from metasim.types import DictEnvState, TensorState

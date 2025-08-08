@@ -18,15 +18,15 @@ from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
-from metasim.cfg.objects import (
+from scenario_cfg.objects import (
     ArticulationObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.robots import BaseRobotCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, DictEnvState
