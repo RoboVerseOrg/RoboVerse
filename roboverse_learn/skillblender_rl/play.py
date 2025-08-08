@@ -10,7 +10,6 @@ except ImportError:
 import torch
 from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 
-from scenario_cfg.scenario import ScenarioCfg
 from roboverse_learn.skillblender_rl.utils import (
     export_policy_as_jit,
     get_args,
@@ -19,6 +18,7 @@ from roboverse_learn.skillblender_rl.utils import (
     get_log_dir,
     get_wrapper,
 )
+from scenario_cfg.scenario import ScenarioCfg
 
 
 def play(args):

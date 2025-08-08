@@ -38,10 +38,10 @@ def main(cfg: DictConfig):
     if sim_name == "isaacgym":
         import isaacgym  # noqa: F401
 
-    from scenario_cfg.scenario import ScenarioCfg
     from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
     from roboverse_learn.rl.algos import get_algorithm
     from roboverse_learn.rl.env import RLEnvWrapper
+    from scenario_cfg.scenario import ScenarioCfg
 
     cprint("Start Building the Environment", "green", attrs=["bold"])
     task = get_task(cfg.train.task_name)
