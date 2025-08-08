@@ -28,10 +28,15 @@ isaaclab = [
     "isaacsim-extscache-kit==4.2.0.2",
     "isaacsim-extscache-kit-sdk==4.2.0.2",
 ]
-isaaclab2 = [
-    "torch==2.5.1+cu118",
-    "torchvision==0.20.1+cu118",
+isaaclab211 = [
+    "torch==2.7.0+cu128",
+    "torchvision==0.22.0+cu128",
     "isaacsim[all,extscache]==4.5.0",
+]
+isaaclab220 = [
+    "torch==2.7.0+cu128",
+    "torchvision==0.22.0+cu128",
+    "isaacsim[all,extscache]==5.0.0",
 ]
 isaacgym = [
     "numpy<2",
@@ -54,6 +59,7 @@ index-strategy = "unsafe-best-match"
 extra-index-url = [
     "https://pypi.org/simple",
     "https://download.pytorch.org/whl/cu118",
+    "https://download.pytorch.org/whl/cu128",
     "https://pypi.nvidia.com",
 ]
 
