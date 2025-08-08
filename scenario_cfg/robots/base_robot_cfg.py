@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import MISSING
 from typing import Literal
 
-from metasim.cfg.objects import ArticulationObjCfg
+from scenario_cfg.objects import ArticulationObjCfg
 from metasim.utils import configclass
 
 

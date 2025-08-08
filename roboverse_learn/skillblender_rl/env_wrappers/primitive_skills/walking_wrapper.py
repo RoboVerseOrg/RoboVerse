@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.utils.humanoid_robot_util import (
     contact_forces_tensor,
     dof_pos_tensor,

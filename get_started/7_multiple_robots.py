@@ -12,8 +12,8 @@ import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.cfg.robots import FrankaCfg, H1Cfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.robots import FrankaCfg, H1Cfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.setup_util import get_sim_handler_class
 

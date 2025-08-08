@@ -5,8 +5,8 @@ from unittest.mock import Mock
 import pytest
 import torch
 
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.tasks.isaacgym_envs.allegrohand_cfg import AllegroHandCfg
+from scenario_cfg.scenario import ScenarioCfg
+from scenario_cfg.tasks.isaacgym_envs.allegrohand_cfg import AllegroHandCfg
 from metasim.utils.setup_util import get_robot
 from roboverse_learn.rl.env import RLEnvWrapper
 

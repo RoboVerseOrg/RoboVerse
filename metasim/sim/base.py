@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import torch
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from scenario_cfg.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import DictEnvState, TensorState, Action

@@ -24,7 +24,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.utils.setup_util import register_task
 from roboverse_learn.tasks.base import BaseTaskWrapper
 

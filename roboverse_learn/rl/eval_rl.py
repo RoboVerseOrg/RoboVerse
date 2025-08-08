@@ -41,7 +41,7 @@ def main(cfg: DictConfig):
 
     set_np_formatting()
 
-    from metasim.cfg.scenario import ScenarioCfg
+    from scenario_cfg.scenario import ScenarioCfg
     from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
     from roboverse_learn.rl.algos import get_algorithm
 

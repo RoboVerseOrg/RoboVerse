@@ -118,8 +118,8 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 from torchvision.utils import make_grid
 
-from metasim.cfg.cameras import PinholeCameraCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.utils.state import list_state_to_tensor
 from roboverse_learn.tasks.base import BaseTaskWrapper
 

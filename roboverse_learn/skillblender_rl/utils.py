@@ -9,7 +9,7 @@ import os
 import torch
 from loguru import logger as log
 
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 

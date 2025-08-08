@@ -6,9 +6,9 @@ import numpy as np
 import torch
 from loguru import logger as log
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.scenario import ScenarioCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler
 from metasim.utils.demo_util import save_traj_file

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from diffusion_policy import RobotWorkspace
 
-from metasim.cfg.policy import DiffusionPolicyCfg
+from scenario_cfg.policy import DiffusionPolicyCfg
 
 from .base_runner import PolicyRunner
 

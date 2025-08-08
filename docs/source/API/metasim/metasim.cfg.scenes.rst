@@ -1,7 +1,7 @@
-﻿metasim.cfg.scenes
+﻿scenario_cfg.scenes
 ==================
 
-.. automodule:: metasim.cfg.scenes
+.. automodule:: scenario_cfg.scenes
    :members:
    :undoc-members:
    :show-inheritance:

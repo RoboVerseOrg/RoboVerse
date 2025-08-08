@@ -9,8 +9,8 @@ from typing import Callable
 import numpy as np
 import torch
 
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
+from scenario_cfg.scenario import ScenarioCfg
+from scenario_cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
 from metasim.utils.humanoid_robot_util import (
     contact_forces_tensor,
     dof_vel_tensor,

@@ -5,7 +5,7 @@ import numpy as np
 from loguru import logger as log
 from matplotlib import pyplot as plt
 
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 from metasim.constants import TaskType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_task
@@ -38,7 +38,7 @@ franka_joint_limits = [
 
 
 def get_available_tasks():
-    from metasim.cfg import tasks
+    from scenario_cfg import tasks
 
     tasks = [task for task_name, task in vars(tasks).items() if task_name.endswith("Cfg")]
 

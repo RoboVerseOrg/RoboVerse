@@ -8,7 +8,7 @@ from curobo.types.robot import RobotConfig
 from curobo.util_file import get_robot_path, join_path, load_yaml
 from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.utils.math import matrix_from_quat
 
 

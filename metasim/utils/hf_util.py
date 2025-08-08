@@ -8,13 +8,13 @@ from multiprocessing import Pool
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from metasim.cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from scenario_cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
 
 ## This is to avoid circular import
 try:
-    from metasim.cfg.scenario import ScenarioCfg
+    from scenario_cfg.scenario import ScenarioCfg
 except ImportError:
     pass
 

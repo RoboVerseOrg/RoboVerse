@@ -22,9 +22,9 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.cfg.cameras import PinholeCameraCfg
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.sim import HybridSimHandler
 from metasim.utils import configclass

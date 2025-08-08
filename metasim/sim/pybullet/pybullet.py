@@ -15,9 +15,9 @@ import pybullet as p
 import pybullet_data
 import torch
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.robots import BaseRobotCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, DictEnvState

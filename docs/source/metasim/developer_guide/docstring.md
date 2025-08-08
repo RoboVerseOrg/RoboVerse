@@ -18,7 +18,7 @@ Here we provide several examples with explainations, so you can get started quic
 
 ### Modules
 
-Every module file should begin with a module-level docstring describing its purpose. For example, for `metasim.cfg.objects`:
+Every module file should begin with a module-level docstring describing its purpose. For example, for `scenario_cfg.objects`:
 
 
 ```python

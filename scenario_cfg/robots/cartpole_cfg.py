@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
+from scenario_cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 from metasim.utils import configclass
 
 

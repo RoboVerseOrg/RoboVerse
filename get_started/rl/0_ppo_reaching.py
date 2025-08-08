@@ -26,8 +26,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
-from metasim.cfg.cameras import PinholeCameraCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.setup_util import get_sim_handler_class
@@ -67,7 +67,7 @@ class MetaSimVecEnv(VectorEnv):
         handler_class = get_sim_handler_class(SimType(scenario.sim))
         self.env: BaseSimHandler = handler_class(scenario, self.extra_spec)
         self.env.launch()
-        
+
         self.render_mode = None  # XXX
         self.scenario = scenario
 

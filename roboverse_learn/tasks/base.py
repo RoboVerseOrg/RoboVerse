@@ -8,7 +8,7 @@ import gymnasium as gym
 import numpy as np
 from traitlets import Dict
 
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler

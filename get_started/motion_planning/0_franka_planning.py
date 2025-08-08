@@ -33,8 +33,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
 from get_started.utils import ObsSaver
-from metasim.cfg.cameras import PinholeCameraCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils import configclass
 from metasim.utils.kinematics_utils import get_curobo_models

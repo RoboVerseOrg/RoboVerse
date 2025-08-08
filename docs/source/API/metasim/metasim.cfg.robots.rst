@@ -1,7 +1,7 @@
-﻿metasim.cfg.robots
+﻿scenario_cfg.robots
 ==================
 
-.. automodule:: metasim.cfg.robots
+.. automodule:: scenario_cfg.robots
 
    .. rubric:: Base Class
 

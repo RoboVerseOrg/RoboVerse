@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class

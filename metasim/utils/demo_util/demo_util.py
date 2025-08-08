@@ -6,7 +6,7 @@ import os
 
 from loguru import logger as log
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
+from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
 from metasim.sim import BaseSimHandler
 
 from .demo_util_v1 import get_traj_v1

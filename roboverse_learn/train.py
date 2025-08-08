@@ -10,7 +10,7 @@ from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 
 
 def parse_args():
@@ -39,7 +39,7 @@ def main():
 
     import torch
 
-    from metasim.cfg.cameras import PinholeCameraCfg
+    from scenario_cfg.cameras import PinholeCameraCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task

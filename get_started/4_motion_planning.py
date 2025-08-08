@@ -23,9 +23,9 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 from get_started.utils import ObsSaver
-from metasim.cfg.cameras import PinholeCameraCfg
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.cameras import PinholeCameraCfg
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.scenario import ScenarioCfg
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
 from metasim.utils.kinematics_utils import get_curobo_models

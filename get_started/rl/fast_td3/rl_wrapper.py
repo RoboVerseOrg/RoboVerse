@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 
-from metasim.cfg.scenario import ScenarioCfg
+from scenario_cfg.scenario import ScenarioCfg
 from roboverse_learn.tasks.base import BaseTaskWrapper
 
 

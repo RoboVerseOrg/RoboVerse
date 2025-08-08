@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 
-from metasim.cfg.policy import VLAPolicyCfg
+from scenario_cfg.policy import VLAPolicyCfg
 
 from .base_runner import PolicyRunner
 
