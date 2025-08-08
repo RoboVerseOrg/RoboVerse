@@ -78,13 +78,11 @@ Install IsaacLab v1.4.1 (IsaacSim v4.2, Recommended)
 
     uv pip install -e ".[isaaclab]"
     cd third_party
-    git clone --depth 1 --branch v1.4.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab && cd IsaacLab
-    sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py
-    ./isaaclab.sh -i
+    git clone --depth 1 --branch v1.4.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab141 && cd IsaacLab141
+    ./isaaclab.sh -i none
 
 .. note::
-   1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
-   2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
+   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
 
 Install IsaacLab v2.1.1 (IsaacSim v4.5)
 ---------------------------------------
@@ -94,14 +92,13 @@ Install IsaacLab v2.1.1 (IsaacSim v4.5)
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab2]"
+    uv pip install -e ".[isaaclab211]"
     cd third_party
-    git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
-    ./isaaclab.sh -i
+    git clone --depth 1 --branch v2.1.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab211 && cd IsaacLab211
+    ./isaaclab.sh -i none
 
 .. note::
-   1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
-   2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
+   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
 
 Install IsaacLab v2.2.0 (IsaacSim v5.0, Latest)
 -----------------------------------------------
@@ -111,15 +108,14 @@ Install IsaacLab v2.2.0 (IsaacSim v5.0, Latest)
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab2]"
+    uv pip install -e ".[isaaclab220]"
     cd third_party
     git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
     ./isaaclab.sh -i none
 
 .. note::
-   1. ``pip`` may raise version conflicts. It doesn't affect the usage of MetaSim.
-   2. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
-   3. Comment out the following lines in both ``step`` and ``reset`` methods in ``third_party/IsaacLab220/source/isaaclab/isaaclab/sim/simulation_context.py`` could help fix running issue:
+   1. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
+   2. Comment out the following lines in both ``step`` and ``reset`` methods in ``third_party/IsaacLab220/source/isaaclab/isaaclab/sim/simulation_context.py`` could help fix running issue:
 
    .. code-block:: python
 
@@ -165,15 +161,14 @@ Install IsaacGym
 Multiple Simulators
 -------------------
 
-Feel free to combine the above commands to install multiple simulators in one environment. For example, if you want to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
+Feel free to combine the above commands to install multiple simulators in one environment. For example, to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
 
 .. code-block:: bash
 
     uv pip install -e ".[mujoco,isaaclab]"
     cd third_party
-    git clone --depth 1 --branch v1.4.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab && cd IsaacLab
-    sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py
-    ./isaaclab.sh -i
+    git clone --depth 1 --branch v1.4.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab141 && cd IsaacLab141
+    ./isaaclab.sh -i none
 
 .. note::
    Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, to install MuJoCo, SAPIEN3, and Genesis at the same time, you should run:
