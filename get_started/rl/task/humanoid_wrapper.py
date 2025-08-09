@@ -61,7 +61,6 @@ class BaseLocomotionReward(HumanoidBaseReward):
     """Stable (move or don't-move)."""
 
     _move_speed = 0.0
-    success_bar = None
 
     def __init__(self, robot_name: str = "h1", move_speed: float | None = None):
         super().__init__(robot_name)
@@ -90,8 +89,8 @@ class BaseLocomotionReward(HumanoidBaseReward):
 
 
 # ---------- task wrapper ----------
-class HumanoidStandingTask(RLTaskWrapper):
-    """Standing task: locomotion reward with _move_speed = 0."""
+class BaseLocomotionTask(RLTaskWrapper):
+    """locomotion reward with _move_speed = 0."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
         self.robot_name = scenario.robots[0] if isinstance(scenario.robots[0], str) else scenario.robots[0].name
@@ -156,3 +155,39 @@ class HumanoidStandingTask(RLTaskWrapper):
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]
         terminated = robot_position_tensor[:, 2] < 0.2
         return terminated
+
+
+class WalkTask(BaseLocomotionTask):
+    """Walking task for humanoid robots"""
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> None:
+        # start from standing configuration
+        scenario = super()._load_task_config(scenario)
+        # override differences for walking
+        self.max_episode_steps = 1000
+        self.reward_fn = BaseLocomotionReward(self.robot_name, move_speed=1.0)
+        return scenario
+
+
+class RunTask(BaseLocomotionTask):
+    """Run task for humanoid robots."""
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> None:
+        # start from standing configuration
+        scenario = super()._load_task_config(scenario)
+        # override differences for walking
+        self.max_episode_steps = 1000
+        self.reward_fn = BaseLocomotionReward(self.robot_name, move_speed=5.0)
+        return scenario
+
+
+class StandTask(BaseLocomotionTask):
+    """Stand task for humanoid robots."""
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> None:
+        # start from standing configuration
+        scenario = super()._load_task_config(scenario)
+        # override differences for walking
+        self.max_episode_steps = 1000
+        self.reward_fn = BaseLocomotionReward(self.robot_name, move_speed=0.0)
+        return scenario

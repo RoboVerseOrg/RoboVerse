@@ -15,159 +15,175 @@ class RLTaskWrapper(BaseTaskWrapper):
         scenario: ScenarioCfg,
         device: str | torch.device | None = None,
     ) -> None:
+        # device
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
 
-        # Configure task parameters before initializing base
+        # allow subclasses to tweak scenario before base init
         self._load_task_config(scenario)
-
-        # Initialize the base class
         super().__init__(scenario)
 
+        # basic handles
         self.num_envs = scenario.num_envs
         self.robot = scenario.robots[0]
 
-        # ----------- initial states --------------------------------------------------
-        # Get initial states from the environment
+        # initial states (replicate to num_envs)
         initial_states = self._get_initial_states()
-        # Duplicate / trim list so that its length matches num_envs
         if len(initial_states) < self.num_envs:
-            k = self.num_envs // len(initial_states)
-            initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
+            n = len(initial_states)
+            reps, extra = divmod(self.num_envs, n)
+            initial_states = initial_states * reps + initial_states[:extra]
         self._initial_states = initial_states[: self.num_envs]
 
-        # Reset environment with initial states
+        # reset all envs
         self.reset(env_ids=list(range(self.num_envs)))
 
-        # Get first observation to determine observation space
+        # observation size from first obs
         states = self.env.get_states()
         first_obs = self._observation(states)
         self.num_obs = first_obs.shape[-1]
         self._raw_observation_cache = first_obs.clone()
 
-        # Set up action space
-        limits = self.robot.joint_limits  # dict: {joint_name: (low, high)}
+        # action bounds from joint limits (ordered by joint_names)
+        limits = self.robot.joint_limits
         self.joint_names = self.env.get_joint_names(self.robot.name)
-
         self._action_low = torch.tensor(
-            [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.device
+            [limits[j][0] for j in self.joint_names],
+            dtype=torch.float32,
+            device=self.device,
         )
         self._action_high = torch.tensor(
-            [limits[j][1] for j in self.joint_names], dtype=torch.float32, device=self.device
+            [limits[j][1] for j in self.joint_names],
+            dtype=torch.float32,
+            device=self.device,
         )
         self.num_actions = self._action_low.shape[0]
 
-        # Store input/output dimensions for easy access
+        # i/o dims for convenience
         self.input_dim = self.num_obs
         self.output_dim = self.num_actions
 
-        # Initialize observation and action spaces
+        # lazily built spaces
         self._observation_space = None
         self._action_space = None
-        self.max_episode_steps = 1000  # change this to the episode length of the task
-        self.asymmetric_obs = False  # privileged critic input not used (for now)
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> None:
-        """Load task-specific configuration (episode length, objects, sim params, etc.).
-        Called before super().__init__() to allow scenario modification.
-        Override in subclasses for custom configuration.
-        """
+        # episode settings
+        self.max_episode_steps = 1000
+        self.asymmetric_obs = False
+
+    # -------------------------------------------------------------------------
+    # hooks / spaces
+    # -------------------------------------------------------------------------
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
+        """Hook to modify `scenario` before base init if needed."""
         return scenario
 
     def _get_initial_states(self) -> list[dict]:
-        """Get the initial states of the environment."""
-        return None
+        """Return initial states for each env (override in subclasses)."""
+        return None  # intentional: base class expects subclass override
 
     @property
     def observation_space(self) -> spaces.Space:
-        """Get the observation space of the environment."""
         if self._observation_space is None:
-            self._observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
+            self._observation_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(self.num_obs,),
+                dtype=np.float32,
+            )
         return self._observation_space
 
     @property
     def action_space(self) -> spaces.Space:
-        """Get the action space of the environment."""
+        # normalized action space
         if self._action_space is None:
-            self._action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_actions,), dtype=np.float32)
+            self._action_space = spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(self.num_actions,),
+                dtype=np.float32,
+            )
         return self._action_space
 
+    # -------------------------------------------------------------------------
+    # env api
+    # -------------------------------------------------------------------------
+
     def _time_out(self, env_states) -> torch.Tensor:
-        """Get the timeout flag of the environment based on max episode length."""
-        timeout_flag = self._episode_steps >= self.max_episode_steps
-        return timeout_flag
+        """Timeout flag based on max episode length."""
+        return self._episode_steps >= self.max_episode_steps
 
     def reset(self, env_ids) -> torch.Tensor:
-        """Reset the environment and return initial observation."""
+        """Reset and return initial observation."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
         self._episode_steps[env_ids] = 0
         self.env.reset(states=self._initial_states, env_ids=env_ids)
+
         states = self.env.get_states()
-        observation = self._observation(states)
-        observation = observation.to(self.device)
-        self._raw_observation_cache.copy_(observation)
-        return observation
+        obs = self._observation(states)
+        self._raw_observation_cache.copy_(obs)
+        return obs
 
     def step(self, actions: torch.Tensor):
-        """Step the environment with normalized actions."""
+        """Step with normalized actions in [-1, 1]."""
         self._episode_steps += 1
 
-        # Convert normalized actions to real actions
         real_action = self._unnormalise_action(actions)
-
-        # Use the base class step method
         obs, priv_obs, reward, terminated, time_out, _ = super().step(real_action)
 
-        obs_now = obs.to(self.device)
-        reward_now = reward.to(self.device)
-        done_flag = terminated.to(self.device, torch.bool)
-        time_out_flag = time_out.to(self.device, torch.bool)
+        done = terminated.bool()
+        time_out = time_out.bool()
+        episode_done = done | time_out
 
         info = {
-            "time_outs": time_out_flag,
             "episode_steps": self._episode_steps.clone(),
-            "observations": {"raw": {"obs": self._raw_observation_cache.clone().to(self.device)}},
+            "observations": {"raw": {"obs": self._raw_observation_cache.clone()}},
         }
 
-        # Check for episode completion (either terminated or timed out)
-        episode_done = done_flag | time_out_flag
-
-        if (done_indices := episode_done.nonzero(as_tuple=False).squeeze(-1)).numel():
-            # Reset completed episodes
+        done_indices = episode_done.nonzero(as_tuple=False).squeeze(-1)
+        if done_indices.numel():
+            # reset finished envs and replace their obs
             self.reset(env_ids=done_indices.tolist())
-            reset_states = self.env.get_states()
-            reset_obs_full = self._observation(reset_states).to(self.device)
-            obs_now[done_indices] = reset_obs_full[done_indices]
-            self._raw_observation_cache[done_indices] = reset_obs_full[done_indices]
+            states_after = self.env.get_states()
+            obs_after = self._observation(states_after)
+            obs[done_indices] = obs_after[done_indices]
+            self._raw_observation_cache[done_indices] = obs_after[done_indices]
         else:
-            keep_mask = (~done_flag).unsqueeze(-1)
-            self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs_now)
+            # keep previous raw obs where not done (same as original logic)
+            keep_mask = (~done).unsqueeze(-1)
+            self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs)
 
-        return obs_now, reward_now, episode_done, info
+        return obs, priv_obs, reward, terminated, time_out, info
 
     def render(self) -> np.ndarray:
-        """Render the environment and return RGB image."""
+        """Render RGB image grid from first camera."""
         state = self.env.get_states()
-        rgb_data = next(iter(state.cameras.values())).rgb
-        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
-        image = image.cpu().numpy().transpose(1, 2, 0)  # (H, W, C)
-        image = (image * 255).astype(np.uint8)
-        return image
+        rgb = next(iter(state.cameras.values())).rgb  # (N, H, W, C)
+        grid = make_grid(  # (C, H, W)
+            (rgb.permute(0, 3, 1, 2) / 255.0),
+            nrow=int(rgb.shape[0] ** 0.5),
+        )
+        img = (grid.cpu().numpy().transpose(1, 2, 0) * 255.0).astype(np.uint8)
+        return img
+
+    # -------------------------------------------------------------------------
+    # utils
+    # -------------------------------------------------------------------------
 
     def _unnormalise_action(self, action: torch.Tensor) -> torch.Tensor:
-        """Map actions from [-1, 1] to the robot's joint-limit range."""
-        return (action + 1) / 2 * (self._action_high - self._action_low) + self._action_low
+        """Map actions from [-1, 1] to the robot joint range."""
+        return (action + 1.0) / 2.0 * (self._action_high - self._action_low) + self._action_low
 
     def _reward(self, env_states) -> torch.Tensor:
-        """Calculate reward based on configured reward functions.
-        Override this method to customize reward computation.
-        """
-        total_reward = torch.zeros(self.num_envs, device=self.device)
-
+        """Weighted sum of configured reward functions."""
+        total_reward = None
         for reward_func, weight in zip(self.reward_functions, self.reward_weights):
-            reward_value = reward_func(env_states, self.robot.name)
-            total_reward += weight * reward_value
+            val = reward_func(env_states, self.robot.name)
+            if total_reward is None:
+                total_reward = torch.zeros_like(val)
+            total_reward += weight * val
         return total_reward

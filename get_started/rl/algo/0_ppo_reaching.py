@@ -128,9 +128,6 @@ def train_ppo():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rl_wrapper = RLTaskWrapper(scenario, device=device)
 
-    # Set appropriate episode length
-    rl_wrapper.max_episode_steps = 500  # Adjust based on your task
-
     # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(rl_wrapper)
 
@@ -178,7 +175,7 @@ def train_ppo():
     rl_wrapper_inference.max_episode_steps = 500
     env_inference = VecEnvWrapper(rl_wrapper_inference)
 
-    task_name = scenario.task.__class__.__name__[:-3]
+    task_name =
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}_rl_wrapper.mp4")
 
     # load the model
