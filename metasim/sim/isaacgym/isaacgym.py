@@ -294,12 +294,6 @@ class IsaacgymHandler(BaseSimHandler):
         self._action_scale = torch.tensor(1.0, device=self.device)
         self._action_offset = torch.tensor(0.0, device=self.device)
 
-        self._p_gains = torch.zeros(
-            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self._d_gains = torch.zeros(
-            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-        )
         self._torque_limits = torch.zeros(
             self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
         )
@@ -336,15 +330,13 @@ class IsaacgymHandler(BaseSimHandler):
 
             # pd control effort mode
             if i_control_mode == "effort":
-                self._p_gains[:, i] = i_actuator_cfg.stiffness
-                self._d_gains[:, i] = i_actuator_cfg.damping
                 torque_limit = (
                     i_actuator_cfg.torque_limit
                     if i_actuator_cfg.torque_limit is not None
                     else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
                 )
                 # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
-                self._torque_limits[:, i] = self.scenario.control.torque_limit_scale * torque_limit
+
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
                 robot_dof_props["stiffness"][i] = 0.0
                 robot_dof_props["damping"][i] = 0.0
@@ -354,8 +346,12 @@ class IsaacgymHandler(BaseSimHandler):
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
                 if i_actuator_cfg.stiffness is not None:
                     robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
+                else:
+                    robot_dof_props["stiffness"][i] = 400.0
                 if i_actuator_cfg.damping is not None:
                     robot_dof_props["damping"][i] = i_actuator_cfg.damping
+                else:
+                    robot_dof_props["damping"][i] = 40.0
                 self._pos_ctrl_dof_dix.append(i + self._obj_num_dof)
             else:
                 log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
@@ -733,26 +729,15 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.fetch_results(self.sim, True)
         self._render()
 
-    def _simulate_one_physics_step(self, action):
-        # for pd control joints by effort api, update torque and step the physics
-        if self._manual_pd_on:
-            self._apply_pd_control(action)
-            self.gym.simulate(self.sim)
+    def _simulate_one_physics_step(self):
+        self.gym.simulate(self.sim)
+        if self.device == "cpu":
             self.gym.fetch_results(self.sim, True)
-            self.gym.refresh_dof_state_tensor(self.sim)
-        # for position control joints, just step the physics
-        else:
-            self.gym.simulate(self.sim)
-            self.gym.fetch_results(self.sim, True)
+        self.gym.refresh_dof_state_tensor(self.sim)
 
     def _simulate(self) -> None:
         # Step the physics
-        for _ in range(self.scenario.decimation):
-            self._simulate_one_physics_step(self.actions)
-
-        # Refresh tensors
-        if not self._manual_pd_on:
-            self.gym.refresh_dof_state_tensor(self.sim)
+        self._simulate_one_physics_step()
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_jacobian_tensors(self.sim)
@@ -776,35 +761,6 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             if not self.headless:
                 self.gym.poll_viewer_events(self.viewer)
-
-    def _compute_effort(self, actions):
-        """Compute effort from actions"""
-        # scale the actions (generally output from policy)
-        action_scaled = self._action_scale * actions
-        robot_dof_pos = self._robot_dof_state[..., 0]
-        robot_dof_vel = self._robot_dof_state[..., 1]
-        if self._action_offset:
-            _effort = (
-                self._p_gains * (action_scaled + self._robot_default_dof_pos - robot_dof_pos)
-                - self._d_gains * robot_dof_vel
-            )
-        else:
-            _effort = self._p_gains * (action_scaled - robot_dof_pos) - self._d_gains * robot_dof_vel
-        self._effort = torch.clip(_effort, -self._torque_limits, self._torque_limits)
-        effort = self._effort.to(torch.float32)
-        return effort
-
-    def _apply_pd_control(self, actions):
-        """
-        Compute torque using pd controller for effort actuator and set torque.
-        """
-        effort = self._compute_effort(actions)
-
-        # NOTE: effort passed set_dof_actuation_force_tensor() must have the same dimension as the number of DOFs, even if some DOFs are not actionable.
-        if self._obj_num_dof > 0:
-            obj_force_placeholder = torch.zeros((self._num_envs, self._obj_num_dof), device=self.device)
-            effort = torch.cat((obj_force_placeholder, effort), dim=1)
-        self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(effort))
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids
