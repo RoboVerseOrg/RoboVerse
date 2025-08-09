@@ -45,6 +45,7 @@ pybullet = ["numpy<2", "pybullet"]
 genesis = [
     "genesis-world",
     "libigl==2.5.1",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
+    "open3d",
 ]
 
 [tool.uv]
