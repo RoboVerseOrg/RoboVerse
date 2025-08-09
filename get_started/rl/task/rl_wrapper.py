@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import torch
+from gymnasium import spaces
 from torchvision.utils import make_grid
 
 from roboverse_learn.tasks.base import BaseTaskWrapper
@@ -18,6 +19,9 @@ class RLTaskWrapper(BaseTaskWrapper):
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
 
+        # Configure task parameters before initializing base
+        self._load_task_config(scenario)
+
         # Initialize the base class
         super().__init__(scenario)
 
@@ -26,7 +30,7 @@ class RLTaskWrapper(BaseTaskWrapper):
 
         # ----------- initial states --------------------------------------------------
         # Get initial states from the environment
-        initial_states = self.env.get_initial_states() if hasattr(self.env, "get_initial_states") else []
+        initial_states = self._get_initial_states()
         # Duplicate / trim list so that its length matches num_envs
         if len(initial_states) < self.num_envs:
             k = self.num_envs // len(initial_states)
@@ -54,27 +58,40 @@ class RLTaskWrapper(BaseTaskWrapper):
         )
         self.num_actions = self._action_low.shape[0]
 
+        # Store input/output dimensions for easy access
+        self.input_dim = self.num_obs
+        self.output_dim = self.num_actions
+
+        # Initialize observation and action spaces
+        self._observation_space = None
+        self._action_space = None
         self.max_episode_steps = 1000  # change this to the episode length of the task
         self.asymmetric_obs = False  # privileged critic input not used (for now)
 
-    def _observation(self, env_states) -> torch.Tensor:
-        """Flatten humanoid states and move them onto the training device."""
-        if hasattr(self.env.task, "humanoid_obs_flatten_func"):
-            return self.env.task.humanoid_obs_flatten_func(env_states).to(self.device)
-        else:
-            # Fallback: return flattened states
-            return torch.tensor(env_states, device=self.device).flatten(start_dim=1)
+    def _load_task_config(self, scenario: ScenarioCfg) -> None:
+        """Load task-specific configuration (episode length, objects, sim params, etc.).
+        Called before super().__init__() to allow scenario modification.
+        Override in subclasses for custom configuration.
+        """
+        return scenario
 
-    def _reward(self, env_states) -> torch.Tensor:
-        """Get the reward of the environment."""
-        total_reward = torch.zeros(self.num_envs, device=self.device)
-        if hasattr(self.env.task, "reward_functions") and hasattr(self.env.task, "reward_weights"):
-            for reward_fn, weight in zip(self.env.task.reward_functions, self.env.task.reward_weights):
-                total_reward += reward_fn(self.robot.name)(env_states).to(self.device) * weight
-        else:
-            # Fallback: return zero reward
-            total_reward = torch.zeros(self.num_envs, device=self.device)
-        return total_reward
+    def _get_initial_states(self) -> list[dict]:
+        """Get the initial states of the environment."""
+        return None
+
+    @property
+    def observation_space(self) -> spaces.Space:
+        """Get the observation space of the environment."""
+        if self._observation_space is None:
+            self._observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
+        return self._observation_space
+
+    @property
+    def action_space(self) -> spaces.Space:
+        """Get the action space of the environment."""
+        if self._action_space is None:
+            self._action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_actions,), dtype=np.float32)
+        return self._action_space
 
     def _time_out(self, env_states) -> torch.Tensor:
         """Get the timeout flag of the environment based on max episode length."""
@@ -143,3 +160,14 @@ class RLTaskWrapper(BaseTaskWrapper):
     def _unnormalise_action(self, action: torch.Tensor) -> torch.Tensor:
         """Map actions from [-1, 1] to the robot's joint-limit range."""
         return (action + 1) / 2 * (self._action_high - self._action_low) + self._action_low
+
+    def _reward(self, env_states) -> torch.Tensor:
+        """Calculate reward based on configured reward functions.
+        Override this method to customize reward computation.
+        """
+        total_reward = torch.zeros(self.num_envs, device=self.device)
+
+        for reward_func, weight in zip(self.reward_functions, self.reward_weights):
+            reward_value = reward_func(env_states, self.robot.name)
+            total_reward += weight * reward_value
+        return total_reward

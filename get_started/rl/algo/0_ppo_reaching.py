@@ -25,8 +25,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.rl.fast_td3.task_wrapper import RLTaskWrapper
 from get_started.utils import ObsSaver
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.utils.setup_util import register_task
+from scenario_cfg.scenario import ScenarioCfg
 
 
 @dataclass
@@ -42,7 +42,7 @@ class Args:
 args = tyro.cli(Args)
 
 
-class RLTaskWrapperVecEnv(VecEnv):
+class VecEnvWrapper(VecEnv):
     """Vectorized environment wrapper for RLTaskWrapper to work with Stable Baselines 3."""
 
     def __init__(self, rl_wrapper: RLTaskWrapper):
@@ -109,31 +109,6 @@ class RLTaskWrapperVecEnv(VecEnv):
         """Close the environment."""
         self.rl_wrapper.close()
 
-    ############################################################
-    ## Abstract methods
-    ############################################################
-    def get_images(self):
-        """Get images from the environment."""
-        raise NotImplementedError
-
-    def get_attr(self, attr_name, indices=None):
-        """Get an attribute of the environment."""
-        if indices is None:
-            indices = list(range(self.num_envs))
-        return [getattr(self.rl_wrapper.env, attr_name)] * len(indices)
-
-    def set_attr(self, attr_name: str, value, indices=None) -> None:
-        """Set an attribute of the environment."""
-        raise NotImplementedError
-
-    def env_method(self, method_name: str, *method_args, indices=None, **method_kwargs):
-        """Call a method of the environment."""
-        raise NotImplementedError
-
-    def env_is_wrapped(self, wrapper_class, indices=None):
-        """Check if the environment is wrapped by a given wrapper class."""
-        raise NotImplementedError
-
 
 def train_ppo():
     """Train PPO for reaching task using RLTaskWrapper."""
@@ -157,7 +132,7 @@ def train_ppo():
     rl_wrapper.max_episode_steps = 500  # Adjust based on your task
 
     # Create VecEnv wrapper for SB3
-    env = RLTaskWrapperVecEnv(rl_wrapper)
+    env = VecEnvWrapper(rl_wrapper)
 
     log(f"Created environment with {env.num_envs} environments")
     log(f"Observation space: {env.observation_space}")
@@ -201,7 +176,7 @@ def train_ppo():
 
     rl_wrapper_inference = RLTaskWrapper(scenario_inference, device=device)
     rl_wrapper_inference.max_episode_steps = 500
-    env_inference = RLTaskWrapperVecEnv(rl_wrapper_inference)
+    env_inference = VecEnvWrapper(rl_wrapper_inference)
 
     task_name = scenario.task.__class__.__name__[:-3]
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}_rl_wrapper.mp4")
