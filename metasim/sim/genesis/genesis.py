@@ -7,12 +7,13 @@ from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
 from genesis.vis.camera import Camera
 from loguru import logger as log
 
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg, _FileBasedMixin
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, GymEnvWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg, _FileBasedMixin
+from scenario_cfg.robots import BaseRobotCfg
+from scenario_cfg.scenario import ScenarioCfg
 
 # Apply IGL compatibility patch
 try:
@@ -39,8 +40,10 @@ class GenesisHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
         self.object_inst_dict: dict[str, RigidEntity] = {}
         self.camera_inst_dict: dict[str, Camera] = {}
+        self.robot = self.robots[0] if self.robots else None
 
     def launch(self) -> None:
+        super().launch()
         gs.init(backend=gs.gpu)  # TODO: add option for cpu
         self.scene_inst = gs.Scene(
             sim_options=gs.options.SimOptions(
@@ -65,16 +68,16 @@ class GenesisHandler(BaseSimHandler):
             log.warning(f"Could not add ground plane: {e}")
             pass
 
-        ## Add robot
-        self.robot_inst: RigidEntity = self.scene_inst.add_entity(
-            gs.morphs.URDF(
-                file=self.robot.urdf_path,
-                fixed=self.robot.fix_base_link,
-                merge_fixed_links=self.robot.collapse_fixed_joints,
-            ),
-            material=gs.materials.Rigid(gravity_compensation=1 if not self.robot.enabled_gravity else 0),
-        )
-        self.object_inst_dict[self.robot.name] = self.robot_inst
+        if self.robot:
+            self.robot_inst: RigidEntity = self.scene_inst.add_entity(
+                gs.morphs.URDF(
+                    file=self.robot.urdf_path,
+                    fixed=self.robot.fix_base_link,
+                    merge_fixed_links=self.robot.collapse_fixed_joints,
+                ),
+                material=gs.materials.Rigid(gravity_compensation=1 if not self.robot.enabled_gravity else 0),
+            )
+            self.object_inst_dict[self.robot.name] = self.robot_inst
 
         ## Add objects
         for obj in self.scenario.objects:
@@ -157,7 +160,7 @@ class GenesisHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for obj in [self.robot]:
+        for obj in self.robots:
             obj_inst = self.object_inst_dict[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
             state = RobotState(
@@ -199,32 +202,56 @@ class GenesisHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         states_flat = [state["objects"] | state["robots"] for state in states]
-        for obj in self.objects + [self.robot]:
+
+        all_objects = self.objects + self.robots
+        for obj in all_objects:
+            if obj.name not in self.object_inst_dict:
+                log.warning(f"Object {obj.name} not found in object_inst_dict")
+                continue
+
             obj_inst = self.object_inst_dict[obj.name]
-            obj_inst.set_pos(np.array([states_flat[env_id][obj.name]["pos"] for env_id in env_ids]))
-            obj_inst.set_quat(np.array([states_flat[env_id][obj.name]["rot"] for env_id in env_ids]))
-            if isinstance(obj, ArticulationObjCfg):
-                if obj.fix_base_link:
-                    obj_inst.set_qpos(
-                        np.array([
-                            [
-                                states_flat[env_id][obj.name]["dof_pos"][jn]
-                                for jn in self._get_joint_names(obj.name, sort=False)
-                            ]
-                            for env_id in env_ids
-                        ]),
-                        envs_idx=env_ids,
-                    )
-                else:
-                    joint_names = self._get_joint_names(obj.name, sort=False)
-                    qs_idx_local = torch.arange(1, 1 + len(joint_names), dtype=torch.int32, device=gs.device).tolist()
-                    obj_inst.set_qpos(
-                        np.array([
-                            [states_flat[env_id][obj.name]["dof_pos"][jn] for jn in joint_names] for env_id in env_ids
-                        ]),
-                        qs_idx_local=qs_idx_local,
-                        envs_idx=env_ids,
-                    )
+
+            positions = np.array([states_flat[env_id][obj.name]["pos"] for env_id in env_ids])
+            rotations = np.array([states_flat[env_id][obj.name]["rot"] for env_id in env_ids])
+
+            obj_inst.set_pos(positions)
+            obj_inst.set_quat(rotations)
+
+            is_articulated = isinstance(obj, (ArticulationObjCfg, BaseRobotCfg))
+
+            if is_articulated:
+                joint_names = self._get_joint_names(obj.name, sort=False)
+
+                if joint_names and "dof_pos" in states_flat[0][obj.name]:
+                    joint_positions = []
+                    for env_id in env_ids:
+                        env_joint_pos = []
+                        for jn in joint_names:
+                            if jn in states_flat[env_id][obj.name]["dof_pos"]:
+                                pos_val = float(states_flat[env_id][obj.name]["dof_pos"][jn])
+                                env_joint_pos.append(pos_val)
+                            else:
+                                env_joint_pos.append(0.0)
+                        joint_positions.append(env_joint_pos)
+
+                    joint_pos_array = np.array(joint_positions)
+
+                    if obj.fix_base_link:
+                        obj_inst.set_qpos(
+                            joint_pos_array,
+                            envs_idx=env_ids,
+                        )
+                    else:
+                        qs_idx_local = torch.arange(
+                            1, 1 + len(joint_names), dtype=torch.int32, device=gs.device
+                        ).tolist()
+                        obj_inst.set_qpos(
+                            joint_pos_array,
+                            qs_idx_local=qs_idx_local,
+                            envs_idx=env_ids,
+                        )
+
+        self.scene_inst.step()
 
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
@@ -232,42 +259,44 @@ class GenesisHandler(BaseSimHandler):
         control_mode = self._get_control_mode(obj_name)
         joint_names = self._get_joint_names(obj_name, sort=False)
 
+        obj_inst = self.object_inst_dict[obj_name]
+
         if control_mode == "effort":
             effort = [
-                [actions[env_id][self.robot.name]["dof_effort_target"][jn] for jn in joint_names]
+                [actions[env_id][obj_name]["dof_effort_target"][jn] for jn in joint_names]
                 for env_id in range(self.num_envs)
             ]
             if self.object_dict[obj_name].fix_base_link:
-                self.robot_inst.control_dofs_force(
+                obj_inst.control_dofs_force(
                     force=effort,
-                    dofs_idx_local=[j.dof_idx_local for j in self.robot_inst.joints if j.dof_idx_local is not None],
+                    dofs_idx_local=[j.dof_idx_local for j in obj_inst.joints if j.dof_idx_local is not None],
                 )
             else:
-                self.robot_inst.control_dofs_force(
+                obj_inst.control_dofs_force(
                     force=effort,
                     dofs_idx_local=[
                         j.dof_idx_local
-                        for j in self.robot_inst.joints
-                        if j.dof_idx_local is not None and j.name != self.robot_inst.base_joint.name
+                        for j in obj_inst.joints
+                        if j.dof_idx_local is not None and j.name != obj_inst.base_joint.name
                     ],
                 )
         else:
             position = [
-                [actions[env_id][self.robot.name]["dof_pos_target"][jn] for jn in joint_names]
+                [actions[env_id][obj_name]["dof_pos_target"][jn] for jn in joint_names]
                 for env_id in range(self.num_envs)
             ]
             if self.object_dict[obj_name].fix_base_link:
-                self.robot_inst.control_dofs_position(
+                obj_inst.control_dofs_position(
                     position=position,
-                    dofs_idx_local=[j.dof_idx_local for j in self.robot_inst.joints if j.dof_idx_local is not None],
+                    dofs_idx_local=[j.dof_idx_local for j in obj_inst.joints if j.dof_idx_local is not None],
                 )
             else:
-                self.robot_inst.control_dofs_position(
+                obj_inst.control_dofs_position(
                     position=position,
                     dofs_idx_local=[
                         j.dof_idx_local
-                        for j in self.robot_inst.joints
-                        if j.dof_idx_local is not None and j.name != self.robot_inst.base_joint.name
+                        for j in obj_inst.joints
+                        if j.dof_idx_local is not None and j.name != obj_inst.base_joint.name
                     ],
                 )
 
@@ -281,12 +310,9 @@ class GenesisHandler(BaseSimHandler):
             self.scene_inst.viewer.update()
         self.scene_inst.visualizer.update()
 
-    def close(self):
-        pass
-
     def _get_effort_targets(self) -> torch.Tensor | None:
         """Get the effort targets from cached actions."""
-        if not hasattr(self, "_actions_cache") or not self._actions_cache:
+        if not self._actions_cache or not self.robot:
             return None
 
         joint_names = self._get_joint_names(self.robot.name, sort=False)
@@ -310,15 +336,15 @@ class GenesisHandler(BaseSimHandler):
         return "position"
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+        obj_cfg = self.object_dict[obj_name]
+        if isinstance(obj_cfg, (ArticulationObjCfg, BaseRobotCfg)):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
-            joint_names = [
-                j.name
-                for j in joints
-                if j.dof_idx_local is not None and j.name != self.object_inst_dict[obj_name].base_joint.name
-            ]
+
+            joint_names = [j.name for j in joints if j.dof_idx_local is not None]
+
             if sort:
                 joint_names.sort()
+
             return joint_names
         else:
             return []
@@ -335,5 +361,8 @@ class GenesisHandler(BaseSimHandler):
     def device(self) -> torch.device:
         return gs.device
 
-
-GenesisEnv = GymEnvWrapper(GenesisHandler)
+    def close(self) -> None:
+        """Close the simulation and clean up resources."""
+        self.scene_inst = None
+        self.object_inst_dict = {}
+        self.camera_inst_dict = {}
