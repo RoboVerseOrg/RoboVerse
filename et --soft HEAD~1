@@ -1,0 +1,4081 @@
+[33mcommit 69cd5c2705477b8dffbf0fbf76bc92c0c9bb7668[m[33m ([m[1;36mHEAD -> [m[1;32mtest_new_metasim[m[33m, [m[1;31morigin/dev/new-metasim[m[33m)[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Sat Aug 9 01:24:48 2025 -0700
+
+    rm action scale from isaacgym
+
+[33mcommit 2c1ed717885c98b37c864062692828eabb9e2de7[m
+Author: Charlie Cheng <ctcheng@berkeley.edu>
+Date:   Sat Aug 9 00:58:17 2025 -0700
+
+    genesis: add open3d to pip install
+
+[33mcommit 4231013b14ff89569f032c61db4043885dc36040[m
+Author: Charlie Cheng <ctcheng@berkeley.edu>
+Date:   Sat Aug 9 00:44:20 2025 -0700
+
+    genesis: update genesis to support get_started static scene
+
+[33mcommit 7e9c500fd0e8ff5dd442b3acc2bc12eab860e018[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sat Aug 9 00:43:22 2025 -0700
+
+    update isaacgym to fit new metasim
+
+[33mcommit a4b3d0d43a0ef39a7a3074ab96fc7aa4e21a9eab[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Wed Aug 6 05:43:31 2025 +0800
+
+    [update] mount_camera docs for issaclab
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit d3790362b6837116ddfed0b957486913d66ec7bc[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue Aug 5 13:59:32 2025 -0700
+
+    [feat] camera mounting for isaaclab (#359)
+
+    * [feat] camera mounting for isaaclab
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update path
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update index
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit 7234ea8ceb1f96bd8a21b811f14e45dd7f4befc6[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Mon Aug 4 23:15:57 2025 -0700
+
+    [update] unify ci location to ecr
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit ab20a6eba6a3f65a4f169925c964e341d6716769[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon Aug 4 22:35:56 2025 -0700
+
+    [update] ci build docker (#411)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit b512c05827fdc7fba3298a4c2892971298746347[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Aug 4 11:20:31 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#419)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.12.5 → v0.12.7](https://github.com/astral-sh/ruff-pre-commit/compare/v0.12.5...v0.12.7)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit f9e92c36c635528e3d141876ea28dcf6b15524da[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Aug 3 19:29:01 2025 -0700
+
+    rebase isaaclab camera
+
+[33mcommit 442f6d25ea24ce49857871563d9d6b58ae4e16fa[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 22:20:47 2025 -0700
+
+    ruff
+
+[33mcommit 5885e1a52fc12bd4db3ec169680ed1bc5398aee7[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 22:18:36 2025 -0700
+
+    ruff
+
+[33mcommit c961c8ba502f8cbf32d7254a18a0c8df1512c39a[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 22:00:52 2025 -0700
+
+    change metasim/cfg
+
+[33mcommit ac6b8420fc95b52e8c266bc23b0c4801f8e523ee[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 15:15:53 2025 -0700
+
+    motion plan
+
+[33mcommit fbb7b256aa42d78c73fad4199d84321f66e994d3[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 15:10:58 2025 -0700
+
+    hybrid so,
+
+[33mcommit e15388254122b033f57629800fa30e2db0f932cd[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 13:39:42 2025 -0700
+
+    fix hybrid renderer
+
+[33mcommit e80e0f44e16155c976bd2f9abccb8b70e71af755[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 13:20:46 2025 -0700
+
+    fix multi-camera
+
+[33mcommit 34dc790b136c7e57dbf8c1dfe472035f37d7265e[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 02:06:01 2025 -0700
+
+    fix mujoco 0 1 2 3 4
+
+[33mcommit e054f2772d3493f5871f96e3043fcf4d8b962858[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 01:53:31 2025 -0700
+
+    mjc get_strated 1
+
+[33mcommit 53668959ea34d944cbf27296145ebbc16fe2ef04[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Thu Aug 7 01:46:30 2025 -0700
+
+    fix get_joint_name
+
+[33mcommit 2c90a2e49d6198458b853b43993e97eef3cf893f[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Aug 7 01:39:32 2025 -0700
+
+    small update on mujoco and isaaacgym
+
+[33mcommit 6443c1984611e10f3395b437fd040f2ae78bc0a3[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Wed Aug 6 23:58:06 2025 -0700
+
+    rl base wrapper&get started rl
+
+[33mcommit 481117f9ff0e067cabd1c8ec69cbf12421c297fc[m
+Merge: 62efd7e 21484f6
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Wed Aug 6 00:44:59 2025 -0700
+
+    Merge branch 'dev/new-metasim' of https://github.com/RoboVerseOrg/RoboVerse into dev/new-metasim
+
+[33mcommit 62efd7ee06dabfd8d2c14c305e43e3c89a0d3914[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Wed Aug 6 00:43:34 2025 -0700
+
+    fixing get started rl
+
+[33mcommit 21484f6379852d067be48fb9300e1484a98272d8[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Wed Aug 6 00:16:02 2025 -0700
+
+    fixing get started rl
+
+[33mcommit 20c4e50fbb2cd5734c4c8882c2812fa783e32f79[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Wed Aug 6 00:14:30 2025 -0700
+
+    fixing get started rl
+
+[33mcommit 7b8536b113a75339575794e36c99a436dc5dee69[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Tue Aug 5 09:22:45 2025 +0000
+
+    isaaclab minimum align
+
+[33mcommit e12620f135d17aa7f1d61efc94e66ef1861fe970[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Mon Aug 4 22:30:23 2025 -0700
+
+    remove unnecessary types and constant
+
+[33mcommit fd510c6b6deaa1fd198d54eb73b2ee895e7151b2[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Mon Aug 4 22:27:32 2025 -0700
+
+    fixing mjx
+
+[33mcommit 60f30c0611ea4593a36054ccd7cd78754cf59b04[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Mon Aug 4 13:06:33 2025 -0700
+
+    fixing mjx
+
+[33mcommit 424fd241cb690aa6071fe5ece51efdb2efbf76a9[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Sun Aug 3 23:21:16 2025 +0000
+
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+[33mcommit 12356c566d1b765e42e4330b367264068e2562d5[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Sun Aug 3 16:20:56 2025 -0700
+
+    remove sensor
+
+[33mcommit 2d4476e8d51d5691a834c2f2a09c4a4e848ca33b[m
+Author: MurphyZhao04 <xh930717304@gmail.com>
+Date:   Sun Aug 3 16:20:44 2025 -0700
+
+    remove sensor
+
+[33mcommit 8564b5cf3f831bac813c01d12e7d515af999d542[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 03:18:44 2025 +0800
+
+    changed API naming
+
+[33mcommit 4ae5f40eb1b27040a9e89faf265af79dc8f96e57[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 03:05:40 2025 +0800
+
+    renamed EnvState
+
+[33mcommit 619cdc4c8de08d51fda7ff9ee5fa703713512bdc[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 03:05:35 2025 +0800
+
+    renamed EnvState
+
+[33mcommit 9f5c6211c6b847b39dc88e2a7d8f9c364346e094[m
+Merge: 0e65b92 19a2edb
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 03:05:29 2025 +0800
+
+    renamed EnvState
+
+[33mcommit 0e65b925ef258e4cfbf87ca96685b15e957e24be[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 02:58:54 2025 +0800
+
+    added dof_pos_target and dof_vel_target to EnvState.RobotState, allowing removal of set_dof_target
+
+[33mcommit 88e8d21b0c7b9458c1f0fc7267334608ff8f7381[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 02:53:58 2025 +0800
+
+    added deprecation logs for mujoco
+
+[33mcommit 19a2edbfaccb929fdae5e1a37dc8e9fed0816524[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Sun Aug 3 18:51:21 2025 +0000
+
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+[33mcommit c447ed23190f4270e3e602b9bd1a908c88bc6ff5[m
+Author: boshi-an <boshi_an@126.com>
+Date:   Mon Aug 4 02:47:16 2025 +0800
+
+    rewriting metasim, now mujoco.set_states() is working
+
+[33mcommit 9a345901a8e2c9aae00ac7720937fec829d0d2fe[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sat Aug 2 20:47:29 2025 -0700
+
+    [add]config template for robot config (#413)
+
+[33mcommit 63f766ff9cbc7e5ad8c7ed2bd5a34f55aab2836f[m
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Sun Aug 3 05:51:01 2025 +0800
+
+    Dev/extra query (#407)
+
+    * added base query type
+
+    * added query binding for all simulator handlers
+
+    * added extra_spec for base task wrapper
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * fixed format issues
+
+    * fix bugs&implement in humanoid bench
+
+    * [dev]extra query
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+    Co-authored-by: MurphyZhao04 <xh930717304@gmail.com>
+
+[33mcommit 3416ef7cbcce4247a76302cee67bbe0d25cec902[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Jul 30 01:34:53 2025 -0700
+
+    [update] optimize ci to prevent cancel and not terminated
+
+[33mcommit a97c5eb2bd0aba78ef5987530df9f3d3eeb36af4[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jul 30 01:16:22 2025 -0700
+
+    [add] aws ec2 template for CI/CD (#410)
+
+[33mcommit 83dfaceb0fd899d1c2b2a2f476e94b54d51f68ad[m
+Author: woltium <56248704+woltium@users.noreply.github.com>
+Date:   Tue Jul 29 14:25:19 2025 +0800
+
+    [fix] mujoco states bug;shadowhand bugs (#405)
+
+    * fix: update ShadowHand joint naming and Mujoco state handling
+
+    * fix: update ShadowHand joint naming and Mujoco state handling
+
+[33mcommit b96fdfcf1590097c773d10e2b717d3871a8dc336[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Mon Jul 28 21:16:02 2025 -0700
+
+    [update] move metasim gym env into metasim/wrapper; simplify to 0_ppo_reaching_new (#404)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit 4b2fadde5a9c526cdd4f4cd0f7b800e078c0d24c[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jul 28 21:13:51 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#406)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.12.4 → v0.12.5](https://github.com/astral-sh/ruff-pre-commit/compare/v0.12.4...v0.12.5)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit f1ab2c41f646f8f16fcbf9fae4da23c9d1073009[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Mon Jul 28 11:03:08 2025 -0700
+
+    [doc]metasim_overview (#403)
+
+    * [doc]metasim_overview
+
+    * [doc]metasim_overview
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [doc]metasim_overview
+
+    * [doc]metasim_overview
+
+    * [doc]architecture_overview
+
+    * [doc]architecture_overview
+
+    * [doc]architecture_overview
+
+    * [doc]architecture_overview
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 1ac1f0937ca3521b064923555370822bf8e8c4cd[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sun Jul 27 00:56:41 2025 -0700
+
+    [fix]mujoco querier import jax (#402)
+
+[33mcommit f0127a334a3d94f119ea594cb738c1a6d091b9df[m[33m ([m[1;31morigin/fix_mujoco[m[33m)[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Thu Jul 24 00:14:56 2025 -0700
+
+    [feat]get_extras query (#376)
+
+    * get_extras query
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * feat/get_extra for humanoid-bench
+
+    * feat/get_extra for humanoid-bench
+
+    * feat/get_extra for humanoid-bench
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 6efbf93dba1019d52dcaeea40723464c9f527ce9[m
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Thu Jul 24 13:33:36 2025 +0800
+
+    [dev] New architecture for roboverse tasks (ongoing) (#392)
+
+    * added base class for task wrapper
+
+    * adopted mujoco viewer fix
+
+    * refined test script
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * added privileged obs
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * fixed typing
+
+    * modified logic
+
+    * re-organized functions, added docstring
+
+    * fixed typing
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 91128df6fa7c13761dbd0cc640938939eb29cb52[m
+Author: zcyqyq <zcyqyq@gmail.com>
+Date:   Wed Jul 23 21:58:48 2025 -0700
+
+    [fix]: syntax error in imitation learning doc (#394)
+
+    * [add]: contributing doc
+
+    * [fix]: syntax error
+
+[33mcommit 306e24ffaba1d13163514b56cc0c01bc598b8797[m
+Author: zcyqyq <zcyqyq@gmail.com>
+Date:   Wed Jul 23 16:40:53 2025 -0700
+
+    [add]: contributing doc (#393)
+
+[33mcommit 0b0f0abcbbd9a6c34f073ecc6ad403de23bf9c37[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Wed Jul 23 10:05:48 2025 -0700
+
+    [fix]: mujoco handler fix headless offscreen size error (#338)
+
+[33mcommit a320c7b54dc6685e6570c1c638f4978077689454[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Wed Jul 23 10:05:26 2025 -0700
+
+    [add]: genesis add torque control (#339)
+
+[33mcommit 37dc51f83f193a4cfa5cd48badb4b267d500f60d[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue Jul 22 19:59:22 2025 -0700
+
+    [fix] isaacgym step graphics check to prevent fps downgradtion  (#364)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit ddc1794e31c74626cbad44b5aa978f3f48245124[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Tue Jul 22 16:15:37 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#381)
+
+[33mcommit 9e75d148447d59277a6edce13fac6ca97cf6fc89[m
+Author: TianlingXu <132552664+TianlingXu@users.noreply.github.com>
+Date:   Wed Jul 23 07:15:13 2025 +0800
+
+    [doc,fix] collect_demo script (#384)
+
+[33mcommit 6de0df86c12a23fbbf224d6c7eca94ec595211e6[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Jul 21 01:06:14 2025 -0700
+
+    [add] pr template and contributors list
+
+[33mcommit fd430336581b296d464dba78fdad1f2decc693a5[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Jul 20 23:53:52 2025 -0700
+
+    [fix] isaaclab support robot cfg with fix_base_link=True; realize it with get_started example (#377)
+
+[33mcommit f945ef33c4fd8765be1d31512b2931d07a065693[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Sun Jul 20 23:32:03 2025 -0700
+
+    [fix]: fix mujoco velocity target (#340)
+
+[33mcommit 2e8889c52960336d2b9102e095d36d8dea098111[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Jul 20 19:53:02 2025 -0700
+
+    [feature] teleoperation using XR (#283)
+
+    * added teleop demo for with xrobotoolkit-sdk
+
+    * bug fix for teleop xr after commit 98e662d; updated installation guide
+
+    * updated pico link in readme
+
+    * corrected readme
+
+    * added documentation to teleoperate demo
+
+    * [fix] format
+
+    * [fix] relative path
+
+    * [add] title
+
+    ---------
+
+    Co-authored-by: Zhigen Zhao <zhaozhigen@gmail.com>
+
+[33mcommit ae46dde98708374fc547441f2aa3483b456a280f[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Sat Jul 19 10:44:41 2025 +0800
+
+    [fix] skillblender cross-embodiment action_dim assignment (#373)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit f3b39e41258b55e9ffad295e6e8693dcf9a7a7a2[m
+Author: JIAjindou <96030696+JIAjindou@users.noreply.github.com>
+Date:   Fri Jul 18 15:53:26 2025 +0800
+
+    Bugs fixed for get_started demos (#367)
+
+    Signed-off-by: jjindou <jdjiabuaa@126.com>
+    Co-authored-by: Fisher Wang <feishiwang2001@gmail.com>
+
+[33mcommit 0f9d2feda2418edc294f6b3e4daf66d8ff4d84e9[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Jul 16 18:02:13 2025 -0700
+
+    [fix] genesis installation bug
+
+[33mcommit 27bb6380a385f8067e84007d88f430963b7a8ea1[m
+Author: JIAjindou <96030696+JIAjindou@users.noreply.github.com>
+Date:   Thu Jul 17 07:42:48 2025 +0800
+
+    [fix] docker separate genesis from isaaclab (#348)
+
+    Signed-off-by: jjindou <jdjiabuaa@126.com>
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit bdedc230408a2473f2b3a9d97185923ddd0c970d[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Tue Jul 15 21:34:55 2025 -0700
+
+    [add]: mujoco handler add scale (#341)
+
+[33mcommit 3129c39b22112454f3b176fd6fee13e9cfb40c5b[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Jul 15 01:45:28 2025 -0700
+
+    [doc,update] curobo.md
+
+    add warning for curobo installation about cuda 11.8 dependency
+
+[33mcommit 48b09df6ff127b20329c389e78597fa5c77c50d5[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Jul 15 01:42:29 2025 -0700
+
+    [doc,update] installation.rst
+
+    warning about isaaclab v2 put to more prominent position
+
+[33mcommit c24fb47eb110c2395caf3a9b5127c56d99ce99c5[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Jul 15 01:13:11 2025 -0700
+
+    [fix] isaaclab v1.4.1 installation bug (#355)
+
+[33mcommit 6fc5ab4c052d2303121fd757d861c7e84cef3c9c[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Jul 15 00:27:52 2025 -0700
+
+    [doc,update] polish new_robot.md
+
+[33mcommit 84650b674283fe5caa0cb1767133213786582d9d[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Jul 15 00:24:56 2025 -0700
+
+    [doc,update] tutorials for adding a new robot for developers (#353)
+
+[33mcommit 2af7ddb407ef84ad156e77c18926cd0b647b9ebc[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Mon Jul 14 13:29:26 2025 -0700
+
+    [feat] Dev/mount camera for isaacgym(#247)
+
+    * update
+
+    * update
+
+    * update
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [fix] fix save path; save multiple camera view to video
+
+    * update rotation and translation for g1
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * rename file
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix robots
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add renderer
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+    Co-authored-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit 385c1fb9c1375f86c402595f6a88643a130cae9d[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jul 14 13:24:50 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#352)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.12.2 → v0.12.3](https://github.com/astral-sh/ruff-pre-commit/compare/v0.12.2...v0.12.3)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit a841800fedce70557c01991c9bb8b7271088a066[m
+Author: Xiangyu Chen <89004488+XyC0212@users.noreply.github.com>
+Date:   Tue Jul 15 04:06:44 2025 +0800
+
+    update the fast_td3 requirements.txt (#351)
+
+[33mcommit 0ed926836dd22120bad00622be964e8877d912f9[m[33m ([m[1;31morigin/rl-libraries[m[33m)[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sat Jul 12 18:17:48 2025 -0700
+
+    [update] support gymnasium for all versions (#347)
+
+[33mcommit 9e46cc36b98cd2a438887e00258afb4ce98a909d[m
+Author: Melooooo <138291225+WinterMelooooo@users.noreply.github.com>
+Date:   Sat Jul 12 13:54:36 2025 -0700
+
+    [Doc]: Added Imitation Learning and updated benchmark (#346)
+
+    * [Doc]: Added doc for Imitation Learning
+
+    * [Doc]: Added doc for Imitation Learning
+
+    * [Doc]: Updated Benchmark and Imitation Learning
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [doc] update explaination
+
+    ---------
+
+    Co-authored-by: geng-haoran <ghr@berkeley.edu>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 5563fee6381791155cd3c685c873898b112b0bbe[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jul 11 00:42:20 2025 -0700
+
+    [doc] update task group notice
+
+[33mcommit 48b660b6eed115934ea1341c87c3024b63d26630[m
+Author: difan1995 <140031348+difan1995@users.noreply.github.com>
+Date:   Thu Jul 10 21:48:06 2025 -0700
+
+    [doc,update] docstrings, collect demo tutorial, and migrating new tasks  (#324)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit 43ce8ded5f5b6a77997f4d090995306974aa5e73[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Thu Jul 10 07:25:56 2025 +0800
+
+    fix/slide (#337)
+
+[33mcommit 0fb2408f9b2ab4acf89a634750dda6cb4c42d8ff[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Wed Jul 9 11:19:02 2025 -0700
+
+    mujoco support torque control (#332)
+
+    * [add]: mujoco add torque control
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [question]: request for deletion of deprecated function
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 729767d05aec1af639fd11352db9803c616fcfd8[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Thu Jul 10 02:18:27 2025 +0800
+
+    [fix] typo error in randomCfg (#336)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit 235b03175f8d3178d1e341a832973c340a01dc16[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jul 9 02:15:43 2025 -0700
+
+    [update] dockerfile to add option for using isaaclab v2.1.0 instead of v1.4.0 (#334)
+
+[33mcommit 1111ec4ebc7f449089d8450437e6c60b4c851f27[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Tue Jul 8 15:14:25 2025 -0700
+
+    [fix]: temporarily fix isaacgym assets to fixed route (#331)
+
+    * [fix]: temporarily fix isaacgym assets to fixed route
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 720aba7a3ad64e75e7e22cac75c5b71cf7f8444a[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Tue Jul 8 12:24:05 2025 -0700
+
+    [fix]: align rl-infra to lastest metasim (#330)
+
+    * [fix]: align rl-infra to lastest metasim
+
+    * [fix]: align rl-infra to lastest metasim
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [fix]: fix isaacgymenvs with new configs
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [add]: add humanoidbench ppo
+
+    * [fix]: fix stylecheck for rl
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 133f0b7640ba86da05c455dd815e98e5f5805a05[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Wed Jul 9 02:59:31 2025 +0800
+
+    [feat] skillblender tasks and dynamics domain randomization for isaacgym (#307)
+
+    * stage for ball task
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * load ball task successfuly
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [Add] skillblender:walking pipeline
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * run single env successfully
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * run parrlel pipeline successfully
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add config dump
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update support matrix
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [add] skillbench:TaskReach
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add skillblender:farReach and boxtransfer
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix mistack
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add skillblender:buttonPress
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update config
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update confi
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * run taskbutton pipeline
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add skillblender:cabinetClose
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add skillblender:packageCarry
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [add] skillblender:task_lift
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add skillblender:BoxPush
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish config
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * stage for cfg system change
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [refactor] skillblender cfg system
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [add] DR in mass and friction for rigidbody
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [performance/isaacgym] tensorize set_state
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [feat] add command curriculum for skillblender
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix reward default pos
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix bug in joint_indices
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [feat] add play for skillblender
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix hf load error
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * update readme
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update cross-embodiment cfg
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit f2e8ca68bcfdccc66e27dde6ced4213c44775934[m
+Author: Kara Lu <karalu2@illinois.edu>
+Date:   Mon Jul 7 21:45:46 2025 -0700
+
+    [fix] get_started instruction for fasttd3 (#325)
+
+[33mcommit f652ca88258689532e252ac56422f5bccda1f8fa[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jul 7 21:44:59 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#328)
+
+    updates:
+    - [github.com/pre-commit/pre-commit-hooks: v4.6.0 → v5.0.0](https://github.com/pre-commit/pre-commit-hooks/compare/v4.6.0...v5.0.0)
+    - [github.com/astral-sh/ruff-pre-commit: v0.12.1 → v0.12.2](https://github.com/astral-sh/ruff-pre-commit/compare/v0.12.1...v0.12.2)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 28939c89369dbdf4d792ec4e891fcbc0a7355522[m[33m ([m[1;31morigin/dev/dex_retargeting[m[33m)[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon Jul 7 11:20:38 2025 +0800
+
+    [add] g1 and cross embodiment testing (#304)
+
+    * [feat] add g1&&cross-embod in sb:walking
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * polish
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit 5fc1e5e43bb6387e7e8012082e06ca8125699c5a[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Jul 6 19:36:34 2025 -0700
+
+    [fix] train_ppo_vec.py bug; isaaclab return time_out on device (#326)
+
+[33mcommit 147f7ae9355b341e3cc7d7ec84ac42f1e755eb4d[m
+Author: difan1995 <140031348+difan1995@users.noreply.github.com>
+Date:   Sat Jul 5 01:41:52 2025 -0700
+
+    [doc,add] task table like ruff rules with description generator from docstring (#322)
+
+[33mcommit 7399bffce680c62eadfd984d48900a44f369ca45[m
+Author: Kara Lu <karalu2@illinois.edu>
+Date:   Wed Jul 2 17:08:34 2025 -0700
+
+    [doc]fix FastTD3 get_started instructions
+
+    fix small error
+
+[33mcommit 45720722feec7021e15b69fbfe8265072049b134[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Thu Jul 3 03:11:03 2025 +0800
+
+    Fix/stair (#311)
+
+[33mcommit e8bf91c84da7844d5290e5067276925ad33ec6ff[m
+Author: Kara Lu <karalu2@illinois.edu>
+Date:   Wed Jul 2 12:01:19 2025 -0700
+
+    fixed mujoco viewer import (#319)
+
+    * fixed mujoco viewer import
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    ---------
+
+    Co-authored-by: kara <kara.lu1002@gmail.com>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 2620a5dd149a6d93381971fb55a16fe27856431f[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Tue Jul 1 22:42:47 2025 -0700
+
+    RL INFRA!!! (#274)
+
+    * [fix] IsaacGym compatibility for RL training environments
+
+    • Convert PyTorch tensors to NumPy arrays in gymnasium spaces to fix type compatibility
+    • Simplify observation space handling to support flat observation vectors from IsaacGymEnvs
+    • Add support for different observation types (full_no_vel, full, full_state) used by dexterous manipulation tasks
+    • Fix object initialization to use default positions/orientations from configurations
+    • Correct quaternion ordering for gymapi (x,y,z,w) in robot and object poses
+    • Disable gravity for XFORM physics objects (goal objects) to match IsaacGymEnvs behavior
+    • Set proper collision groups and filters for actors to ensure correct physics interactions
+    • Fix rigid body index mapping between local and global indices for accurate state tracking
+
+    These changes enable proper integration with IsaacGymEnvs benchmark tasks and fix critical issues preventing RL training.
+
+    * [feature] Add IsaacGymEnvs task integration for AllegroHand and Ant
+
+    • Implement AllegroHand object reorientation task with cube/egg/pen manipulation
+    • Add Ant locomotion task wrapper from IsaacGymEnvs
+    • Create PPO/SAC training configurations for RL tasks
+    • Add comprehensive unit tests for task integration and training configs
+    • Register new tasks in isaacgym_envs namespace
+
+    * [fix] Update RL infrastructure for IsaacGymEnvs compatibility
+
+    • Handle TensorState objects in env wrapper for IsaacGym environments
+    • Add device mapping for multi-GPU training support
+    • Fix observation normalization and reward scaling
+    • Improve quaternion normalization to prevent NaN values
+    • Update PPO algorithm to support IsaacGymEnvs reward structure
+    • Fix evaluation script model loading path
+
+    * [feature] Add TD3 algorithm implementation for RL infrastructure
+
+    Implement Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm following
+    the existing PPO/SAC code structure. Includes PyTorch-based replay buffer, actor-critic
+    networks with twin Q-functions, and training configuration for AllegroHand tasks.
+
+    * [feat] RL: add Anymal quadruped locomotion task from IsaacGymEnvs
+
+      - Add Anymal robot configuration with 12 DOF joints and locomotion parameters
+      - Implement Anymal locomotion task with velocity command tracking
+      - Add PPO training configuration for Anymal with appropriate hyperparameters
+      - Update task registry to include Anymal in isaacgym_envs tasks
+      - Set fix_base_link=True temporarily to address spawning issue
+
+    * [fix]: RL infra fix anymal fixed root states
+
+    * [feat]: RL Integrate Ant locomotion environment from IsaacGymEnvs
+
+      - Add Ant robot configuration with direct torque control support
+      - Implement AntIsaacGymCfg task with locomotion rewards and termination
+      - Configure actuators with proper torque limits and control modes
+      - Fix episode reset logic to use task-specific episode length (1000 steps)
+      - Add PPO training configuration for Ant locomotion task
+
+    * [fix]: RL infra fix env reset problem
+
+    * [feat]: RL Infra integrate DM control tasks:- Add DMControl wrapper integration in metasim/cfg/tasks/dmcontrol/
+      - Implement visualization support with MuJoCo viewer when headless=False
+      - Create task configurations for all 19 DMControl tasks:
+        * Locomotion: acrobot, cartpole (balance/swingup), hopper, humanoid, pendulum, walker
+        * Manipulation: cup_catch, finger (spin/turn), reacher (easy/hard)
+      - Generate 76 RL training configurations (19 tasks × 4 algorithms)
+      - Fix device compatibility issues for GPU training
+      - Fix TD3 configuration format to match expected parameters
+      - Update RLEnvWrapper to properly handle DMControl environments without robots
+
+    * [feature]: RL infra update readme
+
+    * [feature]: RL infra Add OGBench (Offline Goal-Conditioned RL Benchmark) support
+
+      - Integrate OGBench environments (AntMaze, HumanoidMaze, Cube tasks)
+      - Add wrapper to interface OGBench with RoboVerse RL infrastructure
+      - Create PPO training configurations for OGBench tasks
+      - Fix NaN observations issue with single-environment training:
+        - Handle variance calculation for single sample in RunningMeanStd
+        - Add robust normalization with NaN/inf checks
+        - Improve observation tensor conversion from numpy arrays
+      - Add render_mode support for MuJoCo visualization when headless=False
+      - Update RL documentation with OGBench task commands
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [feature]: RL infra add ogbench tasks
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [feature]: RL infra add ogbench cubeQuadruplePlayPPO config
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [fix]: RL infra fix precommit issues
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [fix]: rl infra precommit problems
+
+    * [fix]: rl infra precommit problems
+
+    * [fix]: rl infra precommit problems
+
+    * [fix]: rl infra precommit problems0
+
+    * restore pre-commit version
+
+    * [fix]: isaacgym handler fix setting initial position of the robot
+
+    * [feature]: RL infra add ogbench tasks
+
+    * [fix]: sim2real script style check
+
+    * [feature]: RL infra add cartpole from isaacgym_envs
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * [feature]: RL infra temporarily move isaacgymenvs tasks to wrapperse
+
+    * [fix]: RL revert previous gym wrapper
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit 2fd96157a3535bace6c197de826b6eda30f3c0b8[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Wed Jul 2 08:59:41 2025 +0800
+
+    [add] fasttd3 training to get_started (#297)
+
+[33mcommit 8e3b2eb20052e63c2b80dc00c073d604c16e6153[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Jun 30 23:05:23 2025 -0700
+
+    [update] doc for real2sim (#230)
+
+    Co-authored-by: HAOZHE LOU <42707859+louhz@users.noreply.github.com>
+
+[33mcommit 2cf4b2f4374e9b31cb135a227d3a1680173e60a9[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jun 30 15:44:57 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#313)
+
+[33mcommit 54003e66c45e01d913d1196b47e35f4e92738fce[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Tue Jul 1 06:44:40 2025 +0800
+
+    [add] sensor support for mjx (#312)
+
+[33mcommit 97e95f624160749c9aef4bf21c9d0de01694e2a0[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Tue Jul 1 06:44:01 2025 +0800
+
+    [add] Go1-feet-only quad configuration for MuJoCo-Playground (#314)
+
+[33mcommit 4b730653621c37a10e6d62659183b2eb31364734[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Tue Jul 1 06:43:20 2025 +0800
+
+    [add] add full-body collision model for the H1 robot (#315)
+
+[33mcommit 542dd515ee33d9c22c99d73c5d39b581a88c08c0[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sat Jun 28 08:26:43 2025 +0800
+
+    [fix] humanoidbench h1 sit task (#305)
+
+[33mcommit b22193b4d542af3ca5276e48a606ee37a715b82b[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Jun 26 14:07:28 2025 -0700
+
+    [doc,update] move hf data structure to developer guide (#306)
+
+[33mcommit 4ab698cd101be9764e7bb3f08da7c192e7a3c208[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Wed Jun 25 10:11:42 2025 +0800
+
+    [update] fasttd3 training use iio to save mp4 (#301)
+
+[33mcommit d84ed16fc78bf99051afc7435144933e45447776[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Wed Jun 25 10:09:23 2025 +0800
+
+    [doc] update fasttd3 (#298)
+
+[33mcommit 16cfda2024675c2079a1b585ac2740f6e3d81374[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Wed Jun 25 10:08:22 2025 +0800
+
+    [bugfix] humanoidbench rewards (#302)
+
+[33mcommit e8da3a39208499152ad4c66d3945e9b0cdb3046f[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Tue Jun 24 19:04:59 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#303)
+
+    * [pre-commit.ci] pre-commit autoupdate
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.13 → v0.12.0](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.13...v0.12.0)
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    ---------
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit fe0befe059f225020c81a8f18d4733b7877f09c6[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Tue Jun 24 00:45:45 2025 -0700
+
+    Update index.md
+
+[33mcommit 62f5e9b0b98441dfe359387c55261cf203a6f3e7[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Tue Jun 24 00:44:47 2025 -0700
+
+    Update README.md
+
+[33mcommit 63b6e69ad12939ab0591969e1d4c3fce390d6d62[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sat Jun 21 06:27:49 2025 +0800
+
+    [bugfix] isaacgym env create probelm (#294)
+
+[33mcommit dc1c9659f842d4df1db8176e1174bb60c3c66bb6[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sat Jun 21 06:27:12 2025 +0800
+
+    [bugfix] StandReward in humanoidbench (#295)
+
+[33mcommit 142f65e9295ebd383e9f46a99a1ca7b1dab37c34[m[33m ([m[1;31morigin/roboverse_deploy[m[33m)[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Fri Jun 20 05:19:05 2025 +0800
+
+    perf/tensorize-robot-local-velocity (#290)
+
+[33mcommit 2850d7fc3eb2fe7e1c6cd4f32dee7d893ebe7f66[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Thu Jun 19 09:05:49 2025 +0800
+
+    [add] rollout render for fasttd3 (#289)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 11208a01741e3af4f4fbe4cef0f8f10ee603d352[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Thu Jun 19 05:57:22 2025 +0800
+
+    [add] env_spacing to ScenarioCfg (#287)
+
+[33mcommit afc07b37a843fb548ad9be7626141ce336a098b6[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Thu Jun 19 05:55:27 2025 +0800
+
+    [performance] mjx handler accelerate (#288)
+
+[33mcommit 1be25b6eae4b299b6243e00af93a79975c2672db[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Wed Jun 18 06:46:06 2025 +0800
+
+    [fix] align quaternion in humanoid infra (#286)
+
+[33mcommit 056b5cea97fb15d7373b462744387aae17ef1da5[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Jun 17 15:23:40 2025 -0700
+
+    [bugfix] simulators set states expires states cache
+
+[33mcommit 1bef357c89c9cea01316dbf5d9ac60e4f75db512[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Jun 16 15:48:39 2025 -0700
+
+    [fix] teleop_keyboard.py when using mujoco and states are all on cpu (#285)
+
+[33mcommit f5ced278f2d2e57dc6fcd4533af4bd4074bbdbdf[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Jun 16 14:45:27 2025 -0700
+
+    [doc,update] supported simulators
+
+[33mcommit edbcdf8550c5de44e376dc61343a90de4d4d5287[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Mon Jun 16 07:04:24 2025 +0800
+
+    [fix] bugs for RL infra and configs caused by multirobots (#279)
+
+[33mcommit 55864e24c1e0bcc5e7c9e190cf2cf1df6c55612a[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Jun 15 15:19:45 2025 -0700
+
+    update state_consistency test code, delete isaacgym simulate. update xyzw_to_wxyz code with indexing to avoid latency
+
+[33mcommit 3150c8a5b626e249bd5161d992f0441feddbce83[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun Jun 15 15:11:47 2025 -0700
+
+    fix isaacgym tensor regresh issue (#278)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit b26abcb918a7b8a1f2cd953c592678801d1a2d93[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun Jun 15 15:11:17 2025 -0700
+
+    [fix] IsaacGym quaternion bugs (#277)
+
+[33mcommit 8e1a96e023ccbc92a864a62077d6a30e037fa203[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Jun 15 14:59:05 2025 -0700
+
+    [update] github bug report template
+
+[33mcommit f8e68c06a04c1d88a6c193c59c7d0fd7e73d3928[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon Jun 16 05:32:22 2025 +0800
+
+    [add,fix] add skillblender reaching and h1_wrist_cfg; fix isaacgym (#275)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+    Co-authored-by: geng-haoran <ghr@berkeley.edu>
+
+[33mcommit 8107a726122e53068819efaae156039dc95e1e60[m[33m ([m[1;31morigin/fix/isaacgym_quat[m[33m)[m
+Author: difan1995 <140031348+difan1995@users.noreply.github.com>
+Date:   Sat Jun 14 20:10:00 2025 -0700
+
+    [doc] add skillblender back (#271)
+
+    Co-authored-by: Di Fan <difan@Dis-MacBook-Pro.local>
+
+[33mcommit 9872d2c1c0019ab777d273cc814c259707ab4f92[m
+Author: difan1995 <140031348+difan1995@users.noreply.github.com>
+Date:   Sat Jun 14 19:56:52 2025 -0700
+
+    [doc] add skillblender_rl.md back (#270)
+
+[33mcommit d00c22d61abd3c1c580fbf5dae5f3321d822f221[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sun Jun 15 06:53:21 2025 +0800
+
+    [feature] add FastTD3 with config management and MJX support (#243)
+
+[33mcommit f002933b2b6166bd33e8f141a8428508fc09e4f7[m
+Author: difan1995 <140031348+difan1995@users.noreply.github.com>
+Date:   Fri Jun 13 22:20:06 2025 -0700
+
+    Reorganize doc (#266)
+
+[33mcommit 55fe544c9fd4ee9e0c44ebff01f040145ad7b175[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Jun 13 15:14:54 2025 -0700
+
+    [update] no default camera
+
+[33mcommit 986e7bcc39ea7d810f7e97c26ab879d28b71e57a[m
+Author: Gu Song En <45731193+gusongen@users.noreply.github.com>
+Date:   Sat Jun 14 05:56:33 2025 +0800
+
+    [fix] isaaclab states not update (#265)
+
+[33mcommit 9d2b5c4221063f5a1218048217cff11bf871ea00[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jun 13 14:52:39 2025 -0700
+
+    update readme
+
+[33mcommit 8f0341dee1b52648a07977f1ca3ac584fb6edf67[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jun 13 14:42:29 2025 -0700
+
+    update readme
+
+[33mcommit d973f85a8daa0929138bfb1e721f4ebdfbbcb829[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jun 13 14:38:54 2025 -0700
+
+    update readme
+
+[33mcommit f29cad613c9b0f43e6afa87b753cb90941bb66fc[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jun 13 14:37:22 2025 -0700
+
+    update readme
+
+[33mcommit 57a5365788aa23d94f166150e7f95989721c5456[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Jun 13 14:31:56 2025 -0700
+
+    update readme
+
+[33mcommit 7e49014d6c731094ecb40ee776a6338b4556e2d0[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Jun 13 14:20:48 2025 -0700
+
+    Update README.md
+
+[33mcommit 4fcda497d70ff20235920ec2ad002bfed8775848[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Fri Jun 13 15:00:24 2025 +0800
+
+    add skillblender:walking and rsl_rl wrapper (#218)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit 122b669200f5b034db8b58b2ed01fb51e363fee0[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Jun 12 23:12:12 2025 -0700
+
+    [bugfix] camera state bug introduced in #264
+
+[33mcommit 7069482f42176c966e41d3149c2174b16b448b2e[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Fri Jun 13 08:01:34 2025 +0800
+
+    [add] feature to isaacgym that toggle sync viewer by press V (#217)
+
+[33mcommit 3e81239f8aed7ede46b0663596a3b7f3ef36ef30[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Jun 12 14:44:29 2025 -0700
+
+    [add] isaaclab support segmentation output in camera state (#264)
+
+[33mcommit 0c2206f4b867e8d48f2e02c27bf4c42112a215c7[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 22:18:37 2025 -0700
+
+    [add] github issue template (#262)
+
+[33mcommit 74378cba6fee96cd701a0a21ed97c439be61789e[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Thu Jun 12 07:09:22 2025 +0800
+
+    Bug/fix action interface (#256)
+
+[33mcommit 4779d34108d2fb1d58b253b1b5785c5945c18304[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 16:04:42 2025 -0700
+
+    [fix] roboverse_learn/eval.py use correct action format (#260)
+
+[33mcommit 00c5777c4c0bab0ce72f937fc625a4eb310a34d1[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 16:01:38 2025 -0700
+
+    [refactor] autodownload use hf_api.file_exists instead of hf_fs.exists to speed up; fix comments (#259)
+
+[33mcommit 9d4efec6a815e6d1e3cab41b57d4c12f555eb726[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 15:36:49 2025 -0700
+
+    [refactor] autodownload check hf exists when local not exists (#258)
+
+[33mcommit 79a9bfde769addbcc68dbed1d11199664f5fc7b2[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 14:24:37 2025 -0700
+
+    [bugfix] isaaclab scene don't autodownload (#257)
+
+[33mcommit 993a0b0cf80ed9027c527347e0a71b1ccc6f460e[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 02:15:12 2025 -0700
+
+    [fix] isaaclab and isaacgym support tensorized action (#251)
+
+[33mcommit 56ebeb9618e46b62bc44f6e546c422817f2fda2c[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Jun 11 01:03:19 2025 -0700
+
+    [fix] isaacgym get_joint_names order (#250)
+
+[33mcommit 22a69840ebe823c6ffed49a005d6e5feb68bbfd8[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jun 9 12:20:13 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#242)
+
+[33mcommit 93224d39f90e79a29b627cab25a05c4e21535492[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Jun 9 03:17:42 2025 -0700
+
+    [performance] add caching for get_states method (#240)
+
+[33mcommit 98e662d106a2ac8c813c54bffcb86b5f77ead2f9[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Jun 9 02:56:11 2025 -0700
+
+    [feature] IsaacLab support multiple robots (#208)
+
+[33mcommit 17f868489938b394102b0f68249d20005d34b1d8[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Sun Jun 8 17:13:12 2025 +0800
+
+    [fix] specify device in BaseChecker (#233)
+
+[33mcommit ac74dfa74774c2ae4f220f52b27439aaedb235d4[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sun Jun 8 04:09:01 2025 +0800
+
+    Feature/set timestep and use JIT forward in set_state (#219)
+
+[33mcommit 24e138806889dbde272d84d1f4ccb39f39570f96[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sat Jun 7 12:56:55 2025 -0700
+
+    [fix] isaacgym dt definition correct (#232)
+
+[33mcommit b0aad707777a78827505359fa8d6834fbae13b81[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Sun Jun 8 03:43:00 2025 +0800
+
+    [fix] isaacgym fix bug in get robot state; better state consistency for set_state  (#216)
+
+[33mcommit 330ff5f8c2c37452441328aa1c599c54dd2ff21d[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Jun 5 18:20:08 2025 -0700
+
+    [feature] mujoco support parallel envs (#229)
+
+[33mcommit 3b34b659de693205563f721a0d6b609ac16e94f9[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Jun 2 16:12:06 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#222)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.11 → v0.11.12](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.11...v0.11.12)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 33b59076f21011fa4ac9949c00991f3611013776[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sun Jun 1 10:02:26 2025 +0800
+
+    [bugfix] fix mujoco states consistency (#215)
+
+[33mcommit 3b4f257a29e0179c5867ae66ae4974de5b57df65[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 22:12:47 2025 -0700
+
+    [fix] isaacgym use stiffness and damping specified by urdf by default
+
+[33mcommit 6f7c869d9903c21774c8e59a7da3195365126f44[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 20:55:58 2025 -0700
+
+    [delete] empty_demo.py
+
+[33mcommit 80e2b4f717896c6bd99fa2b0a98657e5af5c1388[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 23:28:25 2025 -0400
+
+    [add] shadow hand (#212)
+
+    Co-authored-by: wyzhgxy <2200012805@stu.pku.edu.cn>
+
+[33mcommit ac30e5b8643a0d1ae33b182dfc2f954f49efd426[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 23:22:51 2025 -0400
+
+    [feature] isaacgym can read from mjcf file (#211)
+
+[33mcommit 4b65c50b231dfa77b9f06a7a25b1890c1b3eaf1e[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue May 27 10:43:27 2025 +0800
+
+    [add] robot unitree dex3-1 (#190)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit c1b8364986588931e5f52a5aa528a903ea49395b[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 22:10:58 2025 -0400
+
+    [update] arnold tapwater scene path (#210)
+
+[33mcommit 12e62a4029ebc93b47a8607e88714340fd57d87c[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon May 26 15:41:46 2025 -0400
+
+    [pre-commit.ci] pre-commit autoupdate (#209)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.10 → v0.11.11](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.10...v0.11.11)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 74fa3f7f18465a07048e57e000be7639a397ad8e[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Tue May 27 03:41:30 2025 +0800
+
+    [fix] mujoco&mjx cvel bugs (#204)
+
+[33mcommit 219c4355a60523e9ce0040e19de84eb84ff2a343[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 26 12:37:24 2025 -0700
+
+    [update] update unitree h1-2 (w/o hand) usd path
+
+[33mcommit 8db4a2b8c30e3089a41dbbcd1c8eb62ace3c64a4[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun May 25 15:05:40 2025 -0400
+
+    [bugfix,doc] isaacgym set joint stiffness=800, damping=40 when not specified (#207)
+
+[33mcommit a2ff27fea6a302ed16f9a1caefde792896a7da1b[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun May 25 11:59:58 2025 -0400
+
+    [delete] unused data and doc (#206)
+
+[33mcommit 14c7bd25c25a677b97ed86edbfc111e5a2579de7[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Sun May 25 23:41:44 2025 +0800
+
+    add viewer for MJX handler&fix bugs for set_states (#202)
+
+[33mcommit f89ec81a21883ccfc9c6361e1b0af045c8da14a8[m
+Author: Priokin <12211819@sustech.mail.edu.cn>
+Date:   Sat May 24 11:44:16 2025 +0800
+
+    Revert "fix cvel bugs for mujoco and mjx"
+
+    This reverts commit a4e0d1d86e25a0da31c9378ee8ca6c2c49fc015c.
+
+[33mcommit a4e0d1d86e25a0da31c9378ee8ca6c2c49fc015c[m
+Author: Priokin <12211819@sustech.mail.edu.cn>
+Date:   Sat May 24 11:33:28 2025 +0800
+
+    fix cvel bugs for mujoco and mjx
+
+[33mcommit 3c03cf3cb26d478c5f0f92b437cb26504339dfd2[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Tue May 20 17:33:03 2025 +0800
+
+    update wechat code
+
+[33mcommit 1c048a1221589583b68332ed8606262f4b902819[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue May 20 01:21:25 2025 -0700
+
+    [refactor] reorganize `objects.py` (#200)
+
+[33mcommit d4bb09c1941824e24d4cc497509baae8e2102b94[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 20:50:20 2025 -0700
+
+    [doc,update] metasim/sim docstrings; update pyproject ruff rules ignore (#199)
+
+[33mcommit 9936bd57172ffb36b95500d9b5e8bf283acff6b6[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 19:56:53 2025 -0700
+
+    [refactor] standardize supported simulator (#198)
+
+[33mcommit a9100ee5a8b15cae6425c6a9b7c53d4f9c0c86c7[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 18:36:57 2025 -0700
+
+    [refactor] reorganize and add docstring for `base_robot_cfg.py` (#197)
+
+[33mcommit 73d6d55a34a492fd9547adc1af009f577293ffbe[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon May 19 15:47:06 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#193)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.9 → v0.11.10](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.9...v0.11.10)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 76a8e5d0bd3921f0d34cdc043721dd14bacfd4ad[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 13:51:00 2025 -0700
+
+    [add] mjx support autodownload too from mjx_mjcf_path (#196)
+
+[33mcommit 5ce2046ed1cc6305cf20ef96cb0c068b7fc18e08[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 13:43:06 2025 -0700
+
+    [refactor] mujoco simplify code (#195)
+
+[33mcommit 6b38c59c78d41aa477c0e250eee3cb24cdabd32e[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 19 13:38:38 2025 -0700
+
+    [fix] fix bug that camera state is not converted from tensor state to nested state, introduced in #159 (#194)
+
+[33mcommit 2eb24ede243f3fdbd5eda347aa170b3bcbe4d2ed[m
+Author: Murphy <167211955+MurphyZhao04@users.noreply.github.com>
+Date:   Tue May 20 04:29:27 2025 +0800
+
+    [add] MJX handler (#159)
+
+    Co-authored-by: Feishi Wang <feishiwang2001@gmail.com>
+
+[33mcommit 0540533a9b3ff141e9acb4bfaf690e70f200aa81[m
+Author: Melooooo <138291225+WinterMelooooo@users.noreply.github.com>
+Date:   Sat May 17 21:56:20 2025 -0700
+
+    [doc] RoboVerse Benchmark Update (#191)
+
+[33mcommit e400c3b85e18d48f58290f9c9de99f23a5d7983a[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 12 23:38:58 2025 -0700
+
+    [bugfix] isaaclab dt
+
+[33mcommit e1146c0a9d4675ae26da0aad0011f1358c74cf8d[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 12 15:04:01 2025 -0700
+
+    [quickfix] fix docstring for metasim/cfg/__init__.py
+
+[33mcommit 7e63f5699c8276be38d5e78a226fa2b39600a32e[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 12 14:45:08 2025 -0700
+
+    [bugfix] add reaching tasj traj
+
+[33mcommit c7dce33dca8ca29fd271bd5af3c5d2dc4f9895f0[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon May 12 14:34:23 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#188)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.8 → v0.11.9](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.8...v0.11.9)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit e37ce8782481b648a3b202cb7cd8deae60bcd1ea[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun May 11 21:30:32 2025 -0700
+
+    [update] readme for dashboard testing
+
+[33mcommit c36a4a77756d69ec06ed4375d945037445c433df[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun May 11 20:44:03 2025 -0700
+
+    [doc] support matrix (#182)
+
+    1. Add [support matrix](https://doc-support-matrix.roboverse-release.pages.dev/metasim/user_guide/support_matrix) to doc
+    2. Align isaaclab with recently added `sim_params` in #164
+    3. Align `dt` across different simulators. Currently use their own default value in the original simulator by default. Not aligning them with a specific number is because MuJoCo has so much difference with other simulators. It seems MuJoCo must work with very high precision (dt=1/500) to work well
+
+[33mcommit 1c1429d9793e06390f94502f84ea7d5e356462f4[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon May 12 05:01:11 2025 +0800
+
+    [fix] isaacgym dict access and update docs (#183)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit 1c9fa4430cf4a0c0cebe5ba3d62e1c1c489ecda8[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon May 12 03:33:00 2025 +0800
+
+    [fix] isaacgym humanoid training pipeline  (#164)
+
+    * add pd&&fix hardcoding in igym, add torque limit
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * fix hardcoding of initial pos in isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    fix gripper type initialization in isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    fix reset in isaacgymHandler&run hb:stand success
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    update humanoidbench docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add sim paramscfg&add ctrl mode ckeck(isaacg)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * update humanoidbench docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * Update humanoidbench_rl.md
+
+    * Update wandb cfg
+
+    Co-authored-by: Fisher Wang <feishiwang2001@gmail.com>
+
+    * add sim_param and control_type in scenario
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * feat: support non-actionable joints in isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * fix wrong import
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * Update metasim/cfg/tasks/base_task_cfg.py
+
+    Co-authored-by: Fisher Wang <feishiwang2001@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * avoid pass global val in action calculaton [isaacgym]
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * clean code
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * clean annotation
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update
+
+    * [feat] add high level control config class
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [fix] control file miss
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add joint level control type cfg
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update annotation
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * clean code in isaacgym.py
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update cfg
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * update docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+    Co-authored-by: Fisher Wang <feishiwang2001@gmail.com>
+
+[33mcommit 763e1ef9b4be0da09938c2d91efc0d9adf69db72[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 19:39:30 2025 -0700
+
+    [fix] sapien3 support headless
+
+[33mcommit 244df430464100ad5af993803d04d92fded138cf[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 19:05:54 2025 -0700
+
+    [doc,update] update docker installation statistics in doc
+
+[33mcommit cd07e4d0616bd904290e54b2988fc995399532ad[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 18:55:35 2025 -0700
+
+    [fix] docker conda init (#177)
+
+[33mcommit f401be9c9d42a99d42d07a66b46af618def75d1b[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 18:25:51 2025 -0700
+
+    [fix] fix isaaclab render_interval warning
+
+[33mcommit f79ff07397893b09beeba1fc44ece108d1d615f7[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 17:37:49 2025 -0700
+
+    [fix] fix genesis non-headless usage in docker (#176)
+
+[33mcommit 6949684a5cb131de32134d49ce26b243e19c4d54[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 16:53:41 2025 -0700
+
+    Update 0_static_scene.md to use sapien3 (#175)
+
+[33mcommit 43b951e960bdcb9f51f4f434d6776f2605cf9357[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 16:42:10 2025 -0700
+
+    [update] align direct_rl_env with IsaacLab v1.4.1 version (#153)
+
+[33mcommit 4133f45cbd23605c736e3dc76de3f87ac75d3912[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 16:25:52 2025 -0700
+
+    [fix] fix docker library conflict by updating LD_LIBRARY_PATH only when metasim_isaacgym conda env is activated (#174)
+
+[33mcommit 6d3fed3f2608e9219a09426a486d6fa88fe16055[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 00:20:02 2025 -0700
+
+    [fix] resolve mamba init command not found in docker (#171)
+
+    initialize mamba using the officially recommended way
+
+[33mcommit 071ccd6d6be7df2718bb0bcce92a2fe2c13477dd[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 00:15:54 2025 -0700
+
+    [update] fix readme and doc bibtex
+
+[33mcommit 96ec759bee4a42fc51a6c857955b0be244df94ac[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu May 8 00:11:47 2025 -0700
+
+    [update] update maniskill:pick_cube traj_filepath
+
+[33mcommit 341225fd265c966f9048510e37d06f6b4ffb5c23[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed May 7 00:06:35 2025 -0700
+
+    [refactor] remove mjcf_path from PrimitiveCubeCfg (#168)
+
+[33mcommit 5c9583381ba473add2f6e875d436f0398f5ad764[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue May 6 03:22:05 2025 -0700
+
+    update readme: remove star history
+
+[33mcommit 3a9d938a3eccb73e066630f9a64fe03cc01533f4[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue May 6 02:37:41 2025 -0700
+
+    doc: resolve warning
+
+[33mcommit ad14c10852e6bcfd4cfd3733646a239cb792e828[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue May 6 02:16:10 2025 -0700
+
+    Doc/checker cfgs (#167)
+
+    * fix metasim.cfg.checkers docstring, fix typo, improve sphinx ui
+
+    * fix checker api ref
+
+    * add docstring for checker attributes
+
+    * rename deprecated checkers with leading underline; add todos
+
+[33mcommit ef2ab69a238bbfa1cd4f28a2b7b8e9d123c65abc[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 5 23:05:07 2025 -0700
+
+    [refactor] remove import rootutils in metasim module (#166)
+
+[33mcommit 40f815d3d2c0c9c966d1df1dc25a42a306af4c52[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 5 22:41:37 2025 -0700
+
+    isaaclab support setting actuator stiffness and damping (#152)
+
+[33mcommit 73ffd49cd24d8303e1d71d03d234fb07894a0d07[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon May 5 22:38:21 2025 -0700
+
+    [refactor] restructure the autodownload code into FileDownloader, speed up when there are multiple objects in scenario (#165)
+
+[33mcommit 1e1cf63b6daf0b23893992164e30a3969706cb41[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 5 16:27:43 2025 -0700
+
+    quickfix: scripts/clean_usd.py takes collision_mode as argument and can overwrite existed collision api
+
+[33mcommit fdd25d2b1326c2a59c1d6df18bdff99f663df6d1[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon May 5 16:25:56 2025 -0700
+
+    quickfix: autodownload skip cylinder
+
+[33mcommit df530fc740eb6ccc48f52ae125cd02e841e53947[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon May 5 15:36:59 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#160)
+
+    updates:
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.7 → v0.11.8](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.7...v0.11.8)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 053619f8b51755831dbb62d35a62deedf2808c58[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue May 6 03:02:40 2025 +0800
+
+    Revert "run humanoid parrallel training (#162)" (#163)
+
+    This reverts commit ea6a1a531001d929ff97b955d355132c49923ddb.
+
+[33mcommit ea6a1a531001d929ff97b955d355132c49923ddb[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue May 6 02:55:21 2025 +0800
+
+    run humanoid parrallel training (#162)
+
+    * add pd&&fix hardcoding in igym, add torque limit
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    * fix hardcoding of initial pos in isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    fix gripper type initialization in isaacgym
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    fix reset in isaacgymHandler&run hb:stand success
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    update humanoidbench docs
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * add sim paramscfg&add ctrl mode ckeck(isaacg)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+    * [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+
+    ---------
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit 99c4bd3be65a93c06fe99d20f3c75ceb7dd9c000[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon May 5 02:57:21 2025 +0000
+
+    update wechat code
+
+[33mcommit a6e67ca58b967465b8c61a08ef695af5bf996af8[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun May 4 10:37:00 2025 -0700
+
+    Update render.md
+
+[33mcommit d10e63fc7c1ae82a9fc6637ddedc4712600c3700[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun May 4 09:58:25 2025 -0700
+
+    update ignore for cust
+
+[33mcommit aa3d8ca13a773e8dcc757445b24c818e25f49ccc[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Fri May 2 23:39:41 2025 -0700
+
+    Feature/update clean usd script (#155)
+
+    * clean_articulation_root.py: for rigid object (non-articulation): ensure there is a collision api (convex decomposition by default); remove the fixed joint
+
+    * rename clean_acticulation_root.py to clean_usd.py; add docstring
+
+    * remove scripts/clean_articulation_root.py
+
+[33mcommit 77675c857b017288d30cdd88c4a2cb1b351304ef[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Fri May 2 10:17:41 2025 -0700
+
+    isaaclab ShaderFixer also repair opacity_texture (#154)
+
+[33mcommit c215c135dc10df98517448b6015fc37f07bc8be3[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 30 01:03:29 2025 -0700
+
+    quickfix: checker operators device
+
+[33mcommit a6a23ef2f3c144418275bc6b8557c540b02c93b3[m
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Tue Apr 29 08:21:50 2025 +0200
+
+    Simpler env move near (#91)
+
+    * added simpler env move near
+
+    * added constants
+
+    * fixed simpler env bugs
+
+    * added subtask_id checking
+
+    * merged constants of SimplerEnv
+
+    ---------
+
+    Co-authored-by: boshi-an <boshi_an2stu.pku.edu.cn>
+
+[33mcommit 81ce7905daf73de5eacea2e467ff2424bcbc06bc[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 28 23:18:12 2025 -0700
+
+    infra script: fix teleop_keyboard to use latest tensor states (#136)
+
+    * infra script: fix teleop_keyboard to use latest tensor states
+
+    * delete redundant code
+
+[33mcommit a9caf37149bd9d96b2a9c134f9d7e14e84f5e171[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Tue Apr 29 14:17:55 2025 +0800
+
+    fix evaluation bug of humanoidbench (#133)
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit e578c2889f5650ef24ef20634eabcb0008426848[m
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Tue Apr 29 08:16:50 2025 +0200
+
+    Feature/fix102 (#131)
+
+    * added feature body-state and vel/ang_vel for sapien2
+
+    * sapien3 added link velocity/ang_vel and base velocity/ang_eel
+
+    * added sapien dof action features
+
+    * added sapien3 dof action features
+
+    * supported pos and vel target for sapien and sapien3
+
+    * added docstring
+
+    * fixed get state bugs
+
+    ---------
+
+    Co-authored-by: boshi-an <boshi_an2stu.pku.edu.cn>
+
+[33mcommit 55a64f95dae5c11edb38b242e791442c1493393e[m
+Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+Date:   Mon Apr 28 22:44:19 2025 -0700
+
+    [pre-commit.ci] pre-commit autoupdate (#144)
+
+    updates:
+    - [github.com/pre-commit/pre-commit-hooks: v4.6.0 → v5.0.0](https://github.com/pre-commit/pre-commit-hooks/compare/v4.6.0...v5.0.0)
+    - [github.com/astral-sh/ruff-pre-commit: v0.11.5 → v0.11.7](https://github.com/astral-sh/ruff-pre-commit/compare/v0.11.5...v0.11.7)
+
+    Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+[33mcommit f04cbcbb04e5dce6e3e9dc57ad8d61b31f46a78c[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 28 22:15:16 2025 -0700
+
+    add get_started example for multiple cameras
+
+[33mcommit 8b04722c53bc0bb52b532be63f9b123444c79666[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Mon Apr 28 18:02:58 2025 -0700
+
+    Update README.md
+
+[33mcommit 1f1f784b9f8744dc6e84bacb46456904acd7007d[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Mon Apr 28 18:02:40 2025 -0700
+
+    Update index.md
+
+[33mcommit bd6d7c327260f154504894fb838c5c5f117d17f5[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Mon Apr 28 18:01:56 2025 -0700
+
+    Update README.md
+
+[33mcommit 1b42c6fbbf35a423be4abb2b64bb32bcb8cba186[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 25 15:41:03 2025 -0700
+
+    organize objects config
+
+[33mcommit 86ebb3af5bd8ad51064e96b7e6676295fe7e5c24[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 25 03:17:03 2025 -0700
+
+    add camera poses to states; isaaclab: support it (#141)
+
+[33mcommit 95c47a647fe2c25fef78d77ef7a656c65cae7f31[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 25 01:33:20 2025 -0700
+
+    ruff: ignore rule D105 and D107
+
+[33mcommit a449e6046ba7ab2901489e4137e7ac461b8a1c1d[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 24 20:05:05 2025 -0700
+
+    update kinova_gen3_robotiq_2f85 usd_path
+
+[33mcommit c013715ba89111ba89152e658061dacbe9ce47f3[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 24 18:25:49 2025 -0700
+
+    Dev/clean math util quat inv (#140)
+
+    * merge quat_inv to quat_invert
+
+    * merge quat_conjugate to quat_invert
+
+    * rename quat_invert to quat_inv
+
+    * move quat_inv to a good position to solve undefined symbol problem
+
+[33mcommit 1c65d5a00cb30a0e2af3c5c2dc9066d07883323b[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 24 15:15:24 2025 -0700
+
+    KinovaGen3Robotiq2f85 motion planning good
+
+[33mcommit bd2664975f5761dfa3b066a22bd004a6376ea6db[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 23 17:34:23 2025 -0700
+
+    infra script: fix random_action.py for new state tensor; add new script random_action_ee.py currently only work for isaaclab
+
+[33mcommit b6030c62e13667d85b5c4c11938f61106c156a4c[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 23 16:35:59 2025 -0700
+
+    infra script: random_action_really_pure add decimation to cli argument
+
+[33mcommit 15c31466ee2bd4c4050e0e8aa52ab114895402f2[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 22 19:54:10 2025 -0700
+
+    isaaclab: organize code; pass the test
+
+[33mcommit fc25df6b295301c72735f2d7885cc8bd446c57eb[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 22 16:13:24 2025 -0700
+
+    bugfix: fix checker devices
+
+[33mcommit 98c4be68b9ba9ca7fdb687b0d9d42d9040799c71[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 22 15:57:36 2025 -0700
+
+    cancel pre-commit action, use hook instead
+
+[33mcommit 7074cf4397448b1b85ed4bef12ece50e70194b11[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 22 15:34:18 2025 -0700
+
+    quickfix: simulators get_states return empty sensors; pass all tests
+
+[33mcommit 6484abc4ab24bd755c5301c043adb62b7ad48017[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 22 01:40:27 2025 -0700
+
+    infra: add contact force sensor cfg; isaaclab: support it (#137)
+
+[33mcommit 8a33af1699d8dec7d540ce3c985a18b79eb2e9e3[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 21 23:31:29 2025 -0700
+
+    infra: add PrimitiveFrameCfg; isaaclab: support it (#135)
+
+    * infra: add PrimitiveFrameCfg; isaaclab: support it
+
+    * add frame asset to metasim/data; update path
+
+    * quickfix
+
+[33mcommit 6ff093bc051fbc2ba188d0bd9de4c257759f4a55[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 21 23:16:57 2025 -0700
+
+    print_usd_joint_names also print body names
+
+[33mcommit 6c4e9dffa766c3ec9ad80b8ced9042d8954ee7b9[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 02:32:45 2025 -0700
+
+    update rl doc format
+
+[33mcommit f2ac6d2d67ba34ba4cbdba974aa32ae82359cf60[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 02:30:26 2025 -0700
+
+    update rl doc format
+
+[33mcommit 0c69582ea3437a0850fe69d955712f963f46cf2a[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 02:24:48 2025 -0700
+
+    update rl example naming and rl doc video
+
+[33mcommit 2dfdc57906a1a78ac66460e661b6fd4c389ef245[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 02:13:22 2025 -0700
+
+    fix rl doc: add reach origin
+
+[33mcommit a7d305104b39005e1eeb866ea6f07f8050053688[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 01:52:45 2025 -0700
+
+    fix rl doc
+
+[33mcommit bff36bdb59917f99168a9ab41acc3271f28b2f10[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 01:44:36 2025 -0700
+
+    update rl example doc
+
+[33mcommit e977200973ae61d921e88c422e8082fb7a681b31[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 01:38:42 2025 -0700
+
+    update rl example doc
+
+[33mcommit 018a4f0dd187e21a0d0444daf65863dcfce3808b[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 01:32:11 2025 -0700
+
+    update rl example doc
+
+[33mcommit 5811f99b076eea23de02d7535bb0713585b75389[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 01:25:52 2025 -0700
+
+    add rl example
+
+[33mcommit 13ef53f9963cd5ff5be494082ef5b634f29bbc69[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 00:51:18 2025 -0700
+
+    add debug tasks
+
+[33mcommit 6d1230cf270ff04c4980fe4dfa8e5013e950f4c4[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 21 00:33:39 2025 -0700
+
+    update rl tasks
+
+[33mcommit 8d83ec5eeea0751e2f558f1877a8262314575a5d[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 21 00:08:51 2025 -0700
+
+    train_ppo_vec now support mujoco and isaacgym
+
+[33mcommit c1a457a8f04f98d48df95026e494549c794e7d6a[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 20 23:54:32 2025 -0700
+
+    Bugfix/isaaclab multienv state (#134)
+
+    * quickfix: isaaclab multi env body pos
+
+    * quickfix: isaaclab root state pos
+
+[33mcommit 5d0ec2e869a54a889d2d5898a253525629542924[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 23:32:13 2025 -0700
+
+    remove default camera for rl
+
+[33mcommit 34fbd1ad7194b293f5bb1fb45a23712ec98b4ccc[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 16:09:23 2025 -0700
+
+    update links in readme
+
+[33mcommit d0f019c64701654c4c37b733fbc3833e5f0130df[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 16:03:20 2025 -0700
+
+    add links to wiki
+
+[33mcommit c04706f7380a821077792d559b5cecd082a38397[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 05:43:17 2025 -0700
+
+    update object grasping doc and example
+
+[33mcommit a068f6f11ba1ea3c668cbefb371903e3cc081025[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 05:38:19 2025 -0700
+
+    resize doc understanding image size
+
+[33mcommit 52f5c470df08fc90329e9652cd9cbbf02ea8baea[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 05:35:56 2025 -0700
+
+    fix video link
+
+[33mcommit d0d9d30120055eee66d1ae22adfd85ba7303807c[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 20 05:32:48 2025 -0700
+
+    update motion planning doc, delete unused
+
+[33mcommit b9b0f38fdc94a1dc51ac8f008477a15c2880b3b8[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 20 05:06:39 2025 -0700
+
+    kinova + 2f85 random action success (#132)
+
+[33mcommit cb91a40d8338bf8b20cc3a95d6bf663378fa9e21[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 18 17:26:16 2025 -0700
+
+    update grasping demo
+
+[33mcommit 9613e608cd09f8668e6f3aacda643122a0f14819[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 18 14:36:21 2025 -0700
+
+    doc: update isaaclab troubleshooting
+
+[33mcommit 14cb322bf49e1c4a2a46b6241c6c6f0e13753721[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 18 14:11:50 2025 -0700
+
+    doc: add common troubleshooting
+
+[33mcommit 2aab38abb3243399a4386f22f44b034eccdc8d5c[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 17 16:49:15 2025 -0700
+
+    add robots: kinova_gen3 and kinova_gen3_robotiq_2f85
+
+[33mcommit b8f6df9a657b9dee665b462ad07cc4c24fc98558[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 17 13:22:04 2025 -0700
+
+    add isaacgym_animate script to test urdf
+
+[33mcommit ab8b27331f606dc5813bb3e118e5e6b29b51cd7f[m
+Author: HAOZHE LOU <42707859+louhz@users.noreply.github.com>
+Date:   Fri Apr 18 03:00:47 2025 +0800
+
+    Update real2sim.md
+
+[33mcommit ce13a52390279620c94157096b7699ba081b87aa[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 17 11:49:50 2025 -0700
+
+    doc: add page for real2sim
+
+[33mcommit 0ca6a5abfb5b9b1f1323820afd1a9bc68d227df1[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Thu Apr 17 13:47:02 2025 -0400
+
+    Update `humanoidbench` training code (#125)
+
+    * fix: Update task configuration to include humanoidbench prefix for consistency across simulators
+
+    * docs: Update training instructions for humanoidbench to clarify configuration changes for wandb logging
+
+    * fix: Ensure tensor operations use the correct device in robot_local_velocity_tensor function
+
+    * refactor: Update training script to improve model saving functionality and adjust configuration settings
+
+    - Modified the `headless` parameter in the training script to depend on the training or evaluation mode.
+    - Introduced a new `SaveModelCallback` class for saving the model at specified intervals.
+    - Updated configuration files to set model save path and frequency, and adjusted the number of environments and batch sizes for training.
+    - Removed unused code related to video recording and evaluation callbacks to streamline the training process.
+
+[33mcommit df542f568f7cf027b2d0c9606580d8b759a844b6[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 16 21:02:59 2025 -0700
+
+    train_ppo_vec, reach_origin_cfg: update with tensorized state, run successfully with gymnasium>=1
+
+[33mcommit 33ce476bc306ee1a15600390d3ba9339ffdcc2c5[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 16 22:44:34 2025 -0400
+
+    Update `humanoidbench` training code (#122)
+
+    * refactor: Refactor the training script to support YAML configuration files and add learning rate scheduling functionality. Update the main function to read parameters from the configuration, removing command-line argument parsing. Add configuration files for IsaacGym, IsaacLab, and MuJoCo, standardizing training settings and parameters.
+
+    * Cleanup: Removed unnecessary log information to simplify the code and improve readability. Specifically, the log records for environment state setup and reset were deleted in `isaacgym.py` and `isaaclab.py`.
+
+    * fix: Add decimation factor configuration for different simulators in training script
+
+[33mcommit 3ed8c3955bc41a90aef2336682660b5a1304eed5[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 15:41:12 2025 -0700
+
+    update gsnet code
+
+[33mcommit 0d0c82bdcd0e5d4c84c84daf49788f488723d9fe[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 15:33:24 2025 -0700
+
+    adapt eval code with new state representation
+
+[33mcommit 305467c08d6d3b204767d2543a81f80e490e5556[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 16 15:27:53 2025 -0700
+
+    fix doc warning (#120)
+
+[33mcommit ce25368a3307f7b580ed088d3b2cec6fbaed6670[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 14:02:27 2025 -0700
+
+    align doc naming
+
+[33mcommit f9b9ec61bd83cda6e639486fae0c05de91e24688[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 14:01:54 2025 -0700
+
+    update assets, update gsnet, update path, update rootutil for gsnet
+
+[33mcommit 4ced0fa9b1c9bb46e5dae6a04e8c86733233b89c[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:53:40 2025 -0700
+
+    add gsnet doc
+
+[33mcommit 47218f996a47b4754124345d7786fb34bb3e55da[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:53:07 2025 -0700
+
+    update assets name and doc for gsnet
+
+[33mcommit 4e3228d257f23ec3643a8adec67e9d8c28ec1b72[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:44:37 2025 -0700
+
+    update assets name and doc for gsnet
+
+[33mcommit 416bc065898f28fe2d2164f3a0fda503e86fa911[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:44:26 2025 -0700
+
+    update assets name and doc for gsnet
+
+[33mcommit 494d8e632e1039971539a1b2d1ba024e50f369b7[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:39:31 2025 -0700
+
+    add gsnet as third_party
+
+[33mcommit ee1e95dc48a009ee663867f1e621affc9e8b271e[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Wed Apr 16 13:38:39 2025 -0700
+
+    add gsnet as third_party
+
+[33mcommit 9d509a042a1e9144d57496986a0ad360a19c16d0[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 16 01:40:25 2025 -0700
+
+    quickfix: sapien3 and genesis hf file autodownload
+
+[33mcommit 4ca3c1565634952db6682031c5734dd76b2ece26[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 16 00:49:37 2025 -0700
+
+    add docstrings for base handler and mujoco handler
+
+[33mcommit d71d59e83b80890d43740dbc56df89d46144316f[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 16 02:26:15 2025 +0800
+
+    🐛 fix: Rollback to Stand training successfully
+
+[33mcommit a2b5803ae19eca6c3aab8aa99d41db50b8d9ec79[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 23:27:16 2025 -0700
+
+    Dev/optimize mujoco states indexing (#119)
+
+    * optimize mujoc body_ids_reindex
+
+    * mujoco: rename get_actuator_names to _get_actuator_names; rename get_actuator_reindex to _get_actuator_reindex
+
+[33mcommit ea3ebc01a73935cb3ad01e6d084d1cd1d6dc4c1e[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 20:21:37 2025 -0700
+
+    Fix/bug97 2 (#116)
+
+    * fixed bug #97
+
+    * also fixed same bug for sapien2/3
+
+    * also fix joint_names list inline sort problem in isaaclab, pybullet, sapien2, sapien3
+
+    ---------
+
+    Co-authored-by: boshi-an <boshi_an2stu.pku.edu.cn>
+
+[33mcommit cb9de9455762176ba2617d8c916bc0450ba2a1ae[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 17:17:56 2025 -0700
+
+    Dev/organize get_object_joint_names (#114)
+
+    This PR rename and rewrite `get_object_joint_names()` method in handler is a more elegant manner
+
+    * get_object_joint_names() take obj_name as argument instead of obj_cfg
+
+    * rename get_object_joint_names to get_joint_names
+
+    * add sort argument to get_joint_names()
+
+[33mcommit 31e392fe9dbc200f4651ae649858e0f0fa0d5153[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 16:56:54 2025 -0700
+
+    quickfix: isaacgym get camera images (#112)
+
+[33mcommit fc678d57484890a06bd5bfd6a0f0bb64e4573889[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 16:38:08 2025 -0700
+
+    fix minimal test script to fit tensorized states (#111)
+
+[33mcommit 1884a678e38f83adf358d109f5b7e9c52311a49a[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 15:58:15 2025 -0700
+
+    Quickfix/body and device (#109)
+
+    * genesis, pybullet, sapien23 pass body_names to state
+
+    * base handler: fix get_vel, get_pos, and get_rot to exploit tensorized states
+
+[33mcommit ab09aabe2189482a55d679bdc564cb0476d00542[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 15:30:19 2025 -0700
+
+    get_body_names() add argument sort
+
+[33mcommit aa1a5dbf58a5e7ca896c6670a9be70a6cff49cde[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 15 15:13:06 2025 -0700
+
+    Originally PR 108 (#108)
+
+    * 🐛 fix: velocity slice in `BaseLocomotionReward`
+
+    * 🐛 fix: MuJoCo body index for h1/ should be removed
+
+    * ✨ feat: Use math function matrix_from_quat
+
+    * 💄 style: Use CPU for MuJoCo and prevent using `self.env.handler`
+
+    * 🐛 fix: Rollback to Stand training successfully
+
+    * restore the reindexing part
+
+    ---------
+
+    Co-authored-by: Yutong Liang <lyt0112@outlook.com>
+
+[33mcommit 3eb527b6714501fe3b24a764a0b85a6df1b1bcd6[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Wed Apr 16 01:42:16 2025 +0800
+
+    update humanoidbench, speed up ~30x (#96)
+
+[33mcommit 6133fe5e4c74429ec16984e17610053dca203d99[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 23:03:06 2025 -0700
+
+    state_consistency default to be headless
+
+[33mcommit f0897cc6c5f44353dc4a88da8c03cdefeb5ef3bc[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 22:51:17 2025 -0700
+
+    add script to test get_states() and set_states() consistency
+
+[33mcommit 1518c6f8ff8a4e869b39c0865a0d1efb10cdfbc1[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 19:05:31 2025 -0700
+
+    Tensorize states (#92)
+
+    * isaaclab get_states + replay_demo good
+
+    * define the dof tensor joint order to be alphabetic; collect demo works well
+
+    * isaacgym + stack_cube/close_box + replay_demo successful
+
+    * isaacgym collect demo ok (1 env)
+
+    * isaaclab get_states delete redundant code
+
+    * mujoco replay close_box/stack_cube successful
+
+    * env_wrapper simulate() after set_states() to help mujoco and isaacgym success for stack_cube (and other simuliar tasks that depends on checker initialization)
+
+    * genesis use tensor state
+
+    * pybullet fit to new states format
+
+    * replay demo are more robust to the case when no rgb is available in tensor state
+
+    * sapien2 and sapien3 fit tensor state
+
+    * fix isaaclab device problem
+
+    * add body_state to tensorized state representation; isaaclab support it
+
+    * tensor_state_to_env_states deal with body states; tensor_state_to_env_states ensure all tensors in converted states are on cpu
+
+    * run humanoidbench stand ppo training successfully
+
+    * body state be compatible with simulators that hasn't implement yet
+
+    * quickfix
+
+    * get_started script tested; hybrid sim adapt to tensor states; quickfix mujoco
+
+    * implement mujoco body states (need to debug)
+
+    * fix mujoco body tensor
+
+    * asset: modify metasim/data/quick_start/robots/franka/mjcf/panda.xml to align with usd body names
+
+    * isaacgym support body state
+
+    * mujoco support joint_pos_target and joint_effort_target for robots
+
+    * fix humanoidbench isaacgym case
+
+    * add method get_object_body_names() to base handler; organize docstrings
+
+    * rename get_object_body_names to get_body_names
+
+    * rename get_object_joint_reindex to get_joint_reindex
+
+    * rename tensor_state_to_env_states to state_tensor_to_nested
+
+[33mcommit dd2cfc3cc7e164f4f7a42d78c3fc582728c36cbd[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 18:46:33 2025 -0700
+
+    update transfer.sh with printing the cp command
+
+[33mcommit 90f65bfe68d1275ddfecb5d08d6887ea19d2c0a1[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 13 23:28:28 2025 -0700
+
+    pre-commit: upgrade ruff to v0.11.5
+
+[33mcommit f8fb52824c036243ef6cbbada87e32399c4ea7bb[m
+Author: Charlie Cheng <90072894+charlietcheng@users.noreply.github.com>
+Date:   Mon Apr 14 12:42:13 2025 -0700
+
+    updated RL infra (#86)
+
+    * rl: closebox doenst make sense to be a rl task. remove for now
+
+    * rl: updated rl infra with minimal infra
+
+    * isaacgym: xyzw -> wxyz for quats
+
+    * rl: fix all issues
+
+    * rl: fix docs
+
+    * Update parallel.py
+
+    * Update default.yaml
+
+    ---------
+
+    Co-authored-by: Fisher Wang <feishiwang2001@gmail.com>
+
+[33mcommit ec535c14b84602b853c841a86b361a20cf1efc30[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 12:19:20 2025 -0700
+
+    delete get_observation() method from handler (#89)
+
+[33mcommit b0e34b68f772c3a49c6bffe22c4d07075d836829[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Mon Apr 14 00:59:40 2025 -0700
+
+    update scripts/transfer.sh to take a list of folders instead of a single folder
+
+[33mcommit 9709078a89151ef1bf6dc59806ce9ffbe01b88bf[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 13 23:35:14 2025 -0700
+
+    ignore checkpoint
+
+[33mcommit fb53aba70d187798dadd25dc2344baa30b141ef2[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 13 18:45:35 2025 -0700
+
+    quickfix: isaacgym device bug
+
+[33mcommit 4f6ab5ab411c8a60f36548b92e61061e55d36155[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 13 23:24:20 2025 +0000
+
+    fix diffusion policy hydra command line error
+
+[33mcommit 8bfc13557cdaaaa240647d9895a6c39cc9e63ab3[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun Apr 13 16:17:46 2025 -0700
+
+    Update diffusion_policy.md
+
+[33mcommit 7df282f2455e9de6dfd6e58ba978aad480464438[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 13 14:11:22 2025 -0700
+
+    add device property for handlers (#88)
+
+[33mcommit 7a971e868ac537cf41051ed66653010d1b6471eb[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 13 13:55:22 2025 -0700
+
+    parse_util: fit the case when mjcf doesn't have a compiler
+
+[33mcommit cac1c141b8f59149e39bf9773491d4771cdb5061[m
+Author: weison_pan <124496507+WeisonWEileen@users.noreply.github.com>
+Date:   Mon Apr 14 04:52:52 2025 +0800
+
+    fix humanoid joint name mismatch (#84)
+
+[33mcommit d662bc537fcfea6958f35b4b7914ea85d4a03e3f[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sat Apr 12 18:55:58 2025 -0700
+
+    add script to clean articulatin root api for usds given task names
+
+[33mcommit ffc735d65ba161c1d722d0d642aef13d7b7a0fee[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sat Apr 12 15:58:21 2025 -0700
+
+    Update diffusion_policy.md
+
+[33mcommit 1f158529fa69ed0e36724929753cb5717a704f7c[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sat Apr 12 15:54:14 2025 -0700
+
+    Update diffusion_policy.md
+
+[33mcommit 304a09a44d378a227c202e94c1c9cb157d430b19[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sat Apr 12 15:46:21 2025 -0700
+
+    update h1 with hand urdf
+
+[33mcommit 51ad7eb0a8e09275a0b9ae67fbcfdc72a2dcfa5d[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sat Apr 12 14:56:00 2025 -0700
+
+    Dev/hf auto download (#78)
+
+    * basic autodownload from public hf dataset; force traj file ended with .pkl.gz by default
+
+    * add transfer script to quickly migrate data from roboverse_data_dev to roboverse_data
+
+    * gitignore: ignore roboverse_data_release
+
+    * franka asset paths use huggingface
+
+    * hf autodownload support urdf and mjcf
+
+[33mcommit 9bfe52d7b0a385503314ae670c1ed446d465075b[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sat Apr 12 14:54:05 2025 -0700
+
+    remove useless assets in get_started
+
+[33mcommit bbf27954709b617b3dbee7d60fa0c014a8f744cc[m
+Author: dylan-goetting <76505830+dylan-goetting@users.noreply.github.com>
+Date:   Sat Apr 12 12:01:49 2025 -0700
+
+    Clean up training DP and ACT, with better docs (#74)
+
+    * clean up ACT training script and doc
+
+    * remove unnecesary/deprecated diffusion policy files
+
+    * rename train.sh -> train_dp.sh, clean up the training script and update the doc
+
+    * update config save path for better file structure
+
+    * clean up zarr script
+
+    * eval now works for joint space policy - EE still needs work
+
+[33mcommit d96044d3518e1cbf7a2e528a25e0ce7ee2c4b2e7[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 11 15:59:21 2025 -0700
+
+    gitignore: ignore roboverse_data_dev
+
+[33mcommit 24766bac647ab6708638943bdce89567edbaf882[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Fri Apr 11 00:40:52 2025 -0700
+
+    doc: update state definition
+
+[33mcommit fd3bca99657be718f2ade23ff469c7ca4204b974[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Thu Apr 10 22:11:05 2025 -0700
+
+    Update README.md
+
+[33mcommit b26120ddde86b07ade8f0364116959f1abc3b1e9[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 10 20:49:38 2025 -0700
+
+    doc: docker installation force specify username
+
+[33mcommit 62b393a4541bb30a82aae9667390535ada1ab793[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 10 17:34:58 2025 -0700
+
+    collect demo: fix cuda oom bug
+
+[33mcommit 8f96dd0777d131d39bdb42f8536d47f031fe747c[m
+Author: 15101051 <34539686+15101051@users.noreply.github.com>
+Date:   Fri Apr 11 06:42:11 2025 +0800
+
+    [docs/fix] Add clone project to installation.rst (#68)
+
+    I wonder if cloning project is missing from installation in docs. That made `uv pip install -e ".[<simulator>]"` below a little confusing.
+
+[33mcommit 6d2cbf89984aaac08814637704d4af46f1866246[m
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 10 12:01:28 2025 -0700
+
+    Dev/states as obs (#65)
+
+    * states as demo, test passed on isaaclab and isaacgym
+
+    * fix minimal test script
+
+    * isaacgym: add todo
+
+    * pybullet add dof_pos_target to get_states; test passed
+
+    * mujoco: get_states support dof_pos_target
+
+    * pybullet: fix set_dof_targets
+
+    * sapien3: get_states support dof_pos_target
+
+    * genesis: get_states support dof_pos_target
+
+    * genesis, mujoco: add todo
+
+    * gitignore: ignore *.convex.stl
+
+    * 0_static_scene: fit to new obs
+
+    * genesis, pybullet, sapien2, sapien3: implement refresh_render (todo: pybullet's implementation is hacky)
+
+    * hybrid sim: fit to states as obs
+
+    * infra types: states as obs
+
+    * replay_demo: obs saver fix multiple env bug
+
+    * get_started: 6_advanced_rendering fit new obs format
+
+    * get_started: move obs saver to utils; 1-5 test passed on isaaclab
+
+    * env_wrapper: make up a forgotten change
+
+    * env_wrapper: push forgotten changes
+
+    * genesis: fix headless bug
+
+    * mujoco: fix refresh_render bug when headless
+
+    * pybullet: add comment for pybullet's refresh_render method
+
+    * infra script: random_action fit new obs format
+
+[33mcommit 842bee2b7a35e2f9665b848d7636be0b6b14db40[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Thu Apr 10 11:44:34 2025 -0700
+
+    Update README.md
+
+[33mcommit 520bd74b2937a0ca9e916d28a97f6fd8a1aa0414[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Thu Apr 10 00:54:30 2025 -0700
+
+    infra script: remove useless scripts
+
+[33mcommit 3c1756e026bc2183353c25743b0ab358d1b9f000[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 14:07:08 2025 -0700
+
+    rename ee_prim_path to ee_body_name
+
+[33mcommit 4d25ed1c23ba1e5b01c48716a6fad2451877e42d[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 14:02:35 2025 -0700
+
+    infra types: dof_pos in EnvState can be None
+
+[33mcommit c818745d2921783a00762903b8a80cad70d091a9[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 13:45:05 2025 -0700
+
+    infra util: move save_util to save_utli/save_util_v1; prepare for save_util_v2
+
+[33mcommit b7661c965189ad5abe463930c862d64eab1484b4[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 21:11:59 2025 -0700
+
+    infra script: fix random_action; support isaaclab2
+
+[33mcommit 2419d658871605a5173b6a0a19fce4ed5a1c54be[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 20:52:09 2025 -0700
+
+    infra script: fix random_action
+
+[33mcommit cf92a9668b3f14832209814ee5c709dae47de575[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 10 03:30:55 2025 +0000
+
+    update dp command and doc explaination
+
+[33mcommit f7541e926c53f2acdab5401a34bae12fb667c414[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 10 03:24:35 2025 +0000
+
+    update dp command and doc
+
+[33mcommit 26ed0373cf261e9d318125a5cf673cbc199c3f0d[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 19:15:10 2025 -0700
+
+    README: add citation
+
+[33mcommit 9ac3e5ec9a70577c02faed5dc496b2fc1b66895f[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 19:08:51 2025 -0700
+
+    doc: update isaacgym installation troubleshooting
+
+[33mcommit 254ebde907b25d2658ed9133dcc6f6d59a22b0d9[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 19:08:35 2025 -0700
+
+    dashboard: conda env naming following dockerfile convension
+
+[33mcommit 4066d782998a6cf6e424efe558c06ab0dc9e05d1[m
+Merge: ed973cc 8ec896a
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 10:50:21 2025 -0700
+
+    Merge pull request #61 from szang18/main
+
+    Fix: Resolve the errors of using the evaluation scripts in roboverse_learn
+
+[33mcommit 8ec896a02bc92bcdde1598e7627ab67dfbe51719[m
+Author: szang18 <1316294604@qq.com>
+Date:   Wed Apr 9 13:38:16 2025 +0000
+
+    Refactor train.py in roboverse_learn to support the updated MetaSim API
+
+[33mcommit 1735937d332c21b4bea1ba2e082dc549d21de91d[m
+Author: szang18 <1316294604@qq.com>
+Date:   Wed Apr 9 13:15:45 2025 +0000
+
+    Refactor evaluation modules in roboverse_learn to support the updated MetaSim API
+
+[33mcommit ed973cc7b32dae479d4d32104563fe3c9d486d9c[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 00:58:11 2025 -0700
+
+    README: add star history
+
+[33mcommit df8deea057982c18cc96aa494b56242d7985f53d[m
+Merge: 5e34514 8e4b81f
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Wed Apr 9 00:54:51 2025 -0700
+
+    Merge pull request #59 from EmptyBlueBox/dev_rl_infra
+
+    IsaacGym and IsaacLab Infra Change
+
+[33mcommit 8e4b81f70fa172b5baefb41a1721d4995c9c9fdf[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 15:02:07 2025 +0800
+
+    📝 docs: Remove the note about IsaacLab not being supported, update the humanoidbench_rl documentation.
+
+[33mcommit dc1f665ca672ee6f5c7819d76ec287595fbe305b[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:53:07 2025 +0800
+
+    📝 docs: update humanoid rl doc
+
+[33mcommit 0b4bd0a5ecff2f293acc5a6321319e0bf9073ec8[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:52:49 2025 +0800
+
+    🐛 fix: Remove error logs for unsupported IsaacLab and optimize the environment reset logic.
+
+[33mcommit 55ee1ecf739bc9d9af02327042f21b0d1446fb86[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:52:16 2025 +0800
+
+    🐛 fix: delete `handler.simulate()` in `reset()`
+
+[33mcommit 1616bf4c8579501b584345c1a3ffbcf1b66c128c[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:51:42 2025 +0800
+
+    ✨ feat: align IsaacLab `get_states`
+
+[33mcommit 4fc7eb658e9195dc27e43b9c8203a08c1db1ce37[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:50:58 2025 +0800
+
+    ✨ feat: Support `set_states` only for specified `env_ids`, updating the processing logic of root states and joint states.
+
+[33mcommit 541089c4db09eda8b28ab4539064a8c96b3acb3b[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 14:50:07 2025 +0800
+
+    🐛 fix: Modify the decimation value in HumanoidTaskCfg to 1
+
+[33mcommit 5e3451439bfba58a3767ffa33cd13a3b8fe7878a[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Tue Apr 8 14:53:36 2025 -0700
+
+    Update README.md
+
+[33mcommit b1a9c47471acb81d61113d5c0239c2a85fd0e51d[m
+Merge: 4f01287 b1004eb
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Tue Apr 8 14:45:48 2025 -0700
+
+    Merge pull request #52 from EmptyBlueBox/dev_rl_infra
+
+    MuJoCo and IsaacGym Infra Update
+
+[33mcommit b1004eb728fde5ce852ab710fd205403a4f18cac[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 05:37:49 2025 +0800
+
+    🐛 fix: SB3 training loggings
+
+[33mcommit 5c93fb44432d151524ca7a36a51012df7d0f11b5[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 05:19:27 2025 +0800
+
+    🐛 fix: mujoco `get_states` bug
+
+[33mcommit 39410079268c82a6be953c6532f6f097272d425e[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:41:35 2025 +0800
+
+    💄 style: clean code
+
+[33mcommit 1e17d20f9b07efa3dc5e8a9a8a1e095f7a8cd0a2[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:41:14 2025 +0800
+
+    ♻️ refactor: use `env_state[robots][h1][body][pelvis]` instead of `env_state[robots][h1][pelvis]`
+
+[33mcommit bff9997a25dbbc969dfd6bdd7997cf67bef5429d[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:13:27 2025 +0800
+
+    📝 docs: humanoidbench rl doc update
+
+[33mcommit 7f54c5b9991abb9fd94ae0d2704b9e2edfa70a4e[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:13:11 2025 +0800
+
+    ✨ feat: sb3 code one for all simulators
+
+[33mcommit 525aad5804504072c918a3352b1606ef2d8104b7[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:12:34 2025 +0800
+
+    ✨ feat: humanoidbench reward modification for h1 in mjcf and urdf
+
+[33mcommit 036aa621cfe9765c7a7f2236565b5bb19595bcd9[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Wed Apr 9 04:11:20 2025 +0800
+
+    ✨ feat: MuJoCo and IsaacGym get_states alignment
+
+[33mcommit 4f01287a71ce61c878b4bc220ca8997073d75e3c[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Tue Apr 8 03:31:19 2025 -0700
+
+    README: update emoji
+
+[33mcommit 9ae1351492e70eba8a0525dbf765696085021395[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Tue Apr 8 03:28:42 2025 -0700
+
+    README: update wish list
+
+[33mcommit 71e3924c491e166c6b5f002950ec9beeb3e06972[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 21:58:50 2025 -0700
+
+    infra cfg: rename enabled to collision_enabled
+
+[33mcommit fa6fdd9014e5a0b3e66a0a8c3503418f39274faf[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 21:52:22 2025 -0700
+
+    doc: delete dashboard link
+
+[33mcommit 60db826008b7a5db252dfb60c5dd038318390831[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 20:31:03 2025 -0700
+
+    fix format
+
+[33mcommit 2ef580607b7a38e6cf5b01e7a90b70d00c4bd240[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 20:23:24 2025 -0700
+
+    isaaclab: support fix_base_link and collision
+
+[33mcommit ae0875d4af06360129588a693aba7cc4feb7d058[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 15:58:03 2025 -0700
+
+    remove paper pdf
+
+[33mcommit cff254bd4a1724ee05f7552acf7e60bfb9f75a6f[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Mon Apr 7 15:57:23 2025 -0700
+
+    doc: hide configuration system
+
+[33mcommit 5e40970006b99038dead11f36af6142651a84a3c[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Mon Apr 7 06:47:04 2025 -0700
+
+    update paper link
+
+[33mcommit 4d38c1a5eb7b68e33237ffd93dbfb32f7a99a6b6[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 22:32:45 2025 -0700
+
+    doc: prerequisite more smooth
+
+[33mcommit 56faf8825316627fcd82986f31c11eb0886d0edc[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 22:24:49 2025 -0700
+
+    doc: update curobo installation
+
+[33mcommit c45cc922c967e43fe29a07a6c2c3647bd47076d4[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 22:17:33 2025 -0700
+
+    doc: update project website
+
+[33mcommit b06ba22ada0c77c6bcd51a6abf6304b0adb7b7df[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 22:08:24 2025 -0700
+
+    fix submodule
+
+[33mcommit 862e7a13486d64ff231c0b05cfd266e8251ecd9e[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 21:50:32 2025 -0700
+
+    isaacgym: speed up by not using sync_frame_time
+
+[33mcommit f5760c8d5c5b01890948b526d8856fc88b33a37c[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 21:47:29 2025 -0700
+
+    doc: fix echo command for .env in docker installation
+
+[33mcommit 519c4405acea415457db1deb19c21abf58af5b7d[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 6 21:46:32 2025 -0700
+
+    fix isaacgym state setting refreshing bugs
+
+[33mcommit 4bb71eb6f6dedeeae7ccfdda710975160f62d8a5[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun Apr 6 21:03:11 2025 -0700
+
+    Update diffusion_policy.md: fix zarr path
+
+[33mcommit b8410e2c4a7245c64f84ed0703100b17b2fa906a[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 20:46:41 2025 -0700
+
+    infra script: random_action_really_pure support new task format
+
+[33mcommit f7e8f534b47a4dadee3d0be87963501af26f75be[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 20:41:00 2025 -0700
+
+    docker: clean cache to reduce image size from 39GB to 32GB
+
+[33mcommit bc70b325b1d6fc920394ab5cc0bb8bc1d778b092[m
+Merge: 1760dad 12e48d5
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 16:28:45 2025 -0700
+
+    Merge pull request #30 from RoboVerseOrg/pull/29/head
+
+    docker more robust
+
+[33mcommit 1760dadeb83412d4e796494aea139b8a3d3ceba6[m
+Merge: 4eaa50d dcf0c92
+Author: Fisher Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 15:19:41 2025 -0700
+
+    Merge pull request #28 from sjtuyinjie/patch-1
+
+    added the paper link in the GitHub README
+
+[33mcommit 12e48d54c9d13f0604c7f824097dfd6e614bd11c[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 15:11:55 2025 -0700
+
+    docker: fix missing libGLU.so.1
+
+[33mcommit 9ee67a6ab63b66690fb96f15f2e1376e57c6cbde[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 15:08:57 2025 -0700
+
+    docker: install sudo for easier debugging
+
+[33mcommit fe991e7e65e7d135f60896b6f00a83532ad80c9a[m
+Author: Feishi Wang <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 15:00:36 2025 -0700
+
+    docker: fix default user issue
+
+[33mcommit 4eaa50d4489b30da990f5e15956c1503ee9c5445[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 6 13:40:18 2025 -0700
+
+    update naming of merge link in robot
+
+[33mcommit a2cb0e777d1c35d18f089be42fa9e1c421e227a4[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 6 12:23:30 2025 -0700
+
+    fix get started isaacgym
+
+[33mcommit 1de10e4e99e2ad0fba1c1c1d453b93ec7c78f786[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 6 12:22:36 2025 -0700
+
+    fix get started isaacgym
+
+[33mcommit b369bd1b6b53f356fce27c1e0640462e49f399d5[m
+Merge: 1ebb59f b2f85b9
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Sun Apr 6 12:15:57 2025 -0700
+
+    Merge pull request #27 from EmptyBlueBox/main
+
+    fix: Resolve the Isaac Gym error related to loading robots when `fix_base_link == False`.
+
+[33mcommit dcf0c9248796a774a4cf324ab48df3fe10f34128[m
+Author: Yin Jie <42110520+sjtuyinjie@users.noreply.github.com>
+Date:   Sun Apr 6 19:27:12 2025 +0800
+
+    Update README.md
+
+    Currently, the paper is only available on the project website. To prevent other readers from missing it, I’ve added the paper link in the GitHub README."
+
+[33mcommit 518e50b95c68414b4aa8c78603334457cd2400a7[m
+Author: weisonweileen <weisonweileen@gmail.com>
+Date:   Sun Apr 6 19:11:36 2025 +0800
+
+    fix docker-compose.yml and Dockerfile
+
+    Signed-off-by: weisonweileen <weisonweileen@gmail.com>
+
+[33mcommit b2f85b9d1f23f251b944ebc7f56c9bc0f74875c2[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sun Apr 6 17:30:03 2025 +0800
+
+    🐛 fix: Collapse_fixed_joints default as False
+
+[33mcommit 4377a94a829d5153eb75b49b6e3e17b9561bd99c[m
+Merge: c3c21f5 1ebb59f
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sun Apr 6 17:21:51 2025 +0800
+
+    Merge remote-tracking branch 'upstream/main'
+
+[33mcommit c3c21f57964e3a1b3b4a072b617c2100f44966b9[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sun Apr 6 17:15:25 2025 +0800
+
+    🐛 fix: Compatible with old states format
+
+[33mcommit 6e481c9dd4ecb66b2654008b77e87032f2f3ea41[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sun Apr 6 16:45:21 2025 +0800
+
+    🐛 fix(config): Resolve the Isaac Gym error related to loading robots when `fix_base_link == False`.
+
+[33mcommit 1ebb59fd0b42c85c167b924d167337c5310c0e27[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 01:44:16 2025 -0700
+
+    doc: update main page
+
+[33mcommit 2f42fc9823a562dac9041a2fab8ef4e5c16713c4[m
+Merge: 67c2c3c 7dbd6aa
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sun Apr 6 16:42:21 2025 +0800
+
+    Merge branch 'RoboVerseOrg:main' into main
+
+[33mcommit 7dbd6aa42f42c165b3d62e82298e64acc6aeb064[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sun Apr 6 00:45:09 2025 -0700
+
+    update paper
+
+[33mcommit 329d85200ab44dd98ab19fd14db722061102dab6[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sun Apr 6 00:21:16 2025 -0700
+
+    update badges
+
+[33mcommit be064e3bf0052868f1dd8d3bae2e3dc45cc8ca82[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Sat Apr 5 23:52:02 2025 -0700
+
+    README: move pictures to project page
+
+[33mcommit 911b0c64347a7255c1135da9721d0afffcadba37[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Sat Apr 5 13:54:21 2025 -0700
+
+    update paper
+
+[33mcommit 67c2c3c6c25e494ec678a70c89eca0d9e2d831c8[m
+Author: Yutong Liang <lyt0112@outlook.com>
+Date:   Sat Apr 5 16:45:39 2025 +0800
+
+    📝 docs: Update humanoidbench rl training doc
+
+[33mcommit 47b3ebfd55e96117ec2ee4000b6a6a8f6018c182[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Fri Apr 4 22:45:52 2025 -0700
+
+    update paper link
+
+[33mcommit 9c08b01b0abd8048697f3b4074ab985954d15864[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 20:58:35 2025 -0700
+
+    Update README.md
+
+[33mcommit 82804e146abec0d7bea512db34aea278bcfb49e8[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 19:36:38 2025 -0700
+
+    update paper
+
+[33mcommit 7845c5968328b8dce47682c15d1ed9e03dbd1e93[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 19:32:38 2025 -0700
+
+    update paper
+
+[33mcommit f54ca2215008b9eba426a8bb027664cbdca2714a[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Fri Apr 4 18:14:35 2025 -0700
+
+    doc: remove unit_test section
+
+[33mcommit 4b4e98a49c9ce4624a7b522033fca938a6bc992f[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 18:00:55 2025 -0700
+
+    delete asset_converter from datasets
+
+[33mcommit 9036721e144662af278dc1e37005d75113672d6c[m
+Merge: 6f88f26 b51365b
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 17:59:29 2025 -0700
+
+    Merge pull request #25 from charlietcheng/main
+
+    update asset converter docs
+
+[33mcommit b51365b60d68973bc213c898c758d8fc984ea9e6[m
+Author: Charlie Cheng <ctcheng@berkeley.edu>
+Date:   Fri Apr 4 17:44:24 2025 -0700
+
+    update asset converter docs
+
+[33mcommit 6f88f268a81033b943a0974b0f35d0b6757bf991[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Sat Apr 5 02:29:07 2025 +0200
+
+    added tutorials for cfg system
+
+[33mcommit dc6815499f61df980590870c1510c1b11128c20a[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Sat Apr 5 01:30:47 2025 +0200
+
+    reorganized task description, completed multi-env simulator list
+
+[33mcommit 0cae0471ecc655d07bba573c473503c20201a78a[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 11:08:03 2025 +0200
+
+    commented missing imports
+
+[33mcommit 6f7a92e5db2a9b810a65ca0bf9bae3d357007388[m
+Merge: 32a9dea 2e413a2
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Sat Apr 5 01:20:44 2025 +0200
+
+    Merge pull request #24 from RoboVerseOrg/dev/robots_doc
+
+    added docs
+
+[33mcommit 2e413a2647e150bb63eb5a8f5ba9e2e6611f5637[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Sat Apr 5 01:20:21 2025 +0200
+
+    added docs
+
+[33mcommit 32a9dea0a38bb92c93518144bdd01d9b08959d5e[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 16:13:07 2025 -0700
+
+    formatting readme
+
+[33mcommit 54f36c4a0d2059e0214fbabf3e73367b02152574[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 16:12:16 2025 -0700
+
+    formatting readme
+
+[33mcommit 79dd0a14deb1dded6b5ee8fd15701e2d7fcd7404[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 16:11:19 2025 -0700
+
+    formatting readme
+
+[33mcommit d8ed94f775ae42f178d22821ded6bc873c9555fe[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 16:10:03 2025 -0700
+
+    update readme
+
+[33mcommit e5ce4d4d50f8e927310d2627b2ffe7beb7fdf338[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 16:05:37 2025 -0700
+
+    update readme
+
+[33mcommit 758487b3f832aeb0f23c920a41546bff57c23ffe[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 15:47:38 2025 -0700
+
+    Update README.md
+
+[33mcommit f2edcb61e22c1e52a44aaf7e999f5f6980127426[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 15:42:55 2025 -0700
+
+    Update README.md
+
+[33mcommit f5bd17a417073c458a81ce4088590f5ddca181e1[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 15:40:24 2025 -0700
+
+    update doc and img2video
+
+[33mcommit 7b3c16ca0a1f2697f72aaa32e0c9be4651547c0c[m
+Merge: 03e2eab d33ba02
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 23:24:33 2025 +0200
+
+    Merge pull request #23 from RoboVerseOrg/dev/robots_doc
+
+    Dev/robots doc
+
+[33mcommit d33ba02d098c11a3162333f732da395ece8bb143[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 23:16:05 2025 +0200
+
+    added descriptions
+
+[33mcommit 37e58f93b0ec71c44897c060f9fb6515f0a2fc3a[m
+Merge: 073dafe 03e2eab
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 23:08:28 2025 +0200
+
+    Merge branch 'main' into dev/robots_doc
+
+[33mcommit 073dafecfa6c4ec56cf79cdf39e95b92256c3be6[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 23:07:17 2025 +0200
+
+    moved task description
+
+[33mcommit 03e2eabcf6af4abd52789952ea323731f6017a39[m
+Merge: 539902a a68a339
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 22:57:24 2025 +0200
+
+    Merge pull request #21 from RoboVerseOrg/dev/robots_doc
+
+    Dev/robots doc
+
+[33mcommit a68a33970aa28723e826d851af4d8ba2489b6ca4[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 22:56:59 2025 +0200
+
+    added descriptions of tasks
+
+[33mcommit 7ca31e695d6a4a54f02f3538a4940d73da0eb433[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 21:52:57 2025 +0200
+
+    fixed wrong link
+
+[33mcommit 539902a9d16dd11763c8d1385499dec37ec3846e[m
+Merge: 1636413 4d27f92
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 21:48:59 2025 +0200
+
+    Merge pull request #20 from RoboVerseOrg/dev/robots_doc
+
+    added scenes list
+
+[33mcommit 4d27f9254137874aac359b9fb521fe77fd320d5a[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 21:46:38 2025 +0200
+
+    added scenes
+
+[33mcommit 1636413acf1c8ed294b0a35934d7e3b067e34d0f[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Fri Apr 4 12:13:41 2025 -0700
+
+    genesis: fix camera fov
+
+[33mcommit d4944e1566dcf8438fda951bce987233fa766edd[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 11:48:58 2025 -0700
+
+    Update README.md
+
+[33mcommit fda4d8ce4fc160f65ad85bd0d05ee67c4c183bde[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 04:41:36 2025 -0700
+
+    Update overview.md
+
+[33mcommit 8d42f3b25d83fa4eddd88383e0c2de882c66ef67[m
+Merge: 86c4ed4 c8975fe
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 13:09:30 2025 +0200
+
+    Merge pull request #19 from RoboVerseOrg/dev/robots_doc
+
+    Dev/robots doc
+
+[33mcommit c8975fee6597b44c7bc871564f3326205ee9eb67[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 13:07:54 2025 +0200
+
+    added robots docs
+
+[33mcommit 86c4ed4a783c1f2ad3e083bdda4ec3b20060dbd0[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Fri Apr 4 03:24:28 2025 -0700
+
+    Update multi_env.md
+
+[33mcommit 4d4ad4c33f912c563eba9125f6dd4e5726f02da8[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:20:24 2025 -0700
+
+    update version from metasim to main
+
+[33mcommit fadb4dac33e24b4cbeac2dac42af4c2207967845[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:16:56 2025 -0700
+
+    update pybullet h1 demo
+
+[33mcommit 1c228a58b760590a0d91c3a604a99a9aaaa86ab9[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:15:19 2025 -0700
+
+    update get started 2
+
+[33mcommit e57741c6dfd8368f966cf4d3c22de0a63109da0b[m
+Merge: eb29464 9866c26
+Author: Boshi An <41010290+boshi-an@users.noreply.github.com>
+Date:   Fri Apr 4 12:09:33 2025 +0200
+
+    Merge pull request #18 from RoboVerseOrg/dev/pybullet
+
+    fixed pybullet robot always fix_base_link bug
+
+[33mcommit eb29464380f4948a9659d1f7a0392c1dea62aebe[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:08:43 2025 -0700
+
+    move prepare data to user guide
+
+[33mcommit 716889e5343da7db9584dbbe682bddc12fb5176d[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:07:10 2025 -0700
+
+    update doc: dataset deprecated
+
+[33mcommit bd7a043913d88bc6e08102f3286cbc7d3d83489d[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:06:23 2025 -0700
+
+    update doc: delete unused
+
+[33mcommit 9cb6a384053c15a4ace2d25e749e6190b74c6372[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:05:24 2025 -0700
+
+    update doc: prepare data
+
+[33mcommit 2e304b7518445d98773d2ef3e039a4224211b2b5[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 03:05:02 2025 -0700
+
+    update doc: prepare data
+
+[33mcommit 819a07d4ea6a899255e807cc26befde515428dae[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Fri Apr 4 02:53:46 2025 -0700
+
+    fix small bugs for importing
+
+[33mcommit 1d60b10bf5d239df175876d3fb42c5b1506f82f3[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 11:31:28 2025 +0200
+
+    added Fetch robot to docs
+
+[33mcommit 8a3d605f055cedfa9d6e8fadc04e928f8ab39083[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 11:03:09 2025 +0200
+
+    adding descriptions for robots
+
+[33mcommit 9866c2653060ccd5945bfb4b3bc0b0a2c1e5ee0c[m
+Author: boshi-an <boshi_an2stu.pku.edu.cn>
+Date:   Fri Apr 4 10:44:42 2025 +0200
+
+    fixed pybullet robot always fix_base_link bug
+
+[33mcommit 5bd30ee8e9365c1228e3fc4b963af75ecf2a7ccd[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:50:24 2025 -0700
+
+    update acknowledgement
+
+[33mcommit 79a3a6cec80af4f2349034a32c1c46f91ff94d5f[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:23:54 2025 -0700
+
+    fix logo
+
+[33mcommit 13461a2135d90e5e75cfa9bd772016c4bf78703d[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 22:23:15 2025 -0700
+
+    update badge
+
+[33mcommit 8275d64d3d830ffb6c69c88b3cc021cfeb80e98a[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 22:21:42 2025 -0700
+
+    update badge
+
+[33mcommit 4e9f2cfea157b1178aeb4070c241a79cd6b79f03[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 20:56:58 2025 -0700
+
+    update readme logo
+
+[33mcommit 76af4a4b1c2e30810fe662499c80a39ac59d213d[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:20:38 2025 -0700
+
+    update contributing guide
+
+[33mcommit 5a404d361f992d00f8359a9b732fabcdcfcdffd2[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:12:45 2025 -0700
+
+    update README
+
+[33mcommit 7a98c07ef76afff820344e3085c37b9263bd2aa5[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:11:51 2025 -0700
+
+    update README
+
+[33mcommit 4382ea10018d1a32e8defcd18fae796be63ec3f7[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 22:03:37 2025 -0700
+
+    update acknowledgement
+
+[33mcommit 8e6adb0f44a35933580345bade5972e8b303cf6b[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 21:51:22 2025 -0700
+
+    remove .vscode/tasks.json
+
+[33mcommit 5a3962d756bc82e24973138a3e357c99df438ec8[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 21:06:35 2025 -0700
+
+    update image with more compression
+
+[33mcommit f962aa839ed8d80164d589105aaa7c30c8e6152c[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 20:57:25 2025 -0700
+
+    update images
+
+[33mcommit d5e94e4cc658eacc43d3a9159d3a22ba8ce8fa2a[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 20:52:26 2025 -0700
+
+    update readme logo
+
+[33mcommit 931b2a772c6584fb4e043ecc5c26231aa65859f0[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 20:48:54 2025 -0700
+
+    update readme logo
+
+[33mcommit 73ca0b842a533a829d32293e686652e87112ae4b[m
+Author: geng-haoran <ghr@berkeley.edu>
+Date:   Thu Apr 3 20:47:47 2025 -0700
+
+    update readme logo
+
+[33mcommit 6d691fc139bf8097b45d60046b4115fbe7cf7e7a[m
+Author: Feishi <feishiwang2001@gmail.com>
+Date:   Thu Apr 3 20:17:57 2025 -0700
+
+    release version
+
+[33mcommit 83c8219859f5f2d39765c000791477604c623f7b[m
+Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
+Date:   Thu Apr 3 20:00:07 2025 -0700
+
+    Initial commit
