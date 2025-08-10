@@ -5,13 +5,14 @@ import argparse
 import os
 
 import torch
-# import isaaclab.sim as sim_utils
+from copy import deepcopy
 
 from loguru import logger as log
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-
+from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
+from metasim.utils.math import convert_camera_frame_orientation_convention
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from scenario_cfg.objects import (
@@ -48,7 +49,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         self.scenario_cfg = scenario_cfg
-        self.dt = self.scenario.sim_params.dt
+        self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._step_counter = 0
         self.render_interval = 4 #TODO: fix hardcode
 
@@ -92,10 +93,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene = InteractiveScene(scene_config)
 
 
-    def _load_cameras(self) -> None:
-        # TODO: Implement camera setup logic based on scenario_cfg.cameras
-        pass
-
     def _load_robots(self) -> None:
         # TODO support multiple robots
         assert len(self.robots) == 1, "Only support one robot for now in Isaaclab."
@@ -106,19 +103,28 @@ class IsaacsimHandler(BaseSimHandler):
         for obj_cfg in self.objects:
             self._add_object(obj_cfg)
 
+    def _load_cameras(self) -> None:
+        for camera in self.cameras:
+            if isinstance(camera, PinholeCameraCfg):
+                self._add_pinhole_camera(camera)
+            else:
+                raise ValueError(f"Unsupported camera type: {type(camera)}")
+
     def launch(self) -> None:
         self._init_scene()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
-        self._load_sensors()
-        self._load_lights()
         self._load_robots()
 
 
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
-        # self.scene.reset()
+        self._load_lights()
+        
+        self.sim.reset()
+        indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
+        self.scene.reset(indices)
 
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
@@ -147,7 +153,7 @@ class IsaacsimHandler(BaseSimHandler):
                     log.warning(f"No dof_pos found for {obj.name}")
                 else:
                     dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
-                    joint_names = self.get_joint_names(obj.name, sort=False)
+                    joint_names = self._get_joint_names(obj.name, sort=False)
                     joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.device)
                     for i, joint_name in enumerate(joint_names):
                         if joint_name in dof_dict[0]:
@@ -180,7 +186,7 @@ class IsaacsimHandler(BaseSimHandler):
                 body_state[:, :, 0:3] -= self.scene.env_origins[:, None, :]
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=body_state,
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -206,7 +212,7 @@ class IsaacsimHandler(BaseSimHandler):
             body_state[:, :, 0:3] -= self.scene.env_origins[:, None, :]
             state = RobotState(
                 root_state=root_state,
-                body_names=self.get_body_names(obj.name),
+                body_names=self._get_body_names(obj.name),
                 body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -242,10 +248,10 @@ class IsaacsimHandler(BaseSimHandler):
             )
 
         sensor_states = {}
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors=sensor_states)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
 
-    def set_dof_targets(self, actions: torch.Tensor) -> None:
+    def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
         #TODO: support set torque
         self._actions_cache = actions
         if isinstance(actions, torch.Tensor):
@@ -264,7 +270,8 @@ class IsaacsimHandler(BaseSimHandler):
             action_tensor_all = torch.cat(action_tensors, dim=-1)
 
         start_idx = 0
-        for robot, robot_inst in zip(self.robots, self.scene.robots):
+        for robot in self.robots:
+            robot_inst = self.scene.articulations[robot.name]
             actionable_joint_ids = [
                 robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
             ]
@@ -279,6 +286,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.step(render=False)
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
+        self._update_tiled_camera_pose(self.cameras)
         self.scene.update(dt=self.dt)
 
 
@@ -306,6 +314,13 @@ class IsaacsimHandler(BaseSimHandler):
         cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
         cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
         cfg.spawn.articulation_props.enabled_self_collisions = robot.enabled_self_collisions
+        # init_state = ArticulationCfg.InitialStateCfg(
+        #     pos=tuple(self.robot_config.init_state.pos),
+        #     joint_pos={
+        #         joint_name: joint_angle for joint_name, joint_angle in default_joint_angles.items()
+        #     },
+        #     joint_vel={".*": 0.0},
+        # )
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
@@ -526,3 +541,85 @@ class IsaacsimHandler(BaseSimHandler):
             env_ids=torch.tensor(env_ids, device=self.device),
         )  # ! critical
         obj_inst.write_data_to_sim()
+
+
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            joint_names = deepcopy(self.scene.articulations[obj_name].joint_names)
+            if sort:
+                joint_names.sort()
+            return joint_names
+        else:
+            return []
+
+
+    def _set_object_joint_pos(
+        self,
+        object: BaseObjCfg,
+        joint_pos: torch.Tensor,  # (num_envs, num_joints)
+        env_ids: list[int] | None = None,
+    ) -> None:
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+        assert joint_pos.shape[0] == len(env_ids)
+        pos = joint_pos.to(self.device)
+        vel = torch.zeros_like(pos)
+        obj_inst = self.scene.articulations[object.name]
+        obj_inst.write_joint_state_to_sim(pos, vel, env_ids=torch.tensor(env_ids, device=self.device))
+        obj_inst.write_data_to_sim()
+
+
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            body_names = deepcopy(self.scene.articulations[obj_name].body_names)
+            if sort:
+                body_names.sort()
+            return body_names
+        else:
+            return []
+
+
+    def _add_pinhole_camera(self, camera: PinholeCameraCfg) -> None:
+        import isaaclab.sim as sim_utils
+        from isaaclab.sensors import TiledCamera, TiledCameraCfg
+
+        ## See https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sensors.html#tile-rendered-usd-camera
+        data_type_map = {
+            "rgb": "rgb",
+            "depth": "depth",
+            "instance_seg": "instance_segmentation_fast",
+            "instance_id_seg": "instance_id_segmentation_fast",
+        }
+        if camera.mount_to is None:
+            prim_path = f"/World/envs/env_.*/{camera.name}"
+            offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+        else:
+            prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
+            offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+
+        self.scene.sensors[camera.name] = TiledCamera(
+            TiledCameraCfg(
+                prim_path=prim_path,
+                offset=offset,
+                data_types=[data_type_map[dt] for dt in camera.data_types],
+                spawn=sim_utils.PinholeCameraCfg(
+                    focal_length=camera.focal_length,
+                    focus_distance=camera.focus_distance,
+                    horizontal_aperture=camera.horizontal_aperture,
+                    clipping_range=camera.clipping_range,
+                ),
+                width=camera.width,
+                height=camera.height,
+                colorize_instance_segmentation=False,
+                colorize_instance_id_segmentation=False,
+            )
+        )
+
+    def _update_tiled_camera_pose(self, cameras: list[BaseCameraCfg]):
+        for camera in cameras:
+            camera_inst = self.scene.sensors[camera.name]
+            pos, quat = camera_inst._view.get_world_poses()
+            camera_inst._data.pos_w = pos
+            camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
+                quat, origin="opengl", target="world"
+            )
