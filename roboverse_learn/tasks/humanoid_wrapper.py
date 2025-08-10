@@ -11,10 +11,11 @@ from metasim.utils.humanoid_robot_util import (
     torso_upright_tensor,
 )
 from metasim.utils.state import TensorState
-from roboverse_learn.tasks.registry import register_task
-from roboverse_learn.tasks.rl_task import RLTaskWrapper
 from scenario_cfg.scenario import ScenarioCfg
 from scenario_cfg.simulator_params import SimParamCfg
+
+from .registry import register_task
+from .rl_task import RLTaskWrapper
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -99,8 +100,6 @@ class BaseLocomotionTask(RLTaskWrapper):
             replace_cylinder_with_capsule=True,
         )
         scenario.decimation = 10
-        # reward module
-        self.reward_fn = BaseLocomotionReward(self.robot_name, move_speed=0.0)
         return scenario
 
     def _observation(self, states: TensorState) -> torch.Tensor:
@@ -155,7 +154,7 @@ class BaseLocomotionTask(RLTaskWrapper):
         return terminated
 
 
-@register_task("humanoidbench.walk", "walk", "h1.walk")
+@register_task("humanoid.walk", "walk", "h1.walk")
 class WalkTask(BaseLocomotionTask):
     """Walking task for humanoid robots"""
 
@@ -168,7 +167,7 @@ class WalkTask(BaseLocomotionTask):
         return scenario
 
 
-@register_task("humanoidbench.run", "run", "h1.run")
+@register_task("humanoid.run", "run", "h1.run")
 class RunTask(BaseLocomotionTask):
     """Run task for humanoid robots."""
 
@@ -181,7 +180,7 @@ class RunTask(BaseLocomotionTask):
         return scenario
 
 
-@register_task("humanoidbench.stand", "stand", "h1.stand")
+@register_task("humanoid.stand", "stand", "h1.stand")
 class StandTask(BaseLocomotionTask):
     """Stand task for humanoid robots."""
 

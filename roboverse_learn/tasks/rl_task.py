@@ -27,6 +27,7 @@ class RLTaskWrapper(BaseTaskWrapper):
         # basic handles
         self.num_envs = scenario.num_envs
         self.robot = scenario.robots[0]
+        self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
         # initial states (replicate to num_envs)
         initial_states = self._get_initial_states()
@@ -43,11 +44,10 @@ class RLTaskWrapper(BaseTaskWrapper):
         states = self.env.get_states()
         first_obs = self._observation(states)
         self.num_obs = first_obs.shape[-1]
-        self._raw_observation_cache = first_obs.clone()
 
         # action bounds from joint limits (ordered by joint_names)
         limits = self.robot.joint_limits
-        self.joint_names = self.env.get_joint_names(self.robot.name)
+        self.joint_names = self.env._get_joint_names(self.robot.name)
         self._action_low = torch.tensor(
             [limits[j][0] for j in self.joint_names],
             dtype=torch.float32,
@@ -70,6 +70,8 @@ class RLTaskWrapper(BaseTaskWrapper):
 
         # episode settings
         self.max_episode_steps = 1000
+
+        # asymmetric observation space
         self.asymmetric_obs = False
 
     # -------------------------------------------------------------------------
@@ -115,31 +117,40 @@ class RLTaskWrapper(BaseTaskWrapper):
         """Timeout flag based on max episode length."""
         return self._episode_steps >= self.max_episode_steps
 
-    def reset(self, env_ids) -> torch.Tensor:
+    def reset(self, env_ids=None) -> torch.Tensor:
         """Reset and return initial observation."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
         self._episode_steps[env_ids] = 0
-        self.env.reset(states=self._initial_states, env_ids=env_ids)
+        self.env.set_states(states=self._initial_states, env_ids=env_ids)
 
         states = self.env.get_states()
-        obs = self._observation(states)
-        self._raw_observation_cache.copy_(obs)
-        return obs
+        first_obs = self._observation(states).to(self.device)
+        # initialise cache on first reset
+        self._raw_observation_cache = first_obs.clone()
+        return first_obs
 
-    def step(self, actions: torch.Tensor):
+    def step(self, actions):
         """Step with normalized actions in [-1, 1]."""
         self._episode_steps += 1
 
         real_action = self._unnormalise_action(actions)
-        obs, priv_obs, reward, terminated, time_out, _ = super().step(real_action)
 
-        done = terminated.bool()
-        time_out = time_out.bool()
-        episode_done = done | time_out
+        self.env.set_dof_targets(self.robot.name, real_action)
+        self.env.simulate()
+
+        states = self.env.get_states()
+        obs = self._observation(states).to(self.device)
+        priv_obs = self._privileged_observation(states)
+        reward = self._reward(states)
+        terminated = self._terminated(states).bool().to(self.device)
+        time_out = self._time_out(states).bool().to(self.device)
+
+        episode_done = terminated | time_out
 
         info = {
+            "privileged_observation": priv_obs,
             "episode_steps": self._episode_steps.clone(),
             "observations": {"raw": {"obs": self._raw_observation_cache.clone()}},
         }
@@ -149,15 +160,15 @@ class RLTaskWrapper(BaseTaskWrapper):
             # reset finished envs and replace their obs
             self.reset(env_ids=done_indices.tolist())
             states_after = self.env.get_states()
-            obs_after = self._observation(states_after)
+            obs_after = self._observation(states_after).to(self.device)
             obs[done_indices] = obs_after[done_indices]
             self._raw_observation_cache[done_indices] = obs_after[done_indices]
         else:
             # keep previous raw obs where not done (same as original logic)
-            keep_mask = (~done).unsqueeze(-1)
+            keep_mask = (~terminated).unsqueeze(-1)
             self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs)
 
-        return obs, priv_obs, reward, terminated, time_out, info
+        return obs, reward, terminated, time_out, info
 
     def render(self) -> np.ndarray:
         """Render RGB image grid from first camera."""
@@ -187,3 +198,8 @@ class RLTaskWrapper(BaseTaskWrapper):
                 total_reward = torch.zeros_like(val)
             total_reward += weight * val
         return total_reward
+
+    def _terminated(self, env_states) -> torch.Tensor:
+        """Check if any envs are terminated."""
+        # default: no termination
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)

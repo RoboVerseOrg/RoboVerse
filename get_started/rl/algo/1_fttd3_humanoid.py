@@ -12,7 +12,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "sim": "mjx",
     "robots": ["h1"],
-    "task": "humanoidbench:Crawl",
+    "task": "humanoid.walk",
     "decimation": 10,
     "train_or_eval": "train",
     # -------------------------------------------------------------------------------
@@ -27,7 +27,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1200,
+    "total_timesteps": 1500,
     "learning_starts": 10,
     "num_steps": 1,
     # -------------------------------------------------------------------------------
@@ -79,8 +79,8 @@ CONFIG: dict[str, Any] = {
     "exp_name": "get_started_fttd3",
     "use_wandb": False,
     "checkpoint_path": None,
-    "eval_interval": 1200,
-    "save_interval": 1200,
+    "eval_interval": 700,
+    "save_interval": 700,
     "video_width": 1024,
     "video_height": 1024,
 }
@@ -95,6 +95,11 @@ if sys.platform != "darwin":
 else:
     os.environ["MUJOCO_GL"] = "glfw"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
+# Ensure repository root is on sys.path for local package imports
+import rootutils
+
+rootutils.setup_root(__file__, pythonpath=True)
 
 import torch
 
@@ -117,6 +122,7 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
+from roboverse_learn.tasks.registry import load_task
 from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.scenario import ScenarioCfg
 
@@ -162,25 +168,21 @@ def main() -> None:
     log.info(f"Using device: {device}")
 
     scenario = ScenarioCfg(
-        task=cfg("task"),
         robots=cfg("robots"),
-        try_add_table=cfg("add_table", False),
-        sim=cfg("sim"),
+        simulator=cfg("sim"),
         num_envs=cfg("num_envs", 1),
-        headless=True if cfg("train_or_eval") == "train" else False,
+        headless=False,
         cameras=[],
     )
 
     # For different simulators, the decimation factor is different, so we need to set it here
-    scenario.task.decimation = cfg("decimation", 1)
+    scenario.decimation = cfg("decimation", 1)
 
-    envs = FastTD3EnvWrapper(scenario, device=device)
+    envs = load_task(cfg("task"), scenario, device=device)
     eval_envs = envs  # reuse for evaluation
     scenario_render = ScenarioCfg(
-        task=cfg("task"),
         robots=cfg("robots"),
-        try_add_table=cfg("add_table", False),
-        sim=cfg("sim"),
+        simulator=cfg("sim"),
         num_envs=1,
         headless=True,
         cameras=[
@@ -192,7 +194,7 @@ def main() -> None:
             )
         ],
     )
-    scenario_render.task.decimation = cfg("decimation", 1)
+    scenario_render.decimation = cfg("decimation", 1)
 
     # ---------------- derive shapes ------------------------------------
     n_act = envs.num_actions
@@ -285,7 +287,7 @@ def main() -> None:
                 obs = normalize_obs(obs)
                 actions = actor(obs)
 
-            next_obs, rewards, dones, _ = eval_envs.step(actions.float())
+            next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -305,8 +307,7 @@ def main() -> None:
         """
         video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
-
-        env = FastTD3EnvWrapper(scenario_render, device=device)
+        env = load_task(cfg("task"), scenario_render, device=device)
 
         obs_normalizer.eval()
         obs = env.reset()
@@ -455,9 +456,9 @@ def main() -> None:
             norm_obs = normalize_obs(obs)
             actions = policy(obs=norm_obs, dones=dones)
 
-        next_obs, rewards, dones, infos = envs.step(actions.float())
+        next_obs, rewards, terminated, time_out, infos = envs.step(actions.float())
+        dones = terminated | time_out
 
-        truncations = infos["time_outs"]
         # Compute 'true' next_obs and next_critic_obs for saving
         true_next_obs = torch.where(dones[:, None] > 0, infos["observations"]["raw"]["obs"], next_obs)
         transition = TensorDict(
@@ -467,7 +468,7 @@ def main() -> None:
                 "next": {
                     "observations": true_next_obs,
                     "rewards": torch.as_tensor(rewards, device=device, dtype=torch.float),
-                    "truncations": truncations.long(),
+                    "truncations": time_out.long(),
                     "dones": dones.long(),
                 },
             },

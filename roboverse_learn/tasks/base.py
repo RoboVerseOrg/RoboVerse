@@ -11,7 +11,7 @@ from traitlets import Dict
 from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, Extra, Obs, Reward, Success, Termination, TimeOut
+from metasim.types import Action, Info, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.setup_util import get_sim_handler_class
 from scenario_cfg.scenario import ScenarioCfg
 
@@ -67,7 +67,7 @@ class BaseTaskWrapper:
             scenario: The scenario configuration
         """
 
-        handler_class = get_sim_handler_class(SimType(scenario.sim))
+        handler_class = get_sim_handler_class(SimType(scenario.simulator))
         self.env: BaseSimHandler = handler_class(scenario, self.extra_spec)
         self.env.launch()
 
@@ -153,7 +153,7 @@ class BaseTaskWrapper:
 
         return actions_dict
 
-    def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Extra | None]:
+    def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Info | None]:
         """
         Physics step.
         """
@@ -168,7 +168,7 @@ class BaseTaskWrapper:
 
         return self.env.get_states(), None
 
-    def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
+    def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
         """
         Post-physics step.
         """
@@ -185,7 +185,7 @@ class BaseTaskWrapper:
             None,
         )
 
-    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Extra | None]:
+    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
         """
         Step the environment.
 
@@ -193,20 +193,15 @@ class BaseTaskWrapper:
             actions: The actions to take
         """
 
-        actions_dict = self.__pre_physics_step(actions)
-        env_states, _ = self.__physics_step(actions_dict)
+        actions = self.__pre_physics_step(actions)
+        env_states, _ = self.__physics_step(actions)
         obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
+        info = {
+            "privileged_observation": priv_obs,
+        }
+        return obs, reward, terminated, time_out, info
 
-        return obs, priv_obs, reward, terminated, time_out, None
-
-    def step_actions(self, actions: Action) -> tuple[Obs, Extra | None, Success, TimeOut, Extra | None]:
-        """
-        Step the environment with actions (compatibility method).
-        """
-        obs, priv_obs, reward, terminated, time_out, extra = self.step(actions)
-        return obs, extra, terminated, time_out, extra
-
-    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Obs, Extra | None]:
+    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Info | None]:
         """
         Reset the environment. This base implementation does not do anything.
 

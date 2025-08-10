@@ -3,8 +3,9 @@ from __future__ import annotations
 import torch
 
 from metasim.utils.state import TensorState
-from roboverse_learn.tasks.registry import register_task
-from roboverse_learn.tasks.rl_task import RLTaskWrapper
+
+from .registry import register_task
+from .rl_task import RLTaskWrapper
 
 
 def negative_distance(states: TensorState, robot_name: str | None = None) -> torch.Tensor:
@@ -36,19 +37,11 @@ class ReachingWrapper(RLTaskWrapper):
 
         return scenario
 
-    def _observation(self):
-        """Get current observations for all environments."""
-        states = self.env.handler.get_states()
-        joint_pos = states.robots["franka"].joint_pos
-        panda_hand_index = states.robots["franka"].body_names.index("panda_hand")
-        ee_pos = states.robots["franka"].body_state[:, panda_hand_index, :3]
-
-        return torch.cat([joint_pos, ee_pos], dim=1)
-
     def _get_initial_states(self) -> list[dict]:
         """Get the initial states of the environment."""
         return [
             {
+                "objects": {},
                 "robots": {
                     "franka": {
                         "dof_pos": {
@@ -62,13 +55,20 @@ class ReachingWrapper(RLTaskWrapper):
                             "panda_finger_joint1": 0.0,
                             "panda_finger_joint2": 0.0,
                         },
-                        "pos": [0.0, 0.0, 0.0],
-                        "rot": [1.0, 0.0, 0.0, 0.0],
+                        "pos": torch.tensor([0.0, 0.0, 0.0]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     }
                 },
-                "objects": {},
             }
         ]
+
+    def _observation(self, states: TensorState) -> torch.Tensor:
+        """Get the observation for the current state."""
+        joint_pos = states.robots["franka"].joint_pos
+        panda_hand_index = states.robots["franka"].body_names.index("panda_hand")
+        ee_pos = states.robots["franka"].body_state[:, panda_hand_index, :3]
+
+        return torch.cat([joint_pos, ee_pos], dim=1)
 
 
 @register_task("reach.origin", "reach_origin", "franka.reach_origin")

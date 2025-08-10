@@ -14,7 +14,6 @@ import numpy as np
 import rootutils
 import torch
 import tyro
-from gymnasium import spaces
 from loguru import logger as log
 from rich.logging import RichHandler
 from stable_baselines3 import PPO
@@ -23,9 +22,10 @@ from stable_baselines3.common.vec_env import VecEnv
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from get_started.rl.fast_td3.task_wrapper import RLTaskWrapper
+# Ensure reaching tasks are registered exactly once from the canonical module
 from get_started.utils import ObsSaver
-from metasim.utils.setup_util import register_task
+from roboverse_learn.tasks.registry import load_task
+from roboverse_learn.tasks.rl_task import RLTaskWrapper
 from scenario_cfg.scenario import ScenarioCfg
 
 
@@ -35,8 +35,8 @@ class Args:
 
     task: str = "reach_origin"
     robot: str = "franka"
-    num_envs: int = 16
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaaclab"
+    num_envs: int = 1
+    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mujoco"
 
 
 args = tyro.cli(Args)
@@ -49,23 +49,11 @@ class VecEnvWrapper(VecEnv):
         """Initialize the environment."""
         self.rl_wrapper = rl_wrapper
 
-        # Set up action space based on RLTaskWrapper
-        action_space_info = rl_wrapper.action_space
-        self.action_space = spaces.Box(
-            low=action_space_info["low"],
-            high=action_space_info["high"],
-            shape=action_space_info["shape"],
-            dtype=action_space_info["dtype"],
-        )
+        # Use action space directly from RLTaskWrapper
+        self.action_space = rl_wrapper.action_space
 
-        # Set up observation space based on RLTaskWrapper
-        obs_space_info = rl_wrapper.observation_space
-        self.observation_space = spaces.Box(
-            low=obs_space_info["low"],
-            high=obs_space_info["high"],
-            shape=obs_space_info["shape"],
-            dtype=obs_space_info["dtype"],
-        )
+        # Use observation space directly from RLTaskWrapper
+        self.observation_space = rl_wrapper.observation_space
 
         super().__init__(rl_wrapper.num_envs, self.observation_space, self.action_space)
         self.render_mode = None
@@ -85,8 +73,9 @@ class VecEnvWrapper(VecEnv):
 
     def step_wait(self):
         """Wait for the step to complete."""
-        obs, reward, done, info = self.rl_wrapper.step(self.pending_actions)
+        obs, reward, terminated, time_out, info = self.rl_wrapper.step(self.pending_actions)
 
+        done = terminated | time_out
         # Convert to numpy for SB3
         obs_np = obs.cpu().numpy()
         reward_np = reward.cpu().numpy()
@@ -95,9 +84,9 @@ class VecEnvWrapper(VecEnv):
         # Prepare extra info for SB3
         extra = [{} for _ in range(self.num_envs)]
         for env_id in range(self.num_envs):
-            if done[env_id]:
+            if bool(done[env_id].item()):
                 extra[env_id]["terminal_observation"] = obs_np[env_id]
-            extra[env_id]["TimeLimit.truncated"] = info["time_outs"][env_id].item() and not done[env_id].item()
+            extra[env_id]["TimeLimit.truncated"] = bool(time_out[env_id].item() and not terminated[env_id].item())
 
         return obs_np, reward_np, done_np, extra
 
@@ -109,24 +98,40 @@ class VecEnvWrapper(VecEnv):
         """Close the environment."""
         self.rl_wrapper.close()
 
+    def get_attr(self, attr_name, indices=None):
+        """Get an attribute of the environment."""
+        if indices is None:
+            indices = list(range(self.num_envs))
+        return [getattr(self.env.handler, attr_name)] * len(indices)
+
+    def set_attr(self, attr_name: str, value, indices=None) -> None:
+        """Set an attribute of the environment."""
+        raise NotImplementedError
+
+    def env_method(self, method_name: str, *method_args, indices=None, **method_kwargs):
+        """Call a method of the environment."""
+        raise NotImplementedError
+
+    def env_is_wrapped(self, wrapper_class, indices=None):
+        """Check if the environment is wrapped by a given wrapper class."""
+        raise NotImplementedError
+
 
 def train_ppo():
     """Train PPO for reaching task using RLTaskWrapper."""
-    register_task(args.task)
 
     # Create scenario configuration
     scenario = ScenarioCfg(
-        task=args.task,
         robots=[args.robot],
-        sim=args.sim,
+        simulator=args.sim,
         num_envs=args.num_envs,
         headless=True,
         cameras=[],
     )
 
-    # Create RLTaskWrapper
+    # Create RLTaskWrapper via registry
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_wrapper = RLTaskWrapper(scenario, device=device)
+    rl_wrapper = load_task(args.task, scenario, device=device)
 
     # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(rl_wrapper)
@@ -155,8 +160,8 @@ def train_ppo():
     model.learn(total_timesteps=1_000_000)
 
     # Save the model
-    task_name = scenario.task.__class__.__name__[:-3]
-    model.save(f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}_rl_wrapper")
+
+    model.save(f"get_started/output/rl/0_ppo_reaching{args.sim}")
 
     env.close()
 
@@ -166,20 +171,19 @@ def train_ppo():
         task=args.task,
         robots=[args.robot],
         sim=args.sim,
-        num_envs=16,
+        num_envs=1,
         headless=True,
         cameras=[],
     )
 
-    rl_wrapper_inference = RLTaskWrapper(scenario_inference, device=device)
+    rl_wrapper_inference = load_task(args.task, scenario_inference, device=device)
     rl_wrapper_inference.max_episode_steps = 500
     env_inference = VecEnvWrapper(rl_wrapper_inference)
 
-    task_name =
-    obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}_rl_wrapper.mp4")
+    obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
 
     # load the model
-    model = PPO.load(f"get_started/output/rl/0_ppo_reaching_{task_name}_{args.sim}_rl_wrapper")
+    model = PPO.load(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
 
     # inference
     obs = env_inference.reset()
