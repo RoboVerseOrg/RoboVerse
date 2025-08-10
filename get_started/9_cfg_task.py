@@ -9,15 +9,22 @@ except ImportError:
 
 from typing import Literal
 
-import gymnasium as gym
 import numpy as np
+import rootutils
 import torch
 import tyro
 from loguru import logger as log
-from packaging.version import Version
+from rich.logging import RichHandler
+
+rootutils.setup_root(__file__, pythonpath=True)
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+
 
 from metasim.utils import configclass
-from metasim.utils.setup_util import register_task
+
+# from metasim.utils.setup_util import register_task
+from roboverse_learn.tasks.registry import load_task
+from scenario_cfg.scenario import ScenarioCfg
 
 
 @configclass
@@ -25,13 +32,14 @@ class Args:
     """Arguments for the static scene."""
 
     task: str = "close_box"
-
+    robot: str = "franka"
     ## Handlers
     sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
 
     ## Others
     num_envs: int = 1
     headless: bool = False
+    device: str = "cuda"
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -42,16 +50,19 @@ args = tyro.cli(Args)
 TASK_NAME = args.task
 NUM_ENVS = args.num_envs
 SIM = args.sim
-register_task(TASK_NAME)
-if Version(gym.__version__) < Version("1"):
-    metasim_env = gym.make(TASK_NAME, num_envs=NUM_ENVS, sim=SIM)
-else:
-    metasim_env = gym.make_vec(TASK_NAME, num_envs=NUM_ENVS, sim=SIM)
-scenario = metasim_env.scenario
+
+scenario = ScenarioCfg(
+    robots=[args.robot],
+    simulator=args.sim,
+    num_envs=args.num_envs,
+    headless=True,
+    cameras=[],
+)
+
+env = load_task(args.task, scenario, device=args.device)
 
 actions = np.zeros((NUM_ENVS, len(scenario.robots[0].joint_limits)))
-
-obs, _ = metasim_env.reset()
+obs = env.reset()
 for step_i in range(100):
     action_dicts = [
         {
@@ -71,4 +82,4 @@ for step_i in range(100):
         }
         for _ in range(NUM_ENVS)
     ]
-    obs, _, _, _, _ = metasim_env.step(action_dicts)
+    obs, _, _, _, _ = env.step(action_dicts)
