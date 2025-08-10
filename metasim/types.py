@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, TypedDict
+from typing import Any, Dict, TypedDict
 
 import torch
 
@@ -54,7 +54,6 @@ class DictEnvState(TypedDict):
     objects: dict[str, DictObjectState]
     robots: dict[str, DictRobotState]
     cameras: dict[str, dict[str, torch.Tensor]]
-
 
 
 @dataclass
@@ -164,3 +163,12 @@ class TensorState:
     """States of all cameras."""
     extras: dict = field(default_factory=dict)
     """States of Extra information"""
+
+
+## Gymnasium types
+Obs = TensorState
+Reward = torch.Tensor
+Success = torch.BoolTensor
+TimeOut = torch.BoolTensor
+Info = Dict[str, Any]  # XXX
+Termination = torch.BoolTensor

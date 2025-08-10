@@ -100,7 +100,7 @@ class MJXHandler(BaseSimHandler):
             max_w = max(c.width for c in self.cameras)
             max_h = max(c.height for c in self.cameras)
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
-            self._render_data = mujoco.MjData(self._mj_model)
+        self._render_data = mujoco.MjData(self._mj_model)
 
         if not self.headless:
             self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
@@ -116,6 +116,8 @@ class MJXHandler(BaseSimHandler):
         if self._gravity_compensation:
             self._disable_robotgravity()
         self._data = self._substep(self._mjx_model, self._data)
+        if not self.headless:
+            self.refresh_render()
 
     def _get_states(self, env_ids: list[int] | None = None):
         """Return a structured snapshot of all robots / objects in the scene."""
@@ -269,6 +271,10 @@ class MJXHandler(BaseSimHandler):
         self._data = self._data.replace(qpos=qpos, qvel=qvel, ctrl=ctrl)
         self._data = self._forward(self._mjx_model, self._data)
 
+    def close(self):
+        if self._viewer is not None:
+            self._viewer.close()
+
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""
         if hasattr(self, "_robot_joint_ids"):
@@ -333,58 +339,40 @@ class MJXHandler(BaseSimHandler):
         self._init_mjx()  # compile & allocate batched data
         self._mjx_done = True
 
-    def set_dof_targets(
-        self,
-        obj_name: str,
-        actions: list[Action],
-    ) -> None:
+    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        """Accepts Tensor (N, J) or list[dict] -> writes ctrl."""
         self._actions_cache = actions
 
-        # -------- build (N, J) tensor ---------------------------------
-        jnames_local = self._get_joint_names(obj_name, sort=True)
-        tgt_torch = torch.stack(
-            [
-                torch.tensor(
-                    [actions[e]["dof_pos_target"][jn] for jn in jnames_local],
-                    dtype=torch.float32,
-                )
-                for e in range(self.num_envs)
-            ],
-            dim=0,
-        )  # (N, J)
-        tgt_jax = t2j(tgt_torch)
+        # joint order
+        jnames = self._get_joint_names(obj_name, sort=True)
 
-        # -------- id maps ---------------------------------------------
-        if obj_name == self._scenario.robots[0].name:
-            a_ids = self._robot_act_ids.get(obj_name)
+        # normalize to torch.Tensor (N, J)
+        if isinstance(actions, torch.Tensor):
+            tgt_t = actions.to(torch.float32)
+            if tgt_t.ndim == 1:
+                tgt_t = tgt_t.unsqueeze(0)
         else:
-            a_ids = self._object_act_ids.get(obj_name)
+            tgt_t = torch.stack(
+                [
+                    torch.tensor([actions[e]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
+                    for e in range(self.num_envs)
+                ],
+                dim=0,
+            )
 
+        # shape check
+        if tgt_t.shape != (self.num_envs, len(jnames)):
+            raise ValueError(f"Expected shape {(self.num_envs, len(jnames))}, got {tuple(tgt_t.shape)}")
+
+        # ids
+        a_ids = (self._robot_act_ids if obj_name == self._scenario.robots[0].name else self._object_act_ids).get(
+            obj_name
+        )
+
+        # write ctrl
+        tgt_j = t2j(tgt_t)
         data = self._data
-        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
-        self._data = data.replace(ctrl=new_ctrl)
-
-    def set_actions(
-        self,
-        obj_name: str,
-        actions,
-    ) -> None:
-        self._actions_cache = actions
-
-        tgt_jax = t2j(actions)
-
-        # -------- id maps ---------------------------------------------
-        if obj_name == self._scenario.robots[0].name:
-            a_ids = self._robot_act_ids.get(obj_name)
-        else:
-            a_ids = self._object_act_ids.get(obj_name)
-
-        data = self._data
-        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
-        self._data = data.replace(ctrl=new_ctrl)
-
-    def close(self):
-        pass
+        self._data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(tgt_j))
 
     ############################################################
     ## Utils
