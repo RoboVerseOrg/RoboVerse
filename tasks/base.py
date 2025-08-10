@@ -1,4 +1,4 @@
-"""A base task wrapper for roboverse"""
+"""A base task env for roboverse."""
 
 from __future__ import annotations
 
@@ -16,11 +16,10 @@ from metasim.utils.setup_util import get_sim_handler_class
 from scenario_cfg.scenario import ScenarioCfg
 
 
-class BaseTaskWrapper:
-    """
-    A base task wrapper for roboverse.
+class BaseTaskEnv:
+    """A base task env for roboverse.
 
-    This wrapper is used to wrap the environment to form a complete task.
+    This env is used to wrap the environment to form a complete task.
 
     To write your own task, you need to inherit this class and override the following methods:
     - _observation
@@ -45,13 +44,11 @@ class BaseTaskWrapper:
     """
 
     def __init__(self, scenario: BaseSimHandler | ScenarioCfg) -> None:
-        """
-        Initialize the task wrapper.
+        """Initialize the task env.
 
         Args:
             scenario: The scenario configuration
         """
-
         if isinstance(scenario, BaseSimHandler):
             self.env = scenario
         else:
@@ -60,83 +57,60 @@ class BaseTaskWrapper:
         self._prepare_callbacks()
 
     def _instantiate_env(self, scenario: ScenarioCfg) -> None:
-        """
-        Instantiate the environment.
+        """Instantiate the environment.
 
         Args:
             scenario: The scenario configuration
         """
-
         handler_class = get_sim_handler_class(SimType(scenario.simulator))
         self.env: BaseSimHandler = handler_class(scenario, self.extra_spec)
         self.env.launch()
 
     def _prepare_callbacks(self) -> None:
-        """
-        Prepare the callbacks for the environment.
-        """
-
+        """Prepare the callbacks for the environment."""
         self.pre_physics_step_callback: list[Callable] = []
         self.post_physics_step_callback: list[Callable] = []
         self.reset_callback: list[Callable] = []
         self.close_callback: list[Callable] = []
 
     def _observation_space(self) -> gym.Space:
-        """
-        Get the observation space of the environment.
-        """
+        """Get the observation space of the environment."""
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))
 
     def _action_space(self) -> gym.Space:
-        """
-        Get the action space of the environment.
-        """
+        """Get the action space of the environment."""
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))
 
     def _extra_spec(self) -> dict[str, BaseQueryType]:
-        """
-        Get the extra spec of the environment.
-        """
+        """Get the extra spec of the environment."""
         return {}
 
     def _observation(self, env_states: Obs) -> Obs:
-        """
-        Get the observation of the environment.
-        """
+        """Get the observation of the environment."""
         return env_states
 
     def _privileged_observation(self, env_states: Obs) -> Obs:
-        """
-        Get the privileged observation of the environment.
-        """
+        """Get the privileged observation of the environment."""
         return env_states
 
     def _reward(self, env_states: Obs) -> Reward:
-        """
-        Get the reward of the environment.
-        """
+        """Get the reward of the environment."""
         return [0.0] * self.env.num_envs
 
     def _terminated(self, env_states: Obs) -> Termination:
-        """
-        Get the terminated of the environment.
-        """
+        """Get the terminated of the environment."""
         return [False] * self.env.num_envs
 
     def _time_out(self, env_states: Obs) -> TimeOut:
-        """
-        Get the time out of the environment.
-        """
+        """Get the time out of the environment."""
         return [False] * self.env.num_envs
 
     def __pre_physics_step(self, actions: Action) -> Dict[str, Any]:
-        """
-        Pre-physics step, apply transforms to actions and put actions into correct dict format.
+        """Pre-physics step, apply transforms to actions and put actions into correct dict format.
 
         Args:
             actions: The actions to take
         """
-
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
@@ -154,9 +128,7 @@ class BaseTaskWrapper:
         return actions_dict
 
     def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Info | None]:
-        """
-        Physics step.
-        """
+        """Physics step."""
         # TODO: Use set_states() in new metasim handler
         # self.env.set_states(actions_dict)
 
@@ -169,10 +141,7 @@ class BaseTaskWrapper:
         return self.env.get_states(), None
 
     def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
-        """
-        Post-physics step.
-        """
-
+        """Post-physics step."""
         for callback in self.post_physics_step_callback:
             callback(env_states)
 
@@ -186,24 +155,23 @@ class BaseTaskWrapper:
         )
 
     def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
-        """
-        Step the environment.
+        """Step the environment.
 
         Args:
             actions: The actions to take
         """
-
         actions = self.__pre_physics_step(actions)
         env_states, _ = self.__physics_step(actions)
         obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
+
         info = {
             "privileged_observation": priv_obs,
         }
+
         return obs, reward, terminated, time_out, info
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Info | None]:
-        """
-        Reset the environment. This base implementation does not do anything.
+        """Reset the environment. This base implementation does not do anything.
 
         Args:
             env_ids: The environment ids to reset
@@ -220,13 +188,14 @@ class BaseTaskWrapper:
             callback(env_ids)
 
         env_states = self.env.get_states(env_ids=env_ids)
+        info = {
+            "privileged_observation": self._privileged_observation(env_states),
+        }
 
-        return self._observation(env_states), self._privileged_observation(env_states), None
+        return self._observation(env_states), info
 
     def close(self) -> None:
-        """
-        Close the environment.
-        """
+        """Close the environment."""
         for callback in self.close_callback:
             callback()
 
@@ -234,22 +203,15 @@ class BaseTaskWrapper:
 
     @property
     def observation_space(self) -> gym.Space:
-        """
-        Get the observation space of the environment.
-        """
+        """Get the observation space of the environment."""
         return self._observation_space()
 
     @property
     def action_space(self) -> gym.Space:
-        """
-        Get the action space of the environment.
-        """
+        """Get the action space of the environment."""
         return self._action_space()
 
     @property
     def extra_spec(self) -> dict[str, BaseQueryType]:
-        """
-        Get the extra spec of the environment.
-        Extra specs are optional queries that are used in handler.get_extra() stage.
-        """
+        """Extra specs are optional queries that are used in handler.get_extra() stage."""
         return self._extra_spec()

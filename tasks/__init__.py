@@ -1,3 +1,9 @@
+"""Auto-import all submodules in the tasks package.
+
+This ensures that all tasks decorated with @register_task are registered
+when the package is imported.
+"""
+
 from __future__ import annotations
 
 # Auto-discover and import all submodules in this package so that

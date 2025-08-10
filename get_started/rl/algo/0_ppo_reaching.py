@@ -24,9 +24,9 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
 from get_started.utils import ObsSaver
-from roboverse_learn.tasks.registry import load_task
-from roboverse_learn.tasks.rl_task import RLTaskWrapper
 from scenario_cfg.scenario import ScenarioCfg
+from tasks.registry import load_task
+from tasks.rl_task import RLTaskWrapper
 
 
 @dataclass
@@ -63,7 +63,7 @@ class VecEnvWrapper(VecEnv):
     ############################################################
     def reset(self):
         """Reset the environment."""
-        obs = self.rl_wrapper.reset()
+        obs, _ = self.rl_wrapper.reset()
         return obs.cpu().numpy()
 
     def step_async(self, actions: np.ndarray) -> None:
@@ -125,7 +125,7 @@ def train_ppo():
         robots=[args.robot],
         simulator=args.sim,
         num_envs=args.num_envs,
-        headless=True,
+        headless=False,
         cameras=[],
     )
 

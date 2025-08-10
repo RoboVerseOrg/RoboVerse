@@ -9,9 +9,8 @@ except ImportError:
 
 from typing import Literal
 
-import numpy as np
+import gymnasium as gym
 import rootutils
-import torch
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
@@ -21,10 +20,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 from metasim.utils import configclass
-
-# from metasim.utils.setup_util import register_task
-from roboverse_learn.tasks.registry import load_task
-from scenario_cfg.scenario import ScenarioCfg
+from tasks.gym_registration import register_all_tasks_with_gym
 
 
 @configclass
@@ -51,35 +47,22 @@ TASK_NAME = args.task
 NUM_ENVS = args.num_envs
 SIM = args.sim
 
-scenario = ScenarioCfg(
+register_all_tasks_with_gym()
+
+env_id = f"RoboVerse/{args.task}-v0"
+env = gym.make(
+    env_id,
     robots=[args.robot],
     simulator=args.sim,
     num_envs=args.num_envs,
-    headless=True,
+    headless=args.headless,
     cameras=[],
+    device=args.device,
 )
 
-env = load_task(args.task, scenario, device=args.device)
-
-actions = np.zeros((NUM_ENVS, len(scenario.robots[0].joint_limits)))
-obs = env.reset()
+obs, info = env.reset()
 for step_i in range(100):
-    action_dicts = [
-        {
-            scenario.robots[0].name: {
-                "dof_pos_target": {
-                    joint_name: (
-                        torch.rand(1).item()
-                        * (
-                            scenario.robots[0].joint_limits[joint_name][1]
-                            - scenario.robots[0].joint_limits[joint_name][0]
-                        )
-                        + scenario.robots[0].joint_limits[joint_name][0]
-                    )
-                    for joint_name in scenario.robots[0].joint_limits.keys()
-                }
-            }
-        }
-        for _ in range(NUM_ENVS)
-    ]
-    obs, _, _, _, _ = env.step(action_dicts)
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(action)
+    if terminated or truncated:
+        obs, info = env.reset()

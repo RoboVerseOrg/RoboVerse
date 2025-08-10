@@ -13,9 +13,8 @@ from metasim.utils.humanoid_robot_util import (
 from metasim.utils.state import TensorState
 from scenario_cfg.scenario import ScenarioCfg
 from scenario_cfg.simulator_params import SimParamCfg
-
-from .registry import register_task
-from .rl_task import RLTaskWrapper
+from tasks.registry import register_task
+from tasks.rl_task import RLTaskWrapper
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -29,6 +28,7 @@ class StableReward:
         self.robot_name = robot_name
 
     def __call__(self, states: TensorState) -> torch.FloatTensor:
+        """Calculate the stability reward based on neck height, upright position, and small control forces."""
         if self.robot_name.startswith("h1"):
             neck_target = H1_STAND_NECK_HEIGHT
         else:
@@ -64,6 +64,7 @@ class BaseLocomotionReward:
             self._move_speed = float(move_speed)
 
     def __call__(self, states: TensorState) -> torch.FloatTensor:
+        """Calculate the locomotion reward based on stability and movement speed."""
         stable = StableReward(self.robot_name)(states)
 
         if self._move_speed == 0:
@@ -153,7 +154,7 @@ class BaseLocomotionTask(RLTaskWrapper):
 
 @register_task("humanoid.walk", "walk", "h1.walk")
 class WalkTask(BaseLocomotionTask):
-    """Walking task for humanoid robots"""
+    """Walking task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
         # start from standing configuration

@@ -1,3 +1,4 @@
+import logoru as log
 import numpy as np
 from base import BaseTaskWrapper
 
@@ -54,4 +55,4 @@ if __name__ == "__main__":
 
     for i in range(10):
         tmp = task.step(np.zeros(9))
-        print(tmp)
+        log.info(tmp)

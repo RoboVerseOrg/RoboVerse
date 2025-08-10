@@ -5,11 +5,22 @@ import torch
 from gymnasium import spaces
 from torchvision.utils import make_grid
 
-from roboverse_learn.tasks.base import BaseTaskWrapper
 from scenario_cfg.scenario import ScenarioCfg
+from tasks.base import BaseTaskEnv
 
 
-class RLTaskWrapper(BaseTaskWrapper):
+class RLTaskEnv(BaseTaskEnv):
+    """Provide common functionality for RL tasks.
+
+    Includes:
+    - loading task config
+    - getting initial states
+    - observation space
+    - action space
+    - step with automatic reset and unnormalized actions
+    - reset
+    """
+
     def __init__(
         self,
         scenario: ScenarioCfg,
@@ -88,6 +99,7 @@ class RLTaskWrapper(BaseTaskWrapper):
 
     @property
     def observation_space(self) -> spaces.Space:
+        """Get the observation space of the environment."""
         if self._observation_space is None:
             self._observation_space = spaces.Box(
                 low=-np.inf,
@@ -99,6 +111,7 @@ class RLTaskWrapper(BaseTaskWrapper):
 
     @property
     def action_space(self) -> spaces.Space:
+        """Get the action space of the environment."""
         # normalized action space
         if self._action_space is None:
             self._action_space = spaces.Box(
@@ -174,12 +187,16 @@ class RLTaskWrapper(BaseTaskWrapper):
         """Render RGB image grid from first camera."""
         state = self.env.get_states()
         rgb = next(iter(state.cameras.values())).rgb  # (N, H, W, C)
-        grid = make_grid(  # (C, H, W)
-            (rgb.permute(0, 3, 1, 2) / 255.0),
-            nrow=int(rgb.shape[0] ** 0.5),
-        )
-        img = (grid.cpu().numpy().transpose(1, 2, 0) * 255.0).astype(np.uint8)
-        return img
+        if make_grid is not None:
+            grid = make_grid(  # (C, H, W)
+                (rgb.permute(0, 3, 1, 2) / 255.0),
+                nrow=int(max(1, rgb.shape[0] ** 0.5)),
+            )
+            img = (grid.cpu().numpy().transpose(1, 2, 0) * 255.0).astype(np.uint8)
+            return img
+        else:
+            # Fallback: return the first frame without grid composition
+            return rgb[0].cpu().numpy().astype(np.uint8)
 
     # -------------------------------------------------------------------------
     # utils
@@ -203,3 +220,7 @@ class RLTaskWrapper(BaseTaskWrapper):
         """Check if any envs are terminated."""
         # default: no termination
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+
+# Backward-compatible alias
+RLTaskWrapper = RLTaskEnv

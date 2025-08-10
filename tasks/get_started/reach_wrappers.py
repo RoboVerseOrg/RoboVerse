@@ -3,9 +3,8 @@ from __future__ import annotations
 import torch
 
 from metasim.utils.state import TensorState
-
-from .registry import register_task
-from .rl_task import RLTaskWrapper
+from tasks.registry import register_task
+from tasks.rl_task import RLTaskEnv
 
 
 def negative_distance(states: TensorState, robot_name: str | None = "franka") -> torch.Tensor:
@@ -21,8 +20,8 @@ def x_distance(states: TensorState, robot_name: str | None = "franka") -> torch.
     return ee_pos[:, 0]  # Return x-coordinate
 
 
-class ReachingWrapper(RLTaskWrapper):
-    """Base wrapper for reaching tasks.
+class ReachingEnv(RLTaskEnv):
+    """Base Env for reaching tasks.
 
     This class provides common functionality for all reaching tasks.
     """
@@ -72,8 +71,8 @@ class ReachingWrapper(RLTaskWrapper):
 
 
 @register_task("reach.origin", "reach_origin", "franka.reach_origin")
-class ReachOriginWrapper(ReachingWrapper):
-    """Wrapper for reaching origin task.
+class ReachOriginEnv(ReachingEnv):
+    """Env for reaching origin task.
 
     This task encourages the robot's end effector to move towards the origin (0, 0, 0).
     The reward is based on the negative distance to the origin.
@@ -91,8 +90,8 @@ class ReachOriginWrapper(ReachingWrapper):
 
 
 @register_task("reach.far", "reach_far", "franka.reach_far")
-class ReachFarAwayWrapper(ReachingWrapper):
-    """Wrapper for reaching far away task.
+class ReachFarAwayEnv(ReachingEnv):
+    """Env for reaching far away task.
 
     This task encourages the robot's end effector to move as far as possible
     in the positive x direction.
