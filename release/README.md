@@ -54,3 +54,19 @@ from metasim.sim import base
 ## License
 
 MIT License
+
+
+## For developers:
+
+compiling the package:
+
+```bash
+cd release
+python -m build .
+```
+
+uploading the package to pypi:
+
+```bash
+python -m twine upload dist/*
+```
