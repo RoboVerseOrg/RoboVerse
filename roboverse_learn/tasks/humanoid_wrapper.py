@@ -145,9 +145,6 @@ class BaseLocomotionTask(RLTaskWrapper):
         }
         return [init]
 
-    def _reward(self, states: TensorState) -> torch.Tensor:
-        return self.reward_fn(states)
-
     def _terminated(self, states: TensorState) -> torch.Tensor:
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]
         terminated = robot_position_tensor[:, 2] < 0.2
@@ -164,6 +161,7 @@ class WalkTask(BaseLocomotionTask):
         # override differences for walking
         self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
+        self.reward_weights = [1.0]
         return scenario
 
 
@@ -177,6 +175,7 @@ class RunTask(BaseLocomotionTask):
         # override differences for walking
         self.max_episode_steps = 1000
         self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
+        self.reward_weights = [1.0]
         return scenario
 
 
@@ -190,4 +189,5 @@ class StandTask(BaseLocomotionTask):
         # override differences for walking
         self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
+        self.reward_weights = [1.0]
         return scenario

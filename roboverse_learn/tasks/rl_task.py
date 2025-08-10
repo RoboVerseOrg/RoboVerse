@@ -193,7 +193,7 @@ class RLTaskWrapper(BaseTaskWrapper):
         """Weighted sum of configured reward functions."""
         total_reward = None
         for reward_func, weight in zip(self.reward_functions, self.reward_weights):
-            val = reward_func(env_states, self.robot.name)
+            val = reward_func(env_states)
             if total_reward is None:
                 total_reward = torch.zeros_like(val)
             total_reward += weight * val
