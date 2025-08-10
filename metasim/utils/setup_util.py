@@ -38,6 +38,14 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("IsaacGym is not installed, please install it first")
             raise e
+    elif sim == SimType.ISAACSIM:
+        try:
+            from metasim.sim.isaacsim import IsaacsimHandler
+
+            return IsaacsimHandler
+        except ImportError as e:
+            log.error("IsaacSim is not installed, please install it first")
+            raise e
     elif sim == SimType.GENESIS:
         try:
             from metasim.sim.genesis import GenesisHandler

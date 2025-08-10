@@ -18,6 +18,7 @@ class SimType(enum.Enum):
     """Simulator type."""
 
     ISAACLAB = "isaaclab"
+    ISAACSIM = "isaacsim"
     ISAACGYM = "isaacgym"
     GENESIS = "genesis"
     PYREP = "pyrep"

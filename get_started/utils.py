@@ -53,8 +53,10 @@ class ObsSaver:
             os.makedirs(os.path.dirname(self.video_path), exist_ok=True)
             iio.mimsave(self.video_path, self.images, fps=30)
 
-
-import open3d as o3d
+try:
+    import open3d as o3d
+except ImportError:
+    pass
 
 
 def get_depth_from_normalized(depth_normalized, depth_min, depth_max):

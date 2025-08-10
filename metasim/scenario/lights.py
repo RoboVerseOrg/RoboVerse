@@ -36,7 +36,7 @@ class DistantLightCfg(BaseLightCfg):
 
     @property
     def quat(self) -> tuple[float, float, float, float]:
-        """Quaternion of the light direction. (1, 0, 0, 0) means the light is pointing towards Z- direction."""
+        """Quaternion of the light direction. (1, 0, 0, 0)a means the light is pointing towards Z- direction."""
         roll = torch.tensor(self.polar / 180.0 * math.pi)
         pitch = torch.tensor(0.0)
         yaw = torch.tensor(self.azimuth / 180.0 * math.pi)
