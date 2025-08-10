@@ -253,6 +253,9 @@ class GenesisHandler(BaseSimHandler):
 
         self.scene_inst.step()
 
+        if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
+            self.scene_inst.viewer.update()
+
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         self._actions_cache = actions
 
@@ -262,42 +265,46 @@ class GenesisHandler(BaseSimHandler):
         obj_inst = self.object_inst_dict[obj_name]
 
         if control_mode == "effort":
+            if actions and obj_name in actions[0] and "dof_effort_target" in actions[0][obj_name]:
+                available_joints = set(actions[0][obj_name]["dof_effort_target"].keys())
+                joint_names = [jn for jn in joint_names if jn in available_joints]
+
             effort = [
                 [actions[env_id][obj_name]["dof_effort_target"][jn] for jn in joint_names]
                 for env_id in range(self.num_envs)
             ]
-            if self.object_dict[obj_name].fix_base_link:
+
+            dofs_idx_local = []
+            for j in obj_inst.joints:
+                if j.dofs_idx_local is not None and j.name in joint_names:
+                    dofs_idx_local.extend(j.dofs_idx_local)
+
+            if dofs_idx_local:
                 obj_inst.control_dofs_force(
                     force=effort,
-                    dofs_idx_local=[j.dof_idx_local for j in obj_inst.joints if j.dof_idx_local is not None],
-                )
-            else:
-                obj_inst.control_dofs_force(
-                    force=effort,
-                    dofs_idx_local=[
-                        j.dof_idx_local
-                        for j in obj_inst.joints
-                        if j.dof_idx_local is not None and j.name != obj_inst.base_joint.name
-                    ],
+                    dofs_idx_local=dofs_idx_local,
                 )
         else:
+            if actions and obj_name in actions[0] and "dof_pos_target" in actions[0][obj_name]:
+                available_joints = set(actions[0][obj_name]["dof_pos_target"].keys())
+                joint_names = [jn for jn in joint_names if jn in available_joints]
+
             position = [
                 [actions[env_id][obj_name]["dof_pos_target"][jn] for jn in joint_names]
                 for env_id in range(self.num_envs)
             ]
-            if self.object_dict[obj_name].fix_base_link:
+
+            dofs_idx_local = []
+            for j in obj_inst.joints:
+                if j.dofs_idx_local is not None and j.name in joint_names:
+                    dofs_idx_local.extend(j.dofs_idx_local)
+
+            if dofs_idx_local:
+                if self.num_envs == 1:
+                    position = position[0]
                 obj_inst.control_dofs_position(
                     position=position,
-                    dofs_idx_local=[j.dof_idx_local for j in obj_inst.joints if j.dof_idx_local is not None],
-                )
-            else:
-                obj_inst.control_dofs_position(
-                    position=position,
-                    dofs_idx_local=[
-                        j.dof_idx_local
-                        for j in obj_inst.joints
-                        if j.dof_idx_local is not None and j.name != obj_inst.base_joint.name
-                    ],
+                    dofs_idx_local=dofs_idx_local,
                 )
 
     def _simulate(self):
@@ -306,9 +313,8 @@ class GenesisHandler(BaseSimHandler):
 
     def refresh_render(self):
         """Refresh the render."""
-        if not self.headless:
+        if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
             self.scene_inst.viewer.update()
-        self.scene_inst.visualizer.update()
 
     def _get_effort_targets(self) -> torch.Tensor | None:
         """Get the effort targets from cached actions."""
@@ -340,7 +346,7 @@ class GenesisHandler(BaseSimHandler):
         if isinstance(obj_cfg, (ArticulationObjCfg, BaseRobotCfg)):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
 
-            joint_names = [j.name for j in joints if j.dof_idx_local is not None]
+            joint_names = [j.name for j in joints if j.dofs_idx_local is not None]
 
             if sort:
                 joint_names.sort()
