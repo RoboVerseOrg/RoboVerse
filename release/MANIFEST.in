@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+recursive-include metasim/data *
+recursive-include metasim/sim/isaaclab/cfg *
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .DS_Store

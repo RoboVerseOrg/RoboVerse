@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metasim-core"
+version = "0.1.0"
+description = "Meta-Sim: A unified simulation framework for robotics"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Meta-Sim Team"},
+]
+maintainers = [
+    {name = "Meta-Sim Team"},
+]
+keywords = ["robotics", "simulation", "reinforcement-learning", "computer-vision"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "gymnasium",
+    "huggingface-hub",
+    "imageio[ffmpeg]",
+    "loguru",
+    "opencv-python",
+    "rich",
+    "rootutils",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "tyro",
+]
+
+[project.optional-dependencies]
+# Simulator-specific dependencies
+isaaclab = [
+    "protobuf<5",
+    "pyglet<2",
+    "warp-lang<1.8",
+    "torch==2.4.0+cu118",
+    "torchvision==0.19.0+cu118",
+    "isaacsim==4.2.0.2",
+    "isaacsim-extscache-physics==4.2.0.2",
+    "isaacsim-extscache-kit==4.2.0.2",
+    "isaacsim-extscache-kit-sdk==4.2.0.2",
+]
+isaaclab2 = [
+    "torch==2.5.1+cu118",
+    "torchvision==0.20.1+cu118",
+    "isaacsim[all,extscache]==4.5.0",
+]
+isaacgym = [
+    "numpy<2",
+    "fsspec<=2025.3.0",
+]
+mujoco = ["mujoco", "dm-control"]
+mjx = ["mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]"]
+sapien2 = [
+    # Note: mani-skill2 must be installed separately from git:
+    # pip install git+https://github.com/haosulab/ManiSkill.git@v0.5.3
+]
+sapien3 = ["sapien>=3.0.0.b1"]
+pybullet = ["numpy<2", "pybullet"]
+genesis = [
+    "genesis-world",
+    "libigl==2.5.1",
+    "open3d",
+]
+blender = ["bpy"]
+
+# Convenience groups
+all = [
+    "mujoco",
+    "pybullet",
+    "sapien3",
+    "genesis",
+]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "pre-commit",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/meta-sim"
+Documentation = "https://meta-sim.readthedocs.io"
+Repository = "https://github.com/yourusername/meta-sim"
+Issues = "https://github.com/yourusername/meta-sim/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["metasim", "metasim.*"]
+
+[tool.setuptools.package-data]
+metasim = [
+    "data/**/*",
+    "sim/isaaclab/cfg/**/*",
+]
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[tool.uv.pip]
+extra-index-url = [
+    "https://pypi.org/simple",
+    "https://download.pytorch.org/whl/cu118",
+    "https://pypi.nvidia.com",
+]
