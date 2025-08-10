@@ -136,10 +136,10 @@ def train_ppo():
     # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(rl_wrapper)
 
-    log(f"Created environment with {env.num_envs} environments")
-    log(f"Observation space: {env.observation_space}")
-    log(f"Action space: {env.action_space}")
-    log(f"Max episode steps: {rl_wrapper.max_episode_steps}")
+    log.info(f"Created environment with {env.num_envs} environments")
+    log.info(f"Observation space: {env.observation_space}")
+    log.info(f"Action space: {env.action_space}")
+    log.info(f"Max episode steps: {rl_wrapper.max_episode_steps}")
 
     # PPO configuration
     model = PPO(
