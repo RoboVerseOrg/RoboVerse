@@ -8,14 +8,14 @@ from .registry import register_task
 from .rl_task import RLTaskWrapper
 
 
-def negative_distance(states: TensorState, robot_name: str | None = None) -> torch.Tensor:
+def negative_distance(states: TensorState, robot_name: str | None = "franka") -> torch.Tensor:
     """Calculate negative distance from end effector to origin as reward."""
     ee_pos = states.robots[robot_name].body_state[:, states.robots[robot_name].body_names.index("panda_hand"), :3]
     distances = torch.norm(ee_pos, dim=1)
     return -distances  # Negative distance as reward
 
 
-def x_distance(states: TensorState, robot_name: str | None = None) -> torch.Tensor:
+def x_distance(states: TensorState, robot_name: str | None = "franka") -> torch.Tensor:
     """Calculate x-distance from end effector as reward."""
     ee_pos = states.robots[robot_name].body_state[:, states.robots[robot_name].body_names.index("panda_hand"), :3]
     return ee_pos[:, 0]  # Return x-coordinate
