@@ -36,7 +36,7 @@ class Args:
     task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
+    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaacgym"
     headless: bool = False
     device: str = "cuda"
 
