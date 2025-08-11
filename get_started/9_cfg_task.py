@@ -59,7 +59,7 @@ env = gym.make_vec(
     headless=args.headless,
     cameras=[],
     device=args.device,
-    prefer_backend_vectorization=False,
+    prefer_backend_vectorization=True,
 )
 
 obs, info = env.reset()
