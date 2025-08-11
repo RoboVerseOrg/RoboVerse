@@ -277,7 +277,7 @@ def main() -> None:
     elif cfg("mode") == "render":
         num_envs = 1
     else:
-        raise ValueError(f"Unsupported mode: {cfg("mode")}")
+        raise ValueError(f"Unsupported mode: {cfg('mode')}")
 
     scenario = ScenarioCfg(
         task=cfg("task"),
