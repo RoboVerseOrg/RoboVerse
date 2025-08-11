@@ -26,10 +26,6 @@ class get_pyroki_model:
         """
         Solve IK for a single target.
         """
-        # pos = pos_target.detach().cpu().numpy().reshape(3)
-        # quat = quat_target.detach().cpu().numpy().reshape(4)
-
-        # Convert PyTorch tensors to JAX arrays (on GPU)
         pos = jnp.array(pos_target.detach().cpu().numpy())
         quat = jnp.array(quat_target.detach().cpu().numpy())
 

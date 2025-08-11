@@ -42,7 +42,7 @@ class Args:
     ## Others
     num_envs: int = 4
     headless: bool = False
-    solver: str = "pyroki"   # curobo, pyroki
+    solver: Literal["pyroki", "curobo"] = "pyroki"
 
     def __post_init__(self):
         """Post-initialization configuration."""
