@@ -67,6 +67,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.simulation_app = app_launcher.app
 
         # physics context
+        from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
         sim_config: SimulationCfg = SimulationCfg(
@@ -82,10 +83,8 @@ class IsaacsimHandler(BaseSimHandler):
         )
         if self.scenario.sim_params.dt is not None:
             sim_config.dt = self.scenario.sim_params.dt
-        self.sim: SimulationContext = SimulationContext(sim_config)
-        from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
 
-        # scence configuration
+        self.sim: SimulationContext = SimulationContext(sim_config)
         scene_config: InteractiveSceneCfg = InteractiveSceneCfg(
             num_envs=self._num_envs, env_spacing=self.scenario.env_spacing
         )
@@ -257,7 +256,6 @@ class IsaacsimHandler(BaseSimHandler):
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
 
-        sensor_states = {}
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
     def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
