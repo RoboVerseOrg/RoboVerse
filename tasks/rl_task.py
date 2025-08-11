@@ -209,6 +209,8 @@ class RLTaskEnv(BaseTaskEnv):
     def _reward(self, env_states) -> torch.Tensor:
         """Weighted sum of configured reward functions."""
         total_reward = None
+        if len(self.reward_functions) == 0:
+            return torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
         for reward_func, weight in zip(self.reward_functions, self.reward_weights):
             val = reward_func(env_states)
             if total_reward is None:
