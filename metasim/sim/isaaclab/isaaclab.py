@@ -222,8 +222,6 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
-
-
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
