@@ -14,7 +14,7 @@ from metasim.utils.state import TensorState
 from scenario_cfg.scenario import ScenarioCfg
 from scenario_cfg.simulator_params import SimParamCfg
 from tasks.registry import register_task
-from tasks.rl_task import RLTaskWrapper
+from tasks.rl_task import RLTaskEnv
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -85,8 +85,8 @@ class BaseLocomotionReward:
         return (stable * move_term).float()
 
 
-# ---------- task wrapper ----------
-class BaseLocomotionTask(RLTaskWrapper):
+# ---------- task env ----------
+class BaseLocomotionEnv(RLTaskEnv):
     """locomotion reward with _move_speed = 0."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -157,7 +157,7 @@ class BaseLocomotionTask(RLTaskWrapper):
 
 
 @register_task("humanoid.walk", "walk", "h1.walk")
-class WalkTask(BaseLocomotionTask):
+class WalkEnv(BaseLocomotionEnv):
     """Walking task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -171,7 +171,7 @@ class WalkTask(BaseLocomotionTask):
 
 
 @register_task("humanoid.run", "run", "h1.run")
-class RunTask(BaseLocomotionTask):
+class RunEnv(BaseLocomotionEnv):
     """Run task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -185,7 +185,7 @@ class RunTask(BaseLocomotionTask):
 
 
 @register_task("humanoid.stand", "stand", "h1.stand")
-class StandTask(BaseLocomotionTask):
+class StandEnv(BaseLocomotionEnv):
     """Stand task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:

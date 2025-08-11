@@ -26,7 +26,6 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from get_started.utils import ObsSaver
 from scenario_cfg.scenario import ScenarioCfg
 from tasks.registry import load_task
-from tasks.rl_task import RLTaskEnv
 
 
 @dataclass
@@ -42,61 +41,72 @@ class Args:
 args = tyro.cli(Args)
 
 
+def _to_np(x):
+    """Convert torch tensors to CPU numpy, else asarray."""
+    if torch is not None and isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+
 class VecEnvWrapper(VecEnv):
-    """Vectorized environment wrapper for RLTaskEnv to work with Stable Baselines 3."""
+    """Bridge Gymnasium VectorEnv to SB3 VecEnv."""
 
-    def __init__(self, rl_env: RLTaskEnv):
-        """Initialize the environment."""
-        self.rl_env = rl_env
+    def __init__(self, gym_vec_env):
+        """Initialize the wrapper."""
+        self.gym_vec = gym_vec_env
+        super().__init__(
+            num_envs=gym_vec_env.num_envs,
+            observation_space=gym_vec_env.observation_space,
+            action_space=gym_vec_env.action_space,
+        )
+        self._last_obs = None
 
-        # Use action space directly from RLTaskEnv
-        self.action_space = rl_env.action_space
-
-        # Use observation space directly from RLTaskEnv
-        self.observation_space = rl_env.observation_space
-
-        super().__init__(rl_env.num_envs, self.observation_space, self.action_space)
-        self.render_mode = None
-
-    ############################################################
-    ## Gym-like interface
-    ############################################################
     def reset(self):
-        """Reset the environment."""
-        obs, _ = self.rl_env.reset()
-        return obs.cpu().numpy()
+        """Reset all envs and return observations."""
+        obs, _ = self.gym_vec.reset()
+        obs = _to_np(obs)
+        self._last_obs = obs.copy()
+        return obs
 
-    def step_async(self, actions: np.ndarray) -> None:
-        """Asynchronously step the environment."""
-        # Convert numpy actions to torch
-        self.pending_actions = torch.tensor(actions, device=self.rl_env.device, dtype=torch.float32)
+    def step_async(self, actions):
+        """Send actions to the vectorized env."""
+        self.actions = actions
 
     def step_wait(self):
-        """Wait for the step to complete."""
-        obs, reward, terminated, time_out, info = self.rl_env.step(self.pending_actions)
+        """Step the envs and adapt outputs for SB3."""
+        obs, rewards, terminated, truncated, infos = self.gym_vec.step(self.actions)
 
-        done = terminated | time_out
-        # Convert to numpy for SB3
-        obs_np = obs.cpu().numpy()
-        reward_np = reward.cpu().numpy()
-        done_np = done.cpu().numpy()
+        obs = _to_np(obs)
+        rewards = _to_np(rewards).reshape(self.num_envs)
+        terminated = _to_np(terminated).astype(bool).reshape(self.num_envs)
+        truncated = _to_np(truncated).astype(bool).reshape(self.num_envs)
+        dones = np.logical_or(terminated, truncated)
 
-        # Prepare extra info for SB3
-        extra = [{} for _ in range(self.num_envs)]
-        for env_id in range(self.num_envs):
-            if bool(done[env_id].item()):
-                extra[env_id]["terminal_observation"] = obs_np[env_id]
-            extra[env_id]["TimeLimit.truncated"] = bool(time_out[env_id].item() and not terminated[env_id].item())
+        if isinstance(infos, list):
+            out_infos = []
+            n = len(infos) if infos is not None else 0
+            for i in range(self.num_envs):
+                info_i = dict(infos[i]) if (infos is not None and i < n and infos[i] is not None) else {}
+                info_i["TimeLimit.truncated"] = bool(truncated[i] and not terminated[i])
+                if dones[i] and self._last_obs is not None:
+                    info_i["terminal_observation"] = np.array(self._last_obs[i], copy=True)
+                out_infos.append(info_i)
+        else:
+            base = dict(infos) if infos is not None else {}
+            out_infos = []
+            for i in range(self.num_envs):
+                info_i = dict(base)
+                info_i["TimeLimit.truncated"] = bool(truncated[i] and not terminated[i])
+                if dones[i] and self._last_obs is not None:
+                    info_i["terminal_observation"] = np.array(self._last_obs[i], copy=True)
+                out_infos.append(info_i)
 
-        return obs_np, reward_np, done_np, extra
-
-    def render(self):
-        """Render the environment."""
-        return self.rl_env.render()
+        self._last_obs = obs.copy()
+        return obs, rewards, dones, out_infos
 
     def close(self):
-        """Close the environment."""
-        self.rl_env.close()
+        """Close the underlying envs."""
+        self.gym_vec.close()
 
     def get_attr(self, attr_name, indices=None):
         """Get an attribute of the environment."""
@@ -104,16 +114,16 @@ class VecEnvWrapper(VecEnv):
             indices = list(range(self.num_envs))
         return [getattr(self.env.handler, attr_name)] * len(indices)
 
-    def set_attr(self, attr_name: str, value, indices=None) -> None:
-        """Set an attribute of the environment."""
+    def set_attr(self, attr_name, value, indices=None):
+        """Not implemented."""
         raise NotImplementedError
 
-    def env_method(self, method_name: str, *method_args, indices=None, **method_kwargs):
-        """Call a method of the environment."""
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """Not implemented."""
         raise NotImplementedError
 
     def env_is_wrapped(self, wrapper_class, indices=None):
-        """Check if the environment is wrapped by a given wrapper class."""
+        """Not implemented."""
         raise NotImplementedError
 
 
