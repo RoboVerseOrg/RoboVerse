@@ -9,7 +9,6 @@ import third_party.pyroki.examples.pyroki_snippets as pks
 
 class get_pyroki_model:
     def __init__(self, robot_cfg):
-
         """Get the Pyroki robot model.
 
         Args:
@@ -17,7 +16,6 @@ class get_pyroki_model:
                 - urdf_path: str
                 - ee_body_name: str (end effector link name).
         """
-
         self.urdf_path = robot_cfg.urdf_path
         self.ee_link_name = getattr(robot_cfg, "ee_body_name", None)
         if self.ee_link_name is None:
