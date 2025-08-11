@@ -133,15 +133,15 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
-        
+
         # Update camera pose after scene reset to avoid being overridden
         self._update_camera_pose()
-        
+
         # Force another simulation step and camera update to ensure proper initialization
         self.sim.step(render=False)
         self.scene.update(dt=self.dt)
         self._update_camera_pose()
-        
+
         # Force a render to update camera data after position is set
         if self.sim.has_gui() or self.sim.has_rtx_sensors():
             self.sim.render()
@@ -193,7 +193,7 @@ class IsaacsimHandler(BaseSimHandler):
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-        
+
         # Special handling for the first frame to ensure camera is properly positioned
         if self._step_counter == 0:
             self._update_camera_pose()
@@ -255,7 +255,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Force camera sensor update to ensure correct position data
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
-        
+
         for camera in self.cameras:
             camera_inst = self.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
@@ -284,11 +284,11 @@ class IsaacsimHandler(BaseSimHandler):
 
     def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
         # TODO: support set torque
-        
+
         # Store actions for all robots at once when first robot calls this
-        if not hasattr(self, '_actions_applied_this_step'):
+        if not hasattr(self, "_actions_applied_this_step"):
             self._actions_applied_this_step = False
-            
+
         # Only process actions once per simulation step
         if not self._actions_applied_this_step:
             if isinstance(actions, torch.Tensor):
@@ -315,10 +315,11 @@ class IsaacsimHandler(BaseSimHandler):
                     robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
                 ]
                 robot_inst.set_joint_position_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)], joint_ids=actionable_joint_ids
+                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
+                    joint_ids=actionable_joint_ids,
                 )
                 start_idx += len(actionable_joint_ids)
-            
+
             self._actions_applied_this_step = True
 
     def _simulate(self):
@@ -328,14 +329,14 @@ class IsaacsimHandler(BaseSimHandler):
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
         self.scene.update(dt=self.dt)
-        
+
         # Ensure camera pose is correct, especially for the first few frames
         if self._step_counter < 5:
             self._update_camera_pose()
-        
+
         # Reset action application flag for next step
         self._actions_applied_this_step = False
-        
+
         self._step_counter += 1
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:

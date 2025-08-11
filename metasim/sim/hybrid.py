@@ -55,10 +55,10 @@ class HybridSimHandler(BaseSimHandler):
         """Get states from physics handler and camera data from render handler."""
         # Get physics states (robots and objects)
         physics_states = self.physics_handler._get_states(env_ids)
-        
+
         # Get render states (mainly for camera data)
         render_states = self.render_handler._get_states(env_ids)
-        
+
         # Combine states: use physics for robots/objects, render for cameras
         return TensorState(
             objects=physics_states.objects,
@@ -75,7 +75,7 @@ class HybridSimHandler(BaseSimHandler):
         physics_states = self.physics_handler._get_states()
         states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
         self.render_handler._set_states(states_nested)
-        
+
         # Update render and ensure camera data is refreshed
         self.render_handler.refresh_render()
         # Also run a simulation step in render handler to update sensors

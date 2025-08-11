@@ -16,12 +16,12 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
+from get_started.utils import ObsSaver
 from metasim.constants import SimType
 from metasim.utils.setup_util import get_sim_handler_class
+from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.robots import FrankaCfg, H1Cfg
 from scenario_cfg.scenario import ScenarioCfg
-from scenario_cfg.cameras import PinholeCameraCfg
-from get_started.utils import ObsSaver
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -41,7 +41,7 @@ class Args:
 
 def main():
     args = tyro.cli(Args)
-    
+
     # Add camera for video recording
     camera = PinholeCameraCfg(
         name="main_camera",
@@ -51,7 +51,7 @@ def main():
         height=480,
         data_types=["rgb"],
     )
-    
+
     scenario = ScenarioCfg(
         robots=[
             FRANKA_CFG.replace(name="franka_1"),
@@ -74,7 +74,7 @@ def main():
         {
             "robots": {
                 "franka_1": {
-                    "pos": torch.tensor([1.0, 1.0, args.z_pos]), 
+                    "pos": torch.tensor([1.0, 1.0, args.z_pos]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "panda_joint1": 0.0,
@@ -89,7 +89,7 @@ def main():
                     },
                 },
                 "franka_2": {
-                    "pos": torch.tensor([1.0, -1.0, args.z_pos]), 
+                    "pos": torch.tensor([1.0, -1.0, args.z_pos]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "panda_joint1": 0.0,
@@ -104,7 +104,7 @@ def main():
                     },
                 },
                 "h1_1": {
-                    "pos": torch.tensor([-1.0, 1.0, args.z_pos + 1]), 
+                    "pos": torch.tensor([-1.0, 1.0, args.z_pos + 1]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "left_hip_yaw": 0.0,
@@ -129,7 +129,7 @@ def main():
                     },
                 },
                 "h1_2": {
-                    "pos": torch.tensor([-1.0, -1.0, args.z_pos + 1]), 
+                    "pos": torch.tensor([-1.0, -1.0, args.z_pos + 1]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "left_hip_yaw": 0.0,
@@ -188,12 +188,12 @@ def main():
         for robot in scenario.robots:
             env.set_dof_targets(robot.name, actions)
         env.simulate()
-        
+
         # Save observations for video
         if obs_saver is not None:
             states = env.get_states()
             obs_saver.add(states)
-        
+
         step += 1
 
     # Save video at the end
