@@ -116,11 +116,10 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_terrain()
         self._load_objects()
         self._load_robots()
-
+        self._load_lights()
+        self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
-        self._load_lights()
-
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
@@ -455,6 +454,31 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
 
+    def _load_render_settings(self) -> None:
+        import carb
+        import omni.replicator.core as rep
+
+        # from omni.rtx.settings.core.widgets.pt_widgets import PathTracingSettingsFrame
+
+        rep.settings.set_render_rtx_realtime()  # fix noising rendered images
+
+        settings = carb.settings.get_settings()
+        if self.scenario.render.mode == "pathtracing":
+            settings.set_string("/rtx/rendermode", "PathTracing")
+        elif self.scenario.render.mode == "raytracing":
+            settings.set_string("/rtx/rendermode", "RayTracedLighting")
+        elif self.scenario.render.mode == "rasterization":
+            raise ValueError("Isaaclab does not support rasterization")
+        else:
+            raise ValueError(f"Unknown render mode: {self.scenario.render.mode}")
+
+        log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")
+        log.info(f"Render totalSpp: {settings.get('/rtx/pathtracing/totalSpp')}")
+        log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
+        log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
+        log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
+
+
     def _load_sensors(self) -> None:
         # TODO move it into query
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
@@ -615,3 +639,8 @@ class IsaacsimHandler(BaseSimHandler):
             camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
                 quat, origin="opengl", target="world"
             )
+
+    def refresh_render(self) -> None:
+        for sensor in self.scene.sensors.values():
+            sensor.update(dt=0)
+        self.sim.render()
