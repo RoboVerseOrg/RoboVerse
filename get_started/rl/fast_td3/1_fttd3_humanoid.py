@@ -278,7 +278,7 @@ def main() -> None:
     elif cfg("mode") == "render":
         num_envs = 1
     else:
-        raise ValueError(f"Unsupported mode: {mode}")
+        raise ValueError(f"Unsupported mode: {cfg("mode")}")
 
     scenario = ScenarioCfg(
         task=cfg("task"),
@@ -286,7 +286,7 @@ def main() -> None:
         try_add_table=cfg("add_table", False),
         sim=cfg("sim"),
         num_envs=num_envs,
-        headless=True if cfg("mode") == "train" else True,
+        headless=False if cfg("mode") == "train" else True,
         cameras=[],
     )
 
