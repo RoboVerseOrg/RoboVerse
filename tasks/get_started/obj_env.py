@@ -52,7 +52,6 @@ class ObjectEnv(BaseTaskEnv):
         ]
         self.reward_functions = []
         self.max_episode_steps = 100
-
         return scenario
 
     def _get_initial_states(self) -> list[dict]:

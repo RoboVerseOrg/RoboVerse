@@ -23,9 +23,10 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
+import gymnasium as gym
+
 from get_started.utils import ObsSaver
-from scenario_cfg.scenario import ScenarioCfg
-from tasks.registry import load_task
+from tasks.gym_registration import register_all_tasks_with_gym
 
 
 @dataclass
@@ -36,6 +37,8 @@ class Args:
     robot: str = "franka"
     num_envs: int = 128
     sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
+    headless: bool = False
+    device: str = "cuda"
 
 
 args = tyro.cli(Args)
@@ -131,25 +134,27 @@ def train_ppo():
     """Train PPO for reaching task using RLTaskEnv."""
 
     # Create scenario configuration
-    scenario = ScenarioCfg(
+
+    register_all_tasks_with_gym()
+
+    env_id = f"RoboVerse/{args.task}"
+    env = gym.make_vec(
+        env_id,
         robots=[args.robot],
         simulator=args.sim,
         num_envs=args.num_envs,
-        headless=False,
+        headless=args.headless,
         cameras=[],
+        device=args.device,
+        prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
     )
 
-    # Create RLTaskEnv via registry
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_env = load_task(args.task, scenario, device=device)
-
     # Create VecEnv wrapper for SB3
-    env = VecEnvWrapper(rl_env)
+    env = VecEnvWrapper(env)
 
     log.info(f"Created environment with {env.num_envs} environments")
     log.info(f"Observation space: {env.observation_space}")
     log.info(f"Action space: {env.action_space}")
-    log.info(f"Max episode steps: {rl_env.max_episode_steps}")
 
     # PPO configuration
     model = PPO(
@@ -177,16 +182,18 @@ def train_ppo():
 
     # Inference and Save Video
     # Create new environment for inference
-    scenario_inference = ScenarioCfg(
+    env_inference = gym.make_vec(
+        env_id,
         robots=[args.robot],
         simulator=args.sim,
-        num_envs=1,
-        headless=True,
+        num_envs=args.num_envs,
+        headless=args.headless,
         cameras=[],
+        device=args.device,
+        prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
     )
 
-    rl_env_inference = load_task(args.task, scenario_inference, device=device)
-    env_inference = VecEnvWrapper(rl_env_inference)
+    env_inference = VecEnvWrapper(env_inference)
 
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
 
@@ -195,7 +202,7 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = rl_env_inference.env.get_states()
+    obs_orin = env_inference.env.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(100):
@@ -203,7 +210,7 @@ def train_ppo():
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
 
-        obs_orin = rl_env_inference.env.get_states()
+        obs_orin = env_inference.env.get_states()
         obs_saver.add(obs_orin)
 
     obs_saver.save()

@@ -10,7 +10,6 @@ except ImportError:
 from typing import Literal
 
 import gymnasium as gym
-import numpy as np
 import rootutils
 import tyro
 from loguru import logger as log
@@ -20,6 +19,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
+import torch
+
 from metasim.utils import configclass
 from tasks.gym_registration import register_all_tasks_with_gym
 
@@ -28,13 +29,13 @@ from tasks.gym_registration import register_all_tasks_with_gym
 class Args:
     """Arguments for the static scene."""
 
-    task: str = "reach_origin"
+    task: str = "obj_env"
     robot: str = "franka"
     ## Handlers
-    sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mjx"
+    sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
 
     ## Others
-    num_envs: int = 16
+    num_envs: int = 1
     headless: bool = True
     device: str = "cuda"
 
@@ -63,11 +64,22 @@ env = gym.make_vec(
 )
 
 obs, info = env.reset()
+robot = env.scenario.robots[0]
 for step_i in range(100):
     # batch actions: (num_envs, act_dim)
-    actions = np.stack(
-        [env.single_action_space.sample() for _ in range(env.num_envs)],
-        axis=0,
-    ).astype(np.float32, copy=False)
+    actions = [
+        {
+            robot.name: {
+                "dof_pos_target": {
+                    joint_name: (
+                        torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                        + robot.joint_limits[joint_name][0]
+                    )
+                    for joint_name in robot.joint_limits.keys()
+                }
+            }
+        }
+        for _ in range(args.num_envs)
+    ]
     obs, reward, terminated, truncated, info = env.step(actions)
 env.close()

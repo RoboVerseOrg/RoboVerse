@@ -354,7 +354,7 @@ class MJXHandler(BaseSimHandler):
         else:
             tgt_t = torch.stack(
                 [
-                    torch.tensor([actions[e]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
+                    torch.tensor([actions[e][obj_name]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
                     for e in range(self.num_envs)
                 ],
                 dim=0,

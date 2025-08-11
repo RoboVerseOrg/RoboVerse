@@ -286,8 +286,8 @@ def main() -> None:
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 obs = normalize_obs(obs)
                 actions = actor(obs)
-
-            next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
+            real_actions = envs.unnormalise_action(actions)
+            next_obs, rewards, terminated, time_out, infos = eval_envs.step(real_actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -316,7 +316,8 @@ def main() -> None:
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
-            obs, _, done, _ = env.step(act.float())
+            real_actions = envs.unnormalise_action(act)
+            obs, _, done, _ = env.step(real_actions.float())
             frames.append(env.render())
             if done.any():
                 break
@@ -455,8 +456,8 @@ def main() -> None:
         with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
             norm_obs = normalize_obs(obs)
             actions = policy(obs=norm_obs, dones=dones)
-
-        next_obs, rewards, terminated, time_out, infos = envs.step(actions.float())
+        real_actions = envs.unnormalise_action(actions)
+        next_obs, rewards, terminated, time_out, infos = envs.step(real_actions.float())
         dones = terminated | time_out
 
         # Compute 'true' next_obs and next_critic_obs for saving

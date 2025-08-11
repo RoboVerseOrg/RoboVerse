@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
+import torch
 from traitlets import Dict
 
 from metasim.constants import SimType
@@ -43,17 +44,24 @@ class BaseTaskEnv:
     - __post_physics_step
     """
 
-    def __init__(self, scenario: BaseSimHandler | ScenarioCfg) -> None:
+    def __init__(
+        self,
+        scenario: BaseSimHandler | ScenarioCfg,
+        device: str | torch.device | None = None,
+    ) -> None:
         """Initialize the task env.
 
         Args:
             scenario: The scenario configuration
+            device: The device to use for the environment. If None, it will use "cuda" if available, otherwise "cpu".
         """
+        self.scenario = scenario
         if isinstance(scenario, BaseSimHandler):
             self.env = scenario
         else:
             self._instantiate_env(scenario)
-
+        self.device = device
+        self.num_envs = scenario.num_envs
         self._prepare_callbacks()
 
     def _instantiate_env(self, scenario: ScenarioCfg) -> None:
@@ -119,7 +127,7 @@ class BaseTaskEnv:
                 self.env.robots[0].name: {
                     "dof_pos_target": {
                         joint_name: action
-                        for joint_name, action in zip(self.env.get_joint_names(self.env.robots[0].name), actions)
+                        for joint_name, action in zip(self.env._get_joint_names(self.env.robots[0].name), actions)
                     }
                 }
             }

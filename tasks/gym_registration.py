@@ -46,7 +46,7 @@ class GymEnvWrapper(gym.Env):
 
         scenario = ScenarioCfg(**scenario_kwargs)
         self.env = load_task(task_name, scenario, device=self._device)
-
+        self.scenario = self.env.scenario
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 
@@ -66,13 +66,28 @@ class GymEnvWrapper(gym.Env):
             obs = obs[0]
         return obs, {}
 
-    def step(self, action: np.ndarray):
+    def step(self, action):
         """Step the environment with the given action."""
-        # Convert numpy action to torch; RLTask expects torch at this boundary.
-        if not isinstance(action, torch.Tensor):
+        # Three cases: numpy -> tensor, list-of-dict -> stacked tensor, torch -> move to device
+        if isinstance(action, torch.Tensor):
+            action_t = action.to(self._device)
+        elif isinstance(action, np.ndarray):
             action_t = torch.as_tensor(action, dtype=torch.float32, device=self._device)
+        elif isinstance(action, dict):
+            robot = self.scenario.robots[0]
+            joint_names = list(robot.joint_limits.keys())
+            if len(action) != 1:
+                raise ValueError(f"Single-env wrapper expects exactly 1 action dict, got {len(action)}")
+            vec = torch.tensor(
+                [action[0][robot.name]["dof_pos_target"][jn] for jn in joint_names],
+                dtype=torch.float32,
+                device=self._device,
+            )
+            action_t = vec.unsqueeze(0)
         else:
-            action_t = action.to(self._device, dtype=torch.float32)
+            raise TypeError(
+                f"Unsupported action type: {type(action)}. Expected torch.Tensor, numpy.ndarray, or list/dict of action dicts."
+            )
 
         # Ensure batch dimension for single-env backend.
         if action_t.ndim == 1:
@@ -81,17 +96,14 @@ class GymEnvWrapper(gym.Env):
         # Backend is expected to return (obs, reward, terminated, truncated, info).
         obs, reward, terminated, truncated, info = self.env.step(action_t)
 
-        # Convert tensors to numpy for Gym API.
-        if torch.is_tensor(obs):
-            obs = obs.detach().cpu().numpy()
-        if torch.is_tensor(reward):
-            reward = float(reward.detach().cpu().numpy().reshape(-1)[0])
-        if torch.is_tensor(terminated):
-            terminated = bool(terminated.detach().cpu().numpy().reshape(-1)[0])
-        if torch.is_tensor(truncated):
-            truncated = bool(truncated.detach().cpu().numpy().reshape(-1)[0])
+        # De-batch observation for single-env wrapper if needed.
+        try:
+            if hasattr(obs, "ndim") and obs.ndim >= 2 and obs.shape[0] == 1:
+                obs = obs[0]
+        except Exception:
+            pass
 
-        return obs[0], reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
 
     def render(self):
         """Render the environment."""
@@ -131,7 +143,7 @@ class GymVectorEnvAdapter(VectorEnv):
 
         scenario = ScenarioCfg(**scenario_kwargs)
         self.env = load_task(task_name, scenario, device=self._device)
-
+        self.scenario = self.env.scenario
         # Use positional args to be compatible across Gymnasium versions.
         try:
             super().__init__(self.env.num_envs, self.env.observation_space, self.env.action_space)
@@ -154,18 +166,36 @@ class GymVectorEnvAdapter(VectorEnv):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""
         super().reset(seed=seed)
-        obs = self.env.reset()
-        if torch.is_tensor(obs):
-            obs = obs.detach().cpu().numpy()
+        obs, info = self.env.reset()
         # VectorEnv API: return (obs_batch, infos_list) where len(infos) == num_envs.
-        return obs, [{} for _ in range(self.num_envs)]
+        return obs, info
 
-    def step_async(self, actions: np.ndarray) -> None:
-        """Cache actions; convert to torch so RLTask sees a consistent type."""
-        if not isinstance(actions, torch.Tensor):
+    def step_async(self, actions) -> None:
+        """Cache actions; convert to torch."""
+        # Three cases: numpy -> tensor, list-of-dict -> stacked tensor, torch -> move to device
+        if isinstance(actions, torch.Tensor):
+            self._pending_actions = actions.to(self._device)
+        elif isinstance(actions, np.ndarray):
             self._pending_actions = torch.as_tensor(actions, dtype=torch.float32, device=self._device)
+        elif isinstance(actions, dict) or (
+            isinstance(actions, (list, tuple)) and len(actions) > 0 and isinstance(actions[0], dict)
+        ):
+            robot = self.scenario.robots[0]
+            joint_names = list(robot.joint_limits.keys())
+            if len(actions) != self.num_envs:
+                raise ValueError(f"Expected {self.num_envs} action dicts, got {len(actions)}")
+            vectors = [
+                torch.tensor(
+                    [actions[e][robot.name]["dof_pos_target"][jn] for jn in joint_names],
+                    dtype=torch.float32,
+                )
+                for e in range(self.num_envs)
+            ]
+            self._pending_actions = torch.stack(vectors, dim=0).to(self._device)
         else:
-            self._pending_actions = actions.to(self._device, dtype=torch.float32)
+            raise TypeError(
+                f"Unsupported action type: {type(actions)}. Expected torch.Tensor, numpy.ndarray, or list/dict of action dicts."
+            )
 
     def step_wait(self):
         """Wait for the step to complete and return results."""
@@ -179,16 +209,6 @@ class GymVectorEnvAdapter(VectorEnv):
             )
 
         obs, reward, terminated, truncated, info = out  # 'truncated' may be 'timeout' internally.
-
-        # Convert outputs to numpy arrays to match VectorEnv API.
-        if torch.is_tensor(obs):
-            obs = obs.detach().cpu().numpy()
-        if torch.is_tensor(reward):
-            reward = reward.detach().cpu().numpy()
-        if torch.is_tensor(terminated):
-            terminated = terminated.detach().cpu().numpy().astype(bool)
-        if torch.is_tensor(truncated):
-            truncated = truncated.detach().cpu().numpy().astype(bool)
 
         # Ensure infos is a list[dict] of length num_envs.
         if info is None:

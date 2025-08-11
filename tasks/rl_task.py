@@ -29,7 +29,7 @@ class RLTaskEnv(BaseTaskEnv):
         self.asymmetric_obs = False
 
         self._load_task_config(scenario)
-        super().__init__(scenario)
+        super().__init__(scenario, device)
 
         self.num_envs = scenario.num_envs
         self.robot = scenario.robots[0]
