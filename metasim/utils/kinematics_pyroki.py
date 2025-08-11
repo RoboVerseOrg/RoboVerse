@@ -27,9 +27,6 @@ class get_pyroki_model:
             robot_cfg: An instance of BaseRobotCfg or similar, which must contain:
                 - urdf_path (str): Path to the robot's URDF file.
                 - ee_body_name (str): Name of the end-effector link.
-
-        Raises:
-            ValueError: If 'ee_body_name' is not defined in robot_cfg.
         """
         self.urdf_path = robot_cfg.urdf_path
         self.ee_link_name = getattr(robot_cfg, "ee_body_name", None)
