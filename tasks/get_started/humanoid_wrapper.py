@@ -114,37 +114,41 @@ class BaseLocomotionTask(RLTaskWrapper):
         return torch.cat(results_state, dim=1)
 
     def _get_initial_states(self) -> list[dict] | None:
-        init = {
-            "objects": {},
-            "robots": {
-                self.robot_name: {
-                    "dof_pos": {
-                        "left_hip_yaw": 0.0,
-                        "left_hip_roll": 0.0,
-                        "left_hip_pitch": -0.4,
-                        "left_knee": 0.8,
-                        "left_ankle": -0.4,
-                        "right_hip_yaw": 0.0,
-                        "right_hip_roll": 0.0,
-                        "right_hip_pitch": -0.4,
-                        "right_knee": 0.8,
-                        "right_ankle": -0.4,
-                        "torso": 0.0,
-                        "left_shoulder_pitch": 0.0,
-                        "left_shoulder_roll": 0.0,
-                        "left_shoulder_yaw": 0.0,
-                        "left_elbow": 0.0,
-                        "right_shoulder_pitch": 0.0,
-                        "right_shoulder_roll": 0.0,
-                        "right_shoulder_yaw": 0.0,
-                        "right_elbow": 0.0,
-                    },
-                    "pos": torch.tensor([0.0, 0.0, 0.98]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                }
-            },
-        }
-        return [init]
+        init = [
+            {
+                "objects": {},
+                "robots": {
+                    self.robot_name: {
+                        "dof_pos": {
+                            "left_hip_yaw": 0.0,
+                            "left_hip_roll": 0.0,
+                            "left_hip_pitch": -0.4,
+                            "left_knee": 0.8,
+                            "left_ankle": -0.4,
+                            "right_hip_yaw": 0.0,
+                            "right_hip_roll": 0.0,
+                            "right_hip_pitch": -0.4,
+                            "right_knee": 0.8,
+                            "right_ankle": -0.4,
+                            "torso": 0.0,
+                            "left_shoulder_pitch": 0.0,
+                            "left_shoulder_roll": 0.0,
+                            "left_shoulder_yaw": 0.0,
+                            "left_elbow": 0.0,
+                            "right_shoulder_pitch": 0.0,
+                            "right_shoulder_roll": 0.0,
+                            "right_shoulder_yaw": 0.0,
+                            "right_elbow": 0.0,
+                        },
+                        "pos": torch.tensor([0.0, 0.0, 0.98]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    }
+                },
+            }
+            for _ in range(self.num_envs)
+        ]
+
+        return init
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]

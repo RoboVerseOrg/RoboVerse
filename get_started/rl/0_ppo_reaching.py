@@ -1,4 +1,4 @@
-"""Train PPO for reaching task using RLTaskWrapper."""
+"""Train PPO for reaching task using RLTaskEnv."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from get_started.utils import ObsSaver
 from scenario_cfg.scenario import ScenarioCfg
 from tasks.registry import load_task
-from tasks.rl_task import RLTaskWrapper
+from tasks.rl_task import RLTaskEnv
 
 
 @dataclass
@@ -35,27 +35,27 @@ class Args:
 
     task: str = "reach_origin"
     robot: str = "franka"
-    num_envs: int = 1
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mujoco"
+    num_envs: int = 128
+    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
 
 
 args = tyro.cli(Args)
 
 
 class VecEnvWrapper(VecEnv):
-    """Vectorized environment wrapper for RLTaskWrapper to work with Stable Baselines 3."""
+    """Vectorized environment wrapper for RLTaskEnv to work with Stable Baselines 3."""
 
-    def __init__(self, rl_wrapper: RLTaskWrapper):
+    def __init__(self, rl_env: RLTaskEnv):
         """Initialize the environment."""
-        self.rl_wrapper = rl_wrapper
+        self.rl_env = rl_env
 
-        # Use action space directly from RLTaskWrapper
-        self.action_space = rl_wrapper.action_space
+        # Use action space directly from RLTaskEnv
+        self.action_space = rl_env.action_space
 
-        # Use observation space directly from RLTaskWrapper
-        self.observation_space = rl_wrapper.observation_space
+        # Use observation space directly from RLTaskEnv
+        self.observation_space = rl_env.observation_space
 
-        super().__init__(rl_wrapper.num_envs, self.observation_space, self.action_space)
+        super().__init__(rl_env.num_envs, self.observation_space, self.action_space)
         self.render_mode = None
 
     ############################################################
@@ -63,17 +63,17 @@ class VecEnvWrapper(VecEnv):
     ############################################################
     def reset(self):
         """Reset the environment."""
-        obs, _ = self.rl_wrapper.reset()
+        obs, _ = self.rl_env.reset()
         return obs.cpu().numpy()
 
     def step_async(self, actions: np.ndarray) -> None:
         """Asynchronously step the environment."""
         # Convert numpy actions to torch
-        self.pending_actions = torch.tensor(actions, device=self.rl_wrapper.device, dtype=torch.float32)
+        self.pending_actions = torch.tensor(actions, device=self.rl_env.device, dtype=torch.float32)
 
     def step_wait(self):
         """Wait for the step to complete."""
-        obs, reward, terminated, time_out, info = self.rl_wrapper.step(self.pending_actions)
+        obs, reward, terminated, time_out, info = self.rl_env.step(self.pending_actions)
 
         done = terminated | time_out
         # Convert to numpy for SB3
@@ -92,11 +92,11 @@ class VecEnvWrapper(VecEnv):
 
     def render(self):
         """Render the environment."""
-        return self.rl_wrapper.render()
+        return self.rl_env.render()
 
     def close(self):
         """Close the environment."""
-        self.rl_wrapper.close()
+        self.rl_env.close()
 
     def get_attr(self, attr_name, indices=None):
         """Get an attribute of the environment."""
@@ -118,7 +118,7 @@ class VecEnvWrapper(VecEnv):
 
 
 def train_ppo():
-    """Train PPO for reaching task using RLTaskWrapper."""
+    """Train PPO for reaching task using RLTaskEnv."""
 
     # Create scenario configuration
     scenario = ScenarioCfg(
@@ -129,17 +129,17 @@ def train_ppo():
         cameras=[],
     )
 
-    # Create RLTaskWrapper via registry
+    # Create RLTaskEnv via registry
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_wrapper = load_task(args.task, scenario, device=device)
+    rl_env = load_task(args.task, scenario, device=device)
 
     # Create VecEnv wrapper for SB3
-    env = VecEnvWrapper(rl_wrapper)
+    env = VecEnvWrapper(rl_env)
 
     log.info(f"Created environment with {env.num_envs} environments")
     log.info(f"Observation space: {env.observation_space}")
     log.info(f"Action space: {env.action_space}")
-    log.info(f"Max episode steps: {rl_wrapper.max_episode_steps}")
+    log.info(f"Max episode steps: {rl_env.max_episode_steps}")
 
     # PPO configuration
     model = PPO(
@@ -168,17 +168,16 @@ def train_ppo():
     # Inference and Save Video
     # Create new environment for inference
     scenario_inference = ScenarioCfg(
-        task=args.task,
         robots=[args.robot],
-        sim=args.sim,
+        simulator=args.sim,
         num_envs=1,
         headless=True,
         cameras=[],
     )
 
-    rl_wrapper_inference = load_task(args.task, scenario_inference, device=device)
-    rl_wrapper_inference.max_episode_steps = 500
-    env_inference = VecEnvWrapper(rl_wrapper_inference)
+    rl_env_inference = load_task(args.task, scenario_inference, device=device)
+    rl_env_inference.max_episode_steps = 500
+    env_inference = VecEnvWrapper(rl_env_inference)
 
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
 
@@ -187,7 +186,7 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = rl_wrapper_inference.env.get_states()
+    obs_orin = rl_env_inference.env.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(100):
@@ -195,7 +194,7 @@ def train_ppo():
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
 
-        obs_orin = rl_wrapper_inference.env.get_states()
+        obs_orin = rl_env_inference.env.get_states()
         obs_saver.add(obs_orin)
 
     obs_saver.save()
