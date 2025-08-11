@@ -39,7 +39,7 @@ class Args:
 
     ## Handlers
     sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
-    renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
+    renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaacsim"
 
     ## Others
     num_envs: int = 1
@@ -155,7 +155,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.renderer}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_render_{args.renderer}.mp4")
 obs_saver.add(obs)
 
 step = 0
