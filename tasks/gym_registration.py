@@ -4,31 +4,32 @@ from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
-import rootutils
 import torch
 from gymnasium.envs.registration import register
-
-# Ensure project root is on sys.path when running scripts directly
-rootutils.setup_root(__file__, pythonpath=True)
-
-from importlib import import_module
-from pathlib import Path
+from gymnasium.vector import SyncVectorEnv
+from gymnasium.vector.vector_env import VectorEnv
 
 from scenario_cfg.scenario import ScenarioCfg
 
 from .registry import list_tasks, load_task
 
+# Try to use the canonical enum for autoreset if available; otherwise, fall back to True.
+try:
+    from gymnasium.vector.utils import AutoresetMode as _AutoresetMode
 
+    _AUTORESET_META = _AutoresetMode.AUTO_RESET
+except Exception:
+    _AUTORESET_META = True
+
+
+# -------------------------
+# Single-env Gym wrapper (for gym.make)
+# -------------------------
 class GymEnvWrapper(gym.Env):
-    """Gymnasium-compatible wrapper around RL task wrapper.
+    """Gymnasium-compatible single-environment wrapper around the RL task."""
 
-    This wrapper adapts the step/reset signatures and converts tensors to numpy
-    so it can be created via gym.make(). It is intended for single-env usage
-    (num_envs == 1). For vectorized training, prefer SB3 VecEnv on the original
-    RL wrapper.
-    """
-
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
+    # Expose render capability and declare autoreset mode for clearer integration.
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 30, "autoreset": _AUTORESET_META}
 
     def __init__(
         self,
@@ -36,8 +37,8 @@ class GymEnvWrapper(gym.Env):
         device: str | torch.device | None = None,
         **scenario_kwargs: Any,
     ) -> None:
-        if "num_envs" not in scenario_kwargs:
-            scenario_kwargs["num_envs"] = 1
+        # Force single environment when created via gym.make.
+        scenario_kwargs["num_envs"] = 1
 
         self._device = (
             torch.device(device)
@@ -61,103 +62,222 @@ class GymEnvWrapper(gym.Env):
 
     def step(self, action: np.ndarray):
         """Step the environment with the given action."""
+        # Convert numpy action to torch; RLTask expects torch at this boundary.
         if not isinstance(action, torch.Tensor):
             action_t = torch.as_tensor(action, dtype=torch.float32, device=self._device)
         else:
             action_t = action.to(self._device, dtype=torch.float32)
 
-        # ensure batch dim for single env
+        # Ensure batch dimension for single-env backend.
         if action_t.ndim == 1:
             action_t = action_t.unsqueeze(0)
 
-        obs, reward, terminated, time_out, info = self.env.step(action_t)
+        # Backend is expected to return (obs, reward, terminated, truncated, info).
+        obs, reward, terminated, truncated, info = self.env.step(action_t)
 
-        # convert
+        # Convert tensors to numpy for Gym API.
         if torch.is_tensor(obs):
             obs = obs.detach().cpu().numpy()
         if torch.is_tensor(reward):
             reward = float(reward.detach().cpu().numpy().reshape(-1)[0])
         if torch.is_tensor(terminated):
             terminated = bool(terminated.detach().cpu().numpy().reshape(-1)[0])
-        if torch.is_tensor(time_out):
-            time_out = bool(time_out.detach().cpu().numpy().reshape(-1)[0])
+        if torch.is_tensor(truncated):
+            truncated = bool(truncated.detach().cpu().numpy().reshape(-1)[0])
 
-        return obs[0], reward, terminated, time_out, info
+        return obs[0], reward, terminated, truncated, info
 
     def render(self):
         """Render the environment."""
         img = self.env.render()
-        return img
+        # Return a safe copy in case the backend reuses buffers.
+        return None if img is None else np.array(img, copy=True)
 
     def close(self):
         """Close the environment."""
         self.env.close()
 
 
-def _discover_tasks_modules() -> None:
-    """Import all task modules under the `tasks` package recursively.
+# -------------------------
+# VectorEnv adapter (native backend vectorization; for gym.make_vec)
+# -------------------------
+class GymVectorEnvAdapter(VectorEnv):
+    """VectorEnv adapter that leverages backend-native vectorization (single process, many envs)."""
 
-    This ensures modules containing `@register_task` are imported, so they
-    appear in the registry before Gym registration.
-    """
-    try:
-        base_pkg = __package__.split(".")[0]  # "tasks"
-        base_dir = Path(__file__).resolve().parent
-        for py_file in base_dir.rglob("*.py"):
-            if py_file.name in {"__init__.py", Path(__file__).name}:
-                continue
-            rel = py_file.relative_to(base_dir).with_suffix("")
-            dotted = ".".join((base_pkg, *rel.parts))
-            try:
-                import_module(dotted)
-            except Exception:
-                # ignore faulty modules during discovery
-                pass
-    except Exception:
-        pass
+    # Expose render capability and autoreset mode for vectorized environments.
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 30, "autoreset": _AUTORESET_META}
+
+    def __init__(
+        self,
+        task_name: str,
+        num_envs: int,
+        device: str | torch.device | None = None,
+        **scenario_kwargs: Any,
+    ) -> None:
+        # Delegate num_envs to the backend.
+        scenario_kwargs["num_envs"] = int(num_envs)
+
+        self._device = (
+            torch.device(device)
+            if device is not None
+            else (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
+        )
+
+        scenario = ScenarioCfg(**scenario_kwargs)
+        self.env = load_task(task_name, scenario, device=self._device)
+
+        # Use positional args to be compatible across Gymnasium versions.
+        try:
+            super().__init__(self.env.num_envs, self.env.observation_space, self.env.action_space)
+        except TypeError:
+            # Some versions may not define VectorEnv.__init__.
+            self.num_envs = self.env.num_envs
+            self.observation_space = self.env.observation_space
+            self.action_space = self.env.action_space
+
+        # Optional single-space hints consumed by some libraries.
+        self.single_observation_space = self.env.observation_space
+        self.single_action_space = self.env.action_space
+
+        self._pending_actions: torch.Tensor | None = None
+
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+        """Reset all environments and return initial observations."""
+        super().reset(seed=seed)
+        obs = self.env.reset()
+        if torch.is_tensor(obs):
+            obs = obs.detach().cpu().numpy()
+        # VectorEnv API: return (obs_batch, infos_list) where len(infos) == num_envs.
+        return obs, [{} for _ in range(self.num_envs)]
+
+    def step_async(self, actions: np.ndarray) -> None:
+        """Cache actions; convert to torch so RLTask sees a consistent type."""
+        if not isinstance(actions, torch.Tensor):
+            self._pending_actions = torch.as_tensor(actions, dtype=torch.float32, device=self._device)
+        else:
+            self._pending_actions = actions.to(self._device, dtype=torch.float32)
+
+    def step_wait(self):
+        """Wait for the step to complete and return results."""
+        if self._pending_actions is None:
+            raise RuntimeError("step_async must be called before step_wait.")
+
+        out = self.env.step(self._pending_actions)
+        if len(out) != 5:
+            raise RuntimeError(
+                f"Backend returned {len(out)} items; expected 5 (obs, reward, terminated, truncated, info)."
+            )
+
+        obs, reward, terminated, truncated, info = out  # 'truncated' may be 'timeout' internally.
+
+        # Convert outputs to numpy arrays to match VectorEnv API.
+        if torch.is_tensor(obs):
+            obs = obs.detach().cpu().numpy()
+        if torch.is_tensor(reward):
+            reward = reward.detach().cpu().numpy()
+        if torch.is_tensor(terminated):
+            terminated = terminated.detach().cpu().numpy().astype(bool)
+        if torch.is_tensor(truncated):
+            truncated = truncated.detach().cpu().numpy().astype(bool)
+
+        # Ensure infos is a list[dict] of length num_envs.
+        if info is None:
+            infos = [{} for _ in range(self.num_envs)]
+        elif isinstance(info, dict):
+            infos = [info.copy() for _ in range(self.num_envs)]
+        else:
+            infos = list(info)
+            if len(infos) != self.num_envs:
+                # Broadcast a single dict if needed.
+                if len(infos) == 1 and isinstance(infos[0], dict):
+                    infos = [infos[0].copy() for _ in range(self.num_envs)]
+                else:
+                    raise RuntimeError(f"Expected {self.num_envs} infos, got {len(infos)}.")
+
+        # Clear pending actions.
+        self._pending_actions = None
+        return obs, reward, terminated, truncated, infos
+
+    def step(self, actions):
+        """Synchronous step composed from step_async + step_wait (required by Gym)."""
+        self.step_async(actions)
+        return self.step_wait()
+
+    def render(self):
+        """Render the environment."""
+        img = self.env.render()
+        return None if img is None else np.array(img, copy=True)
+
+    def close(self):
+        """Close the environment."""
+        self.env.close()
 
 
-def _make_entry_point(task_name: str) -> Callable[..., gym.Env]:
+# -------------------------
+# Entry points for registration
+# -------------------------
+def _make_entry_point_single(task_name: str) -> Callable[..., gym.Env]:
+    """Entry point for gym.make(): always returns a single-env GymEnvWrapper."""
+
     def _factory(**kwargs: Any) -> gym.Env:
         device = kwargs.pop("device", None)
+        # Ignore any external num_envs to keep gym.make() single-env.
+        kwargs.pop("num_envs", None)
         return GymEnvWrapper(task_name=task_name, device=device, **kwargs)
 
     return _factory
 
 
+def _make_vector_entry_point(task_name: str) -> Callable[..., VectorEnv]:
+    """Entry point for gym.make_vec(): returns a native-vectorized VectorEnv."""
+
+    def _factory(**kwargs: Any) -> VectorEnv:
+        device = kwargs.pop("device", None)
+        num_envs = int(kwargs.pop("num_envs", 1) or 1)
+        prefer_backend_vectorization = bool(kwargs.pop("prefer_backend_vectorization", True))
+
+        # Optional fallback to SyncVectorEnv for non-native backends or debugging.
+        if not prefer_backend_vectorization and num_envs > 1:
+
+            def _one_env_factory():
+                return GymEnvWrapper(task_name=task_name, device=device, **kwargs)
+
+            return SyncVectorEnv([_one_env_factory for _ in range(num_envs)])
+
+        return GymVectorEnvAdapter(task_name=task_name, num_envs=num_envs, device=device, **kwargs)
+
+    return _factory
+
+
+# -------------------------
+# Registration helpers
+# -------------------------
 def register_all_tasks_with_gym(prefix: str = "RoboVerse/") -> None:
-    """Register all tasks from registry with Gymnasium.
-
-    Each task name will be exposed as an env id f"{prefix}{task_name}-v0".
-    Example usage:
-
-        from tasks.gym_registration import register_all_tasks_with_gym
-        register_all_tasks_with_gym()
-        env = gym.make("RoboVerse/reach.origin-v0", robots=["franka"], simulator="mujoco", num_envs=1)
-    """
-    # ensure tasks are discovered
-    _discover_tasks_modules()
-
+    """Register all tasks with both single-env and vectorized entry points."""
     for task_name in list_tasks():
-        env_id = f"{prefix}{task_name}-v0"
-        # avoid duplicate registration in hot-reload/dev
+        env_id = f"{prefix}{task_name}"
         try:
-            register(id=env_id, entry_point=_make_entry_point(task_name))
+            register(
+                id=env_id,
+                entry_point=_make_entry_point_single(task_name),
+                vector_entry_point=_make_vector_entry_point(task_name),
+            )
         except Exception:
-            # ignore if already registered
+            # Ignore duplicate registrations during hot reload.
             pass
 
 
 def register_task_with_gym(task_name: str, env_id: str | None = None) -> str:
-    """Register a single task with Gymnasium.
-
-    Returns the env id.
-    """
+    """Register a single task with both single-env and vectorized entry points."""
     if env_id is None:
-        env_id = f"RoboVerse/{task_name}-v0"
+        env_id = f"RoboVerse/{task_name}"
     try:
-        register(id=env_id, entry_point=_make_entry_point(task_name))
+        register(
+            id=env_id,
+            entry_point=_make_entry_point_single(task_name),
+            vector_entry_point=_make_vector_entry_point(task_name),
+        )
     except Exception:
-        # ignore if already registered
+        # Ignore duplicate registrations during hot reload.
         pass
     return env_id

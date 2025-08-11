@@ -122,9 +122,9 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
-from roboverse_learn.tasks.registry import load_task
 from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.scenario import ScenarioCfg
+from tasks.registry import load_task
 
 
 def main() -> None:

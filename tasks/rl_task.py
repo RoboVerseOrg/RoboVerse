@@ -220,7 +220,3 @@ class RLTaskEnv(BaseTaskEnv):
         """Check if any envs are terminated."""
         # default: no termination
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-
-
-# Backward-compatible alias
-RLTaskWrapper = RLTaskEnv
