@@ -21,6 +21,8 @@ class BaseTaskEnv:
 
     This env is used to wrap the environment to form a complete task.
 
+    The default scenario config is defined by the class variable "scenario". One can modify it and pass it to the __init__ method.
+
     To write your own task, you need to inherit this class and override the following methods:
     - _observation
     - _privileged_observation
@@ -43,9 +45,11 @@ class BaseTaskEnv:
     - close
     """
 
+    scenario: ScenarioCfg | None = None
+
     def __init__(
         self,
-        scenario: BaseSimHandler | ScenarioCfg,
+        scenario: BaseSimHandler | ScenarioCfg | None = None,
         device: str | torch.device | None = None,
     ) -> None:
         """Initialize the task env.
@@ -54,8 +58,8 @@ class BaseTaskEnv:
             scenario: The scenario configuration
             device: The device to use for the environment. If None, it will use "cuda" if available, otherwise "cpu".
         """
-        self.scenario = scenario
-        self._load_task_config(scenario)
+        if scenario is not None:
+            self.scenario = scenario
         self.num_envs = scenario.num_envs
         self._initial_states = self._get_initial_states()
         if isinstance(scenario, BaseSimHandler):
@@ -64,10 +68,6 @@ class BaseTaskEnv:
             self._instantiate_env(scenario)
         self.device = device
         self._prepare_callbacks()
-
-    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
-        """Optionally modify `scenario` before base init."""
-        return scenario
 
     def _get_initial_states(self) -> list[dict]:
         """Return per-env initial states (override in subclasses)."""

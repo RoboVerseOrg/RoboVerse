@@ -89,19 +89,19 @@ class BaseLocomotionReward:
 class BaseLocomotionEnv(RLTaskEnv):
     """locomotion reward with _move_speed = 0."""
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> None:
-        self.robot_name = scenario.robots[0] if isinstance(scenario.robots[0], str) else scenario.robots[0].name
-        self.max_episode_steps = 800
-        scenario.sim_params = SimParamCfg(
+    scenario = ScenarioCfg(
+        objects=[],
+        robots=["h1"],
+        sim_params=SimParamCfg(
             dt=0.002,
             contact_offset=0.01,
             num_position_iterations=8,
             num_velocity_iterations=0,
             bounce_threshold_velocity=0.5,
             replace_cylinder_with_capsule=True,
-        )
-        scenario.decimation = 10
-        return scenario
+        ),
+        decimation=10,
+    )
 
     def _observation(self, states: TensorState) -> torch.Tensor:
         results_state = []
@@ -160,39 +160,60 @@ class BaseLocomotionEnv(RLTaskEnv):
 class WalkEnv(BaseLocomotionEnv):
     """Walking task for humanoid robots."""
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> None:
-        # start from standing configuration
-        scenario = super()._load_task_config(scenario)
-        # override differences for walking
+    # def _load_task_config(self, scenario: ScenarioCfg) -> None:
+    #     # start from standing configuration
+    #     scenario = super()._load_task_config(scenario)
+    #     # override differences for walking
+    #     self.max_episode_steps = 1000
+    #     self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
+    #     self.reward_weights = [1.0]
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None):
+        super().__init__(scenario, device)
+
         self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
         self.reward_weights = [1.0]
-        return scenario
 
 
 @register_task("humanoid.run", "run", "h1.run")
 class RunEnv(BaseLocomotionEnv):
     """Run task for humanoid robots."""
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> None:
-        # start from standing configuration
-        scenario = super()._load_task_config(scenario)
-        # override differences for walking
+    # def _load_task_config(self, scenario: ScenarioCfg) -> None:
+    #     # start from standing configuration
+    #     scenario = super()._load_task_config(scenario)
+    #     # override differences for walking
+    #     self.max_episode_steps = 1000
+    #     self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
+    #     self.reward_weights = [1.0]
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None):
+        super().__init__(scenario, device)
+
         self.max_episode_steps = 1000
         self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
         self.reward_weights = [1.0]
-        return scenario
 
 
 @register_task("humanoid.stand", "stand", "h1.stand")
 class StandEnv(BaseLocomotionEnv):
     """Stand task for humanoid robots."""
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> None:
-        # start from standing configuration
-        scenario = super()._load_task_config(scenario)
-        # override differences for walking
+    # def _load_task_config(self, scenario: ScenarioCfg) -> None:
+    #     # start from standing configuration
+    #     scenario = super()._load_task_config(scenario)
+    #     # override differences for walking
+    #     self.max_episode_steps = 1000
+    #     self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
+    #     self.reward_weights = [1.0]
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None):
+        super().__init__(scenario, device)
+
         self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
         self.reward_weights = [1.0]
-        return scenario

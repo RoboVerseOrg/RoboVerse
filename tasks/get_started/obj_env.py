@@ -5,6 +5,7 @@ import torch
 from metasim.constants import PhysicStateType
 from metasim.utils.state import TensorState
 from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from scenario_cfg.scenario import ScenarioCfg
 from tasks.base import BaseTaskEnv
 from tasks.registry import register_task
 
@@ -16,12 +17,8 @@ class ObjectEnv(BaseTaskEnv):
     This class provides common functionality for all object tasks.
     """
 
-    def _load_task_config(self, scenario) -> None:
-        """Configure common object task parameters."""
-        super()._load_task_config(scenario)
-
-        # Common configuration for object tasks
-        scenario.objects = [
+    scenario = ScenarioCfg(
+        objects=[
             PrimitiveCubeCfg(
                 name="cube",
                 size=(0.1, 0.1, 0.1),
@@ -49,10 +46,9 @@ class ObjectEnv(BaseTaskEnv):
                 urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
                 mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
             ),
-        ]
-        self.reward_functions = []
-        self.max_episode_steps = 100
-        return scenario
+        ],
+        robots=["franka"],
+    )
 
     def _get_initial_states(self) -> list[dict]:
         """Get the initial states of the environment."""
