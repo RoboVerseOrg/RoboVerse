@@ -9,8 +9,7 @@ if TYPE_CHECKING:
     from scenario_cfg.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
-from metasim.types import DictEnvState, TensorState, Action
-
+from metasim.types import Action, DictEnvState, TensorState
 
 
 class BaseSimHandler(ABC):
@@ -62,6 +61,13 @@ class BaseSimHandler(ABC):
         """Set the states of the environment."""
         self._set_states(states, env_ids)
 
+    # @abstractmethod
+    def _set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        """Set the dof targets of the environment.
+        For a new simulator, you should implement this method.
+        """
+        raise NotImplementedError
+
     def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
         """Set the dof targets of the robot.
 
@@ -69,8 +75,7 @@ class BaseSimHandler(ABC):
             obj_name (str): The name of the robot
             actions (list[Action]): The target actions for the robot
         """
-        raise NotImplementedError
-
+        self._set_dof_targets(obj_name, actions)
 
     ############################################################
     ## Get states
