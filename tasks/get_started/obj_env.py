@@ -95,6 +95,7 @@ class ObjectEnv(BaseTaskEnv):
                     }
                 },
             }
+            for _ in range(self.num_envs)
         ]
 
     def _observation(self, states: TensorState) -> torch.Tensor:

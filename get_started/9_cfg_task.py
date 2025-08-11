@@ -29,10 +29,10 @@ from tasks.gym_registration import register_all_tasks_with_gym
 class Args:
     """Arguments for the static scene."""
 
-    task: str = "reach_origin"
+    task: str = "obj_env"
     robot: str = "franka"
     ## Handlers
-    sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacgym"
 
     ## Others
     num_envs: int = 1
@@ -65,7 +65,7 @@ env = gym.make_vec(
 
 obs, info = env.reset()
 robot = env.scenario.robots[0]
-for step_i in range(100):
+for step_i in range(10000):
     # batch actions: (num_envs, act_dim)
     actions = [
         {
