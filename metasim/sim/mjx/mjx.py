@@ -272,7 +272,7 @@ class MJXHandler(BaseSimHandler):
         self._data = self._forward(self._mjx_model, self._data)
 
     def close(self):
-        if self._viewer is not None:
+        if hasattr(self, "_viewer") and self._renderer is not None:
             self._viewer.close()
 
     def _ensure_id_cache(self, ts: TensorState):
