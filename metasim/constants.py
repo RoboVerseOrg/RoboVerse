@@ -28,5 +28,3 @@ class SimType(enum.Enum):
     SAPIEN3 = "sapien3"
     BLENDER = "blender"
     MJX = "mjx"
-
-

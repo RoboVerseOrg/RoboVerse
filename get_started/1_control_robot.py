@@ -37,8 +37,13 @@ if __name__ == "__main__":
 
         robot: str = "franka"
 
+<<<<<<< HEAD
         ## Handlers
         sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+=======
+    ## Handlers
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+>>>>>>> 749594d (update camera pose)
 
         ## Others
         num_envs: int = 1

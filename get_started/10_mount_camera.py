@@ -37,7 +37,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
 
     ## Others
     num_envs: int = 1
@@ -241,7 +241,7 @@ init_states = [
 ]
 env.launch()
 env.set_states(init_states)
-obs = env.get_obs()
+obs = env.get_states()
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -268,9 +268,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    env.set_actions(actions)
+    env.set_dof_targets(robot.name, actions)
     env.simulate()
-    obs = env.get_obs()
+    obs = env.get_states()
     obs_saver.add(obs)
     step += 1
 

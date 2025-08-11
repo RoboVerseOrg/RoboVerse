@@ -51,6 +51,8 @@ def main():
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_sim_env_class
+    from scenario_cfg.cameras import PinholeCameraCfg
+    from scenario_cfg.scenario import ScenarioCfg
 
     camera = PinholeCameraCfg(
         name="camera",

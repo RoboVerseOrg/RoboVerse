@@ -3,10 +3,12 @@ import os
 import torch
 from loguru import logger as log
 
-# from metasim.scenario.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
-from metasim.scenario.cameras import BaseCameraCfg, PinholeCameraCfg
-from metasim.scenario.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
-from metasim.scenario.objects import (
+from metasim.utils.math import convert_camera_frame_orientation_convention
+
+# from scenario_cfg.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
+from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
+from scenario_cfg.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
+from scenario_cfg.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
     PrimitiveCubeCfg,
@@ -15,8 +17,7 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from metasim.scenario.robot import RobotCfg
-from metasim.utils.math import convert_camera_frame_orientation_convention
+from scenario_cfg.robots import BaseRobotCfg
 
 try:
     from .empty_env import EmptyEnv

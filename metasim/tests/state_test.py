@@ -1,7 +1,8 @@
-"""This script is used to test the static scene."""
+"""This script is used to test the consistency of `set_states` and `get_states`."""
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 try:
@@ -9,43 +10,30 @@ try:
 except ImportError:
     pass
 
-import os
 
-import imageio
-import rootutils
 import torch
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
 from metasim.constants import PhysicStateType, SimType
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.state import state_tensor_to_nested
 from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from scenario_cfg.render import RenderCfg
 from scenario_cfg.scenario import ScenarioCfg
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass
 class Args:
-    """Arguments for the static scene."""
-
     robot: str = "franka"
-    render: RenderCfg = RenderCfg()
-
-    ## Handlers
-    sim: Literal["isaacsim"] = "isaacsim"
-
-    ## Others
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaacsim"
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     def __post_init__(self):
-        """Post-initialization configuration."""
         log.info(f"Args: {self}")
 
 
@@ -55,10 +43,10 @@ args = tyro.cli(Args)
 scenario = ScenarioCfg(
     robots=[args.robot],
     simulator=args.sim,
-    render=args.render,
     headless=args.headless,
     num_envs=args.num_envs,
 )
+
 
 # add cameras
 scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
@@ -93,14 +81,13 @@ scenario.objects = [
         mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
+from metasim.utils.setup_util import get_sim_handler_class
 
-
-log.info(f"Using simulator: {scenario.simulator}")
+log.info(f"Using simulator: {args.sim}")
 env_class = get_sim_handler_class(SimType(scenario.simulator))
 env = env_class(scenario)
-
-
 env.launch()
+
 init_states = [
     {
         "objects": {
@@ -141,10 +128,36 @@ init_states = [
         },
     }
 ]
+
 env.set_states(init_states)
-env.refresh_render()
-obs = env.get_states(mode="dict")
-os.makedirs("get_started/output", exist_ok=True)
-save_path = f"get_started/output/6_advanced_rendering_{args.sim}_{args.render.mode}.png"
-log.info(f"Saving image to {save_path}")
-imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())
+states = state_tensor_to_nested(env, env.get_states())
+
+
+def assert_close(a, b, atol=1e-3):
+    if isinstance(a, torch.Tensor):
+        assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b}"
+    elif isinstance(a, float):
+        assert math.isclose(a, b, abs_tol=atol), f"a: {a} != b: {b}"
+    else:
+        raise ValueError(f"Unsupported type: {type(a)}")
+
+
+for i in range(args.num_envs):
+    assert_close(states[i]["objects"]["cube"]["pos"], init_states[i]["objects"]["cube"]["pos"])
+    assert_close(states[i]["objects"]["sphere"]["pos"], init_states[i]["objects"]["sphere"]["pos"])
+    assert_close(states[i]["objects"]["bbq_sauce"]["pos"], init_states[i]["objects"]["bbq_sauce"]["pos"])
+    assert_close(states[i]["objects"]["box_base"]["pos"], init_states[i]["objects"]["box_base"]["pos"])
+    assert_close(states[i]["objects"]["box_base"]["rot"], init_states[i]["objects"]["box_base"]["rot"])
+    assert_close(states[i]["robots"]["franka"]["pos"], init_states[i]["robots"]["franka"]["pos"])
+    assert_close(states[i]["robots"]["franka"]["rot"], init_states[i]["robots"]["franka"]["rot"])
+    assert_close(
+        states[i]["objects"]["box_base"]["dof_pos"]["box_joint"],
+        init_states[i]["objects"]["box_base"]["dof_pos"]["box_joint"],
+    )
+    for k in states[i]["robots"]["franka"]["dof_pos"].keys():
+        assert_close(
+            states[i]["robots"]["franka"]["dof_pos"][k],
+            init_states[i]["robots"]["franka"]["dof_pos"][k],
+        )
+
+log.info("States are consistent!")

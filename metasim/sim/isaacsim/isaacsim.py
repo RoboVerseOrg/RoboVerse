@@ -12,9 +12,8 @@ from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
-from metasim.utils.math import convert_camera_frame_orientation_convention
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
+from scenario_cfg.cameras import PinholeCameraCfg
 from scenario_cfg.objects import (
     ArticulationObjCfg,
     BaseArticulationObjCfg,
@@ -57,7 +56,6 @@ class IsaacsimHandler(BaseSimHandler):
         """
         Initializes the isaacsim simulation environment.
         """
-        # launch application
         from isaaclab.app import AppLauncher
 
         parser = argparse.ArgumentParser()
@@ -110,17 +108,33 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
+    def _update_camera_pose(self) -> None:
+        for camera in self.cameras:
+            if isinstance(camera, PinholeCameraCfg):
+                # set look at position using isaaclab's api
+                if camera.mount_to is None:
+                    camera_inst = self.scene.sensors[camera.name]
+                    position_tensor = torch.tensor(camera.pos, device=self.device).unsqueeze(0)
+                    position_tensor = position_tensor.repeat(self.num_envs, 1)
+                    camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
+                    camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
+                    camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
+                return
+            else:
+                raise ValueError(f"Unsupported camera type: {type(camera)}")
+
     def launch(self) -> None:
         self._init_scene()
+        self._load_robots()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
-        self._load_robots()
         self._load_lights()
         self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
+        self._update_camera_pose()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
 
@@ -281,7 +295,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.step(render=False)
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
-        self._update_tiled_camera_pose(self.cameras)
         self.scene.update(dt=self.dt)
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
@@ -478,7 +491,6 @@ class IsaacsimHandler(BaseSimHandler):
         log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
 
-
     def _load_sensors(self) -> None:
         # TODO move it into query
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
@@ -491,12 +503,30 @@ class IsaacsimHandler(BaseSimHandler):
 
     def _load_lights(self) -> None:
         import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
 
-        light_config1 = sim_utils.DomeLightCfg(
-            intensity=1000.0,
-            color=(0.98, 0.95, 0.88),
+        spawn_light(
+            "/World/Light",
+            sim_utils.DistantLightCfg(intensity=500.0, angle=0.53),
+            orientation=(1.0, 0.0, 0.0, 0.0),
+            translation=(0, 0, 10),
         )
-        light_config1.func("/World/DomeLight", light_config1, translation=(1, 0, 10))
+
+    # def _load_ground(self) -> None:
+    #     import isaaclab.sim as sim_utils
+    #     cfg_ground = sim_utils.GroundPlaneCfg(
+    #         physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=1.0, dynamic_friction=1.0),
+    #         color=(1.0,1.0,1.0),
+    #     )
+    #     cfg_ground.func("/World/ground", cfg_ground)
+    # import isaacsim.core.experimental.utils.prim as prim_utils
+    # import omni
+    # from pxr import Sdf, UsdShade
+    # ground_prim = prim_utils.get_prim_at_path("/World/ground")
+    # material = UsdShade.MaterialBindingAPI(ground_prim).GetDirectBinding().GetMaterial()
+    # shader = UsdShade.Shader(omni.usd.get_shader_from_material(material, get_prim=True))
+    # # Correspond to Shader -> Inputs -> UV -> Texture Tiling (in Isaac Sim 4.2.0)
+    # shader.CreateInput("texture_scale", Sdf.ValueTypeNames.Float2).Set((10,10))
 
     def _get_pose(
         self, obj_name: str, obj_subpath: str | None = None, env_ids: list[int] | None = None
@@ -599,7 +629,6 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sensors import TiledCamera, TiledCameraCfg
 
-        ## See https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sensors.html#tile-rendered-usd-camera
         data_type_map = {
             "rgb": "rgb",
             "depth": "depth",
@@ -608,12 +637,13 @@ class IsaacsimHandler(BaseSimHandler):
         }
         if camera.mount_to is None:
             prim_path = f"/World/envs/env_.*/{camera.name}"
-            offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+            rot = (1.0, 0.0, 0.0, 0.0)
+            offset = TiledCameraCfg.OffsetCfg(pos=camera.pos, rot=rot, convention="world")
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
             offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
 
-        self.scene.sensors[camera.name] = TiledCamera(
+        camera_inst = TiledCamera(
             TiledCameraCfg(
                 prim_path=prim_path,
                 offset=offset,
@@ -630,15 +660,7 @@ class IsaacsimHandler(BaseSimHandler):
                 colorize_instance_id_segmentation=False,
             )
         )
-
-    def _update_tiled_camera_pose(self, cameras: list[BaseCameraCfg]):
-        for camera in cameras:
-            camera_inst = self.scene.sensors[camera.name]
-            pos, quat = camera_inst._view.get_world_poses()
-            camera_inst._data.pos_w = pos
-            camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
-                quat, origin="opengl", target="world"
-            )
+        self.scene.sensors[camera.name] = camera_inst
 
     def refresh_render(self) -> None:
         for sensor in self.scene.sensors.values():

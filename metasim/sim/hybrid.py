@@ -9,8 +9,9 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import TensorState, Action
+from metasim.types import Action, TensorState
 from metasim.utils.state import TensorState, state_tensor_to_nested
+
 
 class HybridSimHandler(BaseSimHandler):
     """Hybrid simulation handler that uses one simulator for physics and another for rendering."""

@@ -53,6 +53,7 @@ class ObsSaver:
             os.makedirs(os.path.dirname(self.video_path), exist_ok=True)
             iio.mimsave(self.video_path, self.images, fps=30)
 
+
 try:
     import open3d as o3d
 except ImportError:
