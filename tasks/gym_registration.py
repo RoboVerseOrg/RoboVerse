@@ -62,6 +62,8 @@ class GymEnvWrapper(gym.Env):
         obs = self.env.reset()
         if torch.is_tensor(obs):
             obs = obs.detach().cpu().numpy()
+        if obs.ndim == 2 and obs.shape[0] == 1:
+            obs = obs[0]
         return obs, {}
 
     def step(self, action: np.ndarray):

@@ -34,7 +34,7 @@ class Args:
     sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mjx"
 
     ## Others
-    num_envs: int = 100
+    num_envs: int = 16
     headless: bool = True
     device: str = "cuda"
 
@@ -59,7 +59,7 @@ env = gym.make_vec(
     headless=args.headless,
     cameras=[],
     device=args.device,
-    prefer_backend_vectorization=True,
+    prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
 )
 
 obs, info = env.reset()
