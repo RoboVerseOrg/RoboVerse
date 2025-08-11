@@ -3,23 +3,23 @@ from __future__ import annotations
 
 import argparse
 import os
-
-import torch
 from copy import deepcopy
 
+import torch
 from loguru import logger as log
-from metasim.types import DictEnvState
-from metasim.utils.dict import deep_get
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
-from metasim.utils.math import convert_camera_frame_orientation_convention
+
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
+from metasim.types import DictEnvState
+from metasim.utils.dict import deep_get
+from metasim.utils.math import convert_camera_frame_orientation_convention
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
 from scenario_cfg.objects import (
-    BaseRigidObjCfg,
-    BaseArticulationObjCfg,
     ArticulationObjCfg,
+    BaseArticulationObjCfg,
     BaseObjCfg,
+    BaseRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveCylinderCfg,
     PrimitiveFrameCfg,
@@ -51,7 +51,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scenario_cfg = scenario_cfg
         self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._step_counter = 0
-        self.render_interval = 4 #TODO: fix hardcode
+        self.render_interval = 4  # TODO: fix hardcode
 
     def _init_scene(self) -> None:
         """
@@ -59,6 +59,7 @@ class IsaacsimHandler(BaseSimHandler):
         """
         # launch application
         from isaaclab.app import AppLauncher
+
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
@@ -66,10 +67,10 @@ class IsaacsimHandler(BaseSimHandler):
         args.headless = self.headless
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app
-        
+
         # physics context
-        from isaaclab.sim import SimulationContext
-        from isaaclab.sim import PhysxCfg, SimulationCfg
+        from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
+
         sim_config: SimulationCfg = SimulationCfg(
             device="cuda:0",
             render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
@@ -91,7 +92,6 @@ class IsaacsimHandler(BaseSimHandler):
             num_envs=self._num_envs, env_spacing=self.scenario.env_spacing
         )
         self.scene = InteractiveScene(scene_config)
-
 
     def _load_robots(self) -> None:
         # TODO support multiple robots
@@ -117,15 +117,13 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_robots()
 
-
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self._load_lights()
-        
+
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
-
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
@@ -168,7 +166,6 @@ class IsaacsimHandler(BaseSimHandler):
                             joint_pos, env_ids=torch.tensor(env_ids, device=self.device)
                         )
                         robot_inst.write_data_to_sim()
-
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
@@ -250,9 +247,8 @@ class IsaacsimHandler(BaseSimHandler):
         sensor_states = {}
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
-
     def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
-        #TODO: support set torque
+        # TODO: support set torque
         self._actions_cache = actions
         if isinstance(actions, torch.Tensor):
             action_tensor_all = actions
@@ -289,11 +285,11 @@ class IsaacsimHandler(BaseSimHandler):
         self._update_tiled_camera_pose(self.cameras)
         self.scene.update(dt=self.dt)
 
-
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
         from isaaclab.actuators import ImplicitActuatorCfg
-        from isaaclab.assets import Articulation, ArticulationCfg, RigidObject, RigidObjectCfg
+        from isaaclab.assets import Articulation, ArticulationCfg
+
         cfg = ArticulationCfg(
             spawn=sim_utils.UsdFileCfg(
                 usd_path=robot.usd_path,
@@ -314,13 +310,12 @@ class IsaacsimHandler(BaseSimHandler):
         cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
         cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
         cfg.spawn.articulation_props.enabled_self_collisions = robot.enabled_self_collisions
-        # init_state = ArticulationCfg.InitialStateCfg(
-        #     pos=tuple(self.robot_config.init_state.pos),
-        #     joint_pos={
-        #         joint_name: joint_angle for joint_name, joint_angle in default_joint_angles.items()
-        #     },
-        #     joint_vel={".*": 0.0},
-        # )
+        init_state = ArticulationCfg.InitialStateCfg(
+            pos=[0.0, 0.0, 0.0],
+            joint_pos=robot.default_joint_positions,
+            joint_vel={".*": 0.0},
+        )
+        cfg.init_state = init_state
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
@@ -330,6 +325,7 @@ class IsaacsimHandler(BaseSimHandler):
         """Add an object to the scene."""
         import isaaclab.sim as sim_utils
         from isaaclab.assets import Articulation, ArticulationCfg, RigidObject, RigidObjectCfg
+
         assert isinstance(obj, BaseObjCfg)
         prim_path = f"/World/envs/env_.*/{obj.name}"
 
@@ -436,9 +432,10 @@ class IsaacsimHandler(BaseSimHandler):
         raise ValueError(f"Unsupported object type: {type(obj)}")
 
     def _load_terrain(self) -> None:
-        #TODO support multiple terrains cfg
+        # TODO support multiple terrains cfg
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainImporterCfg
+
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
             terrain_type="plane",
@@ -459,16 +456,18 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain.env_origins = self.terrain.terrain_origins
 
     def _load_sensors(self) -> None:
-        #TODO move it into query
-        from isaaclab.sensors import ContactSensorCfg, ContactSensor
+        # TODO move it into query
+        from isaaclab.sensors import ContactSensor, ContactSensorCfg
+
         contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
             prim_path="/World/envs/env_.*/Robot/.*", history_length=3, update_period=0.005, track_air_time=True
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
-    
+
     def _load_lights(self) -> None:
         import isaaclab.sim as sim_utils
+
         light_config1 = sim_utils.DomeLightCfg(
             intensity=1000.0,
             color=(0.98, 0.95, 0.88),
@@ -478,7 +477,6 @@ class IsaacsimHandler(BaseSimHandler):
     def _get_pose(
         self, obj_name: str, obj_subpath: str | None = None, env_ids: list[int] | None = None
     ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
-
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -499,11 +497,9 @@ class IsaacsimHandler(BaseSimHandler):
         assert rot.shape == (len(env_ids), 4)
         return pos, rot
 
-
     @property
     def device(self) -> torch.device:
         return self._device
-    
 
     def _set_object_pose(
         self,
@@ -542,7 +538,6 @@ class IsaacsimHandler(BaseSimHandler):
         )  # ! critical
         obj_inst.write_data_to_sim()
 
-
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.scene.articulations[obj_name].joint_names)
@@ -551,7 +546,6 @@ class IsaacsimHandler(BaseSimHandler):
             return joint_names
         else:
             return []
-
 
     def _set_object_joint_pos(
         self,
@@ -568,7 +562,6 @@ class IsaacsimHandler(BaseSimHandler):
         obj_inst.write_joint_state_to_sim(pos, vel, env_ids=torch.tensor(env_ids, device=self.device))
         obj_inst.write_data_to_sim()
 
-
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = deepcopy(self.scene.articulations[obj_name].body_names)
@@ -577,7 +570,6 @@ class IsaacsimHandler(BaseSimHandler):
             return body_names
         else:
             return []
-
 
     def _add_pinhole_camera(self, camera: PinholeCameraCfg) -> None:
         import isaaclab.sim as sim_utils
