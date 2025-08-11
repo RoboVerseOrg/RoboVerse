@@ -36,10 +36,10 @@ class BaseTaskEnv:
     - reset_callback: Called when the environment is reset
     - close_callback: Called when the environment is closed
 
-    Some methods are private and usually you should not override them.
-    - __pre_physics_step
-    - __physics_step
-    - __post_physics_step
+    Some methods you usually should not override.
+    - step
+    - reset
+    - close
     """
 
     def __init__(self, scenario: BaseSimHandler | ScenarioCfg) -> None:
