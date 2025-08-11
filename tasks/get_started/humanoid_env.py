@@ -14,7 +14,7 @@ from metasim.utils.state import TensorState
 from scenario_cfg.scenario import ScenarioCfg
 from scenario_cfg.simulator_params import SimParamCfg
 from tasks.registry import register_task
-from tasks.rl_task import RLTaskWrapper
+from tasks.rl_task import RLTaskEnv
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -85,8 +85,8 @@ class BaseLocomotionReward:
         return (stable * move_term).float()
 
 
-# ---------- task wrapper ----------
-class BaseLocomotionTask(RLTaskWrapper):
+# ---------- task env ----------
+class BaseLocomotionEnv(RLTaskEnv):
     """locomotion reward with _move_speed = 0."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -114,37 +114,41 @@ class BaseLocomotionTask(RLTaskWrapper):
         return torch.cat(results_state, dim=1)
 
     def _get_initial_states(self) -> list[dict] | None:
-        init = {
-            "objects": {},
-            "robots": {
-                self.robot_name: {
-                    "dof_pos": {
-                        "left_hip_yaw": 0.0,
-                        "left_hip_roll": 0.0,
-                        "left_hip_pitch": -0.4,
-                        "left_knee": 0.8,
-                        "left_ankle": -0.4,
-                        "right_hip_yaw": 0.0,
-                        "right_hip_roll": 0.0,
-                        "right_hip_pitch": -0.4,
-                        "right_knee": 0.8,
-                        "right_ankle": -0.4,
-                        "torso": 0.0,
-                        "left_shoulder_pitch": 0.0,
-                        "left_shoulder_roll": 0.0,
-                        "left_shoulder_yaw": 0.0,
-                        "left_elbow": 0.0,
-                        "right_shoulder_pitch": 0.0,
-                        "right_shoulder_roll": 0.0,
-                        "right_shoulder_yaw": 0.0,
-                        "right_elbow": 0.0,
-                    },
-                    "pos": torch.tensor([0.0, 0.0, 0.98]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                }
-            },
-        }
-        return [init]
+        init = [
+            {
+                "objects": {},
+                "robots": {
+                    self.robot_name: {
+                        "dof_pos": {
+                            "left_hip_yaw": 0.0,
+                            "left_hip_roll": 0.0,
+                            "left_hip_pitch": -0.4,
+                            "left_knee": 0.8,
+                            "left_ankle": -0.4,
+                            "right_hip_yaw": 0.0,
+                            "right_hip_roll": 0.0,
+                            "right_hip_pitch": -0.4,
+                            "right_knee": 0.8,
+                            "right_ankle": -0.4,
+                            "torso": 0.0,
+                            "left_shoulder_pitch": 0.0,
+                            "left_shoulder_roll": 0.0,
+                            "left_shoulder_yaw": 0.0,
+                            "left_elbow": 0.0,
+                            "right_shoulder_pitch": 0.0,
+                            "right_shoulder_roll": 0.0,
+                            "right_shoulder_yaw": 0.0,
+                            "right_elbow": 0.0,
+                        },
+                        "pos": torch.tensor([0.0, 0.0, 0.98]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    }
+                },
+            }
+            for _ in range(self.num_envs)
+        ]
+
+        return init
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]
@@ -153,7 +157,7 @@ class BaseLocomotionTask(RLTaskWrapper):
 
 
 @register_task("humanoid.walk", "walk", "h1.walk")
-class WalkTask(BaseLocomotionTask):
+class WalkEnv(BaseLocomotionEnv):
     """Walking task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -167,7 +171,7 @@ class WalkTask(BaseLocomotionTask):
 
 
 @register_task("humanoid.run", "run", "h1.run")
-class RunTask(BaseLocomotionTask):
+class RunEnv(BaseLocomotionEnv):
     """Run task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:
@@ -181,7 +185,7 @@ class RunTask(BaseLocomotionTask):
 
 
 @register_task("humanoid.stand", "stand", "h1.stand")
-class StandTask(BaseLocomotionTask):
+class StandEnv(BaseLocomotionEnv):
     """Stand task for humanoid robots."""
 
     def _load_task_config(self, scenario: ScenarioCfg) -> None:

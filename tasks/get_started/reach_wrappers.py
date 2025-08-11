@@ -59,6 +59,7 @@ class ReachingEnv(RLTaskEnv):
                     }
                 },
             }
+            for _ in range(self.num_envs)
         ]
 
     def _observation(self, states: TensorState) -> torch.Tensor:

@@ -5,12 +5,12 @@ import torch
 from metasim.constants import PhysicStateType
 from metasim.utils.state import TensorState
 from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from tasks.base import BaseTaskEnv
 from tasks.registry import register_task
-from tasks.rl_task import RLTaskEnv
 
 
 @register_task("obj_env", "obj_env", "franka.obj_env")
-class ObjectEnv(RLTaskEnv):
+class ObjectEnv(BaseTaskEnv):
     """Base Env for object tasks.
 
     This class provides common functionality for all object tasks.
@@ -21,7 +21,7 @@ class ObjectEnv(RLTaskEnv):
         super()._load_task_config(scenario)
 
         # Common configuration for object tasks
-        self.objects = [
+        scenario.objects = [
             PrimitiveCubeCfg(
                 name="cube",
                 size=(0.1, 0.1, 0.1),
