@@ -592,7 +592,7 @@ class MujocoHandler(BaseSimHandler):
                         ).id
                         self.physics.data.ctrl[actuator_id] = effort[i]
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def set_dof_targets(self, obj_name, actions) -> None:
         """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
         self._actions_cache = actions
 
