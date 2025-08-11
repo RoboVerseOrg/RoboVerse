@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 import gymnasium as gym
 import numpy as np
 import torch
-from traitlets import Dict
 
 from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
@@ -38,10 +37,10 @@ class BaseTaskEnv:
     - reset_callback: Called when the environment is reset
     - close_callback: Called when the environment is closed
 
-    Some methods are private and usually you should not override them.
-    - __pre_physics_step
-    - __physics_step
-    - __post_physics_step
+    Some methods you usually should not override.
+    - step
+    - reset
+    - close
     """
 
     def __init__(
@@ -113,12 +112,69 @@ class BaseTaskEnv:
         """Get the time out of the environment."""
         return [False] * self.env.num_envs
 
-    def __pre_physics_step(self, actions: Action) -> Dict[str, Any]:
-        """Pre-physics step, apply transforms to actions and put actions into correct dict format.
+    # def __pre_physics_step(self, actions: Action) -> Dict[str, Any]:
+    #     """Pre-physics step, apply transforms to actions and put actions into correct dict format.
+
+    #     Args:
+    #         actions: The actions to take
+    #     """
+    #     for callback in self.pre_physics_step_callback:
+    #         callback(actions)
+
+    #     actions_dict = {
+    #         "robots": {
+    #             self.env.robots[0].name: {
+    #                 "dof_pos_target": {
+    #                     joint_name: action
+    #                     for joint_name, action in zip(self.env.get_joint_names(self.env.robots[0].name), actions)
+    #                 }
+    #             }
+    #         }
+    #     }
+
+    #     return actions_dict
+
+    # def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Info | None]:
+    #     """Physics step."""
+    #     # TODO: Use set_states() in new metasim handler
+    #     # self.env.set_states(actions_dict)
+
+    #     for robot in self.env.robots:
+    #         robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
+    #         self.env.set_dof_targets(robot.name, list(robot_actions.values()))
+
+    #     self.env.simulate()
+
+    #     return self.env.get_states(), None
+
+    # def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
+    #     """Post-physics step."""
+    #     for callback in self.post_physics_step_callback:
+    #         callback(env_states)
+
+    #     return (
+    #         self._observation(env_states),
+    #         self._reward(env_states),
+    #         self._terminated(env_states),
+    #         self._time_out(env_states),
+    #         {"privileged_observation": self._privileged_observation(env_states)},
+    #     )
+
+    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
+        """Step the environment.
 
         Args:
             actions: The actions to take
         """
+        # actions = self.__pre_physics_step(actions)
+        # env_states, _ = self.__physics_step(actions)
+        # obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
+
+        # info = {
+        #     "privileged_observation": priv_obs,
+        # }
+
+        # return obs, reward, terminated, time_out, info
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
@@ -133,50 +189,24 @@ class BaseTaskEnv:
             }
         }
 
-        return actions_dict
-
-    def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Info | None]:
-        """Physics step."""
-        # TODO: Use set_states() in new metasim handler
-        # self.env.set_states(actions_dict)
-
         for robot in self.env.robots:
             robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
             self.env.set_dof_targets(robot.name, list(robot_actions.values()))
 
         self.env.simulate()
 
-        return self.env.get_states(), None
+        env_states = self.env.get_states()
 
-    def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
-        """Post-physics step."""
         for callback in self.post_physics_step_callback:
             callback(env_states)
 
         return (
             self._observation(env_states),
-            self._privileged_observation(env_states),
             self._reward(env_states),
             self._terminated(env_states),
             self._time_out(env_states),
-            None,
+            {"privileged_observation": self._privileged_observation(env_states)},
         )
-
-    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
-        """Step the environment.
-
-        Args:
-            actions: The actions to take
-        """
-        actions = self.__pre_physics_step(actions)
-        env_states, _ = self.__physics_step(actions)
-        obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
-
-        info = {
-            "privileged_observation": priv_obs,
-        }
-
-        return obs, reward, terminated, time_out, info
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Info | None]:
         """Reset the environment. This base implementation does not do anything.
