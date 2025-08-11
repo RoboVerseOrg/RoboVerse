@@ -13,13 +13,11 @@ from scenario_cfg.scenario import ScenarioCfg
 
 from .registry import list_tasks, load_task
 
-# Try to use the canonical enum for autoreset if available; otherwise, fall back to True.
+# Use the official enum for autoreset mode (required to silence the warning)
 try:
-    from gymnasium.vector.utils import AutoresetMode as _AutoresetMode
-
-    _AUTORESET_META = _AutoresetMode.AUTO_RESET
+    from gymnasium.vector import AutoresetMode
 except Exception:
-    _AUTORESET_META = True
+    AutoresetMode = None  # Fallback won't silence the warning, but keeps compatibility
 
 
 # -------------------------
@@ -28,8 +26,8 @@ except Exception:
 class GymEnvWrapper(gym.Env):
     """Gymnasium-compatible single-environment wrapper around the RL task."""
 
-    # Expose render capability and declare autoreset mode for clearer integration.
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 30, "autoreset": _AUTORESET_META}
+    # Render metadata (class-level defaults)
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
 
     def __init__(
         self,
@@ -51,6 +49,12 @@ class GymEnvWrapper(gym.Env):
 
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
+
+        # Instance-level metadata; declare autoreset mode with the official enum
+        self.metadata = dict(getattr(self, "metadata", {}))
+        self.metadata["autoreset_mode"] = (
+            AutoresetMode.SAME_STEP if AutoresetMode is not None else "same-step"
+        )  # If enum missing, string fallback (may still warn on older Gymnasium)
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""
@@ -104,8 +108,8 @@ class GymEnvWrapper(gym.Env):
 class GymVectorEnvAdapter(VectorEnv):
     """VectorEnv adapter that leverages backend-native vectorization (single process, many envs)."""
 
-    # Expose render capability and autoreset mode for vectorized environments.
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 30, "autoreset": _AUTORESET_META}
+    # Render metadata (class-level defaults)
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
 
     def __init__(
         self,
@@ -140,6 +144,10 @@ class GymVectorEnvAdapter(VectorEnv):
         self.single_action_space = self.env.action_space
 
         self._pending_actions: torch.Tensor | None = None
+
+        # Instance-level metadata; declare autoreset mode with the official enum
+        self.metadata = dict(getattr(self, "metadata", {}))
+        self.metadata["autoreset_mode"] = AutoresetMode.SAME_STEP if AutoresetMode is not None else "same-step"
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""

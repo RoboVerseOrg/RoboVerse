@@ -35,7 +35,7 @@ class Args:
 
     ## Others
     num_envs: int = 100
-    headless: bool = False
+    headless: bool = True
     device: str = "cuda"
 
     def __post_init__(self):
