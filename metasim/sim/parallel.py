@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from scenario_cfg.scenario import ScenarioCfg
 
 from metasim.sim.base import BaseSimHandler
-from metasim.types import DictEnvState, TensorState
+from metasim.types import Action, DictEnvState, TensorState
 from metasim.utils.state import join_tensor_states
 
 
@@ -54,6 +54,8 @@ def _worker(
             elif cmd == "get_body_names":
                 names = env._get_body_names(data[0])
                 remote.send(names)
+            elif cmd == "set_dof_targets":
+                env.set_dof_targets(data[0], data[1])
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized before sending any commands
                 remote.send("handshake")
@@ -164,6 +166,10 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             # toc = time.time()
             # log.trace(f"Time taken to concatenate states: {toc - tic:.4f}s")
             return concat_states
+
+        def _set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+            for remote in self.remotes:
+                remote.send(("set_dof_targets", (obj_name, actions)))
 
         def _simulate(self):
             for remote in self.remotes:

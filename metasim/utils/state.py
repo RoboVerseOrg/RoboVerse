@@ -17,7 +17,7 @@ except:
 
 def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     """Join a list of tensor states with num_envs = 1 into a single tensor state."""
-    rst = TensorState(objects={}, robots={}, cameras={}, sensors={})
+    rst = TensorState(objects={}, robots={}, cameras={})
 
     if not tensor_states:
         return rst
@@ -26,13 +26,13 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     all_object_keys = set()
     all_robot_keys = set()
     all_camera_keys = set()
-    all_sensor_keys = set()
+    # all_sensor_keys = set()
 
     for state in tensor_states:
         all_object_keys.update(state.objects.keys())
         all_robot_keys.update(state.robots.keys())
         all_camera_keys.update(state.cameras.keys())
-        all_sensor_keys.update(state.sensors.keys())
+        # all_sensor_keys.update(state.sensors.keys())
 
     # Join objects
     for key in all_object_keys:
@@ -92,11 +92,11 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
             )
 
     # Join sensors (assuming similar structure to objects)
-    for key in all_sensor_keys:
-        sensor_states = [state.sensors[key] for state in tensor_states if key in state.sensors]
-        if sensor_states:
-            # Note: SensorState structure is not defined, so this is a placeholder
-            rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
+    # for key in all_sensor_keys:
+    #     sensor_states = [state.sensors[key] for state in tensor_states if key in state.sensors]
+    #     if sensor_states:
+    #         # Note: SensorState structure is not defined, so this is a placeholder
+    #         rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
 
     return rst
 
