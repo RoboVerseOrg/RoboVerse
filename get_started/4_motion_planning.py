@@ -48,10 +48,12 @@ class Args:
         """Post-initialization configuration."""
         log.info(f"Args: {self}")
 
+
 args = tyro.cli(Args)
 
 if args.solver == "curobo":
     from curobo.types.math import Pose
+
     from metasim.utils.kinematics_utils import get_curobo_models
 
 elif args.solver == "pyroki":
