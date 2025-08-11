@@ -9,10 +9,15 @@ import third_party.pyroki.examples.pyroki_snippets as pks
 
 class get_pyroki_model:
     def __init__(self, robot_cfg):
-        """robot_cfg: an instance of BaseRobotCfg or similar, must contain:
-        - urdf_path: str
-        - ee_body_name: str (end effector link name)
+
+        """Get the Pyroki robot model.
+
+        Args:
+            robot_cfg: An instance of BaseRobotCfg or similar, must contain:
+                - urdf_path: str
+                - ee_body_name: str (end effector link name).
         """
+
         self.urdf_path = robot_cfg.urdf_path
         self.ee_link_name = getattr(robot_cfg, "ee_body_name", None)
         if self.ee_link_name is None:
@@ -36,21 +41,3 @@ class get_pyroki_model:
         q_list = np.concatenate([solution, [0.04, 0.04]])
         q_tensor = torch.tensor(q_list, dtype=torch.float32)
         return q_tensor.cuda() if torch.cuda.is_available() else q_tensor
-
-    # def solve_trajopt(self, pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
-    #     """
-    #     Solve trajectory optimization (fallbacks to IK in this snippet).
-    #     """
-    #     pos = pos_target.detach().cpu().numpy().reshape(3)
-    #     quat = quat_target.detach().cpu().numpy().reshape(4)
-
-    #     solution = pks.solve_ik(  # could be replaced with a real trajopt call
-    #         self.pk_robot,
-    #         self.ee_link_name,
-    #         target_wxyz=quat,
-    #         target_position=pos,
-    #     )
-
-    #     q_list = np.concatenate([solution, [0.04, 0.04]])
-    #     q_tensor = torch.tensor(q_list, dtype=torch.float32)
-    #     return q_tensor.cuda() if torch.cuda.is_available() else q_tensor
