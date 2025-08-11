@@ -55,13 +55,23 @@ class BaseTaskEnv:
             device: The device to use for the environment. If None, it will use "cuda" if available, otherwise "cpu".
         """
         self.scenario = scenario
+        self._load_task_config(scenario)
+        self.num_envs = scenario.num_envs
+        self._initial_states = self._get_initial_states()
         if isinstance(scenario, BaseSimHandler):
             self.env = scenario
         else:
             self._instantiate_env(scenario)
         self.device = device
-        self.num_envs = scenario.num_envs
         self._prepare_callbacks()
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
+        """Optionally modify `scenario` before base init."""
+        return scenario
+
+    def _get_initial_states(self) -> list[dict]:
+        """Return per-env initial states (override in subclasses)."""
+        return None
 
     def _instantiate_env(self, scenario: ScenarioCfg) -> None:
         """Instantiate the environment.
@@ -178,20 +188,8 @@ class BaseTaskEnv:
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
-        actions_dict = {
-            "robots": {
-                self.env.robots[0].name: {
-                    "dof_pos_target": {
-                        joint_name: action
-                        for joint_name, action in zip(self.env._get_joint_names(self.env.robots[0].name), actions)
-                    }
-                }
-            }
-        }
-
         for robot in self.env.robots:
-            robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
-            self.env.set_dof_targets(robot.name, list(robot_actions.values()))
+            self.env.set_dof_targets(robot.name, actions)
 
         self.env.simulate()
 
@@ -224,7 +222,7 @@ class BaseTaskEnv:
 
         for callback in self.reset_callback:
             callback(env_ids)
-
+        self.env.set_states(states=self._initial_states, env_ids=env_ids)
         env_states = self.env.get_states(env_ids=env_ids)
         info = {
             "privileged_observation": self._privileged_observation(env_states),

@@ -73,17 +73,21 @@ class GymEnvWrapper(gym.Env):
             action_t = action.to(self._device)
         elif isinstance(action, np.ndarray):
             action_t = torch.as_tensor(action, dtype=torch.float32, device=self._device)
-        elif isinstance(action, dict):
+        elif isinstance(action, list):
             robot = self.scenario.robots[0]
             joint_names = list(robot.joint_limits.keys())
+
             if len(action) != 1:
                 raise ValueError(f"Single-env wrapper expects exactly 1 action dict, got {len(action)}")
+
             vec = torch.tensor(
                 [action[0][robot.name]["dof_pos_target"][jn] for jn in joint_names],
                 dtype=torch.float32,
                 device=self._device,
             )
+
             action_t = vec.unsqueeze(0)
+
         else:
             raise TypeError(
                 f"Unsupported action type: {type(action)}. Expected torch.Tensor, numpy.ndarray, or list/dict of action dicts."
@@ -177,21 +181,20 @@ class GymVectorEnvAdapter(VectorEnv):
             self._pending_actions = actions.to(self._device)
         elif isinstance(actions, np.ndarray):
             self._pending_actions = torch.as_tensor(actions, dtype=torch.float32, device=self._device)
-        elif isinstance(actions, dict) or (
-            isinstance(actions, (list, tuple)) and len(actions) > 0 and isinstance(actions[0], dict)
-        ):
+        elif isinstance(actions, list):
             robot = self.scenario.robots[0]
             joint_names = list(robot.joint_limits.keys())
             if len(actions) != self.num_envs:
                 raise ValueError(f"Expected {self.num_envs} action dicts, got {len(actions)}")
-            vectors = [
-                torch.tensor(
-                    [actions[e][robot.name]["dof_pos_target"][jn] for jn in joint_names],
+            # Build a clean tensor directly without intermediate lists of tensors
+            act_dim = len(joint_names)
+            actions_tensor = torch.empty((self.num_envs, act_dim), dtype=torch.float32, device=self._device)
+            for env_index in range(self.num_envs):
+                actions_tensor[env_index] = torch.tensor(
+                    [actions[env_index][robot.name]["dof_pos_target"][jn] for jn in joint_names],
                     dtype=torch.float32,
                 )
-                for e in range(self.num_envs)
-            ]
-            self._pending_actions = torch.stack(vectors, dim=0).to(self._device)
+            self._pending_actions = actions_tensor
         else:
             raise TypeError(
                 f"Unsupported action type: {type(actions)}. Expected torch.Tensor, numpy.ndarray, or list/dict of action dicts."

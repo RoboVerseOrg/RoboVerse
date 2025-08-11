@@ -279,7 +279,7 @@ def main() -> None:
         episode_lengths = torch.zeros(num_eval_envs, device=device)
         done_masks = torch.zeros(num_eval_envs, dtype=torch.bool, device=device)
 
-        obs = eval_envs.reset()
+        obs, info = eval_envs.reset()
 
         # Run for a fixed number of steps
         for _ in range(eval_envs.max_episode_steps):
@@ -310,7 +310,7 @@ def main() -> None:
         env = load_task(cfg("task"), scenario_render, device=device)
 
         obs_normalizer.eval()
-        obs = env.reset()
+        obs, info = env.reset()
         frames = [env.render()]
 
         for _ in range(env.max_episode_steps):
@@ -428,7 +428,7 @@ def main() -> None:
         normalize_obs = torch.compile(obs_normalizer.forward, mode=mode)
     else:
         normalize_obs = obs_normalizer.forward
-    obs = envs.reset()
+    obs, info = envs.reset()
 
     if cfg("checkpoint_path"):
         # Load checkpoint if specified
@@ -518,7 +518,7 @@ def main() -> None:
                     if cfg("eval_interval") > 0 and global_step % cfg("eval_interval") == 0:
                         log.info(f"Evaluating at global step {global_step}")
                         eval_avg_return, eval_avg_length = evaluate()
-                        obs = envs.reset()
+                        obs, info = envs.reset()
                         logs["eval_avg_return"] = eval_avg_return
                         logs["eval_avg_length"] = eval_avg_length
                         log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")

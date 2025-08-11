@@ -29,14 +29,14 @@ from tasks.gym_registration import register_all_tasks_with_gym
 class Args:
     """Arguments for the static scene."""
 
-    task: str = "obj_env"
+    task: str = "reach_origin"
     robot: str = "franka"
     ## Handlers
     sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
 
     ## Others
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
     device: str = "cuda"
 
     def __post_init__(self):
