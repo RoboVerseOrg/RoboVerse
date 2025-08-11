@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 import torch
 from loguru import logger as log
 
+from metasim.cfg.randomization import FrictionRandomCfg
 from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
+
+if TYPE_CHECKING:
+    from metasim.cfg.scenario import ScenarioCfg
+from metasim.queries.base import BaseQueryType
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
 from metasim.utils.state import TensorState, state_tensor_to_nested
 
@@ -14,7 +19,7 @@ from metasim.utils.state import TensorState, state_tensor_to_nested
 class BaseSimHandler(ABC):
     """Base class for simulation handler."""
 
-    def __init__(self, scenario: ScenarioCfg):
+    def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         ## Overwrite scenario with task, TODO: this should happen in scenario class post_init
         if scenario.task is not None:
             scenario.objects = scenario.task.objects
@@ -25,6 +30,7 @@ class BaseSimHandler(ABC):
         self.scenario = scenario
         self._num_envs = scenario.num_envs
         self.headless = scenario.headless
+        self.optional_queries = optional_queries
 
         ## For quick reference
         self.task = scenario.task
@@ -39,7 +45,11 @@ class BaseSimHandler(ABC):
 
     def launch(self) -> None:
         """Launch the simulation."""
-        raise NotImplementedError
+        if self.optional_queries is None:
+            self.optional_queries = {}
+        for query_name, query_type in self.optional_queries.items():
+            query_type.bind_handler(self)
+        # raise NotImplementedError
 
     ############################################################
     ## Gymnasium main methods
@@ -115,6 +125,13 @@ class BaseSimHandler(ABC):
             self._states = self._get_states(env_ids=env_ids)
             self._state_cache_expire = False
         return self._states
+
+    def get_extra(self):
+        """Get the extra information of the environment."""
+        ret_dict = {}
+        for query_name, query_type in self.optional_queries.items():
+            ret_dict[query_name] = query_type()
+        return ret_dict
 
     def get_vel(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if self.num_envs > 1:
@@ -193,6 +210,12 @@ class BaseSimHandler(ABC):
         """Simulate the environment."""
         self._state_cache_expire = True
         self._simulate()
+
+    ############################################################
+    ## Domain Randomization
+    ############################################################
+    def rand_rigid_body_fric(self, cfg: FrictionRandomCfg):
+        raise NotImplementedError
 
     ############################################################
     ## Utils

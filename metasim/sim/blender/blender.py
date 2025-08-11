@@ -8,13 +8,9 @@ import torch
 from loguru import logger as log
 from mathutils import Matrix
 
-from metasim.cfg.objects import (
-    ArticulationObjCfg,
-    PrimitiveCubeCfg,
-    PrimitiveSphereCfg,
-    RigidObjCfg,
-)
+from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
 from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, Termination
 from metasim.utils.camera_util import get_cam_params
@@ -42,8 +38,8 @@ def import_mesh(path):
 
 
 class BlenderHandler(BaseSimHandler):
-    def __init__(self, scenario: ScenarioCfg):
-        super().__init__(scenario)
+    def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
+        super().__init__(scenario, optional_queries)
         self.context = bpy.context
         self._objs = {}
 

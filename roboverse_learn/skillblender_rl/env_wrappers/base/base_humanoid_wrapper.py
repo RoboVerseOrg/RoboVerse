@@ -1,6 +1,5 @@
 """A humanoid base wrapper for skillBench tasks"""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 from collections import deque
@@ -10,18 +9,25 @@ from typing import Callable
 import numpy as np
 import torch
 
-from metasim.utils.math import quat_apply, quat_rotate_inverse
-
-try:
-    from isaacgym.torch_utils import torch_rand_float
-except ImportError:
-    pass
-
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.tasks.skillblender.base_legged_cfg import BaseLeggedTaskCfg
-from metasim.utils.demo_util import get_traj
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_vel_tensor,
+    gait_phase_tensor,
+    get_euler_xyz_tensor,
+    robot_ang_velocity_tensor,
+    robot_root_state_tensor,
+    robot_rotation_tensor,
+    robot_velocity_tensor,
+)
+from metasim.utils.math import quat_apply, quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+from roboverse_learn.skillblender_rl.utils import (
+    get_body_reindexed_indices_from_substring,
+    get_joint_reindexed_indices_from_substring,
+    torch_rand_float,
+)
 
 
 class HumanoidBaseWrapper(RslRlWrapper):
@@ -32,76 +38,105 @@ class HumanoidBaseWrapper(RslRlWrapper):
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
-
-        # FIXME hardcode. read names from config, get from handler.
-
         self.use_vision = scenario.task.use_vision
         self.up_axis_idx = 2
 
+        self._parse_rigid_body_indices(scenario.robots[0])
         self._parse_joint_indices(scenario.robots[0])
-        self._get_cfg_from_handler()
+        self._parse_joint_cfg(scenario)
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
-    def _parse_joint_indices(self, robot):
+    def _parse_rigid_body_indices(self, robot):
         """
-        Parse humanoid rigid body indices from robot cfg.
+        Parse rigid body indices from robot cfg.
         """
         feet_names = robot.feet_links
         knee_names = robot.knee_links
         elbow_names = robot.elbow_links
+        wrist_names = robot.wrist_links
+        torso_names = robot.torso_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
 
-        # TODO get alphabet order
-        self.feet_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, feet_names)
-        self.knee_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, knee_names)
-        self.elbow_indices = self.env.handler.get_body_reindexed_indices_from_substring(robot.name, elbow_names)
-        self.termination_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
-            robot.name, termination_contact_names
+        # get sorted indices for specific body links
+        self.feet_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, feet_names, device=self.device
         )
-        self.penalised_contact_indices = self.env.handler.get_body_reindexed_indices_from_substring(
-            robot.name, penalised_contact_names
+        self.knee_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, knee_names, device=self.device
+        )
+        self.elbow_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, elbow_names, device=self.device
+        )
+        self.wrist_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, wrist_names, device=self.device
+        )
+        self.torso_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, torso_names, device=self.device
+        )
+        self.termination_contact_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, termination_contact_names, device=self.device
+        )
+        self.penalised_contact_indices = get_body_reindexed_indices_from_substring(
+            self.env.handler, robot.name, penalised_contact_names, device=self.device
         )
 
         # attach to cfg for reward computation.
         self.cfg.feet_indices = self.feet_indices
         self.cfg.knee_indices = self.knee_indices
         self.cfg.elbow_indices = self.elbow_indices
+        self.cfg.wrist_indices = self.wrist_indices
+        self.cfg.torso_indices = self.torso_indices
         self.cfg.termination_contact_indices = self.termination_contact_indices
         self.cfg.penalised_contact_indices = self.penalised_contact_indices
+
+    def _parse_joint_indices(self, robot):
+        """
+        Parse joint indices.
+        """
+        left_yaw_roll_names = robot.left_yaw_roll_joints
+        right_yaw_roll_names = robot.right_yaw_roll_joints
+        upper_body_names = robot.upper_body_joints
+        self.cfg.left_yaw_roll_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, left_yaw_roll_names, device=self.device
+        )
+        self.cfg.right_yaw_roll_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, right_yaw_roll_names, device=self.device
+        )
+        self.cfg.upper_body_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env.handler, robot.name, upper_body_names, device=self.device
+        )
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
         self.dt = scenario.decimation * scenario.sim_params.dt
+        self.command_ranges = scenario.task.command_ranges
         self.num_commands = scenario.task.command_dim
 
-    def _get_init_states(self, scenario):
-        """Get initial states from handler."""
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robots[0], self.env.handler)
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
-            )
-        else:
-            self.init_states = self.init_states[: self.num_envs]
+    def _parse_joint_cfg(self, scenario):
+        """
+        parse default joint positions and torque limits from cfg.
+        """
 
-    def _get_cfg_from_handler(self):
-        """
-        Get cfg from handler for reward computation.
-        """
-        # TODO read name specified in config, add indices here
-        self.cfg.default_joint_pd_target = self.env.handler.default_dof_pos
-        self.cfg.torque_limits = self.env.handler.torque_limits
+        torque_limits = scenario.robots[0].torque_limits
+        sorted_joint_names = sorted(torque_limits.keys())
+        sorted_limits = [torque_limits[name] for name in sorted_joint_names]
+        self.cfg.torque_limits = (
+            torch.tensor(sorted_limits, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+            * scenario.control.torque_limit_scale
+        )
+
+        default_joint_pos = scenario.robots[0].default_joint_positions
+        sorted_joint_pos = [default_joint_pos[name] for name in sorted_joint_names]
+        self.cfg.default_joint_pd_target = (
+            torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+        )
 
     def _init_buffers(self):
         """
         Init all buffer for reward computation
-
-        TODO: move those var into
         """
         self.base_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
@@ -117,10 +152,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs,
             1,
         ))
-
-        # TODO implement it
-        # self.neg_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-        # self.pos_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
         self.common_step_counter = 0
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.bool)
@@ -172,11 +203,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
 
-        # reference dof position
-        self.ref_dof_pos = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
-        )
-
         # history buffer for reward computation
         self.last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
@@ -184,12 +210,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
-        self.last_dof_vel = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
-        )
+        self.last_dof_vel = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self.last_root_vel = torch.zeros(self.num_envs, 6, device=self.device, requires_grad=False)
 
-        # TODO move it into config
         self.last_feet_z = 0.05 * torch.ones(
             self.num_envs, len(self.feet_indices), device=self.device, requires_grad=False
         )
@@ -197,7 +220,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.feet_pos = torch.zeros((self.num_envs, len(self.feet_indices), 3), device=self.device, requires_grad=False)
         self.feet_height = torch.zeros((self.num_envs, len(self.feet_indices)), device=self.device, requires_grad=False)
 
-        # TODO add height buffer, random push force
+        self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+        self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+
         # TODO add history manager, read from config.
         self.obs_history = deque(maxlen=self.cfg.frame_stack)
         self.critic_history = deque(maxlen=self.cfg.c_frame_stack)
@@ -210,20 +235,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 torch.zeros(self.num_envs, self.cfg.single_num_privileged_obs, dtype=torch.float, device=self.device)
             )
 
-        # random push force
-        self.rand_push_force = torch.zeros(
-            (self.num_envs, 3), dtype=torch.float32, device=self.device
-        )  # TODO now set 0
-        self.rand_push_torque = torch.zeros(
-            (self.num_envs, 3), dtype=torch.float32, device=self.device
-        )  # TODO now set 0
         self.env_frictions = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device)  # TODO now set 0
         self.body_mass = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device, requires_grad=False)
 
     def _get_phase(
         self,
     ):
-        # FIXME cycle_time definition and access
         cycle_time = self.cfg.reward_cfg.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time
         return phase
@@ -261,8 +278,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._parse_feet_clearance(envstate)
 
     def _parse_feet_air_time(self, envstate):
-        # TODO contact is computed for servaral times. maybe precompute it as a class var?
-        contact = contact_force_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
+        contact = contact_forces_tensor(envstate, self.robot.name)[:, self.feet_indices, 2] > 5.0
         stance_mask = gait_phase_tensor(envstate, self.robot.name)
         contact_filt = torch.logical_or(torch.logical_or(contact, stance_mask), self.last_contacts)
         self.last_contacts = contact
@@ -295,10 +311,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         envstate.robots[self.robot.name].extra["feet_clearance"] = rew_pos
 
     def _parse_history_state(self, envstate):
-        # TODO check integration
         """update history buffer, must be called after reset"""
-        # envstate.robots[self.robot.name].extra["last_contact_forces"] = self.last_contact_forces
-
         envstate.robots[self.robot.name].extra["last_root_vel"] = self.last_root_vel
         envstate.robots[self.robot.name].extra["last_dof_vel"] = self.last_dof_vel
         envstate.robots[self.robot.name].extra["last_actions"] = self.last_actions
@@ -310,21 +323,18 @@ class HumanoidBaseWrapper(RslRlWrapper):
         envstate.robots[self.robot.name].extra["base_ang_vel"] = self.base_ang_vel
 
     def _parse_command(self, envstate):
-        """Add command into states"""
+        """Adds the current velocity and heading command to state."""
         envstate.robots[self.robot.name].extra["command"] = self.commands
 
     def _parse_epsidoe_legth(self, envstate):
-        """parse episode length into states"""
+        """parse episode length into states."""
         envstate.robots[self.robot.name].extra["episode_length_buf"] = self.episode_length_buf
 
     def _parse_state_for_reward(self, envstate):
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
-        Eg., offset the observation by default obs, compute input rewards.
         """
-        # TODO read from config
+
         self._parse_gait_phase(envstate)
         self._parse_action(envstate)
         self._parse_history_state(envstate)
@@ -335,11 +345,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._parse_local_base_vel(envstate)
 
     def _prepare_reward_function(self, task: BaseLeggedTaskCfg):
-        """Prepares a list of reward functions, which will be called to compute the total reward.
-        Looks for self._reward_<REWARD_NAME>, where <REWARD_NAME> are names of all non zero reward scales in the cfg.
-        """
+        """Prepares a list of reward functions, which will be called to compute the total reward."""
+
         self.reward_scales = task.reward_weights
-        # remove zero scales + multiply non-zero ones by dt
         for key in list(self.reward_scales.keys()):
             scale = self.reward_scales[key]
             if scale == 0:
@@ -363,13 +371,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         }
         self.episode_metrics = {name: 0 for name in self.reward_scales.keys()}
 
-    def compute_reward(self, envstates):
+    def compute_reward(self, envstate):
         """Compute all the reward from the states provided."""
         self.rew_buf[:] = 0
 
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
-            rew_func_return = self.reward_functions[i](envstates, self.robot.name, self.cfg)
+            rew_func_return = self.reward_functions[i](envstate, self.robot.name, self.cfg)
             if isinstance(rew_func_return, tuple):
                 unscaled_rew, metric = rew_func_return
                 self.episode_metrics[name] = metric.mean().item()
@@ -381,8 +389,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         if self.cfg.reward_cfg.only_positive_rewards:
             self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.0)
-
-        # TODO add termination reward checking
 
     def _get_gait_phase(self):
         """Add phase into states"""
@@ -398,7 +404,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
         return stance_mask
 
-    def _compute_observations(self, envstates):
+    def _compute_observations(self, envstate):
         """compute observations and priviledged observation"""
         raise NotImplementedError
 
@@ -436,15 +442,23 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf
 
-    def wrap_action_as_dict(self, actions):
+    def update_command_curriculum(self, env_ids):
+        """Implements a curriculum of increasing commands
+
+        Args:
+            env_ids (List[int]): ids of environments being reset
         """
-        wrap actions as a dict for the env handler.
-        """
-        joint_names = list(self.robot.actuators.keys())
-        return [
-            {"dof_pos_target": {joint_name: float(pos) for joint_name, pos in zip(joint_names, actions[env_id])}}
-            for env_id in range(len(actions))
-        ]
+        # If the tracking reward is above 80% of the maximum, increase the range of commands
+        if (
+            torch.mean(self.episode_sums["tracking_lin_vel"][env_ids]) / self.max_episode_length
+            > 0.8 * self.reward_scales["tracking_lin_vel"]
+        ):
+            self.command_ranges.lin_vel_x[0] = np.clip(
+                self.command_ranges.lin_vel_x[0] - 0.5, -self.cfg.commands.max_curriculum, 0.0
+            )
+            self.command_ranges.lin_vel_x[1] = np.clip(
+                self.command_ranges.lin_vel_x[1] + 0.5, 0.0, self.cfg.commands.max_curriculum
+            )
 
     def clip_actions(self, actions):
         """Clip actions based on cfg."""
@@ -453,12 +467,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _pre_physics_step(self, actions):
         """Apply action smoothing and wrap actions as dict before physics step."""
-        # action smoothing
         delay = torch.rand((self.num_envs, 1), device=self.device)
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
-        # action_dict = self.wrap_action_as_dict(clipped_actions)
         return self.actions
 
     def _physics_step(self, action_dict):
@@ -474,7 +486,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         Input: actions
         Output: obs, privileged_obs, rewards, dones, infos
         """
-        # FIXME return code back
         action_dict = self._pre_physics_step(actions)
         env_states = self._physics_step(action_dict)
         obs, privileged_obs, rewards = self._post_physics_step(env_states)
@@ -484,22 +495,19 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """
         Reset state in the env and buffer in this wrapper
         """
-        # if env_ids is None, reset all envs
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-        # if env_ids is empty, do nothing
         if len(env_ids) == 0:
             return
 
-        # TODO
-        # update terrain curriculum
-        # update command curriculum
-
         _, _ = self.env.reset(self.init_states, env_ids)
+
+        if self.cfg.commands.curriculum and (self.common_step_counter % self.max_episode_length == 0):
+            self.update_command_curriculum(env_ids)
 
         self._resample_commands(env_ids)
 
-        # reset state in the wrapper
+        # reset state buffer in the wrapper
         self.actions[env_ids] = 0.0
         self.last_actions[env_ids] = 0.0
         self.last_last_actions[env_ids] = 0.0
@@ -537,28 +545,28 @@ class HumanoidBaseWrapper(RslRlWrapper):
             env_ids (List[int]): Environments ids for which new commands are needed
         """
         self.commands[env_ids, 0] = torch_rand_float(
-            self.cfg.command_ranges.lin_vel_x[0],
-            self.cfg.command_ranges.lin_vel_x[1],
+            self.command_ranges.lin_vel_x[0],
+            self.command_ranges.lin_vel_x[1],
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
         self.commands[env_ids, 1] = torch_rand_float(
-            self.cfg.command_ranges.lin_vel_y[0],
-            self.cfg.command_ranges.lin_vel_y[1],
+            self.command_ranges.lin_vel_y[0],
+            self.command_ranges.lin_vel_y[1],
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(
-                self.cfg.command_ranges.heading[0],
-                self.cfg.command_ranges.heading[1],
+                self.command_ranges.heading[0],
+                self.command_ranges.heading[1],
                 (len(env_ids), 1),
                 device=self.device,
             ).squeeze(1)
         else:
             self.commands[env_ids, 2] = torch_rand_float(
-                self.cfg.command_ranges.ang_vel_yaw[0],
-                self.cfg.command_ranges.ang_vel_yaw[1],
+                self.command_ranges.ang_vel_yaw[0],
+                self.command_ranges.ang_vel_yaw[1],
                 (len(env_ids), 1),
                 device=self.device,
             ).squeeze(1)
@@ -567,7 +575,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
 
     def _post_physics_step_callback(self):
-        # TODO modified this name
         """Callback called before computing terminations, rewards, and observations
         Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
@@ -576,22 +583,28 @@ class HumanoidBaseWrapper(RslRlWrapper):
             .nonzero(as_tuple=False)
             .flatten()
         )
-        self._resample_commands(env_ids)
+        if len(env_ids) > 0:
+            self._resample_commands(env_ids)
+
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
-        # TODO: implement terrain height measurement
-        # TODO: implement random push force
+        self._push_robots()
 
-    # TODO implement this
     def _push_robots(self):
-        pass
-
-    # TODO implement this
-    def _get_heights(self):
-        pass
+        """Randomly set robot's root velocity to simulate a push."""
+        if self.cfg.random.push.enabled and self.common_step_counter % self.cfg.random.push.push_interval == 0:
+            max_vel = self.cfg.random.push.max_push_vel_xy
+            max_push_angular = self.cfg.random.push.max_push_ang_vel
+            env_states = self.env.handler.get_states()
+            self.rand_push_force[:, :2] += torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)
+            env_states.robots[self.robot.name].root_state[:, 0:2] += self.rand_push_force[:, :2]
+            self.rand_push_torque = torch_rand_float(
+                -max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device
+            )
+            env_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
     @staticmethod
     def get_reward_fn(target: str, reward_functions: list[Callable]) -> Callable:
@@ -600,7 +613,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             raise KeyError(f"No reward function named '{target}'")
         return fn
 
-    # TODO move the utils file
     @staticmethod
     def get_axis_params(value, axis_idx, x_value=0.0, dtype=np.float64, n_dims=3):
         """construct arguments to `Vec` according to axis index."""
@@ -611,7 +623,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         params[0] = x_value
         return list(params.astype(dtype))
 
-    # TODO move .utils file
     @staticmethod
     def wrap_to_pi(angles: torch.Tensor) -> torch.Tensor:
         angles %= 2 * np.pi

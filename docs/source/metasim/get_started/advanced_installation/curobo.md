@@ -2,6 +2,10 @@
 
 MetaSim uses [cuRobo](https://github.com/NVlabs/curobo) to perform IK, motion planning, and retargeting of trajectories across different embodiments.
 
+```{warning}
+cuRobo requires CUDA Toolkit version 11.8.
+```
+
 ```{note}
 cuRobo installation is tested on Ubuntu 22.04LTS, with both Python 3.8 and 3.10. For other platforms, please refer to the [official guide](https://curobo.org/get_started/1_install_instructions.html).
 ```

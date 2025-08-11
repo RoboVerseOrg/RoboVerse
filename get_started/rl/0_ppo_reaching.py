@@ -181,7 +181,7 @@ class StableBaseline3VecEnv(VecEnv):
         """Wait for the step to complete."""
         obs, rewards, success, timeout, _ = self.env.step(self.action_dicts)
 
-        dones = success | timeout
+        dones = success | timeout.to(success.device)
         if dones.any():
             self.env.reset(env_ids=dones.nonzero().squeeze(-1).tolist())
 

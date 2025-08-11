@@ -1,15 +1,19 @@
 """SkillBlench wrapper for training primitive skill: stepping."""
 
-# ruff: noqa: F405
 from __future__ import annotations
 
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.types import EnvState
-from metasim.utils.humanoid_robot_util import *
+from metasim.utils.humanoid_robot_util import (
+    contact_forces_tensor,
+    dof_pos_tensor,
+    dof_vel_tensor,
+    sample_fp,
+)
 from metasim.utils.math import sample_int_from_float
-from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
+from roboverse_learn.skillblender_rl.env_wrappers.base.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
 class SteppingWrapper(HumanoidBaseWrapper):
@@ -20,9 +24,8 @@ class SteppingWrapper(HumanoidBaseWrapper):
     """
 
     def __init__(self, scenario: ScenarioCfg):
-        # TODO check compatibility for other simulators
         super().__init__(scenario)
-        env_states, _ = self.env.reset()
+        env_states, _ = self.env.reset(self.init_states)
         self._init_target_wp(env_states)
 
     def _parse_ref_pos(self, envstate: EnvState):
@@ -32,8 +35,8 @@ class SteppingWrapper(HumanoidBaseWrapper):
         self.ori_feet_pos = (
             envstate.robots[self.robot.name].body_state[:, self.feet_indices, :2].clone()
         )  # [num_envs, 2, 2], two feet's original xy positions
-        self.target_wp, self.num_pairs, self.num_wp = self.sample_fp(
-            device=self.device, num_points=1000000, num_wp=10, ranges=self.cfg.command_ranges
+        self.target_wp, self.num_pairs, self.num_wp = sample_fp(
+            device=self.device, num_points=1000000, num_wp=10, ranges=self.command_ranges
         )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 2]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device
@@ -107,12 +110,8 @@ class SteppingWrapper(HumanoidBaseWrapper):
     def _parse_state_for_reward(self, envstate: EnvState) -> None:
         """
         Parse all the states to prepare for reward computation, legged_robot level reward computation.
-        The
-
-        Eg., offset the observation by default obs, compute input rewards.
         """
-        # TODO read from config
-        # parse those state which cannot directly get from Envstates
+
         super()._parse_state_for_reward(envstate)
         self._parse_ref_pos(envstate)
 
@@ -181,26 +180,3 @@ class SteppingWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = torch.clip(
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
-
-    @staticmethod
-    def sample_fp(device, num_points, num_wp, ranges):
-        """sample feet waypoints"""
-        # left foot still, right foot move, [num_points//2, 2]
-        l_positions_s = torch.zeros(num_points // 2, 2)  # left foot positions (xy)
-        r_positions_m = torch.randn(num_points // 2, 2)
-        r_positions_m = (
-            r_positions_m / r_positions_m.norm(dim=-1, keepdim=True) * ranges.feet_max_radius
-        )  # within a sphere, [-radius, +radius]
-        # right foot still, left foot move, [num_points//2, 2]
-        r_positions_s = torch.zeros(num_points // 2, 2)  # right foot positions (xy)
-        l_positions_m = torch.randn(num_points // 2, 2)
-        l_positions_m = (
-            l_positions_m / l_positions_m.norm(dim=-1, keepdim=True) * ranges.feet_max_radius
-        )  # within a sphere, [-radius, +radius]
-        # concat
-        l_positions = torch.cat([l_positions_s, l_positions_m], dim=0)  # (num_points, 2)
-        r_positions = torch.cat([r_positions_m, r_positions_s], dim=0)  # (num_points, 2)
-        wp = torch.stack([l_positions, r_positions], dim=1)  # (num_points, 2, 2)
-        wp = wp.unsqueeze(1).repeat(1, num_wp, 1, 1)  # (num_points, num_wp, 2, 2)
-        print("===> [sample_fp] return shape:", wp.shape)
-        return wp.to(device), num_points, num_wp

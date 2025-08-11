@@ -160,3 +160,22 @@ a {
 .bd-content table.benchmark tbody tr:hover {
   background-color: var(--pst-color-table-row-hover-bg) !important;
 }
+
+.bd-content table.benchmark {
+  border-collapse: collapse !important;
+  width: auto !important;
+  max-width: 100% !important;
+
+  margin-bottom: 1.5em;
+  display: block !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+.bd-content table.benchmark th,
+.bd-content table.benchmark td {
+  border: 1px solid var(--pst-color-border) !important;
+  padding: 0.5em 1em !important;
+  white-space: nowrap !important;
+}

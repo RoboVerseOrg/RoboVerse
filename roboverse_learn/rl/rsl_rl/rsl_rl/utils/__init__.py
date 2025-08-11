@@ -28,4 +28,4 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-from .utils import split_and_pad_trajectories, unpad_trajectories
+from .utils import split_and_pad_trajectories, unpad_trajectories, get_load_path, get_cfgs

@@ -74,19 +74,27 @@ class ScenarioCfg:
             ]
 
         ### Parse task and robot
-        if isinstance(self.task, str):
-            self.task = get_task(self.task)
         for i, robot in enumerate(self.robots):
             if isinstance(robot, str):
                 self.robots[i] = get_robot(robot)
+        if isinstance(self.task, str):
+            TaskCls = get_task(self.task)
+            ### Instantiate TaskCls with robots if supported
+            if "robots" in TaskCls.__dataclass_fields__.keys():
+                self.task = TaskCls(robots=self.robots)
+            else:
+                self.task = TaskCls()
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
 
         ### Simulator parameters overvide by task
         self.sim_params = self.task.sim_params if self.task is not None else self.sim_params
-        ### Control parameters  overvide by task
+        ### Control parameters overvide by task
         self.control = self.task.control if self.task is not None else self.control
         ### spacing of parallel environments
         self.env_spacing = self.task.env_spacing if self.task is not None else self.env_spacing
+        ### Randomization vervide by task
+        if self.task is not None and self.task.random is not None:
+            self.random = self.task.random
 
         FileDownloader(self).do_it()

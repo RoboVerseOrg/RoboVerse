@@ -22,3 +22,7 @@ class RunCfg(HumanoidTaskCfg):
     checker = _RunChecker()
     reward_functions = [RunReward]
     reward_weights = [1.0]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

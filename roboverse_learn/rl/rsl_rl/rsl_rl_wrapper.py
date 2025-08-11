@@ -9,8 +9,10 @@ from rsl_rl.env import VecEnv
 from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
-from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
+
+from metasim.utils.state import list_state_to_tensor
+
 
 
 class RslRlWrapper(VecEnv):
@@ -23,8 +25,8 @@ class RslRlWrapper(VecEnv):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__()
 
-        # TODO check compatibility for other simulators
-        if SimType(scenario.sim) not in [SimType.ISAACGYM]:
+
+        if SimType(scenario.sim) not in [SimType.ISAACGYM,SimType.ISAACLAB, SimType.GENESIS]:
             raise NotImplementedError(
                 f"RslRlWrapper in Roboverse now only supports {SimType.ISAACGYM}, but got {scenario.sim}"
             )
@@ -51,17 +53,31 @@ class RslRlWrapper(VecEnv):
         self.max_episode_length = scenario.task.max_episode_length
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.cfg = scenario.task
-        self.train_cfg = rsl_rl_class_to_dict(scenario.task.ppo_cfg)
+        from metasim.utils.dict import class_to_dict
+        self.train_cfg = class_to_dict(scenario.task.ppo_cfg)
+
 
     def _get_init_states(self, scenario):
-        self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
-        if len(self.init_states) < self.num_envs:
-            self.init_states = (
-                self.init_states * (self.num_envs // len(self.init_states))
-                + self.init_states[: self.num_envs % len(self.init_states)]
+        """ Get initial states from the scenario configuration."""
+
+        init_states_list = getattr(scenario.task, 'init_states', None)
+        if init_states_list is None:
+            raise AttributeError(f"'task cfg' has no attribute 'init_states', please add it in your scenario config!")
+
+        if len(init_states_list) < self.num_envs:
+            init_states_list = (
+                init_states_list * (self.num_envs // len(init_states_list))
+                + init_states_list[: self.num_envs % len(init_states_list)]
             )
         else:
-            self.init_states = self.init_states[: self.num_envs]
+            init_states_list = init_states_list[: self.num_envs]
+
+        self.init_states = init_states_list
+
+        if scenario.sim == SimType.ISAACGYM:
+            #tensorize the initial states as TensorState, now we only support IsaacGym
+            self.init_states = list_state_to_tensor(self.env.handler, init_states_list, device=self.device)
+
 
     def get_observations(self):
         """design from config"""
@@ -86,22 +102,3 @@ class RslRlWrapper(VecEnv):
 
         # reset in the env
         self.env.reset(env_ids)
-
-
-# TODO: move this to .utils and aligned naive config in rsl_rl with rsl_rl config
-def rsl_rl_class_to_dict(obj) -> dict:
-    if not hasattr(obj, "__dict__"):
-        return obj
-    result = {}
-    for key in dir(obj):
-        if key.startswith("_"):
-            continue
-        element = []
-        val = getattr(obj, key)
-        if isinstance(val, list):
-            for item in val:
-                element.append(rsl_rl_class_to_dict(item))
-        else:
-            element = rsl_rl_class_to_dict(val)
-        result[key] = element
-    return result

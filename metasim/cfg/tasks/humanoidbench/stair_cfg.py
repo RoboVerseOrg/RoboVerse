@@ -7,13 +7,13 @@ import torch
 from metasim.cfg.checkers import _StairChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.queries.site import SitePos
 from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance_tensor
 from metasim.utils.humanoid_robot_util import (
     actuator_forces_tensor,
     body_pos_tensor,
-    robot_site_pos_tensor,
     robot_velocity_tensor,
     torso_upright_tensor,
 )
@@ -39,7 +39,7 @@ class StairReward(HumanoidBaseReward):
         com_vx = robot_velocity_tensor(states, self.robot_name)[:, 0]  # (B,)
         upright_ = torso_upright_tensor(states, self.robot_name)  # (B,)
 
-        head_z = robot_site_pos_tensor(states, self.robot_name, "head")[:, 2]
+        head_z = states.extras["head_pos"][:, 2]
         lfoot_z = body_pos_tensor(states, self.robot_name, "left_ankle_link")[:, 2]  # (B,)
         rfoot_z = body_pos_tensor(states, self.robot_name, "right_ankle_link")[:, 2]  # (B,)
 
@@ -100,3 +100,9 @@ class StairCfg(HumanoidTaskCfg):
     checker = _StairChecker()
     reward_weights = [1.0]
     reward_functions = [StairReward]
+
+    def extra_spec(self):
+        """Declare extra observations needed by CrawlReward."""
+        return {
+            "head_pos": SitePos("head"),
+        }

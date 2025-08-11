@@ -1,4 +1,4 @@
-"""Walking config in SkillBench in Skillblender"""
+"""Stepping config in SkillBench in Skillblender"""
 
 from __future__ import annotations
 
@@ -6,16 +6,8 @@ from typing import Callable
 
 import torch
 
-from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.base_task_cfg import BaseRLTaskCfg
-from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import (
-    BaseConfig,
-    CommandRanges,
-    CommandsConfig,
-    LeggedRobotCfgPPO,
-    RewardCfg,
-)
+from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg, BaseHumanoidCfgPPO
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_dof_acc,
     reward_dof_vel,
@@ -24,14 +16,11 @@ from metasim.cfg.tasks.skillblender.reward_func_cfg import (
     reward_upper_body_pos,
 )
 from metasim.types import EnvState
-
-# from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
 from metasim.utils import configclass
-from metasim.utils.humanoid_robot_util import *
 
 
-# define new reward function
 def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """Reward function for feet position."""
     foot_pos = env_states.robots[robot_name].body_state[:, cfg.feet_indices, :2]
     feet_pos_diff = (
         foot_pos[:, :, :2] - env_states.robots[robot_name].extra["ref_feet_pos"][:, :, :2]
@@ -41,96 +30,42 @@ def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
     return torch.exp(-4 * feet_pos_error), feet_pos_error
 
 
-# ppo config
-class SteppingCfgPPO(LeggedRobotCfgPPO):
+@configclass
+class SteppingCfgPPO(BaseHumanoidCfgPPO):
+    """PPO config for Skillbench:Stepping."""
+
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
-    class policy:
-        init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
+    @configclass
+    class Runner(BaseHumanoidCfgPPO.Runner):
+        """Runner config for Skillbench:Stepping."""
 
-    class algorithm(LeggedRobotCfgPPO.algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
-        num_mini_batches = 4
-
-    class runner:
         wandb = True
-        policy_class_name = "ActorCritic"
-        algorithm_class_name = "PPO"
-        num_steps_per_env = 60  # per iteration
-        max_iterations = 15001  # 3001  # number of policy updates
-
-        # logging
-        save_interval = 1000  # check for potential saves every this many iterations
+        num_steps_per_env = 60
+        max_iterations = 15001
+        save_interval = 500
         experiment_name = "stepping"
-        run_name = ""
-        # load and resume
-        resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and ckpt
 
-
-# TODO task config override robot config
-class robot_asset(BaseConfig):
-    fix_base_link: bool = False
-    penalize_contacts_on = ["hip", "knee", "pelvis", "torso", "shoulder", "elbow"]
-
-
-@configclass
-class SteppingRewardCfg(RewardCfg):
-    base_height_target = 0.89
-    min_dist = 0.2
-    max_dist = 0.5
-    # put some settings here for LLM parameter tuning
-    target_joint_pos_scale = 0.17  # rad
-    target_feet_height = 0.06  # m
-    cycle_time = 0.64  # sec
-    # if true negative total rewards are clipped at zero (avoids early termination problems)
-    only_positive_rewards = True
-    # tracking reward = exp(error*sigma)
-    tracking_sigma = 5
-    max_contact_force = 700  # forces above this value are penalized
+    runner = Runner()
 
 
 @configclass
 class SteppingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Stepping."""
 
-    task_name = "walking"
-    sim_params = SimParamCfg(
-        dt=0.001,
-        contact_offset=0.01,
-        substeps=1,
-        num_position_iterations=4,
-        num_velocity_iterations=0,
-        bounce_threshold_velocity=0.1,
-        replace_cylinder_with_capsule=False,
-        friction_offset_threshold=0.04,
-        num_threads=10,
-    )
+    task_name = "stepping"
 
     ppo_cfg = SteppingCfgPPO()
-    reward_cfg = SteppingRewardCfg()
-    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-    command_ranges.feet_max_radius = 0.25
 
-    num_actions = 19
+    command_ranges = BaseHumanoidCfg.CommandRanges(
+        lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
+    )
+    commands = BaseHumanoidCfg.CommandsConfig(num_commands=4, resampling_time=8.0)
+
     command_dim = 4
     frame_stack = 1
     c_frame_stack = 3
-    num_single_obs = 3 * num_actions + 6 + command_dim  #
-    num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 18 + 12
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
 
     reward_functions: list[Callable] = [
         reward_feet_pos,
@@ -140,9 +75,6 @@ class SteppingCfg(BaseHumanoidCfg):
         reward_dof_vel,
         reward_dof_acc,
     ]
-
-    # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
-
     reward_weights: dict[str, float] = {
         "feet_pos": 5,
         "upper_body_pos": 0.5,
@@ -151,3 +83,11 @@ class SteppingCfg(BaseHumanoidCfg):
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
     }
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = 3 * self.num_actions + 18 + 12
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
+        self.command_ranges.feet_max_radius = 0.25

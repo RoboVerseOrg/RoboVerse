@@ -8,11 +8,16 @@ try:
 except ImportError:
     pass
 
+import sys
+
 import torch
 from diffusion_policy.common.pytorch_util import dict_apply
 from loguru import logger as log
 
 from metasim.cfg.scenario import ScenarioCfg
+
+for path in sys.path:
+    print(path)
 
 
 class PolicyRunner:

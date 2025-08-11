@@ -51,7 +51,7 @@ def main(cfg: DictConfig):
     if cfg.train.task_name.startswith("dmcontrol:") or (
         cfg.train.robot_name == "none" and not cfg.train.task_name.startswith("ogbench:")
     ):
-        scenario = ScenarioCfg(task=task, robots=[])
+        scenario = ScenarioCfg(task=task(), robots=[])
         scenario.cameras = []
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
@@ -60,8 +60,9 @@ def main(cfg: DictConfig):
 
         env = DMControlEnv(scenario)
     elif cfg.train.task_name.startswith("ogbench:"):
-        task.traj_filepath = None
-        scenario = ScenarioCfg(task=task, robots=[])
+        task_instance = task()
+        task_instance.traj_filepath = None
+        scenario = ScenarioCfg(task=task_instance, robots=[])
         scenario.cameras = []
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
@@ -71,7 +72,7 @@ def main(cfg: DictConfig):
         env = OGBenchEnv(scenario=scenario, handler=None)
     else:
         robot = get_robot(cfg.train.robot_name)
-        scenario = ScenarioCfg(task=task, robots=[robot])
+        scenario = ScenarioCfg(task=task(), robots=[robot])
         scenario.cameras = []
 
         scenario.num_envs = cfg.environment.num_envs

@@ -45,3 +45,7 @@ class HurdleCfg(HumanoidTaskCfg):
     checker = _HurdleChecker()
     reward_weights = [1.0]
     reward_functions = [HurdleReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

@@ -23,3 +23,7 @@ class StandCfg(HumanoidTaskCfg):
     checker = _StandChecker()
     reward_weights = [1.0]
     reward_functions = [StandReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

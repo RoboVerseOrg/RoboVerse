@@ -4,7 +4,9 @@ from typing import Any
 
 import torch
 
-from metasim.cfg.checkers import EmptyChecker
+from metasim.cfg.checkers import BaseChecker, EmptyChecker
+from metasim.cfg.objects import BaseObjCfg
+from metasim.cfg.simulator_params import SimParamCfg
 from metasim.constants import TaskType
 from metasim.utils import configclass
 
@@ -16,11 +18,11 @@ from .dm_wrapper import DM_CONTROL_AVAILABLE, DMControlWrapper
 class DMControlBaseCfg(BaseTaskCfg):
     """Base configuration for dm_control tasks."""
 
-    episode_length = 1000
-    traj_filepath = None
-    task_type = TaskType.LOCOMOTION
-    objects = []
-    checker = EmptyChecker()
+    episode_length: int = 1000
+    traj_filepath: str | None = None
+    task_type: TaskType = TaskType.LOCOMOTION
+    objects: list[BaseObjCfg] = []
+    checker: BaseChecker = EmptyChecker()
 
     # dm_control specific parameters
     domain_name: str = None
@@ -34,6 +36,7 @@ class DMControlBaseCfg(BaseTaskCfg):
         super().__post_init__()
         self._wrapper = None
         self._initialized = False
+        self.sim_params = SimParamCfg()
 
         # Set observation space based on dm_control environment
         if DM_CONTROL_AVAILABLE and self.domain_name and self.task_name:

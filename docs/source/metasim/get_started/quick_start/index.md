@@ -14,4 +14,6 @@ We provide tutorials for using MetaSim:
 6_advanced_rendering
 7_collect_demo
 8_replay_demo
+9_cfg_task
+10_mount_camera
 ```

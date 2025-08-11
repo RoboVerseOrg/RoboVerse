@@ -1,37 +1,24 @@
-"""This is a training script that train legged robot"""
-
 from __future__ import annotations
 
+import argparse
+import copy
 import datetime
 import importlib
 import os
 
+import torch
 from loguru import logger as log
 
-try:
-    import isaacgym  # noqa: F401
-except ImportError:
-    pass
-
-import rootutils
-import torch
-
-rootutils.setup_root(__file__, pythonpath=True)
-import argparse
-
-import wandb
-from rsl_rl.runners.on_policy_runner import OnPolicyRunner
-
 from metasim.cfg.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
 def parse_arguments(description="humanoid rl task arguments", custom_parameters=None):
-    """Parse arguments."""
+    """Parse command line arguments."""
 
     if custom_parameters is None:
         custom_parameters = []
-    """Parse command line arguments."""
     parser = argparse.ArgumentParser(description=description)
     for argument in custom_parameters:
         if ("name" in argument) and ("type" in argument or "action" in argument):
@@ -50,18 +37,15 @@ def parse_arguments(description="humanoid rl task arguments", custom_parameters=
                 parser.add_argument(argument["name"], action=argument["action"], help=help_str)
 
         else:
-            print()
-            print("ERROR: command line argument name, type/action must be defined, argument not added to parser")
-            print("supported keys: name, type, default, action, help")
-            print()
+            log.error("ERROR: command line argument name, type/action must be defined, argument not added to parser")
+            log.error("supported keys: name, type, default, action, help")
+
     return parser.parse_args()
 
 
-# TODO
-# 1. add resume training from checkpoint
-
-
 def get_wrapper(task_id: str):
+    """Get the environment wrapper class for the given task ID."""
+
     if ":" in task_id:
         prefix, task_name = task_id.split(":")
         if prefix not in ["skillblender", "Skillblender"]:
@@ -78,6 +62,54 @@ def get_wrapper(task_id: str):
     wrapper_module = importlib.import_module("roboverse_learn.skillblender_rl.env_wrappers")
     wrapper_cls = getattr(wrapper_module, f"{task_name_camel}Wrapper")
     return wrapper_cls
+
+
+def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+    """Get the log directory."""
+
+    robot_name = args.robot
+    task_name = scenario.task.task_name
+    task_name = f"{robot_name}_{task_name}"
+    now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
+    log_dir = f"./outputs/skillblender/{task_name}/{now}/"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    log.info("Log directory: {}", log_dir)
+    return log_dir
+
+
+def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+    """Get the root directory to load the model from."""
+
+    robot_name = args.robot
+    task_name = scenario.task.task_name
+    task_name = f"{robot_name}_{task_name}"
+    if args.load_run is None:
+        raise ValueError("Please provide a run name to load the model from using --load_run")
+    load_root = f"./outputs/skillblender/{task_name}/{args.load_run}"
+    return load_root
+
+
+def get_load_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+    """Get the path to load the model from."""
+
+    load_root = get_load_root_dir(args, scenario)
+    if args.checkpoint == -1:
+        models = [file for file in os.listdir(load_root) if "model" in file]
+        models.sort(key=lambda m: f"{m!s:0>15}")
+        model = models[-1]
+        load_path = f"{load_root}/model_{model}.pt"
+    else:
+        load_path = f"{load_root}/model_{args.checkpoint}.pt"
+    return load_path
+
+
+def get_export_jit_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+    """Get the path to export the JIT model."""
+    load_root = get_load_root_dir(args, scenario)
+    exported_root_dir = f"{load_root}/exported"
+    os.makedirs(exported_root_dir, exist_ok=True)
+    return f"{load_root}/exported/model_exported_jit.pt"
 
 
 def get_args(test=False):
@@ -122,6 +154,12 @@ def get_args(test=False):
             "help": "Path to the config file. If provided, will override command line arguments.",
         },
         {
+            "name": "--load_run",
+            "type": str,
+            "default": None,
+            "help": "Path to the config file. If provided, will override command line arguments.",
+        },
+        {
             "name": "--checkpoint",
             "type": int,
             "default": -1,
@@ -135,50 +173,47 @@ def get_args(test=False):
     return args
 
 
-def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
-    """Get the log directory."""
-    robot_name = args.robot
-    task_name = scenario.task.task_name
-    task_name = f"{robot_name}_{task_name}"
-    now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    log_dir = f"./outputs/skillblender/{task_name}/{now}/"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir, exist_ok=True)
-    log.info("Log directory: {}", log_dir)
-    return log_dir
+def export_policy_as_jit(actor_critic, path, filename=None):
+    """Export the policy as a JIT model."""
+    model = copy.deepcopy(actor_critic.actor).to("cpu")
+    traced_script_module = torch.jit.script(model)
+    traced_script_module.save(path)
 
 
-def train(args):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    # TODO add camera
-    # cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
-    cameras = []
-    scenario = ScenarioCfg(
-        task=args.task,
-        robots=[args.robot],
-        num_envs=args.num_envs,
-        sim=args.sim,
-        headless=args.headless,
-        cameras=cameras,
-    )
-    log_dir = get_log_dir(args, scenario)
-    task_wrapper = get_wrapper(args.task)
-    env = task_wrapper(scenario)
-    use_wandb = args.use_wandb
-    if use_wandb:
-        wandb.init(project=args.wandb, name=args.run_name)
-    ppo_runner = OnPolicyRunner(
-        env=env,
-        train_cfg=env.train_cfg,
-        device=device,
-        log_dir=log_dir,
-        wandb=use_wandb,
-        args=args,
-    )
-    ppo_runner.learn(num_learning_iterations=args.learning_iterations)
+def get_body_reindexed_indices_from_substring(
+    sim_handler: BaseSimHandler, obj_name: str, body_names: list[str], device
+):
+    """given substrings of body name, find all the bodies indices in sorted order."""
+
+    matches = []
+    sorted_names = sim_handler.get_body_names(obj_name, sort=True)
+
+    for name in body_names:
+        for i, s in enumerate(sorted_names):
+            if name in s:
+                matches.append(i)
+
+    index = torch.tensor(matches, dtype=torch.int32, device=device)
+    return index
 
 
-# TODO expose algorithm api to let user define their own nerual network
-if __name__ == "__main__":
-    args = get_args()
-    train(args)
+def get_joint_reindexed_indices_from_substring(
+    sim_handler: BaseSimHandler, obj_name: str, joint_names: list[str], device: str
+):
+    """given substrings of joint name, find all the bodies indices in sorted order."""
+
+    matches = []
+    sorted_names = sim_handler.get_joint_names(obj_name, sort=True)
+
+    for name in joint_names:
+        for i, s in enumerate(sorted_names):
+            if name in s:
+                matches.append(i)
+
+    index = torch.tensor(matches, dtype=torch.int32, device=device)
+    return index
+
+
+def torch_rand_float(lower: float, upper: float, shape: tuple[int, int], device: str) -> torch.Tensor:
+    """Generate a tensor of random floats in the range [lower, upper]."""
+    return (upper - lower) * torch.rand(*shape, device=device) + lower

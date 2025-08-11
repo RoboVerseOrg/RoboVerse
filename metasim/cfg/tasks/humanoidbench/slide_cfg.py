@@ -7,16 +7,18 @@ import torch
 from metasim.cfg.checkers import _SlideChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.queries.site import SitePos
 from metasim.types import EnvState
-from metasim.utils import configclass, humanoid_reward_util
+from metasim.utils import configclass
+from metasim.utils.humanoid_reward_util import tolerance_tensor
 from metasim.utils.humanoid_robot_util import (
-    actuator_forces,
-    head_height,
-    left_foot_height,
-    right_foot_height,
-    robot_velocity,
-    torso_upright,
+    actuator_forces_tensor,
+    body_pos_tensor,
+    robot_velocity_tensor,
+    torso_upright_tensor,
 )
+
+_WALK_SPEED = 1.0
 
 from .base_cfg import (
     HumanoidBaseReward,
@@ -32,57 +34,53 @@ class SlideReward(HumanoidBaseReward):
         super().__init__(robot_name)
 
     def __call__(self, states: list[EnvState]) -> torch.FloatTensor:
-        """Compute the slide reward."""
-        results = []
-        for state in states:
-            # Reward for controlled movement
-            small_control = humanoid_reward_util.tolerance(
-                actuator_forces(state, self._robot_name),
-                margin=10,
-                value_at_margin=0,
-                sigmoid="quadratic",
-            ).mean(dim=-1)
-            small_control = (4 + small_control) / 5
+        """Compute the stair reward."""
+        forces = actuator_forces_tensor(states, self.robot_name)  # (B, n_act)
+        com_vx = robot_velocity_tensor(states, self.robot_name)[:, 0]  # (B,)
+        upright_ = torso_upright_tensor(states, self.robot_name)  # (B,)
 
-            # Reward for sliding motion - encourage horizontal velocity
-            root_x_speed = humanoid_reward_util.tolerance(
-                robot_velocity(state, self._robot_name)[0],  # x-axis velocity
-                bounds=(1.0, float("inf")),  # Adjust velocity threshold as needed
-                margin=1.0,
-                value_at_margin=0,
-                sigmoid="linear",
-            )
+        head_z = states.extras["head_pos"][:, 2]
+        lfoot_z = body_pos_tensor(states, self.robot_name, "left_ankle_link")[:, 2]  # (B,)
+        rfoot_z = body_pos_tensor(states, self.robot_name, "right_ankle_link")[:, 2]  # (B,)
 
-            # Reward for maintaining upright posture
-            upright = humanoid_reward_util.tolerance(
-                torso_upright(state),
-                bounds=(0.5, 1.0),
-                sigmoid="linear",
-                margin=1.9,
-                value_at_margin=0,
-            )
+        # standing term -------------------------------------------------
+        standing = tolerance_tensor(head_z - lfoot_z, bounds=(1.2, float("inf")), margin=0.45) * tolerance_tensor(
+            head_z - rfoot_z, bounds=(1.2, float("inf")), margin=0.45
+        )  # (B,)
 
-            # Left foot vertical distance
-            head_z = head_height(state)
-            left_foot_z = left_foot_height(state)
-            right_foot_z = right_foot_height(state)
-            vertical_foot_left = humanoid_reward_util.tolerance(
-                head_z - left_foot_z,
-                bounds=(1.2, float("inf")),
-                margin=0.45,
-            )
-            vertical_foot_right = humanoid_reward_util.tolerance(
-                head_z - right_foot_z,
-                bounds=(1.2, float("inf")),
-                margin=0.45,
-            )
+        # upright term --------------------------------------------------
+        upright = tolerance_tensor(
+            upright_,
+            bounds=(0.5, float("inf")),
+            margin=1.9,
+            sigmoid="linear",
+            value_at_margin=0.0,
+        )  # (B,)
 
-            # Combine rewards
-            reward = small_control * root_x_speed * upright * vertical_foot_left * vertical_foot_right
+        stand_reward = standing * upright  # (B,)
 
-            # log.info(f"root_x_speed: {root_x_speed}, upright: {upright}, vertical_foot_left: {vertical_foot_left}, vertical_foot_right: {vertical_foot_right}")
-            results.append(reward)
-        return torch.tensor(results)
+        # small-control term -------------------------------------------
+        small_ctrl = tolerance_tensor(
+            forces,
+            margin=10.0,
+            value_at_margin=0.0,
+            sigmoid="quadratic",
+        ).mean(dim=-1)  # (B,)
+        small_ctrl = (4.0 + small_ctrl) / 5.0  # (B,)
+
+        # forward motion term -------------------------------------------
+        move = tolerance_tensor(
+            com_vx,
+            bounds=(_WALK_SPEED, float("inf")),
+            margin=_WALK_SPEED,
+            value_at_margin=0.0,
+            sigmoid="linear",
+        )
+        move = (5.0 * move + 1.0) / 6.0  # (B,)
+
+        # final reward ---------------------------------------------------
+        reward = stand_reward * small_ctrl * move  # (B,)
+        return reward
 
 
 @configclass
@@ -102,3 +100,9 @@ class SlideCfg(HumanoidTaskCfg):
     checker = _SlideChecker()
     reward_weights = [1.0]
     reward_functions = [SlideReward]
+
+    def extra_spec(self):
+        """Declare extra observations needed by CrawlReward."""
+        return {
+            "head_pos": SitePos("head"),
+        }

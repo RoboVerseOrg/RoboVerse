@@ -6,3 +6,4 @@ _autosummary/
 
 !*.png
 !*.jpg
+source/dataset_benchmark/tasks/tasks_md/

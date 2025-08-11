@@ -17,6 +17,8 @@ try:
     import mujoco.viewer
 except ImportError:
     pass
+from typing import TYPE_CHECKING
+
 import numpy as np
 import torch
 from dm_control import mjcf
@@ -24,14 +26,17 @@ from loguru import logger as log
 from mujoco import mjx
 
 from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
-from metasim.cfg.scenario import ScenarioCfg
+
+if TYPE_CHECKING:
+    from metasim.cfg.scenario import ScenarioCfg
+
 from metasim.constants import TaskType
+from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .mjx_helper import (
-    get_extras,
     j2t,
     pack_body_state,
     pack_root_state,
@@ -44,8 +49,14 @@ from .mjx_helper import (
 
 
 class MJXHandler(BaseSimHandler):
-    def __init__(self, scenario: ScenarioCfg, *, seed: int | None = None):
-        super().__init__(scenario)
+    def __init__(
+        self,
+        scenario: ScenarioCfg,
+        optional_queries: dict[str, BaseQueryType] | None = None,
+        *,
+        seed: int | None = None,
+    ):
+        super().__init__(scenario, optional_queries)
 
         self._scenario = scenario
         self._seed = seed or 0
@@ -96,6 +107,11 @@ class MJXHandler(BaseSimHandler):
             self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
         log.info(f"MJXHandler launched · envs={self.num_envs}")
         log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
+
+        if self.optional_queries is None:
+            self.optional_queries = {}
+        for query_name, query_type in self.optional_queries.items():
+            query_type.bind_handler(self)
 
     def _simulate(self) -> None:
         if self._gravity_compensation:
@@ -204,8 +220,8 @@ class MJXHandler(BaseSimHandler):
             # Convert JAX → PyTorch; result shape (batch, dim)
             sensors[name] = j2t(sens_batch[:, sl])
 
-        extras = get_extras(self._data, self._mj_model, env_ids)
-        return TensorState(objects=objects, robots=robots, cameras=camera_states, sensors=sensors, extras=extras)
+        extras = self.get_extra()  # extra observations
+        return TensorState(objects=objects, robots=robots, sensors=sensors, cameras=camera_states, extras=extras)
 
     def _set_states(
         self,

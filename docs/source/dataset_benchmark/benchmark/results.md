@@ -10,14 +10,16 @@
       <th><center>RGB</center></th>
       <th colspan="3"><center>RGBD</center></th>
       <th colspan="2"><center>PointCloud</center></th>
+      <th><center>Fusion</center></th>
     </tr>
     <tr>
       <th>resnet18</th>
       <th>resnet18</th>
       <th>ViT</th>
       <th>MultiViT</th>
-      <th>pointnet</th>
+      <th>DP3</th>
       <th>spUnet</th>
+      <th>ResNet+DP3</th>
     </tr>
   </thead>
   <tbody>
@@ -28,7 +30,8 @@
       <td>0.89</td>
       <td>0.80</td>
       <td>0.82</td>
-      <td><b>0.92</b></td>
+      <td>0.92</td>
+      <td><b>1.00</b></td>
     </tr>
     <tr>
       <td>CloseBoxL1</td>
@@ -37,7 +40,8 @@
       <td>0.40</td>
       <td>0.42</td>
       <td>0.73</td>
-      <td><b>0.88</b></td>
+      <td>0.88</td>
+      <td><b>0.94</b></td>
     </tr>
     <tr>
       <td>CloseBoxL2</td>
@@ -45,8 +49,9 @@
       <td>0.30</td>
       <td>0.30</td>
       <td>0.32</td>
-      <td><b>0.82</b></td>
+      <td>0.82</td>
       <td>0.62</td>
+      <td><b>0.95</b></td>
     </tr>
     <tr>
       <td>StackCubeL0</td>
@@ -56,10 +61,12 @@
       <td>0.06</td>
       <td>0.00</td>
       <td>0.00</td>
+      <td>0.66</td>
     </tr>
     <tr>
       <td>StackCubeL1</td>
       <td><b>0.01</b></td>
+      <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
@@ -74,6 +81,127 @@
       <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>PickAlphabetSoupL0</td>
+      <td>0.70</td>
+      <td>0.42</td>
+      <td>0.56</td>
+      <td>0.59</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.77</b></td>
+    </tr>
+    <tr>
+      <td>PickAlphabetSoupL1</td>
+      <td>0.00</td>
+      <td>0.03</td>
+      <td>0.10</td>
+      <td>0.16</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.67</b></td>
+    </tr>
+    <tr>
+      <td>PickAlphabetSoupL2</td>
+      <td>0.00</td>
+      <td>0.26</td>
+      <td>0.30</td>
+      <td>0.27</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.73</b></td>
+    </tr>
+    <tr>
+      <td>PickButterL0</td>
+      <td>0.79</td>
+      <td>0.73</td>
+      <td>0.40</td>
+      <td>0.47</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.74</td>
+    </tr>
+    <tr>
+      <td>PickButterL1</td>
+      <td>0.65</td>
+      <td>0.60</td>
+      <td>0.32</td>
+      <td>0.27</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.82</b></td>
+    </tr>
+    <tr>
+      <td>PickButterL2</td>
+      <td>0.52</td>
+      <td>0.52</td>
+      <td>0.34</td>
+      <td>0.35</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.88</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL0</td>
+      <td>0.30</td>
+      <td>0.26</td>
+      <td>0.31</td>
+      <td>0.28</td>
+      <td>0.29</td>
+      <td>0.35</td>
+      <td><b>0.50</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL1</td>
+      <td>0.09</td>
+      <td>0.25</td>
+      <td>0.53</td>
+      <td>0.50</td>
+      <td>0.53</td>
+      <td>0.49</td>
+      <td><b>0.53</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL2</td>
+      <td>0.13</td>
+      <td>0.14</td>
+      <td>0.28</td>
+      <td>0.31</td>
+      <td>0.05</td>
+      <td>0.00</td>
+      <td><b>0.51</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL0</td>
+      <td>0.25</td>
+      <td>0.26</td>
+      <td>0.40</td>
+      <td>0.43</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.81</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL1</td>
+        <td>0.01</td>
+        <td>0.08</td>
+        <td>0.10</td>
+        <td>0.12</td>
+        <td>0.00</td>
+        <td>0.00</td>
+        <td><b>0.68</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL2</td>
+      <td>0.01</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.81</b></td>
     </tr>
   </tbody>
 </table>
@@ -87,14 +215,16 @@
       <th><center>RGB</center></th>
       <th colspan="3"><center>RGBD</center></th>
       <th colspan="2"><center>PointCloud</center></th>
+      <th><center>Fusion</center></th>
     </tr>
     <tr>
       <th>resnet18</th>
       <th>resnet18</th>
       <th>ViT</th>
       <th>MultiViT</th>
-      <th>pointnet</th>
+      <th>DP3</th>
       <th>spUnet</th>
+      <th>ResNet+DP3</th>
     </tr>
   </thead>
   <tbody>
@@ -105,7 +235,8 @@
       <td>0.68</td>
       <td>0.80</td>
       <td>0.60</td>
-      <td><b>0.94</b></td>
+      <td>0.94</td>
+      <td><b>0.97</b></td>
     </tr>
     <tr>
       <td>CloseBoxL1</td>
@@ -114,7 +245,8 @@
       <td>0.36</td>
       <td>0.34</td>
       <td>0.77</td>
-      <td><b>0.88</b></td>
+      <td>0.88</td>
+      <td><b>0.95</b></td>
     </tr>
     <tr>
       <td>CloseBoxL2</td>
@@ -123,7 +255,8 @@
       <td>0.40</td>
       <td>0.32</td>
       <td>0.38</td>
-      <td><b>0.42</b></td>
+      <td>0.42</td>
+      <td><b>0.95</b></td>
     </tr>
     <tr>
       <td>StackCubeL0</td>
@@ -133,9 +266,11 @@
       <td>0.02</td>
       <td>0.00</td>
       <td>0.00</td>
+      <td>0.10</td>
     </tr>
     <tr>
       <td>StackCubeL1</td>
+      <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
@@ -151,7 +286,127 @@
       <td>0.00</td>
       <td>0.00</td>
       <td>0.00</td>
+      <td>0.00</td>
     </tr>
-
+    <tr>
+      <td>PickAlphabetSoupL0</td>
+      <td>0.66</td>
+      <td>0.50</td>
+      <td>0.58</td>
+      <td>0.63</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.89</b></td>
+    </tr>
+    <tr>
+      <td>PickAlphabetSoupL1</td>
+      <td>0.01</td>
+      <td>0.00</td>
+      <td>0.03</td>
+      <td>0.04</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.74</b></td>
+    </tr>
+    <tr>
+      <td>PickAlphabetSoupL2</td>
+      <td>0.00</td>
+      <td>0.22</td>
+      <td>0.30</td>
+      <td>0.32</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.75</b></td>
+    </tr>
+    <tr>
+      <td>PickButterL0</td>
+      <td>0.80</td>
+      <td>0.74</td>
+      <td>0.78</td>
+      <td>0.81</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.87</b></td>
+    </tr>
+    <tr>
+      <td>PickButterL1</td>
+      <td>0.68</td>
+      <td>0.62</td>
+      <td>0.70</td>
+      <td>0.64</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.91</b></td>
+    </tr>
+    <tr>
+      <td>PickButterL2</td>
+      <td>0.67</td>
+      <td>0.50</td>
+      <td>0.56</td>
+      <td>0.62</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.86</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL0</td>
+      <td>0.27</td>
+      <td>0.20</td>
+      <td>0.27</td>
+      <td>0.30</td>
+      <td>0.14</td>
+      <td>0.20</td>
+      <td><b>0.49</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL1</td>
+      <td>0.10</td>
+      <td>0.19</td>
+      <td>0.42</td>
+      <td>0.48</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.58</b></td>
+    </tr>
+    <tr>
+      <td>PickOrangeJuiceL2</td>
+      <td>0.15</td>
+      <td>0.15</td>
+      <td>0.23</td>
+      <td>0.20</td>
+      <td>0.07</td>
+      <td>0.03</td>
+      <td><b>0.53</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL0</td>
+      <td>0.23</td>
+      <td>0.25</td>
+      <td>0.34</td>
+      <td>0.31</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.77</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL1</td>
+      <td>0.01</td>
+      <td>0.07</td>
+      <td>0.06</td>
+      <td>0.12</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.65</b></td>
+    </tr>
+    <tr>
+      <td>PickTomatoSauceL2</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td><b>0.74</b></td>
+    </tr>
   </tbody>
 </table>

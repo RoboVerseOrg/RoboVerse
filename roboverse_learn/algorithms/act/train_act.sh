@@ -24,13 +24,13 @@ extra="obs:${obs_space}_act:${act_space}"
 if [ "${delta_ee}" = 1 ]; then
   extra="${extra}_delta"
 fi
-python roboverse_learn/algorithms/data2zarr_dp.py \
---task_name ${task_name}_${extra} \
---expert_data_num ${expert_data_num} \
---metadata_dir ${metadata_dir} \
---action_space ${act_space} \
---observation_space ${obs_space} \
---delta_ee ${delta_ee}
+#python roboverse_learn/algorithms/data2zarr_dp.py \
+#--task_name ${task_name}_${extra} \
+#--expert_data_num ${expert_data_num} \
+#--metadata_dir ${metadata_dir} \
+#--action_space ${act_space} \
+#--observation_space ${obs_space} \
+#--delta_ee ${delta_ee}
 
 
 export CUDA_VISIBLE_DEVICES=${gpu_id}

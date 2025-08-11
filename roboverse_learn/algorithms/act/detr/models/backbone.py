@@ -72,6 +72,7 @@ class BackboneBase(nn.Module):
         self.num_channels = num_channels
 
     def forward(self, tensor):
+        print(f"[BackBone]: tensor shape: {tensor.shape}")
         xs = self.body(tensor)
         return xs
         # out: Dict[str, NestedTensor] = {}

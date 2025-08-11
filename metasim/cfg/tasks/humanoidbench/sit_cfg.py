@@ -7,12 +7,12 @@ import torch
 from metasim.cfg.checkers import _SitChecker
 from metasim.cfg.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.queries.site import SitePos
 from metasim.utils import configclass
 from metasim.utils.humanoid_reward_util import tolerance_tensor
 from metasim.utils.humanoid_robot_util import (
     actuator_forces_tensor,
     robot_position_tensor,
-    robot_site_pos_tensor,
     robot_velocity_tensor,
     torso_upright_tensor,
 )
@@ -40,8 +40,8 @@ class SitReward(HumanoidBaseReward):
         robot_pos = robot_position_tensor(states, self.robot_name)  # (B, 3)
         chair_pos = states.objects["sit"].root_state[:, 0:3]  # (B, 3)
 
-        head_z = robot_site_pos_tensor(states, self.robot_name, site_name="head")[:, 2]  # (B,)
-        imu_z = robot_site_pos_tensor(states, self.robot_name, site_name="imu")[:, 2]  # (B,)
+        head_z = states.extras["head_pos"][:, 2]
+        imu_z = states.extras["imu_pos"][:, 2]  # (B,)
 
         vel_xy = robot_velocity_tensor(states, self.robot_name)[:, :2]  # (B, 2)
         vx, vy = vel_xy[:, 0], vel_xy[:, 1]
@@ -120,3 +120,10 @@ class SitCfg(HumanoidTaskCfg):
     checker = _SitChecker()
     reward_weights = [1.0]
     reward_functions = [SitReward]
+
+    def extra_spec(self):
+        """Declare extra observations needed by CrawlReward."""
+        return {
+            "imu_pos": SitePos("imu"),
+            "head_pos": SitePos("head"),
+        }

@@ -79,3 +79,7 @@ class PackageCfg(HumanoidTaskCfg):
     checker = _PackageChecker()
     reward_weights = [1.0]
     reward_functions = [PackageReward]
+
+    def extra_spec(self):
+        """This task does not require any extra observations."""
+        return {}

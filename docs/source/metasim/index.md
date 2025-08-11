@@ -32,10 +32,12 @@ get_started/advanced/index
 <!--user_guide/multi_env-->
 <!--user_guide/cross_embodiment-->
 <!--user_guide/cross_sim-->
+user_guide/collect_demo_tutorial
 user_guide/teleoperate_demo
 user_guide/real2sim
 get_started/prepare_data_hf
 user_guide/tips/index
+
 ```
 
 ```{toctree}
@@ -55,6 +57,7 @@ user_guide/cross_sim
 :titlesonly:
 
 developer_guide/precommit_hooks
+developer_guide/architecture_overview
 developer_guide/state
 developer_guide/data_structure
 developer_guide/new_task/index
