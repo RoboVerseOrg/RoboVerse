@@ -28,6 +28,7 @@ class RLTaskEnv(BaseTaskEnv):
         self.max_episode_steps = 1000
         self.asymmetric_obs = False
 
+        self._load_task_config(scenario)
         super().__init__(scenario, device)
 
         self.num_envs = scenario.num_envs
@@ -61,6 +62,10 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # hooks / spaces
     # -------------------------------------------------------------------------
+
+    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
+        """Optionally modify `scenario` before base init."""
+        return scenario
 
     def _get_initial_states(self) -> list[dict]:
         """Return per-env initial states (override in subclasses)."""
