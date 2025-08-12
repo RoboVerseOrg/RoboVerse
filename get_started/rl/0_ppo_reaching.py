@@ -36,7 +36,8 @@ class Args:
     task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
+    sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
+    headless: bool = False
 
 
 args = tyro.cli(Args)
@@ -125,7 +126,7 @@ def train_ppo():
         robots=[args.robot],
         simulator=args.sim,
         num_envs=args.num_envs,
-        headless=False,
+        headless=args.headless,
         cameras=[],
     )
 

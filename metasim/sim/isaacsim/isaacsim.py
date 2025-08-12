@@ -50,6 +50,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scenario_cfg = scenario_cfg
         self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._step_counter = 0
+        self._is_closed = False
         self.render_interval = 4  # TODO: fix hardcode
 
     def _init_scene(self) -> None:
@@ -147,6 +148,18 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.render()
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
+
+    def close(self) -> None:
+        log.info("close Isaacsim Handler")
+        if not self._is_closed:
+            del self.scene
+            self.sim.clear_all_callbacks()
+            self.sim.clear_instance()
+            self._is_closed = True
+
+    def __del__(self):
+        """Cleanup for the environment."""
+        self.close()
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:

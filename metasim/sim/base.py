@@ -75,11 +75,7 @@ class BaseSimHandler(ABC):
             obj_name (str): The name of the robot
             actions (list[Action]): The target actions for the robot
         """
-<<<<<<< HEAD
         self._set_dof_targets(obj_name, actions)
-=======
-        raise NotImplementedError
->>>>>>> 749594d (update camera pose)
 
     ############################################################
     ## Get states

@@ -56,7 +56,11 @@ if __name__ == "__main__":
     scenario = ScenarioCfg(robots=[args.robot], headless=args.headless, num_envs=args.num_envs, simulator=args.sim)
 
     # add cameras
-    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+    scenario.cameras = [
+        PinholeCameraCfg(
+            name="camera", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
+        )
+    ]
 
     # add objects
     scenario.objects = [
@@ -142,3 +146,5 @@ if __name__ == "__main__":
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"
     log.info(f"Saving image to {save_path}")
     imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())
+
+
