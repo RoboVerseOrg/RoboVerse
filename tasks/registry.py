@@ -3,7 +3,6 @@ from __future__ import annotations
 from importlib import import_module
 from pathlib import Path
 
-from scenario_cfg.scenario import ScenarioCfg
 from tasks.base import BaseTaskEnv
 
 # Global registry mapping lowercase names to task wrapper classes
@@ -59,7 +58,7 @@ def _discover_task_modules() -> None:
         pass
 
 
-def get_task_class(name: str):
+def get_task_class(name: str) -> type[BaseTaskEnv]:
     """Return the task wrapper class registered under the given name.
 
     Name lookup is case-insensitive.
@@ -83,12 +82,11 @@ def list_tasks():
     return sorted(TASK_REGISTRY.keys())
 
 
-def load_task(name, scenario: ScenarioCfg, *args, **kwargs) -> BaseTaskEnv:
+def load_task(name, *args, **kwargs) -> BaseTaskEnv:
     """Instantiate a registered task by name.
 
     Args:
         name: Registered task name (case-insensitive).
-        scenario: The `ScenarioCfg` to construct the task with.
         *args: Additional positional arguments forwarded to the task class constructor.
         **kwargs: Additional keyword arguments forwarded to the task class constructor.
 
@@ -96,4 +94,4 @@ def load_task(name, scenario: ScenarioCfg, *args, **kwargs) -> BaseTaskEnv:
         BaseTaskEnv: The instantiated task environment.
     """
     cls = get_task_class(name)
-    return cls(scenario, *args, **kwargs)
+    return cls(*args, **kwargs)

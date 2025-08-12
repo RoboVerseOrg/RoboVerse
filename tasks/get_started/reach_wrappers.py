@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 
 from metasim.utils.state import TensorState
+from scenario_cfg.scenario import ScenarioCfg
 from tasks.registry import register_task
 from tasks.rl_task import RLTaskEnv
 
@@ -26,15 +27,24 @@ class ReachingEnv(RLTaskEnv):
     This class provides common functionality for all reaching tasks.
     """
 
-    def _load_task_config(self, scenario) -> None:
-        """Configure common reaching task parameters."""
-        super()._load_task_config(scenario)
+    scenario = ScenarioCfg(
+        objects=[],
+        robots=["franka"],
+    )
 
-        # Common configuration for reaching tasks
-        self.objects = []
+    # def _load_task_config(self, scenario) -> None:
+    #     """Configure common reaching task parameters."""
+    #     super()._load_task_config(scenario)
+
+    #     # Common configuration for reaching tasks
+    #     self.objects = []
+    #     self.max_episode_steps = 100
+
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        super().__init__(scenario, device)
         self.max_episode_steps = 100
-
-        return scenario
 
     def _get_initial_states(self) -> list[dict]:
         """Get the initial states of the environment."""
@@ -79,15 +89,20 @@ class ReachOriginEnv(ReachingEnv):
     The reward is based on the negative distance to the origin.
     """
 
-    def _load_task_config(self, scenario) -> None:
-        """Configure for reaching origin task."""
-        super()._load_task_config(scenario)
+    # def _load_task_config(self, scenario) -> None:
+    #     """Configure for reaching origin task."""
+    #     super()._load_task_config(scenario)
 
-        # Reward function: negative distance to origin
+    #     # Reward function: negative distance to origin
+    #     self.reward_functions = [negative_distance]
+    #     self.reward_weights = [1.0]
+
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        super().__init__(scenario, device)
         self.reward_functions = [negative_distance]
         self.reward_weights = [1.0]
-
-        return scenario
 
 
 @register_task("reach.far", "reach_far", "franka.reach_far")
@@ -98,12 +113,17 @@ class ReachFarAwayEnv(ReachingEnv):
     in the positive x direction.
     """
 
-    def _load_task_config(self, scenario) -> None:
-        """Configure for reaching far away task."""
-        super()._load_task_config(scenario)
+    # def _load_task_config(self, scenario) -> None:
+    #     """Configure for reaching far away task."""
+    #     super()._load_task_config(scenario)
 
-        # Reward function: x-distance (encourages moving away in x direction)
+    #     # Reward function: x-distance (encourages moving away in x direction)
+    #     self.reward_functions = [x_distance]
+    #     self.reward_weights = [1.0]
+
+    #     return scenario
+
+    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        super().__init__(scenario, device)
         self.reward_functions = [x_distance]
         self.reward_weights = [1.0]
-
-        return scenario

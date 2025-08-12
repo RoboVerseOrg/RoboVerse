@@ -28,7 +28,6 @@ class RLTaskEnv(BaseTaskEnv):
         self.max_episode_steps = 1000
         self.asymmetric_obs = False
 
-        self._load_task_config(scenario)
         super().__init__(scenario, device)
 
         self.num_envs = scenario.num_envs
@@ -47,7 +46,7 @@ class RLTaskEnv(BaseTaskEnv):
 
         # action bounds from joint limits (ordered by joint_names)
         limits = self.robot.joint_limits
-        self.joint_names = self.env._get_joint_names(self.robot.name)
+        self.joint_names = self.env.get_joint_names(self.robot.name)
         self._action_low = torch.tensor(
             [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.device
         )
@@ -62,10 +61,6 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # hooks / spaces
     # -------------------------------------------------------------------------
-
-    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
-        """Optionally modify `scenario` before base init."""
-        return scenario
 
     def _get_initial_states(self) -> list[dict]:
         """Return per-env initial states (override in subclasses)."""
