@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from multiprocessing import Pool
 
+import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
@@ -76,8 +77,16 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     if len(filepaths) == 0:
         return
 
-    with Pool(processes=n_processes) as p:
-        p.map(_check_and_download_single, filepaths)
+    with portalocker.Lock(os.path.join(LOCAL_DIR, "download.lock")):
+        # in parallel env settings, we need to prevent child processes from downloading the same file.
+
+        # check if current process is the main process
+        if os.getpid() == os.getppid():
+            with Pool(processes=n_processes) as p:
+                p.map(_check_and_download_single, filepaths)
+        else:
+            for filepath in filepaths:
+                _check_and_download_single(filepath)
 
     new_filepaths = []
     for filepath in filepaths:
