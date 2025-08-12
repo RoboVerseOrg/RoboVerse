@@ -14,7 +14,7 @@ from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 from .loader import load_traj_file
 
 
-def get_traj_v2(task: BaseTaskCfg, robot: BaseRobotCfg):
+def get_traj_v2(traj_filepath, robot: BaseRobotCfg):
     """Get the trajectory data.
 
     Args:
@@ -25,18 +25,18 @@ def get_traj_v2(task: BaseTaskCfg, robot: BaseRobotCfg):
         The trajectory data.
     """
     ## Load trajectory data
-    assert os.path.exists(task.traj_filepath)
-    if os.path.isfile(task.traj_filepath):
+    assert os.path.exists(traj_filepath)
+    if os.path.isfile(traj_filepath):
         assert (
-            task.traj_filepath.endswith("_v2.pkl")
-            or task.traj_filepath.endswith("_v2.pkl.gz")
-            or task.traj_filepath.endswith("_v2.json")
-            or task.traj_filepath.endswith("_v2.yaml")
+            traj_filepath.endswith("_v2.pkl")
+            or traj_filepath.endswith("_v2.pkl.gz")
+            or traj_filepath.endswith("_v2.json")
+            or traj_filepath.endswith("_v2.yaml")
         )
-        data = load_traj_file(task.traj_filepath)[robot.name]
+        data = load_traj_file(traj_filepath)[robot.name]
     else:
-        assert task.traj_filepath.find("v2") != -1
-        paths = glob(os.path.join(task.traj_filepath, f"{robot.name}_v2.*"))
+        assert traj_filepath.find("v2") != -1
+        paths = glob(os.path.join(traj_filepath, f"{robot.name}_v2.*"))
         assert len(paths) >= 1
         path = paths[0]
         log.info(f"Loading trajectory from {path}")
