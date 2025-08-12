@@ -5,13 +5,11 @@ from typing import Any, Callable
 import gymnasium as gym
 import numpy as np
 import torch
-from gymnasium.envs.registration import register
+from gymnasium.envs.registration import _find_spec, register
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.vector.vector_env import VectorEnv
 
-from scenario_cfg.scenario import ScenarioCfg
-
-from .registry import list_tasks, load_task
+from .registry import get_task_class, list_tasks
 
 # Use the official enum for autoreset mode (required to silence the warning)
 try:
@@ -44,9 +42,10 @@ class GymEnvWrapper(gym.Env):
             else (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         )
 
-        scenario = ScenarioCfg(**scenario_kwargs)
-        self.env = load_task(task_name, scenario, device=self._device)
-        self.scenario = self.env.scenario
+        self.task_cls = get_task_class(task_name)
+        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        self.scenario = updated_scenario_cfg
+        self.env = self.task_cls(updated_scenario_cfg)
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 
@@ -59,7 +58,8 @@ class GymEnvWrapper(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""
         super().reset(seed=seed)
-        obs = self.env.reset()
+        obs, info = self.env.reset()
+
         if torch.is_tensor(obs):
             obs = obs.detach().cpu().numpy()
         if obs.ndim == 2 and obs.shape[0] == 1:
@@ -145,9 +145,13 @@ class GymVectorEnvAdapter(VectorEnv):
             else (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         )
 
-        scenario = ScenarioCfg(**scenario_kwargs)
-        self.env = load_task(task_name, scenario, device=self._device)
-        self.scenario = self.env.scenario
+        self.task_cls = get_task_class(task_name)
+        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        self.env = self.task_cls(updated_scenario_cfg)
+        self.scenario = updated_scenario_cfg
+        # scenario = ScenarioCfg(**scenario_kwargs)
+        # self.env = load_task(task_name, scenario, device=self._device)
+        # self.scenario = self.env.scenario
         # Use positional args to be compatible across Gymnasium versions.
         try:
             super().__init__(self.env.num_envs, self.env.observation_space, self.env.action_space)
@@ -169,7 +173,7 @@ class GymVectorEnvAdapter(VectorEnv):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
         obs, info = self.env.reset()
         # VectorEnv API: return (obs_batch, infos_list) where len(infos) == num_envs.
         return obs, info
@@ -314,3 +318,26 @@ def register_task_with_gym(task_name: str, env_id: str | None = None) -> str:
         # Ignore duplicate registrations during hot reload.
         pass
     return env_id
+
+
+def make_vec(
+    env_id: str,
+    num_envs: int,
+    **kwargs: Any,
+) -> VectorEnv:
+    """Instantiate a vectorized roboverse task.
+
+    Args:
+        env_id: The environment ID to register.
+        num_envs: The number of environments to create.
+        **kwargs: Additional keyword arguments to pass to the environment creator.
+
+    Returns:
+        VectorEnv: The vectorized environment.
+    """
+    spec_ = _find_spec(env_id)
+    entry_point = spec_.vector_entry_point
+    env_creator = entry_point
+
+    env = env_creator(num_envs=num_envs, **kwargs)
+    return env
