@@ -65,7 +65,7 @@ env = gym.make_vec(
 
 obs, info = env.reset()
 robot = env.scenario.robots[0]
-for step_i in range(10000):
+for step_i in range(100):
     # batch actions: (num_envs, act_dim)
     actions = [
         {
