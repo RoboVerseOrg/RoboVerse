@@ -23,10 +23,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
-import gymnasium as gym
-
 from get_started.utils import ObsSaver
-from tasks.gym_registration import register_all_tasks_with_gym
+from tasks.gym_registration import make_vec, register_all_tasks_with_gym
 
 
 @dataclass
@@ -138,7 +136,7 @@ def train_ppo():
     register_all_tasks_with_gym()
 
     env_id = f"RoboVerse/{args.task}"
-    env = gym.make_vec(
+    env = make_vec(
         env_id,
         robots=[args.robot],
         simulator=args.sim,
@@ -146,7 +144,6 @@ def train_ppo():
         headless=args.headless,
         cameras=[],
         device=args.device,
-        prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
     )
 
     # Create VecEnv wrapper for SB3
@@ -182,7 +179,7 @@ def train_ppo():
 
     # Inference and Save Video
     # Create new environment for inference
-    env_inference = gym.make_vec(
+    env_inference = make_vec(
         env_id,
         robots=[args.robot],
         simulator=args.sim,
@@ -190,7 +187,6 @@ def train_ppo():
         headless=args.headless,
         cameras=[],
         device=args.device,
-        prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
     )
 
     env_inference = VecEnvWrapper(env_inference)

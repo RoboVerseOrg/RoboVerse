@@ -9,7 +9,6 @@ except ImportError:
 
 from typing import Literal
 
-import gymnasium as gym
 import rootutils
 import tyro
 from loguru import logger as log
@@ -22,7 +21,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 import torch
 
 from metasim.utils import configclass
-from tasks.gym_registration import register_all_tasks_with_gym
+from tasks.gym_registration import make_vec, register_all_tasks_with_gym
 
 
 @configclass
@@ -52,18 +51,17 @@ SIM = args.sim
 register_all_tasks_with_gym()
 
 env_id = f"RoboVerse/{args.task}"
-env = gym.make_vec(
+env = make_vec(
     env_id,
+    num_envs=args.num_envs,
     robots=[args.robot],
     simulator=args.sim,
-    num_envs=args.num_envs,
     headless=args.headless,
     cameras=[],
     device=args.device,
-    prefer_backend_vectorization=True,  # For single-env simulator such as mujoco, choose False
 )
-
 obs, info = env.reset()
+
 robot = env.scenario.robots[0]
 for step_i in range(100):
     # batch actions: (num_envs, act_dim)
