@@ -155,6 +155,8 @@ class IsaacsimHandler(BaseSimHandler):
             del self.scene
             self.sim.clear_all_callbacks()
             self.sim.clear_instance()
+            self.sim.stop()
+            self.sim.clear()
             self._is_closed = True
 
     def __del__(self):
