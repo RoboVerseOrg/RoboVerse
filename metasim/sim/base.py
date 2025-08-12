@@ -127,6 +127,7 @@ class BaseSimHandler(ABC):
     ############################################################
     ## Misc
     ############################################################
+    # @abstractmethod
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object.
         For a new simulator, you should implement this method.
@@ -142,6 +143,10 @@ class BaseSimHandler(ABC):
             list[str]: A list of joint names. For non-articulation objects, return an empty list.
         """
         raise NotImplementedError
+
+    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        """Get the joint names for a given object."""
+        return self._get_joint_names(obj_name, sort)
 
     def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
         """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
@@ -178,6 +183,7 @@ class BaseSimHandler(ABC):
 
         return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
 
+    # @abstractmethod
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.
         For a new simulator, you should implement this method.
@@ -193,6 +199,10 @@ class BaseSimHandler(ABC):
             list[str]: A list of body names. For non-articulation objects, return an empty list.
         """
         raise NotImplementedError
+
+    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        """Get the body names for a given object."""
+        return self._get_body_names(obj_name, sort)
 
     def get_body_reindex(self, obj_name: str) -> list[int]:
         """Get the reindexing order for body indices of a given object. The returned indices can be used to reorder the bodies such that they are sorted alphabetically by their names.
