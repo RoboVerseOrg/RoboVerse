@@ -91,8 +91,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene = InteractiveScene(scene_config)
 
     def _load_robots(self) -> None:
-        # TODO support multiple robots
-        assert len(self.robots) == 1, "Only support one robot for now in Isaaclab."
         for robot in self.robots:
             self._add_robot(robot)
 
@@ -118,7 +116,7 @@ class IsaacsimHandler(BaseSimHandler):
                     camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
                     camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
-                return
+                    # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
@@ -133,9 +131,22 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
-        self._update_camera_pose()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
+
+        # Update camera pose after scene reset to avoid being overridden
+        self._update_camera_pose()
+
+        # Force another simulation step and camera update to ensure proper initialization
+        self.sim.step(render=False)
+        self.scene.update(dt=self.dt)
+        self._update_camera_pose()
+
+        # Force a render to update camera data after position is set
+        if self.sim.has_gui() or self.sim.has_rtx_sensors():
+            self.sim.render()
+        for sensor in self.scene.sensors.values():
+            sensor.update(dt=0)
 
     def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
@@ -182,6 +193,15 @@ class IsaacsimHandler(BaseSimHandler):
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
+
+        # Special handling for the first frame to ensure camera is properly positioned
+        if self._step_counter == 0:
+            self._update_camera_pose()
+            # Force render and sensor update for first frame
+            if self.sim.has_gui() or self.sim.has_rtx_sensors():
+                self.sim.render()
+            for sensor in self.scene.sensors.values():
+                sensor.update(dt=0)
 
         object_states = {}
         for obj in self.objects:
@@ -232,6 +252,10 @@ class IsaacsimHandler(BaseSimHandler):
             robot_states[obj.name] = state
 
         camera_states = {}
+        # Force camera sensor update to ensure correct position data
+        for sensor in self.scene.sensors.values():
+            sensor.update(dt=0)
+
         for camera in self.cameras:
             camera_inst = self.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
@@ -260,32 +284,43 @@ class IsaacsimHandler(BaseSimHandler):
 
     def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
         # TODO: support set torque
-        self._actions_cache = actions
-        if isinstance(actions, torch.Tensor):
-            action_tensor_all = actions
-        else:
-            action_tensors = []
-            for robot in self.robots:
-                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
-                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
-                for env_id in range(self.num_envs):
-                    for i, actuator_name in enumerate(actuator_names):
-                        action_tensor[env_id, i] = torch.tensor(
-                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
-                        )
-                action_tensors.append(action_tensor)
-            action_tensor_all = torch.cat(action_tensors, dim=-1)
 
-        start_idx = 0
-        for robot in self.robots:
-            robot_inst = self.scene.articulations[robot.name]
-            actionable_joint_ids = [
-                robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
-            ]
-            robot_inst.set_joint_position_target(
-                action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)], joint_ids=actionable_joint_ids
-            )
-            start_idx += len(actionable_joint_ids)
+        # Store actions for all robots at once when first robot calls this
+        if not hasattr(self, "_actions_applied_this_step"):
+            self._actions_applied_this_step = False
+
+        # Only process actions once per simulation step
+        if not self._actions_applied_this_step:
+            if isinstance(actions, torch.Tensor):
+                action_tensor_all = actions
+            else:
+                # Process dictionary-based actions
+                action_tensors = []
+                for robot in self.robots:
+                    actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+                    action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
+                    for env_id in range(self.num_envs):
+                        for i, actuator_name in enumerate(actuator_names):
+                            action_tensor[env_id, i] = torch.tensor(
+                                actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
+                            )
+                    action_tensors.append(action_tensor)
+                action_tensor_all = torch.cat(action_tensors, dim=-1)
+
+            # Apply actions to all robots
+            start_idx = 0
+            for robot in self.robots:
+                robot_inst = self.scene.articulations[robot.name]
+                actionable_joint_ids = [
+                    robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
+                ]
+                robot_inst.set_joint_position_target(
+                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
+                    joint_ids=actionable_joint_ids,
+                )
+                start_idx += len(actionable_joint_ids)
+
+            self._actions_applied_this_step = True
 
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
@@ -294,6 +329,15 @@ class IsaacsimHandler(BaseSimHandler):
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
         self.scene.update(dt=self.dt)
+
+        # Ensure camera pose is correct, especially for the first few frames
+        if self._step_counter < 5:
+            self._update_camera_pose()
+
+        # Reset action application flag for next step
+        self._actions_applied_this_step = False
+
+        self._step_counter += 1
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
@@ -329,7 +373,7 @@ class IsaacsimHandler(BaseSimHandler):
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
-        self.scene.articulations[self.robots[0].name] = robot_inst
+        self.scene.articulations[robot.name] = robot_inst
 
     def _add_object(self, obj: BaseObjCfg) -> None:
         """Add an object to the scene."""
@@ -635,8 +679,8 @@ class IsaacsimHandler(BaseSimHandler):
         }
         if camera.mount_to is None:
             prim_path = f"/World/envs/env_.*/{camera.name}"
-            rot = (1.0, 0.0, 0.0, 0.0)
-            offset = TiledCameraCfg.OffsetCfg(pos=camera.pos, rot=rot, convention="world")
+            # Use default offset, will be set by set_world_poses_from_view later
+            offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
             offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
@@ -659,6 +703,7 @@ class IsaacsimHandler(BaseSimHandler):
             )
         )
         self.scene.sensors[camera.name] = camera_inst
+        log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
 
     def refresh_render(self) -> None:
         for sensor in self.scene.sensors.values():
