@@ -34,7 +34,7 @@ class Args:
     task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
-    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaacgym"
+    sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
     headless: bool = False
     device: str = "cuda"
 
@@ -173,7 +173,7 @@ def train_ppo():
 
     # Save the model
 
-    model.save(f"get_started/output/rl/0_ppo_reaching{args.sim}")
+    model.save(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
 
     env.close()
 

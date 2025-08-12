@@ -23,6 +23,7 @@ def _auto_import_submodules() -> None:
             dotted = ".".join(rel.parts)
             import_module(f"{pkg_name}.{dotted}")
         except Exception:
+            print(py_file)
             # Ignore import errors to avoid breaking discovery due to one bad module
             pass
 
