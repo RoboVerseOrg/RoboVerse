@@ -16,6 +16,7 @@ from loguru import logger as log
 if TYPE_CHECKING:
     from scenario_cfg.scenario import ScenarioCfg
 
+from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
 from metasim.types import Action, DictEnvState, TensorState
 from metasim.utils.state import join_tensor_states
@@ -49,10 +50,10 @@ def _worker(
             elif cmd == "simulate":
                 env.simulate()
             elif cmd == "get_joint_names":
-                names = env._get_joint_names(data[0])
+                names = env.get_joint_names(data[0])
                 remote.send(names)
             elif cmd == "get_body_names":
-                names = env._get_body_names(data[0])
+                names = env.get_body_names(data[0])
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0], data[1])
@@ -80,17 +81,17 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
     """A parallel simulation handler that uses multiprocessing to run multiple simulations in parallel."""
 
     class ParallelHandler(BaseSimHandler):
-        def __new__(cls, scenario: ScenarioCfg):
+        def __new__(cls, scenario: ScenarioCfg, extra_spec: dict[str, BaseQueryType] | None = None):
             """If num_envs is one, simply use the original single-thread class."""
             if scenario.num_envs == 1:
-                return base_cls(scenario)
+                return base_cls(scenario, extra_spec)
             else:
                 return super().__new__(cls)
 
-        def __init__(self, scenario: ScenarioCfg):
+        def __init__(self, scenario: ScenarioCfg, extra_spec: dict[str, BaseQueryType] | None = None):
             sub_scenario = deepcopy(scenario)
             sub_scenario.num_envs = 1
-            super().__init__(scenario)
+            super().__init__(scenario, extra_spec)
 
             self.waiting = False
             self.closed = False
@@ -168,8 +169,8 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             return concat_states
 
         def _set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
-            for remote in self.remotes:
-                remote.send(("set_dof_targets", (obj_name, actions)))
+            for i, remote in enumerate(self.remotes):
+                remote.send(("set_dof_targets", (obj_name, actions[i])))
 
         def _simulate(self):
             for remote in self.remotes:
