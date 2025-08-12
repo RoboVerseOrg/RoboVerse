@@ -55,3 +55,10 @@ class ScenarioCfg:
     decimation: int = 25
 
     # trajectory: TrajectoryCfg | None = None
+
+    def update(self, **kwargs):
+        """Update the scenario configuration."""
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.__post_init__()  # Re-initialize the scenario configuration
+        return self
