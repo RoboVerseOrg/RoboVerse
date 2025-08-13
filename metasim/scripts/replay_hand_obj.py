@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Replay xhand (or other URDF hand) joint trajectories + HOI4D object
 using MetaSim simulator interface (default: PyBullet).
@@ -11,32 +10,32 @@ using MetaSim simulator interface (default: PyBullet).
 """
 
 from __future__ import annotations
+
 import argparse
-from pathlib import Path
 import json
-import os
+import logging
 
 # os.environ.setdefault("PYBULLET_USE_GUI", "0")
 # os.environ.setdefault("SDL_VIDEODRIVER", "offscreen")
 # os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
 # os.environ.setdefault("PYBULLET_EGL", "1")
-
 import time
-import logging
-import numpy as np
+from pathlib import Path
+from typing import Optional
+
 import cv2
-from scipy.spatial.transform import Rotation as R
-from typing import Literal, Optional
+import numpy as np
 
 # ====== MetaSim imports (no pybullet import) ======
 from loguru import logger as log
 from rich.logging import RichHandler
+from scipy.spatial.transform import Rotation as R
 
-from metasim.constants import SimType
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.render import RenderCfg
 from metasim.cfg.randomization import RandomizationCfg
+from metasim.cfg.render import RenderCfg
+from metasim.cfg.scenario import ScenarioCfg
 from metasim.cfg.sensors import PinholeCameraCfg
+from metasim.constants import SimType
 from metasim.sim import HybridSimEnv
 from metasim.utils.setup_util import get_sim_env_class
 
@@ -77,13 +76,46 @@ HOI4D_OBJECT_TYPES = {
 }
 
 HOI4D_OBJECT_CLASSES = {
-    1: "ToyCar", 2: "Mug", 3: "Laptop", 4: "StorageFurniture", 5: "Bottle",
-    6: "Safe", 7: "Bowl", 8: "Bucket", 9: "Scissors", 11: "Pliers",
-    12: "Kettle", 13: "Knife", 14: "TrashCan", 17: "Lamp", 18: "Stapler", 20: "Chair",
+    1: "ToyCar",
+    2: "Mug",
+    3: "Laptop",
+    4: "StorageFurniture",
+    5: "Bottle",
+    6: "Safe",
+    7: "Bowl",
+    8: "Bucket",
+    9: "Scissors",
+    11: "Pliers",
+    12: "Kettle",
+    13: "Knife",
+    14: "TrashCan",
+    17: "Lamp",
+    18: "Stapler",
+    20: "Chair",
 }
-_HOI4D_CLASS_INDEX = ["", "toycar", "mug", "laptop", "storagefurniture", "bottle", "safe",
-                      "bowl", "bucket", "scissors", "", "pliers", "kettle", "knife",
-                      "trashcan", "", "", "lamp", "stapler", "", "chair"]
+_HOI4D_CLASS_INDEX = [
+    "",
+    "toycar",
+    "mug",
+    "laptop",
+    "storagefurniture",
+    "bottle",
+    "safe",
+    "bowl",
+    "bucket",
+    "scissors",
+    "",
+    "pliers",
+    "kettle",
+    "knife",
+    "trashcan",
+    "",
+    "",
+    "lamp",
+    "stapler",
+    "",
+    "chair",
+]
 
 
 def auto_discover_hoi4d_files(root: Path, capture_name: str):
@@ -123,7 +155,7 @@ def auto_discover_hoi4d_files(root: Path, capture_name: str):
 def load_object_pose_from_dir(objpose_dir: Path):
     frames = []
     for pth in sorted(objpose_dir.glob("*.json"), key=lambda p: int(p.stem)):
-        with open(pth, "r") as f:
+        with open(pth) as f:
             data = json.load(f)
         if "dataList" in data:
             d = data["dataList"][0]
@@ -218,6 +250,7 @@ def apply_extra_correction(R_w, euler_deg: Optional[str] = None):
 #     raise RuntimeError("Cannot locate PyBullet client from env.handler; "
 #                        "please check MetaSim PyBullet handler implementation.")
 
+
 def _get_pb_client(handler):
     """
     Return the pybullet *module* so we can call loadURDF/getCameraImage/etc.
@@ -236,7 +269,6 @@ def _get_pb_client(handler):
             if hasattr(cand, "loadURDF") and hasattr(cand, "getCameraImage"):
                 return cand
     raise RuntimeError("Cannot locate a pybullet API; expected module-like object with loadURDF().")
-
 
 
 def _get_active_joint_indices(pb, body_id):
@@ -276,15 +308,28 @@ def build_argparser():
     ap.add_argument("--extrinsics-file", type=str, default=None, help="Manual: 3Dseg/output.log path")
     ap.add_argument("--use_extrinsics", action="store_true", help="Use camera->world extrinsics to place object")
     ap.add_argument("--obj-scale", type=float, default=1.0, help="Scale for object mesh")
-    ap.add_argument("--obj-corr-euler", type=str, default=None, help='Extra orientation correction "yaw,pitch,roll" (deg)')
+    ap.add_argument(
+        "--obj-corr-euler", type=str, default=None, help='Extra orientation correction "yaw,pitch,roll" (deg)'
+    )
 
     # MetaSim options (default choose pybullet)
-    ap.add_argument("--sim", type=str, default="pybullet",
-                    choices=["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"])
-    ap.add_argument("--renderer", type=str, default=None,
-                    choices=["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"])
-    ap.add_argument("--headless", action="store_true",
-                    help="Headless rendering if supported; for pybullet we still use TinyRenderer in offscreen.")
+    ap.add_argument(
+        "--sim",
+        type=str,
+        default="pybullet",
+        choices=["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"],
+    )
+    ap.add_argument(
+        "--renderer",
+        type=str,
+        default=None,
+        choices=["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"],
+    )
+    ap.add_argument(
+        "--headless",
+        action="store_true",
+        help="Headless rendering if supported; for pybullet we still use TinyRenderer in offscreen.",
+    )
     return ap
 
 
@@ -320,7 +365,9 @@ def main():
             except Exception:
                 pass
     else:
-        raise ValueError("Please select: Automatic detection (--hoi4d-root + --capture) or Manual specification (--obj-mesh + --objpose-dir).")
+        raise ValueError(
+            "Please select: Automatic detection (--hoi4d-root + --capture) or Manual specification (--obj-mesh + --objpose-dir)."
+        )
 
     # ---- Load object pose ----
     obj_pose_cam = load_object_pose_from_dir(objpose_dir)  # (T,7) [xyzw, t]
@@ -343,8 +390,8 @@ def main():
     # =========================================================
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
-        task=None,             # no built-in task
-        robots=[],             # we load URDF hand ourselves through pybullet client
+        task=None,  # no built-in task
+        robots=[],  # we load URDF hand ourselves through pybullet client
         scene=None,
         cameras=[camera],
         random=RandomizationCfg(),
@@ -410,7 +457,9 @@ def main():
     driven_names = None
     if meta_names_full is not None:
         meta_names_full = [str(x) for x in meta_names_full]
-        meta_names_filtered = meta_names_full[:] if args.include_dummy else [n for n in meta_names_full if not n.startswith("dummy_")]
+        meta_names_filtered = (
+            meta_names_full[:] if args.include_dummy else [n for n in meta_names_full if not n.startswith("dummy_")]
+        )
         name2idx = {jn: j for j, jn in zip(active_idx, urdf_joint_names)}
         name2col = {n: i for i, n in enumerate(meta_names_full)}
         mapped_idx, col_idx_for_q, missing = [], [], []
@@ -425,7 +474,7 @@ def main():
             driven_names = [meta_names_full[c] for c in col_idx_for_q]
             print(f"[Info] remapped by names. Driving {len(active_idx)} joints.")
             if missing:
-                print(f"[Warn] joints in npz not found in URDF: {missing[:5]}{' ...' if len(missing)>5 else ''}")
+                print(f"[Warn] joints in npz not found in URDF: {missing[:5]}{' ...' if len(missing) > 5 else ''}")
         else:
             print("[Warn] name map failed; fallback to index based.")
             col_idx_for_q = None
@@ -443,15 +492,15 @@ def main():
 
     # ---- Create object (visual + collision) ----
     obj_visual = pb.createVisualShape(
-        shapeType=getattr(pb, "GEOM_MESH"),
+        shapeType=pb.GEOM_MESH,
         fileName=str(obj_mesh),
-        meshScale=[args.obj_scale]*3,
+        meshScale=[args.obj_scale] * 3,
         rgbaColor=[0.9, 0.9, 0.9, 1.0],
     )
     obj_collision = pb.createCollisionShape(
-        shapeType=getattr(pb, "GEOM_MESH"),
+        shapeType=pb.GEOM_MESH,
         fileName=str(obj_mesh),
-        meshScale=[args.obj_scale]*3,
+        meshScale=[args.obj_scale] * 3,
     )
     obj_id = pb.createMultiBody(
         baseMass=0.0,
@@ -488,7 +537,7 @@ def main():
         if col_idx_for_q is not None:
             q0_offset = qpos[0, col_idx_for_q].astype(float)
         else:
-            q0_offset = qpos[0, :min(qpos.shape[1], len(active_idx))].astype(float)
+            q0_offset = qpos[0, : min(qpos.shape[1], len(active_idx))].astype(float)
 
     # ---- Main loop ----
     T = qpos.shape[0]
@@ -508,12 +557,14 @@ def main():
                 if name in flip_set:
                     q[k] = -q[k]
         if args.clamp:
-            names_for_clamp = driven_names if driven_names is not None else urdf_joint_names[:len(q)]
+            names_for_clamp = driven_names if driven_names is not None else urdf_joint_names[: len(q)]
             for k, name in enumerate(names_for_clamp):
                 lo, hi = limits.get(name, (-1e10, 1e10))
                 if lo <= hi:
-                    if q[k] < lo: q[k] = lo
-                    if q[k] > hi: q[k] = hi
+                    if q[k] < lo:
+                        q[k] = lo
+                    if q[k] > hi:
+                        q[k] = hi
         for k, j in enumerate(active_idx[: len(q)]):
             pb.resetJointState(hand_id, j, float(q[k]))
 
@@ -521,7 +572,7 @@ def main():
         qxyzw = obj_pose_cam[i, :4]
         t_cam = obj_pose_cam[i, 4:]
         R_cam = R.from_quat(qxyzw).as_matrix().astype(np.float32)  # camera (RDF)
-        R_w, t_w = transform_rdf_to_flu(R_cam, t_cam)              # -> world (FLU / Z-up)
+        R_w, t_w = transform_rdf_to_flu(R_cam, t_cam)  # -> world (FLU / Z-up)
         R_w = apply_extra_correction(R_w, args.obj_corr_euler)
 
         if args.use_extrinsics and extrinsics_seq is not None:
@@ -557,8 +608,11 @@ def main():
             aspect = float(width) / float(height) if height > 0 else 1.0
             proj = pb.computeProjectionMatrixFOV(fov=60, aspect=aspect, nearVal=0.01, farVal=5.0)
             _w, _h, rgb, _depth, _seg = pb.getCameraImage(
-                max(1, width), max(1, height), view, proj,
-                renderer=getattr(pb, "ER_BULLET_HARDWARE_OPENGL", getattr(pb, "ER_TINY_RENDERER")),
+                max(1, width),
+                max(1, height),
+                view,
+                proj,
+                renderer=getattr(pb, "ER_BULLET_HARDWARE_OPENGL", pb.ER_TINY_RENDERER),
             )
             rgb = np.asarray(rgb)[..., :3]
             writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))

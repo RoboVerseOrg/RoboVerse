@@ -6,9 +6,9 @@ Currently using Pybullet 3.2.6
 """
 
 from __future__ import annotations
-import os
 
 import math
+import os
 from copy import deepcopy
 
 import numpy as np
@@ -61,8 +61,10 @@ class SinglePybulletHandler(BaseSimHandler):
         # self.plane_id = p.loadURDF("plane.urdf")
         self.plane_id = None
         # Only add ground when explicitly requested (controlled by scene switches or environment variables)
-        add_ground = bool(getattr(self.scenario, "try_add_table", False) or
-                        os.environ.get("METASIM_ADD_GROUND", "0").lower() not in ("0","false",""))
+        add_ground = bool(
+            getattr(self.scenario, "try_add_table", False)
+            or os.environ.get("METASIM_ADD_GROUND", "0").lower() not in ("0", "false", "")
+        )
         if add_ground:
             self.plane_id = p.loadURDF("plane.urdf")
         # add agents
@@ -295,15 +297,15 @@ class SinglePybulletHandler(BaseSimHandler):
         #     else:
         #         raise ValueError(f"Object type {object} not supported")
 
-            # p.resetBaseVelocity(curr_id, agent.vel, agent.ang_vel)
-            ### TODO:
-            # Add rigid body properties for objects
-            # p.changeDynamics(
-            #     agent.instance,
-            #     -1,
-            #     linearDamping=agent.rigid_shape_property.linear_damping,
-            #     angularDamping=agent.rigid_shape_property.angular_damping,
-            # )
+        # p.resetBaseVelocity(curr_id, agent.vel, agent.ang_vel)
+        ### TODO:
+        # Add rigid body properties for objects
+        # p.changeDynamics(
+        #     agent.instance,
+        #     -1,
+        #     linearDamping=agent.rigid_shape_property.linear_damping,
+        #     angularDamping=agent.rigid_shape_property.angular_damping,
+        # )
 
         ### TODO:
         # Viewer configuration
@@ -380,7 +382,6 @@ class SinglePybulletHandler(BaseSimHandler):
     def get_bullet_api(self):
         """Return the pybullet module so external code can call pb.loadURDF(), etc."""
         return self.pb
-
 
     def close(self):
         """Close the simulation."""
