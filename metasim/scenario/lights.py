@@ -61,3 +61,45 @@ class CylinderLightCfg(BaseLightCfg):
     """Position of the cylinder (in m). Default is (0.0, 0.0, 0.0)."""
     rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     """Orientation of the cylinder. Default is (1.0, 0.0, 0.0, 0.0)."""
+
+
+@configclass
+class DomeLightCfg(BaseLightCfg):
+    """Configuration for a dome light. Provides uniform lighting from all directions, simulating sky lighting."""
+
+    texture_file: str | None = None
+    """Path to HDR texture file for environment lighting. If None, uses uniform color."""
+    is_global: bool = True
+    """Whether the light is a global light that is not copied to each environment. For dome light, it should be global."""
+
+    def __post_init__(self):
+        """Post-initialization hook to check if the light is global."""
+        if not self.is_global:
+            log.warning("Dome light should be global, overriding the value.")
+            self.is_global = True
+
+
+@configclass
+class SphereLightCfg(BaseLightCfg):
+    """Configuration for a sphere light. Emits light from a spherical area."""
+
+    radius: float = 0.5
+    """Radius of the sphere light (in m). Default is 0.5m."""
+    pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    """Position of the sphere light (in m). Default is (0.0, 0.0, 0.0)."""
+    normalize: bool = True
+    """Whether to normalize the light intensity based on the sphere area."""
+
+
+@configclass
+class DiskLightCfg(BaseLightCfg):
+    """Configuration for a disk light. Emits light from a circular disk area."""
+
+    radius: float = 1.0
+    """Radius of the disk (in m). Default is 1.0m."""
+    pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    """Position of the disk light (in m). Default is (0.0, 0.0, 0.0)."""
+    rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    """Orientation of the disk. Default is (1.0, 0.0, 0.0, 0.0) (pointing down)."""
+    normalize: bool = True
+    """Whether to normalize the light intensity based on the disk area."""

@@ -551,11 +551,164 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
+        from scenario_cfg.lights import CylinderLightCfg, DiskLightCfg, DistantLightCfg, DomeLightCfg, SphereLightCfg
+
+        # Use lights from scenario configuration if available
+        if hasattr(self.scenario, "lights") and self.scenario.lights:
+            for i, light_cfg in enumerate(self.scenario.lights):
+                if isinstance(light_cfg, DistantLightCfg):
+                    self._add_distant_light(light_cfg, i)
+                elif isinstance(light_cfg, CylinderLightCfg):
+                    self._add_cylinder_light(light_cfg, i)
+                elif isinstance(light_cfg, DomeLightCfg):
+                    self._add_dome_light(light_cfg, i)
+                elif isinstance(light_cfg, SphereLightCfg):
+                    self._add_sphere_light(light_cfg, i)
+                elif isinstance(light_cfg, DiskLightCfg):
+                    self._add_disk_light(light_cfg, i)
+                else:
+                    log.warning(f"Unsupported light type: {type(light_cfg)}, skipping...")
+        else:
+            # Fallback to default light if no lights are configured
+            log.info("No lights configured, using default distant light")
+            spawn_light(
+                "/World/DefaultLight",
+                sim_utils.DistantLightCfg(intensity=2000.0, angle=0.53),  # Increased default intensity
+                orientation=(1.0, 0.0, 0.0, 0.0),
+                translation=(0, 0, 10),
+            )
+
+    def _add_distant_light(self, light_cfg, light_index: int) -> None:
+        """Add a distant light to the scene based on configuration."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
+
+        light_name = f"/World/DistantLight_{light_index}"
+
+        # Create Isaac Lab distant light configuration
+        isaac_light_cfg = sim_utils.DistantLightCfg(
+            intensity=light_cfg.intensity,
+            angle=0.53,  # Default angle, could be made configurable
+            color=light_cfg.color,
+        )
+
+        # Use the quaternion from light configuration
+        orientation = light_cfg.quat
+
         spawn_light(
-            "/World/Light",
-            sim_utils.DistantLightCfg(intensity=500.0, angle=0.53),
+            light_name,
+            isaac_light_cfg,
+            orientation=orientation,
+            translation=(0, 0, 10),  # Distant lights don't need specific translation
+        )
+
+        log.debug(
+            f"Added distant light {light_name} with intensity {light_cfg.intensity}, "
+            f"polar={light_cfg.polar}°, azimuth={light_cfg.azimuth}°"
+        )
+
+    def _add_cylinder_light(self, light_cfg, light_index: int) -> None:
+        """Add a cylinder light to the scene based on configuration."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
+
+        light_name = f"/World/CylinderLight_{light_index}"
+
+        # Create Isaac Lab cylinder light configuration
+        isaac_light_cfg = sim_utils.CylinderLightCfg(
+            intensity=light_cfg.intensity, radius=light_cfg.radius, length=light_cfg.length, color=light_cfg.color
+        )
+
+        spawn_light(
+            light_name,
+            isaac_light_cfg,
+            orientation=light_cfg.rot,
+            translation=light_cfg.pos,
+        )
+
+        log.debug(
+            f"Added cylinder light {light_name} with intensity {light_cfg.intensity}, "
+            f"radius={light_cfg.radius}, length={light_cfg.length}"
+        )
+
+    def _add_dome_light(self, light_cfg, light_index: int) -> None:
+        """Add a dome light to the scene based on configuration."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
+
+        light_name = f"/World/DomeLight_{light_index}"
+
+        # Create Isaac Lab dome light configuration
+        isaac_light_cfg = sim_utils.DomeLightCfg(
+            intensity=light_cfg.intensity,
+            color=light_cfg.color,
+        )
+
+        # Add texture if specified
+        if light_cfg.texture_file is not None:
+            isaac_light_cfg.texture_file = light_cfg.texture_file
+
+        spawn_light(
+            light_name,
+            isaac_light_cfg,
             orientation=(1.0, 0.0, 0.0, 0.0),
-            translation=(0, 0, 10),
+            translation=(0, 0, 0),  # Dome lights are typically at origin
+        )
+
+        log.debug(f"Added dome light {light_name} with intensity {light_cfg.intensity}")
+
+    def _add_sphere_light(self, light_cfg, light_index: int) -> None:
+        """Add a sphere light to the scene based on configuration."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
+
+        light_name = f"/World/SphereLight_{light_index}"
+
+        # Create Isaac Lab sphere light configuration
+        isaac_light_cfg = sim_utils.SphereLightCfg(
+            intensity=light_cfg.intensity,
+            color=light_cfg.color,
+            radius=light_cfg.radius,
+            normalize=light_cfg.normalize,
+        )
+
+        spawn_light(
+            light_name,
+            isaac_light_cfg,
+            orientation=(1.0, 0.0, 0.0, 0.0),
+            translation=light_cfg.pos,
+        )
+
+        log.debug(
+            f"Added sphere light {light_name} with intensity {light_cfg.intensity}, "
+            f"radius={light_cfg.radius} at {light_cfg.pos}"
+        )
+
+    def _add_disk_light(self, light_cfg, light_index: int) -> None:
+        """Add a disk light to the scene based on configuration."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.sim.spawners import spawn_light
+
+        light_name = f"/World/DiskLight_{light_index}"
+
+        # Create Isaac Lab disk light configuration
+        isaac_light_cfg = sim_utils.DiskLightCfg(
+            intensity=light_cfg.intensity,
+            color=light_cfg.color,
+            radius=light_cfg.radius,
+            normalize=light_cfg.normalize,
+        )
+
+        spawn_light(
+            light_name,
+            isaac_light_cfg,
+            orientation=light_cfg.rot,
+            translation=light_cfg.pos,
+        )
+
+        log.debug(
+            f"Added disk light {light_name} with intensity {light_cfg.intensity}, "
+            f"radius={light_cfg.radius} at {light_cfg.pos}"
         )
 
     # def _load_ground(self) -> None:
