@@ -300,7 +300,8 @@ class IsaacsimHandler(BaseSimHandler):
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
         if isinstance(actions, torch.Tensor):
-            action_tensor_all = actions
+            reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
+            action_tensor_all = actions[:, reverse_reindex]
         else:
             # Process dictionary-based actions
             action_tensors = []
