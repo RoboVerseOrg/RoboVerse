@@ -172,7 +172,7 @@ def train_ppo():
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
-        tensorboard_log=f"runs/{run.id}",
+        tensorboard_log=f"outputs/ppo_reaching/runs/{run.id}",
         device="cuda" if torch.cuda.is_available() else "cpu",
     )
 
