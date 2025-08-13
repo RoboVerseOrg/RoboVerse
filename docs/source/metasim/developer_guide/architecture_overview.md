@@ -131,7 +131,7 @@ The **two most important folders** in Metasim are:
    #### Task-level declaration
 
    ```python
-   from scenario_cfg.query_type import SitePos, SensorData, GeomCollision, BodyMass
+   from metasim.scenario.query_type import SitePos, SensorData, GeomCollision, BodyMass
 
    def extra_spec(self):
        return {

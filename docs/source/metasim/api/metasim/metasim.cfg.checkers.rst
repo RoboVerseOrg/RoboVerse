@@ -1,9 +1,9 @@
-﻿scenario_cfg.checkers
+﻿metasim.scenario.checkers
 ====================
 
-.. currentmodule:: scenario_cfg.checkers
+.. currentmodule:: metasim.scenario.checkers
 
-.. automodule:: scenario_cfg.checkers
+.. automodule:: metasim.scenario.checkers
 
    .. rubric:: Base Class
 

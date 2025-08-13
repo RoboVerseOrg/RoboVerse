@@ -9,13 +9,13 @@ import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from scenario_cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
 
 ## This is to avoid circular import
 try:
-    from scenario_cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 except ImportError:
     pass
 

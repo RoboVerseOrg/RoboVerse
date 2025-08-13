@@ -6,7 +6,7 @@ import os
 
 from loguru import logger as log
 
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 
 from .demo_util_v1 import get_traj_v1
@@ -14,7 +14,7 @@ from .demo_util_v2 import get_traj_v2
 from .demo_util_v3 import convert_traj_v2_to_v3
 
 
-def get_traj(task, robot: BaseRobotCfg, handler: BaseSimHandler | None = None, v2_as_v3: bool = True):
+def get_traj(task, robot: RobotCfg, handler: BaseSimHandler | None = None, v2_as_v3: bool = True):
     """Get the trajectory data.
 
     Args:
@@ -35,7 +35,7 @@ def get_traj(task, robot: BaseRobotCfg, handler: BaseSimHandler | None = None, v
                 return get_traj_v2(task, robot)
         else:
             raise FileNotFoundError(
-                "The trajectory file does not exist, please check the path or convert the trajectory file to v2 format"
+                "The traje·ctory file does not exist, please check the path or convert the trajectory file to v2 format"
             )
     else:
         log.warning("Reading trajectory using v1 data format, which is deprecated")

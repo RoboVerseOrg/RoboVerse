@@ -1,7 +1,7 @@
-﻿scenario_cfg.tasks
+﻿metasim.scenario.tasks
 ==================
 
-.. automodule:: scenario_cfg.tasks
+.. automodule:: metasim.scenario.tasks
 
    .. rubric:: Base Class
 

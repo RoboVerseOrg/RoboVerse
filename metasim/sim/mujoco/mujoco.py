@@ -9,11 +9,11 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
-from scenario_cfg.robots import BaseRobotCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.robot import RobotCfg
 
 if TYPE_CHECKING:
-    from scenario_cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
@@ -675,7 +675,7 @@ class MujocoHandler(BaseSimHandler):
     ############################################################
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
-            self.object_dict[obj_name], BaseRobotCfg
+            self.object_dict[obj_name], RobotCfg
         ):
             # Find the robot index
             robot_idx = None
@@ -708,7 +708,7 @@ class MujocoHandler(BaseSimHandler):
             return []
 
     def _get_actuator_names(self, robot_name: str) -> list[str]:
-        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
         actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
 
         # Find the robot index
@@ -735,7 +735,7 @@ class MujocoHandler(BaseSimHandler):
         return robot_actuator_names
 
     def _get_actuator_reindex(self, robot_name: str) -> list[int]:
-        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
         origin_actuator_names = self._get_actuator_names(robot_name)
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]

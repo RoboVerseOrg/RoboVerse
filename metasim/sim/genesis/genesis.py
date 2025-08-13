@@ -8,12 +8,18 @@ from genesis.vis.camera import Camera
 from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+    _FileBasedMixin,
+)
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg, _FileBasedMixin
-from scenario_cfg.robots import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
 
 # Apply IGL compatibility patch
 try:
@@ -217,7 +223,7 @@ class GenesisHandler(BaseSimHandler):
             obj_inst.set_pos(positions)
             obj_inst.set_quat(rotations)
 
-            is_articulated = isinstance(obj, (ArticulationObjCfg, BaseRobotCfg))
+            is_articulated = isinstance(obj, (ArticulationObjCfg, RobotCfg))
 
             if is_articulated:
                 joint_names = self._get_joint_names(obj.name, sort=False)
@@ -343,7 +349,7 @@ class GenesisHandler(BaseSimHandler):
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         obj_cfg = self.object_dict[obj_name]
-        if isinstance(obj_cfg, (ArticulationObjCfg, BaseRobotCfg)):
+        if isinstance(obj_cfg, (ArticulationObjCfg, RobotCfg)):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
 
             joint_names = [j.name for j in joints if j.dofs_idx_local is not None]

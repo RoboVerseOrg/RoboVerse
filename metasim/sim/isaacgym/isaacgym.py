@@ -9,11 +9,7 @@ from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
-from metasim.utils.dict import class_to_dict
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.objects import (
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
     PrimitiveCubeCfg,
@@ -23,8 +19,12 @@ from scenario_cfg.objects import (
 )
 
 # FIXME: fix this
-# from scenario_cfg.randomization import FrictionRandomCfg, MassRandomCfg
-from scenario_cfg.scenario import ScenarioCfg
+# from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
+from metasim.types import Action, DictEnvState
+from metasim.utils.dict import class_to_dict
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class IsaacgymHandler(BaseSimHandler):

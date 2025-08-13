@@ -1,8 +1,8 @@
 import torch
 from loguru import logger as log
 
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg
 
 from .isaaclab_helper import add_cameras, add_lights, add_objects, add_robots, get_pose
 
@@ -58,8 +58,6 @@ class IsaaclabEnvOverwriter:
         for camera in self.cameras:
             ## Randomize camera pose
             if self.scenario.random.camera:
-                from .utils.camera_random_util import randomize_camera_pose
-
                 ## Get object in interest
                 ## XXX: temporarily choose the first object as object in interest
                 obj_pos, obj_quat = get_pose(env, self.objects[0].name)
@@ -175,10 +173,10 @@ class IsaaclabEnvOverwriter:
             from isaacsim.core.utils.stage import add_reference_to_stage
 
         from .utils.ground_util import create_ground, set_ground_material, set_ground_material_scale
-        from .utils.usd_util import ReflectionRandomizer, ShaderFixer
+        from .utils.usd_util import ShaderFixer
 
         use_scene = False
-        if self.scene is not None :
+        if self.scene is not None:
             # if self.scenario.random.scene:
             #     from .utils.usd_util import SceneRandomizer
 
@@ -277,18 +275,18 @@ class IsaaclabEnvOverwriter:
         #             position=torch.tensor([x, y, wall_height / 2 - (table_height + table_thickness)]),
         #         )
 
-            ## Add roof
-            # if self.scenario.random.light:
-            #     FixedCuboid(
-            #         prim_path="/World/envs/env_0/metasim_wall/roof",
-            #         name="roof",
-            #         scale=torch.tensor([wall_dist * 2, wall_dist * 2, wall_thickness]),
-            #         position=torch.tensor([
-            #             0.0,
-            #             0.0,
-            #             wall_height + wall_thickness / 2 - (table_height + table_thickness),
-            #         ]),
-            #     )
+        ## Add roof
+        # if self.scenario.random.light:
+        #     FixedCuboid(
+        #         prim_path="/World/envs/env_0/metasim_wall/roof",
+        #         name="roof",
+        #         scale=torch.tensor([wall_dist * 2, wall_dist * 2, wall_thickness]),
+        #         position=torch.tensor([
+        #             0.0,
+        #             0.0,
+        #             wall_height + wall_thickness / 2 - (table_height + table_thickness),
+        #         ]),
+        #     )
 
         ## Set default ground material
         if not use_scene:

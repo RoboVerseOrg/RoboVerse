@@ -25,10 +25,10 @@ from dm_control import mjcf
 from loguru import logger as log
 from mujoco import mjx
 
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 if TYPE_CHECKING:
-    from scenario_cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler

@@ -161,7 +161,7 @@ metasim/cfg/tasks/<benchmark_name>/<your_task>_cfg.py
 It should define a task config class inheriting from `BaseTaskCfg`. Example:
 
 ```python
-from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
+from metasim.scenario.metasim.task.base_task_cfg import BaseTaskCfg
 
 class PickCubeCfg(BaseTaskCfg):
     task_name = "pick_cube"
@@ -248,7 +248,7 @@ Imported from ManiSkill and adapted to IsaacLab format.
 Also add your task to the documentation index:
 
 ```text
-docs/source/metasim/api/metasim/scenario_cfg.tasks.rst
+docs/source/metasim/api/metasim/metasim.scenario.tasks.rst
 ```
 
 ---

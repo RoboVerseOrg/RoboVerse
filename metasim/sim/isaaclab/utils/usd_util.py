@@ -190,8 +190,8 @@ class MdlRandomizer:
 
 class SceneRandomizer:
     def __init__(self):
-        import scenario_cfg.scenes as scenes_module
-        from scenario_cfg.scenes import SceneCfg
+        import metasim.scenario.scenes as scenes_module
+        from metasim.scenario.scenes import SceneCfg
 
         self.scene_configs = []
         for attr_name in dir(scenes_module):

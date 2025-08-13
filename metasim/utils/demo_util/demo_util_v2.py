@@ -8,17 +8,16 @@ from glob import glob
 import torch
 from loguru import logger as log
 
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
-from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
+from metasim.scenario.robot import RobotCfg
 
 from .loader import load_traj_file
 
 
-def get_traj_v2(traj_filepath, robot: BaseRobotCfg):
+def get_traj_v2(traj_filepath, robot: RobotCfg):
     """Get the trajectory data.
 
     Args:
-        task: The task cfg instance.
+        traj_filepath: The task cfg instance.
         robot: The robot cfg instance.
 
     Returns:

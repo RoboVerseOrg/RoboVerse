@@ -3,11 +3,10 @@ import os
 import torch
 from loguru import logger as log
 
-# from scenario_cfg.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
-
-from scenario_cfg.cameras import BaseCameraCfg, PinholeCameraCfg
-from scenario_cfg.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
-from scenario_cfg.objects import (
+# from metasim.scenario.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
+from metasim.scenario.cameras import BaseCameraCfg, PinholeCameraCfg
+from metasim.scenario.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     BaseObjCfg,
     PrimitiveCubeCfg,
@@ -16,7 +15,7 @@ from scenario_cfg.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from scenario_cfg.robots import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import convert_camera_frame_orientation_convention
 
 try:
@@ -140,7 +139,7 @@ def add_objects(env: "EmptyEnv", objects: list[BaseObjCfg]) -> None:
         _add_object(env, obj)
 
 
-def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
+def _add_robot(env: "EmptyEnv", robot: RobotCfg) -> None:
     try:
         import omni.isaac.lab.sim as sim_utils
         from omni.isaac.lab.actuators import ImplicitActuatorCfg
@@ -178,7 +177,7 @@ def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
     env.robots.append(robot_inst)
 
 
-def add_robots(env: "EmptyEnv", robots: list[BaseRobotCfg]) -> None:
+def add_robots(env: "EmptyEnv", robots: list[RobotCfg]) -> None:
     env.robots = []
     for robot in robots:
         _add_robot(env, robot)

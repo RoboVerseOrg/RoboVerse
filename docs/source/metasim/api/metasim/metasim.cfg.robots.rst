@@ -1,13 +1,13 @@
-﻿scenario_cfg.robots
+﻿metasim.scenario.robot
 ==================
 
-.. automodule:: scenario_cfg.robots
+.. automodule:: metasim.scenario.robot
 
    .. rubric:: Base Class
 
    .. autosummary::
 
-      BaseRobotCfg
+      RobotCfg
 
    .. rubric:: Classes
 
@@ -31,9 +31,9 @@
       Ur5E2F85Cfg
       WalkerCfg
 
-BaseRobotCfg
+RobotCfg
 ------------
 
-.. autoclass:: BaseRobotCfg
+.. autoclass:: RobotCfg
    :members:
    :show-inheritance:

@@ -15,10 +15,10 @@ import pybullet as p
 import pybullet_data
 import torch
 
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from scenario_cfg.robots import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
 from metasim.queries.base import BaseQueryType
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
@@ -75,7 +75,7 @@ class SinglePybulletHandler(BaseSimHandler):
             self.camera_ids[camera.name] = (width, height, view_matrix, projection_matrix)
 
         for object in [*self.objects, self.robot]:
-            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+            if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 pos = np.array([0, 0, 0])
                 rot = np.array([1, 0, 0, 0])
                 object_file = object.urdf_path
@@ -109,7 +109,7 @@ class SinglePybulletHandler(BaseSimHandler):
 
                 jointIndices = range(num_joints)
 
-                if isinstance(object, BaseRobotCfg):
+                if isinstance(object, RobotCfg):
                     p.setJointMotorControlMultiDofArray(
                         curr_id,
                         jointIndices,
