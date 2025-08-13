@@ -14,7 +14,7 @@ import torch
 from loguru import logger as log
 
 if TYPE_CHECKING:
-    from scenario_cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler

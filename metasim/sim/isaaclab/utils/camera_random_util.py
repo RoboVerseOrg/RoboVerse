@@ -3,9 +3,9 @@ import copy
 import numpy as np
 from loguru import logger as log
 
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.tasks import BaseTaskCfg
 from metasim.constants import BenchmarkType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.tasks import BaseTaskCfg
 
 _phi_theta_candidates = np.loadtxt("metasim/sim/isaaclab/cfg/randomization/camera_pos_candidates.txt")
 

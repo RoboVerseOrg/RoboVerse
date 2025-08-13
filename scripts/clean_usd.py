@@ -42,7 +42,7 @@ simulation_app = app_launcher.app
 from loguru import logger as log
 from pxr import Usd, UsdPhysics
 
-from scenario_cfg.objects import RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.utils.setup_util import get_task
 
 

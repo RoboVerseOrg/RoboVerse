@@ -7,6 +7,9 @@ import torch
 from loguru import logger as log
 
 from metasim.constants import SimType
+from metasim.scenario.metasim.task.base_task_cfg import BaseTaskCfg
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.utils.demo_util import save_traj_file
 from metasim.utils.demo_util.demo_util_v1 import (
@@ -15,9 +18,6 @@ from metasim.utils.demo_util.demo_util_v1 import (
     get_init_states,
 )
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
-from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 
 def parse_args():
@@ -56,7 +56,7 @@ def check_type(data):
     return True
 
 
-def do_it(task: BaseTaskCfg, robot: BaseRobotCfg, handler: BaseSimHandler, source_path: str, target_path: str):
+def do_it(task: BaseTaskCfg, robot: RobotCfg, handler: BaseSimHandler, source_path: str, target_path: str):
     log.info(f"Loading trajectory from {source_path}")
     demo_original = pkl.load(open(source_path, "rb"))["demos"][robot.name]
     init_states = get_init_states(demo_original, len(demo_original), task, handler, robot)

@@ -34,11 +34,11 @@ from scipy.spatial.transform import Rotation as R
 
 from get_started.utils import ObsSaver
 from metasim.constants import SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.setup_util import get_sim_env_class
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.scenario import ScenarioCfg
 
 
 @configclass

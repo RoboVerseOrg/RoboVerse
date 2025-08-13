@@ -1820,7 +1820,7 @@ Date:   Mon May 19 19:56:53 2025 -0700
 Author: Fisher Wang <feishiwang2001@gmail.com>
 Date:   Mon May 19 18:36:57 2025 -0700
 
-    [refactor] reorganize and add docstring for `base_robot_cfg.py` (#197)
+    [refactor] reorganize and add docstring for `robot.py` (#197)
 
 [33mcommit 73d6d55a34a492fd9547adc1af009f577293ffbe[m
 Author: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
@@ -2772,7 +2772,7 @@ Date:   Wed Apr 16 00:49:37 2025 -0700
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 16 02:26:15 2025 +0800
 
-    🐛 fix: Rollback to Stand training successfully
+    🝛 fix: Rollback to Stand training successfully
 
 [33mcommit a2b5803ae19eca6c3aab8aa99d41db50b8d9ec79[m
 Author: Fisher Wang <feishiwang2001@gmail.com>
@@ -2848,15 +2848,15 @@ Date:   Tue Apr 15 15:13:06 2025 -0700
 
     Originally PR 108 (#108)
 
-    * 🐛 fix: velocity slice in `BaseLocomotionReward`
+    * 🝛 fix: velocity slice in `BaseLocomotionReward`
 
-    * 🐛 fix: MuJoCo body index for h1/ should be removed
+    * 🝛 fix: MuJoCo body index for h1/ should be removed
 
     * ✨ feat: Use math function matrix_from_quat
 
     * 💄 style: Use CPU for MuJoCo and prevent using `self.env.handler`
 
-    * 🐛 fix: Rollback to Stand training successfully
+    * 🝛 fix: Rollback to Stand training successfully
 
     * restore the reindexing part
 
@@ -3312,13 +3312,13 @@ Date:   Wed Apr 9 14:53:07 2025 +0800
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 14:52:49 2025 +0800
 
-    🐛 fix: Remove error logs for unsupported IsaacLab and optimize the environment reset logic.
+    🝛 fix: Remove error logs for unsupported IsaacLab and optimize the environment reset logic.
 
 [33mcommit 55ee1ecf739bc9d9af02327042f21b0d1446fb86[m
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 14:52:16 2025 +0800
 
-    🐛 fix: delete `handler.simulate()` in `reset()`
+    🝛 fix: delete `handler.simulate()` in `reset()`
 
 [33mcommit 1616bf4c8579501b584345c1a3ffbcf1b66c128c[m
 Author: Yutong Liang <lyt0112@outlook.com>
@@ -3336,7 +3336,7 @@ Date:   Wed Apr 9 14:50:58 2025 +0800
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 14:50:07 2025 +0800
 
-    🐛 fix: Modify the decimation value in HumanoidTaskCfg to 1
+    🝛 fix: Modify the decimation value in HumanoidTaskCfg to 1
 
 [33mcommit 5e3451439bfba58a3767ffa33cd13a3b8fe7878a[m
 Author: Haoran Geng <71596067+geng-haoran@users.noreply.github.com>
@@ -3357,13 +3357,13 @@ Date:   Tue Apr 8 14:45:48 2025 -0700
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 05:37:49 2025 +0800
 
-    🐛 fix: SB3 training loggings
+    🝛 fix: SB3 training loggings
 
 [33mcommit 5c93fb44432d151524ca7a36a51012df7d0f11b5[m
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 05:19:27 2025 +0800
 
-    🐛 fix: mujoco `get_states` bug
+    🝛 fix: mujoco `get_states` bug
 
 [33mcommit 39410079268c82a6be953c6532f6f097272d425e[m
 Author: Yutong Liang <lyt0112@outlook.com>
@@ -3375,7 +3375,7 @@ Date:   Wed Apr 9 04:41:35 2025 +0800
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Wed Apr 9 04:41:14 2025 +0800
 
-    ♻️ refactor: use `env_state[robots][h1][body][pelvis]` instead of `env_state[robots][h1][pelvis]`
+    ♻︝ refactor: use `env_state[robots][h1][body][pelvis]` instead of `env_state[robots][h1][pelvis]`
 
 [33mcommit bff9997a25dbbc969dfd6bdd7997cf67bef5429d[m
 Author: Yutong Liang <lyt0112@outlook.com>
@@ -3598,7 +3598,7 @@ Date:   Sun Apr 6 19:11:36 2025 +0800
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Sun Apr 6 17:30:03 2025 +0800
 
-    🐛 fix: Collapse_fixed_joints default as False
+    🝛 fix: Collapse_fixed_joints default as False
 
 [33mcommit 4377a94a829d5153eb75b49b6e3e17b9561bd99c[m
 Merge: c3c21f5 1ebb59f
@@ -3611,13 +3611,13 @@ Date:   Sun Apr 6 17:21:51 2025 +0800
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Sun Apr 6 17:15:25 2025 +0800
 
-    🐛 fix: Compatible with old states format
+    🝛 fix: Compatible with old states format
 
 [33mcommit 6e481c9dd4ecb66b2654008b77e87032f2f3ea41[m
 Author: Yutong Liang <lyt0112@outlook.com>
 Date:   Sun Apr 6 16:45:21 2025 +0800
 
-    🐛 fix(config): Resolve the Isaac Gym error related to loading robots when `fix_base_link == False`.
+    🝛 fix(config): Resolve the Isaac Gym error related to loading robots when `fix_base_link == False`.
 
 [33mcommit 1ebb59fd0b42c85c167b924d167337c5310c0e27[m
 Author: Feishi <feishiwang2001@gmail.com>

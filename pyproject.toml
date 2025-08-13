@@ -103,14 +103,7 @@ lint.ignore = [
     "RUF012",  # allow mutable class attributes
 ]
 extend-exclude = [
-    "roboverse_learn/algorithms/act",
-    "roboverse_learn/algorithms/diffusion_policy",
-    "roboverse_learn/algorithms/rdt",
-    "roboverse_learn/rlds_utils",
-    "roboverse_learn/rl/algos/dreamer",
-    "roboverse_learn/rl/algos/ppo",
-    "roboverse_learn/rl/algos/sac",
-    "roboverse_learn/rl/rsl_rl",
+    "roboverse_learn",
     "wandb",
     "third_party",
     "tmp",
@@ -130,8 +123,8 @@ include = ["metasim*"]
 "metasim/scripts/_private/**.py" = ["T20", "D"]
 "metasim/scripts/RL/**.py" = ["T20", "D"]
 "metasim/scripts/gpt_gen.py" = ["T20", "D"]
-"metasim/cfg/tasks/open6dor/utils/**.py" = ["T20", "D"]
-"metasim/cfg/tasks/maniskill/utils/**.py" = ["T20", "D"]
+"roboverse_pack/tasks/open6dor/utils/**.py" = ["T20", "D"]
+"roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For long-term-support scripts, allow no docstrings
 "metasim/scripts/**.py" = ["D"]
 ## For get_started scripts, allow no docstrings
@@ -139,32 +132,32 @@ include = ["metasim*"]
 ## For unit test, allow no docstrings
 "metasim/test/**.py" = ["D"]
 ## For special tasks, allow no docstrings
-"metasim/cfg/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
-"metasim/cfg/tasks/open6dor/task/**.py" = ["D"]
+"roboverse_pack/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
+"roboverse_pack/tasks/open6dor/task/**.py" = ["D"]
 ## For python files in docs and dashboard folder, allow no docstrings
 "docs/**.py" = ["D"]
 "dashboard/**.py" = ["D"]
 ## For tasks, allow no docstrings in public modules
-"metasim/cfg/tasks/**/*.py" = ["D100"]
+"roboverse_pack/tasks/**/*.py" = ["D100"]
 ## For roboverse_learn, allow no docstrings, allow print
 "roboverse_learn/**.py" = ["D", "T20"]
 ## Temporary disable linting for quick testing
-"metasim/cfg/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
-"metasim/cfg/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"metasim/cfg/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this
-"metasim/cfg/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/cfg/tasks/debug/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/cfg/tasks/dmcontrol/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"metasim/cfg/tasks/fetch/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/cfg/tasks/gapartnet/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/cfg/tasks/isaacgym_envs/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"metasim/cfg/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
-"metasim/cfg/tasks/open6dor/**.py" = ["D"]  # FIXME: Haoran and Yufei add docstring and remove this
-"metasim/cfg/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"metasim/cfg/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
-"metasim/cfg/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"metasim/cfg/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"metasim/cfg/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
+"roboverse_pack/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
+"roboverse_pack/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
+"roboverse_pack/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this
+"roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
+"roboverse_pack/tasks/debug/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
+"roboverse_pack/tasks/dmcontrol/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
+"roboverse_pack/tasks/fetch/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
+"roboverse_pack/tasks/gapartnet/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
+"roboverse_pack/tasks/isaacgym_envs/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
+"roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
+"roboverse_pack/tasks/open6dor/**.py" = ["D"]  # FIXME: Haoran and Yufei add docstring and remove this
+"roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
+"roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
+"roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
+"roboverse_pack/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
+"roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 "metasim/sim/**.py" = ["D"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 

@@ -1,7 +1,7 @@
-﻿scenario_cfg.randomization
+﻿metasim.scenario.randomization
 =========================
 
-.. automodule:: scenario_cfg.randomization
+.. automodule:: metasim.scenario.randomization
 
 
    .. rubric:: Classes

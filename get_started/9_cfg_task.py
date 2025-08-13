@@ -20,8 +20,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import torch
 
+from metasim.task.gym_registration import make_vec, register_all_tasks_with_gym
 from metasim.utils import configclass
-from tasks.gym_registration import make_vec, register_all_tasks_with_gym
 
 
 @configclass

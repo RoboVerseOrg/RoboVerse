@@ -39,13 +39,13 @@ from scipy.spatial.transform import Rotation as R
 from get_started.motion_planning.util_gsnet import GSNet
 from get_started.utils import ObsSaver, get_pcd_from_rgbd
 from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.setup_util import get_sim_env_class
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.objects import RigidObjCfg
-from scenario_cfg.scenario import ScenarioCfg
 
 
 @configclass

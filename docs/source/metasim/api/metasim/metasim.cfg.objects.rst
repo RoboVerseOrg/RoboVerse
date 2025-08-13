@@ -1,4 +1,4 @@
-﻿scenario_cfg.objects
+﻿metasim.scenario.objects
 ===================
 
 Dependency graph:
@@ -35,7 +35,7 @@ Dependency graph:
    N11 & _PrimitiveMixin ---> PrimitiveCubeCfg & PrimitiveSphereCfg & PrimitiveCylinderCfg
 
 
-.. automodule:: scenario_cfg.objects
+.. automodule:: metasim.scenario.objects
 
    .. rubric:: Base Class
 
@@ -64,7 +64,7 @@ Dependency graph:
 
       NonConvexRigidObjCfg
 
-.. currentmodule:: scenario_cfg.objects
+.. currentmodule:: metasim.scenario.objects
 
 Base Object
 -----------

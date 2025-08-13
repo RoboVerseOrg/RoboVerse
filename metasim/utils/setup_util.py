@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import importlib
 
-import gymnasium as gym
 from loguru import logger as log
 
 from metasim.constants import SimType
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
-from metasim.utils import is_camel_case, is_snake_case, to_camel_case, to_snake_case
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
-from scenario_cfg.scenes import SceneCfg
+from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
 def get_sim_handler_class(sim: SimType):
@@ -107,47 +106,7 @@ def get_sim_handler_class(sim: SimType):
         raise ValueError(f"Invalid simulator type: {sim}")
 
 
-def register_task(task_id: str):
-    """Register the task to the gym registry.
-
-    Args:
-        task_id: The id of the task.
-
-    .. warning::
-       Currently we don't support task_id with leading benchmark name and colon.
-    """
-    if ":" in task_id:
-        log.warning(
-            "Currently we don't support task_id with leading benchmark name and colon. However, you can use module path as prefix. "
-            "For example, `debug:reach_origin` is invalid, but `scenario_cfg.tasks.debug:reach_origin` is valid."
-        )
-        prefix, task_name = task_id.split(":", 1)
-    else:
-        prefix, task_name = None, task_id
-
-    if is_camel_case(task_name):
-        task_name_camel = task_name
-        task_name_snake = to_snake_case(task_name)
-    elif is_snake_case(task_name):
-        task_name_camel = to_camel_case(task_name)
-        task_name_snake = task_name
-    else:
-        raise ValueError(f"Invalid task name: {task_id}, should be in either camel case or snake case")
-
-    for task_nickname in [
-        task_name_camel,
-        task_name_snake,
-    ]:
-        log.info(f"Registering task {task_nickname}")
-        gym.register(
-            task_nickname,
-            entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
-            vector_entry_point="metasim.scripts.train_ppo_vec:MetaSimVecEnv",
-            kwargs={"task_name": task_name},
-        )
-
-
-def get_robot(robot_name: str) -> BaseRobotCfg:
+def get_robot(robot_name: str) -> RobotCfg:
     """Get the robot cfg instance from the robot name.
 
     Args:
@@ -162,7 +121,7 @@ def get_robot(robot_name: str) -> BaseRobotCfg:
         RobotName = to_camel_case(robot_name)
     else:
         raise ValueError(f"Invalid robot name: {robot_name}, should be in either camel case or snake case")
-    module = importlib.import_module("scenario_cfg.robots")
+    module = importlib.import_module("roboverse_pack.robots")
     robot_cls = getattr(module, f"{RobotName}Cfg")
     return robot_cls()
 
@@ -179,7 +138,7 @@ def get_scene(scene_name: str) -> SceneCfg:
     if is_snake_case(scene_name):
         scene_name = to_camel_case(scene_name)
     try:
-        module = importlib.import_module("scenario_cfg.scenes")
+        module = importlib.import_module("roboverse_pack.scenes")
         scene_cls = getattr(module, f"{scene_name}Cfg")
         return scene_cls()
     except (ImportError, AttributeError) as e:

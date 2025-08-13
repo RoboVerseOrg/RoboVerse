@@ -8,15 +8,15 @@ from curobo.types.robot import RobotConfig
 from curobo.util_file import get_robot_path, join_path, load_yaml
 from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 
-from scenario_cfg.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import matrix_from_quat
 
 
-def get_curobo_models(robot_cfg: BaseRobotCfg, no_gnd=False):
+def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
     """Initializes and returns the curobo kinematic model, forward kinematics function, and inverse kinematics solver for a given robot configuration.
 
     Args:
-        robot_cfg (BaseRobotCfg): The configuration object for the robot.
+        robot_cfg (RobotCfg): The configuration object for the robot.
         no_gnd (bool, optional): If True, the ground plane is not included for curobo collision checking. Defaults to False.
 
     Returns:
@@ -59,13 +59,13 @@ def get_curobo_models(robot_cfg: BaseRobotCfg, no_gnd=False):
     return kin_model, do_fk, ik_solver
 
 
-def ee_pose_from_tcp_pose(robot_cfg: BaseRobotCfg, tcp_pos: torch.Tensor, tcp_quat: torch.Tensor):
+def ee_pose_from_tcp_pose(robot_cfg: RobotCfg, tcp_pos: torch.Tensor, tcp_quat: torch.Tensor):
     """Calculate the end-effector (EE) pose from the tool center point (TCP) pose.
 
     Note that currently only the translation is considered.
 
     Args:
-        robot_cfg (BaseRobotCfg): Configuration object for the robot, containing the relative position of the TCP.
+        robot_cfg (RobotCfg): Configuration object for the robot, containing the relative position of the TCP.
         tcp_pos (torch.Tensor): The position of the TCP as a tensor.
         tcp_quat (torch.Tensor): The orientation of the TCP as a tensor, in scalar-first quaternion.
 
@@ -77,13 +77,13 @@ def ee_pose_from_tcp_pose(robot_cfg: BaseRobotCfg, tcp_pos: torch.Tensor, tcp_qu
     return ee_pos, tcp_quat
 
 
-def tcp_pose_from_ee_pose(robot_cfg: BaseRobotCfg, ee_pos: torch.Tensor, ee_quat: torch.Tensor):
+def tcp_pose_from_ee_pose(robot_cfg: RobotCfg, ee_pos: torch.Tensor, ee_quat: torch.Tensor):
     """Calculate the TCP (Tool Center Point) pose from the end-effector pose.
 
     Note that currently only the translation is considered.
 
     Args:
-        robot_cfg (BaseRobotCfg): Configuration object for the robot, containing the relative position of the TCP.
+        robot_cfg (RobotCfg): Configuration object for the robot, containing the relative position of the TCP.
         ee_pos (torch.Tensor): The position of the end-effector as a tensor.
         ee_quat (torch.Tensor): The orientation of the end-effector as a tensor, in scalar-first quaternion.
 

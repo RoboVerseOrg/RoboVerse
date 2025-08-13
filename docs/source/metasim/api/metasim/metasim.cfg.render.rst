@@ -1,7 +1,7 @@
-﻿scenario_cfg.render
+﻿metasim.scenario.render
 ==================
 
-.. automodule:: scenario_cfg.render
+.. automodule:: metasim.scenario.render
 
 
    .. rubric:: Classes

@@ -46,9 +46,9 @@ def main():
     if args.sim == "isaacgym":
         from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 
-    from scenario_cfg.cameras import PinholeCameraCfg
-    from scenario_cfg.scenario import ScenarioCfg
     from metasim.constants import SimType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.scenario import ScenarioCfg
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_sim_env_class
 

@@ -122,9 +122,9 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.scenario import ScenarioCfg
-from tasks.registry import load_task
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.registry import load_task
 
 
 def main() -> None:

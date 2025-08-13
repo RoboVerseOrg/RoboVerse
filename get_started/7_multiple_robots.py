@@ -13,9 +13,9 @@ from loguru import logger as log
 from rich.logging import RichHandler
 
 from metasim.constants import SimType
+from metasim.scenario.robot import FrankaCfg, H1Cfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_handler_class
-from scenario_cfg.robots import FrankaCfg, H1Cfg
-from scenario_cfg.scenario import ScenarioCfg
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 

@@ -6,7 +6,7 @@ import torch
 from loguru import logger as log
 from rsl_rl.env import VecEnv
 
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.sim.env_wrapper import EnvWrapper
 from metasim.utils.setup_util import get_sim_env_class

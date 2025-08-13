@@ -18,16 +18,16 @@ from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
-from scenario_cfg.objects import (
+from metasim.queries.base import BaseQueryType
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from scenario_cfg.robots import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
-from metasim.queries.base import BaseQueryType
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import DictEnvState
 from metasim.utils.math import quat_from_euler_np
@@ -112,7 +112,7 @@ class Sapien2Handler(BaseSimHandler):
             # self.camera_ids[camera.name] = camera_id
 
         for object in [*self.objects, self.robot]:
-            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+            if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
@@ -133,7 +133,7 @@ class Sapien2Handler(BaseSimHandler):
                 # Change dof properties
                 ###
 
-                if isinstance(object, BaseRobotCfg):
+                if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
                         stiffness = object.actuators[joint.get_name()].stiffness
@@ -218,7 +218,7 @@ class Sapien2Handler(BaseSimHandler):
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
-            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+            if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 self.link_ids[object.name] = self.object_ids[object.name].get_links()
                 self._previous_dof_pos_target[object.name] = np.zeros(
                     (len(self.object_joint_order[object.name]),), dtype=np.float32
