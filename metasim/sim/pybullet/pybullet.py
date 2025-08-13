@@ -6,6 +6,7 @@ Currently using Pybullet 3.2.6
 """
 
 from __future__ import annotations
+import os
 
 import math
 from copy import deepcopy
@@ -40,7 +41,15 @@ class SinglePybulletHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
 
     def _build_pybullet(self):
-        self.client = p.connect(p.GUI)
+        # self.client = p.connect(p.GUI)
+        # use_gui_env = os.environ.get("PYBULLET_USE_GUI", "")
+        # want_gui = (not self.scenario.headless) and (use_gui_env not in ["0", "false", "False"])
+        # mode = p.GUI if want_gui else p.DIRECT
+        # self.client = p.connect(mode)
+        self.client = p.connect(p.DIRECT)
+        print("[PybulletHandler DEBUG] forcing DIRECT mode")
+        self.pb = p
+        self.p = p
         p.setPhysicsEngineParameter(
             fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
             numSolverIterations=300,
@@ -49,7 +58,13 @@ class SinglePybulletHandler(BaseSimHandler):
         p.setGravity(0, 0, -9.81)
 
         # add plane
-        self.plane_id = p.loadURDF("plane.urdf")
+        # self.plane_id = p.loadURDF("plane.urdf")
+        self.plane_id = None
+        # Only add ground when explicitly requested (controlled by scene switches or environment variables)
+        add_ground = bool(getattr(self.scenario, "try_add_table", False) or
+                        os.environ.get("METASIM_ADD_GROUND", "0").lower() not in ("0","false",""))
+        if add_ground:
+            self.plane_id = p.loadURDF("plane.urdf")
         # add agents
         self.object_ids = {}
         self.object_joint_order = {}
@@ -74,7 +89,13 @@ class SinglePybulletHandler(BaseSimHandler):
 
             self.camera_ids[camera.name] = (width, height, view_matrix, projection_matrix)
 
-        for object in [*self.objects, self.robot]:
+        # ---- instantiate objects/robots safely (robots can be empty) ----
+        iter_cfgs = list(getattr(self, "objects", []))
+        # Only append when robots are actually configured; avoid triggering self.robot attribute access.
+        if getattr(self, "robots", None):
+            iter_cfgs.extend([r for r in self.robots if r is not None])
+
+        for object in iter_cfgs:
             if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
                 pos = np.array([0, 0, 0])
                 rot = np.array([1, 0, 0, 0])
@@ -101,12 +122,6 @@ class SinglePybulletHandler(BaseSimHandler):
                 cur_joint_names = [p.getJointInfo(curr_id, i)[1].decode("utf-8") for i in range(num_joints)]
                 self.object_joint_order[object.name] = cur_joint_names
 
-                # assert(num_joints == len(agent.dof.low))
-                # assert(num_joints == len(agent.dof.high))
-                # print(num_joints, agent.dof.init)
-                # print(p.getJointStates(agent.instance, range(num_joints)))
-                # assert(num_joints == len(object.dof.init))
-
                 jointIndices = range(num_joints)
 
                 if isinstance(object, BaseRobotCfg):
@@ -114,39 +129,7 @@ class SinglePybulletHandler(BaseSimHandler):
                         curr_id,
                         jointIndices,
                         p.POSITION_CONTROL,
-                        # targetPositions = agent.dof.target
                     )
-
-                ### TODO:
-                # Add dof properties for articulated objects
-                # if agent.dof.drive_mode == "position":
-                #     p.setJointMotorControlMultiDofArray(
-                #         agent.instance,
-                #         jointIndices,
-                #         p.POSITION_CONTROL,
-                #         targetPositions = agent.dof.target
-                #     )
-                # elif agent.dof.drive_mode == "velocity":
-                #     p.setJointMotorControlMultiDofArray(
-                #         agent.instance,
-                #         jointIndices,
-                #         p.VELOCITY_CONTROL,
-                #         targetVelocities = agent.dof.target
-                #     )
-                # elif agent.dof.drive_mode == "torque":
-                #     p.setJointMotorControlMultiDofArray(
-                #         agent.instance,
-                #         jointIndices,
-                #         p.TORQUE_CONTROL,
-                #         forces = agent.dof.target
-                #     )
-                # p.resetJointStatesMultiDof(
-                #     agent.instance,
-                #     jointIndices,
-                #     targetValues=[[x] for x in agent.dof.init],
-                #     # targetVelocities=[0 for i in range(num_joints)]
-                # )
-                # p.resetBasePositionAndOrientation(agent.instance, pos, wxyz_to_xyzw(rot))
 
             elif isinstance(object, PrimitiveCubeCfg):
                 box_dimensions = object.half_size
@@ -192,6 +175,125 @@ class SinglePybulletHandler(BaseSimHandler):
 
             else:
                 raise ValueError(f"Object type {object} not supported")
+
+        # for object in [*self.objects, self.robot]:
+        #     if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+        #         pos = np.array([0, 0, 0])
+        #         rot = np.array([1, 0, 0, 0])
+        #         object_file = object.urdf_path
+        #         useFixedBase = object.fix_base_link
+        #         flags = 0
+        #         flags = flags | p.URDF_USE_SELF_COLLISION
+        #         flags = flags | p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES
+        #         flags = flags | p.URDF_MAINTAIN_LINK_ORDER
+        #         if True:  # object.collapse_fixed_joints :
+        #             flags = flags | p.URDF_MERGE_FIXED_LINKS
+
+        #         curr_id = p.loadURDF(
+        #             object_file,
+        #             pos,
+        #             convert_quat(rot, to="xyzw"),
+        #             useFixedBase=useFixedBase,
+        #             flags=flags,
+        #             globalScaling=object.scale[0],
+        #         )
+        #         self.object_ids[object.name] = curr_id
+
+        #         num_joints = p.getNumJoints(curr_id)
+        #         cur_joint_names = [p.getJointInfo(curr_id, i)[1].decode("utf-8") for i in range(num_joints)]
+        #         self.object_joint_order[object.name] = cur_joint_names
+
+        #         # assert(num_joints == len(agent.dof.low))
+        #         # assert(num_joints == len(agent.dof.high))
+        #         # print(num_joints, agent.dof.init)
+        #         # print(p.getJointStates(agent.instance, range(num_joints)))
+        #         # assert(num_joints == len(object.dof.init))
+
+        #         jointIndices = range(num_joints)
+
+        #         if isinstance(object, BaseRobotCfg):
+        #             p.setJointMotorControlMultiDofArray(
+        #                 curr_id,
+        #                 jointIndices,
+        #                 p.POSITION_CONTROL,
+        #                 # targetPositions = agent.dof.target
+        #             )
+
+        #         ### TODO:
+        #         # Add dof properties for articulated objects
+        #         # if agent.dof.drive_mode == "position":
+        #         #     p.setJointMotorControlMultiDofArray(
+        #         #         agent.instance,
+        #         #         jointIndices,
+        #         #         p.POSITION_CONTROL,
+        #         #         targetPositions = agent.dof.target
+        #         #     )
+        #         # elif agent.dof.drive_mode == "velocity":
+        #         #     p.setJointMotorControlMultiDofArray(
+        #         #         agent.instance,
+        #         #         jointIndices,
+        #         #         p.VELOCITY_CONTROL,
+        #         #         targetVelocities = agent.dof.target
+        #         #     )
+        #         # elif agent.dof.drive_mode == "torque":
+        #         #     p.setJointMotorControlMultiDofArray(
+        #         #         agent.instance,
+        #         #         jointIndices,
+        #         #         p.TORQUE_CONTROL,
+        #         #         forces = agent.dof.target
+        #         #     )
+        #         # p.resetJointStatesMultiDof(
+        #         #     agent.instance,
+        #         #     jointIndices,
+        #         #     targetValues=[[x] for x in agent.dof.init],
+        #         #     # targetVelocities=[0 for i in range(num_joints)]
+        #         # )
+        #         # p.resetBasePositionAndOrientation(agent.instance, pos, wxyz_to_xyzw(rot))
+
+        #     elif isinstance(object, PrimitiveCubeCfg):
+        #         box_dimensions = object.half_size
+        #         pos = np.array([0, 0, 0])
+        #         rot = np.array([1, 0, 0, 0])
+        #         box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=box_dimensions)
+        #         curr_id = p.createMultiBody(
+        #             baseMass=object.mass,
+        #             baseCollisionShapeIndex=box_id,
+        #             basePosition=pos,
+        #             baseOrientation=convert_quat(rot, to="xyzw"),
+        #         )
+        #         self.object_ids[object.name] = curr_id
+        #         self.object_joint_order[object.name] = []
+
+        #     elif isinstance(object, PrimitiveSphereCfg):
+        #         radius = object.radius
+        #         pos = np.array([0, 0, 0])
+        #         rot = np.array([1, 0, 0, 0])
+        #         sphere_id = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)
+        #         curr_id = p.createMultiBody(
+        #             baseMass=object.mass,
+        #             baseCollisionShapeIndex=sphere_id,
+        #             basePosition=pos,
+        #             baseOrientation=convert_quat(rot, to="xyzw"),
+        #         )
+        #         self.object_ids[object.name] = curr_id
+        #         self.object_joint_order[object.name] = []
+
+        #     elif isinstance(object, RigidObjCfg):
+        #         useFixedBase = object.fix_base_link
+        #         pos = np.array([0, 0, 0])
+        #         rot = np.array([1, 0, 0, 0])
+        #         curr_id = p.loadURDF(
+        #             object.urdf_path,
+        #             pos,
+        #             convert_quat(rot, to="xyzw"),
+        #             useFixedBase=useFixedBase,
+        #             globalScaling=object.scale[0],
+        #         )
+        #         self.object_ids[object.name] = curr_id
+        #         self.object_joint_order[object.name] = []
+
+        #     else:
+        #         raise ValueError(f"Object type {object} not supported")
 
             # p.resetBaseVelocity(curr_id, agent.vel, agent.ang_vel)
             ### TODO:
@@ -274,6 +376,11 @@ class SinglePybulletHandler(BaseSimHandler):
         """Launch the simulation."""
         self._build_pybullet()
         self.already_disconnect = False
+
+    def get_bullet_api(self):
+        """Return the pybullet module so external code can call pb.loadURDF(), etc."""
+        return self.pb
+
 
     def close(self):
         """Close the simulation."""

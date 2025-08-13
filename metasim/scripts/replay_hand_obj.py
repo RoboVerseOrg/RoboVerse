@@ -15,6 +15,12 @@ import argparse
 from pathlib import Path
 import json
 import os
+
+# os.environ.setdefault("PYBULLET_USE_GUI", "0")
+# os.environ.setdefault("SDL_VIDEODRIVER", "offscreen")
+# os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+# os.environ.setdefault("PYBULLET_EGL", "1")
+
 import time
 import logging
 import numpy as np
@@ -201,16 +207,36 @@ def apply_extra_correction(R_w, euler_deg: Optional[str] = None):
 
 
 # ---------- helpers that DO NOT import pybullet ----------
+# def _get_pb_client(handler):
+#     """
+#     Try to fetch the underlying pybullet client from MetaSim handler.
+#     """
+#     # Common possibilities across handlers:
+#     for attr in ("p", "client", "bullet", "pb", "_client", "_p"):
+#         if hasattr(handler, attr):
+#             return getattr(handler, attr)
+#     raise RuntimeError("Cannot locate PyBullet client from env.handler; "
+#                        "please check MetaSim PyBullet handler implementation.")
+
 def _get_pb_client(handler):
     """
-    Try to fetch the underlying pybullet client from MetaSim handler.
+    Return the pybullet *module* so we can call loadURDF/getCameraImage/etc.
+    Do NOT return handler.client (that's just an int connection id).
     """
-    # Common possibilities across handlers:
-    for attr in ("p", "client", "bullet", "pb", "_client", "_p"):
+    # try:
+    #     import pybullet as p
+    #     return p
+    # except Exception:
+    #     pass
+    # fallback: try to find a module-like attribute but avoid 'client'
+    for attr in ("p", "pb", "bullet", "_p"):
         if hasattr(handler, attr):
-            return getattr(handler, attr)
-    raise RuntimeError("Cannot locate PyBullet client from env.handler; "
-                       "please check MetaSim PyBullet handler implementation.")
+            cand = getattr(handler, attr)
+            # must look like the pybullet module
+            if hasattr(cand, "loadURDF") and hasattr(cand, "getCameraImage"):
+                return cand
+    raise RuntimeError("Cannot locate a pybullet API; expected module-like object with loadURDF().")
+
 
 
 def _get_active_joint_indices(pb, body_id):
@@ -345,7 +371,7 @@ def main():
         env = HybridSimEnv(env_physics, env_render)
 
     handler = env.handler
-    pb = _get_pb_client(handler)  # <-- pybullet client from handler (no direct import)
+    pb = _get_pb_client(handler)  # <-- pybullet client from handler
 
     # Configure physics
     try:
