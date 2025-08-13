@@ -297,45 +297,36 @@ class IsaacsimHandler(BaseSimHandler):
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
 
-    def set_dof_targets(self, robot_name, actions: torch.Tensor) -> None:
+    def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
-
-        # Store actions for all robots at once when first robot calls this
-        if not hasattr(self, "_actions_applied_this_step"):
-            self._actions_applied_this_step = False
-
-        # Only process actions once per simulation step
-        if not self._actions_applied_this_step:
-            if isinstance(actions, torch.Tensor):
-                action_tensor_all = actions
-            else:
-                # Process dictionary-based actions
-                action_tensors = []
-                for robot in self.robots:
-                    actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
-                    action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
-                    for env_id in range(self.num_envs):
-                        for i, actuator_name in enumerate(actuator_names):
-                            action_tensor[env_id, i] = torch.tensor(
-                                actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
-                            )
-                    action_tensors.append(action_tensor)
-                action_tensor_all = torch.cat(action_tensors, dim=-1)
-
-            # Apply actions to all robots
-            start_idx = 0
+        if isinstance(actions, torch.Tensor):
+            action_tensor_all = actions
+        else:
+            # Process dictionary-based actions
+            action_tensors = []
             for robot in self.robots:
-                robot_inst = self.scene.articulations[robot.name]
-                actionable_joint_ids = [
-                    robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
-                ]
-                robot_inst.set_joint_position_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                    joint_ids=actionable_joint_ids,
-                )
-                start_idx += len(actionable_joint_ids)
+                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
+                for env_id in range(self.num_envs):
+                    for i, actuator_name in enumerate(actuator_names):
+                        action_tensor[env_id, i] = torch.tensor(
+                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
+                        )
+                action_tensors.append(action_tensor)
+            action_tensor_all = torch.cat(action_tensors, dim=-1)
 
-            self._actions_applied_this_step = True
+        # Apply actions to all robots
+        start_idx = 0
+        for robot in self.robots:
+            robot_inst = self.scene.articulations[robot.name]
+            actionable_joint_ids = [
+                robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
+            ]
+            robot_inst.set_joint_position_target(
+                action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
+                joint_ids=actionable_joint_ids,
+            )
+            start_idx += len(actionable_joint_ids)
 
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
@@ -348,9 +339,6 @@ class IsaacsimHandler(BaseSimHandler):
         # Ensure camera pose is correct, especially for the first few frames
         if self._step_counter < 5:
             self._update_camera_pose()
-
-        # Reset action application flag for next step
-        self._actions_applied_this_step = False
 
         self._step_counter += 1
 
