@@ -12,24 +12,29 @@ except ImportError:
 
 import imageio as iio
 import numpy as np
+import rootutils
+import torch
 import tyro
 from loguru import logger as log
 from numpy.typing import NDArray
 from rich.logging import RichHandler
 from torchvision.utils import make_grid, save_image
-from tyro import MISSING
 
 from metasim.constants import SimType
-from metasim.scenario.randomization import RandomizationCfg
+from metasim.scenario.cameras import PinholeCameraCfg
+
+# from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
-from metasim.scenario.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.sensors import PinholeCameraCfg
-from metasim.sim import HybridSimEnv
+from metasim.sim import HybridSimHandler
+from metasim.task.registry import load_task
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.setup_util import get_sim_handler_class
 from metasim.utils.state import TensorState
+
+rootutils.setup_root(__file__, pythonpath=True)
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -37,14 +42,14 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
-    task: str = MISSING
+    task: str = "stack_cube"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
-    random: RandomizationCfg = RandomizationCfg()
+    # random: RandomizationCfg = RandomizationCfg()
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
     renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
@@ -69,7 +74,7 @@ args = tyro.cli(Args)
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, action_idx: int, num_envs: int, robot: BaseRobotCfg):
+def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
@@ -134,18 +139,14 @@ class ObsSaver:
 def main():
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = ScenarioCfg(
-        task=args.task,
         robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
-        random=args.random,
+        # random=args.random,
         render=args.render,
-        sim=args.sim,
+        simulator=args.sim,
         renderer=args.renderer,
         num_envs=args.num_envs,
-        try_add_table=args.try_add_table,
-        object_states=args.object_states,
-        split=args.split,
         headless=args.headless,
     )
 
@@ -153,26 +154,27 @@ def main():
 
     tic = time.time()
     if scenario.renderer is None:
-        log.info(f"Using simulator: {scenario.sim}")
-        env_class = get_sim_env_class(SimType(scenario.sim))
+        log.info(f"Using simulator: {scenario.simulator}")
+        env_class = get_sim_handler_class(SimType(scenario.simulator))
         env = env_class(scenario)
     else:
-        log.info(f"Using simulator: {scenario.sim}, renderer: {scenario.renderer}")
-        env_class_render = get_sim_env_class(SimType(scenario.renderer))
+        log.info(f"Using simulator: {scenario.simulator}, renderer: {scenario.renderer}")
+        env_class_render = get_sim_handler_class(SimType(scenario.renderer))
         env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-        env_class_physics = get_sim_env_class(SimType(scenario.sim))
+        env_class_physics = get_sim_handler_class(SimType(scenario.sim))
         env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-        env = HybridSimEnv(env_physics, env_render)
+        env = HybridSimHandler(env_physics, env_render)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = load_task(args.task, scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
-
+    traj_filepath = env.traj_filepath
     ## Data
     tic = time.time()
-    assert os.path.exists(scenario.task.traj_filepath), (
-        f"Trajectory file: {scenario.task.traj_filepath} does not exist."
-    )
+    assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
     init_states, all_actions, all_states = get_traj(
-        scenario.task, scenario.robots[0], env.handler
+        traj_filepath, scenario.robots[0], env.handler
     )  # XXX: only support one robot
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
@@ -195,7 +197,7 @@ def main():
     while True:
         log.debug(f"Step {step}")
         tic = time.time()
-        if scenario.object_states:
+        if args.object_states:
             ## TODO: merge states replay into env.step function
             if all_states is None:
                 raise ValueError("All states are None, please check the trajectory file")
@@ -205,7 +207,7 @@ def main():
             obs = env.handler.get_states()
 
             ## XXX: hack
-            success = env.handler.task.checker.check(env.handler)
+            success = env.checker.check(env.handler)
             if success.any():
                 log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
             if success.all():

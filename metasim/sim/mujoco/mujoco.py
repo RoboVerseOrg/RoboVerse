@@ -452,6 +452,7 @@ class MujocoHandler(BaseSimHandler):
         for camera in self.cameras:
             camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
             camera_states[camera.name] = {}
+            depth = None
             if "rgb" in camera.data_types:
                 rgb = self.physics.render(width=camera.width, height=camera.height, camera_id=camera_id, depth=False)
                 rgb = torch.from_numpy(rgb.copy()).unsqueeze(0)
@@ -592,7 +593,7 @@ class MujocoHandler(BaseSimHandler):
                         ).id
                         self.physics.data.ctrl[actuator_id] = effort[i]
 
-    def set_dof_targets(self, obj_name, actions) -> None:
+    def set_dof_targets(self, actions) -> None:
         """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
         self._actions_cache = actions
 
@@ -605,44 +606,39 @@ class MujocoHandler(BaseSimHandler):
                 self.physics.data.ctrl[:] = vec
             return
 
-        # Dict-list path (actions[0][obj_name]{dof_pos_target, dof_vel_target})
-        robot_idx = next((i for i, r in enumerate(self.robots) if r.name == obj_name), None)
-        if robot_idx is None:
-            return
+        # Dict-list path
+        for robot_idx, robot in enumerate(self.robots):
+            payload = actions[0][robot.name]
 
-        payload = actions[0][obj_name]
+            # Optional velocity targets
+            vel_targets = payload.get("dof_vel_target")
+            if vel_targets:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                self._current_vel_target = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+                for i, jn in enumerate(jnames):
+                    if jn in vel_targets:
+                        self._current_vel_target[i] = vel_targets[jn]
+            else:
+                self._current_vel_target = None
 
-        # Optional velocity targets
-        vel_targets = payload.get("dof_vel_target")
-        if vel_targets:
-            jnames = self._get_joint_names(self.robots[robot_idx].name, sort=True)
-            self._current_vel_target = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
-            for i, jn in enumerate(jnames):
-                if jn in vel_targets:
-                    self._current_vel_target[i] = vel_targets[jn]
-        else:
-            self._current_vel_target = None
-
-        joint_targets = payload["dof_pos_target"]
-
-        if self._manual_pd_on:
-            # Cache q* and optionally mirror to pos-servos
-            jnames = self._get_joint_names(self.robots[robot_idx].name, sort=True)
-            self._current_action = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
-            for i, jn in enumerate(jnames):
-                if jn in joint_targets:
-                    self._current_action[i] = joint_targets[jn]
-            for i in range(self._robot_num_dofs[robot_idx]):
-                if (robot_idx, i) in self._position_controlled_joints:
-                    jn = jnames[i]
+            # Position targets
+            joint_targets = payload["dof_pos_target"]
+            if self._manual_pd_on:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                self._current_action = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+                for i, jn in enumerate(jnames):
                     if jn in joint_targets:
-                        self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = joint_targets[
-                            jn
-                        ]
-        else:
-            # Directly drive actuators by name
-            for jn, pos in joint_targets.items():
-                self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = pos
+                        self._current_action[i] = joint_targets[jn]
+                for i in range(self._robot_num_dofs[robot_idx]):
+                    if (robot_idx, i) in self._position_controlled_joints:
+                        jn = jnames[i]
+                        if jn in joint_targets:
+                            self.physics.data.actuator(
+                                f"{self._mujoco_robot_names[robot_idx]}{jn}"
+                            ).ctrl = joint_targets[jn]
+            else:
+                for jn, pos in joint_targets.items():
+                    self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = pos
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.

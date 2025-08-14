@@ -14,7 +14,6 @@ from metasim.utils.math import euler_xyz_from_quat, matrix_from_quat, quat_from_
 from metasim.utils.state import TensorState
 from metasim.utils.tensor_util import tensor_to_str
 
-from .base_checker import BaseChecker
 from .detectors import BaseDetector
 from .util import get_dof_pos, get_pos, get_rot
 
@@ -25,7 +24,7 @@ except:
 
 
 @configclass
-class EmptyChecker(BaseChecker):
+class EmptyChecker:
     """A checker that always returns False."""
 
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
@@ -39,7 +38,7 @@ class EmptyChecker(BaseChecker):
 
 
 @configclass
-class DetectedChecker(BaseChecker):
+class DetectedChecker:
     """Check if the object with ``obj_name`` is detected by the detector.
 
     This class should always be used with a detector.
@@ -71,7 +70,7 @@ class DetectedChecker(BaseChecker):
 
 
 @configclass
-class JointPosChecker(BaseChecker):
+class JointPosChecker:
     """Check if the joint with ``joint_name`` of the object with ``obj_name`` has position ``radian_threshold`` units.
 
     - ``mode`` should be one of "ge", "le". "ge" for greater than or equal to, "le" for less than or equal to.
@@ -102,7 +101,7 @@ class JointPosChecker(BaseChecker):
 
 
 @configclass
-class JointPosShiftChecker(BaseChecker):
+class JointPosShiftChecker:
     """Check if the joint with ``joint_name`` of the object with ``obj_name`` was moved more than ``threshold`` units.
 
     - ``threshold`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
@@ -137,7 +136,7 @@ class JointPosShiftChecker(BaseChecker):
 
 
 @configclass
-class RotationShiftChecker(BaseChecker):
+class RotationShiftChecker:
     """Check if the object with ``obj_name`` was rotated more than ``radian_threshold`` radians around the given ``axis``.
 
     - ``radian_threshold`` is negative for clockwise rotations and positive for counter-clockwise rotations.
@@ -184,7 +183,7 @@ class RotationShiftChecker(BaseChecker):
 
 
 @configclass
-class PositionShiftChecker(BaseChecker):
+class PositionShiftChecker:
     """Check if the object with ``obj_name`` was moved more than ``distance`` meters in given ``axis``.
 
     - ``distance`` is negative for moving towards the negative direction and positive for moving towards the positive direction.
