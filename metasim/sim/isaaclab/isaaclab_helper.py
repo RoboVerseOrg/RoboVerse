@@ -15,8 +15,8 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
+from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import convert_camera_frame_orientation_convention
-from roboverse_pack.robots.base_robot_cfg import RobotCfg
 
 try:
     from .empty_env import EmptyEnv

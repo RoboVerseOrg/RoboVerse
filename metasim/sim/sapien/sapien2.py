@@ -26,12 +26,12 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
 from metasim.types import DictEnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from roboverse_pack.robots.base_robot_cfg import RobotCfg
 
 
 class Sapien2Handler(BaseSimHandler):

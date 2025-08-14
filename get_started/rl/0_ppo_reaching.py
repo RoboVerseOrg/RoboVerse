@@ -26,8 +26,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from get_started.utils import ObsSaver
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
-from tasks.registry import load_task
-from tasks.rl_task import RLTaskEnv
+from metasim.task.registry import load_task
+from metasim.task.rl_task import RLTaskEnv
 
 
 @dataclass
