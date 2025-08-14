@@ -93,11 +93,6 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # env api
     # -------------------------------------------------------------------------
-
-    def _time_out(self, env_states) -> torch.Tensor:
-        """Timeout flags."""
-        return self._episode_steps >= self.max_episode_steps
-
     def reset(self, env_ids=None) -> tuple[torch.Tensor, dict]:
         """Reset selected envs.
 
