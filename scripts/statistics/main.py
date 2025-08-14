@@ -4,12 +4,12 @@ import pickle as pkl
 import numpy as np
 from loguru import logger as log
 from matplotlib import pyplot as plt
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 from metasim.constants import TaskType
 from metasim.scenario.metasim.task.base_task_cfg import BaseTaskCfg
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_task
-from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 save_dir = "statistics/plots"
 os.makedirs(save_dir, exist_ok=True)

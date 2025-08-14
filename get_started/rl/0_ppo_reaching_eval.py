@@ -23,11 +23,12 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
+from tasks.registry import load_task
+from tasks.rl_task import RLTaskEnv
+
 from get_started.utils import ObsSaver
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
-from tasks.registry import load_task
-from tasks.rl_task import RLTaskEnv
 
 
 @dataclass
