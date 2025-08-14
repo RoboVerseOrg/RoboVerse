@@ -11,6 +11,13 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 By running the above command, you will plan a motion for a robot and it will automatically record a video.
 
+### Using PyRoki Solver
+
+You can run the motion planning script using `PyRoki` install of `curobo` as follows:
+
+```bash
+python get_started/4_motion_planning.py --sim isaaclab --solver pyroki
+```
 
 ### Examples
 
@@ -92,5 +99,3 @@ You will get the following videos:
     </div>
 
 </div>
-
-

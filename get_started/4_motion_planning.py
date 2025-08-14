@@ -37,12 +37,12 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 4
     headless: bool = False
-    solver: Literal["pyroki", "curobo"] = "pyroki"
+    solver: Literal["curobo", "pyroki"] = "curobo"
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -53,7 +53,6 @@ args = tyro.cli(Args)
 
 if args.solver == "curobo":
     from curobo.types.math import Pose
-
     from metasim.utils.kinematics_utils import get_curobo_models
 
 elif args.solver == "pyroki":
