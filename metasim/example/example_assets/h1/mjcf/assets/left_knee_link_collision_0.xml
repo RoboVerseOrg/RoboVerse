@@ -1,0 +1,16 @@
+<mujoco model="left_knee_link_collision">
+<geom class="collision" type="mesh" mesh="left_knee_link_part_0" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_1" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_2" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_3" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_4" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_5" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_6" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_7" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_8" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_9" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_10" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_11" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_12" />
+<geom class="collision" type="mesh" mesh="left_knee_link_part_13" />
+</mujoco>

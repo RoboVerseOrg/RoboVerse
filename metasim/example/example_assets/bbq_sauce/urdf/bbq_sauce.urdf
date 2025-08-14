@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<robot name="converted_from_mjcf">
+  <link name="bbq_sauce">
+    <visual>
+      <geometry>
+          <mesh filename="meshes/bbq_sauce_rescale.obj" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+          <mesh filename="meshes/bbq_sauce_rescale.obj" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
