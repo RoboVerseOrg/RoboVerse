@@ -7,18 +7,18 @@ import torch
 from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
-from metasim.utils.dict import deep_get
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.objects import (
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     BaseArticulationObjCfg,
     BaseObjCfg,
     BaseRigidObjCfg,
     PrimitiveFrameCfg,
 )
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
+from metasim.types import Action, DictEnvState
+from metasim.utils.dict import deep_get
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
 from .isaaclab_helper import _update_tiled_camera_pose, get_pose

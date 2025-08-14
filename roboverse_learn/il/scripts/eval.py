@@ -25,9 +25,9 @@ from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 from roboverse_learn.algorithms import PolicyRunner, get_runner
-from scenario_cfg.cameras import PinholeCameraCfg
+from metasim.scenario.cameras import PinholeCameraCfg
 from scenario_cfg.randomization import RandomizationCfg
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
 
 
 @dataclass

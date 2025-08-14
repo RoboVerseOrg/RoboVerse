@@ -25,8 +25,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.rl.fast_td3.task_wrapper import RLTaskWrapper
 from get_started.utils import ObsSaver
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import register_task
-from scenario_cfg.scenario import ScenarioCfg
 
 
 @dataclass

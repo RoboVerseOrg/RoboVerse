@@ -18,12 +18,10 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from get_started.utils import ObsSaver
 from metasim.constants import SimType
-from metasim.scenario.robot import FrankaCfg, H1Cfg
+from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_handler_class
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.robots import FrankaCfg, H1Cfg
-from scenario_cfg.scenario import ScenarioCfg
+from roboverse_pack.robots import FrankaCfg, H1Cfg
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -188,7 +186,7 @@ def main():
             for _ in range(scenario.num_envs)
         ]
         for robot in scenario.robots:
-            env.set_dof_targets(robot.name, actions)
+            env.set_dof_targets(actions)
         env.simulate()
 
         # Save observations for video

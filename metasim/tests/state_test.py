@@ -17,17 +17,19 @@ from loguru import logger as log
 from rich.logging import RichHandler
 
 from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.state import state_tensor_to_nested
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from scenario_cfg.scenario import ScenarioCfg
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass
 class Args:
+    """Test config."""
+
     robot: str = "franka"
     sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaacsim"
     num_envs: int = 1
@@ -134,6 +136,7 @@ states = state_tensor_to_nested(env, env.get_states())
 
 
 def assert_close(a, b, atol=1e-3):
+    """Assertion for close."""
     if isinstance(a, torch.Tensor):
         assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b}"
     elif isinstance(a, float):

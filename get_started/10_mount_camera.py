@@ -270,7 +270,7 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    env.set_dof_targets(robot.name, actions)
+    env.set_dof_targets(actions)
     env.simulate()
     obs = env.get_states()
     obs_saver.add(obs)

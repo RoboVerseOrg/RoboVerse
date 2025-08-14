@@ -7,7 +7,7 @@ import torch
 
 from metasim.utils.setup_util import get_robot
 from roboverse_learn.rl.env import RLEnvWrapper
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
 from scenario_cfg.tasks.isaacgym_envs.allegrohand_cfg import AllegroHandCfg
 
 

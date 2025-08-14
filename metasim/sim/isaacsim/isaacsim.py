@@ -9,12 +9,8 @@ import torch
 from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler
-from metasim.types import DictEnvState
-from metasim.utils.dict import deep_get
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.cameras import PinholeCameraCfg
-from scenario_cfg.objects import (
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     BaseArticulationObjCfg,
     BaseObjCfg,
@@ -25,7 +21,11 @@ from scenario_cfg.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
+from metasim.types import DictEnvState
+from metasim.utils.dict import deep_get
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class IsaacsimHandler(BaseSimHandler):
@@ -551,7 +551,13 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        from scenario_cfg.lights import CylinderLightCfg, DiskLightCfg, DistantLightCfg, DomeLightCfg, SphereLightCfg
+        from metasim.scenario.lights import (
+            CylinderLightCfg,
+            DiskLightCfg,
+            DistantLightCfg,
+            DomeLightCfg,
+            SphereLightCfg,
+        )
 
         # Use lights from scenario configuration if available
         if hasattr(self.scenario, "lights") and self.scenario.lights:

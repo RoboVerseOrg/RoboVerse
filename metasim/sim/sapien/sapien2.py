@@ -19,19 +19,19 @@ from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import DictEnvState
-from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from scenario_cfg.objects import (
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from scenario_cfg.robots import BaseRobotCfg
-from scenario_cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.types import DictEnvState
+from metasim.utils.math import quat_from_euler_np
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from roboverse_pack.robots.base_robot_cfg import RobotCfg
 
 
 class Sapien2Handler(BaseSimHandler):
