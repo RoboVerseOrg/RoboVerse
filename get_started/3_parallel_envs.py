@@ -78,16 +78,16 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(2, 2, 2),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
     ArticulationObjCfg(
         name="box_base",
         fix_base_link=True,
-        usd_path="get_started/example_assets/box_base/usd/box_base.usd",
-        urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
-        mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        usd_path="metasim/example/example_assets/box_base/usd/box_base.usd",
+        urdf_path="metasim/example/example_assets/box_base/urdf/box_base_unique.urdf",
+        mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
 
