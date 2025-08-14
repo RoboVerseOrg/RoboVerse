@@ -3,6 +3,8 @@ from __future__ import annotations
 import pkgutil
 from importlib import import_module
 
+from loguru import logger as log
+
 from metasim.task.base import BaseTaskEnv
 
 # Global registry mapping lowercase names to task wrapper classes
@@ -42,22 +44,22 @@ def _discover_task_modules() -> None:
     Scans these packages (if available):
       - metasim.task
       - metasim.example
-      - roboverse_pack.tasks
+      - metasim.example.example_pack.tasks
 
     Safe to call multiple times; import errors are ignored to avoid breaking
     discovery due to one bad module.
     """
     packages_to_scan = [
-        "metasim.task",
-        "metasim.example",
+        "metasim.example.example_pack.tasks",
         "roboverse_pack.tasks",
     ]
 
     for pkg_name in packages_to_scan:
         try:
             pkg = import_module(pkg_name)
-        except Exception:
-            # Package not present or import failed; skip
+        except Exception as e:
+            # Package not present or import failed; skip but report
+            log.warning(f"Task discovery: failed to import package '{pkg_name}': {e}")
             continue
 
         try:
@@ -69,12 +71,12 @@ def _discover_task_modules() -> None:
             for _finder, module_name, _is_pkg in pkgutil.walk_packages(pkg_path, prefix=pkg.__name__ + "."):
                 try:
                     import_module(module_name)
-                except Exception:
-                    # Ignore individual module import failures
-                    pass
-        except Exception:
+                except Exception as e:
+                    # Ignore individual module import failures, but report
+                    log.warning(f"Task discovery: failed to import module '{module_name}' from '{pkg_name}': {e}")
+        except Exception as e:
             # Be resilient to any unexpected issues during scanning
-            pass
+            log.warning(f"Task discovery: scanning error for package '{pkg_name}': {e}")
 
 
 def get_task_class(name: str) -> type[BaseTaskEnv]:

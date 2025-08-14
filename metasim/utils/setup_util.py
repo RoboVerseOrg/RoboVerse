@@ -121,9 +121,36 @@ def get_robot(robot_name: str) -> RobotCfg:
         RobotName = to_camel_case(robot_name)
     else:
         raise ValueError(f"Invalid robot name: {robot_name}, should be in either camel case or snake case")
-    module = importlib.import_module("roboverse_pack.robots")
-    robot_cls = getattr(module, f"{RobotName}Cfg")
-    return robot_cls()
+
+    # Search across both official and example robot config packages (union)
+    candidate_packages = [
+        "roboverse_pack.robots",
+        "metasim.example.example_pack.robots",
+    ]
+
+    attr_name = f"{RobotName}Cfg"
+    errors: list[str] = []
+
+    for pkg_name in candidate_packages:
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except Exception as e:
+            errors.append(f"{pkg_name}: import failed ({e})")
+            continue
+
+        # Fast path: attribute re-exported from package __init__
+        try:
+            robot_cls = getattr(pkg, attr_name)
+            return robot_cls()
+        except AttributeError:
+            pass
+
+        except Exception as e:
+            errors.append(f"{pkg_name}: scan failed ({e})")
+
+    # Not found in any package
+    searched_in = ", ".join(candidate_packages)
+    raise ValueError(f"Robot config class '{attr_name}' not found in [{searched_in}]. Errors: {errors}")
 
 
 def get_scene(scene_name: str) -> SceneCfg:
