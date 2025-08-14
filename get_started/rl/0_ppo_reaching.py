@@ -34,7 +34,7 @@ from metasim.task.rl_task import RLTaskEnv
 class Args:
     """Arguments for training PPO."""
 
-    task: str = "reach_origin"
+    task: str = "obj_env"
     # task: str = "reach_far"
     robot: str = "franka"
     num_envs: int = 128

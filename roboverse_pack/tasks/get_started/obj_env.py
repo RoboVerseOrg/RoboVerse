@@ -17,41 +17,41 @@ class ObjectEnv(BaseTaskEnv):
     This class provides common functionality for all object tasks.
     """
 
-    scenario = ScenarioCfg(
-        objects=[
-            PrimitiveCubeCfg(
-                name="cube",
-                size=(0.1, 0.1, 0.1),
-                color=[1.0, 0.0, 0.0],
-                physics=PhysicStateType.RIGIDBODY,
-            ),
-            PrimitiveSphereCfg(
-                name="sphere",
-                radius=0.1,
-                color=[0.0, 0.0, 1.0],
-                physics=PhysicStateType.RIGIDBODY,
-            ),
-            RigidObjCfg(
-                name="bbq_sauce",
-                scale=(2, 2, 2),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-                urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-                mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-            ),
-            ArticulationObjCfg(
-                name="box_base",
-                fix_base_link=True,
-                usd_path="metasim/example/example_assets/box_base/usd/box_base.usd",
-                urdf_path="metasim/example/example_assets/box_base/urdf/box_base_unique.urdf",
-                mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
-            ),
-        ],
-        robots=["franka"],
-    )
+    objects = [
+        PrimitiveCubeCfg(
+            name="cube",
+            size=(0.1, 0.1, 0.1),
+            color=[1.0, 0.0, 0.0],
+            physics=PhysicStateType.RIGIDBODY,
+        ),
+        PrimitiveSphereCfg(
+            name="sphere",
+            radius=0.1,
+            color=[0.0, 0.0, 1.0],
+            physics=PhysicStateType.RIGIDBODY,
+        ),
+        RigidObjCfg(
+            name="bbq_sauce",
+            scale=(2, 2, 2),
+            physics=PhysicStateType.RIGIDBODY,
+            usd_path="metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd",
+            urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
+        ArticulationObjCfg(
+            name="box_base",
+            fix_base_link=True,
+            usd_path="metasim/example/example_assets/box_base/usd/box_base.usd",
+            urdf_path="metasim/example/example_assets/box_base/urdf/box_base_unique.urdf",
+            mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        ),
+    ]
+
+    robots = ["franka"]
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
+        scenario.update(robots=self.robots, objects=self.objects)
         self.reward_functions = []
         self.max_episode_steps = 100
 

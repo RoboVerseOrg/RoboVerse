@@ -25,7 +25,7 @@ LOCAL_DIR = "roboverse_data"
 hf_api = HfApi()
 
 
-def _check_and_download_single(filepath: str):
+def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
 
     Args:
@@ -83,10 +83,10 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
         # check if current process is the main process
         if os.getpid() == os.getppid():
             with Pool(processes=n_processes) as p:
-                p.map(_check_and_download_single, filepaths)
+                p.map(check_and_download_single, filepaths)
         else:
             for filepath in filepaths:
-                _check_and_download_single(filepath)
+                check_and_download_single(filepath)
 
     new_filepaths = []
     for filepath in filepaths:

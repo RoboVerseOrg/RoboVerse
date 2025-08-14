@@ -20,18 +20,15 @@ from numpy.typing import NDArray
 from rich.logging import RichHandler
 from torchvision.utils import make_grid, save_image
 
-from metasim.constants import SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 
 # from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.sim import HybridSimHandler
 from metasim.task.registry import load_task
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_sim_handler_class
 from metasim.utils.state import TensorState
 
 rootutils.setup_root(__file__, pythonpath=True)
@@ -153,17 +150,17 @@ def main():
     num_envs: int = scenario.num_envs
 
     tic = time.time()
-    if scenario.renderer is None:
-        log.info(f"Using simulator: {scenario.simulator}")
-        env_class = get_sim_handler_class(SimType(scenario.simulator))
-        env = env_class(scenario)
-    else:
-        log.info(f"Using simulator: {scenario.simulator}, renderer: {scenario.renderer}")
-        env_class_render = get_sim_handler_class(SimType(scenario.renderer))
-        env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-        env_class_physics = get_sim_handler_class(SimType(scenario.sim))
-        env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-        env = HybridSimHandler(env_physics, env_render)
+    # if scenario.renderer is None:
+    #     log.info(f"Using simulator: {scenario.simulator}")
+    #     env_class = get_sim_handler_class(SimType(scenario.simulator))
+    #     env = env_class(scenario)
+    # else:
+    #     log.info(f"Using simulator: {scenario.simulator}, renderer: {scenario.renderer}")
+    #     env_class_render = get_sim_handler_class(SimType(scenario.renderer))
+    #     env_render = env_class_render(scenario)  # Isaaclab must launch right after import
+    #     env_class_physics = get_sim_handler_class(SimType(scenario.sim))
+    #     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
+    #     env = HybridSimHandler(env_physics, env_render)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = load_task(args.task, scenario, device=device)
@@ -187,7 +184,7 @@ def main():
 
     ## Reset before first step
     tic = time.time()
-    obs, extras = env.reset(states=init_states[:num_envs])
+    obs, extras = env.reset()
     toc = time.time()
     log.trace(f"Time to reset: {toc - tic:.2f}s")
     obs_saver.add(obs)

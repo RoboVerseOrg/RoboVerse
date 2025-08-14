@@ -8,6 +8,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
+from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
 from roboverse_pack.tasks.maniskill.checkers.checkers import DetectedChecker
 from roboverse_pack.tasks.maniskill.checkers.detectors import RelativeBboxDetector
@@ -17,32 +18,33 @@ from roboverse_pack.tasks.maniskill.checkers.detectors import RelativeBboxDetect
 class StackCubeTask(BaseTaskEnv):
     """Stack a red cube on top of a blue base cube and release it."""
 
-    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        self.traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2"
-        super().__init__(scenario, device)
+    objects = [
+        PrimitiveCubeCfg(
+            name="cube",
+            size=(0.04, 0.04, 0.04),
+            mass=0.02,
+            physics=PhysicStateType.RIGIDBODY,
+            color=(1.0, 0.0, 0.0),
+        ),
+        PrimitiveCubeCfg(
+            name="base",
+            size=(0.04, 0.04, 0.04),
+            mass=0.02,
+            physics=PhysicStateType.RIGIDBODY,
+            color=(0.0, 0.0, 1.0),
+        ),
+    ]
+    robots = ["franka"]
 
-    def _load_task_config(self, scenario: ScenarioCfg) -> ScenarioCfg:
-        scenario = super()._load_task_config(scenario)
+    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        self.traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2/franka_v2.pkl.gz"
+        check_and_download_single(self.traj_filepath)
+        # update objects and robots defined by task, must before super()._init_ because handler init
+        scenario.update(robots=self.robots, objects=self.objects)
+        super().__init__(scenario, device)
 
         # task horizon
         self.max_episode_steps = 250
-
-        scenario.objects = [
-            PrimitiveCubeCfg(
-                name="cube",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
-                physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
-            ),
-            PrimitiveCubeCfg(
-                name="base",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
-                physics=PhysicStateType.RIGIDBODY,
-                color=(0.0, 0.0, 1.0),
-            ),
-        ]
 
         # success checker: cube falls into a bbox above base
         self.checker = DetectedChecker(
@@ -56,24 +58,25 @@ class StackCubeTask(BaseTaskEnv):
                 ignore_base_ori=True,
             ),
         )
-        self.scenario = scenario
-        return scenario
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when cube is detected in the bbox above base."""
-        return self.checker.check(self.env, states)
+        return self.checker.check(self.handler, states)
 
-    def reset(self, env_ids):
+    def reset(self, env_ids=None):
         """Reset the checker."""
         states = super().reset(env_ids)
-        self.checker.reset(self.env, env_ids=env_ids)
+        self.checker.reset(self.handler, env_ids=env_ids)
         return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Give the inital states from traj file."""
         # Keep it simple and leave robot states to defaults; just seed cube pose.
         # If the handler handles None gracefully, this can be set to None.
-        initial_states, _, _ = get_traj(self.traj_filepath, self.scenario.robots[0], self.env)
+        initial_states, _, _ = get_traj(self.traj_filepath, self.scenario.robots[0], self.handler)
         # Duplicate / trim list so that its length matches num_envs
-        initial_states = initial_states * self.num_envs
-        return initial_states
+        if len(initial_states) < self.num_envs:
+            k = self.num_envs // len(initial_states)
+            initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
+        self._initial_states = initial_states[: self.num_envs]
+        return self._initial_states

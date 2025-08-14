@@ -60,21 +60,24 @@ class PickCubeTask(BaseTaskEnv):
         """Give the inital states from traj file."""
         # Keep it simple and leave robot states to defaults; just seed cube pose.
         # If the handler handles None gracefully, this can be set to None.
-        initial_states, _, _ = get_traj(self.traj_filepath, self.robot, self.env.handler)
+        initial_states, _, _ = get_traj(self.traj_filepath, self.scenario.robots[0], self.handler)
         # Duplicate / trim list so that its length matches num_envs
-        initial_states = initial_states * self.num_envs
+        if len(initial_states) < self.num_envs:
+            k = self.num_envs // len(initial_states)
+            initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
+        self._initial_states = initial_states[: self.num_envs]
         return initial_states
 
     # def _observation(self, states: TensorState) -> torch.Tensor:
     #     """Return a simple observation: robot joint positions and end-effector position if available."""
     #     if not states.robots:
-    #         return torch.empty((self.env.num_envs, 0), device=self.env.device)
+    #         return torch.empty((self.handler.num_envs, 0), device=self.handler.device)
     #     # use first robot
     #     robot_name, robot_state = next(iter(sorted(states.robots.items())))
     #     joint_pos = (
     #         robot_state.joint_pos
     #         if robot_state.joint_pos is not None
-    #         else torch.empty((self.env.num_envs, 0), device=self.env.device)
+    #         else torch.empty((self.handler.num_envs, 0), device=self.handler.device)
     #     )
     #     ee_pos = None
     #     if robot_state.body_state is not None and robot_state.body_names:
@@ -84,19 +87,23 @@ class PickCubeTask(BaseTaskEnv):
     #             hand_idx = 0
     #         ee_pos = robot_state.body_state[:, hand_idx, :3]
     #     else:
-    #         ee_pos = torch.empty((self.env.num_envs, 0), device=self.env.device)
+    #         ee_pos = torch.empty((self.handler.num_envs, 0), device=self.handler.device)
     #     return (
     #         torch.cat([joint_pos, ee_pos], dim=1)
     #         if joint_pos.numel() or ee_pos.numel()
-    #         else torch.empty((self.env.num_envs, 0), device=self.env.device)
+    #         else torch.empty((self.handler.num_envs, 0), device=self.handler.device)
     #     )
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success when the cube has been lifted sufficiently along z from its reset height."""
-        self.checker.check(self.env, states)
+        self.checker.check(self.handler, states)
 
-    def reset(self, env_ids):
+    def reset(self, env_ids=None):
         """Reset the checker."""
         states = super().reset(env_ids)
-        self.checker.reset(self.env)
+        self.checker.reset(self.handler)
         return states
+
+    def _time_out(self, env_states) -> torch.Tensor:
+        """Timeout flags."""
+        return (self.max_episode_steps >= self.max_episode_steps).to(dtype=torch.bool, device=self.device)

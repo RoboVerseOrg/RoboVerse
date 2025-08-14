@@ -45,8 +45,6 @@ class BaseTaskEnv:
     - close
     """
 
-    scenario: ScenarioCfg | None = None
-
     def __init__(
         self,
         scenario: BaseSimHandler | ScenarioCfg | None = None,
@@ -58,18 +56,19 @@ class BaseTaskEnv:
             scenario: The scenario configuration. If None, it will use the class variable "scenario".
             device: The device to use for the environment. If None, it will use "cuda" if available, otherwise "cpu".
         """
-        if scenario is not None:
-            self.scenario = scenario
+        self.scenario = scenario
         self.num_envs = self.scenario.num_envs
 
         if isinstance(self.scenario, BaseSimHandler):
-            self.env = self.scenario
+            self.handler = self.scenario
         else:
             self._instantiate_env(self.scenario)
 
         self._initial_states = self._get_initial_states()
         self.device = device
         self._prepare_callbacks()
+        self.max_episode_steps = 100
+        self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
     def _get_initial_states(self) -> list[dict]:
         """Return per-env initial states (override in subclasses)."""
@@ -82,8 +81,8 @@ class BaseTaskEnv:
             scenario: The scenario configuration
         """
         handler_class = get_sim_handler_class(SimType(scenario.simulator))
-        self.env: BaseSimHandler = handler_class(scenario, self.extra_spec)
-        self.env.launch()
+        self.handler: BaseSimHandler = handler_class(scenario, self.extra_spec)
+        self.handler.launch()
 
     def _prepare_callbacks(self) -> None:
         """Prepare the callbacks for the environment."""
@@ -114,65 +113,17 @@ class BaseTaskEnv:
 
     def _reward(self, env_states: Obs) -> Reward:
         """Get the reward of the environment."""
-        return [0.0] * self.env.num_envs
+        return torch.zeros(self.handler.num_envs, dtype=torch.float32, device=self.device)
 
     def _terminated(self, env_states: Obs) -> Termination:
         """Get the terminated of the environment."""
-        return [False] * self.env.num_envs
+        return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
 
-    def _time_out(self, env_states: Obs) -> TimeOut:
-        """Get the time out of the environment."""
-        return [False] * self.env.num_envs
+    def _time_out(self, env_states) -> torch.Tensor:
+        """Timeout flags."""
+        return self._episode_steps >= self.max_episode_steps
 
-    # def __pre_physics_step(self, actions: Action) -> Dict[str, Any]:
-    #     """Pre-physics step, apply transforms to actions and put actions into correct dict format.
-
-    #     Args:
-    #         actions: The actions to take
-    #     """
-    #     for callback in self.pre_physics_step_callback:
-    #         callback(actions)
-
-    #     actions_dict = {
-    #         "robots": {
-    #             self.env.robots[0].name: {
-    #                 "dof_pos_target": {
-    #                     joint_name: action
-    #                     for joint_name, action in zip(self.env.get_joint_names(self.env.robots[0].name), actions)
-    #                 }
-    #             }
-    #         }
-    #     }
-
-    #     return actions_dict
-
-    # def __physics_step(self, actions_dict: Dict[str, Any]) -> tuple[Obs, Info | None]:
-    #     """Physics step."""
-    #     # TODO: Use set_states() in new metasim handler
-    #     # self.env.set_states(actions_dict)
-
-    #     for robot in self.env.robots:
-    #         robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
-    #         self.env.set_dof_targets( list(robot_actions.values()))
-
-    #     self.env.simulate()
-
-    #     return self.env.get_states(), None
-
-    # def __post_physics_step(self, env_states: Obs) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
-    #     """Post-physics step."""
-    #     for callback in self.post_physics_step_callback:
-    #         callback(env_states)
-
-    #     return (
-    #         self._observation(env_states),
-    #         self._reward(env_states),
-    #         self._terminated(env_states),
-    #         self._time_out(env_states),
-    #         {"privileged_observation": self._privileged_observation(env_states)},
-    #     )
-
-    def step(self, actions: Action) -> tuple[Obs, Obs, Reward, Success, TimeOut, Info | None]:
+    def step(self, actions: Action) -> tuple[Obs, Reward, Success, TimeOut, Info | None]:
         """Step the environment.
 
         Args:
@@ -190,21 +141,29 @@ class BaseTaskEnv:
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
-        for robot in self.env.robots:
-            self.env.set_dof_targets(actions)
+        for robot in self.handler.robots:
+            self.handler.set_dof_targets(actions)
 
-        self.env.simulate()
+        self.handler.simulate()
 
-        env_states = self.env.get_states()
+        env_states = self.handler.get_states()
 
         for callback in self.post_physics_step_callback:
             callback(env_states)
 
+        # compute reward/termination
+        rewards: Reward = self._reward(env_states)
+        terminated: Termination = self._terminated(env_states)
+
+        # increment step counter and compute a single unified timeout
+        self._episode_steps = self._episode_steps + 1
+        timeout: TimeOut = self._time_out(env_states)
+
         return (
             self._observation(env_states),
-            self._reward(env_states),
-            self._terminated(env_states),
-            self._time_out(env_states),
+            rewards,
+            terminated,
+            timeout,
             {"privileged_observation": self._privileged_observation(env_states)},
         )
 
@@ -220,15 +179,19 @@ class BaseTaskEnv:
             info: The info
         """
         if env_ids is None:
-            env_ids = list(range(self.env.num_envs))
+            env_ids = list(range(self.handler.num_envs))
 
         for callback in self.reset_callback:
             callback(env_ids)
-        self.env.set_states(states=self._initial_states, env_ids=env_ids)
-        env_states = self.env.get_states(env_ids=env_ids)
+        self.handler.set_states(states=self._initial_states, env_ids=env_ids)
+        env_states = self.handler.get_states(env_ids=env_ids)
         info = {
             "privileged_observation": self._privileged_observation(env_states),
         }
+
+        # reset episode step counters for reset envs
+        ids = torch.tensor(env_ids, dtype=torch.long, device=self.device)
+        self._episode_steps[ids] = 0
 
         return self._observation(env_states), info
 
@@ -237,7 +200,7 @@ class BaseTaskEnv:
         for callback in self.close_callback:
             callback()
 
-        self.env.close()
+        self.handler.close()
 
     @property
     def observation_space(self) -> gym.Space:
