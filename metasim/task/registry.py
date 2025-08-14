@@ -42,9 +42,9 @@ def _discover_task_modules() -> None:
     """Import modules from known task packages so @register_task runs.
 
     Scans these packages (if available):
-      - metasim.task
-      - metasim.example
       - metasim.example.example_pack.tasks
+      - roboverse_pack.tasks
+
 
     Safe to call multiple times; import errors are ignored to avoid breaking
     discovery due to one bad module.
@@ -71,12 +71,12 @@ def _discover_task_modules() -> None:
             for _finder, module_name, _is_pkg in pkgutil.walk_packages(pkg_path, prefix=pkg.__name__ + "."):
                 try:
                     import_module(module_name)
-                except Exception as e:
-                    # Ignore individual module import failures, but report
-                    log.warning(f"Task discovery: failed to import module '{module_name}' from '{pkg_name}': {e}")
-        except Exception as e:
+                except Exception:
+                    # Ignore individual module import failures
+                    pass
+        except Exception:
             # Be resilient to any unexpected issues during scanning
-            log.warning(f"Task discovery: scanning error for package '{pkg_name}': {e}")
+            pass
 
 
 def get_task_class(name: str) -> type[BaseTaskEnv]:
