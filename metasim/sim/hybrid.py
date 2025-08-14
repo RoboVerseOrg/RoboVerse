@@ -9,8 +9,9 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import TensorState, Action
+from metasim.types import Action, TensorState
 from metasim.utils.state import TensorState, state_tensor_to_nested
+
 
 class HybridSimHandler(BaseSimHandler):
     """Hybrid simulation handler that uses one simulator for physics and another for rendering."""
@@ -51,8 +52,19 @@ class HybridSimHandler(BaseSimHandler):
         self.render_handler._set_states(states, env_ids)
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
-        """Get states from the physics handler."""
-        return self.physics_handler._get_states(env_ids)
+        """Get states from physics handler and camera data from render handler."""
+        # Get physics states (robots and objects)
+        physics_states = self.physics_handler._get_states(env_ids)
+
+        # Get render states (mainly for camera data)
+        render_states = self.render_handler._get_states(env_ids)
+
+        # Combine states: use physics for robots/objects, render for cameras
+        return TensorState(
+            objects=physics_states.objects,
+            robots=physics_states.robots,
+            cameras=render_states.cameras,  # Use camera data from render handler
+        )
 
     def _simulate(self):
         """Simulate physics and sync render state."""
@@ -63,7 +75,11 @@ class HybridSimHandler(BaseSimHandler):
         physics_states = self.physics_handler._get_states()
         states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
         self.render_handler._set_states(states_nested)
+
+        # Update render and ensure camera data is refreshed
         self.render_handler.refresh_render()
+        # Also run a simulation step in render handler to update sensors
+        self.render_handler._simulate()
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get joint names from physics handler."""

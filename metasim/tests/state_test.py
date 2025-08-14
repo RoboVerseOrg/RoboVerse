@@ -1,7 +1,8 @@
-"""This script is used to test the static scene."""
+"""This script is used to test the consistency of `set_states` and `get_states`."""
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 try:
@@ -9,41 +10,32 @@ try:
 except ImportError:
     pass
 
-import os
 
-import rootutils
 import torch
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-rootutils.setup_root(__file__, pythonpath=True)
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
-from get_started.utils import ObsSaver
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.state import state_tensor_to_nested
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass
 class Args:
-    """Arguments for the static scene."""
+    """Test config."""
 
     robot: str = "franka"
-
-    ## Handlers
-    sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "mujoco"] = "mujoco"
-
-    ## Others
-    num_envs: int = 4
-    headless: bool = False
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] = "isaacsim"
+    num_envs: int = 1
+    headless: bool = True
 
     def __post_init__(self):
-        """Post-initialization configuration."""
         log.info(f"Args: {self}")
 
 
@@ -56,6 +48,7 @@ scenario = ScenarioCfg(
     headless=args.headless,
     num_envs=args.num_envs,
 )
+
 
 # add cameras
 scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
@@ -78,23 +71,24 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(2, 2, 2),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
     ArticulationObjCfg(
         name="box_base",
         fix_base_link=True,
-        usd_path="metasim/example/example_assets/box_base/usd/box_base.usd",
-        urdf_path="metasim/example/example_assets/box_base/urdf/box_base_unique.urdf",
-        mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        usd_path="get_started/example_assets/box_base/usd/box_base.usd",
+        urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
+        mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
-
+from metasim.utils.setup_util import get_sim_handler_class
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_handler_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(scenario.simulator))
 env = env_class(scenario)
+env.launch()
 
 init_states = [
     {
@@ -135,39 +129,38 @@ init_states = [
             },
         },
     }
-    for _ in range(args.num_envs)
 ]
-env.launch()
+
 env.set_states(init_states)
-os.makedirs("get_started/output", exist_ok=True)
+states = state_tensor_to_nested(env, env.get_states())
 
-obs = env.get_states(mode="dict")
-## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/3_parallel_envs_{args.sim}.mp4")
-obs_saver.add(obs)
 
-step = 0
-robot = scenario.robots[0]
-for _ in range(100):
-    log.debug(f"Step {step}")
-    actions = [
-        {
-            robot.name: {
-                "dof_pos_target": {
-                    joint_name: (
-                        torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
-                        + robot.joint_limits[joint_name][0]
-                    )
-                    for joint_name in robot.joint_limits.keys()
-                }
-            }
-        }
-        for _ in range(scenario.num_envs)
-    ]
-    env.set_dof_targets(actions)
-    env.simulate()
-    obs = env.get_states(mode="dict")
-    obs_saver.add(obs)
-    step += 1
+def assert_close(a, b, atol=1e-3):
+    """Assertion for close."""
+    if isinstance(a, torch.Tensor):
+        assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b}"
+    elif isinstance(a, float):
+        assert math.isclose(a, b, abs_tol=atol), f"a: {a} != b: {b}"
+    else:
+        raise ValueError(f"Unsupported type: {type(a)}")
 
-obs_saver.save()
+
+for i in range(args.num_envs):
+    assert_close(states[i]["objects"]["cube"]["pos"], init_states[i]["objects"]["cube"]["pos"])
+    assert_close(states[i]["objects"]["sphere"]["pos"], init_states[i]["objects"]["sphere"]["pos"])
+    assert_close(states[i]["objects"]["bbq_sauce"]["pos"], init_states[i]["objects"]["bbq_sauce"]["pos"])
+    assert_close(states[i]["objects"]["box_base"]["pos"], init_states[i]["objects"]["box_base"]["pos"])
+    assert_close(states[i]["objects"]["box_base"]["rot"], init_states[i]["objects"]["box_base"]["rot"])
+    assert_close(states[i]["robots"]["franka"]["pos"], init_states[i]["robots"]["franka"]["pos"])
+    assert_close(states[i]["robots"]["franka"]["rot"], init_states[i]["robots"]["franka"]["rot"])
+    assert_close(
+        states[i]["objects"]["box_base"]["dof_pos"]["box_joint"],
+        init_states[i]["objects"]["box_base"]["dof_pos"]["box_joint"],
+    )
+    for k in states[i]["robots"]["franka"]["dof_pos"].keys():
+        assert_close(
+            states[i]["robots"]["franka"]["dof_pos"][k],
+            init_states[i]["robots"]["franka"]["dof_pos"][k],
+        )
+
+log.info("States are consistent!")

@@ -3,7 +3,7 @@ import os
 import torch
 from loguru import logger as log
 
-# from metasim.scenario.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
+# from scenario_cfg.sensors import BaseCameraCfg, BaseSensorCfg, ContactForceSensorCfg, PinholeCameraCfg
 from metasim.scenario.cameras import BaseCameraCfg, PinholeCameraCfg
 from metasim.scenario.lights import BaseLightCfg, CylinderLightCfg, DistantLightCfg
 from metasim.scenario.objects import (

@@ -35,7 +35,9 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (
+        "mujoco"
+    )
 
     ## Others
     num_envs: int = 1
@@ -227,7 +229,7 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    env.set_dof_targets(robot.name, actions)
+    env.set_dof_targets(actions)
     env.simulate()
     obs = env.get_states(mode="dict")
     obs_saver.add(obs)

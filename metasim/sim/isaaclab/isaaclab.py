@@ -126,9 +126,6 @@ class IsaaclabHandler(BaseSimHandler):
         log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
 
-    ############################################################
-    ## Gymnasium main methods
-    ############################################################
     def step(self, action: list[Action] | torch.Tensor):
         self._actions_cache = action
 

@@ -14,8 +14,8 @@ from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.utils.kinematics_utils import get_curobo_models
+from metasim.scenario.scenario import ScenarioCfg
 
 
 def images_to_video(images, video_path, frame_size=(1920, 1080), fps=30):
@@ -93,11 +93,11 @@ def main():
     import numpy as np
     import torch
 
-    from metasim.cfg.scenario import RandomizationCfg
-    from metasim.cfg.sensors import PinholeCameraCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_sim_env_class
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.scenario import RandomizationCfg
 
     camera = PinholeCameraCfg(
         name="camera",
