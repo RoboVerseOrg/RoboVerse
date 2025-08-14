@@ -38,7 +38,9 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+        sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = (
+            "mujoco"
+        )
 
         ## Others
         num_envs: int = 1
@@ -164,7 +166,7 @@ if __name__ == "__main__":
             }
             for _ in range(scenario.num_envs)
         ]
-        env.set_dof_targets(robot.name, actions)
+        env.set_dof_targets(actions)
         env.simulate()
         obs = env.get_states(mode="dict")
         obs_saver.add(obs)

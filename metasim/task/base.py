@@ -151,7 +151,7 @@ class BaseTaskEnv:
 
     #     for robot in self.env.robots:
     #         robot_actions = actions_dict["robots"][robot.name]["dof_pos_target"]
-    #         self.env.set_dof_targets(robot.name, list(robot_actions.values()))
+    #         self.env.set_dof_targets( list(robot_actions.values()))
 
     #     self.env.simulate()
 
@@ -189,7 +189,7 @@ class BaseTaskEnv:
             callback(actions)
 
         for robot in self.env.robots:
-            self.env.set_dof_targets(robot.name, actions)
+            self.env.set_dof_targets(actions)
 
         self.env.simulate()
 

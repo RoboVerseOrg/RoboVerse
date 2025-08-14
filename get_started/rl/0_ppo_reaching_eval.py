@@ -23,11 +23,12 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
+from tasks.registry import load_task
+from tasks.rl_task import RLTaskEnv
+
 from get_started.utils import ObsSaver
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import load_task
-from metasim.task.rl_task import RLTaskEnv
 
 
 @dataclass
@@ -35,7 +36,6 @@ class Args:
     """Arguments for training PPO."""
 
     task: str = "reach_origin"
-    # task: str = "reach_far"
     robot: str = "franka"
     num_envs: int = 128
     sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
@@ -124,49 +124,49 @@ def train_ppo():
     """Train PPO for reaching task using RLTaskEnv."""
 
     # Create scenario configuration
-    scenario = ScenarioCfg(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[],
-    )
+    # scenario = ScenarioCfg(
+    #     robots=[args.robot],
+    #     simulator=args.sim,
+    #     num_envs=args.num_envs,
+    #     headless=args.headless,
+    #     cameras=[],
+    # )
 
     # # Create RLTaskEnv via registry
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_env = load_task(args.task, scenario, device=device)
+    # rl_env = load_task(args.task, scenario, device=device)
 
     # # Create VecEnv wrapper for SB3
-    env = VecEnvWrapper(rl_env)
+    # env = VecEnvWrapper(rl_env)
 
-    log.info(f"Created environment with {env.num_envs} environments")
-    log.info(f"Observation space: {env.observation_space}")
-    log.info(f"Action space: {env.action_space}")
-    log.info(f"Max episode steps: {rl_env.max_episode_steps}")
+    # log.info(f"Created environment with {env.num_envs} environments")
+    # log.info(f"Observation space: {env.observation_space}")
+    # log.info(f"Action space: {env.action_space}")
+    # log.info(f"Max episode steps: {rl_env.max_episode_steps}")
 
     # PPO configuration
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=1,
-        learning_rate=3e-4,
-        n_steps=128,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        device="cuda" if torch.cuda.is_available() else "cpu",
-    )
+    # model = PPO(
+    #     "MlpPolicy",
+    #     env,
+    #     verbose=1,
+    #     learning_rate=3e-4,
+    #     n_steps=128,
+    #     batch_size=64,
+    #     n_epochs=10,
+    #     gamma=0.99,
+    #     gae_lambda=0.95,
+    #     clip_range=0.2,
+    #     device="cuda" if torch.cuda.is_available() else "cpu",
+    # )
 
-    # Start training
-    model.learn(total_timesteps=1_000_000)
+    # # Start training
+    # model.learn(total_timesteps=2_000_000)
 
-    # Save the model
+    # # Save the model
 
-    model.save(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
+    # model.save(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
 
-    env.close()
+    # env.close()
 
     # Inference and Save Video
     # Create new environment for inference
@@ -174,7 +174,8 @@ def train_ppo():
         robots=[args.robot],
         simulator=args.sim,
         num_envs=1,
-        headless=True,
+        # headless=True,
+        headless=False,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
     )
 
@@ -195,10 +196,12 @@ def train_ppo():
         actions, _ = model.predict(obs, deterministic=True)
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
+
         obs_orin = rl_env_inference.env.get_states()
         obs_saver.add(obs_orin)
 
-    # obs_saver.save()
+    obs_saver.save()
+    log.info("save success!")
     env_inference.close()
 
 

@@ -38,7 +38,9 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacgym", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+        sim: Literal[
+            "isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 1
@@ -54,7 +56,9 @@ if __name__ == "__main__":
     scenario = ScenarioCfg(robots=[args.robot], headless=args.headless, num_envs=args.num_envs, simulator=args.sim)
 
     # add cameras
-    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+    scenario.cameras = [
+        PinholeCameraCfg(name="camera", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+    ]
 
     # add objects
     scenario.objects = [

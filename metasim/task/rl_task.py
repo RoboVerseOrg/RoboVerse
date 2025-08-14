@@ -132,8 +132,9 @@ class RLTaskEnv(BaseTaskEnv):
             actions = actions.unsqueeze(0)
 
         real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
-        self.env.set_dof_targets(self.robot.name, real_actions)
-        self.env.simulate()
+        self.env.set_dof_targets(real_actions)
+        for _ in range(5):
+            self.env.simulate()
 
         states = self.env.get_states()
         obs = self._observation(states).to(self.device)

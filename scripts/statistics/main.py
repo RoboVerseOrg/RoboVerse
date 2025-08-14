@@ -4,6 +4,7 @@ import pickle as pkl
 import numpy as np
 from loguru import logger as log
 from matplotlib import pyplot as plt
+from scenario_cfg.tasks.base_task_cfg import BaseTaskCfg
 
 from metasim.constants import TaskType
 from metasim.scenario.metasim.task.base_task_cfg import BaseTaskCfg

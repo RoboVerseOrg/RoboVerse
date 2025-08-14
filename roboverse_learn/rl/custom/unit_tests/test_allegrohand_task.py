@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 import torch
 
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.tasks.isaacgym_envs.allegrohand_cfg import AllegroHandCfg
 from metasim.utils.math import quat_inv, quat_mul
 from metasim.utils.setup_util import get_robot, get_task
+from metasim.scenario.scenario import ScenarioCfg
+from scenario_cfg.tasks.isaacgym_envs.allegrohand_cfg import AllegroHandCfg
 
 
 class TestAllegroHandTask:
