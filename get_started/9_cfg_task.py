@@ -113,7 +113,7 @@ for step_i in range(100):
     # Save observations for video
     if obs_saver is not None:
         try:
-            raw_states = env.handler.get_states()  # Access the underlying simulator
+            raw_states = env.env.handler.get_states()  # Access the underlying simulator
             obs_saver.add(raw_states)
         except Exception as e:
             log.debug(f"Could not get camera data: {e}")

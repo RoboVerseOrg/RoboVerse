@@ -339,40 +339,50 @@ class MJXHandler(BaseSimHandler):
         self._init_mjx()  # compile & allocate batched data
         self._mjx_done = True
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
-        """Accepts Tensor (N, J) or list[dict] -> writes ctrl."""
+    def set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
+        """Accepts Tensor (N, sum(J)) or list[dict] -> writes ctrl for all robots."""
         self._actions_cache = actions
+        data = self._data
 
-        # joint order
-        jnames = self._get_joint_names(obj_name, sort=True)
-
-        # normalize to torch.Tensor (N, J)
         if isinstance(actions, torch.Tensor):
             tgt_t = actions.to(torch.float32)
             if tgt_t.ndim == 1:
                 tgt_t = tgt_t.unsqueeze(0)
+
+            off = 0
+            for robot in self.robots:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                J = len(jnames)
+                a_ids = self._robot_act_ids[robot.name]
+                chunk = tgt_t[:, off : off + J]
+                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(chunk)))
+                off += J
+
         else:
-            tgt_t = torch.stack(
-                [
-                    torch.tensor([actions[e][obj_name]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
-                    for e in range(self.num_envs)
-                ],
-                dim=0,
-            )
+            if isinstance(actions, dict):
+                action_map = actions
+            else:
+                raise TypeError("Unsupported actions type")
 
-        # shape check
-        if tgt_t.shape != (self.num_envs, len(jnames)):
-            raise ValueError(f"Expected shape {(self.num_envs, len(jnames))}, got {tuple(tgt_t.shape)}")
+            for robot in self.robots:
+                rname = robot.name
+                jnames = self._get_joint_names(rname, sort=True)
+                tgt_t = torch.stack(
+                    [
+                        torch.tensor([action_map[e][rname]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
+                        for e in range(self.num_envs)
+                    ],
+                    dim=0,
+                )
+                if tgt_t.shape != (self.num_envs, len(jnames)):
+                    raise ValueError(
+                        f"{rname}: Expected shape {(self.num_envs, len(jnames))}, got {tuple(tgt_t.shape)}"
+                    )
 
-        # ids
-        a_ids = (self._robot_act_ids if obj_name == self._scenario.robots[0].name else self._object_act_ids).get(
-            obj_name
-        )
+                a_ids = self._robot_act_ids[rname]
+                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(tgt_t)))
 
-        # write ctrl
-        tgt_j = t2j(tgt_t)
-        data = self._data
-        self._data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(tgt_j))
+        self._data = data
 
     ############################################################
     ## Utils

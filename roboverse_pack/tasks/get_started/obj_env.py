@@ -50,8 +50,8 @@ class ObjectEnv(BaseTaskEnv):
     robots = ["franka"]
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
         scenario.update(robots=self.robots, objects=self.objects)
+        super().__init__(scenario, device)
         self.reward_functions = []
         self.max_episode_steps = 100
 

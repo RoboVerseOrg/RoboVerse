@@ -107,8 +107,8 @@ class BaseLocomotionEnv(RLTaskEnv):
     #     return scenario
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
         scenario.update(robots=self.robots, objects=self.objects)
+        super().__init__(scenario, device)
         self.robot_name = (
             self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name
         )
