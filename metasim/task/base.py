@@ -61,11 +61,13 @@ class BaseTaskEnv:
         if scenario is not None:
             self.scenario = scenario
         self.num_envs = self.scenario.num_envs
-        self._initial_states = self._get_initial_states()
+
         if isinstance(self.scenario, BaseSimHandler):
             self.env = self.scenario
         else:
             self._instantiate_env(self.scenario)
+
+        self._initial_states = self._get_initial_states()
         self.device = device
         self._prepare_callbacks()
 
