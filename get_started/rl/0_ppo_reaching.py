@@ -14,12 +14,10 @@ import numpy as np
 import rootutils
 import torch
 import tyro
-import wandb
 from loguru import logger as log
 from rich.logging import RichHandler
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecEnv
-from wandb.integration.sb3 import WandbCallback
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -146,20 +144,6 @@ def train_ppo():
     log.info(f"Action space: {env.action_space}")
     log.info(f"Max episode steps: {rl_env.max_episode_steps}")
 
-    run = wandb.init(
-        project="panda_reach",  # 自定项目名
-        name=f"{args.task}_{args.sim}",  # run 名
-        config=dict(  # 记录一份超参
-            algo="PPO",
-            total_timesteps=2_000_000,
-            num_envs=args.num_envs,
-            lr=3e-4,
-        ),
-        sync_tensorboard=True,  # 把 tensorboard 日志实时同步
-        monitor_gym=True,  # 记录每回合视频/奖励曲线
-        save_code=True,
-    )
-
     # PPO configuration
     model = PPO(
         "MlpPolicy",
@@ -172,19 +156,11 @@ def train_ppo():
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
-        tensorboard_log=f"outputs/ppo_reaching/runs/{run.id}",
         device="cuda" if torch.cuda.is_available() else "cpu",
     )
 
     # Start training
-    model.learn(
-        total_timesteps=1_000_000,
-        callback=WandbCallback(
-            gradient_save_freq=1000,  # 每 1k 步保存梯度直方图
-            model_save_path=f"models/{run.id}",  # 自动保存模型
-            verbose=2,
-        ),
-    )
+    model.learn(total_timesteps=1_000_000)
 
     # Save the model
 
@@ -198,7 +174,6 @@ def train_ppo():
         robots=[args.robot],
         simulator=args.sim,
         num_envs=1,
-        # headless=True,
         headless=True,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
     )
@@ -220,7 +195,6 @@ def train_ppo():
         actions, _ = model.predict(obs, deterministic=True)
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
-
         obs_orin = rl_env_inference.env.get_states()
         obs_saver.add(obs_orin)
 

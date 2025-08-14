@@ -37,7 +37,9 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
+    sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (
+        "isaacsim"
+    )
 
     ## Others
     num_envs: int = 1
