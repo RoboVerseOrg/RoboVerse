@@ -23,6 +23,7 @@ class BaseSimHandler(ABC):
         self.robots = scenario.robots
         self.cameras = scenario.cameras
         self.objects = scenario.objects
+        self.lights = scenario.lights if hasattr(scenario, "lights") else []
         self._num_envs = scenario.num_envs
         self.decimation = scenario.decimation
         self.headless = scenario.headless
@@ -62,20 +63,20 @@ class BaseSimHandler(ABC):
         self._set_states(states, env_ids)
 
     # @abstractmethod
-    def _set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: list[Action]) -> None:
         """Set the dof targets of the environment.
         For a new simulator, you should implement this method.
         """
         raise NotImplementedError
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def set_dof_targets(self, actions: list[Action]) -> None:
         """Set the dof targets of the robot.
 
         Args:
             obj_name (str): The name of the robot
             actions (list[Action]): The target actions for the robot
         """
-        self._set_dof_targets(obj_name, actions)
+        self._set_dof_targets(actions)
 
     ############################################################
     ## Get states
