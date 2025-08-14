@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 import torch
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
 from metasim.types import Action, TensorState
-from metasim.utils.state import TensorState, state_tensor_to_nested
+from metasim.utils.state import state_tensor_to_nested
 
 
 class HybridSimHandler(BaseSimHandler):
