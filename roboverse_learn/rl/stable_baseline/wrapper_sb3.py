@@ -7,7 +7,7 @@ from gymnasium import spaces
 from loguru import logger as log
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 
-from metasim.cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
@@ -284,7 +284,7 @@ def check_metasim_env(sim_type: SimType = SimType.ISAACGYM, num_envs: int = 2):
 if __name__ == "__main__":
     from gymnasium.envs import register
 
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
     from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task

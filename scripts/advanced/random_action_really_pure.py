@@ -12,8 +12,8 @@ import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_env_class
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])

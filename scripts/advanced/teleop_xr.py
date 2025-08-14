@@ -11,9 +11,9 @@ from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.sensors import PinholeCameraCfg
 from metasim.utils.demo_util import get_traj
 from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.math import quat_apply, quat_inv, quat_mul

@@ -12,8 +12,8 @@ import torch
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_sim_env_class
 

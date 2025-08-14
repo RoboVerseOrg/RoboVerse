@@ -7,8 +7,8 @@ from rich.logging import RichHandler
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from metasim.cfg.scenario import ScenarioCfg
 from metasim.constants import SimType
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 

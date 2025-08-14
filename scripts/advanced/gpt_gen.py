@@ -293,12 +293,12 @@ def write_cfg_file(final_json, object_library):
 
     # The .py file content
     py_content = f"""import math
-from metasim.cfg.checkers import DetectedChecker, RelativeBboxDetector
-from metasim.cfg.objects import ArticulationObjCfg, RigidObjCfg
+from metasim.scenario.checkers import DetectedChecker, RelativeBboxDetector
+from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.constants import BenchmarkType, PhysicStateType, TaskType
 from metasim.utils import configclass
 
-from metasim.cfg.tasks.base_task_cfg import BaseTaskCfg
+from metasim.scenario.tasks.base_task_cfg import BaseTaskCfg
 
 
 @configclass

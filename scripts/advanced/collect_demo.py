@@ -25,8 +25,8 @@ from typing import Literal
 
 import tyro
 
-from metasim.cfg.randomization import RandomizationCfg
-from metasim.cfg.render import RenderCfg
+from metasim.scenario.randomization import RandomizationCfg
+from metasim.scenario.render import RenderCfg
 
 
 @dataclass
@@ -102,10 +102,10 @@ except ImportError:
 import torch
 from tqdm.rich import tqdm_rich as tqdm
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
+from metasim.scenario.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.sensors import PinholeCameraCfg
 from metasim.sim import BaseSimHandler, EnvWrapper
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task

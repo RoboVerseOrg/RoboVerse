@@ -4,7 +4,7 @@ import pickle
 import torch
 import yaml
 
-from metasim.cfg.policy import ACTPolicyCfg
+from metasim.scenario.policy import ACTPolicyCfg
 from roboverse_learn.algorithms.act.policy import ACTPolicy
 
 from .base_runner import PolicyRunner

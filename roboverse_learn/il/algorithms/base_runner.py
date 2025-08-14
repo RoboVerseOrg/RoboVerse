@@ -1,4 +1,4 @@
-from metasim.cfg.policy.base_policy import BasePolicyCfg
+from metasim.scenario.policy.base_policy import BasePolicyCfg
 
 try:
     from curobo.types.math import Pose
@@ -14,7 +14,7 @@ import torch
 from diffusion_policy.common.pytorch_util import dict_apply
 from loguru import logger as log
 
-from metasim.cfg.scenario import ScenarioCfg
+from metasim.scenario.scenario import ScenarioCfg
 
 for path in sys.path:
     print(path)

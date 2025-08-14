@@ -19,12 +19,12 @@ from rich.logging import RichHandler
 from torchvision.utils import make_grid, save_image
 from tyro import MISSING
 
-from metasim.cfg.randomization import RandomizationCfg
-from metasim.cfg.render import RenderCfg
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
+from metasim.scenario.randomization import RandomizationCfg
+from metasim.scenario.render import RenderCfg
+from metasim.scenario.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.sensors import PinholeCameraCfg
 from metasim.sim import HybridSimEnv
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj

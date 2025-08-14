@@ -38,7 +38,7 @@ def main(cfg: DictConfig):
     if sim_name == "isaacgym":
         import isaacgym  # noqa: F401
 
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
     from metasim.utils.setup_util import SimType, get_robot, get_sim_env_class, get_task
     from roboverse_learn.rl.algos import get_algorithm
     from roboverse_learn.rl.env import RLEnvWrapper
@@ -56,7 +56,7 @@ def main(cfg: DictConfig):
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
 
-        from metasim.cfg.tasks.dmcontrol.dmcontrol_env import DMControlEnv
+        from metasim.scenario.tasks.dmcontrol.dmcontrol_env import DMControlEnv
 
         env = DMControlEnv(scenario)
     elif cfg.train.task_name.startswith("ogbench:"):
@@ -67,7 +67,7 @@ def main(cfg: DictConfig):
         scenario.num_envs = cfg.environment.num_envs
         scenario.headless = cfg.environment.headless
 
-        from metasim.cfg.tasks.ogbench.ogbench_env import OGBenchEnv
+        from metasim.scenario.tasks.ogbench.ogbench_env import OGBenchEnv
 
         env = OGBenchEnv(scenario=scenario, handler=None)
     else:

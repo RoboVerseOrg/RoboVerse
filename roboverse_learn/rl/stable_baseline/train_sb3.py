@@ -114,7 +114,7 @@ def main():
         run = Run(id=int(time.time()))
 
     # Create scenario config
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
     scenario = ScenarioCfg(
         task=config.get("task"),
