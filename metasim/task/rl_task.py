@@ -40,13 +40,13 @@ class RLTaskEnv(BaseTaskEnv):
         self.reset(env_ids=list(range(self.num_envs)))
 
         # obs size
-        states = self.env.get_states()
+        states = self.handler.get_states()
         first_obs = self._observation(states)
         self.num_obs = first_obs.shape[-1]
 
         # action bounds from joint limits (ordered by joint_names)
         limits = self.robot.joint_limits
-        self.joint_names = self.env.get_joint_names(self.robot.name)
+        self.joint_names = self.handler.get_joint_names(self.robot.name)
         self._action_low = torch.tensor(
             [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.device
         )
@@ -106,9 +106,9 @@ class RLTaskEnv(BaseTaskEnv):
             env_ids = list(range(self.num_envs))
 
         self._episode_steps[env_ids] = 0
-        self.env.set_states(states=self._initial_states, env_ids=env_ids)
+        self.handler.set_states(states=self._initial_states, env_ids=env_ids)
 
-        states = self.env.get_states()
+        states = self.handler.get_states()
         first_obs = self._observation(states).to(self.device)
         self._raw_observation_cache = first_obs.clone()
         info = {"privileged_observation": self._privileged_observation(states)}
@@ -127,11 +127,11 @@ class RLTaskEnv(BaseTaskEnv):
             actions = actions.unsqueeze(0)
 
         real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
-        self.env.set_dof_targets(real_actions)
+        self.handler.set_dof_targets(real_actions)
         for _ in range(5):
-            self.env.simulate()
+            self.handler.simulate()
 
-        states = self.env.get_states()
+        states = self.handler.get_states()
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
         reward = self._reward(states)
@@ -148,7 +148,7 @@ class RLTaskEnv(BaseTaskEnv):
         done_indices = episode_done.nonzero(as_tuple=False).squeeze(-1)
         if done_indices.numel():
             self.reset(env_ids=done_indices.tolist())
-            states_after = self.env.get_states()
+            states_after = self.handler.get_states()
             obs_after = self._observation(states_after).to(self.device)
             obs[done_indices] = obs_after[done_indices]
             self._raw_observation_cache[done_indices] = obs_after[done_indices]
@@ -160,7 +160,7 @@ class RLTaskEnv(BaseTaskEnv):
 
     def render(self) -> np.ndarray:
         """Return an RGB grid image."""
-        state = self.env.get_states()
+        state = self.handler.get_states()
         rgb = next(iter(state.cameras.values())).rgb  # (N, H, W, C)
         if make_grid is not None:
             grid = make_grid((rgb.permute(0, 3, 1, 2) / 255.0), nrow=int(max(1, rgb.shape[0] ** 0.5)))

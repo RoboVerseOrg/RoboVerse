@@ -9,7 +9,9 @@ from gymnasium.envs.registration import _find_spec, register
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.vector.vector_env import VectorEnv
 
-from .registry import get_task_class, list_tasks
+from metasim.scenario.scenario import ScenarioCfg
+
+from .registry import list_tasks, load_task
 
 # Local fallback registry for vector entry points when Gymnasium does not
 # support the `vector_entry_point` argument in `register()`.
@@ -46,10 +48,13 @@ class GymEnvWrapper(gym.Env):
             else (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         )
 
-        self.task_cls = get_task_class(task_name)
-        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
-        self.scenario = updated_scenario_cfg
-        self.env = self.task_cls(updated_scenario_cfg)
+        # self.task_cls = get_task_class(task_name)
+        # updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        # self.scenario = updated_scenario_cfg
+        # self.env = self.task_cls(updated_scenario_cfg)
+        scenario = ScenarioCfg(**scenario_kwargs)
+        self.env = load_task(task_name, scenario, device=self._device)
+        self.scenario = self.env.scenario
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 
@@ -149,13 +154,13 @@ class GymVectorEnvAdapter(VectorEnv):
             else (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         )
 
-        self.task_cls = get_task_class(task_name)
-        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
-        self.env = self.task_cls(updated_scenario_cfg)
-        self.scenario = updated_scenario_cfg
-        # scenario = ScenarioCfg(**scenario_kwargs)
-        # self.env = load_task(task_name, scenario, device=self._device)
-        # self.scenario = self.env.scenario
+        # self.task_cls = get_task_class(task_name)
+        # updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        # self.env = self.task_cls(updated_scenario_cfg)
+        # self.scenario = updated_scenario_cfg
+        scenario = ScenarioCfg(**scenario_kwargs)
+        self.env = load_task(task_name, scenario, device=self._device)
+        self.scenario = self.env.scenario
         # Use positional args to be compatible across Gymnasium versions.
         try:
             super().__init__(self.env.num_envs, self.env.observation_space, self.env.action_space)
