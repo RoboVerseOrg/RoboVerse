@@ -169,7 +169,7 @@ def train_ppo():
     )
 
     # Start training
-    model.learn(total_timesteps=1_000_000)
+    model.learn(total_timesteps=1_00)
 
     # Save the model
 
@@ -198,7 +198,7 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = env_inference.env.get_states()
+    obs_orin = env_inference.gym_vec.handler.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(100):
@@ -206,7 +206,7 @@ def train_ppo():
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
 
-        obs_orin = env_inference.env.get_states()
+        obs_orin = env_inference.gym_vec.handler.get_states()
         obs_saver.add(obs_orin)
 
     obs_saver.save()

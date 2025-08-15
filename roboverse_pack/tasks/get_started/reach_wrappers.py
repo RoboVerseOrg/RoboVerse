@@ -27,22 +27,13 @@ class ReachingEnv(RLTaskEnv):
     This class provides common functionality for all reaching tasks.
     """
 
-    objects = []
-    robots = ["franka"]
-
-    # def _load_task_config(self, scenario) -> None:
-    #     """Configure common reaching task parameters."""
-    #     super()._load_task_config(scenario)
-
-    #     # Common configuration for reaching tasks
-    #     self.objects = []
-    #     self.max_episode_steps = 100
-
-    #     return scenario
+    scenario = ScenarioCfg(
+        objects=[],
+        robots=["franka"],
+    )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        scenario.update(robots=self.robots, objects=self.objects)
         self.max_episode_steps = 100
 
     def _get_initial_states(self) -> list[dict]:

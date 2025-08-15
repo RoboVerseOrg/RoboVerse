@@ -30,7 +30,7 @@ from metasim.utils import configclass
 class Args:
     """Arguments for the static scene."""
 
-    task: str = "obj_env"
+    task: str = "stack_cube"
     robot: str = "franka"
     ## Handlers
     sim: Literal["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (

@@ -25,8 +25,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 # Ensure reaching tasks are registered exactly once from the canonical module
 from get_started.utils import ObsSaver
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import load_task
+from metasim.task.registry import get_task_class, load_task
 from metasim.task.rl_task import RLTaskEnv
 
 
@@ -34,8 +33,7 @@ from metasim.task.rl_task import RLTaskEnv
 class Args:
     """Arguments for training PPO."""
 
-    task: str = "obj_env"
-    # task: str = "reach_far"
+    task: str = "reach_far"
     robot: str = "franka"
     num_envs: int = 128
     sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
@@ -122,14 +120,10 @@ class VecEnvWrapper(VecEnv):
 
 def train_ppo():
     """Train PPO for reaching task using RLTaskEnv."""
-
-    # Create scenario configuration
-    scenario = ScenarioCfg(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[],
+    task_cls = get_task_class(args.task)
+    # Get default scenario from task class and update with specific parameters
+    scenario = task_cls.scenario.update(
+        robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
     )
 
     # # Create RLTaskEnv via registry
@@ -169,8 +163,8 @@ def train_ppo():
     env.close()
 
     # Inference and Save Video
-    # Create new environment for inference
-    scenario_inference = ScenarioCfg(
+    # Create new environment for inference using task's default scenario
+    scenario_inference = task_cls.scenario.update(
         robots=[args.robot],
         simulator=args.sim,
         num_envs=1,

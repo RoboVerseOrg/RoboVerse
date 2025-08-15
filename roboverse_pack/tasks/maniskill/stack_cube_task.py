@@ -18,29 +18,30 @@ from roboverse_pack.tasks.maniskill.checkers.detectors import RelativeBboxDetect
 class StackCubeTask(BaseTaskEnv):
     """Stack a red cube on top of a blue base cube and release it."""
 
-    objects = [
-        PrimitiveCubeCfg(
-            name="cube",
-            size=(0.04, 0.04, 0.04),
-            mass=0.02,
-            physics=PhysicStateType.RIGIDBODY,
-            color=(1.0, 0.0, 0.0),
-        ),
-        PrimitiveCubeCfg(
-            name="base",
-            size=(0.04, 0.04, 0.04),
-            mass=0.02,
-            physics=PhysicStateType.RIGIDBODY,
-            color=(0.0, 0.0, 1.0),
-        ),
-    ]
-    robots = ["franka"]
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=(0.04, 0.04, 0.04),
+                mass=0.02,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(1.0, 0.0, 0.0),
+            ),
+            PrimitiveCubeCfg(
+                name="base",
+                size=(0.04, 0.04, 0.04),
+                mass=0.02,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(0.0, 0.0, 1.0),
+            ),
+        ],
+        robots=["franka"],
+    )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         self.traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2/franka_v2.pkl.gz"
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
-        scenario.update(robots=self.robots, objects=self.objects)
         super().__init__(scenario, device)
 
         # task horizon

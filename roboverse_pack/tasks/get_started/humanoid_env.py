@@ -89,8 +89,10 @@ class BaseLocomotionReward:
 class BaseLocomotionEnv(RLTaskEnv):
     """locomotion reward with _move_speed = 0."""
 
-    objects = ([],)
-    robots = ["h1"]
+    scenario = ScenarioCfg(
+        objects=[],
+        robots=["h1"],
+    )
 
     # def _load_task_config(self, scenario: ScenarioCfg) -> None:
     #     self.robot_name = scenario.robots[0] if isinstance(scenario.robots[0], str) else scenario.robots[0].name
@@ -107,7 +109,6 @@ class BaseLocomotionEnv(RLTaskEnv):
     #     return scenario
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        scenario.update(robots=self.robots, objects=self.objects)
         super().__init__(scenario, device)
         self.robot_name = (
             self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name

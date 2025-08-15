@@ -25,8 +25,7 @@ from metasim.scenario.cameras import PinholeCameraCfg
 # from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.robot import RobotCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import load_task
+from metasim.task.registry import get_task_class, load_task
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.state import TensorState
@@ -134,8 +133,9 @@ class ObsSaver:
 ## Main
 ###########################################################
 def main():
+    task_cls = get_task_class(args.task)
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = ScenarioCfg(
+    scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
