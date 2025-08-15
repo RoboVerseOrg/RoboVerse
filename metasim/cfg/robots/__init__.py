@@ -13,6 +13,7 @@ from .franka_urdf_cfg import FrankaUrdfCfg
 from .franka_urdf_sapien_cfg import FrankaUrdfSapienCfg
 from .franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
 from .g1_cfg import G1Cfg
+from .gen3_cfg import Gen3Cfg
 from .google_robot_static_cfg import GoogleRobotStaticCfg
 from .h1_2_without_hand_cfg import H12WithoutHandCfg
 from .h1_cfg import H1Cfg
@@ -20,6 +21,7 @@ from .h1_hand_cfg import H1HandCfg
 from .h1_simple_hand_cfg import H1SimpleHandCfg
 from .h1_wrist_cfg import H1WristCfg
 from .iiwa_cfg import IiwaCfg
+from .iiwa14_cfg import Iiwa14Cfg
 from .kinova_gen3_cfg import KinovaGen3Cfg
 from .kinova_gen3_robotiq_2f85 import KinovaGen3Robotiq2f85Cfg
 from .sawyer_cfg import SawyerCfg
@@ -27,4 +29,12 @@ from .sawyer_mujoco_cfg import SawyerMujocoCfg
 from .shadow_hand_cfg import ShadowHandCfg
 from .unitree_dex3_1_cfg import UnitreeDex31LeftCfg
 from .ur5e_2f85_cfg import Ur5E2F85Cfg
+from .ur5e_cfg import Ur5ECfg
+from .ur10e_cfg import Ur10ECfg
 from .walker_cfg import WalkerCfg
+from .z1_cfg import Z1Cfg
+from .arx_l5_mjcf_cfg import ArxL5Cfg
+from .koch_mjcf_cfg import KochCfg
+from .lite6_mjcf_cfg import Lite6Cfg
+from .so_arm100_mjcf_cfg import SoArm100Cfg
+from .yam_mjcf_cfg import YamCfg
