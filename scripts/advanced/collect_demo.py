@@ -25,23 +25,24 @@ from typing import Literal
 
 import tyro
 
-from metasim.scenario.randomization import RandomizationCfg
+# from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 
 
 @dataclass
 class Args:
-    random: RandomizationCfg
+    # random: RandomizationCfg
     """Domain randomization options"""
+
     render: RenderCfg
     """Renderer options"""
-    task: str
+    task: str = "stack_cube"
     """Task name"""
     robot: str = "franka"
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaaclab"
+    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -61,20 +62,21 @@ class Args:
     """Custom name for the dataset"""
     scene: str | None = None
     """Scene name"""
-    run_all: bool = False
+    run_all: bool = True
     """Rollout all trajectories, overwrite existing demos"""
     run_unfinished: bool = False
     """Rollout unfinished trajectories"""
     run_failed: bool = False
     """Rollout unfinished and failed trajectories"""
+    renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
     def __post_init__(self):
         assert self.run_all or self.run_unfinished or self.run_failed, (
             "At least one of run_all, run_unfinished, or run_failed must be True"
         )
-        if self.random.table and not self.table:
-            log.warning("Cannot enable table randomization without a table, disabling table randomization")
-            self.random.table = False
+        # if self.random.table and not self.table:
+        #     log.warning("Cannot enable table randomization without a table, disabling table randomization")
+        #     self.random.table = False
 
         if self.max_demo_idx is None:
             self.max_demo_idx = math.inf
@@ -99,25 +101,27 @@ try:
 except ImportError:
     pass
 
+import rootutils
 import torch
 from tqdm.rich import tqdm_rich as tqdm
 
-from metasim.constants import SimType
-from metasim.scenario.robots.base_robot_cfg import BaseRobotCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.sensors import PinholeCameraCfg
-from metasim.sim import BaseSimHandler, EnvWrapper
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.robot import RobotCfg
+from metasim.sim import BaseSimHandler
+from metasim.task.registry import get_task_class, load_task
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
+from metasim.utils.setup_util import get_robot
 from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
+
+rootutils.setup_root(__file__, pythonpath=True)
 
 
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[int], robot: BaseRobotCfg):
-    action_idxs = env.episode_length_buf
+def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
+    action_idxs = env._episode_steps
 
     actions = [
         all_actions[demo_idx][action_idx] if action_idx < len(all_actions[demo_idx]) else all_actions[demo_idx][-1]
@@ -126,8 +130,8 @@ def get_actions(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[in
     return actions
 
 
-def get_run_out(all_actions, env: EnvWrapper[BaseSimHandler], demo_idxs: list[int]) -> list[bool]:
-    action_idxs = env.episode_length_buf
+def get_run_out(all_actions, env, demo_idxs: list[int]) -> list[bool]:
+    action_idxs = env._episode_steps
     run_out = [action_idx >= len(all_actions[demo_idx]) for demo_idx, action_idx in zip(demo_idxs, action_idxs)]
     return run_out
 
@@ -156,8 +160,6 @@ global_step = 0
 ###########################################################
 class DemoCollector:
     def __init__(self, handler):
-        from metasim.sim import BaseSimHandler
-
         assert isinstance(handler, BaseSimHandler)
         self.handler = handler
         self.cache: dict[int, list[dict]] = {}
@@ -165,14 +167,12 @@ class DemoCollector:
         self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue,))
         self.save_proc.start()
 
-        TaskName = self.handler.task.__class__.__name__.replace("Cfg", "")
+        TaskName = args.task
         if args.cust_name is not None:
             additional_str = "-" + str(args.cust_name)
         else:
             additional_str = ""
-        self.base_save_dir = (
-            f"roboverse_demo/demo_{args.sim}/{TaskName}-Level{args.random.level}{additional_str}/robot-{args.robot}"
-        )
+        self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}-{additional_str}/robot-{args.robot}"
 
     def create(self, demo_idx: int, data_dict: dict):
         assert demo_idx not in self.cache
@@ -276,29 +276,26 @@ class DemoIndexer:
 ###########################################################
 def main():
     global global_step, tot_success, tot_give_up
-    handler_class = get_sim_env_class(SimType(args.sim))
-    task_cls = get_task(args.task)
-    task = task_cls()
-    robot = get_robot(args.robot)
-    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = ScenarioCfg(
-        task=task,
-        robots=[robot],
+    task_cls = get_task_class(args.task)
+    camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+    scenario = task_cls.scenario.update(
+        robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
-        random=args.random,
-        try_add_table=args.table,
+        # random=args.random,
         render=args.render,
-        split=args.split,
-        sim=args.sim,
-        headless=args.headless,
+        simulator=args.sim,
+        renderer=args.renderer,
         num_envs=args.num_envs,
+        headless=args.headless,
     )
-    env = handler_class(scenario)
-
+    robot = get_robot(args.robot)
+    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = load_task(args.task, scenario, device=device)
     ## Data
-    assert os.path.exists(task.traj_filepath), f"Trajectory file does not exist: {task.traj_filepath}"
-    init_states, all_actions, all_states = get_traj(task, robot, env.handler)
+    assert os.path.exists(env.traj_filepath), f"Trajectory file does not exist: {env.traj_filepath}"
+    init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
 
     tot_demo = len(all_actions)
     if args.split == "train":
@@ -349,14 +346,14 @@ def main():
     failure_count = [0] * env.handler.num_envs
     steps_after_success = [0] * env.handler.num_envs
     finished = [False] * env.handler.num_envs
-    TaskName = env.handler.task.__class__.__name__.replace("Cfg", "")
+    TaskName = args.task
 
     if args.cust_name is not None:
         additional_str = "-" + str(args.cust_name)
     else:
         additional_str = ""
     demo_indexer = DemoIndexer(
-        save_root_dir=f"roboverse_demo/demo_{args.sim}/{TaskName}-Level{args.random.level}{additional_str}/robot-{args.robot}",
+        save_root_dir=f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}",
         start_idx=0,
         end_idx=max_demo,
         pbar=pbar,
@@ -366,11 +363,12 @@ def main():
         demo_idxs.append(demo_indexer.next_idx)
         demo_indexer.move_on()
     log.info(f"Initialize with demo idxs: {demo_idxs}")
-
+    env.reset()
     ## Reset before first step
-    obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+    # self.checker.reset(self.handler, env_ids=env_ids)
+    obs = env.handler.get_states()
     obs = state_tensor_to_nested(env.handler, obs)
-
     ## Initialize
     for env_id, demo_idx in enumerate(demo_idxs):
         collector.create(demo_idx, obs[env_id])
@@ -414,7 +412,11 @@ def main():
                 if demo_indexer.next_idx < max_demo:
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
-                    obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                    env.reset()
+                    ## Reset before first step
+                    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+                    # self.checker.reset(self.handler, env_ids=env_ids)
+                    obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
                     collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
@@ -437,7 +439,11 @@ def main():
             if failure_count[env_id] < try_num:
                 ## Timeout --> CollectingDemo
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
-                obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                env.reset()
+                ## Reset before first step
+                env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+                # self.checker.reset(self.handler, env_ids=env_ids)
+                obs = env.handler.get_states()
                 obs = state_tensor_to_nested(env.handler, obs)
                 collector.create(demo_idx, obs[env_id])
             else:
@@ -451,7 +457,11 @@ def main():
                 if demo_indexer.next_idx < max_demo:
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
-                    obs, _ = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                    env.reset()
+                    ## Reset before first step
+                    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+                    # self.checker.reset(self.handler, env_ids=env_ids)
+                    obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
                     collector.create(demo_indexer.next_idx, obs[env_id])
                     demo_indexer.move_on()
