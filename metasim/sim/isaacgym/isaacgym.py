@@ -656,7 +656,7 @@ class IsaacgymHandler(BaseSimHandler):
             # reverse sorted joint indices
             reverse_reindex = self.get_joint_reindex(obj_name, inverse=True)
             self._actions_cache = actions[:, reverse_reindex]
-            action_array_all = actions
+            action_array_all = self._actions_cache
 
         else:
             action_array_all = self._get_action_array_all(actions)
