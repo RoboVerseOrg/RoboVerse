@@ -43,13 +43,13 @@ class Iiwa14Cfg(BaseRobotCfg):
 
     # Joint limits - Based on IIWA14 actual joint limits from MJCF (radians)
     joint_limits: dict[str, tuple[float, float]] = {
-        "joint1": (-2.96706, 2.96706),   # ±170°
-        "joint2": (-2.0944, 2.0944),     # ±120°
-        "joint3": (-3.05433, 3.05433),   # ±175°
-        "joint4": (-2.0944, 2.0944),     # ±120°
-        "joint5": (-2.96706, 2.96706),   # ±170°
-        "joint6": (-2.0944, 2.0944),     # ±120°
-        "joint7": (-3.05433, 3.05433),   # ±175°
+        "joint1": (-2.96706, 2.96706),  # ±170°
+        "joint2": (-2.0944, 2.0944),  # ±120°
+        "joint3": (-3.05433, 3.05433),  # ±175°
+        "joint4": (-2.0944, 2.0944),  # ±120°
+        "joint5": (-2.96706, 2.96706),  # ±170°
+        "joint6": (-2.0944, 2.0944),  # ±120°
+        "joint7": (-3.05433, 3.05433),  # ±175°
     }
 
     # End-effector body name - Attachment site on link7
@@ -59,9 +59,9 @@ class Iiwa14Cfg(BaseRobotCfg):
     # Based on the commented keyframe in MJCF
     default_joint_positions: dict[str, float] = {
         "joint1": 0.0,
-        "joint2": 0.785398,    # 45°
+        "joint2": 0.785398,  # 45°
         "joint3": 0.0,
-        "joint4": -1.5708,     # -90°
+        "joint4": -1.5708,  # -90°
         "joint5": 0.0,
         "joint6": 0.0,
         "joint7": 0.0,

@@ -35,6 +35,11 @@ try:
 except ImportError:
     pass
 
+import os
+
+# Import ObsSaver for saving observations
+import sys
+
 import torch
 
 from metasim.cfg.scenario import ScenarioCfg
@@ -42,11 +47,9 @@ from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 
-# Import ObsSaver for saving observations
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'get_started'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "get_started"))
 from utils import ObsSaver
+
 
 def main():
     num_envs: int = args.num_envs

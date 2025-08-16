@@ -43,12 +43,12 @@ class Ur10ECfg(BaseRobotCfg):
     # Joint limits - Based on UR10e actual joint limits (radians)
     # UR10e has same joint ranges as other UR series robots
     joint_limits: dict[str, tuple[float, float]] = {
-        "shoulder_pan_joint": (-6.28318, 6.28318),     # ±360°
-        "shoulder_lift_joint": (-6.28318, 6.28318),    # ±360°
-        "elbow_joint": (-3.14159, 3.14159),            # ±180°
-        "wrist_1_joint": (-6.28318, 6.28318),          # ±360°
-        "wrist_2_joint": (-6.28318, 6.28318),          # ±360°
-        "wrist_3_joint": (-6.28318, 6.28318),          # ±360°
+        "shoulder_pan_joint": (-6.28318, 6.28318),  # ±360°
+        "shoulder_lift_joint": (-6.28318, 6.28318),  # ±360°
+        "elbow_joint": (-3.14159, 3.14159),  # ±180°
+        "wrist_1_joint": (-6.28318, 6.28318),  # ±360°
+        "wrist_2_joint": (-6.28318, 6.28318),  # ±360°
+        "wrist_3_joint": (-6.28318, 6.28318),  # ±360°
     }
 
     # End-effector body name - UR tool flange
@@ -59,7 +59,7 @@ class Ur10ECfg(BaseRobotCfg):
         "shoulder_pan_joint": 0.0,
         "shoulder_lift_joint": -1.5708,  # -90°
         "elbow_joint": 0.0,
-        "wrist_1_joint": -1.5708,        # -90°
+        "wrist_1_joint": -1.5708,  # -90°
         "wrist_2_joint": 0.0,
         "wrist_3_joint": 0.0,
     }

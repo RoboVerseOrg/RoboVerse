@@ -19,18 +19,15 @@ class SoArm100Cfg(BaseRobotCfg):
     num_joints: int = 6
     fix_base_link: bool = True
 
-
-    #usd_path: str = "roboverse_data/robots/ARX_Robotics_L5_Arm/usd/arx_l5.usd"
-    #urdf_path: str = "roboverse_data/robots/Universal_Robots_UR5e/urdf/ur_description/urdf/ur5e.urdf"
+    # usd_path: str = "roboverse_data/robots/ARX_Robotics_L5_Arm/usd/arx_l5.usd"
+    # urdf_path: str = "roboverse_data/robots/Universal_Robots_UR5e/urdf/ur_description/urdf/ur5e.urdf"
     mjcf_path: str = "roboverse_data/robots/Siasun_SO-ARM100/mjcf/so_arm100.xml"
-
 
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
 
-
     actuators: dict[str, BaseActuatorCfg] = {
-         "Rotation": BaseActuatorCfg( velocity_limit=2.175),
+        "Rotation": BaseActuatorCfg(velocity_limit=2.175),
         "Pitch": BaseActuatorCfg(velocity_limit=2.175),
         "Elbow": BaseActuatorCfg(velocity_limit=2.175),
         "Wrist_Pitch": BaseActuatorCfg(velocity_limit=2.175),
@@ -38,9 +35,8 @@ class SoArm100Cfg(BaseRobotCfg):
         "Jaw": BaseActuatorCfg(velocity_limit=2.61),
     }
 
-
     joint_limits: dict[str, tuple[float, float]] = {
-         "Rotation": (-2.618, 2.618),
+        "Rotation": (-2.618, 2.618),
         "Pitch": (-2.059, 2.0944),
         "Elbow": (-2.697, 0),
         "Wrist_Pitch": (-0.19198, 3.927),
@@ -48,9 +44,7 @@ class SoArm100Cfg(BaseRobotCfg):
         "Jaw": (-1.69297, 3.14159),
     }
 
-
     ee_body_name: str = "tool0"
-
 
     default_joint_positions: dict[str, float] = {
         "Rotation": 0.0,
@@ -61,7 +55,6 @@ class SoArm100Cfg(BaseRobotCfg):
         "Jaw": 1.570796,
     }
 
-
     control_type: dict[str, Literal["position", "effort"]] = {
         "Rotation": "position",
         "Pitch": "position",
@@ -70,5 +63,3 @@ class SoArm100Cfg(BaseRobotCfg):
         "Wrist_Roll": "position",
         "Jaw": "position",
     }
-
-
