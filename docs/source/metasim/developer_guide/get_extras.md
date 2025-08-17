@@ -22,6 +22,7 @@ Adding custom extra observations follows these steps:
 2. **Pass** these extras to your simulation **Handler**.
 3. The Handler automatically **binds** these extras, linking them to your simulation.
 4. You then access the custom data at runtime via `handler.get_extra()`.
+Also, get_states will use get_extra to attain extras infomation in states.
 
 Simplified workflow diagram:
 
