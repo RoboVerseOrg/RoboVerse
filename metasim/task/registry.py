@@ -50,33 +50,31 @@ def _discover_task_modules() -> None:
     discovery due to one bad module.
     """
     packages_to_scan = [
-        # "metasim.example.example_pack.tasks",
+        "metasim.example.example_pack.tasks",
         "roboverse_pack.tasks",
     ]
 
     for pkg_name in packages_to_scan:
         try:
+            # Import the root package
             pkg = import_module(pkg_name)
         except Exception as e:
-            # Package not present or import failed; skip but report
-            log.warning(f"Task discovery: failed to import package '{pkg_name}': {e}")
+            log.error(f"Task discovery: failed to import package '{pkg_name}': {e}")
             continue
 
         try:
             pkg_path = getattr(pkg, "__path__", None)
             if pkg_path is None:
-                # Single-file module; importing the package is enough
                 continue
 
+            # Scan and import all submodules
             for _finder, module_name, _is_pkg in pkgutil.walk_packages(pkg_path, prefix=pkg.__name__ + "."):
                 try:
                     import_module(module_name)
-                except Exception:
-                    # Ignore individual module import failures
-                    pass
-        except Exception:
-            # Be resilient to any unexpected issues during scanning
-            pass
+                except Exception as e:
+                    log.error(f"Task discovery: failed to import module '{module_name}': {e}")
+        except Exception as e:
+            log.error(f"Task discovery: error scanning package '{pkg_name}': {e}")
 
 
 def get_task_class(name: str) -> type[BaseTaskEnv]:

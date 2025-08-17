@@ -102,15 +102,15 @@ class MJXHandler(BaseSimHandler):
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
         self._render_data = mujoco.MjData(self._mj_model)
 
-        if not self.headless:
-            self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
-        log.info(f"MJXHandler launched · envs={self.num_envs}")
-        log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
-
         if self.optional_queries is None:
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
+
+        if not self.headless:
+            self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
+        log.info(f"MJXHandler launched · envs={self.num_envs}")
+        log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
 
     def _simulate(self) -> None:
         if self._gravity_compensation:

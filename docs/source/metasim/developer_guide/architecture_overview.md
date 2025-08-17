@@ -94,70 +94,6 @@ The **two most important folders** in Metasim are:
 
    ------
 
-   4. `get_extras(env_ids=None) → dict[str, Tensor]`
-
-   > **Purpose:** Returns **task-specific, non-standard information** not present in the core `TensorState`.
-
-   Examples include:
-
-   - Site positions
-
-   - Contact forces
-
-   - Body mass
-
-   - IMU sensor data
-
-     ......
-
-
-   #### Usage overview
-
-   The full pipeline looks like this:
-
-   ```text
-   Task.extra_spec()       # Declares what is needed
-           │
-           ▼
-   SimHandler.get_extras()                 # Called by RL wrapper
-           │
-           ▼
-   SimHandler.query_derived_obs(spec)      # Parses query dict
-           │
-           ▼
-   Querier.query(query_obj, handler)       # Resolves each field
-   ```
-
-   #### Task-level declaration
-
-   ```python
-   from metasim.scenario.query_type import SitePos, SensorData, GeomCollision, BodyMass
-
-   def extra_spec(self):
-       return {
-           "head_pos"        : SitePos(["head"]),
-           "gyro_torso"      : SensorData("gyro_torso"),
-           "torso_mass"      : BodyMass("torso"),
-           "left_foot_touch" : GeomCollision("left_foot", "floor"),
-       }
-   ```
-
-   #### Output from `get_extras()`
-
-   The returned dictionary will look like:
-
-   ```python
-   {
-       "head_pos":        Tensor of shape (N_env, 3),
-       "gyro_torso":      Tensor of shape (N_env, 3),
-       "torso_mass":      Tensor of shape (N_env,),  # scalar per env
-       "left_foot_touch": Tensor of shape (N_env,),  # bool mask
-   }
-   ```
-
-   Each value is resolved independently via the corresponding query type and handler logic.
-
-
 
 2. #### cfg folder — Simulator Configuration
 
@@ -202,7 +138,7 @@ The **two most important folders** in Metasim are:
    - Build new tasks without touching simulator configs
 
 
-## RoboVerse Learn  Overeview
+## RoboVerse Learn  Overview
 
 RoboVerse Learn consists of Task Wrappers and Learning Framework.
 Its goal is to present *one* standard interface that:
