@@ -1,0 +1,67 @@
+defaults:
+  - _self_
+  - dataset_config: robot_image_dataset
+  - model_config:  ${oc.env:algo_model,diffusion_policy_model}      # diffusion_policy_model/fm_model/DDIM_model
+  - eval_config: diffusion_policy_eval
+  - train_config: diffusion_policy_train
+
+task_name: placeholder
+name: robot_${task_name}
+_target_: roboverse_learn.runner.dp_runner.DPRunner
+
+
+image_shape: &image_shape [3, 256, 256]
+shape_meta: &shape_meta
+  # acceptable types: rgb, low_dim
+  obs:
+    head_cam:
+      shape: *image_shape
+      type: rgb
+    agent_pos:
+      shape: [9]
+      type: low_dim
+  action:
+    shape: [9]
+
+exp_name: "default"
+
+horizon: 8
+n_obs_steps: 3
+n_action_steps: 4
+n_latency_steps: 0
+dataset_obs_steps: ${n_obs_steps}
+past_action_visible: False
+keypoint_visible_rate: 1.0
+obs_as_global_cond: True
+
+multi_run:
+  run_dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+  wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${task_name}
+
+hydra:
+  job:
+    override_dirname: ${name}
+  run:
+    dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+  sweep:
+    dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
+    subdir: ${hydra.job.num}
+
+logging:
+  project: RoboVerse_DP
+  resume: True
+  mode: online
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${task_name}
+  tags: ${now:%Y.%m.%d-%H.%M.%S}_${task_name}
+  id: null
+  group: null
+
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    k: 5
+    format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
+  save_last_ckpt: True
+  save_last_snapshot: False
+  save_root_dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}
