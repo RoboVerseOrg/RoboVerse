@@ -64,9 +64,9 @@ class StackCubeTask(BaseTaskEnv):
         """Success when cube is detected in the bbox above base."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, env_ids=None):
+    def reset(self, states, env_ids=None):
         """Reset the checker."""
-        states = super().reset(env_ids)
+        states = super().reset(states, env_ids)
         self.checker.reset(self.handler, env_ids=env_ids)
         return states
 

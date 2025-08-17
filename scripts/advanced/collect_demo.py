@@ -363,11 +363,8 @@ def main():
         demo_idxs.append(demo_indexer.next_idx)
         demo_indexer.move_on()
     log.info(f"Initialize with demo idxs: {demo_idxs}")
-    env.reset()
     ## Reset before first step
-    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
-    # self.checker.reset(self.handler, env_ids=env_ids)
-    obs = env.handler.get_states()
+    obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
     obs = state_tensor_to_nested(env.handler, obs)
     ## Initialize
     for env_id, demo_idx in enumerate(demo_idxs):
@@ -412,10 +409,8 @@ def main():
                 if demo_indexer.next_idx < max_demo:
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
-                    env.reset()
                     ## Reset before first step
-                    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
-                    # self.checker.reset(self.handler, env_ids=env_ids)
+                    env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
                     collector.create(demo_indexer.next_idx, obs[env_id])
@@ -439,10 +434,8 @@ def main():
             if failure_count[env_id] < try_num:
                 ## Timeout --> CollectingDemo
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
-                env.reset()
                 ## Reset before first step
-                env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
-                # self.checker.reset(self.handler, env_ids=env_ids)
+                env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
                 obs = env.handler.get_states()
                 obs = state_tensor_to_nested(env.handler, obs)
                 collector.create(demo_idx, obs[env_id])
@@ -457,9 +450,8 @@ def main():
                 if demo_indexer.next_idx < max_demo:
                     ## NextDemo --> CollectingDemo
                     demo_idxs[env_id] = demo_indexer.next_idx
-                    env.reset()
                     ## Reset before first step
-                    env.handler.set_states(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+                    env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
                     # self.checker.reset(self.handler, env_ids=env_ids)
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
