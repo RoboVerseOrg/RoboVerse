@@ -184,12 +184,6 @@ class IsaacSimDomainRandomizer:
         except Exception as e:
             log.warning(f"Visual domain randomization failed: {e}")
     
-    def apply_randomization(self):
-        """Apply all enabled randomizations based on config (legacy method).""" 
-        # For backward compatibility, apply visual randomizations only
-        # to avoid physics simulation conflicts
-        self.apply_visual_randomization()
-    
     def apply_dynamic_lighting(self):
         """Apply per-frame dynamic lighting changes."""
         if not self.cfg.light:
@@ -621,66 +615,6 @@ class IsaacSimDomainRandomizer:
         except Exception as e:
             log.warning(f"Failed to create cylinder light: {e}")
     
-    def _create_default_lighting(self, stage, modules):
-        """Create default randomized lighting."""
-        try:
-            Gf = modules['Gf']
-            
-            # Create a distant light (sun)
-            light_path = "/World/defaultLight"
-            light_prim = stage.DefinePrim(light_path, "DistantLight")
-            
-            # Randomize properties
-            intensity = np.random.uniform(1.0, 3.0)
-            color = np.random.uniform(0.8, 1.0, 3)
-            angle = np.random.uniform(0.0, 5.0)
-            
-            light_prim.GetAttribute("intensity").Set(intensity)
-            light_prim.GetAttribute("color3f").Set(Gf.Vec3f(*color))
-            light_prim.GetAttribute("angle").Set(angle)
-            
-            log.debug("Created default randomized lighting")
-            
-        except Exception as e:
-            log.warning(f"Failed to create default lighting: {e}")
-    
-    def _randomize_single_light(self, stage, light_path, modules):
-        """Randomize properties of a single light."""
-        try:
-            Gf = modules['Gf']
-            light_prim = stage.GetPrimAtPath(light_path)
-            if not light_prim or not light_prim.IsValid():
-                return
-                
-            light_type = light_prim.GetTypeName()
-            
-            # Randomize intensity
-            intensity = np.random.uniform(0.5, 2.0)
-            intensity_attr = light_prim.GetAttribute("intensity")
-            if intensity_attr:
-                intensity_attr.Set(intensity)
-            
-            # Randomize color (warm to cool)
-            color = np.random.uniform(0.7, 1.0, 3)
-            color_attr = light_prim.GetAttribute("color3f")
-            if color_attr:
-                color_attr.Set(Gf.Vec3f(*color))
-            
-            # Type-specific randomization
-            if light_type == "DistantLight":
-                angle = np.random.uniform(0.0, 10.0)
-                angle_attr = light_prim.GetAttribute("angle")
-                if angle_attr:
-                    angle_attr.Set(angle)
-            elif light_type == "SphereLight":
-                radius = np.random.uniform(0.1, 1.0)
-                radius_attr = light_prim.GetAttribute("radius")
-                if radius_attr:
-                    radius_attr.Set(radius)
-                    
-        except Exception as e:
-            log.debug(f"Failed to randomize light {light_path}: {e}")
-    
     def _randomize_reflection(self):
         """Randomize material reflection properties, based on IsaacLab's ReflectionRandomizer."""
         log.debug("Randomizing material reflection properties...")
@@ -734,51 +668,7 @@ class IsaacSimDomainRandomizer:
                     
         except Exception as e:
             log.warning(f"Failed to randomize scene material properties: {e}")
-            
-    def _should_skip_prim_for_material_randomization(self, prim):
-        """Check if a prim should be skipped for material randomization to avoid physics conflicts."""
-        try:
-            prim_path = str(prim.GetPath()).lower()
-            
-            # Skip robot-related prims
-            robot_keywords = [
-                "robot", "franka", "panda", "ur5", "kinova", "fetch", 
-                "shadow", "allegro", "baxter", "sawyer"
-            ]
-            for keyword in robot_keywords:
-                if keyword in prim_path:
-                    return True
-                    
-            # Skip physics-critical objects
-            physics_keywords = [
-                "collision", "physics", "joint", "articulation", 
-                "rigidbody", "mass", "inertia"
-            ]
-            for keyword in physics_keywords:
-                if keyword in prim_path:
-                    return True
-                    
-            # Skip task objects that might have physics constraints
-            task_keywords = ["cube", "object", "target", "goal", "task"]
-            for keyword in task_keywords:
-                if keyword in prim_path:
-                    return True
-                    
-            return False
-            
-        except Exception:
-            # If in doubt, skip it
-            return True
-            
-    def _prim_descendants(self, root_prim):
-        """Iterate through all descendant prims (helper function)."""
-        try:
-            for prim in root_prim.GetAllChildren():
-                yield prim
-                yield from self._prim_descendants(prim)
-        except Exception:
-            pass
-            
+    
     def _randomize_single_prim_material(self, prim, modules):
         """Randomize material properties for a single prim (based on IsaacLab approach)."""
         try:
@@ -1514,8 +1404,3 @@ class IsaacSimDomainRandomizer:
         except Exception as e:
             log.warning(f"Failed to load clutter object configurations: {e}")
             return []
-
-
-
-# For compatibility with existing code
-IsaacSimDomainRandomizer_Original = IsaacSimDomainRandomizer
