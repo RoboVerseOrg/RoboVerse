@@ -53,6 +53,16 @@ class IsaacsimHandler(BaseSimHandler):
         self._is_closed = False
         self.render_interval = 4  # TODO: fix hardcode
 
+        # Initialize domain randomization if enabled
+        self.domain_randomizer = None
+        if hasattr(scenario_cfg, "random") and scenario_cfg.random.level > 0:
+            from .utils.domain_randomizer import IsaacSimDomainRandomizer
+
+            self.domain_randomizer = IsaacSimDomainRandomizer(self, scenario_cfg.random)
+            log.info(f"Domain randomization enabled with level {scenario_cfg.random.level}")
+
+        self._randomization_applied = False
+
     def _init_scene(self) -> None:
         """
         Initializes the isaacsim simulation environment.
@@ -106,7 +116,15 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
-    def _update_camera_pose(self) -> None:
+    def _update_camera_pose(self, force_config_pose: bool = False) -> None:
+        """Update camera pose. If randomization was applied and force_config_pose is False, skip update to preserve randomized poses."""
+        # Don't override randomized camera poses unless explicitly forced
+        if hasattr(self, "_randomization_applied") and self._randomization_applied and not force_config_pose:
+            # Check if camera randomization was actually applied
+            if hasattr(self, "domain_randomizer") and self.domain_randomizer and self.domain_randomizer.cfg.camera:
+                log.debug("Skipping camera pose update to preserve randomized poses")
+                return
+
         for camera in self.cameras:
             if isinstance(camera, PinholeCameraCfg):
                 # set look at position using isaaclab's api
@@ -129,14 +147,21 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_lights()
         self._load_render_settings()
+
+        # Apply scene-level domain randomization BEFORE physics initialization
+        self._apply_scene_level_randomization()
+
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
 
-        # Update camera pose after scene reset to avoid being overridden
-        self._update_camera_pose()
+        # Update camera pose after scene reset - use config poses initially
+        self._update_camera_pose(force_config_pose=True)
+
+        # Apply visual-only domain randomization AFTER physics initialization
+        self._apply_visual_randomization()
 
         # Force another simulation step and camera update to ensure proper initialization
         self.sim.step(render=False)
@@ -152,11 +177,13 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            del self.scene
-            self.sim.clear_all_callbacks()
-            self.sim.clear_instance()
-            self.sim.stop()
-            self.sim.clear()
+            if hasattr(self, "scene") and self.scene is not None:
+                del self.scene
+            if hasattr(self, "sim") and self.sim is not None:
+                self.sim.clear_all_callbacks()
+                self.sim.clear_instance()
+                self.sim.stop()
+                self.sim.clear()
             self._is_closed = True
 
     def __del__(self):
@@ -337,11 +364,89 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.render()
         self.scene.update(dt=self.dt)
 
+        # Apply dynamic lighting if enabled (like RoboTwin)
+        if self.domain_randomizer:
+            self.domain_randomizer.apply_dynamic_lighting()
+
         # Ensure camera pose is correct, especially for the first few frames
         if self._step_counter < 5:
             self._update_camera_pose()
 
         self._step_counter += 1
+
+    def _apply_scene_level_randomization(self) -> None:
+        """Apply scene-level randomization BEFORE physics initialization."""
+        if self.domain_randomizer is None:
+            return
+
+        try:
+            # Only apply randomizations that don't affect physics state
+            # Scene objects and materials can be applied before physics init
+            self.domain_randomizer.apply_scene_randomization()
+            log.debug("Scene-level domain randomization applied successfully")
+        except Exception as e:
+            log.warning(f"Failed to apply scene-level domain randomization: {e}")
+
+    def _apply_visual_randomization(self) -> None:
+        """Apply visual-only randomization AFTER physics initialization."""
+        if self.domain_randomizer is None:
+            return
+
+        try:
+            # Apply randomizations that don't affect physics: camera, lights, materials, reflection
+            self.domain_randomizer.apply_visual_randomization()
+            self._randomization_applied = True
+            log.debug("Visual domain randomization applied successfully")
+        except Exception as e:
+            log.warning(f"Failed to apply visual domain randomization: {e}")
+            self._randomization_applied = False
+
+    def _apply_domain_randomization(self) -> None:
+        """Apply domain randomization if enabled (legacy method for reset)."""
+        if self.domain_randomizer is None:
+            return
+
+        try:
+            # For reset, only apply visual randomizations to avoid physics conflicts
+            self.domain_randomizer.apply_visual_randomization()
+            self._randomization_applied = True
+            log.debug("Domain randomization applied successfully")
+
+        except Exception as e:
+            log.warning(f"Failed to apply domain randomization: {e}")
+            self._randomization_applied = False
+
+    def reset_randomization(self) -> None:
+        """Reset randomization for a new episode."""
+        if self.domain_randomizer is not None:
+            self.domain_randomizer.reset_randomization()
+        self._randomization_applied = False
+
+    def reset(self, env_ids: list[int] | None = None) -> None:
+        """Reset the environment and apply new randomization.
+
+        Args:
+            env_ids: List of environment IDs to reset. If None, reset all environments.
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        # Reset scene
+        indices = torch.tensor(env_ids, dtype=torch.int64, device=self.device)
+        self.scene.reset(indices)
+
+        # Apply new randomization
+        self.reset_randomization()
+        self._apply_domain_randomization()
+
+        # Update camera poses
+        self._update_camera_pose()
+
+        # Step simulation to apply changes
+        self.sim.step(render=False)
+        self.scene.update(dt=self.dt)
+
+        log.debug(f"Reset environments {env_ids} with randomization")
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils

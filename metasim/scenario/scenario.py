@@ -11,6 +11,7 @@ from metasim.utils.setup_util import get_robot, get_scene
 from .cameras import BaseCameraCfg
 from .lights import BaseLightCfg, DistantLightCfg
 from .objects import BaseObjCfg
+from .randomization import RandomizationCfg
 from .render import RenderCfg
 from .robot import RobotCfg
 from .scene import SceneCfg
@@ -44,6 +45,7 @@ class ScenarioCfg:
     # scenario: ScenarioCfg = ScenarioCfg()
 
     render: RenderCfg = RenderCfg()
+    random: RandomizationCfg = RandomizationCfg()
     sim_params: SimParamCfg = SimParamCfg()
     simulator: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] = "isaaclab"
     renderer: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] | None = None

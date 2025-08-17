@@ -25,6 +25,44 @@ LOCAL_DIR = "roboverse_data"
 hf_api = HfApi()
 
 
+def extract_texture_paths_from_mdl(mdl_filepath: str) -> list[str]:
+    """Extract texture file paths referenced in an MDL file.
+
+    Args:
+        mdl_filepath: Path to the MDL file
+
+    Returns:
+        List of absolute paths to texture files referenced in the MDL
+    """
+    texture_paths = []
+    if not os.path.exists(mdl_filepath):
+        return texture_paths
+
+    try:
+        with open(mdl_filepath, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+
+        # Find all texture_2d declarations with relative paths
+        import re
+
+        # Pattern to match: texture_2d("./textures/filename.ext", ...)
+        pattern = r'texture_2d\s*\(\s*"(\./[^"]+)"\s*,'
+        matches = re.findall(pattern, content)
+
+        # Convert relative paths to absolute paths
+        mdl_dir = os.path.dirname(mdl_filepath)
+        for relative_path in matches:
+            # Remove leading "./"
+            clean_path = relative_path[2:]  # Remove "./"
+            absolute_path = os.path.join(mdl_dir, clean_path)
+            texture_paths.append(absolute_path)
+
+    except Exception as e:
+        log.warning(f"Failed to parse MDL file {mdl_filepath}: {e}")
+
+    return texture_paths
+
+
 def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
 
@@ -35,6 +73,13 @@ def check_and_download_single(filepath: str):
     if local_exists:
         ## In this case, the runner has the file in their local machine.
         log.info(f"File {filepath} found in local directory.")
+        # If this is an MDL file, also check and download its texture dependencies
+        if filepath.endswith(".mdl"):
+            texture_paths = extract_texture_paths_from_mdl(filepath)
+            for texture_path in texture_paths:
+                if not os.path.exists(texture_path):
+                    log.info(f"Downloading missing texture dependency: {texture_path}")
+                    check_and_download_single(texture_path)
         return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
@@ -63,6 +108,15 @@ def check_and_download_single(filepath: str):
                 local_dir=LOCAL_DIR,
             )
             log.info(f"File {filepath} downloaded from the huggingface dataset.")
+
+            # If this is an MDL file, also download its texture dependencies
+            if filepath.endswith(".mdl"):
+                texture_paths = extract_texture_paths_from_mdl(filepath)
+                for texture_path in texture_paths:
+                    if not os.path.exists(texture_path):
+                        log.info(f"Downloading texture dependency: {texture_path}")
+                        check_and_download_single(texture_path)
+
         except Exception as e:
             raise e
 

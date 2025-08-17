@@ -1,0 +1,109 @@
+# Object Pool Configuration for Domain Randomization
+# Based on RoboTwin's object organization system
+# train: 80%, val: 10%, test: 10%
+#
+# METASIM OBJECT TYPE MAPPING:
+# - "primitive": Uses PrimitiveCubeCfg, PrimitiveSphereCfg, PrimitiveCylinderCfg 
+# - "rigid": Uses RigidObjCfg (for USD/URDF/MJCF files)
+# - "articulation": Uses ArticulationObjCfg (for articulated objects with joints)
+#
+# ARTICULATION OBJECTS:
+# - Have movable joints (e.g., box_base has box_joint)
+# - Require fix_base_link setting (usually true for clutter)
+# - Can have dof_config for initial joint positions
+
+# Available real objects (using existing USD files)
+# type: "rigid" matches metasim's RigidObjCfg class
+available_objects:
+  train:
+    - name: "bbq_sauce"
+      path: "metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd"
+      type: "rigid"
+      scale_range: [0.8, 1.2]
+      mass_range: [0.1, 0.3]
+      radius: 0.03
+      z_offset: 0.0
+      stable: true
+  val:
+    - name: "bbq_sauce"
+      path: "metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd"
+      type: "rigid"
+      scale_range: [0.8, 1.2]
+      mass_range: [0.1, 0.3]
+      radius: 0.03
+      z_offset: 0.0
+      stable: true
+  test:
+    - name: "bbq_sauce"
+      path: "metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd"
+      type: "rigid"
+      scale_range: [0.8, 1.2]
+      mass_range: [0.1, 0.3]
+      radius: 0.03
+      z_offset: 0.0
+      stable: true
+
+# No additional categories - using only primitive_objects as fallback
+
+# Fallback primitive objects (when GLB files are not available)
+primitive_objects:
+  train:
+    - name: "primitive_cube"
+      type: "primitive"
+      usd_type: "Cube"
+      scale_range: [0.02, 0.08]
+      mass_range: [0.1, 0.5]
+      color_range: [[0.1, 0.9], [0.1, 0.9], [0.1, 0.9]]
+      radius: 0.03
+      z_offset: 0.01
+      stable: true
+    - name: "primitive_sphere"
+      type: "primitive"
+      usd_type: "Sphere"
+      scale_range: [0.02, 0.06]
+      mass_range: [0.1, 0.3]
+      color_range: [[0.1, 0.9], [0.1, 0.9], [0.1, 0.9]]
+      radius: 0.03
+      z_offset: 0.0
+      stable: true
+    - name: "primitive_cylinder"
+      type: "primitive"
+      usd_type: "Cylinder"
+      scale_range: [0.02, 0.06]
+      mass_range: [0.1, 0.4]
+      color_range: [[0.1, 0.9], [0.1, 0.9], [0.1, 0.9]]
+      radius: 0.03
+      z_offset: 0.0
+      stable: true
+  val:
+    - name: "primitive_capsule"
+      type: "primitive"
+      usd_type: "Capsule"
+      scale_range: [0.02, 0.05]
+      mass_range: [0.08, 0.2]
+      color_range: [[0.1, 0.9], [0.1, 0.9], [0.1, 0.9]]
+      radius: 0.025
+      z_offset: 0.0
+      stable: false
+  test:
+    - name: "primitive_capsule"
+      type: "primitive"
+      usd_type: "Capsule"
+      scale_range: [0.02, 0.05]
+      mass_range: [0.08, 0.2]
+      color_range: [[0.1, 0.9], [0.1, 0.9], [0.1, 0.9]]
+      radius: 0.025
+      z_offset: 0.0
+      stable: false
+
+# Configuration for object selection weights
+object_selection_weights:
+  available_objects: 0.7  # Real USD objects 
+  primitive_objects: 0.3  # fallback when other objects fail to load
+
+# Collision avoidance settings
+collision_settings:
+  min_distance_between_objects: 0.05
+  max_placement_attempts: 50
+  check_stability: true
+  stability_check_steps: 100

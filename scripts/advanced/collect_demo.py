@@ -25,13 +25,13 @@ from typing import Literal
 
 import tyro
 
-# from metasim.scenario.randomization import RandomizationCfg
+from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 
 
 @dataclass
 class Args:
-    # random: RandomizationCfg
+    random: RandomizationCfg
     """Domain randomization options"""
 
     render: RenderCfg
@@ -42,7 +42,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -74,9 +74,9 @@ class Args:
         assert self.run_all or self.run_unfinished or self.run_failed, (
             "At least one of run_all, run_unfinished, or run_failed must be True"
         )
-        # if self.random.table and not self.table:
-        #     log.warning("Cannot enable table randomization without a table, disabling table randomization")
-        #     self.random.table = False
+        if self.random.table and not self.table:
+            log.warning("Cannot enable table randomization without a table, disabling table randomization")
+            self.random.table = False
 
         if self.max_demo_idx is None:
             self.max_demo_idx = math.inf
@@ -172,7 +172,9 @@ class DemoCollector:
             additional_str = "-" + str(args.cust_name)
         else:
             additional_str = ""
-        self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}-{additional_str}/robot-{args.robot}"
+        self.base_save_dir = (
+            f"roboverse_demo/demo_{args.sim}/{TaskName}-Level{args.random.level}{additional_str}/robot-{args.robot}"
+        )
 
     def create(self, demo_idx: int, data_dict: dict):
         assert demo_idx not in self.cache
@@ -282,7 +284,7 @@ def main():
         robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
-        # random=args.random,
+        random=args.random,
         render=args.render,
         simulator=args.sim,
         renderer=args.renderer,

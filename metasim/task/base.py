@@ -181,6 +181,10 @@ class BaseTaskEnv:
         if env_ids is None:
             env_ids = list(range(self.handler.num_envs))
 
+        # Call handler's reset method (which may include domain randomization)
+        if hasattr(self.handler, "reset"):
+            self.handler.reset(env_ids)
+
         for callback in self.reset_callback:
             callback(env_ids)
         self.handler.set_states(states=self._initial_states, env_ids=env_ids)
