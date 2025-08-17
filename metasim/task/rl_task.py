@@ -93,11 +93,12 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # env api
     # -------------------------------------------------------------------------
-    def reset(self, env_ids=None) -> tuple[torch.Tensor, dict]:
+    def reset(self, states=None, env_ids=None) -> tuple[torch.Tensor, dict]:
         """Reset selected envs.
 
         Args:
             env_ids: Indices to reset; None resets all.
+            states: Optional external states to set for the selected envs. If None, use initial states.
 
         Returns:
             (obs, info).
@@ -106,7 +107,8 @@ class RLTaskEnv(BaseTaskEnv):
             env_ids = list(range(self.num_envs))
 
         self._episode_steps[env_ids] = 0
-        self.handler.set_states(states=self._initial_states, env_ids=env_ids)
+        states_to_set = self._initial_states if states is None else states
+        self.handler.set_states(states=states_to_set, env_ids=env_ids)
 
         states = self.handler.get_states()
         first_obs = self._observation(states).to(self.device)

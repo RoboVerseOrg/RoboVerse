@@ -105,11 +105,11 @@ class BaseTaskEnv:
 
     def _observation(self, env_states: Obs) -> Obs:
         """Get the observation of the environment."""
-        pass
+        return env_states
 
     def _privileged_observation(self, env_states: Obs) -> Obs:
         """Get the privileged observation of the environment."""
-        pass
+        return env_states
 
     def _reward(self, env_states: Obs) -> Reward:
         """Get the reward of the environment."""
@@ -167,11 +167,16 @@ class BaseTaskEnv:
             {"privileged_observation": self._privileged_observation(env_states)},
         )
 
-    def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Info | None]:
-        """Reset the environment. This base implementation does not do anything.
+    def reset(
+        self,
+        states=None,
+        env_ids: list[int] | None = None,
+    ) -> tuple[Obs, Info | None]:
+        """Reset the environment.
 
         Args:
             env_ids: The environment ids to reset
+            states: Optional external states to set for the selected envs. If None, use initial states.
 
         Returns:
             obs: The observation
@@ -183,7 +188,8 @@ class BaseTaskEnv:
 
         for callback in self.reset_callback:
             callback(env_ids)
-        self.handler.set_states(states=self._initial_states, env_ids=env_ids)
+        states_to_set = self._initial_states if states is None else states
+        self.handler.set_states(states=states_to_set, env_ids=env_ids)
         env_states = self.handler.get_states(env_ids=env_ids)
         info = {
             "privileged_observation": self._privileged_observation(env_states),

@@ -166,7 +166,7 @@ class TensorState:
 
 
 ## Gymnasium types
-Obs = torch.Tensor
+Obs = TensorState | torch.Tensor
 Reward = torch.Tensor
 Success = torch.BoolTensor
 TimeOut = torch.BoolTensor
