@@ -66,6 +66,7 @@ developer_guide/new_sim
 developer_guide/asset_conversions
 developer_guide/docstring
 developer_guide/tips/index
+developer_guide/get_extras
 ```
 
 ```{toctree}

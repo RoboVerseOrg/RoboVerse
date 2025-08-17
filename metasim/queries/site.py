@@ -27,7 +27,7 @@ class SitePos(BaseQueryType):
     def bind_handler(self, handler, *args, **kwargs):
         """Remember the site-id once the handler is known."""
         mod = handler.__class__.__module__
-
+        self.handler = handler
         if mod.startswith("metasim.sim.mjx"):
             robot_name = handler._robot.name
             full_name = f"{robot_name}/{self.site_name}" if "/" not in self.site_name else self.site_name

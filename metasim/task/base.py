@@ -105,11 +105,11 @@ class BaseTaskEnv:
 
     def _observation(self, env_states: Obs) -> Obs:
         """Get the observation of the environment."""
-        return env_states
+        pass
 
     def _privileged_observation(self, env_states: Obs) -> Obs:
         """Get the privileged observation of the environment."""
-        return env_states
+        pass
 
     def _reward(self, env_states: Obs) -> Reward:
         """Get the reward of the environment."""
