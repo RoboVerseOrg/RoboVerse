@@ -36,7 +36,7 @@ class Args:
 
     render: RenderCfg
     """Renderer options"""
-    task: str = "stack_cube"
+    task: str = "close_box"
     """Task name"""
     robot: str = "franka"
     """Robot name"""

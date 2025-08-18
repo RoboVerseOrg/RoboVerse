@@ -1,9 +1,0 @@
-!*
-MinkowskiEngine/
-graspnetAPI/
-graspness_implementation/
-assets/
-*/__pycache__/
-*/build/
-*/dist/
-*/.vscode/
