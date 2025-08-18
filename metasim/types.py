@@ -8,7 +8,7 @@ from typing import Any, Dict, TypedDict
 import torch
 
 from metasim.utils.math import convert_camera_frame_orientation_convention
-
+from typing import Union
 ## Basic types
 Dof = Dict[str, float]
 
@@ -166,7 +166,7 @@ class TensorState:
 
 
 ## Gymnasium types
-Obs = TensorState | torch.Tensor
+Obs = Union[TensorState, torch.Tensor]
 Reward = torch.Tensor
 Success = torch.BoolTensor
 TimeOut = torch.BoolTensor

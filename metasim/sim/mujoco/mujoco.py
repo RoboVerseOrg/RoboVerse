@@ -537,7 +537,8 @@ class MujocoHandler(BaseSimHandler):
         if len(states) > 1:
             raise ValueError("MujocoHandler only supports single env state setting")
 
-        states_flat = [state["objects"] | state["robots"] for state in states]
+        states_flat = [{**state["objects"], **state["robots"]} for state in states]
+
         for obj_name, obj_state in states_flat[0].items():
             self._set_root_state(obj_name, obj_state, zero_vel)
             self._set_joint_state(obj_name, obj_state, zero_vel)
