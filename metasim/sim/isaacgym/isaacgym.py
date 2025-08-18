@@ -664,12 +664,12 @@ class IsaacgymHandler(BaseSimHandler):
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action] | torch.Tensor):
+    def set_dof_targets(self, actions: list[Action] | torch.Tensor):
         self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0])
         if isinstance(actions, torch.Tensor):
             # reverse sorted joint indices
-            reverse_reindex = self.get_joint_reindex(obj_name, inverse=True)
+            reverse_reindex = self.get_joint_reindex(inverse=True)
             self._actions_cache = actions[:, reverse_reindex]
             action_array_all = actions
 
@@ -702,7 +702,7 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
-    def set_actions(self, obj_name: str, actions: torch.Tensor) -> None:
+    def set_actions(self, actions: torch.Tensor) -> None:
         action_input = torch.zeros_like(self._dof_states[:, 0])
 
         if not hasattr(self, "_robot_dim_index"):
