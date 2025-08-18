@@ -29,6 +29,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
+from metasim.sim.sapien.utils import adapt_actions
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -163,7 +164,7 @@ class Sapien3Handler(BaseSimHandler):
                     half_size=object.half_size,
                     # color=object.color if object.color else [1.0, 1.0, 0.0],
                     material=sapien_core.render.RenderMaterial(
-                        base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
+                        base_color=list(object.color[:3]) + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),
                 )
                 box = actor_builder.build(name="box")  # Add a box
@@ -187,7 +188,7 @@ class Sapien3Handler(BaseSimHandler):
                 actor_builder.add_sphere_visual(
                     radius=object.radius,
                     material=sapien_core.render.RenderMaterial(
-                        base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
+                        base_color=list(object.color[:3]) + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),
                 )
                 sphere = actor_builder.build(name="sphere")  # Add a sphere
@@ -340,21 +341,23 @@ class Sapien3Handler(BaseSimHandler):
                 joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
-    def set_dof_targets(self, obj_name, target: list[Action]):
-        instance = self.object_ids[obj_name]
-        if isinstance(instance, sapien_core.physx.PhysxArticulation):
-            action = target[0]
-            pos_target = action.get("dof_pos_target", None)
-            vel_target = action.get("dof_vel_target", None)
-            pos_target_arr = (
-                np.array([pos_target[name] for name in self.object_joint_order[obj_name]]) if pos_target else None
-            )
-            vel_target_arr = (
-                np.array([vel_target[name] for name in self.object_joint_order[obj_name]]) if vel_target else None
-            )
-            self._previous_dof_pos_target[obj_name] = pos_target_arr
-            self._previous_dof_vel_target[obj_name] = vel_target_arr
-            self._apply_action(instance, pos_target, vel_target)
+    def set_dof_targets(self, targets: list[Action] | TensorState):
+        targets = adapt_actions(self, targets)
+
+        for name, action in targets.items():
+            instance = self.object_ids[name]
+            if isinstance(instance, sapien_core.physx.PhysxArticulation):
+                pos_target = action.get("dof_pos_target", None)
+                vel_target = action.get("dof_vel_target", None)
+                pos_target_arr = (
+                    np.array([pos_target[name] for name in self.object_joint_order[name]]) if pos_target else None
+                )
+                vel_target_arr = (
+                    np.array([vel_target[name] for name in self.object_joint_order[name]]) if vel_target else None
+                )
+                self._previous_dof_pos_target[name] = pos_target_arr
+                self._previous_dof_vel_target[name] = vel_target_arr
+                self._apply_action(instance, pos_target, vel_target)
 
     def _simulate(self):
         for i in range(self.scenario.decimation):
@@ -366,6 +369,7 @@ class Sapien3Handler(BaseSimHandler):
             camera_id.take_picture()
 
     def launch(self) -> None:
+        super().launch()
         self._build_sapien()
 
     def close(self):
@@ -509,7 +513,7 @@ class Sapien3Handler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.object_joint_order[obj_name])
             if sort:
@@ -524,3 +528,7 @@ class Sapien3Handler(BaseSimHandler):
             return sorted(body_names)
         else:
             return deepcopy(body_names)
+
+    @property
+    def robot(self):
+        return self.robots[0]
