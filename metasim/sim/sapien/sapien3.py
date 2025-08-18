@@ -524,4 +524,3 @@ class Sapien3Handler(BaseSimHandler):
             return sorted(body_names)
         else:
             return deepcopy(body_names)
-
