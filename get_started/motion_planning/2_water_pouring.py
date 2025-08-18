@@ -45,8 +45,7 @@ from metasim.utils import configclass
 # from get_started.motion_planning.util_gsnet import GSNet
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.kinematics_utils import get_curobo_models
-from metasim.utils.setup_util import get_sim_env_class
-
+from metasim.utils.setup_util import get_sim_handler_class
 
 @configclass
 class Args:
@@ -55,7 +54,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaacgym"
 
     ## Others
     num_envs: int = 1
@@ -72,8 +71,7 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -100,7 +98,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -141,8 +139,9 @@ robot = scenario.robots[0]
 *_, robot_ik = get_curobo_models(robot)
 curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
 ee_n_dof = len(robot.gripper_open_q)
-
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -188,7 +187,9 @@ def move_to_pose(
         {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(scenario.num_envs)
     ]
     for i in range(steps):
-        obs, reward, success, time_out, extras = env.step(actions)
+        env.set_dof_targets(actions)
+        env.simulate()
+        obs = env.get_states(mode="dict")
         obs_saver.add(obs)
     return obs
 
@@ -197,7 +198,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
-    states = env.handler.get_states()
+    states = env.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
     seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
