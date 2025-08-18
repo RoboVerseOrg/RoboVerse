@@ -9,7 +9,9 @@ from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 class SawyerCfg(BaseRobotCfg):
     name: str = "sawyer"
     num_joints: int = 10
-    usd_path: str = "roboverse_data/robots/sawyer/usd/sawyer_v2.usd"
+    usd_path: str = "roboverse_data/robots/Rethink_Robotics_Sawyer/usd/sawyer_v2.usd"
+    # mjcf_path: str = "roboverse_data/robots/Rethink_Robotics_Sawyer/mjcf/sawyer.xml"
+    urdf_path: str = "roboverse_data/robots/Rethink_Robotics_Sawyer/urdf/sawyer_v2.urdf"
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {
