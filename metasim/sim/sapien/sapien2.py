@@ -29,9 +29,10 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
+from metasim.sim.sapien.utils import adapt_actions
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, _dof_tensor_to_dict
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
 class Sapien2Handler(BaseSimHandler):
@@ -315,12 +316,7 @@ class Sapien2Handler(BaseSimHandler):
             instance.set_drive_velocity_target(vel_action)
 
     def _set_dof_targets(self, actions: list[Action] | TensorState):
-        if isinstance(actions, torch.Tensor):
-            if len(actions.shape) == 2:
-                actions = actions[0]
-            actions = {self.robot.name: _dof_tensor_to_dict(actions, self.get_joint_names(self.robot.name))}
-        if isinstance(actions, list):
-            actions = actions[0]
+        actions = adapt_actions(self, actions)
         for obj_name, action in actions.items():
             instance = self.object_ids[obj_name]
             if isinstance(instance, sapien_core.Articulation):
