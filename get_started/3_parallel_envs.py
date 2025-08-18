@@ -41,7 +41,9 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"] = "mujoco"
+        sim: Literal[
+            "isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 4
@@ -50,7 +52,6 @@ if __name__ == "__main__":
         def __post_init__(self):
             """Post-initialization configuration."""
             log.info(f"Args: {self}")
-
 
     args = tyro.cli(Args)
 
@@ -95,7 +96,6 @@ if __name__ == "__main__":
             mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
-
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_handler_class(SimType(args.sim))
@@ -160,7 +160,8 @@ if __name__ == "__main__":
                 robot.name: {
                     "dof_pos_target": {
                         joint_name: (
-                            torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                            torch.rand(1).item()
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
                             + robot.joint_limits[joint_name][0]
                         )
                         for joint_name in robot.joint_limits.keys()

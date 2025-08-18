@@ -29,10 +29,10 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import DictEnvState, Action
+from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from metasim.utils.state import _dof_tensor_to_dict
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, _dof_tensor_to_dict
+
 
 class Sapien2Handler(BaseSimHandler):
     """Sapien2 Handler class."""
@@ -315,15 +315,13 @@ class Sapien2Handler(BaseSimHandler):
             instance.set_drive_velocity_target(vel_action)
 
     def _set_dof_targets(self, actions: list[Action] | TensorState):
-        if isinstance(actions, torch.Tensor) :
-            if len(actions.shape) == 2 :
+        if isinstance(actions, torch.Tensor):
+            if len(actions.shape) == 2:
                 actions = actions[0]
-            actions = {
-                self.robot.name: _dof_tensor_to_dict(actions, self.get_joint_names(self.robot.name))
-            }
-        if isinstance(actions, list) :
+            actions = {self.robot.name: _dof_tensor_to_dict(actions, self.get_joint_names(self.robot.name))}
+        if isinstance(actions, list):
             actions = actions[0]
-        for obj_name, action in actions.items() :
+        for obj_name, action in actions.items():
             instance = self.object_ids[obj_name]
             if isinstance(instance, sapien_core.Articulation):
                 pos_target = None
@@ -510,5 +508,5 @@ class Sapien2Handler(BaseSimHandler):
             return deepcopy(body_names)
 
     @property
-    def robot(self) :
+    def robot(self):
         return self.robots[0]
