@@ -28,7 +28,7 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -525,5 +525,3 @@ class Sapien3Handler(BaseSimHandler):
         else:
             return deepcopy(body_names)
 
-
-Sapien3Env: type[EnvWrapper[Sapien3Handler]] = GymEnvWrapper(Sapien3Handler)
