@@ -29,10 +29,9 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.sim.sapien.utils import adapt_actions
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
 
 
 class Sapien2Handler(BaseSimHandler):

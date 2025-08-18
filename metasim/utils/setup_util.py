@@ -66,7 +66,7 @@ def get_sim_handler_class(sim: SimType):
         try:
             from metasim.sim.pybullet import PybulletHandler
 
-            return PybulletHandler
+            return ParallelSimWrapper(PybulletHandler)
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e

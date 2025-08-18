@@ -19,10 +19,10 @@ from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
 
 
 class SinglePybulletHandler(BaseSimHandler):
@@ -236,7 +236,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
 
-    def set_dof_targets(self, obj_name, actions: list[Action]):
+    def set_dof_targets(self, actions: list[Action] | TensorState):
         """Set the target joint positions for the object.
 
         Args:
@@ -244,12 +244,12 @@ class SinglePybulletHandler(BaseSimHandler):
             target: The target joint positions
         """
         # For multi-env version, rewrite this function
+        actions = adapt_actions(self, actions)
         self._actions_cache = actions
-        action = actions[0]
-        action_arr = np.array([
-            action[self.robot.name]["dof_pos_target"][name] for name in self.object_joint_order[obj_name]
-        ])
-        self._apply_action(action_arr, self.object_ids[obj_name])
+
+        for obj_name, action in actions.items():
+            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
+            self._apply_action(action_arr, self.object_ids[obj_name])
 
     def _simulate(self):
         """Step the simulation."""
@@ -272,6 +272,7 @@ class SinglePybulletHandler(BaseSimHandler):
 
     def launch(self) -> None:
         """Launch the simulation."""
+        super().launch()
         self._build_pybullet()
         self.already_disconnect = False
 
@@ -406,7 +407,9 @@ class SinglePybulletHandler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
+    @property
+    def robot(self):
+        return self.robots[0]
+
 
 PybulletHandler = SinglePybulletHandler  # TODO: support parallel
-
-PybulletEnv: type[EnvWrapper[PybulletHandler]] = GymEnvWrapper(PybulletHandler)  # type: ignore
