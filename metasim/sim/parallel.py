@@ -56,7 +56,7 @@ def _worker(
                 names = env.get_body_names(data[0])
                 remote.send(names)
             elif cmd == "set_dof_targets":
-                env.set_dof_targets(data[0], data[1])
+                env.set_dof_targets(data[0])
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized before sending any commands
                 remote.send("handshake")
@@ -157,20 +157,16 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
 
             for i in env_ids:
                 self.remotes[i].send(("get_states", (None,)))
-
             states_list = []
             for i in env_ids:
                 states = self.remotes[i].recv()
                 states_list.append(states)
-            # tic = time.time()
             concat_states = join_tensor_states(states_list)
-            # toc = time.time()
-            # log.trace(f"Time taken to concatenate states: {toc - tic:.4f}s")
             return concat_states
 
-        def _set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+        def _set_dof_targets(self, actions: list[Action]) -> None:
             for i, remote in enumerate(self.remotes):
-                remote.send(("set_dof_targets", (obj_name, actions[i])))
+                remote.send(("set_dof_targets", (actions[i],)))
 
         def _simulate(self):
             for remote in self.remotes:
