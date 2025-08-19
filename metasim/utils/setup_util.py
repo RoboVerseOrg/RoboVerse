@@ -66,7 +66,7 @@ def get_sim_handler_class(sim: SimType):
         try:
             from metasim.sim.pybullet import PybulletHandler
 
-            return PybulletHandler
+            return ParallelSimWrapper(PybulletHandler)
         except ImportError as e:
             log.error("PyBullet is not installed, please install it first")
             raise e
@@ -74,7 +74,7 @@ def get_sim_handler_class(sim: SimType):
         try:
             from metasim.sim.sapien import Sapien2Handler
 
-            return Sapien2Handler
+            return ParallelSimWrapper(Sapien2Handler)
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
@@ -82,7 +82,7 @@ def get_sim_handler_class(sim: SimType):
         try:
             from metasim.sim.sapien import Sapien3Handler
 
-            return Sapien3Handler
+            return ParallelSimWrapper(Sapien3Handler)
         except ImportError as e:
             log.error("Sapien is not installed, please install it first")
             raise e
