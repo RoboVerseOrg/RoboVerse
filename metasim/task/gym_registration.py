@@ -9,7 +9,7 @@ from gymnasium.envs.registration import _find_spec, register
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.vector.vector_env import VectorEnv
 
-from .registry import get_task_class, list_tasks
+from .registry import get_task_class
 
 # Local fallback registry for vector entry points when Gymnasium does not
 # support the `vector_entry_point` argument in `register()`.
@@ -290,29 +290,29 @@ def _make_vector_entry_point(task_name: str) -> Callable[..., VectorEnv]:
     return _factory
 
 
-# -------------------------
-# Registration helpers
-# -------------------------
-def register_all_tasks_with_gym(prefix: str = "RoboVerse/") -> None:
-    """Register all tasks with both single-env and vectorized entry points."""
-    for task_name in list_tasks():
-        env_id = f"{prefix}{task_name}"
-        entry = _make_entry_point_single(task_name)
-        vec_entry = _make_vector_entry_point(task_name)
-        # Try registering with vector entry point (newer Gymnasium). If that fails
-        # (older versions), register single entry and store vector entry locally.
-        try:
-            register(id=env_id, entry_point=entry, vector_entry_point=vec_entry)
-        except TypeError:
-            try:
-                register(id=env_id, entry_point=entry)
-            except Exception:
-                # Ignore duplicate registrations during hot reload.
-                pass
-            _VECTOR_ENTRY_POINTS[env_id] = vec_entry
-        except Exception:
-            # Ignore duplicate registrations during hot reload.
-            pass
+# # -------------------------
+# # Registration helpers
+# # -------------------------
+# def register_all_tasks_with_gym(prefix: str = "RoboVerse/") -> None:
+#     """Register all tasks with both single-env and vectorized entry points."""
+#     for task_name in list_tasks():
+#         env_id = f"{prefix}{task_name}"
+#         entry = _make_entry_point_single(task_name)
+#         vec_entry = _make_vector_entry_point(task_name)
+#         # Try registering with vector entry point (newer Gymnasium). If that fails
+#         # (older versions), register single entry and store vector entry locally.
+#         try:
+#             register(id=env_id, entry_point=entry, vector_entry_point=vec_entry)
+#         except TypeError:
+#             try:
+#                 register(id=env_id, entry_point=entry)
+#             except Exception:
+#                 # Ignore duplicate registrations during hot reload.
+#                 pass
+#             _VECTOR_ENTRY_POINTS[env_id] = vec_entry
+#         except Exception:
+#             # Ignore duplicate registrations during hot reload.
+#             pass
 
 
 def register_task_with_gym(task_name: str, env_id: str | None = None) -> str:

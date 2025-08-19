@@ -21,7 +21,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 import torch
 
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.task.gym_registration import make_vec, register_all_tasks_with_gym
+from metasim.task.gym_registration import make_vec
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 
@@ -52,8 +52,6 @@ args = tyro.cli(Args)
 TASK_NAME = args.task
 NUM_ENVS = args.num_envs
 SIM = args.sim
-
-register_all_tasks_with_gym()
 
 # Add camera for video recording if needed
 camera = (

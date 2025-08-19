@@ -99,18 +99,3 @@ def list_tasks():
     if not TASK_REGISTRY:
         _discover_task_modules()
     return sorted(TASK_REGISTRY.keys())
-
-
-def load_task(name, *args, **kwargs) -> BaseTaskEnv:
-    """Instantiate a registered task by name.
-
-    Args:
-        name: Registered task name (case-insensitive).
-        *args: Additional positional arguments forwarded to the task class constructor.
-        **kwargs: Additional keyword arguments forwarded to the task class constructor.
-
-    Returns:
-        BaseTaskEnv: The instantiated task environment.
-    """
-    cls = get_task_class(name)
-    return cls(*args, **kwargs)

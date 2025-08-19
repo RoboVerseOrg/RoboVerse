@@ -22,7 +22,7 @@ import torch
 # Ensure the new env class is imported so its @register_task decorators run.
 # Adjust the import path if you place xhand_env.py elsewhere.
 from metasim.example.example_pack.tasks.dexhands_env import XHandEnv  # noqa: F401
-from metasim.task.gym_registration import make_vec, register_all_tasks_with_gym
+from metasim.task.gym_registration import make_vec
 from metasim.utils import configclass
 
 
@@ -53,8 +53,6 @@ TASK_NAME = args.task
 NUM_ENVS = args.num_envs
 SIM = args.sim
 
-# Register tasks with Gym (must happen after the env module import above)
-register_all_tasks_with_gym()
 env_id = f"RoboVerse/{args.task}"
 env = make_vec(
     env_id,
