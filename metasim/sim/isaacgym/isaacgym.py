@@ -689,6 +689,7 @@ class IsaacgymHandler(BaseSimHandler):
         if self._manual_pd_on:
             actions_reshape = action_input.view(self._num_envs, self._obj_num_dof + self._robot_num_dof)
             self.actions = actions_reshape[:, self._obj_num_dof :]
+            self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(actions_reshape))
             # and set position target for position actuator if any exist
             if len(self._pos_ctrl_dof_dix) > 0:
                 self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
