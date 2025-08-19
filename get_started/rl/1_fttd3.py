@@ -15,6 +15,7 @@ CONFIG: dict[str, Any] = {
     "task": "humanoid.crawl",
     "decimation": 10,
     "train_or_eval": "train",
+    "headless": True,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -123,8 +124,7 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import load_task
+from metasim.task.registry import get_task_class, load_task
 
 
 def main() -> None:
@@ -167,34 +167,14 @@ def main() -> None:
             raise ValueError("No GPU available")
     log.info(f"Using device: {device}")
 
-    scenario = ScenarioCfg(
-        robots=cfg("robots"),
-        simulator=cfg("sim"),
-        num_envs=cfg("num_envs", 1),
-        headless=False,
-        cameras=[],
+    task_cls = get_task_class(cfg("task"))
+    # Get default scenario from task class and update with specific parameters
+    scenario = task_cls.scenario.update(
+        robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
     )
-
-    # For different simulators, the decimation factor is different, so we need to set it here
     scenario.decimation = cfg("decimation", 1)
-
     envs = load_task(cfg("task"), scenario, device=device)
-    eval_envs = envs  # reuse for evaluation
-    scenario_render = ScenarioCfg(
-        robots=cfg("robots"),
-        simulator=cfg("sim"),
-        num_envs=1,
-        headless=True,
-        cameras=[
-            PinholeCameraCfg(
-                width=cfg("video_width", 1024),
-                height=cfg("video_height", 1024),
-                pos=(4.0, -4.0, 4.0),  # adjust as needed
-                look_at=(0.0, 0.0, 0.0),
-            )
-        ],
-    )
-    scenario_render.decimation = cfg("decimation", 1)
+    eval_envs = envs
 
     # ---------------- derive shapes ------------------------------------
     n_act = envs.num_actions
@@ -307,6 +287,24 @@ def main() -> None:
         """
         video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
+
+        robots = (cfg("robots"),)
+        simulator = (cfg("sim"),)
+        num_envs = (1,)
+        headless = (True,)
+        cameras = (
+            [
+                PinholeCameraCfg(
+                    width=cfg("video_width", 1024),
+                    height=cfg("video_height", 1024),
+                    pos=(4.0, -4.0, 4.0),  # adjust as needed
+                    look_at=(0.0, 0.0, 0.0),
+                )
+            ],
+        )
+        scenario_render = scenario.update(
+            robots=robots, simulator=simulator, num_envs=num_envs, headless=headless, cameras=cameras
+        )
         env = load_task(cfg("task"), scenario_render, device=device)
 
         obs_normalizer.eval()
