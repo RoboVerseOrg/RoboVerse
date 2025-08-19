@@ -23,6 +23,10 @@ the simulator or OpenGL convention for the camera, we use the robotics or ROS co
 import argparse
 
 from isaaclab.app import AppLauncher
+from loguru import logger as log
+from rich.logging import RichHandler
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to use the camera sensor.")
@@ -277,7 +281,7 @@ def main():
     # Play simulator
     sim.reset()
     # Now we are ready!
-    print("[INFO]: Setup complete...")
+    log.info("[INFO]: Setup complete...")
     # Run simulator
     run_simulator(sim, scene_entities)
 

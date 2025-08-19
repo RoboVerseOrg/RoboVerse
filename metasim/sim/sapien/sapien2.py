@@ -28,10 +28,10 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import DictEnvState
+from metasim.sim import BaseSimHandler
+from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
 
 
 class Sapien2Handler(BaseSimHandler):
@@ -138,7 +138,8 @@ class Sapien2Handler(BaseSimHandler):
                     for id, joint in enumerate(active_joints):
                         stiffness = object.actuators[joint.get_name()].stiffness
                         damping = object.actuators[joint.get_name()].damping
-                        joint.set_drive_property(stiffness, damping)
+                        if stiffness is not None and damping is not None:
+                            joint.set_drive_property(stiffness, damping)
                 else:
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
@@ -313,23 +314,24 @@ class Sapien2Handler(BaseSimHandler):
         if vel_action is not None:
             instance.set_drive_velocity_target(vel_action)
 
-    def set_dof_targets(self, obj_name, target):
-        instance = self.object_ids[obj_name]
-        if isinstance(instance, sapien_core.Articulation):
-            action = target[0]
-            pos_target = None
-            vel_target = None
-            if "dof_pos_target" in action:
-                pos_target = np.array([
-                    action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]
-                ])
-            if "dof_vel_target" in action:
-                vel_target = np.array([
-                    action["dof_vel_target"][name] for name in self.object_joint_order[self.robot.name]
-                ])
-            self._previous_dof_pos_target[obj_name] = pos_target
-            self._previous_dof_vel_target[obj_name] = vel_target
-            self._apply_action(instance, pos_target, vel_target)
+    def _set_dof_targets(self, actions: list[Action] | TensorState):
+        actions = adapt_actions(self, actions)
+        for obj_name, action in actions.items():
+            instance = self.object_ids[obj_name]
+            if isinstance(instance, sapien_core.Articulation):
+                pos_target = None
+                vel_target = None
+                if "dof_pos_target" in action:
+                    pos_target = np.array([
+                        action["dof_pos_target"][name] for name in self.object_joint_order[self.robot.name]
+                    ])
+                if "dof_vel_target" in action:
+                    vel_target = np.array([
+                        action["dof_vel_target"][name] for name in self.object_joint_order[self.robot.name]
+                    ])
+                self._previous_dof_pos_target[obj_name] = pos_target
+                self._previous_dof_vel_target[obj_name] = vel_target
+                self._apply_action(instance, pos_target, vel_target)
 
     def _simulate(self):
         for i in range(self.scenario.decimation):
@@ -348,6 +350,7 @@ class Sapien2Handler(BaseSimHandler):
             camera_id.take_picture()
 
     def launch(self) -> None:
+        super().launch()
         self._build_sapien()
 
     def close(self):
@@ -406,7 +409,6 @@ class Sapien2Handler(BaseSimHandler):
             else:
                 state = ObjectState(root_state=root_state)
             object_states[obj.name] = state
-
         robot_states = {}
         for robot in [self.robot]:
             robot_inst = self.object_ids[robot.name]
@@ -446,7 +448,6 @@ class Sapien2Handler(BaseSimHandler):
                 joint_effort_target=torque_target,
             )
             robot_states[robot.name] = state
-
         camera_states = {}
         for camera in self.cameras:
             cam_inst = self.camera_ids[camera.name]
@@ -501,5 +502,6 @@ class Sapien2Handler(BaseSimHandler):
         else:
             return deepcopy(body_names)
 
-
-Sapien2Env: type[EnvWrapper[Sapien2Handler]] = GymEnvWrapper(Sapien2Handler)
+    @property
+    def robot(self):
+        return self.robots[0]

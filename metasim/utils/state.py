@@ -7,7 +7,7 @@ from itertools import chain
 import torch
 from loguru import logger as log
 
-from metasim.types import CameraState, DictEnvState, ObjectState, RobotState, TensorState
+from metasim.types import Action, CameraState, DictEnvState, ObjectState, RobotState, TensorState
 
 try:
     from metasim.sim.base import BaseSimHandler
@@ -59,9 +59,15 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
             rst.robots[key] = RobotState(
                 root_state=torch.cat([robot.root_state for robot in robot_states], dim=0),
                 body_names=robot_states[0].body_names,
-                body_state=torch.cat([robot.body_state for robot in robot_states], dim=0),
-                joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0),
-                joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0),
+                body_state=torch.cat([robot.body_state for robot in robot_states], dim=0)
+                if robot_states[0].body_state is not None
+                else None,
+                joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0)
+                if robot_states[0].joint_pos is not None
+                else None,
+                joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0)
+                if robot_states[0].joint_vel is not None
+                else None,
                 joint_pos_target=torch.cat([robot.joint_pos_target for robot in robot_states], dim=0)
                 if robot_states[0].joint_pos_target is not None
                 else None,
@@ -339,3 +345,25 @@ def list_state_to_tensor(
         robots=robots,
         cameras=cameras,
     )
+
+
+def adapt_actions(
+    handler: BaseSimHandler, actions: list[Action] | TensorState
+) -> dict[str, dict[str, dict[str, float]]]:
+    """Adapt actions to the format of single env handlers.
+
+    Args:
+        handler: The handler of the simulation.
+        actions: The actions to adapt.
+    """
+    if isinstance(actions, torch.Tensor):
+        if len(actions.shape) == 2:
+            actions = actions[0]
+        actions = {
+            handler.robot.name: {
+                "dof_pos_target": _dof_tensor_to_dict(actions, handler.get_joint_names(handler.robot.name))
+            }
+        }
+    if isinstance(actions, list):
+        actions = actions[0]
+    return actions
