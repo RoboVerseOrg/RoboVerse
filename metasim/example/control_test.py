@@ -54,6 +54,7 @@ if __name__ == "__main__":
 
     log.info(f"Using simulator: {args.sim}")
     task_cls = get_task_class("obj_env")
+
     # Get default scenario from task class and update with specific parameters
     scenario = task_cls.scenario.update(simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[])
     # add cameras
