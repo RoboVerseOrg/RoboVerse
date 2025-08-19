@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, TypedDict
+from typing import Any, Dict, TypedDict, Union
 
 import torch
 
 from metasim.utils.math import convert_camera_frame_orientation_convention
-from typing import Union
+
 ## Basic types
 Dof = Dict[str, float]
 
@@ -17,7 +17,7 @@ Dof = Dict[str, float]
 class RobotAction(TypedDict):
     """Action of the robot."""
 
-    dof_pos_target: Dof
+    dof_pos_target: Dof | None
     dof_effort_target: Dof | None
 
 
