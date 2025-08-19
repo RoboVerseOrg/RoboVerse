@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     obs, extra = env.reset()
     ## Main loop
-    obs_saver = ObsSaver(video_path="test_output/test.mp4")
+    obs_saver = ObsSaver(video_path="test_output/test_control.mp4")
     obs_saver.add(obs)
 
     step = 0
