@@ -36,10 +36,10 @@ class XHandEnv(BaseTaskEnv):
         robots=[
             RobotCfg(
                 name="xhand_right",
-                # usd_path="metasim/example/example_assets/xhand_right/usd/xhand_right.usd",
-                urdf_path="metasim/example/example_assets/xhand_right/urdf/xhand_right.urdf",
-                # mjcf_path="metasim/example/example_assets/xhand_right/mjcf/xhand_right.xml",
-                # mjx_mjcf_path="metasim/example/example_assets/xhand_right/mjx/xhand_right.xml",
+                # usd_path="roboverse_data/robots/xhand_right/usd/xhand_right.usd",
+                urdf_path="roboverse_data/robots/xhand_right/urdf/xhand_right.urdf",
+                # mjcf_path="roboverse_data/robots/xhand_right/mjcf/xhand_right.xml",
+                # mjx_mjcf_path="roboverse_data/robots/xhand_right/mjx/xhand_right.xml",
             ),
         ],
     )
