@@ -305,10 +305,11 @@ class IsaacgymHandler(BaseSimHandler):
         robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
         num_actions = 0
         default_dof_pos = []
+
+        assert self.robots[0].control_type is not None, "Control type is required for robot"
         self._manual_pd_on = any(mode == "effort" for mode in self.robots[0].control_type.values())
 
         dof_names = self.gym.get_asset_dof_names(robot_asset)
-
         for i, dof_name in enumerate(dof_names):
             # get config
             i_actuator_cfg = self.robots[0].actuators[dof_name]
@@ -327,19 +328,13 @@ class IsaacgymHandler(BaseSimHandler):
             # for end effector, always use open as default position
             else:
                 default_dof_pos.append(robot_upper_limits[i])
-
             # pd control effort mode
             if i_control_mode == "effort":
-                torque_limit = (
-                    i_actuator_cfg.torque_limit
-                    if i_actuator_cfg.torque_limit is not None
-                    else torch.tensor(robot_dof_props["effort"][i], dtype=torch.float, device=self.device)
-                )
                 # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
 
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                robot_dof_props["stiffness"][i] = 0.0
-                robot_dof_props["damping"][i] = 0.0
+                robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
+                robot_dof_props["damping"][i] = i_actuator_cfg.damping
 
             # built-in position mode
             elif i_control_mode == "position":
