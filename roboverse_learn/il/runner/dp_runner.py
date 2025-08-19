@@ -33,6 +33,9 @@ from roboverse_learn.utils.common.pytorch_util import dict_apply, optimizer_to
 from torch.utils.data import DataLoader
 
 
+from metasim.task.registry import get_task_class, load_task
+
+
 class DPRunner(BaseRunner):
     include_keys = ["global_step", "epoch"]
 
@@ -319,24 +322,37 @@ class DPRunner(BaseRunner):
 
         num_envs: int = args.num_envs
         log.info(f"Using GPU device: {args.gpu_id}")
-
-        task = get_task(args.task)()
-        task.episode_length = args.action_set_steps * args.max_step
-        robot = get_robot(args.robot)
+        task_cls = get_task_class(args.task)
         camera = PinholeCameraCfg(pos=(1.5, 0, 1.5), look_at=(0.0, 0.0, 0.0))
-        scenario = ScenarioCfg(
-            task=args.task,
+        scenario = task_cls.scenario.update(
             robots=[args.robot],
-            cameras=[camera],
-            random=args.random,
-            sim=args.sim,
+            simulator=args.sim,
+            #random=args.random,
             num_envs=args.num_envs,
             headless=args.headless,
+            cameras=[camera]
         )
-
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tic = time.time()
-        env_class = get_sim_env_class(SimType(scenario.sim))
-        env = env_class(scenario)
+        env = load_task(args.task, scenario, device=device)
+
+        # task = get_task()()
+        # task.episode_length = args.action_set_steps * args.max_step
+        robot = get_robot(args.robot)
+
+        # scenario = ScenarioCfg(
+        #     task=args.task,
+        #     robots=[args.robot],
+        #     cameras=[camera],
+        #     random=args.random,
+        #     sim=args.sim,
+        #     num_envs=args.num_envs,
+        #     headless=args.headless,
+        # )
+
+
+        # env_class = get_sim_env_class(SimType(scenario.sim))
+        # env = env_class(scenario)
         toc = time.time()
         log.trace(f"Time to launch: {toc - tic:.2f}s")
 
@@ -365,10 +381,10 @@ class DPRunner(BaseRunner):
         )
         ## Data
         tic = time.time()
-        assert os.path.exists(task.traj_filepath), (
-            f"Trajectory file: {task.traj_filepath} does not exist."
+        assert os.path.exists(env.traj_filepath), (
+            f"Trajectory file: {env.traj_filepath} does not exist."
         )
-        init_states, all_actions, all_states = get_traj(task, robot, env.handler)
+        init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
         num_demos = len(init_states)
         toc = time.time()
         log.trace(f"Time to load data: {toc - tic:.2f}s")
