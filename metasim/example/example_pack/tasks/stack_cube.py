@@ -6,6 +6,7 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
@@ -13,8 +14,7 @@ from roboverse_pack.tasks.maniskill.checkers.checkers import DetectedChecker
 from roboverse_pack.tasks.maniskill.checkers.detectors import RelativeBboxDetector
 
 
-# @register_task("maniskill.stack_cube", "stack_cube")
-# registed in metasim/example
+@register_task("maniskill.stack_cube", "stack_cube")
 class StackCubeTask(BaseTaskEnv):
     """Stack a red cube on top of a blue base cube and release it."""
 
