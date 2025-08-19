@@ -30,3 +30,4 @@ from .shadow_hand_cfg import ShadowHandCfg
 from .unitree_dex3_1_cfg import UnitreeDex31LeftCfg
 from .ur5e_2f85_cfg import Ur5E2F85Cfg
 from .walker_cfg import WalkerCfg
+from .xhand_cfg import XhandRightCfg

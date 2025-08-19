@@ -21,44 +21,64 @@ from .simulator_params import SimParamCfg
 class ScenarioCfg:
     """Scenario configuration."""
 
+    # assets
     scene: SceneCfg | None = None
     robots: list[RobotCfg] = []
     lights: list[BaseLightCfg] = [DistantLightCfg()]
     objects: list[BaseObjCfg] = []
     cameras: list[BaseCameraCfg] = []
 
-    def __post_init__(self):
-        """Post-initialization configuration."""
-        ### Parse task and robot
-        for i, robot in enumerate(self.robots):
-            if isinstance(robot, str):
-                self.robots[i] = get_robot(robot)
-        if isinstance(self.scene, str):
-            self.scene = get_scene(self.scene)
-
-        FileDownloader(self).do_it()
-
-    # @configclass
-    # class SimulationCfg:
-    #     """Simulation configuration."""
-    # scenario: ScenarioCfg = ScenarioCfg()
-
+    # runtime
     render: RenderCfg = RenderCfg()
     sim_params: SimParamCfg = SimParamCfg()
-    simulator: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] = "isaaclab"
-    renderer: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] | None = None
-    ## Others
+    simulator: (
+        Literal[
+            "isaaclab",
+            "isaacgym",
+            "sapien2",
+            "sapien3",
+            "genesis",
+            "pybullet",
+            "mujoco",
+        ]
+        | None
+    ) = None
+    renderer: (
+        Literal[
+            "isaaclab",
+            "isaacgym",
+            "sapien2",
+            "sapien3",
+            "genesis",
+            "pybullet",
+            "mujoco",
+        ]
+        | None
+    ) = None
+
+    # misc
     num_envs: int = 1
     headless: bool = False
-    """environment spacing for parallel environments"""
     env_spacing: float = 1.0
     decimation: int = 25
 
-    # trajectory: TrajectoryCfg | None = None
+    def __post_init__(self) -> None:
+        """Resolve strings & fetch assets; skip until `simulator` is set."""
+        if self.simulator is None:  # defer init until user specifies simulator
+            return
+
+        for i, robot in enumerate(self.robots):
+            if isinstance(robot, str):
+                self.robots[i] = get_robot(robot)
+
+        if isinstance(self.scene, str):
+            self.scene = get_scene(self.scene)
+
+        FileDownloader(self).do_it()  # download any external assets
 
     def update(self, **kwargs):
-        """Update the scenario configuration."""
+        """Patch fields then rerun post-init."""
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.__post_init__()  # Re-initialize the scenario configuration
+        self.__post_init__()
         return self
