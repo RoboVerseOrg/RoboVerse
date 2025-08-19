@@ -29,13 +29,12 @@ from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from get_started.utils import convert_to_ply
+from metasim.utils.obs_utils import convert_to_ply
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
-from get_started.utils import ObsSaver, get_pcd_from_rgbd
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
@@ -45,7 +44,9 @@ from metasim.utils import configclass
 # from get_started.motion_planning.util_gsnet import GSNet
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.kinematics_utils import get_curobo_models
+from metasim.utils.obs_utils import ObsSaver, get_pcd_from_rgbd
 from metasim.utils.setup_util import get_sim_handler_class
+
 
 @configclass
 class Args:

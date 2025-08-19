@@ -24,10 +24,10 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.render import RenderCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_handler_class
-from scenario_cfg.render import RenderCfg
 
 
 @configclass
