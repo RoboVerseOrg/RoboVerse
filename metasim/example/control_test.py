@@ -23,7 +23,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f"Using device: {device}")
-    env = load_task("obj_env", scenario, device=device)
+    env = task_cls(scenario, device=device)
 
     os.makedirs("test_output", exist_ok=True)
 
