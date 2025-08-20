@@ -32,11 +32,11 @@ get_started/advanced/index
 <!--user_guide/multi_env-->
 <!--user_guide/cross_embodiment-->
 <!--user_guide/cross_sim-->
-tutorial/architecture_overview
+tutorial/architecture
 tutorial/state
 tutorial/handler
 tutorial/scenario
-tutorial/robot_cfg
+tutorial/robot
 tutorial/task
 tutorial/get_extras
 <!-- user_guide/collect_demo_tutorial -->
