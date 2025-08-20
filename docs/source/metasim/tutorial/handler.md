@@ -1,54 +1,62 @@
 
-   #####  Handler Lifecycle
+# Scenario Config & Handler
 
-   Every handler follows a common lifecycle:
+## Architecture and Philosophy
 
-   1. **Initialization (`__init__`)**:
-       Receives a `ScenarioCfg` which includes simulation metadata such as robots, objects, sensors, lights, task checker, etc.
-       It extracts these components and stores useful references like `self.robots`, `self.cameras`, and `self.object_dict`.
-   2. **Launch (`launch`)**:
-       This function builds the simulator model (e.g., loading MJCF/URDF files), compiles it, allocates buffers, and optionally initializes renderers or viewers.
-   3. **Close (`close`)**
-       Releases all simulator resources, such as viewers, renderers, or GPU memory buffers.
+A **scenario config** is a simulator-agnostic configuration class that defines a simulation. It contains defnitions for objects, robots, lightings, physics parameters and so on. All these definitions will be instantiated into a real simulation when passed to a handler.
 
-   ------
+A **handler** is a basic class that transforms a scenario config into a simulated instance. We support multiple handler backends including `mujoco`, `mujoco-mjx`, `isaacgym`, `isaaclab`, `isaacsim`, `pybullet`, `genesis`, `sapien` and more.
 
-   #####  Key Interface Functions
+##  Handler Lifecycle
 
-   1. `get_state() → TensorState`
+Every handler follows a common lifecycle:
 
-   > **Purpose:** Extracts structured simulator state for all robots, objects, and cameras into a unified `TensorState` data structure.
+1. **Initialization (`__init__`)**:
+    Receives a `ScenarioCfg` which includes simulation metadata such as robots, objects, sensors, lights, task checker, etc.
+    It extracts these components and stores useful references like `self.robots`, `self.cameras`, and `self.object_dict`.
+2. **Launch (`launch`)**:
+    This function builds the simulator model (e.g., loading MJCF/URDF files), compiles it, allocates buffers, and optionally initializes renderers or viewers.
+3. **Close (`close`)**
+    Releases all simulator resources, such as viewers, renderers, or GPU memory buffers.
 
-   This includes:
+------
 
-   - Root position/orientation of each object
-   - Joint positions & velocities
-   - Actuator states
-   - Camera outputs (RGB / depth)
-   - Optional per-task "extras"
+##  Key Interface Functions
 
-   It supports multi-env batched extraction, and ensures consistent structure across backends.
+1. `get_state() → TensorState | DictEnvState`
 
-   ------
+> **Purpose:** Extracts structured simulator state for all robots, objects, and cameras into a unified `TensorState` data structure.
 
-   2. `set_state(ts: TensorState)`
+This includes:
 
-   > **Purpose:** Restores or manually sets the simulator state using a full `TensorState` snapshot.
+- Root position/orientation of each object
+- Joint positions & velocities
+- Actuator states
+- Camera outputs (RGB / depth)
+- Optional per-task "extras"
 
-   This is often used for:
+It supports multi-env batched extraction, and ensures consistent structure across backends.
 
-   - Episode resets to a known state
-   - State injection during training
-   - Replaying trajectories
+------
 
-   Internally this maps the unified `TensorState` back to simulator-specific structures (`qpos`, `qvel`, `ctrl`, etc.)
+2. `set_state(ts: TensorState)`
 
-   ------
+> **Purpose:** Restores or manually sets the simulator state using a full `TensorState` snapshot.
 
-   3. `simulate()`
+This is often used for:
 
-   > **Purpose:** Executes the physics update (step function) in the simulator.
+- Episode resets to a known state
+- State injection during training
+- Replaying trajectories
 
-   This is typically called after applying actions or updating the state. It may involve multiple substeps (based on decimation rate) and handles model-specific quirks.
+Internally this maps the unified `TensorState` back to simulator-specific structures (`qpos`, `qvel`, `ctrl`, etc.)
 
-   ------
+------
+
+3. `simulate()`
+
+> **Purpose:** Executes the physics update (step function) in the simulator.
+
+This is typically called after applying actions or updating the state. It may involve multiple substeps (based on decimation rate) and handles model-specific quirks.
+
+------

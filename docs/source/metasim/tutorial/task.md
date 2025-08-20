@@ -1,8 +1,18 @@
-### 4.Migrating a New Task into RoboVerse
+# Task System
 
-We support two ways to bring an external task into the RoboVerse Learn pipeline:
+## Architecture and Philosophy
 
-#### Approach 1: Direct Integration (Quick Migration)
+A **task** is a wrapper that contains gym APIs on top of a Handler. In our RoboVerse design philosophy, we put all simulation related contents into a scenario config and instantiated with a handler. All other contents on top of the simulation (reward, observation, etc.) are implemented with different layers wrappers.
+
+A task is instantiated with two parameters: **scenario** and **device**. The **scenario** is a scenario config that specifies the underlying simulated environment, and device is used to specify which device this scenario is instantiated on. In the initialization, the scenario will be instantiated into a handler.
+
+When defining your own task, you need to inherit from `BaseTaskEnv` and implement multiple methods including `_observation`, `_privileged_observation`, `_reward`, `_terminated`, `_time_out`, `_observation_space`, `_action_space`, `_extra_spec`. These methods are basic building blocks of a task with gym-style APIs.
+
+## Migrating a New Task into RoboVerse
+
+We encourage two ways to bring an external task into the RoboVerse Learn pipeline:
+
+### Approach 1: Direct Integration (Quick Migration)
 
 The fastest way to integrate a new task is to:
 
@@ -15,7 +25,7 @@ This transforms the original task into a RoboVerse-compatible format while prese
 
 **Cross-simulator support is now enabled for this task.**
 
-####  Approach 2: Structured Wrapper Integration
+###  Approach 2: Structured Wrapper Integration
 
 To enable better reuse and cross-task comparison:
 
