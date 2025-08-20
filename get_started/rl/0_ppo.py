@@ -24,7 +24,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 from metasim.task.rl_task import RLTaskEnv
 from metasim.utils.obs_utils import ObsSaver
 
@@ -33,7 +33,7 @@ from metasim.utils.obs_utils import ObsSaver
 class Args:
     """Arguments for training PPO."""
 
-    task: str = "reach_far"
+    task: str = "reach:origin"
     robot: str = "franka"
     num_envs: int = 128
     sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
@@ -171,8 +171,8 @@ def train_ppo():
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
     )
 
-    rl_env_inference = load_task(args.task, scenario_inference, device=device)
-    env_inference = VecEnvWrapper(rl_env_inference)
+    env_inference = task_cls(scenario_inference, device=device)
+    env_inference = VecEnvWrapper(env_inference)
 
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
 
@@ -181,14 +181,14 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = rl_env_inference.env.get_states()
+    obs_orin = env_inference.env.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(100):
         actions, _ = model.predict(obs, deterministic=True)
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
-        obs_orin = rl_env_inference.env.get_states()
+        obs_orin = env_inference.env.get_states()
         obs_saver.add(obs_orin)
 
     # obs_saver.save()

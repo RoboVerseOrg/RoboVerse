@@ -12,7 +12,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "sim": "mjx",
     "robots": ["h1"],
-    "task": "humanoid.crawl",
+    "task": "humanoid.run",
     "decimation": 10,
     "train_or_eval": "train",
     "headless": True,
@@ -124,7 +124,7 @@ from torch import optim
 from torch.amp import GradScaler, autocast
 
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 
 
 def main() -> None:
@@ -173,7 +173,7 @@ def main() -> None:
         robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
     )
     scenario.decimation = cfg("decimation", 1)
-    envs = load_task(cfg("task"), scenario, device=device)
+    envs = task_cls(scenario, device=device)
     eval_envs = envs
 
     # ---------------- derive shapes ------------------------------------
@@ -288,10 +288,10 @@ def main() -> None:
         video_path: str = cfg("video_path", "output/rollout.mp4")
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
 
-        robots = (cfg("robots"),)
-        simulator = (cfg("sim"),)
-        num_envs = (1,)
-        headless = (True,)
+        robots = cfg("robots")
+        simulator = cfg("sim")
+        num_envs = 1
+        headless = True
         cameras = (
             [
                 PinholeCameraCfg(
@@ -305,7 +305,7 @@ def main() -> None:
         scenario_render = scenario.update(
             robots=robots, simulator=simulator, num_envs=num_envs, headless=headless, cameras=cameras
         )
-        env = load_task(cfg("task"), scenario_render, device=device)
+        env = task_cls(scenario_render, device=device)
 
         obs_normalizer.eval()
         obs, info = env.reset()

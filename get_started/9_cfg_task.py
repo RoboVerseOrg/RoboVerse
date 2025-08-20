@@ -68,6 +68,8 @@ camera = (
 )
 
 env_id = f"RoboVerse/{args.task}"
+
+
 env = make_vec(
     env_id,
     num_envs=args.num_envs,
