@@ -108,7 +108,7 @@ from tqdm.rich import tqdm_rich as tqdm
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
 from metasim.utils.state import state_tensor_to_nested
@@ -292,7 +292,7 @@ def main():
     robot = get_robot(args.robot)
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = load_task(args.task, scenario, device=device)
+    env = task_cls(scenario, device=device)
     ## Data
     assert os.path.exists(env.traj_filepath), f"Trajectory file does not exist: {env.traj_filepath}"
     init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)

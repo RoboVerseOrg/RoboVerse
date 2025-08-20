@@ -25,7 +25,7 @@ from metasim.scenario.cameras import PinholeCameraCfg
 # from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.robot import RobotCfg
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.state import TensorState
@@ -163,7 +163,7 @@ def main():
     #     env = HybridSimHandler(env_physics, env_render)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = load_task(args.task, scenario, device=device)
+    env = task_cls(args.task, scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
     traj_filepath = env.traj_filepath

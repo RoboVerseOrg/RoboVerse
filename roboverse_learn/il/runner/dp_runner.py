@@ -334,7 +334,7 @@ class DPRunner(BaseRunner):
         )
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tic = time.time()
-        env = load_task(args.task, scenario, device=device)
+        env = task_cls(scenario, device=device)
 
         # task = get_task()()
         # task.episode_length = args.action_set_steps * args.max_step
