@@ -34,9 +34,10 @@ get_started/advanced/index
 <!--user_guide/cross_sim-->
 tutorial/architecture
 tutorial/state
+tutorial/config
 tutorial/handler
-tutorial/scenario
-tutorial/robot
+<!-- tutorial/scenario -->
+<!-- tutorial/robot -->
 tutorial/task
 tutorial/get_extras
 <!-- user_guide/collect_demo_tutorial -->

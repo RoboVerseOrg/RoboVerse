@@ -1,13 +1,12 @@
 
-# Scenario Config & Handler
+# Metasim Handlers
 
 ## Architecture and Philosophy
 
-A **scenario config** is a simulator-agnostic configuration class that defines a simulation. It contains defnitions for objects, robots, lightings, physics parameters and so on. All these definitions will be instantiated into a real simulation when passed to a handler.
-
 A **handler** is a basic class that transforms a scenario config into a simulated instance. We support multiple handler backends including `mujoco`, `mujoco-mjx`, `isaacgym`, `isaaclab`, `isaacsim`, `pybullet`, `genesis`, `sapien` and more.
 
-##  Handler Lifecycle
+
+## Handler Lifecycle
 
 Every handler follows a common lifecycle:
 
