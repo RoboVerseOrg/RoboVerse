@@ -7,6 +7,7 @@ from torchvision.utils import make_grid
 
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.utils.state import list_state_to_tensor
 
 
 class RLTaskEnv(BaseTaskEnv):
@@ -34,8 +35,8 @@ class RLTaskEnv(BaseTaskEnv):
         self.robot = scenario.robots[0]
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
-        self._initial_states = self._get_initial_states()
-
+        # convert list state to tensor state for reset acceleration
+        self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states())
         # first reset
         self.reset(env_ids=list(range(self.num_envs)))
 
@@ -130,9 +131,7 @@ class RLTaskEnv(BaseTaskEnv):
 
         real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
         self.handler.set_dof_targets(real_actions)
-        for _ in range(5):
-            self.handler.simulate()
-
+        self.handler.simulate()
         states = self.handler.get_states()
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
