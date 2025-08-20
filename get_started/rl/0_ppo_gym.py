@@ -23,7 +23,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
-from metasim.task.gym_registration import make_vec, register_all_tasks_with_gym
+from metasim.task.gym_registration import make_vec
 from metasim.utils.obs_utils import ObsSaver
 
 
@@ -132,9 +132,6 @@ def train_ppo():
     """Train PPO for reaching task using RLTaskEnv."""
 
     # Create scenario configuration
-
-    register_all_tasks_with_gym()
-
     env_id = f"RoboVerse/{args.task}"
     env = make_vec(
         env_id,

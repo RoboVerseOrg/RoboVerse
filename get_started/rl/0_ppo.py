@@ -33,7 +33,7 @@ from metasim.utils.obs_utils import ObsSaver
 class Args:
     """Arguments for training PPO."""
 
-    task: str = "reach:origin"
+    task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
     sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
