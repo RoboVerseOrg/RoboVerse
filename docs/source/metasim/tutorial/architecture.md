@@ -1,12 +1,17 @@
-# Achitecture Overview
-## Metasim Overview
+# RoboVerse Achitecture Overview
 
-**Metasim** is a standalone simulator layer designed to provide a unified interface to different underlying physics backends (e.g. MuJoCo, Isaac). It is simulator-agnostic, and only contains code and configuration necessary for simulating scenes and extracting structured state information.
+## Metasim
+
+### Design Philosophy
+
+We aim to build a unified framework for simulated environments. All static contents of a simulation (robots used, objects used, lightings, physics parameters) are defined inside of a configuration system we call **scenario config**. Such configs are then instantiated with **metasim handlers** with different backends (`mujoco`, `isaaclab`, etc.). Handlers are then wrapped in a `task wrapper` that provide gym-style APIs to users.
+
+**Metasim**, therefore, is a standalone layer designed to provide a unified interface to different underlying physics backends. It only contains code necessary for simulating scenes and extracting state.
 
 >  Its design principle:
 >
 > 1. **Metasim is a standalone simulation interface that supports multiple use cases.**
-> 2. **Configurations only describe static, simulator-related properties.**
+> 2. **Configurations only describe static, simulator-agnostic, simulation-related properties.**
 > 3. **New tasks should be easy to migrate or implement from scratch without modifying simulator logic.**
 
 ------
@@ -85,7 +90,7 @@ The **two most important folders** in Metasim are:
    - Build new tasks without touching simulator configs
 
 
-## RoboVerse Learn  Overview
+## RoboVerse Learn
 
 RoboVerse Learn consists of Task Wrappers and Learning Framework.
 Its goal is to present *one* standard interface that:
@@ -95,7 +100,7 @@ Its goal is to present *one* standard interface that:
 
 ---
 
-###  Design Principles
+###  Design Philosophy
 
 | #     | Principle                                | Key Points                                                   |
 | ----- | ---------------------------------------- | ------------------------------------------------------------ |
@@ -137,4 +142,3 @@ Its goal is to present *one* standard interface that:
 *Rule:* Simulator parameters → Handler; task‑coupled noise → Wrapper.
 
 ------
-
