@@ -1,101 +1,101 @@
-"""Task registry with lazy import.
-
-Rules
------
-1.  Task name *must* map directly to a module path:
-        "<base_pkg>.<task_name>"
-    e.g.  "humanoid.walk"  ->  "roboverse_pack.tasks.humanoid.walk"
-2.  Name lookup is case-insensitive. Duplicate names are disallowed.
-3.  After the first import the class stays cached in ``TASK_REGISTRY``.
-
-The file is ruff-compliant (E, F, D).
-"""
-
 from __future__ import annotations
 
+import pkgutil
 from importlib import import_module
-from typing import Final
 
 from loguru import logger as log
 
 from metasim.task.base import BaseTaskEnv
 
-TASK_REGISTRY: dict[str, type[BaseTaskEnv]] = {}
-
-_BASE_PKGS: Final[list[str]] = [
-    "metasim.example.example_pack.tasks",
-    "roboverse_pack.tasks",
-]
+# Global registry mapping lowercase names to task wrapper classes
+TASK_REGISTRY = {}
 
 
-def register_task(*names: str):
-    """Decorator: register a ``BaseTaskEnv`` subclass under one or more names."""
+def register_task(*names):
+    """Class decorator to register a task under one or more names.
+
+    Usage:
+        @register_task("humanoid.walk", "walk")
+        class WalkTask(...):
+            ...
+    """
     if not names:
-        raise ValueError("At least one name is required.")
+        raise ValueError("At least one name must be provided to register_task().")
 
-    def _wrap(cls: type[BaseTaskEnv]):
+    def _decorator(cls):
         if not issubclass(cls, BaseTaskEnv):
-            raise TypeError(f"{cls.__name__} is not a BaseTaskEnv")
-
-        for n in names:
-            key = n.strip().lower()
+            raise TypeError(f"Can only register subclasses of BaseTaskEnv, got: {cls!r}")
+        for raw_name in names:
+            key = raw_name.strip().lower()
             if not key:
-                raise ValueError("Task name cannot be empty.")
-            if (prev := TASK_REGISTRY.get(key)) and prev is not cls:
-                raise ValueError(f"Name '{key}' already used by {prev.__name__}")
+                raise ValueError("Task name cannot be empty or whitespace only.")
+            existing = TASK_REGISTRY.get(key)
+            if existing is not None and existing is not cls:
+                raise ValueError(f"Task name '{key}' is already registered to {existing.__name__}.")
             TASK_REGISTRY[key] = cls
         return cls
 
-    return _wrap
+    return _decorator
 
 
-def _try_import(name: str) -> None:
-    """Import ``<base_pkg>.<name>`` once.
+def _discover_task_modules() -> None:
+    """Import modules from known task packages so @register_task runs.
 
-    Task discovery relies on the *name = module suffix* convention.
-    If your task is ``humanoid.walk``, its module **must** live at
-    ``roboverse_pack.tasks.humanoid.walk`` (or the first matching base
-    package listed in ``_BASE_PKGS``).
+    Scans these packages (if available):
+      - metasim.example.example_pack.tasks
+      - roboverse_pack.tasks
 
-    Parameters
-    ----------
-    name :
-        Task name, case-insensitive. Dots are preserved.
 
-    Notes:
-    -----
-    * Stops at the first successful import.
-    * Logs a **warning** when a module is absent, and an **error** for any
-      other import failure.
+    Safe to call multiple times; import errors are ignored to avoid breaking
+    discovery due to one bad module.
     """
-    for base in _BASE_PKGS:
-        mod_path = f"{base}.{name}"
+    packages_to_scan = [
+        "metasim.example.example_pack.tasks",
+        "roboverse_pack.tasks",
+    ]
+
+    for pkg_name in packages_to_scan:
         try:
-            import_module(mod_path)
-            return  # success
-        except ModuleNotFoundError as exc:
-            log.warning(f"Module '{mod_path}' not found: {exc}")
+            # Import the root package
+            pkg = import_module(pkg_name)
+        except Exception as e:
+            log.error(f"Task discovery: failed to import package '{pkg_name}': {e}")
             continue
-        except Exception as exc:
-            log.error(f"Import error for '{mod_path}': {exc}")
+
+        try:
+            pkg_path = getattr(pkg, "__path__", None)
+            if pkg_path is None:
+                continue
+
+            # Scan and import all submodules
+            for _finder, module_name, _is_pkg in pkgutil.walk_packages(pkg_path, prefix=pkg.__name__ + "."):
+                try:
+                    import_module(module_name)
+                except Exception as e:
+                    log.error(f"Task discovery: failed to import module '{module_name}': {e}")
+        except Exception as e:
+            log.error(f"Task discovery: error scanning package '{pkg_name}': {e}")
 
 
 def get_task_class(name: str) -> type[BaseTaskEnv]:
-    """Return the task class; import lazily if needed."""
+    """Return the task wrapper class registered under the given name.
+
+    Name lookup is case-insensitive.
+    """
+    # ensure modules are imported so registry is populated
+    if not TASK_REGISTRY:
+        _discover_task_modules()
+
     key = name.strip().lower()
-
-    if (cls := TASK_REGISTRY.get(key)) is not None:
-        return cls
-
-    _try_import(key)
-
-    if (cls := TASK_REGISTRY.get(key)) is not None:
-        return cls
-
-    available = ", ".join(sorted(TASK_REGISTRY)) or "<none>"
-    raise KeyError(f"Unknown task '{name}'. Known: {available}")
+    try:
+        return TASK_REGISTRY[key]
+    except KeyError as exc:
+        available = ", ".join(sorted(TASK_REGISTRY.keys())) or "<none>"
+        raise KeyError(f"Unknown task '{name}'. Available tasks: {available}") from exc
 
 
-def list_tasks() -> list[str]:
-    """Return all registered task names (sorted)."""
-    return sorted(TASK_REGISTRY)
+def list_tasks():
+    """List all registered task names (sorted)."""
+    if not TASK_REGISTRY:
+        _discover_task_modules()
+    return sorted(TASK_REGISTRY.keys())
