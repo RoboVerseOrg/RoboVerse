@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from metasim.utils.configclass import configclass
+from metasim.utils.hf_util import FileDownloader
 from metasim.utils.setup_util import get_robot, get_scene
 
 from .cameras import BaseCameraCfg
@@ -74,6 +75,10 @@ class ScenarioCfg:
             self.scene = get_scene(self.scene)
 
         # FileDownloader(self).do_it()  # download any external assets
+
+    def check_assets(self):
+        """Check if all assets are available."""
+        FileDownloader(self).do_it()  # download any external assets
 
     def update(self, **kwargs):
         """Patch fields then rerun post-init."""
