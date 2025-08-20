@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
-from metasim.utils.hf_util import FileDownloader
+
+# from metasim.utils.hf_util import FileDownloader
 
 
 class BaseSimHandler(ABC):
@@ -19,7 +20,8 @@ class BaseSimHandler(ABC):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
         self.optional_queries = optional_queries
-        FileDownloader(scenario).do_it()  # download any external assets
+        scenario.check_assets()  # check if all assets are available
+        # FileDownloader(scenario).do_it()  # download any external assets
 
         ## For quick reference
         self.robots = scenario.robots
