@@ -1,144 +1,114 @@
-# RoboVerse Achitecture Overview
+# RoboVerse Project Architecture
 
-## Metasim
+## Overview
 
-### Design Philosophy
+RoboVerse is a unified framework for robotic simulation and learning. It spans from multi-simulator abstraction, task systems, and scenario management to reinforcement learning (RL) and imitation learning (IL) modules. The design goal is to provide a highly modular, reusable, and extensible ecosystem that allows researchers and developers to quickly build, migrate, and evaluate diverse robotic learning tasks.
 
-We aim to build a unified framework for simulated environments. All static contents of a simulation (robots used, objects used, lightings, physics parameters) are defined inside of a configuration system we call **scenario config**. Such configs are then instantiated with **metasim handlers** with different backends (`mujoco`, `isaaclab`, etc.). Handlers are then wrapped in a `task wrapper` that provide gym-style APIs to users.
+Project structure:
 
-**Metasim**, therefore, is a standalone layer designed to provide a unified interface to different underlying physics backends. It only contains code necessary for simulating scenes and extracting state.
-
->  Its design principle:
->
-> 1. **Metasim is a standalone simulation interface that supports multiple use cases.**
-> 2. **Configurations only describe static, simulator-agnostic, simulation-related properties.**
-> 3. **New tasks should be easy to migrate or implement from scratch without modifying simulator logic.**
-
-------
-
-###  Directory Structure
-
-Inside the `metasim/` folder:
-
-| Folder/File               | Description                                                  |
-| ------------------------- | ------------------------------------------------------------ |
-| `cfg/`                    | Contains static py configs that define simulation-related properties — such as robot models, scenes, objects, and task setups. |
-| `sim/`                    | Simulator-specific **handlers**. Each simulator has a handler that defines how to set, step, and get state. |
-| `scripts/`                | Includes runnable tools that operate within Metasim  — e.g. trajectory replay, asset conversion. |
-| `test/`                   | Contains consistency tests for handler behavior debug. In particular, it ensures information does not change after using `get_state()` and `set_state()` |
-| `utils/`                  | Shared utility functions that Metasim uses internally        |
-| `constants.py / types.py` | Global definitions for enums and shared constants used throughout the metasim system. |
-
-
-
-------
-
-###  Core Components
-
-The **two most important folders** in Metasim are:
-
-1. #### sim folder — Simulator Adapters
-
-   The `sim/` module defines simulation-specific handlers that bridge between low-level simulators (like MuJoCo, IsaacGym) and RoboVerse’s unified task interface.
-
-   Each simulator implements a handler class (e.g., `MJXHandler`, `IsaacHandler`) by inheriting from `BaseSimHandler`. These handlers are responsible for loading assets, stepping physics, setting/resetting environment state, and extracting structured state for upper layers.
-
-   ------
-
-
-
-2. #### cfg folder — Simulator Configuration
-
-   ##### What Belongs in Config
-
-   Each config file under `cfg/` specifies *only* information required to build and launch the simulation. This includes:
-
-   | Key Section  | Purpose                                                      |
-   | ------------ | ------------------------------------------------------------ |
-   | `robots`     | List of robot instances, including model path (e.g. MJCF or URDF), initial pose, joint limits, etc. |
-   | `objects`    | Static or dynamic scene objects, such as tables, cubes, buttons. Each has position, type, and optional fixations. |
-   | `lights`     | Light source settings for visual fidelity or vision-based tasks (e.g. color, direction, intensity). |
-   | `cameras`    | Camera positions and intrinsics, e.g., for RGB, depth, or offscreen rendering. |
-   | `scene`      | Ground plane, friction, or other high-level environment descriptors. |
-   | `sim_params` | Physics timestep, solver config, gravity toggle, etc.        |
-
-   ------
-
-   #####  What Does Not Belong in Config
-
-   To keep `cfg/` clean and portable across tasks and RL settings, the following things are **explicitly excluded**:
-
-   - Reward functions
-   - Observation definitions
-   - Success checkers
-   - Task-level logic or termination conditions
-   - Algorithm-specific parameters (policy type, optimizer, etc.)
-
-   > These should all live in upper-level wrappers in Roboverse_learn
-
-   ------
-
-   #####  Integration with ScenarioCfg
-
-   Every handler is initialized with a `ScenarioCfg` object parsed from these configs.
-    The `ScenarioCfg` aggregates all static config elements (robot, objects, lights, etc.), and passes them to the simulation backend during launch.
-
-   This decoupling ensures that you can:
-
-   - Reuse one config across multiple RL tasks
-   - Load the same config for visualization, trajectory replay, or debugging
-   - Build new tasks without touching simulator configs
-
-
-## RoboVerse Learn
-
-RoboVerse Learn consists of Task Wrappers and Learning Framework.
-Its goal is to present *one* standard interface that:
-
-* Lets any algorithm (PPO, SAC, BC, etc.) work with any task
-* Hides simulator & task differences, so you can swap tasks, simulators or algorithms with minimal friction
+```
+RoboVerse/
+├── metasim/                    # Core simulation framework
+│   ├── sim/                    # Simulator abstraction layer
+│   ├── task/                   # Task system
+│   ├── scenario/               # Scenario management
+│   ├── utils/                  # Utility library
+│   ├── queries/                # Query system
+│   ├── example/                # Example code
+│   └── tests/                  # Test code
+│
+├── roboverse_learn/            # Machine learning module
+│   ├── il/                     # Imitation learning
+│   └── rl/                     # Reinforcement learning
+│
+├── roboverse_pack/             # Pre-configured packages
+│   ├── robots/                 # Robot configurations
+│   ├── scenes/                 # Scene configurations
+│   └── tasks/                  # Task configurations
+│
+├── get_started/                # Quick start examples
+│   ├── motion_planning/        # Motion planning examples
+│   ├── rl/                     # RL examples
+│   └── dexhands/               # Dexterous hands examples
+│
+└── scripts/                    # Utility scripts
+    ├── conversion/             # Format conversion
+    ├── advanced/               # Advanced features
+    ├── statistics/             # Data statistics
+    └── mesh_tools/             # Mesh processing tools
+```
 
 ---
 
-###  Design Philosophy
+## Module Description
 
-| #     | Principle                                | Key Points                                                   |
-| ----- | ---------------------------------------- | ------------------------------------------------------------ |
-| **1** | **Standardised Wrapper API**             | • `TaskWrapper` exposes `step / reset / _reward / _observation / _success`.<br>• Once an algorithm is connected to a single `TaskWrapper`, it can seamlessly switch to any other task simply by replacing the wrapper.<br/>• Upper‑level algorithms need not care whether the backend is MuJoCo, Isaac, etc. |
-| **2** | **Minimise Task‑Migration Cost**         | • Add a task: just subclass / compose a wrapper.<br>• Switch simulator: wrappers/algorithms stay unchanged.<br>• Directory layout, Configs management（except the sim-related part）, training scripts all stay the same. |
-| **3** | **Reusable Reward & Checker Primitives** | • Tasks build complex logic by *composing* primitives → no copy‑paste across tasks. |
+### 1. **metasim - Core Simulation Framework**
+
+Metasim is the core layer of RoboVerse, responsible for providing unified abstractions across different simulators and managing simulation states. Its goal is to shield upper layers from simulator-specific differences and expose a consistent state interface.
+
+* **sim/**: Provides a unified abstraction layer for 11 simulators. Each simulator defines a handler (e.g., `MJXHandler`, `IsaacHandler`) that inherits from `BaseSimHandler` and is responsible for:
+
+  * Loading assets
+  * Physics stepping
+  * Setting/resetting environment states
+  * Extracting structured states for upper layers
+
+* **task/**: Defines standardized task interfaces, enabling quick migration and extension of tasks.
+
+* **scenario/**: Scenario configuration and management. These provide the complete set of static information required by a handler for initialization and launch, including robots, scenes, cameras, and lighting.
+
+* **utils/**: Utility library covering cameras, kinematics, teleoperation, and more.
+
+* **queries/**: Unified query interface for accessing simulation states and environment information.
+
+* **example/**: Example and tutorial code.
+
+* **tests/**: Unit and integration tests ensuring system stability.
 
 ---
 
-### 1. Module Composition
+### 2. **roboverse\_learn - Machine Learning Module**
 
-| Sub‑module              | Responsibilities                                             |
-| ----------------------- | ------------------------------------------------------------ |
-| **Task Wrapper**        | • Combines a `Handler` & exposes `step / reset`.<br>• Assembles Reward / Observation / Success .<br>• Provides `pre_sim_step` & `post_sim_step` callbacks for *task‑level* DR. |
-| **Handler (Metasim)**   | • `set_state / get_state / get_extras` unified across engines.<br>• *Physics‑level* DR (`pre_sim_step`).<br>• Pure simulator adapter—no algorithm logic. |
-| **Learning Framework**  | • Any RL / IL algorithm.<br>• No simulator knowledge.        |
-| **Custom Util Wrapper** | • Provide lightweight extensions (e.g., NumPy-to-Torch conversion, first-frame caching) to support logging, preprocessing, or offline data collection without modifying core task logic. |
+RoboVerse Learn focuses on implementing and integrating learning algorithms:
+
+* **il/**: Imitation learning algorithms.
+* **rl/**: Reinforcement learning algorithms.
+
+This module provides **adapters for third-party algorithms**, as well as **in-house implementations**, and comes with **standardized training scripts**. All algorithms interact with **Metasim Tasks** via a unified interface, enabling plug-and-play learning workflows.
 
 ---
 
-### 2. Interface List
+### 3. **roboverse\_pack - Preconfigured Packages**
 
-| Method                        | Purpose                                                      |
-| ----------------------------- | ------------------------------------------------------------ |
-| `step(action)`                | Runs one simulation step: calls `pre_sim_step`, then `handler.simulate()`, then `post_sim_step`; returns `(obs, reward, done, info)` |
-| `reset()`                     | Resets the environment and applies `reset_callback`, returns initial observation |
-| `pre_sim_step()`              | (Optional) Hook for task-level domain randomization before simulation |
-| `post_sim_step()`             | (Optional) Hook for post-processing (e.g., observation noise) |
-| `get_state()` / `set_state()` | Unified simulator-agnostic state interface using `TensorState` |
-| `get_extras(spec)`            | Returns task-specific quantities (e.g., site poses, contact forces) via query descriptors |
+* **robots/**: Predefined robot models.
+* **scenes/**: Standardized simulation scenes.
+* **tasks/**: Predefined task environments.
 
-### 3. Domain Randomisation Layers
+---
 
-| Layer             | Location                      | Examples                                             |
-| ----------------- | ----------------------------- | ---------------------------------------------------- |
-| **Physics‑level** | `Handler`                     | Friction, mass, light, material                      |
-| **Task‑level**    | `Wrapper.pre/post_sim_step()` | Action noise, observation noise, initial‑pose jitter |
+### 4. **get\_started - Quick Start**
 
-*Rule:* Simulator parameters → Handler; task‑coupled noise → Wrapper.
+* **motion\_planning/**: Motion planning examples.
+* **rl/**: Reinforcement learning examples.
+* **dexhands/**: Dexterous hand control examples.
 
-------
+---
+
+### 5. **scripts - Utility Scripts**
+
+* **conversion/**: File and format conversion utilities.
+* **advanced/**: Advanced features and extension scripts.
+* **statistics/**: Data collection and statistical analysis tools.
+* **mesh\_tools/**: 3D mesh processing tools.
+
+---
+
+## Summary
+
+The RoboVerse architecture emphasizes modularity and decoupling:
+
+* **Metasim**: Unified simulation interface and scenario management.
+* **RoboVerse Learn**: Algorithm adapters, implementations, and standardized training scripts.
+* **RoboVerse Pack**: Out-of-the-box robot, scene, and task configurations.
+* **Get Started**: Quick-start examples for fast adoption.
+* **Scripts**: Supporting utilities and advanced tools.
