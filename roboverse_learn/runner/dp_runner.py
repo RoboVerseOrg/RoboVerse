@@ -6,6 +6,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Literal
+from omegaconf import OmegaConf
 
 import hydra
 import imageio.v2 as iio
@@ -16,13 +17,11 @@ import tyro
 import wandb
 from diffusion_policy.model.diffusion.ema_model import EMAModel
 from loguru import logger as log
-from metasim.cfg.randomization import RandomizationCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.cfg.sensors.cameras import PinholeCameraCfg
+from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
-from omegaconf import OmegaConf
+from metasim.utils.setup_util import get_robot
 from roboverse_learn.base.base_eval_runner import BaseEvalRunner
 from roboverse_learn.base.base_runner import BaseRunner
 from roboverse_learn.utils.common.eval_args import Args
@@ -33,7 +32,7 @@ from roboverse_learn.utils.common.pytorch_util import dict_apply, optimizer_to
 from torch.utils.data import DataLoader
 
 
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 
 
 class DPRunner(BaseRunner):

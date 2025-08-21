@@ -38,7 +38,7 @@ franka_joint_limits = [
 
 
 def get_available_tasks():
-    from metasim.scenario import tasks
+    from metasim.scenario.scenario import tasks
 
     tasks = [task for task_name, task in vars(tasks).items() if task_name.endswith("Cfg")]
 

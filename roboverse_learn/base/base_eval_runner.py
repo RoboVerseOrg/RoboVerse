@@ -1,4 +1,4 @@
-from metasim.cfg.policy.base_policy import BasePolicyCfg
+from roboverse_learn.runner.base_policy import BasePolicyCfg
 
 try:
     from curobo.types.math import Pose
