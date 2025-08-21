@@ -1,4 +1,4 @@
-"""Domain Randomization Demo for MetaSim."""
+"""Domain Randomization Example for MetaSim."""
 
 from __future__ import annotations
 from metasim.utils import configclass
@@ -8,7 +8,6 @@ from typing import Literal
 import torch
 from loguru import logger as log
 from metasim.constants import PhysicStateType, SimType
-from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_handler_class
@@ -109,7 +108,7 @@ def randomize_body_friction(
     handler.set_body_friction(obj_name, new_friction, body_name, env_ids)
 
 
-def demo_domain_randomization(args):
+def run_domain_randomization(args):
     """Demonstrate domain randomization with specified simulator."""
     log.info(f"=== {args.simulator.upper()} Domain Randomization Demo ===")
 
@@ -135,14 +134,6 @@ def demo_domain_randomization(args):
             color=[0.0, 0.0, 1.0],
             physics=PhysicStateType.RIGIDBODY,
         ),
-        RigidObjCfg(
-            name="bbq_sauce",
-            scale=(2, 2, 2),
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="metasim/example/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-            urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        ),
         ArticulationObjCfg(
             name="box_base",
             fix_base_link=True,
@@ -166,10 +157,6 @@ def demo_domain_randomization(args):
                 },
                 "sphere": {
                     "pos": torch.tensor([0.4, -0.6, 0.05]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "bbq_sauce": {
-                    "pos": torch.tensor([0.7, -0.3, 0.14]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 "box_base": {
@@ -219,9 +206,6 @@ def demo_domain_randomization(args):
     sphere_mass = env.get_body_mass("sphere")
     log.info(f"Sphere mass: {sphere_mass.cpu().numpy().round(3)} kg")
 
-    # Get bbq_sauce mass
-    bbq_mass = env.get_body_mass("bbq_sauce")
-    log.info(f"BBQ Sauce mass: {bbq_mass.cpu().numpy().round(3)} kg")
 
     # Get friction values
     robot_friction = env.get_body_friction("franka")
@@ -238,7 +222,6 @@ def demo_domain_randomization(args):
     initial_values = {
         "cube_mass": cube_mass.clone(),
         "sphere_mass": sphere_mass.clone(),
-        "bbq_mass": bbq_mass.clone(),
         "robot_friction": robot_friction.clone(),
         "cube_friction": cube_friction.clone(),
         "sphere_friction": sphere_friction.clone(),
@@ -293,13 +276,6 @@ def demo_domain_randomization(args):
     log.info(f"  Before: {initial_values['sphere_mass'].cpu().numpy().round(3)} kg")
     log.info(f"  After:  {randomized_sphere_mass.cpu().numpy().round(3)} kg")
 
-    # Randomize bbq_sauce mass with scale operation
-    log.info("Randomizing BBQ sauce mass (uniform, 0.8-1.2x scale)...")
-    randomize_body_mass(env, "bbq_sauce", mass_range=(0.8, 1.2), operation="scale", distribution="uniform")
-    randomized_bbq_mass = env.get_body_mass("bbq_sauce")
-    log.info(f"  Before: {initial_values['bbq_mass'].cpu().numpy().round(3)} kg")
-    log.info(f"  After:  {randomized_bbq_mass.cpu().numpy().round(3)} kg")
-
     # Summary table
     log.info("\n" + "=" * 80)
     log.info("RANDOMIZATION SUMMARY")
@@ -312,21 +288,16 @@ def demo_domain_randomization(args):
     cube_after_str = f"{randomized_cube_mass.cpu().numpy().round(3)}"
     sphere_before_str = f"{initial_values['sphere_mass'].cpu().numpy().round(3)}"
     sphere_after_str = f"{randomized_sphere_mass.cpu().numpy().round(3)}"
-    bbq_before_str = f"{initial_values['bbq_mass'].cpu().numpy().round(3)}"
-    bbq_after_str = f"{randomized_bbq_mass.cpu().numpy().round(3)}"
     robot_before_str = f"{initial_values['robot_friction'][0].cpu().numpy().round(3)}"
     robot_after_str = f"{randomized_robot_friction[0].cpu().numpy().round(3)}"
 
     log.info(f"{'Cube':<15} {'Mass':<10} {cube_before_str:<20} {cube_after_str:<20} {'Uniform':<10}")
     log.info(f"{'Sphere':<15} {'Mass':<10} {sphere_before_str:<20} {sphere_after_str:<20} {'Gaussian':<10}")
-    log.info(f"{'BBQ Sauce':<15} {'Mass':<10} {bbq_before_str:<20} {bbq_after_str:<20} {'Scale':<10}")
     log.info(f"{'Robot':<15} {'Friction':<10} {robot_before_str:<20} {robot_after_str:<20} {'Log-Uniform':<10}")
 
-    # Run simulation for a few steps to see the effects
-    for step in range(50):
+    # Run simulation for a few steps
+    for _ in range(50):
         env.simulate()
-        if step % 10 == 0:
-            log.info(f"  Step {step:2d}/50")
 
     env.close()
 
@@ -353,7 +324,7 @@ def main():
     """Main function to run the domain randomization demo."""
     log.info("Starting Domain Randomization Demo")
     # Run IsaacSim demo
-    demo_domain_randomization(args)
+    run_domain_randomization(args)
     log.info("\nDemo completed! Check the logs above for detailed results.")
 
 
