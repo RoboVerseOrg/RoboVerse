@@ -1,45 +1,172 @@
-# Task System
+# Task System Documentation
 
-## Architecture and Philosophy
+## 1.Architecture and Philosophy
 
-A **task** is a wrapper that contains gym APIs on top of a Handler. In our RoboVerse design philosophy, we put all simulation related contents into a scenario config and instantiated with a handler. All other contents on top of the simulation (reward, observation, etc.) are implemented with different layers wrappers.
+In RoboVerse, a **task** is a wrapper built on top of a Handler and exposes **Gym-style APIs** (`step`, `reset`, etc.).
 
-A task is instantiated with two parameters: **scenario** and **device**. The **scenario** is a scenario config that specifies the underlying simulated environment, and device is used to specify which device this scenario is instantiated on. In the initialization, the scenario will be instantiated into a handler.
+* **Simulation contents** (robots, objects, scene, physics params) live in a `ScenarioCfg` and are instantiated by a Handler.
+* **Task logic** (reward, observation, termination, etc.) is layered on top via wrappers.
+* This enforces clean separation between simulation, task, and algorithm.
 
-When defining your own task, you need to inherit from `BaseTaskEnv` and implement multiple methods including `_observation`, `_privileged_observation`, `_reward`, `_terminated`, `_time_out`, `_observation_space`, `_action_space`, `_extra_spec`. These methods are basic building blocks of a task with gym-style APIs.
+A task is created with:
 
-## Migrating a New Task into RoboVerse
+* **scenario**: a `ScenarioCfg` describing the simulation.
+* **device**: execution device (e.g., CPU/GPU).
 
-We encourage two ways to bring an external task into the RoboVerse Learn pipeline:
+When defining a new task, inherit from `BaseTaskEnv` and implement methods like `_observation`, `_reward`, `_terminated`, `_time_out`, `_observation_space`, `_action_space`, and `_extra_spec`.
 
-### Approach 1: Direct Integration (Quick Migration)
+Tasks are managed by a **registry system**, where each task is bound to a unique string ID (e.g., `"example.my_task"`). This design provides:
 
-The fastest way to integrate a new task is to:
+* **One-click switching**: run a different task by simply changing a string in configs or CLI args.
+* **Unified interface**: all tasks share the same API, regardless of simulator or logic.
+---
 
-1. **Copy the task codebase** (from an external repo) into `roboversa_learn/`
-2. Replace any simulator-specific API calls with `Handler` equivalents
-3. Convert raw observations into RoboVerse `TensorState` via `get_state()`
-4. Move simulator-related config (e.g. robot model path, asset layout, `dt`, `decimation`, `n_substeps`) into `ScenarioCfg` and Metasim config files
+## 2. Task Instantiation Workflow
 
-This transforms the original task into a RoboVerse-compatible format while preserving its logic and structure.
+Typical instantiation of a task for training looks like:
 
-**Cross-simulator support is now enabled for this task.**
+```python
+"""Train PPO for reaching task using RLTaskEnv."""
+task_cls = get_task_class(args.task)
 
-###  Approach 2: Structured Wrapper Integration
+# Get default scenario from task class and update with overrides
+scenario = task_cls.scenario.update(
+    robots=[args.robot],
+    simulator=args.sim,
+    num_envs=args.num_envs,
+    headless=args.headless,
+    cameras=[],
+)
 
-To enable better reuse and cross-task comparison:
+# Create RLTaskEnv via registry
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+env = task_cls(scenario=scenario)
 
-1. **Subclass `BaseTaskWrapper`**
-2. Implement standardized interfaces: `_reward()`, `_observation()`, `_terminated()`
-3. Use callbacks (`pre_sim_step`, `post_sim_step`, `reset_callback`) as needed
-4. Leverage existing `Handler` and `ScenarioCfg` setup from Approach 1
+# Wrap with VecEnv for SB3
+```
 
-This approach supports full compatibility with:
+**Key points:**
 
-- **Multi-task learning benchmarks**
-- **One-click algorithm switching**
-- **Clean architectural separation between task, sim, and learning logic**
+* `get_task_class(name)` fetches the task class by string identifier from registry.
+* Each task class provides a **default scenario config** (`task_cls.scenario`) with standard robot, object, and asset definitions.
+* Users can **update** this config (simulator choice, camera list, env count, etc.) via `scenario.update()`.
+* The updated `ScenarioCfg` is then passed into the task class to instantiate a working environment.
 
-------
+This workflow ensures tasks are:
 
->  With either approach, you can quickly benchmark new tasks under different simulators or algorithms — with no boilerplate or duplicate integration.
+* **Customizable** (override any part of the scenario at runtime).
+* **Consistent** (task class always defines a sane default).
+* **Simulator‑agnostic** (only the Handler changes underneath).
+
+---
+
+
+## 3. Task Instantiation Workflow
+
+### 3.1 Via Task Registry
+
+```python
+"""Train PPO for a reaching task using RLTaskEnv."""
+from roboverse_learn.registry import get_task_class
+
+task_cls = get_task_class(args.task)  # e.g., "example.my_task"
+
+# Start from the class-provided default scenario and override as needed
+scenario = task_cls.scenario.update(
+    robots=[args.robot],
+    simulator=args.sim,
+    num_envs=args.num_envs,
+    headless=args.headless,
+    cameras=[],
+)
+
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+rl_env = task_cls(scenario=scenario)
+```
+
+### 3.2 Via `make_vec`
+
+`make_vec` provides a standardized helper that wraps task instantiation in a **Gym‑compatible API**. It is the recommended entry point for creating environments.
+
+```python
+from metasim.task.gym_registration import make_vec
+
+env = make_vec(
+    env_id,                      # e.g., "example.my_task"
+    num_envs=args.num_envs,
+    robots=[args.robot],
+    simulator=args.sim,
+    headless=args.headless,
+    cameras=[camera] if args.save_video else [],
+    device=args.device,
+)
+```
+
+**Key points:**
+
+* Each task class provides a **default scenario** (`task_cls.scenario`) with standard robots/objects/assets.
+* Use `scenario.update(...)` to override simulator, cameras, env count, etc.
+* The final `ScenarioCfg` is passed into the task class or wrapped via `make_vec` for Gym API compatibility.
+
+---
+
+## 4. Task Registration & Auto‑Import
+
+### 4.1 Auto‑import paths
+
+Task modules under the following directories are **auto‑imported and registered** at runtime:
+
+* `metasim/example/example_pack/tasks`
+* `roboverse_pack/tasks`
+
+> For new project tasks, place modules under **`roboverse_pack/tasks`**.
+
+### 4.2 How to register a task
+
+```python
+from metasim.task.base import BaseTaskEnv
+from metasim.task.gym_registration import register_task
+from metasim.scenario.scenario import ScenarioCfg
+
+@register_task("example.my_task")
+class MyExampleTask(BaseTaskEnv):
+    scenario = ScenarioCfg(robots=["franka"], simulator="mujoco", cameras=[])
+    def _observation(self, state): ...
+    def _privileged_observation(self, state): ...
+    def _reward(self, state, action, next_state=None): ...
+    def _terminated(self, state): ...
+    def _time_out(self, step_count): ...
+    def _observation_space(self): ...
+    def _action_space(self): ...
+    def _extra_spec(self): ...
+    def step(self,actions): ...
+    def reset(self,states,env_ids): ...
+```
+
+---
+
+## 5. Migration New Task
+
+### 5.1 Direct Integration (Quick)
+
+1. Copy external task code into `roboverse_learn/`.
+2. Replace simulator‑specific APIs with `Handler` equivalents.
+3. Convert observations to `TensorState` via `get_state()`.
+4. Move sim details (assets, timestep, decimation) into `ScenarioCfg`.
+
+### 5.2 Structured Wrapper Integration
+
+1. Subclass `BaseTaskWrapper`.
+2. Implement `_reward()`, `_observation()`, `_terminated()`.
+3. Use hooks `pre_sim_step`, `post_sim_step`, `reset_callback`.
+4. Reuse `Handler` + `ScenarioCfg` separation.
+
+---
+
+## 6. Summary
+
+* Tasks = **glue layer** between `ScenarioCfg/Handler` (simulation) and learning algorithms
+* Registry system (`get_task_class`) makes tasks discoverable by string names.
+* Default `ScenarioCfg` in each task class ensures reproducibility and easy overrides.
+* Two migration methods (Quick vs. Structured) cover integration.
