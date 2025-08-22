@@ -67,7 +67,7 @@ Metasim is the core layer of RoboVerse, responsible for providing unified abstra
 
 ---
 
-### 2. **roboverse\_learn - Machine Learning Module**
+### 2. **roboverse_learn - Machine Learning Module**
 
 RoboVerse Learn focuses on implementing and integrating learning algorithms:
 
@@ -78,7 +78,7 @@ This module provides **adapters for third-party algorithms**, as well as **in-ho
 
 ---
 
-### 3. **roboverse\_pack - Preconfigured Packages**
+### 3. **roboverse_pack - Preconfigured Packages**
 
 * **robots/**: Predefined robot models.
 * **scenes/**: Standardized simulation scenes.
@@ -86,9 +86,9 @@ This module provides **adapters for third-party algorithms**, as well as **in-ho
 
 ---
 
-### 4. **get\_started - Quick Start**
+### 4. **get_started - Quick Start**
 
-* **motion\_planning/**: Motion planning examples.
+* **motion_planning/**: Motion planning examples.
 * **rl/**: Reinforcement learning examples.
 * **dexhands/**: Dexterous hand control examples.
 
@@ -99,7 +99,7 @@ This module provides **adapters for third-party algorithms**, as well as **in-ho
 * **conversion/**: File and format conversion utilities.
 * **advanced/**: Advanced features and extension scripts.
 * **statistics/**: Data collection and statistical analysis tools.
-* **mesh\_tools/**: 3D mesh processing tools.
+* **mesh_tools/**: 3D mesh processing tools.
 
 ---
 
