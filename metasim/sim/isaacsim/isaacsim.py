@@ -72,7 +72,7 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
         sim_config: SimulationCfg = SimulationCfg(
-            device="cuda:0",
+            device=args.device,
             render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
@@ -872,3 +872,163 @@ class IsaacsimHandler(BaseSimHandler):
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
         self.sim.render()
+
+    def _get_body_mass(
+        self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None
+    ) -> torch.Tensor:
+        """
+        Get the mass of a specific body or all bodies of an object.
+
+        Args:
+            obj_name (str): Name of the object/robot
+            body_name (str, optional): Name of the specific body. If None, returns mass of all bodies
+            env_ids (list[int], optional): List of environment ids. If None, returns for all environments
+
+        Returns:
+            torch.Tensor: Mass values with shape (num_envs, num_bodies) or (num_envs,) if body_name is specified
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        if obj_name in self.scene.articulations:
+            obj_inst = self.scene.articulations[obj_name]
+            masses = obj_inst.root_physx_view.get_masses()
+
+            if body_name is not None:
+                # Get specific body mass
+                body_names = self._get_body_names(obj_name)
+                if body_name not in body_names:
+                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
+                body_idx = body_names.index(body_name)
+                return masses[env_ids, body_idx]
+            else:
+                # Get all body masses
+                return masses[env_ids, :]
+        elif obj_name in self.scene.rigid_objects:
+            obj_inst = self.scene.rigid_objects[obj_name]
+            masses = obj_inst.root_physx_view.get_masses()
+            return masses[env_ids]
+        else:
+            raise ValueError(f"Object {obj_name} not found")
+
+    def _set_body_mass(
+        self, obj_name: str, mass: torch.Tensor, body_name: str | None = None,  env_ids: list[int] | None = None, 
+    device:str="cpu") -> None:
+        """
+        Set the mass of a specific body or all bodies of an object.
+
+        Args:
+            obj_name (str): Name of the object/robot
+            mass (torch.Tensor): Mass values to set
+            body_name (str, optional): Name of the specific body. If None, sets mass for all bodies
+            env_ids (list[int], optional): List of environment ids. If None, sets for all environments
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        if obj_name in self.scene.articulations:
+            obj_inst = self.scene.articulations[obj_name]
+            masses = obj_inst.root_physx_view.get_masses()
+
+            if body_name is not None:
+                # Set specific body mass
+                body_names = self._get_body_names(obj_name)
+                if body_name not in body_names:
+                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
+                body_idx = body_names.index(body_name)
+                masses[env_ids, body_idx] = mass.to(device)
+            else:
+                # Set all body masses
+                masses[env_ids, :] = mass.to(device)
+
+            obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids, device=device))
+        elif obj_name in self.scene.rigid_objects:
+            obj_inst = self.scene.rigid_objects[obj_name]
+            # TODO: check why obj_inst is cpu
+            masses = obj_inst.root_physx_view.get_masses()
+            masses[env_ids] = mass.to(masses.device)
+            obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids, device=device))
+        else:
+            raise ValueError(f"Object {obj_name} not found")
+
+    def get_body_friction(
+        self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None
+    ) -> torch.Tensor:
+        """
+        Get the friction coefficient of a specific body or all bodies of an object.
+
+        Args:
+            obj_name (str): Name of the object/robot
+            body_name (str, optional): Name of the specific body. If None, returns friction of all bodies
+            env_ids (list[int], optional): List of environment ids. If None, returns for all environments
+
+        Returns:
+            torch.Tensor: Friction values with shape (num_envs, num_bodies) or (num_envs,) if body_name is specified
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        if obj_name in self.scene.articulations:
+            obj_inst = self.scene.articulations[obj_name]
+            materials = obj_inst.root_physx_view.get_material_properties()
+            friction = materials[..., 0]  # First component is static friction
+
+            if body_name is not None:
+                # Get specific body friction
+                body_names = self._get_body_names(obj_name)
+                if body_name not in body_names:
+                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
+                body_idx = body_names.index(body_name)
+                return friction[env_ids, body_idx]
+            else:
+                # Get all body friction
+                return friction[env_ids, :]
+        elif obj_name in self.scene.rigid_objects:
+            obj_inst = self.scene.rigid_objects[obj_name]
+            materials = obj_inst.root_physx_view.get_material_properties()
+            friction = materials[..., 0]  # First component is static friction
+            return friction[env_ids]
+        else:
+            raise ValueError(f"Object {obj_name} not found")
+
+    def _set_body_friction(
+        self, obj_name: str, friction: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None, device:str="cpu"
+    ) -> None:
+        """
+        Set the friction coefficient of a specific body or all bodies of an object.
+
+        Args:
+            obj_name (str): Name of the object/robot
+            friction (torch.Tensor): Friction values to set
+            body_name (str, optional): Name of the specific body. If None, sets friction for all bodies
+            env_ids (list[int], optional): List of environment ids. If None, sets for all environments
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        if obj_name in self.scene.articulations:
+            obj_inst = self.scene.articulations[obj_name]
+            materials = obj_inst.root_physx_view.get_material_properties()
+
+            if body_name is not None:
+                # Set specific body friction
+                body_names = self._get_body_names(obj_name)
+                if body_name not in body_names:
+                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
+                body_idx = body_names.index(body_name)
+                materials[env_ids, body_idx, 0] = friction.to(device)  # Static friction
+                materials[env_ids, body_idx, 1] = friction.to(device)  # Dynamic friction
+            else:
+                # Set all body friction
+                materials[env_ids, :, 0] = friction.to(device)  # Static friction
+                materials[env_ids, :, 1] = friction.to(device)  # Dynamic friction
+
+            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids, device=device))
+        elif obj_name in self.scene.rigid_objects:
+            obj_inst = self.scene.rigid_objects[obj_name]
+            materials = obj_inst.root_physx_view.get_material_properties()
+            materials[env_ids, 0] = friction.to(device)  # Static friction
+            materials[env_ids, 1] = friction.to(device)  # Dynamic friction
+            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids, device=device))
+        else:
+            raise ValueError(f"Object {obj_name} not found")
