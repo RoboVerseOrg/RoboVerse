@@ -26,8 +26,6 @@ class BaseQueryType:
         For different simulation handlers, the queries may be given other optional arguments.
         You can also pass locals() to bind_handler() to access local variables in the handler.
         """
-        if handler.__class__ not in self.supported_handlers:
-            raise ValueError(f"Handler {handler.__class__.__name__} not supported for query {self.__class__.__name__}")
         self.handler = handler
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
