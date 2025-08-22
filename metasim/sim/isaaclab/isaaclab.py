@@ -171,6 +171,28 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
+
+    def set_dof_targets(self, actions):
+        self._actions_cache = actions
+
+        if isinstance(actions, torch.Tensor):
+            action_tensor_all = actions
+        else:
+            action_tensors = []
+            for robot in self.robots:
+                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
+                for env_id in range(self.num_envs):
+                    for i, actuator_name in enumerate(actuator_names):
+                        action_tensor[env_id, i] = torch.tensor(
+                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.env.device
+                        )
+                action_tensors.append(action_tensor)
+            action_tensor_all = torch.cat(action_tensors, dim=-1)
+
+        _, _, _, time_out, extras = self.env.step(action_tensor_all)
+        
+    
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[DictEnvState]]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
