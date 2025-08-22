@@ -352,7 +352,7 @@ class IsaacsimHandler(BaseSimHandler):
         cfg = ArticulationCfg(
             spawn=sim_utils.UsdFileCfg(
                 usd_path=robot.usd_path,
-                activate_contact_sensors=True,  # TODO: only activate when contact sensor is added
+                activate_contact_sensors=True, 
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(),
                 articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=robot.fix_base_link),
             ),
@@ -541,7 +541,7 @@ class IsaacsimHandler(BaseSimHandler):
     def _load_sensors(self) -> None:
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
         contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
-            prim_path="/World/envs/env_.*/Robot/.*", history_length=3, update_period=0.005, track_air_time=True
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/.*", history_length=3, update_period=0.005, track_air_time=True
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
