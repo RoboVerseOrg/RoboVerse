@@ -30,7 +30,6 @@ This includes:
 
 - Root position/orientation of each object
 - Joint positions & velocities
-- Actuator states
 - Camera outputs (RGB / depth)
 - Optional per-task "extras"
 
