@@ -163,8 +163,84 @@ class MyExampleTask(BaseTaskEnv):
 4. Reuse `Handler` + `ScenarioCfg` separation.
 
 ---
+# Task System Documentation
 
-## 6. Summary
+## Architecture and Philosophy
+
+In RoboVerse, a **task** is a wrapper built on top of a Handler and exposes **Gym-style APIs** (`step`, `reset`, etc.).
+
+* **Simulation contents** (robots, objects, scene, physics params) live in a `ScenarioCfg` and are instantiated by a Handler.
+* **Task logic** (reward, observation, termination, etc.) is layered on top via wrappers.
+* This enforces clean separation between simulation, task, and algorithm.
+
+A task is created with:
+
+* **scenario**: a `ScenarioCfg` describing the simulation.
+* **device**: execution device (e.g., CPU/GPU).
+
+When defining a new task, inherit from `BaseTaskEnv` and implement methods like `_observation`, `_reward`, `_terminated`, `_time_out`, `_observation_space`, `_action_space`, and `_extra_spec`.
+
+Tasks are managed by a **registry system**, where each task is bound to a unique string ID (e.g., `"example.my_task"`). This design provides:
+
+* **One-click switching**: run a different task by simply changing a string in configs or CLI args.
+* **Unified interface**: all tasks share the same API, regardless of simulator or logic.
+* **Plug-and-play integration**: no code changes needed—`get_task_class(name)` or `make_vec(env_id, ...)` resolves and instantiates the task automatically.
+
+Example:
+
+```python
+from roboverse_learn.registry import get_task_class
+
+# Select task by string identifier
+task_cls = get_task_class("example.my_task")
+scenario = task_cls.scenario.update(simulator="mujoco")
+rl_env = task_cls(scenario=scenario)
+```
+
+---
+
+## 6.BaseTaskEnv & RLTaskEnv
+
+### BaseTaskEnv (core behavior)
+
+* **Default observation**: returns the simulator’s **TensorState** directly via `_observation(env_states)` (structured tensor, not flattened).
+* **Initialization**: accepts a `ScenarioCfg` or a pre‑built `BaseSimHandler`. Internally resolves the handler and calls `launch()`.
+* **Callbacks**: `pre_physics_step_callback`, `post_physics_step_callback`, `reset_callback`, `close_callback`.
+* **Episode control**: per‑env step counter `self._episode_steps`; timeout handled by `_time_out` (default based on `max_episode_steps`).
+* **Step flow**:
+
+  1. `pre_physics_step_callback(actions)`
+  2. `handler.set_dof_targets(actions)`
+  3. `handler.simulate()`
+  4. `env_states = handler.get_states()`
+  5. `post_physics_step_callback(env_states)`
+  6. Compute `reward`, `terminated`, `timeout` and return `(obs, reward, terminated, timeout, info)` with `privileged_observation`.
+* **Reset flow**: can use external `states` or fall back to `_initial_states`. Calls `handler.set_states(...)`, fetches `env_states`, and resets episode counters.
+* **Methods typically not overridden**: `step`, `reset`, `close`.
+
+### RLTaskEnv (RL‑friendly extension)
+
+* **Observation shape**: flattens `TensorState` into a 1D tensor and builds `observation_space = Box(num_obs,)`.
+* **Action handling**: derives `action_space` from `robot.joint_limits` and `handler.get_joint_names(...)`. In `step()`, actions are clamped before being passed to `set_dof_targets`.
+* **Auto device**: defaults to CUDA if available.
+* **Auto reset on done**: after each step, envs flagged by `terminated | time_out` are reset in-place, and their observations refreshed.
+* **Initial state acceleration**: uses `list_state_to_tensor(handler, _get_initial_states())` to convert list states to tensor states for faster resets.
+* **Info payload**: includes `privileged_observation`, `episode_steps`, and cached raw observations `observations.raw.obs`.
+* **Utilities**: `unnormalise_action(a)` maps actions from `[-1,1]` to joint physical ranges.
+
+### Differences at a Glance
+
+| Aspect               | BaseTaskEnv                        | RLTaskEnv                         |
+| -------------------- | ---------------------------------- | --------------------------------- |
+| Observation return   | TensorState (not flattened)        | Flattened tensor (1D)             |
+| Auto reset           | No                                 | Yes (on done/timeout)             |
+| Space construction   | Decided by subclass or upper layer | Auto‑derived obs/action spaces    |
+| Action clamping      | Decided by subclass or upper layer | Built‑in clamping to joint limits |
+| Initial state format | list or tensor                     | Auto conversion list → tensor     |
+| Device selection     | Passed by user                     | Auto‑select CUDA/CPU              |
+
+---
+## 7. Summary
 
 * Tasks = **glue layer** between `ScenarioCfg/Handler` (simulation) and learning algorithms
 * Registry system (`get_task_class`) makes tasks discoverable by string names.
