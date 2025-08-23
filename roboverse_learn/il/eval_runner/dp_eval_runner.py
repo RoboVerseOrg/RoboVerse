@@ -4,9 +4,9 @@ import dill
 import hydra
 import numpy as np
 import torch
-from metasim.cfg.policy import DiffusionPolicyCfg
-from roboverse_learn.base.base_eval_runner import BaseEvalRunner
-from roboverse_learn.runner.dp_runner import DPRunner
+from il.runner.base_policy import DiffusionPolicyCfg
+from il.base.base_eval_runner import BaseEvalRunner
+from il.runner.dp_runner import DPRunner
 
 
 class DPEvalRunner(BaseEvalRunner):

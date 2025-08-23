@@ -7,7 +7,7 @@ defaults:
 
 task_name: placeholder
 name: robot_${task_name}
-_target_: roboverse_learn.runner.dp_runner.DPRunner
+_target_: il.runner.dp_runner.DPRunner
 
 
 image_shape: &image_shape [3, 256, 256]
@@ -33,6 +33,10 @@ dataset_obs_steps: ${n_obs_steps}
 past_action_visible: False
 keypoint_visible_rate: 1.0
 obs_as_global_cond: True
+
+train_enable: null
+eval_enable: null
+eval_path: null
 
 multi_run:
   run_dir: info/outputs/DP/${now:%Y.%m.%d}/${now:%H.%M.%S}_${task_name}

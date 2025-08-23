@@ -2,7 +2,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
 ## Parameters
-task_name_set=CloseBox
+task_name_set=close_box
 random_level=0          # 0: No randomization 1: Randomize visual material 2: Randomize camera pose 3: Randomize object reflection and lighting
 num_envs=1              # Number of parallel environments
 demo_start_idx=0        # Index of the first demo to collect
@@ -17,14 +17,14 @@ if [ "${delta_ee}" = 1 ]; then
 fi
 
 ## Collecting demonstration data run_all,
-python metasim/scripts/collect_demo.py --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --random.level=${random_level} --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx}
+python ~/RoboVerse/scripts/advanced/collect_demo.py --sim isaaclab --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx} 
 
 
 ## Convert demonstration data
-python roboverse_learn/data2zarr_dp.py \
+python ~/RoboVerse/roboverse_learn/il/data2zarr_dp.py \
 --task_name ${task_name_set}FrankaL${random_level}_${extra} \
 --expert_data_num 100 \
---metadata_dir roboverse_demo/demo_isaaclab/${task_name_set}-Level${random_level}/robot-franka \
+--metadata_dir ~/RoboVerse/roboverse_demo/demo_mujoco/${task_name_set}-/robot-franka \
 --action_space ${act_space} \
 --observation_space ${obs_space}
 

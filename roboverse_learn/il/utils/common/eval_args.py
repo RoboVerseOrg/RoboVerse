@@ -5,14 +5,14 @@ from typing import Literal
 
 from loguru import logger as log
 
-from metasim.cfg.randomization import RandomizationCfg
+# from metasim.cfg.randomization import RandomizationCfg
 
 
 @dataclass
 class Args:
     task: str
     """Task name"""
-    random: RandomizationCfg = field(default_factory=RandomizationCfg)
+    # random: RandomizationCfg = field(default_factory=RandomizationCfg)
     """Domain randomization options"""
     robot: str = "franka"
     """Robot name"""
@@ -44,7 +44,7 @@ class Args:
     """GPU ID to use"""
 
     def __post_init__(self):
-        if self.random.table and not self.table:
-            log.warning("Cannot enable table randomization without a table, disabling table randomization")
-            self.random.table = False
+        # if self.random.table and not self.table:
+        #     log.warning("Cannot enable table randomization without a table, disabling table randomization")
+        #     self.random.table = False
         log.info(f"Args: {self}")

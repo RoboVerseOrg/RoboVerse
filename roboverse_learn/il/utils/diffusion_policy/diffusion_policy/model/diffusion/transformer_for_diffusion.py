@@ -3,9 +3,8 @@ from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.model.diffusion.positional_embedding import SinusoidalPosEmb
-
-from roboverse_learn.utils.common.module_attr_mixin import ModuleAttrMixin
 
 logger = logging.getLogger(__name__)
 
@@ -226,10 +225,9 @@ class TransformerForDiffusion(ModuleAttrMixin):
         inter_params = decay & no_decay
         union_params = decay | no_decay
         assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params),)
-        assert len(param_dict.keys() - union_params) == 0, (
-            "parameters %s were not separated into either decay/no_decay set!"
-            % (str(param_dict.keys() - union_params),)
-        )
+        assert (
+            len(param_dict.keys() - union_params) == 0
+        ), "parameters %s were not separated into either decay/no_decay set!" % (str(param_dict.keys() - union_params),)
 
         # create the pytorch optimizer object
         optim_groups = [
@@ -259,7 +257,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
         sample: torch.Tensor,
         timestep: Union[torch.Tensor, float, int],
         cond: Optional[torch.Tensor] = None,
-        **kwargs,
+        **kwargs
     ):
         """
         x: (B,T,input_dim)

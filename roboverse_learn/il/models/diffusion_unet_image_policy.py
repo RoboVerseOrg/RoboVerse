@@ -9,9 +9,9 @@ from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from einops import rearrange, reduce
 
-from roboverse_learn.utils.common.module_attr_mixin import ModuleAttrMixin
-from roboverse_learn.utils.common.normalizer import LinearNormalizer
-from roboverse_learn.utils.common.pytorch_util import dict_apply
+from il.utils.common.module_attr_mixin import ModuleAttrMixin
+from il.utils.common.normalizer import LinearNormalizer
+from il.utils.common.pytorch_util import dict_apply
 
 
 class BaseImagePolicy(ModuleAttrMixin):

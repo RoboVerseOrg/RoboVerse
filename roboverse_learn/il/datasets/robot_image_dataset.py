@@ -6,12 +6,12 @@ import numpy as np
 import torch
 from termcolor import cprint
 
-from roboverse_learn.base.base_dataset import BaseImageDataset
-from roboverse_learn.utils.common.normalize_util import get_image_range_normalizer
-from roboverse_learn.utils.common.normalizer import LinearNormalizer
-from roboverse_learn.utils.common.pytorch_util import dict_apply
-from roboverse_learn.utils.common.replay_buffer import ReplayBuffer
-from roboverse_learn.utils.common.sampler import (
+from il.base.base_dataset import BaseImageDataset
+from il.utils.common.normalize_util import get_image_range_normalizer
+from il.utils.common.normalizer import LinearNormalizer
+from il.utils.common.pytorch_util import dict_apply
+from il.utils.common.replay_buffer import ReplayBuffer
+from il.utils.common.sampler import (
     SequenceSampler,
     downsample_mask,
     get_val_mask,

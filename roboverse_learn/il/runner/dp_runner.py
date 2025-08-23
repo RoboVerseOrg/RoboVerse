@@ -6,6 +6,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Literal
+from omegaconf import OmegaConf
 
 import hydra
 import imageio.v2 as iio
@@ -16,24 +17,22 @@ import tyro
 import wandb
 from diffusion_policy.model.diffusion.ema_model import EMAModel
 from loguru import logger as log
-from metasim.cfg.randomization import RandomizationCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.cfg.sensors.cameras import PinholeCameraCfg
+from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
-from omegaconf import OmegaConf
-from roboverse_learn.base.base_eval_runner import BaseEvalRunner
-from roboverse_learn.base.base_runner import BaseRunner
-from roboverse_learn.utils.common.eval_args import Args
-from roboverse_learn.utils.common.eval_runner_getter import get_runner
-from roboverse_learn.utils.common.json_logger import JsonLogger
-from roboverse_learn.utils.common.lr_scheduler import get_scheduler
-from roboverse_learn.utils.common.pytorch_util import dict_apply, optimizer_to
+from metasim.utils.setup_util import get_robot
+from il.base.base_eval_runner import BaseEvalRunner
+from il.base.base_runner import BaseRunner
+from il.utils.common.eval_args import Args
+from il.utils.common.eval_runner_getter import get_runner
+from il.utils.common.json_logger import JsonLogger
+from il.utils.common.lr_scheduler import get_scheduler
+from il.utils.common.pytorch_util import dict_apply, optimizer_to
 from torch.utils.data import DataLoader
 
 
-from metasim.task.registry import get_task_class, load_task
+from metasim.task.registry import get_task_class
 
 
 class DPRunner(BaseRunner):
@@ -466,7 +465,16 @@ class DPRunner(BaseRunner):
             f.write(f"Average Success Rate: {total_success / total_completed}\n")
         env.close()
 
-    def run(self, train=True, eval=True, ckpt_path=None):
+    def run(
+        self,
+        train=None,
+        eval=None,
+        ckpt_path=None,
+    ):
+        train = self.cfg.train_enable
+        eval = self.cfg.eval_enable
+        if not train:
+            ckpt_path = self.cfg.eval_path
         if train:
             self.train()
         if eval:

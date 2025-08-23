@@ -1,4 +1,4 @@
-_target_: roboverse_learn.models.DDIM_unet_image_policy.DiffusionUnetImagePolicy
+_target_: il.models.DDIM_unet_image_policy.DiffusionUnetImagePolicy
 
 shape_meta: ${shape_meta}
 

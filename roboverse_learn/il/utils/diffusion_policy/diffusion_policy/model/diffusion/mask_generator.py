@@ -1,9 +1,8 @@
 from typing import Optional, Sequence
 
 import torch
+from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from torch import nn
-
-from roboverse_learn.utils.common.module_attr_mixin import ModuleAttrMixin
 
 
 def get_intersection_slice_mask(shape: tuple, dim_slices: Sequence[slice], device: Optional[torch.device] = None):

@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 here = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(here)
 sys.path.insert(0, project_root)
-from roboverse_learn.base.base_runner import BaseRunner
+from il.base.base_runner import BaseRunner
 
 abs_config_path = str(pathlib.Path(__file__).resolve().parent.joinpath("configs").absolute())
 OmegaConf.register_new_resolver("eval", eval, replace=True)

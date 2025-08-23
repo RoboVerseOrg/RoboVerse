@@ -1,4 +1,4 @@
-_target_: roboverse_learn.models.fm_unet_image_policy.FlowMatchingUnetImagePolicy
+_target_: il.models.fm_unet_image_policy.FlowMatchingUnetImagePolicy
 
 
 shape_meta: ${shape_meta}

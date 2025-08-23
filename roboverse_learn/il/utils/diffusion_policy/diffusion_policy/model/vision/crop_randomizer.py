@@ -1,4 +1,4 @@
-import roboverse_learn.utils.common.tensor_util as tu
+import diffusion_policy.model.common.tensor_util as tu
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as ttf
