@@ -133,5 +133,3 @@ RobotCfg(
              "joint2": BaseActuatorCfg(torque_limit=50)}
 )
 ```
-
----

@@ -11,14 +11,12 @@ metasim
 .. autosummary::
     :toctree: metasim
 
-    cfg.objects
-    cfg.robots
-    cfg.sensors
-    cfg.checkers
-    cfg.tasks
-    cfg.scenes
-    cfg.render
-    cfg.randomization
+    example
+    queries
+    scenario
     sim
+    task
+    tests
     utils
-    scripts
+    constants
+    types

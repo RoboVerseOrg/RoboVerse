@@ -9,6 +9,7 @@ imitation_learning/ACT.md
 imitation_learning/openvla.md
 imitation_learning/rdt.md
 imitation_learning/octo.md
+imitation_learning/contributing.md
 ```
 
 ```{toctree}

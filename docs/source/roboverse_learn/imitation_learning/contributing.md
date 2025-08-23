@@ -1,4 +1,4 @@
-## Design Philosophy
+# Design Philosophy
 
 We aim to follow a **single-file, modular design philosophy** inspired by libraries such as Hugging Face's *transformerss* and *diffusers* (https://huggingface.co/blog/transformers-design-philosophy). In this approach, each specific algorithm implementation is encapsulated within its own folder and file, allowing it to evolve independently without affecting other parts of the codebase.
 
@@ -6,7 +6,7 @@ At the same time, to maintain consistency, enable unified management, and suppor
 
 > Refer to the implementation style in the *IL* branch of *diffusion_policy*. Very soon you'll see it in *main*.
 
-### 1. BaseRunner (Core Execution Interface)
+## 1. BaseRunner (Core Execution Interface)
 
 **Purpose**: Encapsulate the overall logic for training, evaluation, checkpoint saving/loading, etc.
 
@@ -22,7 +22,7 @@ At the same time, to maintain consistency, enable unified management, and suppor
 
 ---
 
-### 2. BaseModel (Core Model Interface)
+## 2. BaseModel (Core Model Interface)
 
 **Purpose**: Define the common structure for models and loss computation. All algorithm-specific models should inherit from this class.
 
@@ -33,7 +33,7 @@ At the same time, to maintain consistency, enable unified management, and suppor
 
 ---
 
-### 3. Dataset Management
+## 3. Dataset Management
 
 - Each algorithm can define its own dataset class as needed.
 - All dataset classes should follow a consistent interface (compatible with PyTorch `Dataset`).
@@ -41,11 +41,11 @@ At the same time, to maintain consistency, enable unified management, and suppor
 
 ---
 
-## Configuration Management (Hydra + YAML)
+# Configuration Management (Hydra + YAML)
 
 To keep parameters clean, flexible, and modular, we use Hydra and separate YAML files for different concerns. For merging your own policy into roboverse, please write your configuration in the following format. The `<policy>` symbol below is a placeholder and should be replaced with your desired name.
 
-### configs/model_config/\<policy\>_model.yaml
+## configs/model_config/\<policy\>_model.yaml
 
 Configuration for model architectures and hyperparameters:
 
@@ -58,7 +58,7 @@ dropout: 0.1
 ...
 ```
 ---
-### configs/dataset_config/\<policy\>_dataset.yaml
+## configs/dataset_config/\<policy\>_dataset.yaml
 
 Dataset-related configuration:
 
@@ -73,7 +73,7 @@ shuffle: true
 
 ---
 
-### configs/train_config/\<policy\>_train.yaml
+## configs/train_config/\<policy\>_train.yaml
 
 Training hyperparameters:
 
@@ -88,7 +88,7 @@ log_interval: 10
 
 ---
 
-### configs/eval_config/\<policy\>_eval.yaml
+## configs/eval_config/\<policy\>_eval.yaml
 
 Evaluation configurations:
 
@@ -102,7 +102,7 @@ output_dir: "./eval_results"
 
 ---
 
-### configs/\<policy\>_runner.yaml
+## configs/\<policy\>_runner.yaml
 
 Entrance to the configuration:
 
@@ -118,7 +118,7 @@ defaults:
 
 ---
 
-### Example Main Script
+## Example Main Script
 
 ```python
 import os
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
 ---
 
-### Unit Testing Strategy
+## Unit Testing Strategy
 
 Each runner and model should be independently unit-tested to verify correctness and ensure modularity.
 
@@ -161,7 +161,7 @@ Each runner and model should be independently unit-tested to verify correctness 
 
 ---
 
-### Project Structure
+## Project Structure
 
 ```csharp
 roboverse_learn/
