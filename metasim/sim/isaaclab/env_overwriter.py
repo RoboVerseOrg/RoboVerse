@@ -290,7 +290,7 @@ class IsaaclabEnvOverwriter:
 
         ## Set default ground material
         if not use_scene:
-            set_ground_material("metasim/data/quick_start/materials/Ash.mdl")
+            set_ground_material("roboverse_pack/asset/Ash.mdl")
             set_ground_material_scale(10)
 
         ## Clone, filter, and replicate
