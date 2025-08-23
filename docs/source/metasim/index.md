@@ -53,9 +53,9 @@ tutorial/get_extras
 :maxdepth: 2
 :titlesonly:
 
-user_guide/support_matrix
-user_guide/cross_embodiment
-user_guide/cross_sim
+features/support_matrix
+features/cross_embodiment
+features/cross_sim
 
 ```
 
@@ -64,14 +64,14 @@ user_guide/cross_sim
 :maxdepth: 2
 :titlesonly:
 
-developer_guide/precommit_hooks
+<!-- developer_guide/precommit_hooks
 developer_guide/data_structure
-<!-- developer_guide/new_task/index
-developer_guide/new_robot -->
-<!-- developer_guide/new_sim -->
+developer_guide/new_task/index
+developer_guide/new_robot
+developer_guide/new_sim
 developer_guide/asset_conversions
 developer_guide/docstring
-developer_guide/tips/index
+developer_guide/tips/index -->
 ```
 
 ```{toctree}

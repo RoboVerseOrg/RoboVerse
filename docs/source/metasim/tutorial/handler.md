@@ -22,7 +22,7 @@ Every handler follows a common lifecycle:
 
 ##  Key Interface Functions
 
-1. `get_state() → TensorState | DictEnvState`
+1. `get_state(mode: Literal["tensor", "dict"] = "tensor") → TensorState | DictEnvState`
 
 > **Purpose:** Extracts structured simulator state for all robots, objects, and cameras into a unified `TensorState` data structure.
 
@@ -30,10 +30,14 @@ This includes:
 
 - Root position/orientation of each object
 - Joint positions & velocities
+- Actuator states
 - Camera outputs (RGB / depth)
 - Optional per-task "extras"
 
 It supports multi-env batched extraction, and ensures consistent structure across backends.
+
+A "mode" parameter can be specified. For "dict" observation, it will return a `DictEnvState`. For "tensor" observation, it will return a `TensorState`.
+When returning `TensorState`, DoFs and Body properties are organized in lexicographical order. You can get the joint or body names by `get_joint_names` and `get_body_names` methods of the handler.
 
 ------
 
@@ -57,4 +61,6 @@ Internally this maps the unified `TensorState` back to simulator-specific struct
 
 This is typically called after applying actions or updating the state. It may involve multiple substeps (based on decimation rate) and handles model-specific quirks.
 
-------
+4. `get_joint_names()` and `get_body_names()`
+
+> **Purpose:** Return the list of joints/bodies of the robot.
