@@ -163,42 +163,6 @@ class MyExampleTask(BaseTaskEnv):
 4. Reuse `Handler` + `ScenarioCfg` separation.
 
 ---
-# Task System Documentation
-
-## Architecture and Philosophy
-
-In RoboVerse, a **task** is a wrapper built on top of a Handler and exposes **Gym-style APIs** (`step`, `reset`, etc.).
-
-* **Simulation contents** (robots, objects, scene, physics params) live in a `ScenarioCfg` and are instantiated by a Handler.
-* **Task logic** (reward, observation, termination, etc.) is layered on top via wrappers.
-* This enforces clean separation between simulation, task, and algorithm.
-
-A task is created with:
-
-* **scenario**: a `ScenarioCfg` describing the simulation.
-* **device**: execution device (e.g., CPU/GPU).
-
-When defining a new task, inherit from `BaseTaskEnv` and implement methods like `_observation`, `_reward`, `_terminated`, `_time_out`, `_observation_space`, `_action_space`, and `_extra_spec`.
-
-Tasks are managed by a **registry system**, where each task is bound to a unique string ID (e.g., `"example.my_task"`). This design provides:
-
-* **One-click switching**: run a different task by simply changing a string in configs or CLI args.
-* **Unified interface**: all tasks share the same API, regardless of simulator or logic.
-* **Plug-and-play integration**: no code changes needed—`get_task_class(name)` or `make_vec(env_id, ...)` resolves and instantiates the task automatically.
-
-Example:
-
-```python
-from roboverse_learn.registry import get_task_class
-
-# Select task by string identifier
-task_cls = get_task_class("example.my_task")
-scenario = task_cls.scenario.update(simulator="mujoco")
-rl_env = task_cls(scenario=scenario)
-```
-
----
-
 ## 6.BaseTaskEnv & RLTaskEnv
 
 ### BaseTaskEnv (core behavior)
