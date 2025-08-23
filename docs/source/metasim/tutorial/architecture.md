@@ -112,3 +112,4 @@ The RoboVerse architecture emphasizes modularity and decoupling:
 * **RoboVerse Pack**: Out-of-the-box robot, scene, and task configurations.
 * **Get Started**: Quick-start examples for fast adoption.
 * **Scripts**: Supporting utilities and advanced tools.
+6
