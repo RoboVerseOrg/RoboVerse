@@ -32,6 +32,7 @@ class BaseSimHandler(ABC):
         self.decimation = scenario.decimation
         self.headless = scenario.headless
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
+        self._state_cache_expire = True
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -64,6 +65,7 @@ class BaseSimHandler(ABC):
 
     def set_states(self, states: TensorState | DictEnvState, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
+        self._state_cache_expire = True
         self._set_states(states, env_ids)
 
     # @abstractmethod
@@ -103,7 +105,10 @@ class BaseSimHandler(ABC):
     ) -> TensorState | DictEnvState:
         """Get the states of the environment."""
         # TODO: do type change here
-        return self._get_states(env_ids)
+        if self._state_cache_expire:
+            self._states = self._get_states(env_ids=env_ids)
+            self._state_cache_expire = False
+        return self._states
 
     ############################################################
     ## Get extra queries
@@ -127,6 +132,7 @@ class BaseSimHandler(ABC):
 
     def simulate(self):
         """Simulate the environment."""
+        self._state_cache_expire = True
         self._simulate()
 
     ############################################################
