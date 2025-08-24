@@ -1,9 +1,12 @@
 from __future__ import annotations
-from metasim.sim.randomizaer.base import BaseRandomizerType
+
+from typing import Any, Literal
+
 import torch
-from typing import Literal
-from typing import Any
+
+from metasim.sim.randomizaer.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
+
 
 @configclass
 class FrictionRandomCfg:
@@ -172,7 +175,6 @@ class FrictionRandomizer(BaseRandomizerType):
 
     def __call__(self):
         """Execute friction randomization based on configuration."""
-
         # Randomize friction
         self.randomize_body_friction(
             obj_name=self.cfg.obj_name,
