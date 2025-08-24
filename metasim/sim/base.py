@@ -245,53 +245,7 @@ class BaseSimHandler(ABC):
 
         return self._body_reindex_cache[obj_name]
 
-    def get_body_mass(self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None) -> torch.Tensor:
-        """Get the mass of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        return self._get_body_mass(obj_name, body_name, env_ids)
-    
-    def _get_body_mass(self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None) -> torch.Tensor:
-        """Get the mass of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        raise NotImplementedError
-    
-    def set_body_mass(self, obj_name: str, mass: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None, device:str="cpu") -> None:
-        """Set the mass of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        return self._set_body_mass(obj_name, mass, body_name, env_ids, device)
 
-    def _set_body_mass(self, obj_name: str, mass: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None) -> None:
-        """Set the mass of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        raise NotImplementedError
-
-    def get_body_friction(self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None) -> torch.Tensor:
-        """Get the friction of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        return self._get_body_friction(obj_name, body_name, env_ids)
-    
-    def _get_body_friction(self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None) -> torch.Tensor:
-        """Get the friction of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        raise NotImplementedError
-    
-    def set_body_friction(self, obj_name: str, friction: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None, device:str="cpu") -> None:
-        """Set the friction of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        return self._set_body_friction(obj_name, friction, body_name, env_ids, device)
-    
-    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None) -> None:
-        """Set the friction of a specific body or all bodies of an object.
-        For a new simulator, you should implement this method.
-        """
-        raise NotImplementedError
     
     @property
     def num_envs(self) -> int:
