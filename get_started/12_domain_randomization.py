@@ -102,67 +102,67 @@ def run_domain_randomization(args):
 
     env.set_states(init_states)
 
-
-    mass_randomizer = MassRandomizer()
-    mass_randomizer.bind_handler(env)
-    friction_randomizer = FrictionRandomizer()
-    friction_randomizer.bind_handler(env)
-
-    # Get cube mass using randomizer
-    cube_mass = mass_randomizer.get_body_mass("cube")
-    robot_friction = friction_randomizer.get_body_friction("franka")
-    robot_mass = mass_randomizer.get_body_mass("franka")
-    cube_friction = friction_randomizer.get_body_friction("cube")
-    sphere_friction = friction_randomizer.get_body_friction("sphere")
-
-    # Store initial values for comparison
-    initial_values = {
-        "cube_mass": cube_mass.clone(),
-        "franka_mass": robot_mass.clone(),
-        "robot_friction": robot_friction.clone(),
-        "cube_friction": cube_friction.clone(),
-        "sphere_friction": sphere_friction.clone(),
-    }
-
+    # initialize randomizers
     cube_mass_config = MassRandomCfg(
         obj_name="cube",
         range=(0.3, 0.7),
         operation="abs",
         distribution="uniform",
     )
-    # run randomization for cube mass
-    mass_randomizer(cube_mass_config)
-    randomized_cube_mass = mass_randomizer.get_body_mass("cube")
-    log.info("================================================")
-    log.info("randomizing cube mass by uniform distribution")
-    log.info(f"  Before: {initial_values['cube_mass'].cpu().numpy().round(3)} kg")
-    log.info(f"  After:  {randomized_cube_mass.cpu().numpy().round(3)} kg")
+    cube_mass_randomizer = MassRandomizer(cube_mass_config)
+    cube_mass_randomizer.bind_handler(env)
 
-    friction_config = FrictionRandomCfg(
+    franka_friction_config = FrictionRandomCfg(
         obj_name="franka",
         range=(0.5, 1.5),
         operation="add",
         distribution="gaussian",
     )
-    # run randomization for franka friction
-    friction_randomizer(friction_config)
-    randomized_robot_friction = friction_randomizer.get_body_friction("franka")
-    log.info("================================================")
-    log.info("randomizing franka friction by gaussian distribution")
-    log.info(f"  Before: {initial_values['robot_friction'][0].cpu().numpy().round(3)}")
-    log.info(f"  After:  {randomized_robot_friction[0].cpu().numpy().round(3)}")
+    franka_friction_randomizer = FrictionRandomizer(franka_friction_config)
+    franka_friction_randomizer.bind_handler(env)
 
-    sphere_mass_config = MassRandomCfg(
+    franka_mass_config = MassRandomCfg(
         obj_name="franka",
         range=(0.2, 0.4),
         operation="abs",
-        distribution="gaussian",
+        distribution="log_uniform",
     )
-    # run randomization for franka mass
-    mass_randomizer(sphere_mass_config)
-    randomized_sphere_mass = mass_randomizer.get_body_mass("franka")
+    franka_mass_randomizer = MassRandomizer(franka_mass_config)
+    franka_mass_randomizer.bind_handler(env)
+
+    # Get cube mass using randomizer
+    cube_mass = cube_mass_randomizer.get_body_mass("cube")
+    robot_friction = franka_friction_randomizer.get_body_friction("franka")
+    robot_mass = franka_mass_randomizer.get_body_mass("franka")
+
+    # Store initial values for comparison
+    initial_values = {
+        "cube_mass": cube_mass.clone(),
+        "franka_mass": robot_mass.clone(),
+        "franka_friction": robot_friction.clone(),
+    }
+
+    # run randomization for cube mass
+    cube_mass_randomizer()
+    randomized_cube_mass = cube_mass_randomizer.get_body_mass("cube")
     log.info("================================================")
-    log.info("randomizing franka mass by gaussian distribution")
+    log.info("randomizing cube mass by uniform distribution")
+    log.info(f"  Before: {initial_values['cube_mass'].cpu().numpy().round(3)} kg")
+    log.info(f"  After:  {randomized_cube_mass.cpu().numpy().round(3)} kg")
+
+    # run randomization for franka friction
+    franka_friction_randomizer()
+    randomized_robot_friction = franka_friction_randomizer.get_body_friction("franka")
+    log.info("================================================")
+    log.info("randomizing franka friction by gaussian distribution")
+    log.info(f"  Before: {initial_values['franka_friction'][0].cpu().numpy().round(3)}")
+    log.info(f"  After:  {randomized_robot_friction[0].cpu().numpy().round(3)}")
+
+    # run randomization for franka mass
+    franka_mass_randomizer()
+    randomized_sphere_mass = franka_mass_randomizer.get_body_mass("franka")
+    log.info("================================================")
+    log.info("randomizing franka mass by log_uniform distribution")
     log.info(f"  Before: {initial_values['franka_mass'].cpu().numpy().round(3)} kg")
     log.info(f"  After:  {randomized_sphere_mass.cpu().numpy().round(3)} kg")
 
@@ -197,7 +197,7 @@ def main():
     log.info("Starting Domain Randomization Demo")
     # Run IsaacSim demo
     run_domain_randomization(args)
-    log.info("\nDemo completed! Check the logs above for detailed results.")
+    log.info("\nRandomization demo completed. Check the logs above for detailed results.")
 
 
 if __name__ == "__main__":

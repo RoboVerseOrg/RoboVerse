@@ -18,8 +18,11 @@ class FrictionRandomCfg:
 class FrictionRandomizer(BaseRandomizerType):
     """Friction randomizer for domain randomization."""
 
-    def __init__(self): 
+    def __init__(self, cfg: FrictionRandomCfg | None = None):
         super().__init__()
+        if cfg is None:
+            raise ValueError("FrictionRandomizer requires a cFrictionRandomCfg before called")
+        self.cfg = cfg
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         mod = handler.__class__.__module__
@@ -167,20 +170,15 @@ class FrictionRandomizer(BaseRandomizerType):
 
         self.set_body_friction(obj_name, new_friction, body_name, env_ids)
 
-    def __call__(self, cfg: FrictionRandomCfg):
+    def __call__(self):
         """Execute friction randomization based on configuration."""
-
-        # Use object name from config or fallback to instance variable
-        obj_name = cfg.obj_name
-        body_name = cfg.body_name
-        env_ids = cfg.env_ids
 
         # Randomize friction
         self.randomize_body_friction(
-            obj_name=obj_name,
-            friction_range=cfg.range,
-            body_name=body_name,
-            env_ids=env_ids,
-            operation=cfg.operation,
-            distribution=cfg.distribution,
+            obj_name=self.cfg.obj_name,
+            friction_range=self.cfg.range,
+            body_name=self.cfg.body_name,
+            env_ids=self.cfg.env_ids,
+            operation=self.cfg.operation,
+            distribution=self.cfg.distribution,
         )
