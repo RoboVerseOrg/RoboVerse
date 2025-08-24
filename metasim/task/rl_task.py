@@ -36,7 +36,7 @@ class RLTaskEnv(BaseTaskEnv):
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
         # convert list state to tensor state for reset acceleration
-        self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states())
+        self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states(), self.device)
         # first reset
         self.reset(env_ids=list(range(self.num_envs)))
 
