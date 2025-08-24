@@ -331,7 +331,8 @@ class DPRunner(BaseRunner):
             headless=args.headless,
             cameras=[camera]
         )
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu") 
         tic = time.time()
         env = task_cls(scenario, device=device)
 
@@ -371,10 +372,12 @@ class DPRunner(BaseRunner):
             scenario=scenario,
             num_envs=num_envs,
             checkpoint_path=args.checkpoint_path,
-            device=f"cuda:{args.gpu_id}",
+            device = torch.device("cpu") ,
             task_name=args.task,
             subset=args.subset,
         )
+        # device=f"cuda:{args.gpu_id}",
+
         action_set_steps = (
             2 if policyRunner.policy_cfg.action_config.action_type == "ee" else 1
         )

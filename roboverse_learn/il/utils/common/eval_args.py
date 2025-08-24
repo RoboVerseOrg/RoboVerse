@@ -18,7 +18,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "mujoco", "isaacgym"] = "isaaclab"
+    sim: Literal["isaaclab", "mujoco", "isaacgym"] = "mujoco"
     """Simulator backend"""
     max_demo: int | None = None
     """Maximum number of demos to collect, None for all demos"""

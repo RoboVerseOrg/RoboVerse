@@ -1,7 +1,7 @@
 task_name=close_box
 level=0
 config_name=dp_runner
-num_epochs=100               # Number of training epochs
+num_epochs=10               # Number of training epochs
 port=50010
 seed=42
 gpu=0
@@ -25,7 +25,7 @@ case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.22/07.39.16_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.24/11.56.41_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
         ;;
     1)
         # DDIM settings
