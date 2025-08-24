@@ -110,7 +110,6 @@ def run_domain_randomization(args):
 
     # Get cube mass using randomizer
     cube_mass = mass_randomizer.get_body_mass("cube")
-    sphere_mass = mass_randomizer.get_body_mass("sphere")
     robot_friction = friction_randomizer.get_body_friction("franka")
     robot_mass = mass_randomizer.get_body_mass("franka")
     cube_friction = friction_randomizer.get_body_friction("cube")
@@ -131,6 +130,7 @@ def run_domain_randomization(args):
         operation="abs",
         distribution="uniform",
     )
+    # run randomization for cube mass
     mass_randomizer(cube_mass_config)
     randomized_cube_mass = mass_randomizer.get_body_mass("cube")
     log.info("================================================")
@@ -144,6 +144,7 @@ def run_domain_randomization(args):
         operation="add",
         distribution="gaussian",
     )
+    # run randomization for franka friction
     friction_randomizer(friction_config)
     randomized_robot_friction = friction_randomizer.get_body_friction("franka")
     log.info("================================================")
@@ -157,6 +158,7 @@ def run_domain_randomization(args):
         operation="abs",
         distribution="gaussian",
     )
+    # run randomization for franka mass
     mass_randomizer(sphere_mass_config)
     randomized_sphere_mass = mass_randomizer.get_body_mass("franka")
     log.info("================================================")
