@@ -1,4 +1,4 @@
-"""Base class for all query types."""
+"""Base class for all randomizer types."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class BaseRandomizerType:
         self.handler = handler
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Performing the query.
+        """Performing the randomization.
 
         """
         pass
