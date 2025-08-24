@@ -10,12 +10,12 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
     # -------------------------------------------------------------------------------
-    "sim": "mjx",
-    "robots": ["h1"],
-    "task": "humanoid.run",
+    "sim": "isaacgym",
+    "robots": ["franka"],
+    "task": "reach_origin",
     "decimation": 10,
     "train_or_eval": "train",
-    "headless": True,
+    "headless": False,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -101,18 +101,15 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
-
+try:
+    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
+except ImportError:
+    pass
 import torch
 
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
-try:
-    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
-except ImportError:
-    pass
-
 import torch
 import torch.nn.functional as F
 import tqdm
