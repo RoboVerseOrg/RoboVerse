@@ -72,6 +72,9 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
         filepaths (list[str]): the filepaths to check and download.
         n_processes (int): the number of processes to use for downloading. Default is 16.
     """
+    if len(filepaths) == 0:
+        return
+
     ## Option 1: Use multiprocessing, but sometimes the program stuck here
     # with Pool(processes=n_processes) as p:
     #     p.map(_check_and_download_single, filepaths)
