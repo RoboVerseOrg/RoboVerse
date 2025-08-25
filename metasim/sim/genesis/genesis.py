@@ -351,8 +351,7 @@ class GenesisHandler(BaseSimHandler):
         obj_cfg = self.object_dict[obj_name]
         if isinstance(obj_cfg, (ArticulationObjCfg, RobotCfg)):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
-
-            joint_names = [j.name for j in joints if j.dofs_idx_local is not None]
+            joint_names = [j.name for j in joints if j.dof_idx_local is not None]
 
             if sort:
                 joint_names.sort()
