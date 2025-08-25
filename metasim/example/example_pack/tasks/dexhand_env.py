@@ -11,7 +11,7 @@ from metasim.task.registry import register_task
 from metasim.utils.state import TensorState
 
 
-@register_task("xhand_env", "xhand_env", "xhand.xhand_env")
+@register_task("xhand_env", "xhand.xhand_env")
 class XHandEnv(BaseTaskEnv):
     """Environment for XHand-style object tasks (robot-agnostic).
 
