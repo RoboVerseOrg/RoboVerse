@@ -40,7 +40,7 @@ class SinglePybulletHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
 
     def _build_pybullet(self):
-        self.client = p.connect(p.GUI)
+        self.client = p.connect(p.DIRECT if self.headless else p.GUI)
         p.setPhysicsEngineParameter(
             fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
             numSolverIterations=300,
