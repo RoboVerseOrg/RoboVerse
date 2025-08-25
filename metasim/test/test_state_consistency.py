@@ -20,10 +20,18 @@ def assert_close(a, b, atol=1e-3):
         raise ValueError(f"Unsupported type: {type(a)}")
 
 
-@pytest.mark.parametrize("num_envs", [1, 2, 4])
-@pytest.mark.parametrize("sim", ["isaaclab"])
+def get_test_parameters():
+    """Generate test parameters with different num_envs for different simulators."""
+    # MuJoCo only supports num_envs=1 due to simulator limitations
+    # Other simulators can test with multiple environments
+    isaaclab_params = [("isaaclab", num_envs) for num_envs in [1, 2, 4]]
+    mujoco_params = [("mujoco", 1)]
+    return mujoco_params + isaaclab_params
+
+
+@pytest.mark.parametrize("sim,num_envs", get_test_parameters())
 def test_consistency(sim, num_envs):
-    print(f"Testing {sim} with {num_envs} envs")
+    # print(f"Testing {sim} with {num_envs} envs")
     scenario = ScenarioCfg(
         sim=sim,
         num_envs=num_envs,
@@ -55,7 +63,6 @@ def test_consistency(sim, num_envs):
         ],
         robots=[FrankaCfg()],
     )
-    print("11")
     init_states = [
         {
             "objects": {
@@ -96,14 +103,10 @@ def test_consistency(sim, num_envs):
             },
         }
     ] * num_envs
-    print("12")
 
     with HandlerContext(scenario) as handler:
-        print("1")
         handler.set_states(init_states)
-        print("2")
         states = state_tensor_to_nested(handler, handler.get_states())
-        print("3")
         for i in range(num_envs):
             assert_close(states[i]["objects"]["cube"]["pos"], init_states[i]["objects"]["cube"]["pos"])
             assert_close(states[i]["objects"]["sphere"]["pos"], init_states[i]["objects"]["sphere"]["pos"])
@@ -121,5 +124,4 @@ def test_consistency(sim, num_envs):
                     states[i]["robots"]["franka"]["dof_pos"][k],
                     init_states[i]["robots"]["franka"]["dof_pos"][k],
                 )
-        print("4")
-    print(f"Testing {sim} with {num_envs} envs passed")
+    # print(f"Testing {sim} with {num_envs} envs passed")
