@@ -8,6 +8,7 @@ dependencies = [
     "imageio[ffmpeg]",
     "loguru",
     "opencv-python",
+    "pytest",
     "rich",
     "rootutils",
     "torch",
