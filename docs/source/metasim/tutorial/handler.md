@@ -41,9 +41,9 @@ When returning `TensorState`, DoFs and Body properties are organized in lexicogr
 
 ------
 
-2. `set_state(ts: TensorState)`
+2. `set_state(state: TensorState | DictEnvState)`
 
-> **Purpose:** Restores or manually sets the simulator state using a full `TensorState` snapshot.
+> **Purpose:** Restores or manually sets the simulator state using a full `TensorState` or `DictEnvState` snapshot.
 
 This is often used for:
 
