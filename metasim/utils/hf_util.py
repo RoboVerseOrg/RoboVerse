@@ -65,7 +65,7 @@ def _check_and_download_single(filepath: str):
             raise e
 
 
-def check_and_download_recursive(filepaths: list[str], n_processes: int = 4):
+def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     """Check if the files exist in the local directory, and download them from the huggingface dataset if they don't exist. If the file is a URDF or MJCF file, it will download the referenced mesh and texture files recursively.
 
     Args:
