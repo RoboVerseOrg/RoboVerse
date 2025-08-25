@@ -92,6 +92,7 @@ except ImportError:
     from isaaclab.utils.assets import check_file_path
     from isaaclab.utils.dict import print_dict
 
+
 def main():
     # check valid file path
     urdf_path = args_cli.input
@@ -138,6 +139,7 @@ def main():
     print(f"Generated USD file: {urdf_converter.usd_path}")
     print("-" * 80)
     print("-" * 80)
+
 
 if __name__ == "__main__":
     # run the main function

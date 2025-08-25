@@ -332,7 +332,7 @@ class DPRunner(BaseRunner):
             cameras=[camera]
         )
         # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        device = torch.device("cpu") 
+        device = torch.device("cpu")
         tic = time.time()
         env = task_cls(scenario, device=device)
 

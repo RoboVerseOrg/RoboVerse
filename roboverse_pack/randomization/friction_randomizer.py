@@ -1,12 +1,17 @@
 from __future__ import annotations
-from metasim.sim.randomizaer.base import BaseRandomizerType
+
+from typing import Any, Literal
+
 import torch
-from typing import Literal
-from typing import Any
+
+from metasim.sim.randomizaer.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
+
 
 @configclass
 class FrictionRandomCfg:
+    """Configuration for the friction randomizer."""
+
     obj_name: str | None = None
     range: tuple[float, float] = (0.0, 0.0)
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
@@ -25,6 +30,7 @@ class FrictionRandomizer(BaseRandomizerType):
         self.cfg = cfg
 
     def bind_handler(self, handler, *args: Any, **kwargs):
+        """Bind the handler to the randomizer."""
         mod = handler.__class__.__module__
 
         if mod.startswith("metasim.sim.isaacsim"):
@@ -172,7 +178,6 @@ class FrictionRandomizer(BaseRandomizerType):
 
     def __call__(self):
         """Execute friction randomization based on configuration."""
-
         # Randomize friction
         self.randomize_body_friction(
             obj_name=self.cfg.obj_name,

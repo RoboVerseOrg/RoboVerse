@@ -6,19 +6,20 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
-from metasim.utils import configclass
-import tyro
 from typing import Literal
 
 import torch
+import tyro
 from loguru import logger as log
-from metasim.constants import PhysicStateType, SimType
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.utils.setup_util import get_sim_handler_class
 from rich.logging import RichHandler
-from roboverse_pack.randomization.mass_randomizer import MassRandomizer, MassRandomCfg
-from roboverse_pack.randomization.friction_randomizer import FrictionRandomizer, FrictionRandomCfg
+
+from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.utils import configclass
+from metasim.utils.setup_util import get_sim_handler_class
+from roboverse_pack.randomization.friction_randomizer import FrictionRandomCfg, FrictionRandomizer
+from roboverse_pack.randomization.mass_randomizer import MassRandomCfg, MassRandomizer
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -165,7 +166,6 @@ def run_domain_randomization(args):
     log.info("randomizing franka mass by log_uniform distribution")
     log.info(f"  Before: {initial_values['franka_mass'].cpu().numpy().round(3)} kg")
     log.info(f"  After:  {randomized_sphere_mass.cpu().numpy().round(3)} kg")
-
 
     # Run simulation for a few steps
     for _ in range(50):

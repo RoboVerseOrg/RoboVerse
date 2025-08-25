@@ -54,7 +54,7 @@ class DictEnvState(TypedDict):
     objects: dict[str, DictObjectState]
     robots: dict[str, DictRobotState]
     cameras: dict[str, dict[str, torch.Tensor]]
-    extras: dict[str, Any]      # States of Extra information
+    extras: dict[str, Any]  # States of Extra information
 
 
 @dataclass
