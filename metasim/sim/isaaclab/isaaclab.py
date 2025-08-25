@@ -253,12 +253,10 @@ class IsaaclabHandler(BaseSimHandler):
         return states, extras
 
     def close(self) -> None:
-        print("Closing isaaclab handler")
         if self._env is not None:
             self._env.close()
             self._env = None
-        print("Closed isaaclab env")
-        # Note: Don't close simulation_app here - it stays alive for subsequent tests
+        # NOTE: Don't close simulation_app here - it stays alive for subsequent tests
 
     ############################################################
     ## Utils
