@@ -155,3 +155,10 @@ Its goal is to present *one* standard interface that:
 | **Task‑level**    | `Wrapper.pre/post_sim_step()` | Action noise, observation noise, initial‑pose jitter |
 
 *Rule:* Simulator parameters → Handler; task‑coupled noise → Wrapper.
+
+## 3. RoboVerse Pack
+
+RoboVerse Pack provides pre-built implementations of robots, scenes, and tasks that follow Metasim's interfaces and protocols. It serves as a collection of ready-to-use components that users can directly import and use without implementing from scratch.
+
+RoboVerse Pack contains pre-built implementations of robots, scenes, and tasks that follow Metasim's interfaces and protocols. The robots include pre-configured models like Franka Panda, H1 Humanoid, Shadow Hand, Allegro Hand, and Unitree robots, all with proper joint limits, collision meshes, and initial poses. Scenes provide environment layouts with tables, objects, lighting, and camera setups, including manycore scenes, tapwater scenes, and base scene configurations. Tasks offer specific implementations following the Task Wrapper pattern, such as HumanoidBench tasks (crawl), ManiSkill tasks (pick & place, stacking), and RLBench tasks.
+
