@@ -21,7 +21,6 @@ import torch
 
 # Ensure the new env class is imported so its @register_task decorators run.
 # Adjust the import path if you place xhand_env.py elsewhere.
-from metasim.example.example_pack.tasks.dexhands_env import XHandEnv  # noqa: F401
 from metasim.task.gym_registration import make_vec
 from metasim.utils import configclass
 
@@ -72,8 +71,7 @@ robot = env.scenario.robots[0]
 log.info(f"Loaded robot: {robot.name}")
 log.info(f"DOFs: {len(robot.joint_limits)} | joints: {list(robot.joint_limits.keys())}")
 
-for step_i in range(1000000):
-    # breakpoint()
+for step_i in range(100):
     # Batch actions: (num_envs, act_dim) — random target pose within per-joint limits
     actions = [
         {

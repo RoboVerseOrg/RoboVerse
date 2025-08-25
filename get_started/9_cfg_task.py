@@ -73,7 +73,6 @@ env_id = f"RoboVerse/{args.task}"
 env = make_vec(
     env_id,
     num_envs=args.num_envs,
-    robots=[args.robot],
     simulator=args.sim,
     headless=args.headless,
     cameras=[camera] if args.save_video else [],
