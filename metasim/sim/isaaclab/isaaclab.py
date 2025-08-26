@@ -171,7 +171,6 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
-
     def set_dof_targets(self, actions):
         self._actions_cache = actions
 
@@ -191,8 +190,7 @@ class IsaaclabHandler(BaseSimHandler):
             action_tensor_all = torch.cat(action_tensors, dim=-1)
 
         _, _, _, time_out, extras = self.env.step(action_tensor_all)
-        
-    
+
     def reset(self, env_ids: list[int] | None = None) -> tuple[list[DictEnvState]]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))

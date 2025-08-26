@@ -1,13 +1,17 @@
 from __future__ import annotations
-from metasim.sim.randomizaer.base import BaseRandomizerType
+
+from typing import Any, Literal
+
 import torch
-from typing import Literal
-from typing import Any
+
+from metasim.sim.randomizaer.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
 
 
 @configclass
 class MassRandomCfg:
+    """Configuration for the mass randomizer."""
+
     obj_name: str | None = None
     range: tuple[float, float] = (0.0, 0.0)
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
@@ -19,13 +23,14 @@ class MassRandomCfg:
 class MassRandomizer(BaseRandomizerType):
     """Mass randomizer for domain randomization."""
 
-    def __init__(self, cfg: MassRandomCfg|None=None):
+    def __init__(self, cfg: MassRandomCfg | None = None):
         super().__init__()
         if cfg is None:
             raise ValueError("MassRandomizer requires a MassRandomCfg before called")
         self.cfg = cfg
 
     def bind_handler(self, handler, *args: Any, **kwargs):
+        """Bind the handler to the randomizer."""
         mod = handler.__class__.__module__
 
         if mod.startswith("metasim.sim.isaacsim"):
@@ -167,7 +172,6 @@ class MassRandomizer(BaseRandomizerType):
 
     def __call__(self):
         """Execute mass randomization based on configuration."""
-
         # Randomize mass
         self.randomize_body_mass(
             obj_name=self.cfg.obj_name,
