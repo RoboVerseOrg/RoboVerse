@@ -17,7 +17,7 @@ if [ "${delta_ee}" = 1 ]; then
 fi
 
 ## Collecting demonstration data run_all,
-python ~/RoboVerse/scripts/advanced/collect_demo.py --sim mujoco --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx} 
+python ~/RoboVerse/scripts/advanced/collect_demo.py --sim isaaclab --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx} 
 
 
 

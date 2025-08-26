@@ -13,7 +13,7 @@ eval_max_step=500
 expert_data_num=100
 
 ## Seperate training and evaluation
-train_enable=False
+train_enable=True
 eval_enable=True
 
 ## Choose training or inference algorithm
