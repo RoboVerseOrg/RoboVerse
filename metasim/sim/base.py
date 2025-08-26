@@ -245,8 +245,6 @@ class BaseSimHandler(ABC):
 
         return self._body_reindex_cache[obj_name]
 
-
-    
     @property
     def num_envs(self) -> int:
         return self._num_envs

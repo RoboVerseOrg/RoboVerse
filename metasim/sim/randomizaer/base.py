@@ -18,15 +18,11 @@ class BaseRandomizerType:
         self.randomizer_options = kwargs
 
     def bind_handler(self, handler, *args: Any, **kwargs):
-        """Binding handler to the randomizer.
-
-        """
+        """Binding handler to the randomizer."""
         self.handler = handler
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Performing the randomization.
-
-        """
+        """Performing the randomization."""
         pass
 
     def __str__(self) -> str:
