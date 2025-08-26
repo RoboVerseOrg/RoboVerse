@@ -1,4 +1,4 @@
-# Task System Documentation
+# Task System
 
 ## 1.Architecture and Philosophy
 
