@@ -17,6 +17,7 @@ imitation_learning/contributing.md
 :titlesonly:
 
 reinforcement_learning/ppo.md
+reinforcement_learning/fast_td3.md
 reinforcement_learning/sac.md
 reinforcement_learning/dreamer.md
 reinforcement_learning/humanoidbench_rl.md
