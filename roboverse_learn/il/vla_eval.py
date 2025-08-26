@@ -80,6 +80,7 @@ class OpenVLARunner():
             torch_dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
+            attn_implementation="eager",  
         ).to(self.device)
         
         if self.subset in self.model.norm_stats:
@@ -191,7 +192,7 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int) -> Dict[str, An
 def main():
     parser = argparse.ArgumentParser(description="OpenVLA Evaluation Script")
     
-    parser.add_argument("--model_path", type=str, required=True, help="OpenVLA checkpoint path")
+    parser.add_argument("--model_path", type=str, default="/home/balen/murphy/ROSE/RoboVerse/roboverse_data/openvla-7b", help="OpenVLA checkpoint path")
     parser.add_argument("--task", type=str, default="stack_cube", help="Task name")
     parser.add_argument("--robot", type=str, default="franka", help="Robot name")
     parser.add_argument("--sim", type=str, default="mujoco", 
