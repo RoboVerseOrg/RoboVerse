@@ -26,7 +26,6 @@ Tasks are managed by a **registry system**, where each task is bound to a unique
 Typical instantiation of a task for training looks like:
 
 ```python
-"""Train PPO for reaching task using RLTaskEnv."""
 task_cls = get_task_class(args.task)
 
 # Get default scenario from task class and update with overrides
@@ -38,11 +37,10 @@ scenario = task_cls.scenario.update(
     cameras=[],
 )
 
-# Create RLTaskEnv via registry
+# Create task env via registry
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-env = task_cls(scenario=scenario)
+env = task_cls(scenario=scenario, device=device)
 
-# Wrap with VecEnv for SB3
 ```
 
 **Key points:**
@@ -68,7 +66,7 @@ This workflow ensures tasks are:
 ```python
 """Train PPO for a reaching task using RLTaskEnv."""
 from roboverse_learn.registry import get_task_class
-
+import torch
 task_cls = get_task_class(args.task)  # e.g., "example.my_task"
 
 # Start from the class-provided default scenario and override as needed
@@ -80,9 +78,8 @@ scenario = task_cls.scenario.update(
     cameras=[],
 )
 
-import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-rl_env = task_cls(scenario=scenario)
+env = task_cls(scenario=scenario, device=device)
 ```
 
 ### 3.2 Via `make_vec`
