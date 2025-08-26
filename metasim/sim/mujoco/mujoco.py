@@ -639,6 +639,8 @@ class MujocoHandler(BaseSimHandler):
                             ).ctrl = joint_targets[jn]
             else:
                 for jn, pos in joint_targets.items():
+                    if torch.is_tensor(pos):
+                        pos = pos.detach().cpu().item()
                     self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = pos
 
     def refresh_render(self) -> None:
