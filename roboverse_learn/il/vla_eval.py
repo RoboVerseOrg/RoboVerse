@@ -63,6 +63,7 @@ class OpenVLARunner():
             torch_dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
+            attn_implementation="eager",  
         ).to(self.device)
         
         if self.subset in self.model.norm_stats:

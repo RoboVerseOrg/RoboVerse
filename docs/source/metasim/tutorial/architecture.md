@@ -10,13 +10,11 @@ In Metasim, we followed the principles of object oriented programming, and used 
 
 From the core to the shell, we have `Handlers`, whose responsibility is to run the physics simulation with different backends, `Task Wrappers`, who constructs the Gym-like pipeline, `Domain Randomizer`, who plays an improtant role in creating randomized simulation, and `RL Env Wrapper`, which can be added to further specify which observations are used for RL trainings.
 
-**Handlers**: All static contents of a simulation (robots used, objects used, lightings, physics parameters) are defined inside of a configuration system we call `Scenario Config`. Such configs are then instantiated with `Handlers` with different backends (mujoco, isaaclab, etc.).
+**Handlers in metasim**: All static contents of a simulation (robots used, objects used, lightings, physics parameters) are defined inside of a configuration system we call `Scenario Config`. Such configs are then instantiated with `Handlers` with different backends (mujoco, isaaclab, etc.).
 
 **Task Wrapper**: `Handlers` are then wrapped in a `Task Wrapper` that provide gym-style APIs to users. Each task wrapper corresponds to a task. A task wrapper is shipped with a default `Scenario Config`, which defines the static scene of the task. Other features realted to the task, including reward function and success reporting, are explicitely implemented in this wrapper for each task.
 
 **Domain Randomizer**: `Domain Randomizer` will be responsible for both static randomizations (object mass, friction, lightings) at reset of the simulation (similar to what you can do in Isaaclab), as well as real-time randomizations that randomizes the observations and actions for each step. The randomizer will wrap the `Task Wrapper` to form a randomized task.
-
-**RL Env Wrapper**: `RL Env Wrapper` are used in some cases when the RL training requires further modification or specifications to the tensor states obtained from the previous layers.
 
 All these modules are organized as follows in our repository:
 

@@ -10,7 +10,7 @@ Extra Observation system is a way to inject user-defined observation queries int
 
 A custom Extra Observation type is defined by inheriting `metasim.queries.base.BaseQueryType` . Let's call the inherited class `extra_qeury`.
 
-This class has only one important method you need to overwrite **\_\_call\_\_()** .
+This class has only one important method you need to overwrite **__call__()** .
 
 When an Extra Observation is used by a Task, it will be automatically bound to the underlying handler. You can then use `self.handler` to access the handler instance within the Extra Observation class.
 
@@ -132,7 +132,7 @@ First, create a new Python class that inherits from `BaseQueryType`. You will ty
 * **`bind_handler(self, handler)`**:
   This method is called **once** when the simulation launches. Here you save necessary references (such as simulator handles, indexes, IDs, or configurations) from your specific simulation handler.
 
-* **`\_\_call\_\_(self)`**:
+* **`__call__(self)`**:
   This method is invoked **at runtime** every time you request extras. In this method, you use the previously stored references to retrieve the real-time data you need.
 
 Example:
@@ -148,14 +148,12 @@ class BodyMassQuery(BaseQueryType):
 
         # Example: simulator-specific logic
         mod = handler.__class__.__module__
-        if mod.startswith("metasim.sim.mjx"):
-            self.mass = handler._mj_model.body_mass  # Example MJX API call
-        elif mod.startswith("metasim.sim.mujoco"):
+        if mod.startswith("metasim.sim.mujoco"):
             self.mass = handler.physics.model.body_mass  # Example MuJoCo API call
         else:
             raise ValueError(f"Unsupported handler: {mod}")
 
-    def \_\_call\_\_(self):
+    def __call__(self):
         # Return the stored body mass as a tensor
         return torch.tensor(self.mass)
 ```
@@ -180,7 +178,7 @@ After following these steps, your handler will automatically bind your custom qu
 
 * **Always ensure** simulator-specific code in your custom query is correctly placed inside the `bind_handler` method. This ensures efficient performance, as binding happens once at simulation launch rather than repeatedly at runtime.
 
-* Your `\_\_call\_\_` method should be fast and efficient, simply retrieving pre-stored references or quickly fetching real-time data.
+* Your `__call__` method should be fast and efficient, simply retrieving pre-stored references or quickly fetching real-time data.
 
 * It’s good practice to return data consistently as PyTorch tensors (or similarly structured arrays), as these integrate well with downstream RL pipelines.
 

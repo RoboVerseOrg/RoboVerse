@@ -80,7 +80,18 @@ The class provides mechanisms for asset management and dynamic updates:
 * **`update(**kwargs)`**
   Dynamically patches fields, re-runs `__post_init__`, and returns the updated config. Useful for quick overrides (e.g., changing gravity, swapping robots).
 
----
+  ------
+##  What Does Not Belong in Config
+
+  To keep `cfg/` clean and portable across tasks and RL settings, the following things are **explicitly excluded**:
+
+  - Reward functions
+  - Observation definitions
+  - Success checkers
+  - Task-level logic or termination conditions
+  - Algorithm-specific parameters (policy type, optimizer, etc.)
+
+  > These should all live in upper-level wrappers in Roboverse_learn
 
 
 
