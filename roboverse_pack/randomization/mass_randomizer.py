@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import Any, Literal
 
 import torch
@@ -23,11 +24,52 @@ class MassRandomCfg:
 class MassRandomizer(BaseRandomizerType):
     """Mass randomizer for domain randomization."""
 
-    def __init__(self, cfg: MassRandomCfg | None = None):
+    def __init__(self, cfg: MassRandomCfg | None = None, seed: int | None = None):
         super().__init__()
         if cfg is None:
             raise ValueError("MassRandomizer requires a MassRandomCfg before called")
         self.cfg = cfg
+
+        # Set up reproducible random state
+        if seed is not None:
+            # Use provided seed + simple string-to-number conversion for uniqueness
+            name_sum = sum(ord(c) for c in (cfg.obj_name or "mass"))
+            self._seed = seed + name_sum
+        else:
+            self._seed = random.randint(0, 2**32 - 1)
+
+        self._rng = random.Random(self._seed)
+
+    def _generate_random_tensor(self, shape, distribution: str, range_vals: tuple[float, float]):
+        """Generate random tensor using our reproducible RNG."""
+        if distribution == "uniform":
+            # Generate uniform random values using our RNG
+            rand_vals = [
+                [self._rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[1])] for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        elif distribution == "log_uniform":
+            # Generate log-uniform values
+            log_min, log_max = torch.log(torch.tensor(range_vals[0])), torch.log(torch.tensor(range_vals[1]))
+            rand_vals = [
+                [
+                    torch.exp(torch.tensor(self._rng.uniform(0.0, 1.0)) * (log_max - log_min) + log_min).item()
+                    for _ in range(shape[1])
+                ]
+                for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        elif distribution == "gaussian":
+            # Generate Gaussian values
+            mean = (range_vals[0] + range_vals[1]) / 2
+            std = (range_vals[1] - range_vals[0]) / 6
+            rand_vals = [
+                [max(range_vals[0], min(range_vals[1], self._rng.gauss(mean, std))) for _ in range(shape[1])]
+                for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        else:
+            raise ValueError(f"Unsupported distribution: {distribution}")
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
@@ -146,18 +188,8 @@ class MassRandomizer(BaseRandomizerType):
         current_mass = self.get_body_mass(obj_name, body_name, env_ids)
         num_bodies = current_mass.shape[1]
 
-        if distribution == "uniform":
-            rand_values = torch.rand([len(env_ids), num_bodies]) * (mass_range[1] - mass_range[0]) + mass_range[0]
-        elif distribution == "log_uniform":
-            log_min, log_max = torch.log(torch.tensor(mass_range[0])), torch.log(torch.tensor(mass_range[1]))
-            rand_values = torch.exp(torch.rand([len(env_ids), num_bodies]) * (log_max - log_min) + log_min)
-        elif distribution == "gaussian":
-            mean = (mass_range[0] + mass_range[1]) / 2
-            std = (mass_range[1] - mass_range[0]) / 6
-            rand_values = torch.normal(mean, std, size=(len(env_ids), num_bodies))
-            rand_values = torch.clamp(rand_values, mass_range[0], mass_range[1])
-        else:
-            raise ValueError(f"Unsupported distribution: {distribution}")
+        # Use our reproducible random tensor generation
+        rand_values = self._generate_random_tensor([len(env_ids), num_bodies], distribution, mass_range)
 
         if operation == "add":
             new_mass = current_mass + rand_values

@@ -1,23 +1,10 @@
-## XXX:
-## 1. Currently we use global variables to track the progress, which is not a good practice.
-## TODO:
-## 1. Check the missing demos first, then collect the missing part? In this way, there won't be any global variables
-## 2. Or, combine tot_success, tot_give_up, global_step and pbar into a seperate class, maybe called ProgressManager. In this way, there won't be any global variables
-
 from __future__ import annotations
 
-#########################################
-## Setup logging
-#########################################
 from loguru import logger as log
 from rich.logging import RichHandler
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-
-#########################################
-### Add command line arguments
-#########################################
 import math
 from copy import deepcopy
 from dataclasses import dataclass
@@ -25,15 +12,11 @@ from typing import Literal
 
 import tyro
 
-# from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 
 
 @dataclass
 class Args:
-    # random: RandomizationCfg
-    """Domain randomization options"""
-
     render: RenderCfg
     """Renderer options"""
     task: str = "close_box"
@@ -42,7 +25,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -70,29 +53,55 @@ class Args:
     """Rollout unfinished and failed trajectories"""
     renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
+    ## Domain randomization options
+    enable_randomization: bool = False
+    """Enable domain randomization during demo collection"""
+    randomize_materials: bool = True
+    """Enable material randomization (when randomization is enabled)"""
+    randomize_lights: bool = True
+    """Enable light randomization (when randomization is enabled)"""
+    randomize_cameras: bool = True
+    """Enable camera randomization (when randomization is enabled)"""
+    randomize_physics: bool = True
+    """Enable physics (mass/friction) randomization (when randomization is enabled)"""
+    randomization_frequency: Literal["per_demo", "per_episode"] = "per_demo"
+    """When to apply randomization: per_demo (once at start) or per_episode (every episode)"""
+    randomization_seed: int | None = None
+    """Seed for reproducible randomization. If None, uses random seed"""
+
     def __post_init__(self):
         assert self.run_all or self.run_unfinished or self.run_failed, (
             "At least one of run_all, run_unfinished, or run_failed must be True"
         )
-        # if self.random.table and not self.table:
-        #     log.warning("Cannot enable table randomization without a table, disabling table randomization")
-        #     self.random.table = False
-
         if self.max_demo_idx is None:
             self.max_demo_idx = math.inf
 
         if self.demo_start_idx is None:
             self.demo_start_idx = 0
 
+        # Validate randomization settings
+        if self.enable_randomization:
+            if not (
+                self.randomize_materials or self.randomize_lights or self.randomize_cameras or self.randomize_physics
+            ):
+                log.warning("Randomization enabled but no randomization types selected, disabling randomization")
+                self.enable_randomization = False
+
         log.info(f"Args: {self}")
+
+        # Log randomization settings
+        if self.enable_randomization:
+            log.info("Domain Randomization Configuration:")
+            log.info(f"  Materials: {'✓' if self.randomize_materials else '✗'}")
+            log.info(f"  Lights: {'✓' if self.randomize_lights else '✗'}")
+            log.info(f"  Cameras: {'✓' if self.randomize_cameras else '✗'}")
+            log.info(f"  Physics: {'✓' if self.randomize_physics else '✗'}")
+            log.info(f"  Frequency: {self.randomization_frequency}")
+            log.info(f"  Seed: {self.randomization_seed if self.randomization_seed else 'Random'}")
 
 
 args = tyro.cli(Args)
 
-
-#########################################
-### Import packages
-#########################################
 import multiprocessing as mp
 import os
 
@@ -116,17 +125,171 @@ from metasim.utils.tensor_util import tensor_to_cpu
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+# Import randomization components (after rootutils setup)
+try:
+    from roboverse_pack.randomization import (
+        CameraPresets,
+        CameraRandomizer,
+        FrictionRandomCfg,
+        FrictionRandomizer,
+        LightPresets,
+        LightRandomizer,
+        MassRandomCfg,
+        MassRandomizer,
+        MaterialPresets,
+        MaterialRandomizer,
+    )
 
-###########################################################
-## Utils
-###########################################################
+    RANDOMIZATION_AVAILABLE = True
+except ImportError as e:
+    log.warning(f"Randomization components not available: {e}")
+    RANDOMIZATION_AVAILABLE = False
+
+
+class DomainRandomizationManager:
+    """Manages domain randomization for demo collection."""
+
+    def __init__(self, args: Args, scenario, handler):
+        self.args = args
+        self.scenario = scenario
+        self.handler = handler
+        self.randomizers = []
+        self._demo_count = 0
+
+        if not args.enable_randomization:
+            log.info("Domain randomization disabled")
+            return
+
+        if not RANDOMIZATION_AVAILABLE:
+            log.warning("Domain randomization requested but components not available")
+            return
+
+        log.info("Setting up domain randomization...")
+        self._setup_randomizers()
+
+    def _setup_randomizers(self):
+        """Initialize all randomizers based on configuration."""
+        seed = self.args.randomization_seed
+
+        # Set up global reproducibility if seed provided
+        if seed is not None:
+            log.info(f"Domain randomization using seed: {seed}")
+            torch.manual_seed(seed)
+            import numpy as np
+
+            np.random.seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed(seed)
+
+        # Material randomization
+        if self.args.randomize_materials:
+            # Get objects from scenario
+            objects = getattr(self.scenario, "objects", [])
+            if objects:
+                for obj in objects:
+                    obj_name = obj.name
+                    # Use appropriate material preset based on object type
+                    if "cube" in obj_name.lower():
+                        config = MaterialPresets.metal_object(obj_name, use_mdl=True, randomization_mode="combined")
+                    elif "sphere" in obj_name.lower():
+                        config = MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
+                    else:
+                        config = MaterialPresets.wood_object(obj_name, use_mdl=True, randomization_mode="combined")
+
+                    randomizer = MaterialRandomizer(config, seed=seed)
+                    randomizer.bind_handler(self.handler)
+                    self.randomizers.append(randomizer)
+                    log.info(f"Added material randomizer for {obj_name}")
+
+        # Light randomization
+        if self.args.randomize_lights:
+            lights = getattr(self.scenario, "lights", [])
+            if lights:
+                for light in lights:
+                    light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
+                    config = LightPresets.indoor_ambient(light_name, randomization_mode="combined")
+                    randomizer = LightRandomizer(config, seed=seed)
+                    randomizer.bind_handler(self.handler)
+                    self.randomizers.append(randomizer)
+                    log.info(f"Added light randomizer for {light_name}")
+
+        # Camera randomization
+        if self.args.randomize_cameras:
+            cameras = getattr(self.scenario, "cameras", [])
+            if cameras:
+                for camera in cameras:
+                    camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
+                    config = CameraPresets.surveillance_camera(camera_name, randomization_mode="combined")
+                    randomizer = CameraRandomizer(config, seed=seed)
+                    randomizer.bind_handler(self.handler)
+                    self.randomizers.append(randomizer)
+                    log.info(f"Added camera randomizer for {camera_name}")
+
+        # Physics randomization
+        if self.args.randomize_physics:
+            # Get robot name
+            robots = getattr(self.scenario, "robots", [])
+            if robots:
+                robot_name = robots[0] if isinstance(robots[0], str) else robots[0].name
+
+                # Mass randomization
+                mass_config = MassRandomCfg(
+                    obj_name=robot_name,
+                    range=(0.8, 1.2),
+                    operation="scale",
+                    distribution="uniform",
+                )
+                mass_randomizer = MassRandomizer(mass_config, seed=seed)
+                mass_randomizer.bind_handler(self.handler)
+                self.randomizers.append(mass_randomizer)
+                log.info(f"Added mass randomizer for {robot_name}")
+
+                # Friction randomization
+                friction_config = FrictionRandomCfg(
+                    obj_name=robot_name,
+                    range=(0.8, 1.2),
+                    operation="scale",
+                    distribution="uniform",
+                )
+                friction_randomizer = FrictionRandomizer(friction_config, seed=seed)
+                friction_randomizer.bind_handler(self.handler)
+                self.randomizers.append(friction_randomizer)
+                log.info(f"Added friction randomizer for {robot_name}")
+
+        log.info(f"Domain randomization setup complete: {len(self.randomizers)} randomizers")
+
+    def randomize_for_demo(self, demo_idx: int):
+        """Apply randomization for a new demo."""
+        if not self.args.enable_randomization or not self.randomizers:
+            return
+
+        # Apply randomization based on frequency setting
+        should_randomize = self.args.randomization_frequency == "per_demo" or (
+            self.args.randomization_frequency == "per_episode" and demo_idx == 0
+        )
+
+        if should_randomize:
+            log.debug(f"Applying domain randomization for demo {demo_idx}")
+            for randomizer in self.randomizers:
+                try:
+                    randomizer()
+                except Exception as e:
+                    log.warning(f"Randomizer {type(randomizer).__name__} failed: {e}")
+            self._demo_count += 1
+
+
 def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
     action_idxs = env._episode_steps
 
-    actions = [
-        all_actions[demo_idx][action_idx] if action_idx < len(all_actions[demo_idx]) else all_actions[demo_idx][-1]
-        for demo_idx, action_idx in zip(demo_idxs, action_idxs)
-    ]
+    actions = []
+    for env_id, (demo_idx, action_idx) in enumerate(zip(demo_idxs, action_idxs)):
+        if action_idx < len(all_actions[demo_idx]):
+            action = all_actions[demo_idx][action_idx]
+        else:
+            action = all_actions[demo_idx][-1]
+
+        actions.append(action)
+
     return actions
 
 
@@ -146,18 +309,116 @@ def save_demo_mp(save_req_queue: mp.Queue):
         save_demo(save_dir, demo)
 
 
-###########################################################
-## Global Variables
-###########################################################
+def ensure_clean_state(handler, expected_state=None):
+    """Ensure environment is in clean initial state with intelligent validation."""
+    prev_state = None
+    stable_count = 0
+    max_steps = 10
+    min_steps = 2
+
+    for step in range(max_steps):
+        handler.simulate()
+        current_state = handler.get_states()
+
+        # Only start checking after minimum steps
+        if step >= min_steps:
+            if prev_state is not None:
+                # Check if key states are stable (focus on articulated objects)
+                is_stable = True
+                if hasattr(current_state, "objects") and hasattr(prev_state, "objects"):
+                    for obj_name, obj_state in current_state.objects.items():
+                        if obj_name in prev_state.objects:
+                            # Check DOF positions for articulated objects
+                            curr_dof = getattr(obj_state, "dof_pos", None)
+                            prev_dof = getattr(prev_state.objects[obj_name], "dof_pos", None)
+                            if curr_dof is not None and prev_dof is not None:
+                                if not torch.allclose(curr_dof, prev_dof, atol=1e-5):
+                                    is_stable = False
+                                    break
+
+                # Additional validation: check if we're stable at the RIGHT state
+                if is_stable and expected_state is not None:
+                    is_correct_state = _validate_state_correctness(current_state, expected_state)
+                    if not is_correct_state:
+                        # We're stable but at wrong state - force more simulation
+                        log.debug(f"State stable but incorrect at step {step}, continuing simulation...")
+                        stable_count = 0
+                        is_stable = False
+                        # Continue simulating to let physics settle properly
+
+                if is_stable:
+                    stable_count += 1
+                    if stable_count >= 2:  # Stable for 2 consecutive steps at correct state
+                        break
+                else:
+                    stable_count = 0
+
+            prev_state = current_state
+
+    # Final validation if we ran out of steps
+    if expected_state is not None:
+        final_state = handler.get_states()
+        is_final_correct = _validate_state_correctness(final_state, expected_state)
+        if not is_final_correct:
+            log.warning(f"State validation failed after {max_steps} steps - reset may not have taken full effect")
+
+    # Final state refresh
+    handler.get_states()
+
+
+def _validate_state_correctness(current_state, expected_state):
+    """Validate that current state matches expected initial state for critical objects."""
+    if not hasattr(current_state, "objects") or not hasattr(expected_state, "objects"):
+        return True  # Can't validate, assume correct
+
+    # Focus on articulated objects which are most prone to reset issues
+    critical_objects = []
+    for obj_name, expected_obj in expected_state.objects.items():
+        if hasattr(expected_obj, "dof_pos") and getattr(expected_obj, "dof_pos", None) is not None:
+            critical_objects.append(obj_name)
+
+    if not critical_objects:
+        return True  # No critical objects to validate
+
+    tolerance = 5e-3  # Reasonable tolerance for DOF positions
+
+    for obj_name in critical_objects:
+        if obj_name not in current_state.objects:
+            continue
+
+        expected_obj = expected_state.objects[obj_name]
+        current_obj = current_state.objects[obj_name]
+
+        # Check DOF positions for articulated objects (most critical for demo consistency)
+        expected_dof = getattr(expected_obj, "dof_pos", None)
+        current_dof = getattr(current_obj, "dof_pos", None)
+
+        if expected_dof is not None and current_dof is not None:
+            if not torch.allclose(current_dof, expected_dof, atol=tolerance):
+                # Log the specific difference for debugging
+                diff = torch.abs(current_dof - expected_dof).max().item()
+                log.debug(f"DOF mismatch for {obj_name}: max diff = {diff:.6f} (tolerance = {tolerance})")
+                return False
+
+    return True
+
+
+def force_reset_to_state(env, state, env_id):
+    """Force reset environment to specific state with validation."""
+    env.reset(states=[state], env_ids=[env_id])
+    # Pass expected state for validation
+    ensure_clean_state(env.handler, expected_state=state)
+    # Reset episode counter AFTER stabilization to ensure demo starts from action 0
+    if hasattr(env, "_episode_steps"):
+        env._episode_steps[env_id] = 0
+
+
 global global_step, tot_success, tot_give_up
 tot_success = 0
 tot_give_up = 0
 global_step = 0
 
 
-###########################################################
-## Core Utils
-###########################################################
 class DemoCollector:
     def __init__(self, handler):
         assert isinstance(handler, BaseSimHandler)
@@ -201,8 +462,7 @@ class DemoCollector:
 
         save_demo(save_dir, self.cache[demo_idx])
 
-        ## Option 2: Save in a separate process, non-blocking, not friendly to KeyboardInterrupt, TODO: fix
-        ## TODO: see https://isaac-sim.github.io/IsaacLab/main/source/refs/troubleshooting.html#preventing-memory-leaks-in-the-simulator
+        ## Option 2: Save in a separate process, non-blocking, not friendly to KeyboardInterrupt
         # self.save_request_queue.put({"demo": self.cache[demo_idx], "save_dir": save_dir})
 
     def mark_fail(self, demo_idx: int):
@@ -271,9 +531,6 @@ class DemoIndexer:
         self._skip_if_should()
 
 
-###########################################################
-## Main
-###########################################################
 def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
@@ -293,6 +550,9 @@ def main():
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = task_cls(scenario, device=device)
+
+    # Initialize domain randomization manager
+    randomization_manager = DomainRandomizationManager(args, scenario, env.handler)
     ## Data
     assert os.path.exists(env.traj_filepath), f"Trajectory file does not exist: {env.traj_filepath}"
     init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
@@ -320,23 +580,9 @@ def main():
     max_demo = min(args.max_demo_idx, n_demo)
     try_num = args.retry_num + 1
 
-    ###########################################################
-    ##   State Machine Diagram
-    ###########################################################
-    ##   CollectingDemo --> Success: env success
-    ##   CollectingDemo --> Timeout: env timeout or run_out
-    ##
-    ##   Success --> FinalizeCollectingDemo
-    ##
-    ##   FinalizeCollectingDemo --> NextDemo: run_out or steps_after_success >= args.tot_steps_after_success
-    ##
-    ##   Timeout --> CollectingDemo: failure_count < try_num
-    ##   Timeout --> NextDemo: failure_count >= try_num
-    ##
-    ##   NextDemo --> CollectingDemo: next_demo_idx < max_demo
-    ##   NextDemo --> Finished: next_demo_idx >= max_demo
-    ##
-    ##   All Finished --> Exit
+    ## Demo collection state machine:
+    ## CollectingDemo -> Success -> FinalizeDemo -> NextDemo
+    ## CollectingDemo -> Timeout -> Retry/GiveUp -> NextDemo
 
     ## Setup
     collector = DemoCollector(env.handler)
@@ -363,11 +609,28 @@ def main():
         demo_idxs.append(demo_indexer.next_idx)
         demo_indexer.move_on()
     log.info(f"Initialize with demo idxs: {demo_idxs}")
-    ## Reset before first step
-    obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
-    obs = state_tensor_to_nested(env.handler, obs)
-    ## Initialize
+
+    ## Apply initial randomization
     for env_id, demo_idx in enumerate(demo_idxs):
+        randomization_manager.randomize_for_demo(demo_idx)
+
+    ## Reset to initial states
+    obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+
+    ## Wait for environment to stabilize after reset (before counting demo steps)
+    # For initial setup, we can't validate individual states easily, so just ensure stability
+    ensure_clean_state(env.handler)
+
+    ## Reset episode step counters AFTER stabilization
+    if hasattr(env, "_episode_steps"):
+        for env_id in range(env.handler.num_envs):
+            env._episode_steps[env_id] = 0
+
+    ## Now record the clean, stabilized initial state
+    obs = env.handler.get_states()
+    obs = state_tensor_to_nested(env.handler, obs)
+    for env_id, demo_idx in enumerate(demo_idxs):
+        log.info(f"Starting Demo {demo_idx} in Env {env_id}")
         collector.create(demo_idx, obs[env_id])
 
     ## Main Loop
@@ -389,7 +652,6 @@ def main():
             if finished[env_id]:
                 continue
 
-            ## CollectingDemo --> Success
             demo_idx = demo_idxs[env_id]
             if steps_after_success[env_id] == 0:
                 log.info(f"Demo {demo_idx} in Env {env_id} succeeded!")
@@ -397,34 +659,33 @@ def main():
                 pbar.update(1)
                 pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
 
-            ## Success --> FinalizeCollectingDemo
             if not run_out[env_id] and steps_after_success[env_id] < args.tot_steps_after_success:
                 steps_after_success[env_id] += 1
             else:
-                ## FinalizeCollectingDemo --> NextDemo
                 steps_after_success[env_id] = 0
                 collector.save(demo_idx)
                 collector.delete(demo_idx)
 
                 if demo_indexer.next_idx < max_demo:
-                    ## NextDemo --> CollectingDemo
-                    demo_idxs[env_id] = demo_indexer.next_idx
-                    ## Reset before first step
-                    env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                    new_demo_idx = demo_indexer.next_idx
+                    demo_idxs[env_id] = new_demo_idx
+                    log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx}")
+
+                    randomization_manager.randomize_for_demo(new_demo_idx)
+                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
-                    collector.create(demo_indexer.next_idx, obs[env_id])
+                    collector.create(new_demo_idx, obs[env_id])
                     demo_indexer.move_on()
                     run_out[env_id] = False
                 else:
-                    ## NextDemo --> Finished
                     finished[env_id] = True
 
         for env_id in (time_out | torch.tensor(run_out, device=time_out.device)).nonzero().squeeze(-1).tolist():
             if finished[env_id]:
                 continue
 
-            ## CollectingDemo --> Timeout
             demo_idx = demo_idxs[env_id]
             log.info(f"Demo {demo_idx} in Env {env_id} timed out!")
             collector.mark_fail(demo_idx)
@@ -432,15 +693,14 @@ def main():
             failure_count[env_id] += 1
 
             if failure_count[env_id] < try_num:
-                ## Timeout --> CollectingDemo
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
-                ## Reset before first step
-                env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
+                randomization_manager.randomize_for_demo(demo_idx)
+                force_reset_to_state(env, init_states[demo_idx], env_id)
+
                 obs = env.handler.get_states()
                 obs = state_tensor_to_nested(env.handler, obs)
                 collector.create(demo_idx, obs[env_id])
             else:
-                ## Timeout --> NextDemo
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
                 failure_count[env_id] = 0
                 tot_give_up += 1
@@ -448,17 +708,16 @@ def main():
                 pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
 
                 if demo_indexer.next_idx < max_demo:
-                    ## NextDemo --> CollectingDemo
-                    demo_idxs[env_id] = demo_indexer.next_idx
-                    ## Reset before first step
-                    env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs], env_ids=[env_id])
-                    # self.checker.reset(self.handler, env_ids=env_ids)
+                    new_demo_idx = demo_indexer.next_idx
+                    demo_idxs[env_id] = new_demo_idx
+                    randomization_manager.randomize_for_demo(new_demo_idx)
+                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
-                    collector.create(demo_indexer.next_idx, obs[env_id])
+                    collector.create(new_demo_idx, obs[env_id])
                     demo_indexer.move_on()
                 else:
-                    ## NextDemo --> Finished
                     finished[env_id] = True
 
         global_step += 1
