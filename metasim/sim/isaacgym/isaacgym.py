@@ -17,6 +17,7 @@ from metasim.scenario.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
+from copy import deepcopy
 
 # FIXME: fix this
 # from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg
@@ -972,7 +973,7 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            body_names = self._body_info[obj_name]["names"]
+            body_names = deepcopy(self._body_info[obj_name]["names"])
             if sort:
                 body_names.sort()
             return body_names
