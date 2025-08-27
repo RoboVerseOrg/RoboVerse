@@ -5,9 +5,36 @@ from rich.logging import RichHandler
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
+
+def log_randomization_result(
+    randomizer_type: str, obj_name: str, property_name: str, before_value, after_value, unit: str = ""
+):
+    """Log randomization results in a consistent format."""
+    if hasattr(before_value, "cpu"):
+        before_str = str(before_value.cpu().numpy().round(3) if hasattr(before_value, "numpy") else before_value)
+    else:
+        before_str = str(before_value)
+
+    if hasattr(after_value, "cpu"):
+        after_str = str(after_value.cpu().numpy().round(3) if hasattr(after_value, "numpy") else after_value)
+    else:
+        after_str = str(after_value)
+
+    log.info(f"  [{randomizer_type}] {obj_name}.{property_name}: {before_str} -> {after_str} {unit}")
+
+
+def log_randomization_header(randomizer_name: str, description: str = ""):
+    """Log a consistent header for randomization sections."""
+    log.info("=" * 50)
+    if description:
+        log.info(f"{randomizer_name}: {description}")
+    else:
+        log.info(randomizer_name)
+
+
 import math
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 import tyro
@@ -17,7 +44,7 @@ from metasim.scenario.render import RenderCfg
 
 @dataclass
 class Args:
-    render: RenderCfg
+    render: RenderCfg = field(default_factory=RenderCfg)
     """Renderer options"""
     task: str = "close_box"
     """Task name"""
@@ -63,7 +90,7 @@ class Args:
     randomize_cameras: bool = True
     """Enable camera randomization (when randomization is enabled)"""
     randomize_physics: bool = True
-    """Enable physics (mass/friction) randomization (when randomization is enabled)"""
+    """Enable physics (mass/friction/pose) randomization using ObjectRandomizer"""
     randomization_frequency: Literal["per_demo", "per_episode"] = "per_demo"
     """When to apply randomization: per_demo (once at start) or per_episode (every episode)"""
     randomization_seed: int | None = None
@@ -91,13 +118,15 @@ class Args:
 
         # Log randomization settings
         if self.enable_randomization:
-            log.info("Domain Randomization Configuration:")
+            log.info("=" * 60)
+            log.info("DOMAIN RANDOMIZATION CONFIGURATION")
             log.info(f"  Materials: {'✓' if self.randomize_materials else '✗'}")
             log.info(f"  Lights: {'✓' if self.randomize_lights else '✗'}")
             log.info(f"  Cameras: {'✓' if self.randomize_cameras else '✗'}")
-            log.info(f"  Physics: {'✓' if self.randomize_physics else '✗'}")
+            log.info(f"  Physics: {'✓' if self.randomize_physics else '✗'} (ObjectRandomizer)")
             log.info(f"  Frequency: {self.randomization_frequency}")
             log.info(f"  Seed: {self.randomization_seed if self.randomization_seed else 'Random'}")
+            log.info("=" * 60)
 
 
 args = tyro.cli(Args)
@@ -130,14 +159,12 @@ try:
     from roboverse_pack.randomization import (
         CameraPresets,
         CameraRandomizer,
-        FrictionRandomCfg,
-        FrictionRandomizer,
         LightPresets,
         LightRandomizer,
-        MassRandomCfg,
-        MassRandomizer,
         MaterialPresets,
         MaterialRandomizer,
+        ObjectPresets,
+        ObjectRandomizer,
     )
 
     RANDOMIZATION_AVAILABLE = True
@@ -147,7 +174,7 @@ except ImportError as e:
 
 
 class DomainRandomizationManager:
-    """Manages domain randomization for demo collection."""
+    """Manages domain randomization for demo collection with unified interface."""
 
     def __init__(self, args: Args, scenario, handler):
         self.args = args
@@ -156,24 +183,48 @@ class DomainRandomizationManager:
         self.randomizers = []
         self._demo_count = 0
 
-        if not args.enable_randomization:
-            log.info("Domain randomization disabled")
+        # Early validation
+        if not self._validate_setup():
             return
+
+        log_randomization_header("DOMAIN RANDOMIZATION SETUP", "Initializing randomizers")
+        self._setup_randomizers()
+        log.info(f"Setup complete: {len(self.randomizers)} randomizers ready")
+
+    def _validate_setup(self) -> bool:
+        """Validate if randomization can be set up."""
+        if not self.args.enable_randomization:
+            log.info("Domain randomization disabled")
+            return False
 
         if not RANDOMIZATION_AVAILABLE:
             log.warning("Domain randomization requested but components not available")
-            return
+            return False
 
-        log.info("Setting up domain randomization...")
-        self._setup_randomizers()
+        return True
 
     def _setup_randomizers(self):
         """Initialize all randomizers based on configuration."""
         seed = self.args.randomization_seed
+        self._setup_reproducibility(seed)
 
-        # Set up global reproducibility if seed provided
+        # Setup each randomization type symmetrically
+        if self.args.randomize_materials:
+            self._setup_material_randomizers(seed)
+
+        if self.args.randomize_lights:
+            self._setup_light_randomizers(seed)
+
+        if self.args.randomize_cameras:
+            self._setup_camera_randomizers(seed)
+
+        if self.args.randomize_physics:
+            self._setup_physics_randomizers(seed)
+
+    def _setup_reproducibility(self, seed: int | None):
+        """Setup global reproducibility if seed is provided."""
         if seed is not None:
-            log.info(f"Domain randomization using seed: {seed}")
+            log.info(f"Setting up reproducible randomization with seed: {seed}")
             torch.manual_seed(seed)
             import numpy as np
 
@@ -181,101 +232,174 @@ class DomainRandomizationManager:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed(seed)
 
-        # Material randomization
-        if self.args.randomize_materials:
-            # Get objects from scenario
-            objects = getattr(self.scenario, "objects", [])
-            if objects:
-                for obj in objects:
-                    obj_name = obj.name
-                    # Use appropriate material preset based on object type
-                    if "cube" in obj_name.lower():
-                        config = MaterialPresets.metal_object(obj_name, use_mdl=True, randomization_mode="combined")
-                    elif "sphere" in obj_name.lower():
-                        config = MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
-                    else:
-                        config = MaterialPresets.wood_object(obj_name, use_mdl=True, randomization_mode="combined")
+    def _setup_material_randomizers(self, seed: int | None):
+        """Setup material randomizers for all objects."""
+        objects = getattr(self.scenario, "objects", [])
+        if not objects:
+            log.info("  No objects found for material randomization")
+            return
 
-                    randomizer = MaterialRandomizer(config, seed=seed)
-                    randomizer.bind_handler(self.handler)
-                    self.randomizers.append(randomizer)
-                    log.info(f"Added material randomizer for {obj_name}")
+        log.info(f"  Setting up material randomizers for {len(objects)} objects")
+        for obj in objects:
+            obj_name = obj.name
+            config = self._get_material_config(obj_name)
 
-        # Light randomization
-        if self.args.randomize_lights:
-            lights = getattr(self.scenario, "lights", [])
-            if lights:
-                for light in lights:
-                    light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
-                    config = LightPresets.indoor_ambient(light_name, randomization_mode="combined")
-                    randomizer = LightRandomizer(config, seed=seed)
-                    randomizer.bind_handler(self.handler)
-                    self.randomizers.append(randomizer)
-                    log.info(f"Added light randomizer for {light_name}")
+            randomizer = MaterialRandomizer(config, seed=seed)
+            randomizer.bind_handler(self.handler)
+            self.randomizers.append(randomizer)
+            log.info(f"    Added MaterialRandomizer for {obj_name}")
 
-        # Camera randomization
-        if self.args.randomize_cameras:
-            cameras = getattr(self.scenario, "cameras", [])
-            if cameras:
-                for camera in cameras:
-                    camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
-                    config = CameraPresets.surveillance_camera(camera_name, randomization_mode="combined")
-                    randomizer = CameraRandomizer(config, seed=seed)
-                    randomizer.bind_handler(self.handler)
-                    self.randomizers.append(randomizer)
-                    log.info(f"Added camera randomizer for {camera_name}")
+    def _setup_light_randomizers(self, seed: int | None):
+        """Setup light randomizers for all lights."""
+        lights = getattr(self.scenario, "lights", [])
+        if not lights:
+            log.info("  No lights found for light randomization")
+            return
 
-        # Physics randomization
-        if self.args.randomize_physics:
-            # Get robot name
-            robots = getattr(self.scenario, "robots", [])
-            if robots:
-                robot_name = robots[0] if isinstance(robots[0], str) else robots[0].name
+        log.info(f"  Setting up light randomizers for {len(lights)} lights")
+        for light in lights:
+            light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
+            config = LightPresets.indoor_ambient(light_name, randomization_mode="combined")
 
-                # Mass randomization
-                mass_config = MassRandomCfg(
-                    obj_name=robot_name,
-                    range=(0.8, 1.2),
-                    operation="scale",
-                    distribution="uniform",
-                )
-                mass_randomizer = MassRandomizer(mass_config, seed=seed)
-                mass_randomizer.bind_handler(self.handler)
-                self.randomizers.append(mass_randomizer)
-                log.info(f"Added mass randomizer for {robot_name}")
+            randomizer = LightRandomizer(config, seed=seed)
+            randomizer.bind_handler(self.handler)
+            self.randomizers.append(randomizer)
+            log.info(f"    Added LightRandomizer for {light_name}")
 
-                # Friction randomization
-                friction_config = FrictionRandomCfg(
-                    obj_name=robot_name,
-                    range=(0.8, 1.2),
-                    operation="scale",
-                    distribution="uniform",
-                )
-                friction_randomizer = FrictionRandomizer(friction_config, seed=seed)
-                friction_randomizer.bind_handler(self.handler)
-                self.randomizers.append(friction_randomizer)
-                log.info(f"Added friction randomizer for {robot_name}")
+    def _setup_camera_randomizers(self, seed: int | None):
+        """Setup camera randomizers for all cameras."""
+        cameras = getattr(self.scenario, "cameras", [])
+        if not cameras:
+            log.info("  No cameras found for camera randomization")
+            return
 
-        log.info(f"Domain randomization setup complete: {len(self.randomizers)} randomizers")
+        log.info(f"  Setting up camera randomizers for {len(cameras)} cameras")
+        for camera in cameras:
+            camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
+            config = CameraPresets.surveillance_camera(camera_name, randomization_mode="combined")
+
+            randomizer = CameraRandomizer(config, seed=seed)
+            randomizer.bind_handler(self.handler)
+            self.randomizers.append(randomizer)
+            log.info(f"    Added CameraRandomizer for {camera_name}")
+
+    def _get_material_config(self, obj_name: str):
+        """Get appropriate material configuration based on object type."""
+        obj_lower = obj_name.lower()
+        if "cube" in obj_lower:
+            return MaterialPresets.metal_object(obj_name, use_mdl=True, randomization_mode="combined")
+        elif "sphere" in obj_lower:
+            return MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
+        else:
+            return MaterialPresets.wood_object(obj_name, use_mdl=True, randomization_mode="combined")
+
+    def _setup_physics_randomizers(self, seed: int | None):
+        """Setup unified ObjectRandomizers for robots and objects."""
+        robots = getattr(self.scenario, "robots", [])
+        objects = getattr(self.scenario, "objects", [])
+
+        self._setup_object_randomizers(robots, objects, seed)
+
+    def _setup_object_randomizers(self, robots: list, objects: list, seed: int | None):
+        """Setup unified ObjectRandomizers for all physical entities."""
+        log.info("  Setting up ObjectRandomizers for physics randomization")
+
+        # Robot randomization
+        if robots:
+            robot_name = robots[0] if isinstance(robots[0], str) else robots[0].name
+            robot_randomizer = ObjectRandomizer(ObjectPresets.robot_base(robot_name), seed=seed)
+            robot_randomizer.bind_handler(self.handler)
+            self.randomizers.append(robot_randomizer)
+            log.info(f"    Added ObjectRandomizer for robot {robot_name}")
+
+        # Object randomization
+        if objects:
+            for obj in objects:
+                obj_name = obj.name
+                config = self._get_object_physics_config(obj_name)
+
+                obj_randomizer = ObjectRandomizer(config, seed=seed)
+                obj_randomizer.bind_handler(self.handler)
+                self.randomizers.append(obj_randomizer)
+                log.info(f"    Added ObjectRandomizer for {obj_name}")
+
+        if not robots and not objects:
+            log.info("    No robots or objects found for physics randomization")
+
+    def _get_object_physics_config(self, obj_name: str):
+        """Get appropriate physics configuration based on object type."""
+        obj_lower = obj_name.lower()
+        if "cube" in obj_lower:
+            return ObjectPresets.grasping_target(obj_name)
+        elif "sphere" in obj_lower:
+            return ObjectPresets.bouncy_object(obj_name)
+        else:
+            return ObjectPresets.physics_only(obj_name)
 
     def randomize_for_demo(self, demo_idx: int):
         """Apply randomization for a new demo."""
-        if not self.args.enable_randomization or not self.randomizers:
+        if not self._should_randomize(demo_idx):
             return
 
-        # Apply randomization based on frequency setting
-        should_randomize = self.args.randomization_frequency == "per_demo" or (
+        log_randomization_header("DOMAIN RANDOMIZATION", f"Demo {demo_idx}")
+
+        # Apply all randomizers and collect statistics
+        stats = self._apply_all_randomizers()
+
+        # Log summary
+        self._log_randomization_summary(stats)
+        self._demo_count += 1
+
+    def _should_randomize(self, demo_idx: int) -> bool:
+        """Check if randomization should be applied for this demo."""
+        if not self.args.enable_randomization or not self.randomizers:
+            return False
+
+        return self.args.randomization_frequency == "per_demo" or (
             self.args.randomization_frequency == "per_episode" and demo_idx == 0
         )
 
-        if should_randomize:
-            log.debug(f"Applying domain randomization for demo {demo_idx}")
-            for randomizer in self.randomizers:
-                try:
-                    randomizer()
-                except Exception as e:
-                    log.warning(f"Randomizer {type(randomizer).__name__} failed: {e}")
-            self._demo_count += 1
+    def _apply_all_randomizers(self) -> dict[str, int]:
+        """Apply all randomizers and return statistics."""
+        stats = {"ObjectRandomizer": 0, "MaterialRandomizer": 0, "LightRandomizer": 0, "CameraRandomizer": 0}
+
+        for randomizer in self.randomizers:
+            try:
+                obj_name = self._get_randomizer_target_name(randomizer)
+                randomizer_type = type(randomizer).__name__
+
+                # Apply randomization
+                randomizer()
+                stats[randomizer_type] = stats.get(randomizer_type, 0) + 1
+                log.info(f"  Applied {randomizer_type} for {obj_name}")
+
+            except Exception as e:
+                log.warning(f"  {type(randomizer).__name__} failed for {obj_name}: {e}")
+
+        return stats
+
+    def _get_randomizer_target_name(self, randomizer) -> str:
+        """Extract target object name from randomizer configuration."""
+        if not hasattr(randomizer, "cfg"):
+            return "unknown"
+
+        cfg = randomizer.cfg
+        if hasattr(cfg, "obj_name"):
+            return cfg.obj_name
+        elif hasattr(cfg, "light_name"):
+            return cfg.light_name
+        elif hasattr(cfg, "camera_name"):
+            return cfg.camera_name
+        else:
+            return "unknown"
+
+    def _log_randomization_summary(self, stats: dict[str, int]):
+        """Log a summary of applied randomizers."""
+        applied_types = [f"{name}: {count}" for name, count in stats.items() if count > 0]
+        if applied_types:
+            log.info(f"Applied randomizers: {', '.join(applied_types)}")
+        else:
+            log.info("No randomizers were applied")
 
 
 def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
@@ -534,12 +658,11 @@ class DemoIndexer:
 def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
-        # random=args.random,
         render=args.render,
         simulator=args.sim,
         renderer=args.renderer,
@@ -547,7 +670,6 @@ def main():
         headless=args.headless,
     )
     robot = get_robot(args.robot)
-    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = task_cls(scenario, device=device)
 
