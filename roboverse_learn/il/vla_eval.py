@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-"""
-OpenVLA Complete Evaluation Script
-
-Complete evaluation script with OpenVLARunner class and VLAPolicyCfg configuration class.
-
-Usage:
-    python eval_openvla_simple.py \
-        --model_path <CHECKPOINT_PATH> \
-        --task <TASK_NAME> \
-        --robot <ROBOT_NAME> \
-        --sim <SIMULATOR> \
-        --num_envs 1 \
-        --num_episodes 10 \
-        --max_steps 100
-"""
-
 import argparse
 import json
 import os
