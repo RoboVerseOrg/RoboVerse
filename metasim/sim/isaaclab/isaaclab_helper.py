@@ -148,6 +148,15 @@ def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
 
+    # Prepare initial joint positions if available
+    init_state_dict = {}
+    if hasattr(robot, "default_joint_positions") and robot.default_joint_positions:
+        # Convert default joint positions to a tensor format for init_state
+        joint_pos = {name: pos for name, pos in robot.default_joint_positions.items()}
+        init_state_dict = {
+            "joint_pos": joint_pos,
+        }
+
     cfg = ArticulationCfg(
         spawn=sim_utils.UsdFileCfg(
             usd_path=robot.usd_path,
@@ -163,6 +172,9 @@ def _add_robot(env: "EmptyEnv", robot: BaseRobotCfg) -> None:
             )
             for jn, actuator in robot.actuators.items()
         },
+        init_state=ArticulationCfg.InitialStateCfg(**init_state_dict)
+        if init_state_dict
+        else ArticulationCfg.InitialStateCfg(),
     )
     cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
     cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
