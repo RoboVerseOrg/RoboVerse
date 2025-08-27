@@ -15,6 +15,8 @@ from metasim.utils.math import quat_from_euler_xyz
 class BaseLightCfg:
     """Base configuration for a light."""
 
+    name: str = "light"
+    """Name of the light (used for identification and randomization)"""
     intensity: float = 500.0
     """Intensity of the light"""
     color: tuple[float, float, float] = (1.0, 1.0, 1.0)

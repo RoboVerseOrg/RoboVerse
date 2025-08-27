@@ -592,7 +592,12 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        light_name = f"/World/DistantLight_{light_index}"
+        # Use configured name if available, otherwise fall back to index-based naming
+        light_name = (
+            f"/World/{light_cfg.name}"
+            if hasattr(light_cfg, "name") and light_cfg.name
+            else f"/World/DistantLight_{light_index}"
+        )
 
         # Create Isaac Lab distant light configuration
         isaac_light_cfg = sim_utils.DistantLightCfg(
@@ -621,7 +626,12 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        light_name = f"/World/CylinderLight_{light_index}"
+        # Use configured name if available, otherwise fall back to index-based naming
+        light_name = (
+            f"/World/{light_cfg.name}"
+            if hasattr(light_cfg, "name") and light_cfg.name
+            else f"/World/CylinderLight_{light_index}"
+        )
 
         # Create Isaac Lab cylinder light configuration
         isaac_light_cfg = sim_utils.CylinderLightCfg(
@@ -645,7 +655,12 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        light_name = f"/World/DomeLight_{light_index}"
+        # Use configured name if available, otherwise fall back to index-based naming
+        light_name = (
+            f"/World/{light_cfg.name}"
+            if hasattr(light_cfg, "name") and light_cfg.name
+            else f"/World/DomeLight_{light_index}"
+        )
 
         # Create Isaac Lab dome light configuration
         isaac_light_cfg = sim_utils.DomeLightCfg(
@@ -671,7 +686,12 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        light_name = f"/World/SphereLight_{light_index}"
+        # Use configured name if available, otherwise fall back to index-based naming
+        light_name = (
+            f"/World/{light_cfg.name}"
+            if hasattr(light_cfg, "name") and light_cfg.name
+            else f"/World/SphereLight_{light_index}"
+        )
 
         # Create Isaac Lab sphere light configuration
         isaac_light_cfg = sim_utils.SphereLightCfg(
@@ -698,7 +718,12 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
 
-        light_name = f"/World/DiskLight_{light_index}"
+        # Use configured name if available, otherwise fall back to index-based naming
+        light_name = (
+            f"/World/{light_cfg.name}"
+            if hasattr(light_cfg, "name") and light_cfg.name
+            else f"/World/DiskLight_{light_index}"
+        )
 
         # Create Isaac Lab disk light configuration
         isaac_light_cfg = sim_utils.DiskLightCfg(

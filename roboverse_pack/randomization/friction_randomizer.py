@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import Any, Literal
 
 import torch
@@ -23,11 +24,52 @@ class FrictionRandomCfg:
 class FrictionRandomizer(BaseRandomizerType):
     """Friction randomizer for domain randomization."""
 
-    def __init__(self, cfg: FrictionRandomCfg | None = None):
+    def __init__(self, cfg: FrictionRandomCfg | None = None, seed: int | None = None):
         super().__init__()
         if cfg is None:
             raise ValueError("FrictionRandomizer requires a cFrictionRandomCfg before called")
         self.cfg = cfg
+
+        # Set up reproducible random state
+        if seed is not None:
+            # Use provided seed + simple string-to-number conversion for uniqueness
+            name_sum = sum(ord(c) for c in (cfg.obj_name or "friction"))
+            self._seed = seed + name_sum
+        else:
+            self._seed = random.randint(0, 2**32 - 1)
+
+        self._rng = random.Random(self._seed)
+
+    def _generate_random_tensor(self, shape, distribution: str, range_vals: tuple[float, float]):
+        """Generate random tensor using our reproducible RNG."""
+        if distribution == "uniform":
+            # Generate uniform random values using our RNG
+            rand_vals = [
+                [self._rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[1])] for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        elif distribution == "log_uniform":
+            # Generate log-uniform values
+            log_min, log_max = torch.log(torch.tensor(range_vals[0])), torch.log(torch.tensor(range_vals[1]))
+            rand_vals = [
+                [
+                    torch.exp(torch.tensor(self._rng.uniform(0.0, 1.0)) * (log_max - log_min) + log_min).item()
+                    for _ in range(shape[1])
+                ]
+                for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        elif distribution == "gaussian":
+            # Generate Gaussian values
+            mean = (range_vals[0] + range_vals[1]) / 2
+            std = (range_vals[1] - range_vals[0]) / 6
+            rand_vals = [
+                [max(range_vals[0], min(range_vals[1], self._rng.gauss(mean, std))) for _ in range(shape[1])]
+                for _ in range(shape[0])
+            ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
+        else:
+            raise ValueError(f"Unsupported distribution: {distribution}")
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
@@ -150,20 +192,8 @@ class FrictionRandomizer(BaseRandomizerType):
         current_friction = self.get_body_friction(obj_name, body_name, env_ids)
         num_bodies = current_friction.shape[1]
 
-        if distribution == "uniform":
-            rand_values = (
-                torch.rand([len(env_ids), num_bodies]) * (friction_range[1] - friction_range[0]) + friction_range[0]
-            )
-        elif distribution == "log_uniform":
-            log_min, log_max = torch.log(torch.tensor(friction_range[0])), torch.log(torch.tensor(friction_range[1]))
-            rand_values = torch.exp(torch.rand([len(env_ids), num_bodies]) * (log_max - log_min) + log_min)
-        elif distribution == "gaussian":
-            mean = (friction_range[0] + friction_range[1]) / 2
-            std = (friction_range[1] - friction_range[0]) / 6
-            rand_values = torch.normal(mean, std, size=(len(env_ids), num_bodies))
-            rand_values = torch.clamp(rand_values, friction_range[0], friction_range[1])
-        else:
-            raise ValueError(f"Unsupported distribution: {distribution}")
+        # Use our reproducible random tensor generation
+        rand_values = self._generate_random_tensor([len(env_ids), num_bodies], distribution, friction_range)
 
         if operation == "add":
             new_friction = current_friction + rand_values
