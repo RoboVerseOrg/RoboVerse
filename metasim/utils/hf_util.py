@@ -147,7 +147,7 @@ class FileDownloader:
         ):
             return
 
-        if self.scenario.simulator in ["isaaclab"]:
+        if self.scenario.simulator in ["isaaclab", "isaacsim"]:
             self._add(obj.usd_path)
         elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
             self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
