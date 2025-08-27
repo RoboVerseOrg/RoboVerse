@@ -128,7 +128,7 @@ def train_ppo():
 
     # # Create RLTaskEnv via registry
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_env = task_cls(scenario=scenario)
+    rl_env = task_cls(scenario=scenario, device=device)
     # # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(rl_env)
 

@@ -34,7 +34,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from metasim.task.gym_registration import make_vec
 from roboverse_learn.il.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
 from metasim.utils import configclass
-
+from metasim.scenario.cameras import PinholeCameraCfg
 
 @configclass
 class VLAPolicyCfg(BasePolicyCfg):
@@ -99,28 +99,27 @@ class OpenVLARunner():
             raise ValueError("No observations available")
         
         latest_obs = self.obs[-1]
-
-        if "rgb" in latest_obs:
-            rgb_data = latest_obs["rgb"]
-            if isinstance(rgb_data, torch.Tensor):
-                if rgb_data.dim() == 4:
-                    image = rgb_data[0].cpu().permute(1, 2, 0).numpy()
-                else:
-                    image = rgb_data.cpu().numpy()
+        #XXX CHECK THIS CAMERA[0]
+        first_cam = next(iter(latest_obs.cameras.values()))
+        rgb_data = first_cam.rgb
+        print(f"RGB data shape: {rgb_data.shape}, dtype: {rgb_data.dtype}, min: {rgb_data.min()}, max: {rgb_data.max()}")
+        if isinstance(rgb_data, torch.Tensor):
+            x = rgb_data[0].detach().cpu() if rgb_data.dim() == 4 else rgb_data.detach().cpu()
+            if x.ndim == 3 and x.shape[-1] in (3, 4):        # HWC
+                image = x.numpy()
+            elif x.ndim == 3 and x.shape[0] in (1, 3, 4):    # CHW -> HWC
+                image = x.permute(1, 2, 0).numpy()
             else:
-                image = np.array(rgb_data)
-            
-            if image.max() <= 1.0:
-                image = (image * 255).astype(np.uint8)
-            
-            image = Image.fromarray(image)
+                raise ValueError(f"Unexpected RGB shape: {tuple(x.shape)}")
         else:
-            raise ValueError("No rgb found in observation")
+            image = np.array(rgb_data)
+        
+        # if image.max() <= 1.0:
+        #     image = (image * 255).astype(np.uint8)
+        
+        image = Image.fromarray(image)
 
-        try:
-            instruction = self.env.task_language
-        except AttributeError:
-            instruction = self.task_name
+        instruction = self.env.task_language
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
 
         inputs = self.processor(prompt, image).to(self.device, dtype=torch.bfloat16)
@@ -139,17 +138,6 @@ class OpenVLARunner():
         action = self.predict_action(obs)
         return action
     
-    def process_obs(self, obs):
-        obs = obs.copy()
-        
-        if "rgb" in obs:
-            if isinstance(obs["rgb"], torch.Tensor):
-                obs["rgb"] = obs["rgb"].to(self.device)
-            else:
-                obs["rgb"] = torch.tensor(obs["rgb"], device=self.device)
-        
-        return obs
-    
     def reset(self):
         self.obs.clear()
 
@@ -167,20 +155,16 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int) -> Dict[str, An
     runner.reset()
     
     for step in range(max_steps):
-        try:
-            actions = runner.get_action(obs)
-            obs, reward, terminated, truncated, info = env.step(actions)
-            
-            episode_stats["steps"] += 1
-            episode_stats["total_reward"] += float(reward.mean().item())
-            
-            if terminated.any() or truncated.any():
-                episode_stats["success"] = True
-                break
-                
-        except Exception as e:
-            print(f"Step {step} error: {e}")
+        actions = runner.get_action(obs)
+        obs, reward, terminated, truncated, info = env.step(actions)
+        
+        episode_stats["steps"] += 1
+        episode_stats["total_reward"] += float(reward.mean().item())
+        
+        if terminated.any() or truncated.any():
+            episode_stats["success"] = True
             break
+            
     
     episode_stats["end_time"] = time.time()
     episode_stats["duration"] = episode_stats["end_time"] - episode_stats["start_time"]
@@ -191,8 +175,8 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int) -> Dict[str, An
 def main():
     parser = argparse.ArgumentParser(description="OpenVLA Evaluation Script")
     
-    parser.add_argument("--model_path", type=str, required=True, help="OpenVLA checkpoint path")
-    parser.add_argument("--task", type=str, default="stack_cube", help="Task name")
+    parser.add_argument("--model_path", type=str, default="/datasets/v2p/current/murphy/vla_model/openvla-7b", help="OpenVLA checkpoint path")
+    parser.add_argument("--task", type=str, default="pick_butter", help="Task name")
     parser.add_argument("--robot", type=str, default="franka", help="Robot name")
     parser.add_argument("--sim", type=str, default="mujoco", 
                        choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"],
@@ -224,8 +208,15 @@ def main():
             num_envs=args.num_envs,
             robots=[args.robot],
             simulator=args.sim,
-            headless=False,
-            cameras=[],
+            headless=True,
+            cameras = [PinholeCameraCfg(
+                name="camera",
+                data_types=["rgb", "depth"],
+                width=256,
+                height=256,
+                pos=(1.5, 0.0, 1.5),
+                look_at=(0.0, 0.0, 0.0),
+            )],
             device=args.device,
         )
         
