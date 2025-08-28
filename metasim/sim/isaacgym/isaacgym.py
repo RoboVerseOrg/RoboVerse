@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -17,7 +18,6 @@ from metasim.scenario.objects import (
     RigidObjCfg,
     _FileBasedMixin,
 )
-from copy import deepcopy
 
 # FIXME: fix this
 # from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg

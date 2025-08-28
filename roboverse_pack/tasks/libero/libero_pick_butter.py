@@ -23,7 +23,7 @@ class LiberoPickButterTask(BaseTaskEnv):
 
     task_language = "Pick up the butter and place it in the basket"
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="butter",
                 physics=PhysicStateType.RIGIDBODY,
@@ -72,12 +72,11 @@ class LiberoPickButterTask(BaseTaskEnv):
                 usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/ketchup/usd/ketchup.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/ketchup/urdf/ketchup.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/ketchup/mjcf/ketchup.xml",
-            ),  
+            ),
         ],
         robots=["franka"],
     )
 
-   
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         self.traj_filepath = "roboverse_data/trajs/libero/pick_up_the_butter_and_place_it_in_the_basket/v2"
         check_and_download_single(self.traj_filepath)
@@ -98,6 +97,7 @@ class LiberoPickButterTask(BaseTaskEnv):
                 checker_upper=[0.08, 0.08, 0.05],
             ),
         )
+
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when cube is detected in the bbox above base."""
         return self.checker.check(self.handler, states)
