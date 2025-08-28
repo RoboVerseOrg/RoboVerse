@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
+try:
+    import mujoco.viewer
+except ImportError:
+    pass
 import mujoco
-import mujoco.viewer
 import numpy as np
 import torch
 from dm_control import mjcf

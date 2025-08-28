@@ -21,7 +21,7 @@ class LiberoPickButterTask(BaseTaskEnv):
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl
     """
 
-    task_language = "Pick up the butter and place it in the basket"
+
     scenario = ScenarioCfg(
         objects = [
             RigidObjCfg(
@@ -86,7 +86,7 @@ class LiberoPickButterTask(BaseTaskEnv):
 
         # task horizon
         self.max_episode_steps = 250
-
+        self.task_language = "Pick up the butter and place it in the basket"
         # success checker: cube falls into a bbox above base
         self.checker = DetectedChecker(
             obj_name="butter",
