@@ -120,15 +120,16 @@ class BaseEvalRunner:
         }
         return obs_dict
 
-    def action_to_dict(self, curr_action):
+    def action_to_dict(self, curr_action: torch.Tensor):
         """
         Converts action tensor to dict with joint keys
         """
+        action_nested_list = curr_action.tolist()  # bulk GPU-> CPU transfer; elements of Action must be python float
         actions = [
             {
                 self.scenario.robots[0].name: {
                     "dof_pos_target": {
-                        joint_name: curr_action[i, index]
+                        joint_name: action_nested_list[i][index]
                         for index, joint_name in enumerate(
                             sorted(self.scenario.robots[0].joint_limits.keys())
                         )

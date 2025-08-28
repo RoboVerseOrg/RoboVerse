@@ -66,6 +66,7 @@ class OpenVLARunner:
         self.task = kwargs.get("task_name")
         self.subset = kwargs.get("subset")
 
+
         self.policy_cfg = VLAPolicyCfg()
         self.policy_cfg.obs_config.obs_type = "no_proprio"
 
@@ -107,6 +108,7 @@ class OpenVLARunner:
         if len(self.obs) == 0:
             raise ValueError("No observations available")
 
+
         latest_obs = self.obs[-1]
         # Take first camera
         first_cam = next(iter(latest_obs.cameras.values()))
@@ -128,6 +130,7 @@ class OpenVLARunner:
         instruction = self.env.env.task_language
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
         inputs = self.processor(prompt, image).to(self.device, dtype=torch.bfloat16)
+
 
         with torch.no_grad():
             # Use the dataset key you trained/evaluated on (e.g., "bridge_orig")
@@ -229,6 +232,7 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, default="./eval_output")
     args = parser.parse_args()
+
 
     if args.device.startswith("cuda") and not torch.cuda.is_available():
         print("CUDA not available, switching to CPU")
