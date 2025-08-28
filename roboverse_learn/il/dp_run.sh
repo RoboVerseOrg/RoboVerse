@@ -17,7 +17,7 @@ train_enable=True
 eval_enable=True
 
 ## Choose training or inference algorithm
-algo_choose=1  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based    
+algo_choose=1  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based
 
 algo_model=""
 eval_path=""
