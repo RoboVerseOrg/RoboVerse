@@ -10,7 +10,7 @@ from loguru import logger as log
 
 from metasim.cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
-from .parse_util import extract_mesh_paths_from_mjcf, extract_mesh_paths_from_urdf
+from .parse_util import extract_mesh_paths_from_urdf, extract_paths_from_mjcf
 
 ## This is to avoid circular import
 try:
@@ -85,7 +85,7 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
             mesh_paths = extract_mesh_paths_from_urdf(filepath)
             new_filepaths.extend(mesh_paths)
         elif filepath.endswith(".xml"):
-            mesh_paths = extract_mesh_paths_from_mjcf(filepath)
+            mesh_paths = extract_paths_from_mjcf(filepath)
             new_filepaths.extend(mesh_paths)
     check_and_download_recursive(new_filepaths, n_processes)
 
