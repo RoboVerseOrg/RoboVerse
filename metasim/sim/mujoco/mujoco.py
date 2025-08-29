@@ -394,7 +394,7 @@ class MujocoHandler(BaseSimHandler):
         return root_np, full  # root, bodies
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
-        """Get states of all objects and robots."""         
+        """Get states of all objects and robots."""
         object_states = {}
         for obj in self.objects:
             model_name = self.mj_objects[obj.name].model
@@ -432,7 +432,6 @@ class MujocoHandler(BaseSimHandler):
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
             root_np, body_np = self._pack_state(body_ids_reindex)
-
             state = RobotState(
                 body_names=self._get_body_names(robot.name),
                 root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
@@ -744,9 +743,11 @@ class MujocoHandler(BaseSimHandler):
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            model_name = self.mj_objects[obj_name].model
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-            names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
             names = [name for name in names if name != ""]
+
             if sort:
                 names.sort()
             return names
@@ -781,14 +782,15 @@ class MujocoHandler(BaseSimHandler):
             self._body_ids_reindex_cache = {}
         if obj_name not in self._body_ids_reindex_cache:
             model_name = self.mj_objects[obj_name].model
-            body_ids_origin = [
-                bi
-                for bi in range(self.physics.model.nbody)
-                if self.physics.model.body(bi).name.split("/")[0] == model_name
-                and self.physics.model.body(bi).name != f"{model_name}/"
-            ]
+            body_ids_origin = []
+            for bi in range(self.physics.model.nbody):
+                body_name = self.physics.model.body(bi).name
+                if body_name.split("/")[0] == model_name and body_name != f"{model_name}/":
+                    body_ids_origin.append(bi)
+
             body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
             self._body_ids_reindex_cache[obj_name] = body_ids_reindex
+
         return self._body_ids_reindex_cache[obj_name]
 
     ############################################################
