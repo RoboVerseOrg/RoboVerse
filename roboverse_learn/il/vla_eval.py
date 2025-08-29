@@ -153,7 +153,7 @@ class OpenVLARunner:
         bs = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()   # (B,N,13)
         root = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float() # (B,13)
         qcur = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).to(self.device).float()    # (B,DoF)
-        
+
         if self.ee_body_idx is None:
             self.ee_body_idx = rs.body_names.index(self.ee_body_name)
 
@@ -217,28 +217,28 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: in
     obs, info = env.reset()
     stats = {"steps": 0, "success": False, "total_reward": 0.0, "start_time": time.time()}
     runner.reset()
-    
+
     # Initialize obs saver for this episode
     os.makedirs(output_dir, exist_ok=True)
     obs_saver = ObsSaver(video_path=f"{output_dir}/episode_{episode_num:03d}.mp4")
     obs_saver.add(obs)
-    
+
     for step in range(max_steps):
         actions = runner.ee_control_actions(obs)  # use EE control + IK
         obs, reward, terminated, truncated, info = env.step(actions)
         stats["steps"] += 1
         stats["total_reward"] += float(reward.mean().item())
-        
+
         # Save observation for video
         obs_saver.add(obs)
-        
+
         if (hasattr(terminated, "any") and terminated.any()) or (hasattr(truncated, "any") and truncated.any()):
             stats["success"] = True
             break
-    
+
     # Save the episode video
     obs_saver.save()
-    
+
     stats["end_time"] = time.time()
     stats["duration"] = stats["end_time"] - stats["start_time"]
     return stats
