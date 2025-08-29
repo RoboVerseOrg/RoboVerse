@@ -20,6 +20,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from metasim.task.gym_registration import make_vec
 from metasim.utils import configclass
 from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.utils.obs_utils import ObsSaver
 from roboverse_learn.il.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
 from metasim.utils.kinematics_utils import get_curobo_models
 
@@ -133,9 +134,9 @@ class OpenVLARunner:
 
 
         with torch.no_grad():
-            # Use the dataset key you trained/evaluated on (e.g., "bridge_orig")
             action = self.model.predict_action(**inputs, unnorm_key="bridge_orig", do_sample=False)
 
+        print(f"Raw VLA model output: {action}")
         action = torch.tensor(action, dtype=torch.float32, device=self.device)
         return action.unsqueeze(0) if (self.num_envs == 1 and action.dim() == 1) else action
 
@@ -152,13 +153,14 @@ class OpenVLARunner:
         bs = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()   # (B,N,13)
         root = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float() # (B,13)
         qcur = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).to(self.device).float()    # (B,DoF)
-
+        
         if self.ee_body_idx is None:
             self.ee_body_idx = rs.body_names.index(self.ee_body_name)
 
         # EE pose in world
         ee_p_world = bs[:, self.ee_body_idx, 0:3]
         ee_q_world = bs[:, self.ee_body_idx, 3:7]
+        print(f"EE position in world: {ee_p_world}")
 
         # World -> base local
         base_p, base_q = root[:, 0:3], root[:, 3:7]
@@ -169,10 +171,18 @@ class OpenVLARunner:
         # 3) Apply deltas in local frame
         dpos = action[:, :3]
         drot = action[:, 3:6]
-        dq = transforms.matrix_to_quaternion(transforms.euler_angles_to_matrix(drot, "XYZ"))
-        p_tar = ee_p_local + dpos
-        q_tar = transforms.quaternion_multiply(ee_q_local, dq)
+        dq_local = transforms.matrix_to_quaternion(
+            transforms.euler_angles_to_matrix(drot, "XYZ")
+        )
+        p_tar_local = ee_p_local + dpos
+        q_tar_local = transforms.quaternion_multiply(ee_q_local, dq_local)
 
+        # 3.5) LOCAL -> WORLD
+        p_tar = transforms.quaternion_apply(base_q, p_tar_local) + base_p
+        q_tar = transforms.quaternion_multiply(base_q, q_tar_local)
+
+        print(f"Delta position (local): {dpos}")
+        print(f"Target position (world): {p_tar}")
         # 4) IK (seed = current q)
         seeds = qcur[:, :self.curobo_n_dof].unsqueeze(1).repeat(1, self.robot_ik._num_seeds, 1)
         result = self.robot_ik.solve_batch(Pose(p_tar, q_tar), seed_config=seeds)
@@ -192,27 +202,43 @@ class OpenVLARunner:
             q[b, -self.ee_n_dof:] = close_q if close_mask[b].item() else open_q
 
         q_use = q[:, :self.n_robot_dof]
-        return [
+        actions= [
             {self.robot_name: {"dof_pos_target": {jn: float(q_use[i, j]) for j, jn in enumerate(self.joint_names)}}}
             for i in range(B)
         ]
+        print(f"final actions {actions}")
+        return actions
 
     def reset(self):
         self.obs.clear()
 
 
-def evaluate_episode(env, runner: OpenVLARunner, max_steps: int) -> Dict[str, Any]:
+def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: int, output_dir: str) -> Dict[str, Any]:
     obs, info = env.reset()
     stats = {"steps": 0, "success": False, "total_reward": 0.0, "start_time": time.time()}
     runner.reset()
-    for _ in range(max_steps):
+    
+    # Initialize obs saver for this episode
+    os.makedirs(output_dir, exist_ok=True)
+    obs_saver = ObsSaver(video_path=f"{output_dir}/episode_{episode_num:03d}.mp4")
+    obs_saver.add(obs)
+    
+    for step in range(max_steps):
         actions = runner.ee_control_actions(obs)  # use EE control + IK
         obs, reward, terminated, truncated, info = env.step(actions)
         stats["steps"] += 1
         stats["total_reward"] += float(reward.mean().item())
+        
+        # Save observation for video
+        obs_saver.add(obs)
+        
         if (hasattr(terminated, "any") and terminated.any()) or (hasattr(truncated, "any") and truncated.any()):
             stats["success"] = True
             break
+    
+    # Save the episode video
+    obs_saver.save()
+    
     stats["end_time"] = time.time()
     stats["duration"] = stats["end_time"] - stats["start_time"]
     return stats
@@ -254,7 +280,7 @@ def main():
         headless=True,
         cameras=[PinholeCameraCfg(
             name="camera",
-            data_types=["rgb", "depth"],
+            data_types=["rgb"],
             width=256,
             height=256,
             pos=(1.5, 0.0, 1.5),
@@ -279,7 +305,7 @@ def main():
 
     for ep in range(args.num_episodes):
         print(f"Episode {ep + 1}/{args.num_episodes}")
-        ep_res = evaluate_episode(env, runner, args.max_steps)
+        ep_res = evaluate_episode(env, runner, args.max_steps, ep + 1, args.output_dir)
         eval_stats["total_episodes"] += 1
         if ep_res["success"]:
             eval_stats["total_successes"] += 1
