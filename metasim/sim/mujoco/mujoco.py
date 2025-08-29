@@ -391,11 +391,20 @@ class MujocoHandler(BaseSimHandler):
 
         full = np.concatenate([pos, quat, lin_world, w], axis=1)
         root_np = full[0]
-        return root_np, full  # root, bodies
+        return root_np, full[1:]  # root, bodies
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         """Get states of all objects and robots."""         
         object_states = {}
+
+        """Get states of all objects and robots."""         
+
+        # print("=== MuJoCo body names & positions ===")
+        # for i in range(self.physics.model.nbody):
+        #     body_name = self.physics.model.body(i).name
+        #     body_pos = self.physics.data.xpos[i]  # (3,) np.array
+        #     print(f"[{i}] {body_name} : pos = {body_pos}")
+        # print("=====================================")
         for obj in self.objects:
             model_name = self.mj_objects[obj.name].model
 
@@ -404,7 +413,7 @@ class MujocoHandler(BaseSimHandler):
                 joint_names = self._get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
-                root_np, body_np = self._pack_state(body_ids_reindex)
+                root_np, body_np = self._pack_state([obj_body_id] +body_ids_reindex)
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                     body_names=self._get_body_names(obj.name),
@@ -431,7 +440,7 @@ class MujocoHandler(BaseSimHandler):
             joint_names = self._get_joint_names(robot.name, sort=True)
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
-            root_np, body_np = self._pack_state(body_ids_reindex)
+            root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
 
             state = RobotState(
                 body_names=self._get_body_names(robot.name),
