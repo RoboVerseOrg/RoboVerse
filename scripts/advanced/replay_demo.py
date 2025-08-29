@@ -37,7 +37,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass
-class Args:
+class Args:  # noqa: D101
     task: str = "stack_cube"
     robot: str = "franka"
     scene: str | None = None
@@ -56,8 +56,8 @@ class Args:
     headless: bool = False
 
     ## Only in args
-    save_image_dir: str | None = "tmp"
-    save_video_path: str | None = None
+    save_image_dir: str | None = "test_output/tmp"
+    save_video_path: str | None = "test_output/test_replay.mp4"
     stop_on_runout: bool = False
 
     def __post_init__(self):
@@ -70,7 +70,7 @@ args = tyro.cli(Args)
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
+def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):  # noqa: D103
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
@@ -78,13 +78,13 @@ def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
     return actions
 
 
-def get_states(all_states, action_idx: int, num_envs: int):
+def get_states(all_states, action_idx: int, num_envs: int):  # noqa: D103
     envs_states = all_states[:num_envs]
     states = [env_states[action_idx] if action_idx < len(env_states) else env_states[-1] for env_states in envs_states]
     return states
 
 
-def get_runout(all_actions, action_idx: int):
+def get_runout(all_actions, action_idx: int):  # noqa: D103
     runout = all([action_idx >= len(all_actions[i]) for i in range(len(all_actions))])
     return runout
 
@@ -132,7 +132,7 @@ class ObsSaver:
 ###########################################################
 ## Main
 ###########################################################
-def main():
+def main():  # noqa: D103
     task_cls = get_task_class(args.task)
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
@@ -150,20 +150,8 @@ def main():
     num_envs: int = scenario.num_envs
 
     tic = time.time()
-    # if scenario.renderer is None:
-    #     log.info(f"Using simulator: {scenario.simulator}")
-    #     env_class = get_sim_handler_class(SimType(scenario.simulator))
-    #     env = env_class(scenario)
-    # else:
-    #     log.info(f"Using simulator: {scenario.simulator}, renderer: {scenario.renderer}")
-    #     env_class_render = get_sim_handler_class(SimType(scenario.renderer))
-    #     env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-    #     env_class_physics = get_sim_handler_class(SimType(scenario.sim))
-    #     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    #     env = HybridSimHandler(env_physics, env_render)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = task_cls(args.task, scenario, device=device)
+    env = task_cls(scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
     traj_filepath = env.traj_filepath
@@ -181,6 +169,7 @@ def main():
     ########################################################
 
     obs_saver = ObsSaver(image_dir=args.save_image_dir, video_path=args.save_video_path)
+    os.makedirs("test_output", exist_ok=True)
 
     ## Reset before first step
     tic = time.time()
