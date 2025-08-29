@@ -45,7 +45,7 @@ def _worker(
             elif cmd == "set_states":
                 env.set_states(data[0])
             elif cmd == "get_states":
-                states = env.get_states()
+                states = env.get_states(**data[0])
                 remote.send(states)
             elif cmd == "simulate":
                 env.simulate()
@@ -151,12 +151,12 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for i in env_ids:
                 self.remotes[i].send(("set_states", ([states[i]],)))
 
-        def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
+        def _get_states(self, env_ids: list[int] | None = None, **kwargs) -> TensorState:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 
             for i in env_ids:
-                self.remotes[i].send(("get_states", (None,)))
+                self.remotes[i].send(("get_states", (kwargs,)))
             states_list = []
             for i in env_ids:
                 states = self.remotes[i].recv()
