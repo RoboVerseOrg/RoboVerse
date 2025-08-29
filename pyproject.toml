@@ -33,7 +33,7 @@ isaaclab211 = [
     "torchvision==0.22.0+cu128",
     "isaacsim[all,extscache]==4.5.0",
 ]
-isaaclab220 = [
+isaaclab221 = [
     "torch==2.7.0+cu128",
     "torchvision==0.22.0+cu128",
     "isaacsim[all,extscache]==5.0.0",
