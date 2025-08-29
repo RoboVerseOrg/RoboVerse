@@ -368,7 +368,7 @@ class MujocoHandler(BaseSimHandler):
                 joint_names = self.get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
-                root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+                root_np, body_np = self._pack_state(body_ids_reindex)
 
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
@@ -397,7 +397,7 @@ class MujocoHandler(BaseSimHandler):
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
 
-            root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+            root_np, body_np = self._pack_state(body_ids_reindex)
 
             state = RobotState(
                 body_names=self.get_body_names(robot.name),
@@ -663,9 +663,10 @@ class MujocoHandler(BaseSimHandler):
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        model_name = self.mj_objects[obj_name].model
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-            names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
             names = [name for name in names if name != ""]
             if sort:
                 names.sort()
