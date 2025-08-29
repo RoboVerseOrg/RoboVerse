@@ -21,7 +21,6 @@ class LiberoPickButterTask(BaseTaskEnv):
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl
     """
 
-
     scenario = ScenarioCfg(
         objects=[
             RigidObjCfg(

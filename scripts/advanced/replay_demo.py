@@ -37,7 +37,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 @configclass
-class Args:  # noqa: D101
+class Args:
     task: str = "stack_cube"
     robot: str = "franka"
     scene: str | None = None
@@ -70,7 +70,7 @@ args = tyro.cli(Args)
 ###########################################################
 ## Utils
 ###########################################################
-def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):  # noqa: D103
+def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
@@ -78,13 +78,13 @@ def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):  
     return actions
 
 
-def get_states(all_states, action_idx: int, num_envs: int):  # noqa: D103
+def get_states(all_states, action_idx: int, num_envs: int):
     envs_states = all_states[:num_envs]
     states = [env_states[action_idx] if action_idx < len(env_states) else env_states[-1] for env_states in envs_states]
     return states
 
 
-def get_runout(all_actions, action_idx: int):  # noqa: D103
+def get_runout(all_actions, action_idx: int):
     runout = all([action_idx >= len(all_actions[i]) for i in range(len(all_actions))])
     return runout
 
@@ -132,7 +132,7 @@ class ObsSaver:
 ###########################################################
 ## Main
 ###########################################################
-def main():  # noqa: D103
+def main():
     task_cls = get_task_class(args.task)
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
