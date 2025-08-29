@@ -57,7 +57,7 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - See below
      - 3.10
      - 3.10
-   * - IsaacLab v2.2.0
+   * - IsaacLab v2.2.1
      - See below
      - 3.11
      - 3.11
@@ -100,7 +100,7 @@ Install IsaacLab v2.1.1 (IsaacSim v4.5)
 .. note::
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
 
-Install IsaacLab v2.2.0 (IsaacSim v5.0, Latest)
+Install IsaacLab v2.2.1 (IsaacSim v5.0, Latest)
 -----------------------------------------------
 
 .. warning::
@@ -108,18 +108,17 @@ Install IsaacLab v2.2.0 (IsaacSim v5.0, Latest)
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab220]"
+    uv pip install -e ".[isaaclab221]"
     cd third_party
-    git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
+    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
 
 .. note::
    1. This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
-   2. Comment out the following lines in both ``step`` and ``reset`` methods in ``third_party/IsaacLab220/source/isaaclab/isaaclab/sim/simulation_context.py`` could help fix running issue:
+   2. Comment out the following lines in ``reset``, ``step`` and ``render`` methods in ``third_party/IsaacLab221/source/isaaclab/isaaclab/sim/simulation_context.py`` could help fix running issue:
 
    .. code-block:: python
 
-      # check if we need to raise an exception that was raised in a callback
       # if builtins.ISAACLAB_CALLBACK_EXCEPTION is not None:
       #     exception_to_raise = builtins.ISAACLAB_CALLBACK_EXCEPTION
       #     builtins.ISAACLAB_CALLBACK_EXCEPTION = None
