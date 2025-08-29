@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 try:
     import mujoco.viewer
 except ImportError:
@@ -273,32 +272,29 @@ class MujocoHandler(BaseSimHandler):
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
-        # FIXME: hard code for adding table
-        self.scenario.try_add_table = True
-        if self.scenario.try_add_table:
-            mjcf_model.asset.add(
-                "texture",
-                name="texplane",
-                type="2d",
-                builtin="checker",
-                width=512,
-                height=512,
-                rgb1=[0, 0, 0],
-                rgb2=[1.0, 1.0, 1.0],
-            )
-            mjcf_model.asset.add(
-                "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
-            )
-            ground = mjcf_model.worldbody.add(
-                "geom",
-                type="plane",
-                pos="0 0 0",
-                size="100 100 0.001",
-                quat="1 0 0 0",
-                condim="3",
-                conaffinity="15",
-                material="matplane",
-            )
+        mjcf_model.asset.add(
+            "texture",
+            name="texplane",
+            type="2d",
+            builtin="checker",
+            width=512,
+            height=512,
+            rgb1=[0, 0, 0],
+            rgb2=[1.0, 1.0, 1.0],
+        )
+        mjcf_model.asset.add(
+            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
+        )
+        ground = mjcf_model.worldbody.add(
+            "geom",
+            type="plane",
+            pos="0 0 0",
+            size="100 100 0.001",
+            quat="1 0 0 0",
+            condim="3",
+            conaffinity="15",
+            material="matplane",
+        )
 
         self.object_body_names = []
         self.mj_objects = {}
