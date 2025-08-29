@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
         ## Others
         num_envs: int = 1
-        headless: bool = False
+        headless: bool = True
 
         def __post_init__(self):
             """Post-initialization configuration."""

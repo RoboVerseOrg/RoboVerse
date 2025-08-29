@@ -1,0 +1,32 @@
+{
+  "config": {
+    "model_path": "/datasets/v2p/current/murphy/vla_model/openvla-7b",
+    "task": "pick_butter",
+    "robot": "franka",
+    "sim": "mujoco",
+    "num_envs": 1,
+    "num_episodes": 1,
+    "max_steps": 100,
+    "device": "cuda",
+    "seed": 42,
+    "output_dir": "./eval_output"
+  },
+  "eval_stats": {
+    "total_episodes": 1,
+    "total_successes": 0,
+    "total_rewards": [
+      0.0
+    ],
+    "episode_results": [
+      {
+        "steps": 100,
+        "success": false,
+        "total_reward": 0.0,
+        "start_time": 1756470306.3913324,
+        "end_time": 1756470337.1013255,
+        "duration": 30.70999312400818
+      }
+    ]
+  },
+  "timestamp": "20250829_122537"
+}

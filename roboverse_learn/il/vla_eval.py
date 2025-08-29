@@ -146,65 +146,64 @@ class OpenVLARunner:
         # 1) VLA action
         with torch.no_grad():                     # only VLA forward is no-grad
             action = self.predict_action(obs)     # (B,7)
-        B = action.shape[0]
+        num_envs = action.shape[0]
 
-        # 2) Robot state from TensorState (quat already WXYZ)
+        # 2) Robot state (TensorState -> tensors)
         rs = obs.robots[self.robot_name]
-        bs = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()   # (B,N,13)
-        root = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float() # (B,13)
-        qcur = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).to(self.device).float()    # (B,DoF)
-        
+        curr_robot_q = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).to(self.device).float()
+        robot_ee_state = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()
+        robot_root_state = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float()
+
         if self.ee_body_idx is None:
             self.ee_body_idx = rs.body_names.index(self.ee_body_name)
+        ee_p_world = robot_ee_state[:, self.ee_body_idx, 0:3]
+        ee_q_world = robot_ee_state[:, self.ee_body_idx, 3:7]
+        # print(f"EE position in world: {ee_p_world}")
 
-        # EE pose in world
-        ee_p_world = bs[:, self.ee_body_idx, 0:3]
-        ee_q_world = bs[:, self.ee_body_idx, 3:7]
-        print(f"EE position in world: {ee_p_world}")
+        # Base pose
+        robot_pos, robot_quat = robot_root_state[:, 0:3], robot_root_state[:, 3:7]
+        # print(f"Robot position in world: {robot_pos}")
+        # Local frame transform
+        inv_base_q = transforms.quaternion_invert(robot_quat)
+        curr_ee_pos_local = transforms.quaternion_apply(inv_base_q, ee_p_world - robot_pos)
+        curr_ee_quat_local = transforms.quaternion_multiply(inv_base_q, ee_q_world)
 
-        # World -> base local
-        base_p, base_q = root[:, 0:3], root[:, 3:7]
-        inv_base_q = transforms.quaternion_invert(base_q)
-        ee_p_local = transforms.quaternion_apply(inv_base_q, ee_p_world - base_p)
-        ee_q_local = transforms.quaternion_multiply(inv_base_q, ee_q_world)
-
-        # 3) Apply deltas in local frame
-        dpos = action[:, :3]
-        drot = action[:, 3:6]
-        dq_local = transforms.matrix_to_quaternion(
-            transforms.euler_angles_to_matrix(drot, "XYZ")
+        # 3) Apply deltas
+        ee_pos_delta = action[:num_envs, :3]
+        ee_rot_delta = action[:num_envs, 3:-1]
+        ee_quat_delta = transforms.matrix_to_quaternion(
+            transforms.euler_angles_to_matrix(ee_rot_delta, "XYZ")
         )
-        p_tar_local = ee_p_local + dpos
-        q_tar_local = transforms.quaternion_multiply(ee_q_local, dq_local)
+        gripper_open = action[:num_envs, -1]
+        # print(f"curr_ee_pos_locald: {curr_ee_pos_local}")
+        ee_pos_target = curr_ee_pos_local + ee_pos_delta
+        ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_delta)
 
-        # 3.5) LOCAL -> WORLD
-        p_tar = transforms.quaternion_apply(base_q, p_tar_local) + base_p
-        q_tar = transforms.quaternion_multiply(base_q, q_tar_local)
+        # print(f"Delta position (local): {ee_pos_delta}")
+        # print(f"Target position (world): {ee_pos_target}")
 
-        print(f"Delta position (local): {dpos}")
-        print(f"Target position (world): {p_tar}")
         # 4) IK (seed = current q)
-        seeds = qcur[:, :self.curobo_n_dof].unsqueeze(1).repeat(1, self.robot_ik._num_seeds, 1)
-        result = self.robot_ik.solve_batch(Pose(p_tar, q_tar), seed_config=seeds)
+        seed_config = curr_robot_q[:, :self.curobo_n_dof].unsqueeze(1).tile([1, self.robot_ik._num_seeds, 1])
+        result = self.robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
 
-        # 5) Gripper threshold: 1=open -> release_q ; 0=close -> actuate_q
-        grip_open = action[:, -1]
-        close_mask = (1.0 - grip_open) > 0.5
-        open_q = torch.tensor(self.robot_cfg.gripper_open_q, device=self.device, dtype=torch.float32)
-        close_q = torch.tensor(self.robot_cfg.gripper_close_q, device=self.device, dtype=torch.float32)
+        # 5) Gripper control
+        gripper_pos = 1 - gripper_open.cpu()
+        if gripper_pos.mean().item() > 0.5:
+            gripper_widths = torch.tensor(self.robot_cfg.gripper_close_q).to(self.device)
+        else:
+            gripper_widths = torch.tensor(self.robot_cfg.gripper_open_q).to(self.device)
 
-        q = qcur.clone()
-        succ = result.success.squeeze(1)
-        if succ.any():
-            q[succ, :self.curobo_n_dof] = result.solution[succ, 0, :]
-
-        for b in range(B):
-            q[b, -self.ee_n_dof:] = close_q if close_mask[b].item() else open_q
+        # Compose robot command
+        q = curr_robot_q.clone()
+        ik_succ = result.success.squeeze(1)
+        # print("IK success flags:", ik_succ)
+        q[ik_succ, :self.curobo_n_dof] = result.solution[ik_succ, 0].clone()
+        q[:, -self.ee_n_dof:] = gripper_widths
 
         q_use = q[:, :self.n_robot_dof]
-        actions= [
+        actions = [
             {self.robot_name: {"dof_pos_target": {jn: float(q_use[i, j]) for j, jn in enumerate(self.joint_names)}}}
-            for i in range(B)
+            for i in range(num_envs)
         ]
         print(f"final actions {actions}")
         return actions
@@ -252,7 +251,7 @@ def main():
     parser.add_argument("--sim", type=str, default="mujoco",
                         choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"])
     parser.add_argument("--num_envs", type=int, default=1)
-    parser.add_argument("--num_episodes", type=int, default=10)
+    parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--max_steps", type=int, default=100)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=42)
