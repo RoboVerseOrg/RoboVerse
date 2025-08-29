@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import MISSING
 from typing import Callable, Literal
 
 from metasim.utils.configclass import configclass
@@ -16,9 +15,9 @@ class FrictionRandomCfg:
     """Whether to randomize friction"""
     range: tuple[float, float] = (0.0, 0.0)
     """Friction sampling range"""
-    num_buckets: int = MISSING
+    num_buckets: int | None = None
     """Distribution buckets"""
-    dist_fn: Callable = MISSING
+    dist_fn: Callable | None = None
     """Distribution function, usually uniform or normal"""
 
 
@@ -30,7 +29,7 @@ class MassRandomCfg:
     """Whether to randomize mass"""
     range: tuple[float, float] = (0.0, 0.0)
     """Mass sampling range"""
-    dist_fn: Callable = MISSING
+    dist_fn: Callable | None = None
     """Distribution sampling function for all env, usually uniform or normal"""
 
 
