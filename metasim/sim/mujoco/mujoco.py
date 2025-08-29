@@ -606,6 +606,8 @@ class MujocoHandler(BaseSimHandler):
             return
 
         # Dict-list path
+        if isinstance(actions, list):   # Handling single-env parallell case
+            actions = actions[0]
         for robot_idx, robot in enumerate(self.robots):
             payload = actions[robot.name]
 
