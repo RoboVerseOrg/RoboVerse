@@ -49,10 +49,7 @@ def save_demo_v2(save_dir: str, demo: list[EnvState]):
         "cam_extr": [],
         "joint_qpos_target": [],
         "joint_qpos": [],
-        "robot_ee_state": [],
-        "robot_ee_state_target": [],
         "robot_root_state": [],
-        "robot_body_state": [],
     }
 
     # Process each timestep
@@ -98,25 +95,6 @@ def save_demo_v2(save_dir: str, demo: list[EnvState]):
             target_dof_pos = None
 
         jsondata["joint_qpos_target"].append(target_dof_pos)
-
-        # Extract EE state (position, rotation, last joint)
-        # Assuming ee_state is available in the state
-        ee_pos = robot_state["pos"]
-        ee_rot = robot_state["rot"]
-        last_joint_pos = robot_state["dof_pos"][sorted(robot_state["dof_pos"].keys())[-1]]
-        robot_ee_state = torch.cat([ee_pos, ee_rot, torch.tensor([last_joint_pos], device=ee_pos.device)]).tolist()
-        jsondata["robot_ee_state"].append(robot_ee_state)
-
-        # Set robot_ee_state_target
-        if i < len(demo) - 1:
-            next_robot_state = demo[i + 1]["robots"][robot_name]
-            next_ee_pos = next_robot_state["pos"]
-            next_ee_rot = next_robot_state["rot"]
-            next_last_joint_pos = next_robot_state["dof_pos"][sorted(next_robot_state["dof_pos"].keys())[-1]]
-            next_robot_ee_state = torch.cat([next_ee_pos, next_ee_rot, torch.tensor([next_last_joint_pos])]).tolist()
-            jsondata["robot_ee_state_target"].append(next_robot_ee_state)
-        else:
-            jsondata["robot_ee_state_target"].append(robot_ee_state)
 
         # Extract root and body state
         jsondata["robot_root_state"].append(
