@@ -607,7 +607,7 @@ class MujocoHandler(BaseSimHandler):
 
         # Dict-list path
         for robot_idx, robot in enumerate(self.robots):
-            payload = actions[0][robot.name]
+            payload = actions[robot.name]
 
             # Optional velocity targets
             vel_targets = payload.get("dof_vel_target")
