@@ -38,7 +38,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:  # noqa: D101
-    task: str = "stack_cube"
+    task: str = "close_box"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
