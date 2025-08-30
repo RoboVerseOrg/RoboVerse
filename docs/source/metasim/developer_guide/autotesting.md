@@ -18,5 +18,5 @@ pytest -k isaaclab
 
 CI is automatically triggered every time a PR is ready to be merged (added to the [merge queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue)).
 
-To launch the CI manually, go to Actions tab, select the target workflow, and click the "Run workflow" button, as illustrated below.
+To launch the CI manually, please refer to [Manually running a workflow](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow). Specifically, go to Actions tab, select the target workflow, and click the "Run workflow" button, as illustrated below.
 ![Run CI](images/run_ci_test.png)
