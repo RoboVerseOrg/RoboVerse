@@ -4,11 +4,14 @@ from metasim.queries.base import BaseQueryType
 
 
 class NetContactForce(BaseQueryType):
+    """Net contact force on a site (works for IsaacSim only)."""
+
     def __init__(self, site_name: str):
         super().__init__()
 
     def bind_handler(self, handler, *args, **kwargs):
         """Remember the site-id once the handler is known."""
+        super().bind_handler(handler, *args, **kwargs)  # Remember to call the base method
         mod = handler.__class__.__module__
 
         if mod.startswith("metasim.sim.isaacsim"):

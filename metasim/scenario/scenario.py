@@ -64,8 +64,8 @@ class ScenarioCfg:
 
     def __post_init__(self) -> None:
         """Resolve strings & fetch assets; skip until `simulator` is set."""
-        if self.simulator is None:  # defer init until user specifies simulator
-            return
+        # if self.simulator is None:  # defer init until user specifies simulator
+        #     return
 
         for i, robot in enumerate(self.robots):
             if isinstance(robot, str):
