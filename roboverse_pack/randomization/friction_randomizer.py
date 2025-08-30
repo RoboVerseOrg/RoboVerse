@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 import torch
 
-from metasim.randomizaer.base import BaseRandomizerType
+from metasim.randomizers.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
 
 
