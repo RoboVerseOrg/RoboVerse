@@ -46,7 +46,7 @@ from metasim.scenario.render import RenderCfg
 class Args:
     render: RenderCfg = field(default_factory=RenderCfg)
     """Renderer options"""
-    task: str = "close_box"
+    task: str = "pick_butter"
     """Task name"""
     robot: str = "franka"
     """Robot name"""
@@ -60,7 +60,7 @@ class Args:
     """Maximum number of demos to collect, None for all demos"""
     retry_num: int = 0
     """Number of retries for a failed demo"""
-    headless: bool = False
+    headless: bool = True
     """Run in headless mode"""
     table: bool = True
     """Try to add a table"""
