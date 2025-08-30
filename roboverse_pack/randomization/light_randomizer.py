@@ -7,7 +7,7 @@ from typing import Any, Literal
 import torch
 from loguru import logger
 
-from metasim.sim.randomizaer.base import BaseRandomizerType
+from metasim.randomizers.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
 
 

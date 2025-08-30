@@ -56,8 +56,8 @@ class Args:
     headless: bool = False
 
     ## Only in args
-    save_image_dir: str | None = "tmp"
-    save_video_path: str | None = None
+    save_image_dir: str | None = "test_output/tmp"
+    save_video_path: str | None = "test_output/test_replay.mp4"
     stop_on_runout: bool = False
 
     def __post_init__(self):
@@ -150,20 +150,8 @@ def main():
     num_envs: int = scenario.num_envs
 
     tic = time.time()
-    # if scenario.renderer is None:
-    #     log.info(f"Using simulator: {scenario.simulator}")
-    #     env_class = get_sim_handler_class(SimType(scenario.simulator))
-    #     env = env_class(scenario)
-    # else:
-    #     log.info(f"Using simulator: {scenario.simulator}, renderer: {scenario.renderer}")
-    #     env_class_render = get_sim_handler_class(SimType(scenario.renderer))
-    #     env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-    #     env_class_physics = get_sim_handler_class(SimType(scenario.sim))
-    #     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    #     env = HybridSimHandler(env_physics, env_render)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = task_cls(args.task, scenario, device=device)
+    env = task_cls(scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
     traj_filepath = env.traj_filepath
@@ -181,6 +169,7 @@ def main():
     ########################################################
 
     obs_saver = ObsSaver(image_dir=args.save_image_dir, video_path=args.save_video_path)
+    os.makedirs("test_output", exist_ok=True)
 
     ## Reset before first step
     tic = time.time()

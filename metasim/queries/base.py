@@ -27,6 +27,9 @@ class BaseQueryType:
         You can also pass locals() to bind_handler() to access local variables in the handler.
         """
         self.handler = handler
+        assert self.handler.__class__.__module__ in self.supported_handlers, (
+            f"Query {self} does not support handler type: {type(self.handler)}"
+        )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Performing the query.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 try:
     import mujoco.viewer
 except ImportError:
@@ -273,32 +272,29 @@ class MujocoHandler(BaseSimHandler):
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
-        # FIXME: hard code for adding table
-        self.scenario.try_add_table = True
-        if self.scenario.try_add_table:
-            mjcf_model.asset.add(
-                "texture",
-                name="texplane",
-                type="2d",
-                builtin="checker",
-                width=512,
-                height=512,
-                rgb1=[0, 0, 0],
-                rgb2=[1.0, 1.0, 1.0],
-            )
-            mjcf_model.asset.add(
-                "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
-            )
-            ground = mjcf_model.worldbody.add(
-                "geom",
-                type="plane",
-                pos="0 0 0",
-                size="100 100 0.001",
-                quat="1 0 0 0",
-                condim="3",
-                conaffinity="15",
-                material="matplane",
-            )
+        mjcf_model.asset.add(
+            "texture",
+            name="texplane",
+            type="2d",
+            builtin="checker",
+            width=512,
+            height=512,
+            rgb1=[0, 0, 0],
+            rgb2=[1.0, 1.0, 1.0],
+        )
+        mjcf_model.asset.add(
+            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
+        )
+        ground = mjcf_model.worldbody.add(
+            "geom",
+            type="plane",
+            pos="0 0 0",
+            size="100 100 0.001",
+            quat="1 0 0 0",
+            condim="3",
+            conaffinity="15",
+            material="matplane",
+        )
 
         self.object_body_names = []
         self.mj_objects = {}
@@ -394,7 +390,7 @@ class MujocoHandler(BaseSimHandler):
         return root_np, full[1:]  # root, bodies
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
-        """Get states of all objects and robots."""         
+        """Get states of all objects and robots."""
         object_states = {}
 
         """Get states of all objects and robots."""         
@@ -620,8 +616,10 @@ class MujocoHandler(BaseSimHandler):
             return
 
         # Dict-list path
+        if isinstance(actions, list):  # Handling single-env parallell case
+            actions = actions[0]
         for robot_idx, robot in enumerate(self.robots):
-            payload = actions[0][robot.name]
+            payload = actions[robot.name]
 
             # Optional velocity targets
             vel_targets = payload.get("dof_vel_target")
@@ -753,9 +751,11 @@ class MujocoHandler(BaseSimHandler):
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            model_name = self.mj_objects[obj_name].model
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-            names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
             names = [name for name in names if name != ""]
+
             if sort:
                 names.sort()
             return names
@@ -790,14 +790,15 @@ class MujocoHandler(BaseSimHandler):
             self._body_ids_reindex_cache = {}
         if obj_name not in self._body_ids_reindex_cache:
             model_name = self.mj_objects[obj_name].model
-            body_ids_origin = [
-                bi
-                for bi in range(self.physics.model.nbody)
-                if self.physics.model.body(bi).name.split("/")[0] == model_name
-                and self.physics.model.body(bi).name != f"{model_name}/"
-            ]
+            body_ids_origin = []
+            for bi in range(self.physics.model.nbody):
+                body_name = self.physics.model.body(bi).name
+                if body_name.split("/")[0] == model_name and body_name != f"{model_name}/":
+                    body_ids_origin.append(bi)
+
             body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
             self._body_ids_reindex_cache[obj_name] = body_ids_reindex
+
         return self._body_ids_reindex_cache[obj_name]
 
     ############################################################
@@ -818,3 +819,8 @@ class MujocoHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cpu")
+
+    # Compatibility
+    @property
+    def robot(self) -> RobotCfg:
+        return self.robots[0]
