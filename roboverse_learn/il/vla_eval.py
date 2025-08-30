@@ -84,7 +84,7 @@ class OpenVLARunner:
         ).to(self.device).eval()
 
         # Important: give norm stats to the model; unnorm_key used in predict_action
-        # self.model.norm_stats = self.DATA_STAT
+        self.model.norm_stats = self.DATA_STAT
 
         self.obs = deque(maxlen=2)
 
