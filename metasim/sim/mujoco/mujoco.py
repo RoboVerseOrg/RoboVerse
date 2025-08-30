@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
 
 
 class MujocoHandler(BaseSimHandler):
@@ -393,7 +393,7 @@ class MujocoHandler(BaseSimHandler):
         """Get states of all objects and robots."""
         object_states = {}
 
-        """Get states of all objects and robots."""         
+        """Get states of all objects and robots."""
 
         # print("=== MuJoCo body names & positions ===")
         # for i in range(self.physics.model.nbody):
@@ -409,7 +409,7 @@ class MujocoHandler(BaseSimHandler):
                 joint_names = self._get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
-                root_np, body_np = self._pack_state([obj_body_id] +body_ids_reindex)
+                root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                     body_names=self._get_body_names(obj.name),
@@ -542,6 +542,8 @@ class MujocoHandler(BaseSimHandler):
                 pass
 
     def _set_states(self, states, env_ids=None, zero_vel=True):
+        if isinstance(states, TensorState):
+            states = state_tensor_to_nested(self, states)
         if len(states) > 1:
             raise ValueError("MujocoHandler only supports single env state setting")
 
