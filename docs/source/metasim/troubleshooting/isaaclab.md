@@ -49,3 +49,35 @@ If you get the rendered image with severe aliasing artifacts, it could be very t
 
 ## Stuck at `OmniGraphSettings::getCudaDeviceOrdinal: unable to get a valid CUDA device id from the renderer.`
 Please refer to [this issue](https://github.com/isaac-sim/IsaacLab/issues/987).
+
+## Shared libraries not found
+```
+OSError: libGL.so.1: cannot open shared object file: No such file or directory.
+```
+This issue arises from the absence of required dynamic libraries.
+
+Please install the necessary dynamic libraries for IsaacLab.
+```bash
+sudo apt-get install libgl1-mesa-glx libsm6 libxt6 libglu1-mesa
+```
+
+## Numpy version
+```
+Error: partially initialized module 'numpy.core.arrayprint' has no attribute 'array2string'.
+```
+The RoboVerse-IsaacLab is sensitive to numpy version, currently it only supports for `numpy < 2`. Please install the `numpy < 2`.
+```bash
+pip install numpy==1.26.4
+```
+
+## Unexpected keyword argument 'owner'
+```
+TypeError: array.\_\_init\_\_() got an unexpected keyword argument 'owner'
+```
+This seems a bug in the omni library function.
+
+The corresponding file is:
+```
+/home/anaconda3/envs/roboverse/lib/python3.10/site-packages/isacsim/extscache/omni.replicator.core-1.11.20+186.1.8.1x64.r.cp310/omni/replicatorcore/scripts/utils/annotator_utils.py
+```
+Delete the `owner` parameter in corresponding function (line 341) in the `annotator_utils.py` file.
