@@ -5,8 +5,7 @@ First, clone the RoboVerse project:
 
 .. code-block:: bash
 
-    git clone git@github.com:RoboVerseOrg/RoboVerse.git
-    cd RoboVerse
+    git clone git@github.com:RoboVerseOrg/RoboVerse.git && cd RoboVerse
 
 RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies.
 
