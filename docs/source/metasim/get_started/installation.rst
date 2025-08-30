@@ -7,9 +7,7 @@ First, clone the RoboVerse project:
 
     git clone git@github.com:RoboVerseOrg/RoboVerse.git && cd RoboVerse
 
-RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies.
-
-To install ``uv``, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
+RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To install it, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
 
 .. code-block:: bash
 
