@@ -35,6 +35,7 @@ def test_consistency(sim, num_envs):
     scenario = ScenarioCfg(
         sim=sim,
         num_envs=num_envs,
+        headless=True,
         objects=[
             PrimitiveCubeCfg(
                 name="cube", size=(0.1, 0.1, 0.1), color=[1.0, 0.0, 0.0], physics=PhysicStateType.RIGIDBODY
