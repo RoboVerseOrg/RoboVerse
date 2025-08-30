@@ -4,18 +4,7 @@
 
 Please make sure you have installed `docker` in the officially recommended way. Otherwise, please refer to the [official guide](https://docs.docker.com/engine/install/ubuntu/).
 
-Please install [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) following the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), or run the following commands:
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-&& curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-sudo nvidia-ctk runtime configure --runtime=docker
-sudo systemctl restart docker
-```
+Please install [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) following the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 Please create and add the docker user information to `.env` file. To use the same user information as the host machine, run in project root:
 ```bash
@@ -149,10 +138,10 @@ docker run hello-world
     ```
 
 7. Be patient. Sometimes you need run `docker compose build` multiple times.
-   
+
 ### Setup docker for NVIDIA RTX50 series GPUs
 
-For RTX50 series GPUs, the following environments are required. 
+For RTX50 series GPUs, the following environments are required.
 | Component      | Version   | Notes                          |
 |----------------|-------------------|--------------------------------|
 | 🐧 OS           | Ubuntu ≥ 22.04     | Required by IsaacLab        |
@@ -170,7 +159,7 @@ Currently, the IsaacGym does not support the NVIDIA RTX50 series GPUs, as it is 
     docker pull nvidia/cuda:12.8.0-base-ubuntu22.04
     ```
 2. Setup docker environments.
-   
+
     Please run the base image with GPU supporting and install necessary development tools (build-essential, CMake, git, etc.).
 
     ```bash
@@ -233,7 +222,7 @@ Currently, the IsaacGym does not support the NVIDIA RTX50 series GPUs, as it is 
 
     After setting up issaclab, mujoco can be easily installed with the following command:
     ```bash
-    pip install mujoco 
+    pip install mujoco
     pip install dm-control
     ```
 5. Setup RoboVerse-Reinforcement Learning environments.
@@ -259,7 +248,7 @@ The following issues may arise in various modules during Docker configuration. 	
 
 ### RoboVerse-IsaacLab
 ### 1. "\[omni.gpu_foudation_factory.plugin] Failed to create any GPU devices, including an attempt with compatibility mode."
-This problem is due to incorrect startup method of docker images and the docker cannot access the phsical GPUs in the host. 
+This problem is due to incorrect startup method of docker images and the docker cannot access the phsical GPUs in the host.
 
 Save the running docker container to the docker images.
 ```bash
@@ -329,7 +318,7 @@ This issue is due to that the docker could not find the `EGL` engine for renderi
 You can manually set environment variables in docker:
 ```bash
 export MUJOCO_GL=egl
-export PYOPENGL_PLATFORM=egl 
+export PYOPENGL_PLATFORM=egl
 export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 ```
 
