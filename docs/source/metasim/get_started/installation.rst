@@ -72,7 +72,7 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
 Install IsaacLab v1.4.1 (IsaacSim v4.2, Recommended)
-----------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -85,7 +85,7 @@ Install IsaacLab v1.4.1 (IsaacSim v4.2, Recommended)
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
 
 Install IsaacLab v2.1.1 (IsaacSim v4.5)
----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
@@ -101,7 +101,7 @@ Install IsaacLab v2.1.1 (IsaacSim v4.5)
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
 
 Install IsaacLab v2.2.1 (IsaacSim v5.0, Latest)
------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.
@@ -125,7 +125,7 @@ Install IsaacLab v2.2.1 (IsaacSim v5.0, Latest)
       #     raise exception_to_raise
 
 Install IsaacGym
-----------------
+~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -157,8 +157,8 @@ Install IsaacGym
    where ``$CONDA_HOME`` is the path to your conda installation. It is typically ``~/anaconda3``, ``~/miniconda3`` or ``~/miniforge3``.
    You can also add it to your ``~/.bashrc`` to make it permanent.
 
-Multiple Simulators
--------------------
+Install Multiple Simulators
+---------------------------
 
 Feel free to combine the above commands to install multiple simulators in one environment. For example, to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
 
