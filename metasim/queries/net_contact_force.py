@@ -9,6 +9,7 @@ class NetContactForce(BaseQueryType):
 
     def bind_handler(self, handler, *args, **kwargs):
         """Remember the site-id once the handler is known."""
+        super().bind_handler(handler, *args, **kwargs)  # Remember to call the base method
         mod = handler.__class__.__module__
 
         if mod.startswith("metasim.sim.isaacsim"):
