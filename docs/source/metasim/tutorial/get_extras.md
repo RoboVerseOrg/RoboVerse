@@ -14,7 +14,7 @@ This class has only one important method you need to overwrite **__call__()** .
 
 When an Extra Observation is used by a Task, it will be automatically bound to the underlying handler. You can then use `self.handler` to access the handler instance within the Extra Observation class.
 
-Everytime the `handler.get_state()` is called, the handler will call the `extra_qeury.__call__()` method of the Extra Observation type, to gather the extra observations, and return them in the return value of `handler.get_state()` .
+Everytime the `handler.get_state()` is called, the handler will call the `extra_qeury.__call__()` method of the Extra Observation type, to gather the extra observations, and return them in the return value of `handler.get_state()` . When calling `handler.get_extra()`, the handler will also be explicitly called adn the extra observations will be gathered and returned.
 
 ## Possible Extra Observations
 
