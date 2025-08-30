@@ -809,3 +809,8 @@ class MujocoHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cpu")
+
+    # Compatibility
+    @property
+    def robot(self) -> RobotCfg:
+        return self.robots[0]
