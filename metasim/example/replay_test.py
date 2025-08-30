@@ -38,7 +38,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:  # noqa: D101
-    task: str = "stack_cube"
+    task: str = "pick_butter"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
@@ -53,7 +53,7 @@ class Args:  # noqa: D101
     try_add_table: bool = True
     object_states: bool = False
     split: Literal["train", "val", "test", "all"] = "all"
-    headless: bool = False
+    headless: bool = True
 
     ## Only in args
     save_image_dir: str | None = "test_output/tmp"
