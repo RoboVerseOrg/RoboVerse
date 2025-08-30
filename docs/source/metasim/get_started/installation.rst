@@ -32,7 +32,7 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
    * - MuJoCo
      - ``uv pip install -e ".[mujoco]"``
      - 3.9-3.13
-     - 3.10
+     - 3.10-3.11
    * - SAPIEN2
      - ``uv pip install -e ".[sapien2]"``
      - 3.7-3.11
@@ -44,7 +44,7 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
    * - Genesis
      - ``uv pip install -e ".[genesis]"``
      - 3.10-3.12
-     - 3.10
+     - 3.10-3.11
    * - PyBullet
      - ``uv pip install -e ".[pybullet]"``
      - 3.6-3.11
