@@ -40,6 +40,7 @@ tutorial/handler
 <!-- tutorial/robot -->
 tutorial/task
 tutorial/get_extras
+tutorial/randomization
 <!-- user_guide/collect_demo_tutorial -->
 <!-- user_guide/teleoperate_demo -->
 <!-- user_guide/real2sim -->
