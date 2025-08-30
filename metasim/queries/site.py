@@ -4,8 +4,8 @@ from __future__ import annotations
 import importlib
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim.mujoco import MujocoHandler
 from metasim.sim.mjx import MJXHandler
+from metasim.sim.mujoco import MujocoHandler
 
 _site_cache: dict[int, dict[str, int]] = {}
 
@@ -20,6 +20,7 @@ def _get_site_id(mj_model, name: str) -> int:
 
 class SitePos(BaseQueryType):
     """World-frame position of a MuJoCo site (works for MJX & raw MuJoCo)."""
+
     supported_handlers = [
         MujocoHandler.__module__,
         MJXHandler.__module__,

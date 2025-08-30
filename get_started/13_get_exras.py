@@ -21,6 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
+from metasim.queries.site import SitePos
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
@@ -28,7 +29,6 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
-from metasim.queries.site import SitePos
 
 
 @configclass
