@@ -4,6 +4,8 @@ from __future__ import annotations
 import importlib
 
 from metasim.queries.base import BaseQueryType
+from metasim.sim.mujoco import MujocoHandler
+from metasim.sim.mjx import MJXHandler
 
 _site_cache: dict[int, dict[str, int]] = {}
 
@@ -18,6 +20,10 @@ def _get_site_id(mj_model, name: str) -> int:
 
 class SitePos(BaseQueryType):
     """World-frame position of a MuJoCo site (works for MJX & raw MuJoCo)."""
+    supported_handlers = [
+        MujocoHandler.__module__,
+        MJXHandler.__module__,
+    ]
 
     def __init__(self, site_name: str):
         super().__init__()
@@ -26,7 +32,7 @@ class SitePos(BaseQueryType):
 
     def bind_handler(self, handler, *args, **kwargs):
         """Remember the site-id once the handler is known."""
-        super().bind_handler(handler, *args, **kwargs)      # Remember to call the base method
+        super().bind_handler(handler, *args, **kwargs)  # Remember to call the base method
         mod = handler.__class__.__module__
         if mod.startswith("metasim.sim.mjx"):
             robot_name = handler._robot.name

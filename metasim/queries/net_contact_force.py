@@ -4,6 +4,8 @@ from metasim.queries.base import BaseQueryType
 
 
 class NetContactForce(BaseQueryType):
+    """Net contact force on a site (works for IsaacSim only)."""
+    
     def __init__(self, site_name: str):
         super().__init__()
 
