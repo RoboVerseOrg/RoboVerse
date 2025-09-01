@@ -282,7 +282,7 @@ for _ in range(100):
     obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     extras = env.get_extra()
-    print("Extras:", extras)
+    print("Extras:", extras)  # noqa: T201
     step += 1
 
 obs_saver.save()

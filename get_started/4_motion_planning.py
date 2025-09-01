@@ -7,6 +7,7 @@ try:
 except ImportError:
     pass
 
+import math
 import os
 from typing import Literal
 
