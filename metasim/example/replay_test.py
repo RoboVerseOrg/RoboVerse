@@ -36,6 +36,8 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
+    """Replay trajectory for a given task."""
+
     task: str = "pick_butter"
     robot: str = "franka"
     scene: str | None = None
