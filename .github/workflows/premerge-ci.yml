@@ -210,7 +210,7 @@ jobs:
           -v /usr/local/cuda:/usr/local/cuda \
           -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
           "$IMAGE_URI" \
-          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -u metasim/test/state_consistency.py --sim isaaclab --headless" \
+          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k isaaclab" \
           || TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary

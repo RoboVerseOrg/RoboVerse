@@ -8,6 +8,7 @@ dependencies = [
     "imageio[ffmpeg]",
     "loguru",
     "opencv-python",
+    "pytest",
     "rich",
     "rootutils",
     "torch",
@@ -18,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 isaaclab = [
+    "pillow==10.2.0",  # ImportError: The _imaging extension was built for another version of Pillow or PIL
     "protobuf<5",
     "pyglet<2",
     "warp-lang<1.8",  # warp==1.8.0 has bug with IsaacLab v1.4.1
@@ -179,3 +181,6 @@ known-third-party = ["wandb", "isaacsim"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["metasim/test"]
