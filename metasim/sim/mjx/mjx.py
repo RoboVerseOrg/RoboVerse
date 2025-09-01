@@ -359,7 +359,7 @@ class MJXHandler(BaseSimHandler):
                 off += J
 
         else:
-            if isinstance(actions, dict):
+            if isinstance(actions, list):
                 action_map = actions
             else:
                 raise TypeError("Unsupported actions type")
