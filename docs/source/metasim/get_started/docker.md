@@ -4,18 +4,7 @@
 
 Please make sure you have installed `docker` in the officially recommended way. Otherwise, please refer to the [official guide](https://docs.docker.com/engine/install/ubuntu/).
 
-Please install [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) following the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), or run the following commands:
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-&& curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-sudo nvidia-ctk runtime configure --runtime=docker
-sudo systemctl restart docker
-```
+Please install [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) following the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 Please create and add the docker user information to `.env` file. To use the same user information as the host machine, run in project root:
 ```bash
@@ -53,6 +42,10 @@ xclock
 If a clock successfully shown on the host machine, the GUI is working.
 
 ## Tips
+
+### Troubleshooting
+
+Please refer to [Docker Troubleshooting](../troubleshooting/docker.md) for more details.
 
 ### Run docker without sudo
 
@@ -149,3 +142,107 @@ docker run hello-world
     ```
 
 7. Be patient. Sometimes you need run `docker compose build` multiple times.
+
+### Setup docker for NVIDIA RTX50 series GPUs
+
+For RTX50 series GPUs, the following environments are required.
+| Component      | Version   | Notes                          |
+|----------------|-------------------|--------------------------------|
+| 🐧 OS           | Ubuntu ≥ 22.04     | Required by IsaacLab        |
+| 🐍 Python       | python == 3.10     | Required by multiple simulators        |
+| 🔥 PyTorch      | torch ≥ 2.7.1      | Required by RTX50 series GPUs        |
+| 🚀 CUDA         | CUDA ≥ 12.8        | Required by RTX50 series GPUs |
+```{note}
+Currently, the IsaacGym does not support the NVIDIA RTX50 series GPUs, as it is limited to `python==3.8` or earlier.
+```
+1. Pull the official NVIDIA image.
+
+    To make sure the docker environment supports RTX50 series GPUs and cuda 12.8. Please pull the official Ubuntu 22.04 base image that supports cuda 12.8 from NVIDIA by running the following commands:
+
+    ```bash
+    docker pull nvidia/cuda:12.8.0-base-ubuntu22.04
+    ```
+2. Setup docker environments.
+
+    Please run the base image with GPU supporting and install necessary development tools (build-essential, CMake, git, etc.).
+
+    ```bash
+    docker run --gpus all -it nvidia/cuda:12.8.0-base-ubuntu22.04
+
+    apt-get update && apt-get install -y --no-install-recommends build-essential cmake git curl wget ca-certificates pkg-config software-properties-common unzip nano sudo
+    ```
+
+    Then, setup the conda environment with `python==3.10` for RoboVerse:
+    ```bash
+    conda create -n roboverse python=3.10
+    ```
+3. Setup RoboVerse-IsaacLab environments.
+
+    Please pull the RoboVerse official code repository:
+    ```bash
+    git clone https://github.com/RoboVerseOrg/RoboVerse.git
+
+    cd RoboVerse
+    ```
+
+    The environment in the `pyproject.toml` is currently not compatible for NVIDIA RTX50 series GPUs. Please use `pip` to install isaacsim manually.
+
+    ```bash
+    pip install protobuf
+    pip install pyglet
+    pip install isaacsim==4.2.0.2
+    pip install isaacsim-extscache-physics==4.2.0.2
+    pip install isaacsim-extscache-kit==4.2.0.2
+    pip install isaacsim-extscache-kit-sdk==4.2.0.2
+    ```
+
+    Please install the IsaacLab dependencies by running following commands:
+
+    ```bash
+    cd third_party
+
+    wget https://codeload.github.com/isaac-sim/IsaacLab/zip/refs/tags/v1.4.1 -O IsaacLab-1.4.1.zip && unzip IsaacLab-1.4.1.zip
+
+    cd IsaacLab-1.4.1
+
+    sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py
+
+    ./isaaclab.sh -i
+    ```
+
+    After installing the IsaacLabv 1.4, the torch will be modified to 2.4.0, reinstall the torch to 2.7.1. The `torch==2.4.0` will not be compatible with NVIDIA RTX50 series GPUs.
+    ```bash
+    pip install --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+    ```
+
+    Finally, please install the necessary libraries required by IsaacLab.
+    ```bash
+    pip install rootutils
+    pip install tyro
+    pip install loguru
+    pip install open3d
+    ```
+4. Setup RoboVerse-Mujoco environments.
+
+    After setting up issaclab, mujoco can be easily installed with the following command:
+    ```bash
+    pip install mujoco
+    pip install dm-control
+    ```
+5. Setup RoboVerse-Reinforcement Learning environments.
+
+    RoboVerse provides two reinforcement learning demos: [PPO Reaching](https://roboverse.wiki/metasim/get_started/advanced/rl_example/0_ppo_reaching#ppo-reaching) and [FastTD3 Humanoid](https://roboverse.wiki/metasim/get_started/advanced/rl_example/1_fttd3_humanoid). To run these two demos, please follow the steps below to setup your environments.
+
+    Setup the PPO environments.
+    ```bash
+    pip install stable-baselines3
+    ```
+
+    Setup the FastTD3 environments.
+    ```bash
+    pip install mujoco-mjx
+    pip install dm-control
+    pip install jax[cuda12]
+    pip install wandb
+    pip install tensordict
+    ```

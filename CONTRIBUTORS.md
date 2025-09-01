@@ -29,6 +29,7 @@ Guidelines for modifications:
 * Haozhe Chen
 * Haozhe Lou
 * Jiangran Lyu
+* Krishnan Srinivasan
 * Peihao Li
 * Ran Gong
 * Siheng Zhao
