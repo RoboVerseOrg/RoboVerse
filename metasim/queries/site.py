@@ -5,7 +5,6 @@ import importlib
 
 from metasim.queries.base import BaseQueryType
 
-
 _site_cache: dict[int, dict[str, int]] = {}
 
 
