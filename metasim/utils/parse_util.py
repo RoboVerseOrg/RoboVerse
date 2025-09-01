@@ -1,7 +1,10 @@
 """This file contains the utility functions for parsing URDF and MJCF files."""
 
+from __future__ import annotations
+
 import os
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 
 def extract_mesh_paths_from_urdf(urdf_file_path):
@@ -46,47 +49,40 @@ def extract_mesh_paths_from_urdf(urdf_file_path):
     return mesh_paths
 
 
-def extract_mesh_paths_from_mjcf(xml_file_path):
-    """Extract all referenced mesh file paths from a MuJoCo XML file.
+def extract_paths_from_mjcf(xml_file_path: str) -> list[str]:
+    """Extract all referenced mesh, texture, and include-xml file paths from a MuJoCo XML file.
 
     Args:
         xml_file_path (str): Path to the MuJoCo XML file
 
     Returns:
-        list: List of absolute paths to all referenced mesh files
+        list: List of absolute paths to all referenced mesh, texture, and include-xml files
     """
-    # Parse the XML file
-    tree = ET.parse(xml_file_path)
-    root = tree.getroot()
+    path = Path(xml_file_path)
+    mujoco_xml = path.read_text()
+    root = ET.fromstring(mujoco_xml)
 
-    # Get the mesh directory if specified
-    compiler_elem = root.find(".//compiler")
-    meshdir = compiler_elem.get("meshdir", "") if compiler_elem is not None else ""
+    # Handle texture paths
+    texture_nodes = root.findall(".//texture")
+    texture_relpaths = [texture.get("file") for texture in texture_nodes if texture.get("file") is not None]
+    texture_abspaths = [path.parent / rel for rel in texture_relpaths]
 
-    # Base directory of the XML file
-    base_dir = os.path.dirname(os.path.abspath(xml_file_path))
+    # Parse meshdir
+    mesh_basepath = path.parent
+    compiler_node = root.find(".//compiler")
+    if compiler_node is not None and compiler_node.get("meshdir") is not None:
+        mesh_basepath = mesh_basepath / compiler_node.get("meshdir")
 
-    # Full mesh directory path
-    mesh_dir_path = os.path.join(base_dir, meshdir) if meshdir else base_dir
+    # Handle mesh paths
+    mesh_nodes = root.findall(".//mesh")
+    mesh_relpaths = [mesh.get("file") for mesh in mesh_nodes if mesh.get("file") is not None]
+    mesh_abspaths = [mesh_basepath / rel for rel in mesh_relpaths]
 
-    # Find all mesh elements
-    mesh_files = []
+    # Handler include-xml
+    include_nodes = root.findall(".//include")
+    include_relpaths = [include.get("file") for include in include_nodes if include.get("file") is not None]
+    include_abspaths = [path.parent / rel for rel in include_relpaths]
 
-    # Check for mesh references in 'mesh' elements
-    for mesh in root.findall(".//mesh"):
-        file_name = mesh.get("file")
-        if file_name:
-            mesh_files.append(os.path.join(mesh_dir_path, file_name))
-
-    # Also check for mesh references in 'geom' elements with type="mesh"
-    for geom in root.findall(".//geom[@type='mesh']"):
-        mesh_name = geom.get("mesh")
-        if mesh_name:
-            # Find the corresponding mesh element to get the file path
-            mesh_elem = root.find(f".//mesh[@name='{mesh_name}']")
-            if mesh_elem is not None:
-                file_name = mesh_elem.get("file")
-                if file_name:
-                    mesh_files.append(os.path.join(mesh_dir_path, file_name))
-
-    return mesh_files
+    paths = texture_abspaths + mesh_abspaths + include_abspaths
+    paths = [str(path.resolve()) for path in paths]
+    return paths
