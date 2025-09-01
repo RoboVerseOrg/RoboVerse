@@ -13,7 +13,6 @@ from typing import Literal
 import rootutils
 import torch
 import tyro
-from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -26,9 +25,9 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.kinematics_utils import get_curobo_models
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
+
 
 
 @configclass
@@ -38,11 +37,12 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 1
     headless: bool = False
+    solver: Literal["curobo", "pyroki"] = "pyroki"
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -50,6 +50,13 @@ class Args:
 
 
 args = tyro.cli(Args)
+
+if args.solver == "curobo":
+    from curobo.types.math import Pose
+    from metasim.utils.kinematics_utils import get_curobo_models
+
+elif args.solver == "pyroki":
+    from metasim.utils.kinematics_pyroki import get_pyroki_model
 
 # initialize scenario
 scenario = ScenarioCfg(
@@ -93,11 +100,49 @@ scenario.objects = [
     ),
 ]
 
-
 log.info(f"Using simulator: {args.sim}")
 env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 env.launch()
+
+if args.robot == "franka":
+    robot_dict = {
+        "franka": {
+            "pos": torch.tensor([0.0, 0.0, 0.0]),
+            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            "dof_pos": {
+                "panda_joint1": 0.0,
+                "panda_joint2": -0.785398,
+                "panda_joint3": 0.0,
+                "panda_joint4": -2.356194,
+                "panda_joint5": 0.0,
+                "panda_joint6": 1.570796,
+                "panda_joint7": 0.785398,
+                "panda_finger_joint1": 0.04,
+                "panda_finger_joint2": 0.04,
+            },
+        }
+    }
+elif args.robot == "kinova_gen3_robotiq_2f85":
+    robot_dict = {
+        "kinova_gen3_robotiq_2f85": {
+            "pos": torch.tensor([0.0, 0.0, 0.0]),
+            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            "dof_pos": {
+                "joint_1": 0.0,
+                "joint_2": math.pi / 6,
+                "joint_3": 0.0,
+                "joint_4": math.pi / 2,
+                "joint_5": 0.0,
+                "joint_6": 0.0,
+                "joint_7": 0.0,
+                "finger_joint": 0.0,
+            },
+        }
+    }
+else:
+    robot_dict = {}
+
 init_states = [
     {
         "objects": {
@@ -119,51 +164,25 @@ init_states = [
                 "dof_pos": {"box_joint": 0.0},
             },
         },
-        "robots": {
-            "franka": {
-                "pos": torch.tensor([0.0, 0.0, 0.0]),
-                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                "dof_pos": {
-                    "panda_joint1": 0.0,
-                    "panda_joint2": -0.785398,
-                    "panda_joint3": 0.0,
-                    "panda_joint4": -2.356194,
-                    "panda_joint5": 0.0,
-                    "panda_joint6": 1.570796,
-                    "panda_joint7": 0.785398,
-                    "panda_finger_joint1": 0.04,
-                    "panda_finger_joint2": 0.04,
-                },
-            },
-            # "kinova_gen3_robotiq_2f85": {
-            #     "pos": torch.tensor([0.0, 0.0, 0.0]),
-            #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-            #     "dof_pos": {
-            #         "joint_1": 0.0,
-            #         "joint_2": math.pi / 6,
-            #         "joint_3": 0.0,
-            #         "joint_4": math.pi / 2,
-            #         "joint_5": 0.0,
-            #         "joint_6": 0.0,
-            #         "joint_7": 0.0,
-            #         "finger_joint": 0.0,
-            #     },
-            # },
-        },
+        "robots": robot_dict,
     }
     for _ in range(args.num_envs)
 ]
 
 
 robot = scenario.robots[0]
-*_, robot_ik = get_curobo_models(robot)
-curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-ee_n_dof = len(robot.gripper_open_q)
+
+if args.solver == "curobo":
+    *_, robot_ik = get_curobo_models(robot)
+    curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
+    ee_n_dof = len(robot.gripper_open_q)
+
+elif args.solver == "pyroki":
+    robot_ik = get_pyroki_model(scenario.robots[0])
 
 env.set_states(init_states)
 obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
-
 
 ## Main loop
 obs_saver = ObsSaver(video_path=f"get_started/output/4_motion_planning_{args.sim}.mp4")
@@ -176,7 +195,9 @@ for step in range(200):
     states = env.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
-    seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
+    if args.solver == "curobo":
+        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
+
     if scenario.robots[0].name == "franka":
         x_target = 0.3 + 0.1 * (step / 100)
         y_target = 0.5 - 0.5 * (step / 100)
@@ -201,13 +222,19 @@ for step in range(200):
             device="cuda:0",
         )
 
-    result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+    if args.solver == "curobo":
+        result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+        ik_succ = result.success.squeeze(1)
+        q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
+        q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
+        q[:, -ee_n_dof:] = 0.04
+    elif args.solver == "pyroki":
+        q_list = []
+        for i_env in range(args.num_envs):
+            q_tensor = robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
+            q_list.append(q_tensor)
+        q = torch.stack(q_list, dim=0)
 
-    q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
-    ik_succ = result.success.squeeze(1)
-    q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-    q[:, -ee_n_dof:] = 0.04
-    robot = scenario.robots[0]
     actions = [
         {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
         for i_env in range(scenario.num_envs)
@@ -216,12 +243,7 @@ for step in range(200):
     env.set_dof_targets(actions)
     env.simulate()
     obs = env.get_states(mode="dict")
-    obs_saver.add(obs)
-    step += 1
-
-    if step == 0:
-        for _ in range(50):
-            obs, _, _, _, _ = env.step(actions)
+    # obs, reward, success, time_out, extras = env.step(actions)
 
     obs_saver.add(obs)
     step += 1
