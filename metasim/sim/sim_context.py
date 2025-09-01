@@ -1,3 +1,5 @@
+import traceback
+
 from loguru import logger as log
 
 from metasim.constants import SimType
@@ -30,7 +32,9 @@ class HandlerContext:
             self.handler.launch()
         return self.handler
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         if exc_type is not None:
-            log.error(f"Error in SimContext: {exc_value}, {traceback}")
+            log.error("Error in SimContext:")
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+
         self.handler.close()
