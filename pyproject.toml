@@ -14,6 +14,7 @@ dependencies = [
     "torchvision",
     "tqdm",
     "tyro",
+    "portalocker",
 ]
 
 [project.optional-dependencies]
