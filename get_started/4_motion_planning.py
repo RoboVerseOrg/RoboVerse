@@ -29,7 +29,6 @@ from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
 
 
-
 @configclass
 class Args:
     """Arguments for the static scene."""
@@ -53,6 +52,7 @@ args = tyro.cli(Args)
 
 if args.solver == "curobo":
     from curobo.types.math import Pose
+
     from metasim.utils.kinematics_utils import get_curobo_models
 
 elif args.solver == "pyroki":

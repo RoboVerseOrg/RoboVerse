@@ -60,6 +60,7 @@ class Args:
 
 args = tyro.cli(Args)
 
+
 def _suffix_path(p: str | None, suffix: str) -> str | None:
     if p is None:
         return None
@@ -85,7 +86,7 @@ def get_runout(all_actions, action_idx: int):  # noqa: D103
     return all([action_idx >= len(all_actions[i]) for i in range(len(all_actions))])
 
 
-class ObsSaver:# noqa: D101 
+class ObsSaver:  # noqa: D101
     def __init__(self, image_dir: str | None = None, video_path: str | None = None):
         self.image_dir = image_dir
         self.video_path = video_path
@@ -150,14 +151,13 @@ def main():  # noqa: D103
         image_dir=_suffix_path(args.save_image_dir, "act") if args.save_image_dir else None,
         video_path=_suffix_path(args.save_video_path, "act") if args.save_video_path else None,
     )
-    captured_states: list = [] 
+    captured_states: list = []
 
     t0 = time.time()
     obs, _ = env.reset()
     saver_act.add(obs)
 
-    captured_states.append(env.handler.get_states()) 
-
+    captured_states.append(env.handler.get_states())
 
     step = 0
     while True:
@@ -195,18 +195,16 @@ def main():  # noqa: D103
     )
 
     t0 = time.time()
-    env.reset() 
+    env.reset()
     total = len(captured_states)
     for i in range(total):
         log.debug(f"[STATE] Step {i}/{total - 1}")
         states_i = captured_states[i]
         env.handler.set_states(states_i)
 
-
         env.handler.refresh_render()
         obs = env.handler.get_states()
         saver_state.add(obs)
-
 
         try:
             success = env.checker.check(env.handler)

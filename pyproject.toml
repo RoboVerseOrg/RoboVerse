@@ -168,3 +168,6 @@ known-third-party = ["wandb", "isaacsim"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["metasim/test"]
