@@ -40,29 +40,23 @@ class IsaaclabHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
         self._actions_cache: list[Action] = []
+        self._simulation_app = None
+        self._env = None
 
     ############################################################
     ## Launch
     ############################################################
 
     def launch(self) -> None:
-        env_overwriter = IsaaclabEnvOverwriter(self.scenario)
-        gym.register(
-            id="MetaSimEmptyTaskEnv",
-            entry_point="metasim.sim.isaaclab.empty_env:EmptyEnv",
-            disable_env_checker=True,
-            order_enforce=False,
-            kwargs={
-                "env_cfg_entry_point": "metasim.sim.isaaclab.empty_env:EmptyEnvCfg",
-                "_setup_scene": env_overwriter._setup_scene,
-                "_reset_idx": env_overwriter._reset_idx,
-                "_pre_physics_step": env_overwriter._pre_physics_step,
-                "_apply_action": env_overwriter._apply_action,
-                "_get_observations": env_overwriter._get_observations,
-                "_get_rewards": env_overwriter._get_rewards,
-                "_get_dones": env_overwriter._get_dones,
-            },
-        )
+        # Only launch the simulation app if it hasn't been launched yet
+        if self._simulation_app is None:
+            self._launch_simulation_app()
+
+        # Always setup the environment (this handles both first run and subsequent runs)
+        self._setup_environment()
+
+    def _launch_simulation_app(self) -> None:
+        """Launch the simulation application - only called once"""
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
@@ -80,7 +74,34 @@ class IsaaclabHandler(BaseSimHandler):
             raise ValueError(f"Unknown render mode: {self.scenario.render.mode}")
 
         app_launcher = AppLauncher(args)
-        self.simulation_app = app_launcher.app
+        self._simulation_app = app_launcher.app
+
+    def _setup_environment(self) -> None:
+        """Setup the environment - called for first run and after create_new_stage()"""
+        env_overwriter = IsaaclabEnvOverwriter(self.scenario)
+
+        # Unregister existing environment if it exists
+        try:
+            gym.envs.registry.env_specs.pop("MetaSimEmptyTaskEnv", None)
+        except:
+            pass
+
+        gym.register(
+            id="MetaSimEmptyTaskEnv",
+            entry_point="metasim.sim.isaaclab.empty_env:EmptyEnv",
+            disable_env_checker=True,
+            order_enforce=False,
+            kwargs={
+                "env_cfg_entry_point": "metasim.sim.isaaclab.empty_env:EmptyEnvCfg",
+                "_setup_scene": env_overwriter._setup_scene,
+                "_reset_idx": env_overwriter._reset_idx,
+                "_pre_physics_step": env_overwriter._pre_physics_step,
+                "_apply_action": env_overwriter._apply_action,
+                "_get_observations": env_overwriter._get_observations,
+                "_get_rewards": env_overwriter._get_rewards,
+                "_get_dones": env_overwriter._get_dones,
+            },
+        )
 
         try:
             from omni.isaac.lab_tasks.utils import parse_env_cfg
@@ -101,7 +122,7 @@ class IsaaclabHandler(BaseSimHandler):
         env_cfg.sim.physx.friction_correlation_distance = self.scenario.sim_params.friction_correlation_distance
         env_cfg.sim.physx.solver_type = self.scenario.sim_params.solver_type
 
-        self.env: EmptyEnv = gym.make("MetaSimEmptyTaskEnv", cfg=env_cfg)
+        self._env: EmptyEnv = gym.make("MetaSimEmptyTaskEnv", cfg=env_cfg)
 
         ## Render mode setting, must be done after isaaclab is launched
         ## For more info, see the import below
@@ -127,6 +148,18 @@ class IsaaclabHandler(BaseSimHandler):
         log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
         log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
+
+    @property
+    def env(self):
+        """Get the environment, setting it up if needed"""
+        if self._env is None:
+            self._setup_environment()
+        return self._env
+
+    @property
+    def simulation_app(self):
+        """Get the simulation app"""
+        return self._simulation_app
 
     ############################################################
     ## Gymnasium main methods
@@ -220,8 +253,10 @@ class IsaaclabHandler(BaseSimHandler):
         return states, extras
 
     def close(self) -> None:
-        self.env.close()
-        self.simulation_app.close()
+        if self._env is not None:
+            self._env.close()
+            self._env = None
+        # NOTE: Don't close simulation_app here - it stays alive for subsequent tests
 
     ############################################################
     ## Utils
