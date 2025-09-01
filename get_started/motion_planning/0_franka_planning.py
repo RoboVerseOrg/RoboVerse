@@ -167,11 +167,6 @@ robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(4):
     log.debug(f"Step {step}")
     states = env.get_states()
-    curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-
-    if args.solver == "curobo":
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-
     rotation_transform_for_franka = torch.tensor(
         [
             [0.0, 0.0, 1.0],

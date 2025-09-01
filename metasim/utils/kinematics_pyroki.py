@@ -12,7 +12,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 import third_party.pyroki.examples.pyroki_snippets as pks
-
+from metasim.utils.hf_util import check_and_download_single
 
 class get_pyroki_model:
     """Class to get the Pyroki robot model.
@@ -36,12 +36,13 @@ class get_pyroki_model:
                 - ee_body_name (str): Name of the end-effector link.
         """
         self.urdf_path = robot_cfg.urdf_path
+        check_and_download_single(self.urdf_path)
         self.ee_link_name = getattr(robot_cfg, "ee_body_name", None)
         if self.ee_link_name is None:
             raise ValueError("robot_cfg must have 'ee_body_name' defined")
 
         # Load URDF model from file
-        self.urdf = URDF.load(self.urdf_path)
+        self.urdf = URDF.load(self.urdf_path, load_meshes=False)
 
         # Initialize Pyroki robot model from URDF
         self.pk_robot = pk.Robot.from_urdf(self.urdf)

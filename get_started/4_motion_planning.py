@@ -37,7 +37,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco","mjx"] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -179,7 +179,7 @@ if args.solver == "curobo":
     ee_n_dof = len(robot.gripper_open_q)
 
 elif args.solver == "pyroki":
-    robot_ik = get_pyroki_model(scenario.robots[0])
+    robot_ik = get_pyroki_model(robot)
 
 env.set_states(init_states)
 obs = env.get_states(mode="dict")
@@ -194,10 +194,6 @@ robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(200):
     log.debug(f"Step {step}")
     states = env.get_states()
-    curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-
-    if args.solver == "curobo":
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
 
     if scenario.robots[0].name == "franka":
         x_target = 0.3 + 0.1 * (step / 100)
@@ -224,6 +220,8 @@ for step in range(200):
         )
 
     if args.solver == "curobo":
+        curr_robot_q = states.robots[robot.name].joint_pos.cuda()
+        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
         result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
         ik_succ = result.success.squeeze(1)
         q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
