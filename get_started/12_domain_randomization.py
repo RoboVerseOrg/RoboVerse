@@ -211,9 +211,9 @@ def run_domain_randomization(args):
         ArticulationObjCfg(
             name="box_base",
             fix_base_link=True,
-            usd_path="metasim/example/example_assets/box_base/usd/box_base.usd",
-            urdf_path="metasim/example/example_assets/box_base/urdf/box_base_unique.urdf",
-            mjcf_path="metasim/example/example_assets/box_base/mjcf/box_base_unique.mjcf",
+            usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+            urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+            mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
 

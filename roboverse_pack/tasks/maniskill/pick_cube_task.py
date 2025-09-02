@@ -10,7 +10,7 @@ from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
-from roboverse_pack.tasks.maniskill.checkers.checkers import PositionShiftChecker
+from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
 
 
 @register_task("maniskill.pick_cube", "pick_cube")

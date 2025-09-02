@@ -10,8 +10,8 @@ from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
-from roboverse_pack.tasks.maniskill.checkers.checkers import DetectedChecker
-from roboverse_pack.tasks.maniskill.checkers.detectors import RelativeBboxDetector
+from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
+from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 
 
 @register_task("maniskill.stack_cube", "stack_cube")
