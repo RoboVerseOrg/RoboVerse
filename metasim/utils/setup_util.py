@@ -11,7 +11,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
-
+import sys, os, importlib
 
 def get_sim_handler_class(sim: SimType):
     """Get the simulator handler class from the simulator type.
@@ -135,9 +135,17 @@ def get_robot(robot_name: str) -> RobotCfg:
         "roboverse_pack.robots",
         "metasim.example.example_pack.robots",
     ]
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
 
     attr_name = f"{RobotName}Cfg"
     errors: list[str] = []
+
+    for fname in os.listdir(cwd):
+        if fname.endswith(".py") and not fname.startswith("_"):
+            modname = os.path.splitext(fname)[0]
+            candidate_packages.append(modname)
 
     for pkg_name in candidate_packages:
         try:
