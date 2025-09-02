@@ -11,7 +11,8 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
-import sys, os, importlib
+import sys
+import os
 
 def get_sim_handler_class(sim: SimType):
     """Get the simulator handler class from the simulator type.
@@ -190,8 +191,7 @@ def get_scene(scene_name: str) -> SceneCfg:
             candidate_packages.append(os.path.splitext(fname)[0])
 
     attr_name = f"{SceneName}Cfg"
-    errors: list[str] = []
-
+    errors: list[str] = []  # noqa: F811
     for pkg_name in candidate_packages:
         try:
             pkg = importlib.import_module(pkg_name)
@@ -203,4 +203,4 @@ def get_scene(scene_name: str) -> SceneCfg:
             errors.append(f"{pkg_name}: {e}")
             continue
 
-    raise ValueError(f"Scene config class '{attr_name}' not found in {candidate_packages}. Errors
+    raise ValueError(f"Scene config class '{attr_name}' not found in {candidate_packages}. Errors: {errors}")
