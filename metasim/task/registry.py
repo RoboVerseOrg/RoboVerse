@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import pkgutil
+import sys
 from importlib import import_module
 
 from loguru import logger as log
@@ -54,6 +56,14 @@ def _discover_task_modules() -> None:
         "roboverse_pack.tasks",
     ]
 
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    for fname in os.listdir(cwd):
+        if fname.endswith(".py") and not fname.startswith("_"):
+            modname = os.path.splitext(fname)[0]
+            packages_to_scan.append(modname)
     for pkg_name in packages_to_scan:
         try:
             # Import the root package
