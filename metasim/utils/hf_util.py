@@ -76,8 +76,10 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     """
     if len(filepaths) == 0:
         return
+    os.makedirs(LOCAL_DIR, exist_ok=True)
 
-    with portalocker.Lock(os.path.join(LOCAL_DIR, "download.lock")):
+    lock_path = os.path.join(LOCAL_DIR, "download.lock")
+    with portalocker.Lock(lock_path):
         # in parallel env settings, we need to prevent child processes from downloading the same file.
 
         # check if current process is the main process
