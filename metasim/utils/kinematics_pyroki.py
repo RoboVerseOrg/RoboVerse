@@ -10,9 +10,9 @@ from yourdfpy import URDF
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
-
 import third_party.pyroki.examples.pyroki_snippets as pks
 from metasim.utils.hf_util import check_and_download_single
+
 
 class get_pyroki_model:
     """Class to get the Pyroki robot model.

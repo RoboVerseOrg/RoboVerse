@@ -38,7 +38,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class Args:
     """Replay trajectory for a given task."""
 
-    task: str = "pick_butter"
+    task: str = "close_box"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
