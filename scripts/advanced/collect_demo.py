@@ -81,11 +81,11 @@ class Args:
     renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
     ## Domain randomization options
-    enable_randomization: bool = False
+    enable_randomization: bool = True
     """Enable domain randomization during demo collection"""
     randomize_materials: bool = True
     """Enable material randomization (when randomization is enabled)"""
-    randomize_lights: bool = True
+    randomize_lights: bool = False
     """Enable light randomization (when randomization is enabled)"""
     randomize_cameras: bool = True
     """Enable camera randomization (when randomization is enabled)"""

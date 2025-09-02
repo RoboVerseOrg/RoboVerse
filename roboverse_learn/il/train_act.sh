@@ -10,6 +10,7 @@
 task_name=close_box
 expert_data_num=100
 gpu_id=0
+sim_set=mujoco
 
 num_epochs=100
 obs_space=joint_pos # joint_pos or ee
@@ -32,5 +33,15 @@ python -m roboverse_learn.il.utils.act.train \
 --num_episodes ${expert_data_num} \
 --dataset_dir data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr \
 --policy_class ${alg_name} --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 \
---num_epochs ${num_epochs}  --lr 1e-5 --state_dim 9 \
+--num_epochs ${num_epochs}  --lr 1e-5 --state_dim 14 \
 --seed ${seed}
+
+# export TORCH_CUDA_ARCH_LIST="8.9"
+# python -m roboverse_learn.il.act_eval_runner \
+# --task ${task_name} \
+# --robot Franka \
+# --num_envs 1 \
+# --sim ${sim_set} \
+# --algo act \
+# --ckpt_path ~/RoboVerse/info/outputs/ACT/2025.09.02/01.15.04_close_box_obs:joint_pos_act:joint_pos_100 \
+# --headless True \

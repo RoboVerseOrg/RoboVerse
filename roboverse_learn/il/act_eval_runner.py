@@ -14,8 +14,11 @@ from rich.logging import RichHandler
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-from metasim.scenario.scenario import ScenarioCfg
+# from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.kinematics_utils import get_curobo_models
+
+from metasim.task.registry import get_task_class
+
 
 
 def images_to_video(images, video_path, frame_size=(1920, 1080), fps=30):
@@ -93,11 +96,13 @@ def main():
     import numpy as np
     import torch
 
-    from metasim.scenario.scenario import RandomizationCfg
+    # from metasim.scenario.scenario import RandomizationCfg
     from metasim.scenario.cameras import PinholeCameraCfg
     from metasim.constants import SimType
     from metasim.utils.demo_util import get_traj
-    from metasim.utils.setup_util import get_sim_env_class
+    from metasim.utils.setup_util import get_robot
+
+#    from metasim.utils.setup_util import get_sim_env_class
 
     camera = PinholeCameraCfg(
         name="camera",
@@ -107,21 +112,33 @@ def main():
         pos=(1.5, 0.0, 1.5),
         look_at=(0.0, 0.0, 0.0),
     )
-    randomization = RandomizationCfg(camera=False, light=False, ground=False, reflection=False)
-    scenario = ScenarioCfg(
-        task=args.task,
+    # randomization = RandomizationCfg(camera=False, light=False, ground=False, reflection=False)
+    # scenario = ScenarioCfg(
+    #     task=args.task,
+    #     robots=[args.robot],
+    #     cameras=[camera],
+    #     # random=randomization,
+    #     sim=args.sim,
+    #     num_envs=args.num_envs,
+    #     try_add_table=True,
+    #     headless=args.headless,
+    # )
+
+    task_cls = get_task_class(args.task)
+    scenario = task_cls.scenario.update(
         robots=[args.robot],
-        cameras=[camera],
-        random=randomization,
-        sim=args.sim,
+        simulator=args.sim,
         num_envs=args.num_envs,
-        try_add_table=True,
         headless=args.headless,
+        cameras=[camera]
     )
 
     tic = time.time()
-    env_class = get_sim_env_class(SimType(args.sim))
-    env = env_class(scenario)
+    # env_class = get_sim_env_class(SimType(args.sim))
+    # env = env_class(scenario)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = task_cls(scenario, device=device)
+    robot = get_robot(args.robot)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
 
@@ -157,7 +174,7 @@ def main():
 
         import pickle
 
-        from il.utils.act.policy import ACTPolicy
+        from roboverse_learn.il.utils.act.policy import ACTPolicy
 
         ckpt_path = os.path.join(args.ckpt_path, act_ckpt_name)
         policy = ACTPolicy(policy_config)
@@ -171,7 +188,9 @@ def main():
             stats = pickle.load(f)
 
         def pre_process(s_qpos):
-            return (s_qpos - stats["qpos_mean"]) / stats["qpos_std"]
+           # return (s_qpos - stats["qpos_mean"]) / stats["qpos_std"]
+            return (s_qpos - stats["state_mean"]) / stats["state_std"]
+
 
         def post_process(a):
             return a * stats["action_std"] + stats["action_mean"]
@@ -180,7 +199,7 @@ def main():
         if args.temporal_agg:
             query_frequency = 1
             num_queries = policy_config["num_queries"]
-        max_timesteps = scenario.task.episode_length
+        max_timesteps = env.episode_length
         max_timesteps = int(max_timesteps * 1)
 
     ckpt_name = args.ckpt_path.split("/")[-1]
@@ -188,10 +207,10 @@ def main():
 
     ## Data
     tic = time.time()
-    assert os.path.exists(scenario.task.traj_filepath), (
-        f"Trajectory file: {scenario.task.traj_filepath} does not exist."
+    assert os.path.exists(env.traj_filepath), (
+        f"Trajectory file: {env.traj_filepath} does not exist."
     )
-    init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
+    init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
@@ -229,15 +248,16 @@ def main():
                 log.debug(f"Step {step}")
                 robot_joint_limits = scenario.robots[0].joint_limits
 
-                image_list.append(np.array(obs["rgb"])[0])
+                image_list.append(np.array(obs.cameras['camera'].rgb)[0])
 
                 # act
-                qpos_numpy = np.array(obs["joint_qpos"])
+                qpos_numpy = np.array(obs.robots['franka'].joint_pos)
+                # qpos_numpy = np.array(obs["joint_qpos"])
                 qpos = pre_process(qpos_numpy)
                 qpos = np.concatenate([qpos, np.zeros((qpos.shape[0], 14 - qpos.shape[1]))], axis=1)
                 qpos = torch.from_numpy(qpos).float().cuda()
                 qpos_history[:, step] = qpos
-                curr_image = np.array(obs["rgb"]).transpose(0, 3, 1, 2)
+                curr_image = np.array(obs.cameras['camera'].rgb).transpose(0, 3, 1, 2)
                 # cur_image = np.stack([curr_image, curr_image], axis=0)
                 curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
                 # breakpoint()

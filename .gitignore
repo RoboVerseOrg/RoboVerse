@@ -37,6 +37,8 @@ _isaac_sim
 ppo_logs/
 legacy/
 
+third_party/curobo/
+
 # Data
 /assets
 /data

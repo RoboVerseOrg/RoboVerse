@@ -31,6 +31,7 @@ from il.utils.common.lr_scheduler import get_scheduler
 from il.utils.common.pytorch_util import dict_apply, optimizer_to
 from torch.utils.data import DataLoader
 
+from scripts.advanced.collect_demo import DomainRandomizationManager
 
 from metasim.task.registry import get_task_class
 
@@ -326,7 +327,6 @@ class DPRunner(BaseRunner):
         scenario = task_cls.scenario.update(
             robots=[args.robot],
             simulator=args.sim,
-            #random=args.random,
             num_envs=args.num_envs,
             headless=args.headless,
             cameras=[camera]
@@ -334,24 +334,11 @@ class DPRunner(BaseRunner):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tic = time.time()
         env = task_cls(scenario, device=device)
-
-        # task = get_task()()
-        # task.episode_length = args.action_set_steps * args.max_step
         robot = get_robot(args.robot)
 
-        # scenario = ScenarioCfg(
-        #     task=args.task,
-        #     robots=[args.robot],
-        #     cameras=[camera],
-        #     random=args.random,
-        #     sim=args.sim,
-        #     num_envs=args.num_envs,
-        #     headless=args.headless,
-        # )
+        # Initialize domain randomization manager
+        randomization_manager = DomainRandomizationManager(args, scenario, env.handler)
 
-
-        # env_class = get_sim_env_class(SimType(scenario.sim))
-        # env = env_class(scenario)
         toc = time.time()
         log.trace(f"Time to launch: {toc - tic:.2f}s")
 
@@ -400,6 +387,11 @@ class DPRunner(BaseRunner):
             args.task_id_range_low, args.task_id_range_low + max_demos, num_envs
         ):
             demo_end_idx = min(demo_start_idx + num_envs, num_demos)
+            current_demo_idxs = list(range(demo_start_idx, demo_end_idx))
+            
+            ## Randomize env for this set of demos
+            for demo_idx in current_demo_idxs:
+              randomization_manager.randomize_for_demo(demo_idx)
 
             ## Reset before first step
             tic = time.time()

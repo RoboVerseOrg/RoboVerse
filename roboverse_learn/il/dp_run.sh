@@ -1,5 +1,5 @@
 task_name=close_box
-level=0
+level=2
 config_name=dp_runner
 num_epochs=10               # Number of training epochs
 port=50010
@@ -11,13 +11,14 @@ delta_ee=0
 eval_num_envs=1
 eval_max_step=500
 expert_data_num=100
+sim_set=mujoco
 
 ## Seperate training and evaluation
-train_enable=True
+train_enable=False
 eval_enable=True
 
 ## Choose training or inference algorithm
-algo_choose=1  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based
+algo_choose=0  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based
 
 algo_model=""
 eval_path=""
@@ -25,7 +26,7 @@ case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.24/11.56.41_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.28/10.56.24_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
         ;;
     1)
         # DDIM settings
@@ -73,6 +74,7 @@ eval_config.eval_args.num_envs=${eval_num_envs} \
 train_enable=${train_enable} \
 eval_enable=${eval_enable} \
 eval_path=${eval_path} \
+
 # eval_config.eval_args.random.level=${level} \
 
 ## Seperate training and evaluation
