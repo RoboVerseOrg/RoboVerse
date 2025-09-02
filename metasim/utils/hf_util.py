@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from multiprocessing import Pool
 
+import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
@@ -75,13 +77,16 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     if len(filepaths) == 0:
         return
 
-    ## Option 1: Use multiprocessing, but sometimes the program stuck here
-    # with Pool(processes=n_processes) as p:
-    #     p.map(check_and_download_single, filepaths)
+    with portalocker.Lock(os.path.join(LOCAL_DIR, "download.lock")):
+        # in parallel env settings, we need to prevent child processes from downloading the same file.
 
-    ## Option 2: Use single process, but could be slow
-    for filepath in filepaths:
-        check_and_download_single(filepath)
+        # check if current process is the main process
+        if os.getpid() == os.getppid():
+            with Pool(processes=n_processes) as p:
+                p.map(check_and_download_single, filepaths)
+        else:
+            for filepath in filepaths:
+                check_and_download_single(filepath)
 
     new_filepaths = []
     for filepath in filepaths:
@@ -144,7 +149,7 @@ class FileDownloader:
         ):
             return
 
-        if self.scenario.simulator in ["isaaclab"]:
+        if self.scenario.simulator in ["isaaclab", "isaacsim"]:
             self._add(obj.usd_path)
         elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
             self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
