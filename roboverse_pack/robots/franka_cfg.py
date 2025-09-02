@@ -47,6 +47,7 @@ class FrankaCfg(RobotCfg):
         "panda_finger_joint2": (0.0, 0.04),  # 0.0 close, 0.04 open
     }
     ee_body_name: str = "panda_hand"
+    ee_joint_name: list[str] = ["panda_finger_joint1", "panda_finger_joint2"]
 
     default_joint_positions: dict[str, float] = {
         "panda_joint1": 0.0,

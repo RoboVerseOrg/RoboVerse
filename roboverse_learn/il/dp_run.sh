@@ -58,7 +58,7 @@ if [ "${delta_ee}" = 1 ]; then
 fi
 
 
-python ~/RoboVerse/roboverse_learn/il/main.py --config-name=${config_name}.yaml \
+python /datasets/v2p/current/murphy/RoboVerse/roboverse_learn/il/main.py --config-name=${config_name}.yaml \
 task_name="${task_name}_${extra}" \
 dataset_config.zarr_path="data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr" \
 train_config.training_params.seed=${seed} \

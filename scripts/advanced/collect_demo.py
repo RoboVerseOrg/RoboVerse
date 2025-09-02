@@ -95,6 +95,8 @@ class Args:
     """When to apply randomization: per_demo (once at start) or per_episode (every episode)"""
     randomization_seed: int | None = None
     """Seed for reproducible randomization. If None, uses random seed"""
+    include_ee_state: bool = False
+    """Include end-effector state in collected observations"""
 
     def __post_init__(self):
         assert self.run_all or self.run_unfinished or self.run_failed, (
@@ -151,7 +153,7 @@ from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
 from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
-
+from metasim.utils.kinematics_utils import get_ee_state
 rootutils.setup_root(__file__, pythonpath=True)
 
 # Import randomization components (after rootutils setup)
@@ -751,6 +753,9 @@ def main():
     ## Now record the clean, stabilized initial state
     obs = env.handler.get_states()
     obs = state_tensor_to_nested(env.handler, obs)
+    if args.include_ee_state:
+        ee_state = get_ee_state(obs, robot)
+        obs["ee_state"] = ee_state
     for env_id, demo_idx in enumerate(demo_idxs):
         log.info(f"Starting Demo {demo_idx} in Env {env_id}")
         collector.create(demo_idx, obs[env_id])
@@ -761,6 +766,9 @@ def main():
         actions = get_actions(all_actions, env, demo_idxs, robot)
         obs, reward, success, time_out, extras = env.step(actions)
         obs = state_tensor_to_nested(env.handler, obs)
+        if args.include_ee_state:
+            ee_state = get_ee_state(obs, robot)
+            obs["ee_state"] = ee_state
         run_out = get_run_out(all_actions, env, demo_idxs)
 
         for env_id in range(env.handler.num_envs):
@@ -821,6 +829,9 @@ def main():
 
                 obs = env.handler.get_states()
                 obs = state_tensor_to_nested(env.handler, obs)
+                if args.include_ee_state:
+                    ee_state = get_ee_state(obs, robot)
+                    obs["ee_state"] = ee_state
                 collector.create(demo_idx, obs[env_id])
             else:
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
@@ -837,6 +848,9 @@ def main():
 
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
+                    if args.include_ee_state:
+                        ee_state = get_ee_state(obs, robot)
+                        obs["ee_state"] = ee_state
                     collector.create(new_demo_idx, obs[env_id])
                     demo_indexer.move_on()
                 else:
