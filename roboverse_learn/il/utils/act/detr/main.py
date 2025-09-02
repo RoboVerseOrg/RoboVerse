@@ -19,6 +19,8 @@ def get_args_parser():
     parser.add_argument('--lr_drop', default=200, type=int) # not used
     parser.add_argument('--clip_max_norm', default=0.1, type=float, # not used
                         help='gradient clipping max norm')
+    parser.add_argument('--state_dim', default=9, type=int) # will be overridden
+
 
     # Model parameters
     # * Backbone

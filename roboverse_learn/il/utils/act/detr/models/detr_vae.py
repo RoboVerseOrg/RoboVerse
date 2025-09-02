@@ -238,6 +238,7 @@ def build(args):
 
     encoder = build_encoder(args)
     state_dim = args.state_dim if args.state_dim is not None else 14
+    # state_dim = 14
     model = DETRVAE(
         backbones,
         transformer,

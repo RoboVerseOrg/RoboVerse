@@ -6,6 +6,7 @@ eval_args:
   task: ""
   max_step: 200
   num_envs: 1
+  sim: "isaacsim"
 
 policy_runner:
   action:
