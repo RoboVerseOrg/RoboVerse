@@ -1,7 +1,7 @@
 task_name=close_box
 level=2
 config_name=dp_runner
-num_epochs=10               # Number of training epochs
+num_epochs=1               # Number of training epochs
 port=50010
 seed=42
 gpu=0
@@ -11,7 +11,7 @@ delta_ee=0
 eval_num_envs=1
 eval_max_step=500
 expert_data_num=100
-sim_set=mujoco
+sim_set=isaacsim
 
 ## Seperate training and evaluation
 train_enable=False
@@ -26,22 +26,22 @@ case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.28/10.56.24_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
         ;;
     1)
         # DDIM settings
         export algo_model="DDIM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.22/07.39.16_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
         ;;
     2)
         # FM settings
         export algo_model="fm_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.22/07.39.16_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
         ;;
     3)
         # Score-based settings
         export algo_model="Score_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.08.22/07.39.16_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
         ;;
     *)
         echo "Invalid algorithm choice: $algo_choose"
@@ -58,8 +58,7 @@ if [ "${delta_ee}" = 1 ]; then
   extra="${extra}_delta"
 fi
 
-
-python /datasets/v2p/current/murphy/RoboVerse/roboverse_learn/il/main.py --config-name=${config_name}.yaml \
+python ~/RoboVerse/roboverse_learn/il/main.py --config-name=${config_name}.yaml \
 task_name="${task_name}_${extra}" \
 dataset_config.zarr_path="data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr" \
 train_config.training_params.seed=${seed} \

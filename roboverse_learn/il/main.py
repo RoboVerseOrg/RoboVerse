@@ -14,7 +14,7 @@ abs_config_path = str(pathlib.Path(__file__).resolve().parent.joinpath("configs"
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
 
-@hydra.main(config_path=abs_config_path, version_base=None)
+@hydra.main(config_path=abs_config_path, version_base="1.3")
 def main(cfg):
     OmegaConf.resolve(cfg)
 
