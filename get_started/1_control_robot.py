@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
         ## Handlers
         sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = (
-            "mujoco"
+            "isaacsim"
         )
 
         ## Others

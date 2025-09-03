@@ -1,18 +1,19 @@
 """This module provides utility functions for kinematics calculations using the curobo library."""
 
 import torch
-from curobo.cuda_robot_model.cuda_robot_model import CudaRobotModel
-from curobo.geom.types import Cuboid, WorldConfig
-from curobo.types.base import TensorDeviceType
-from curobo.types.robot import RobotConfig
-from curobo.util_file import get_robot_path, join_path, load_yaml
-from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 
 from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import matrix_from_quat
 
 
 def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
+    from curobo.cuda_robot_model.cuda_robot_model import CudaRobotModel
+    from curobo.geom.types import Cuboid, WorldConfig
+    from curobo.types.base import TensorDeviceType
+    from curobo.types.robot import RobotConfig
+    from curobo.util_file import get_robot_path, join_path, load_yaml
+    from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
+
     """Initializes and returns the curobo kinematic model, forward kinematics function, and inverse kinematics solver for a given robot configuration.
 
     Args:

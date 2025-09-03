@@ -1,43 +1,16 @@
 from __future__ import annotations
 
-from loguru import logger as log
-from rich.logging import RichHandler
-
-log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-
-
-def log_randomization_result(
-    randomizer_type: str, obj_name: str, property_name: str, before_value, after_value, unit: str = ""
-):
-    """Log randomization results in a consistent format."""
-    if hasattr(before_value, "cpu"):
-        before_str = str(before_value.cpu().numpy().round(3) if hasattr(before_value, "numpy") else before_value)
-    else:
-        before_str = str(before_value)
-
-    if hasattr(after_value, "cpu"):
-        after_str = str(after_value.cpu().numpy().round(3) if hasattr(after_value, "numpy") else after_value)
-    else:
-        after_str = str(after_value)
-
-    log.info(f"  [{randomizer_type}] {obj_name}.{property_name}: {before_str} -> {after_str} {unit}")
-
-
-def log_randomization_header(randomizer_name: str, description: str = ""):
-    """Log a consistent header for randomization sections."""
-    log.info("=" * 50)
-    if description:
-        log.info(f"{randomizer_name}: {description}")
-    else:
-        log.info(randomizer_name)
-
-
 import math
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
 
 import tyro
+
+from loguru import logger as log
+from rich.logging import RichHandler
+
+log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.scenario.render import RenderCfg
 
@@ -52,7 +25,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaacsim"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -95,7 +68,7 @@ class Args:
     """When to apply randomization: per_demo (once at start) or per_episode (every episode)"""
     randomization_seed: int | None = None
     """Seed for reproducible randomization. If None, uses random seed"""
-    include_ee_state: bool = False
+    include_ee_state: bool = True
     """Include end-effector state in collected observations"""
 
     def __post_init__(self):
@@ -174,6 +147,32 @@ except ImportError as e:
     log.warning(f"Randomization components not available: {e}")
     RANDOMIZATION_AVAILABLE = False
 
+
+
+def log_randomization_result(
+    randomizer_type: str, obj_name: str, property_name: str, before_value, after_value, unit: str = ""
+):
+    """Log randomization results in a consistent format."""
+    if hasattr(before_value, "cpu"):
+        before_str = str(before_value.cpu().numpy().round(3) if hasattr(before_value, "numpy") else before_value)
+    else:
+        before_str = str(before_value)
+
+    if hasattr(after_value, "cpu"):
+        after_str = str(after_value.cpu().numpy().round(3) if hasattr(after_value, "numpy") else after_value)
+    else:
+        after_str = str(after_value)
+
+    log.info(f"  [{randomizer_type}] {obj_name}.{property_name}: {before_str} -> {after_str} {unit}")
+
+
+def log_randomization_header(randomizer_name: str, description: str = ""):
+    """Log a consistent header for randomization sections."""
+    log.info("=" * 50)
+    if description:
+        log.info(f"{randomizer_name}: {description}")
+    else:
+        log.info(randomizer_name)
 
 class DomainRandomizationManager:
     """Manages domain randomization for demo collection with unified interface."""
