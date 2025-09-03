@@ -481,6 +481,7 @@ class IsaacsimHandler(BaseSimHandler):
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
+                articulation_props=sim_utils.ArticulationRootPropertiesCfg(articulation_enabled=False),
             )
             if isinstance(obj, RigidObjCfg):
                 self.scene.rigid_objects[obj.name] = RigidObject(
