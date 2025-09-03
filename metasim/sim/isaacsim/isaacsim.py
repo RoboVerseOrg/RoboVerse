@@ -164,47 +164,98 @@ class IsaacsimHandler(BaseSimHandler):
         """Cleanup for the environment."""
         self.close()
 
-    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
+    def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
+        # if states is list[DictEnvState], iterate over it and set state
+        if isinstance(states, list):
+            if env_ids is None:
+                env_ids = list(range(self.num_envs))
+            states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
+            for obj in self.objects + self.robots:
+                if obj.name not in states_flat[0]:
+                    log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
+                    pos, rot = self._get_pose(obj.name, env_ids=env_ids)
+                    self._set_object_pose(obj, pos, rot, env_ids=env_ids)
+                    continue
 
-        states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
-        for obj in self.objects + self.robots:
-            if obj.name not in states_flat[0]:
-                log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
-                pos, rot = self._get_pose(obj.name, env_ids=env_ids)
-                self._set_object_pose(obj, pos, rot, env_ids=env_ids)
-                continue
-
-            if states_flat[0][obj.name].get("pos", None) is None or states_flat[0][obj.name].get("rot", None) is None:
-                log.warning(f"No pose found for {obj.name}, setting its velocity to zero")
-                pos, rot = self._get_pose(obj.name, env_ids=env_ids)
-                self._set_object_pose(obj, pos, rot, env_ids=env_ids)
-            else:
-                pos = torch.stack([states_flat[env_id][obj.name]["pos"] for env_id in env_ids]).to(self.device)
-                rot = torch.stack([states_flat[env_id][obj.name]["rot"] for env_id in env_ids]).to(self.device)
-                self._set_object_pose(obj, pos, rot, env_ids=env_ids)
-
-            if isinstance(obj, ArticulationObjCfg):
-                if states_flat[0][obj.name].get("dof_pos", None) is None:
-                    log.warning(f"No dof_pos found for {obj.name}")
+                if (
+                    states_flat[0][obj.name].get("pos", None) is None
+                    or states_flat[0][obj.name].get("rot", None) is None
+                ):
+                    log.warning(f"No pose found for {obj.name}, setting its velocity to zero")
+                    pos, rot = self._get_pose(obj.name, env_ids=env_ids)
+                    self._set_object_pose(obj, pos, rot, env_ids=env_ids)
                 else:
-                    dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
-                    joint_names = self._get_joint_names(obj.name, sort=False)
-                    joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.device)
-                    for i, joint_name in enumerate(joint_names):
-                        if joint_name in dof_dict[0]:
-                            joint_pos[:, i] = torch.tensor([x[joint_name] for x in dof_dict], device=self.device)
-                        else:
-                            log.warning(f"Missing {joint_name} in {obj.name}, setting its position to zero")
+                    pos = torch.stack([states_flat[env_id][obj.name]["pos"] for env_id in env_ids]).to(self.device)
+                    rot = torch.stack([states_flat[env_id][obj.name]["rot"] for env_id in env_ids]).to(self.device)
+                    self._set_object_pose(obj, pos, rot, env_ids=env_ids)
 
-                    self._set_object_joint_pos(obj, joint_pos, env_ids=env_ids)
-                    if obj in self.robots:
-                        robot_inst = self.scene.articulations[obj.name]
-                        robot_inst.set_joint_position_target(
-                            joint_pos, env_ids=torch.tensor(env_ids, device=self.device)
-                        )
-                        robot_inst.write_data_to_sim()
+                if isinstance(obj, ArticulationObjCfg):
+                    if states_flat[0][obj.name].get("dof_pos", None) is None:
+                        log.warning(f"No dof_pos found for {obj.name}")
+                    else:
+                        dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
+                        joint_names = self._get_joint_names(obj.name, sort=False)
+                        joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.device)
+                        for i, joint_name in enumerate(joint_names):
+                            if joint_name in dof_dict[0]:
+                                joint_pos[:, i] = torch.tensor([x[joint_name] for x in dof_dict], device=self.device)
+                            else:
+                                log.warning(f"Missing {joint_name} in {obj.name}, setting its position to zero")
+
+                        self._set_object_joint_pos(obj, joint_pos, env_ids=env_ids)
+                        if obj in self.robots:
+                            robot_inst = self.scene.articulations[obj.name]
+                            robot_inst.set_joint_position_target(
+                                joint_pos, env_ids=torch.tensor(env_ids, device=self.device)
+                            )
+                            robot_inst.write_data_to_sim()
+
+        # if states is TensorState, reindex the tensors and set state
+        elif isinstance(states, TensorState):
+            if env_ids is None:
+                env_ids = torch.arange(self.num_envs, device=self.device)
+            elif isinstance(env_ids, list):
+                env_ids = torch.tensor(env_ids, device=self.device)
+
+            for _, obj in enumerate(self.objects):
+                if obj.fix_base_link:
+                    continue
+                if isinstance(obj, ArticulationObjCfg):
+                    obj_inst = self.scene.articulations[obj.name]
+                else:
+                    obj_inst = self.scene.rigid_objects[obj.name]
+                # root_state = obj_inst.root_state.clone()
+                root_state = states.objects[obj.name].root_state.clone()
+                root_state[:, :3] += self.scene.env_origins
+                obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
+                obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
+                if isinstance(obj, ArticulationObjCfg):
+                    joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
+                    obj_inst.write_joint_position_to_sim(
+                        states.objects[obj.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+                    )
+                    obj_inst.write_joint_velocity_to_sim(
+                        states.objects[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+                    )
+
+            for _, robot in enumerate(self.robots):
+                robot_inst = self.scene.articulations[robot.name]
+                root_state = states.robots[robot.name].root_state.clone()
+                root_state[:, :3] += self.scene.env_origins
+                robot_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
+                robot_inst.write_root_velocity_to_sim(
+                    states.robots[robot.name].root_state[env_ids, 7:], env_ids=env_ids
+                )
+                joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
+                robot_inst.write_joint_position_to_sim(
+                    states.robots[robot.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+                )
+                robot_inst.write_joint_velocity_to_sim(
+                    states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+                )
+
+        else:
+            raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
