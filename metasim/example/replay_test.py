@@ -44,7 +44,7 @@ class Args:
     render: RenderCfg = RenderCfg()
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "mujoco"
+        "isaacgym"
     )
     renderer: (
         Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None
@@ -55,7 +55,6 @@ class Args:
     split: Literal["train", "val", "test", "all"] = "all"
     headless: bool = False
 
-    # 输出
     save_image_dir: str | None = "test_output/tmp"
     save_video_path: str | None = "test_output/test_replay.mp4"
     stop_on_runout: bool = False
