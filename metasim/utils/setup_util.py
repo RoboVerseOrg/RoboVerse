@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import os
+import sys
 
 from loguru import logger as log
 
@@ -11,8 +13,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
-import sys
-import os
+
 
 def get_sim_handler_class(sim: SimType):
     """Get the simulator handler class from the simulator type.
@@ -171,6 +172,17 @@ def get_robot(robot_name: str) -> RobotCfg:
 
 
 def get_scene(scene_name: str) -> SceneCfg:
+    """Get a scene configuration by name.
+
+    Args:
+        scene_name (str): The name of the scene in either snake_case or CamelCase format.
+
+    Returns:
+        SceneCfg: The scene configuration object corresponding to the given scene name.
+
+    Raises:
+        ValueError: If the scene name is not found or has invalid format.
+    """
     if is_snake_case(scene_name):
         SceneName = to_camel_case(scene_name)
     elif is_camel_case(scene_name):
@@ -191,7 +203,7 @@ def get_scene(scene_name: str) -> SceneCfg:
             candidate_packages.append(os.path.splitext(fname)[0])
 
     attr_name = f"{SceneName}Cfg"
-    errors: list[str] = []  # noqa: F811
+    errors: list[str] = []
     for pkg_name in candidate_packages:
         try:
             pkg = importlib.import_module(pkg_name)
