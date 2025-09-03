@@ -18,8 +18,7 @@ if [ "${delta_ee}" = 1 ]; then
   extra="${extra}_delta"
 fi
 
-## Collecting demonstration data run_all,
-# python ~/RoboVerse/scripts/advanced/collect_demo.py --sim=${sim_set} --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx} \
+## Collecting demonstration data
 # python ~/RoboVerse/scripts/advanced/collect_demo.py --sim=${sim_set} --task=${task_name_set} --num_envs=${num_envs} --run_all --headless --demo_start_idx=${demo_start_idx} --max_demo_idx=${max_demo_idx}  --enable-randomization\
 
 
