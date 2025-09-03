@@ -4,6 +4,7 @@ import math
 
 import torch
 
+from metasim.example.example_pack.tasks.checkers.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
@@ -11,7 +12,6 @@ from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
-from metasim.example.example_pack.tasks.checkers.checkers import JointPosChecker
 
 
 @register_task("rlbench.close_box", "close_box", "franka.close_box")

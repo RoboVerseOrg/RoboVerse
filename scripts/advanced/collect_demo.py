@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 import tyro
-
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -123,10 +122,11 @@ from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import get_traj
+from metasim.utils.kinematics_utils import get_ee_state
 from metasim.utils.setup_util import get_robot
 from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
-from metasim.utils.kinematics_utils import get_ee_state
+
 rootutils.setup_root(__file__, pythonpath=True)
 
 # Import randomization components (after rootutils setup)
@@ -146,7 +146,6 @@ try:
 except ImportError as e:
     log.warning(f"Randomization components not available: {e}")
     RANDOMIZATION_AVAILABLE = False
-
 
 
 def log_randomization_result(
@@ -173,6 +172,7 @@ def log_randomization_header(randomizer_name: str, description: str = ""):
         log.info(f"{randomizer_name}: {description}")
     else:
         log.info(randomizer_name)
+
 
 class DomainRandomizationManager:
     """Manages domain randomization for demo collection with unified interface."""

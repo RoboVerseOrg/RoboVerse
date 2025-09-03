@@ -3,6 +3,8 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
+from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
+from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
@@ -10,8 +12,6 @@ from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 
 
 @register_task("libero.pick_butter", "pick_butter")
@@ -77,7 +77,9 @@ class LiberoPickButterTask(BaseTaskEnv):
     )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        self.traj_filepath = "roboverse_data/trajs/libero/pick_up_the_butter_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+        self.traj_filepath = (
+            "roboverse_data/trajs/libero/pick_up_the_butter_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+        )
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
         super().__init__(scenario, device)

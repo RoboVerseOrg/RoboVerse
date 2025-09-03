@@ -3,6 +3,8 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
+from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
+from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
@@ -10,8 +12,6 @@ from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 
 
 @register_task("maniskill.stack_cube", "stack_cube")

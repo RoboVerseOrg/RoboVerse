@@ -388,7 +388,7 @@ class DPRunner(BaseRunner):
         ):
             demo_end_idx = min(demo_start_idx + num_envs, num_demos)
             current_demo_idxs = list(range(demo_start_idx, demo_end_idx))
-            
+
             ## Randomize env for this set of demos
             for demo_idx in current_demo_idxs:
               randomization_manager.randomize_for_demo(demo_idx)
