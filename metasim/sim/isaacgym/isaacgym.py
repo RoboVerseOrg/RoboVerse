@@ -724,7 +724,6 @@ class IsaacgymHandler(BaseSimHandler):
     def refresh_render(self) -> None:
         # Step the physics
         self.gym.simulate(self.sim)
-        # self.gym.step_graphics(self.sim)
         self.gym.fetch_results(self.sim, True)
         self._render()
 
