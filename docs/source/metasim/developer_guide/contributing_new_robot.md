@@ -3,9 +3,11 @@
 ## 1. Create a Robot Configuration File
 Define a new robot in `roboverse_pack/robots/{robot_name}_cfg.py`.
 
+Remember you can always inherit the base robot config class `metasim/scenario/robot.py:RobotCfg`, and add new fields to the robot configs and use it in your own usecase.
+
 <!-- The definition of each term is explained in [API Documentation](https://roboverse.wiki/metasim/api/metasim/metasim.scenario.robot#baserobotcfg). -->
 
-The following terms are mandatory:
+The following fields are mandatory:
 - ``num_joints``
 - ``actuators``
 - ``joint_limits``
