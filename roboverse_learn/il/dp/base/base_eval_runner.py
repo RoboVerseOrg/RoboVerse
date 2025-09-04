@@ -1,4 +1,4 @@
-from il.runner.base_policy import BasePolicyCfg
+from dp.runner.base_policy import BasePolicyCfg
 
 try:
     from curobo.types.math import Pose
@@ -12,7 +12,7 @@ import sys
 import torch
 from loguru import logger as log
 from metasim.scenario.scenario import ScenarioCfg
-from il.utils.common.pytorch_util import dict_apply
+from roboverse_learn.il.utils.common.pytorch_util import dict_apply
 
 
 class BaseEvalRunner:

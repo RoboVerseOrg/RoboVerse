@@ -3,7 +3,7 @@ from typing import Dict
 import torch
 import torch.nn
 
-from il.utils.common.normalizer import LinearNormalizer
+from roboverse_learn.il.utils.common.normalizer import LinearNormalizer
 
 
 class BaseLowdimDataset(torch.utils.data.Dataset):

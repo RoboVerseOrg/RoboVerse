@@ -2,7 +2,7 @@ import numpy as np
 from diffusion_policy.model.common.normalizer import SingleFieldLinearNormalizer
 
 
-from il.utils.common.pytorch_util import (
+from roboverse_learn.il.utils.common.pytorch_util import (
     dict_apply_reduce,
     dict_apply_split,
 )

@@ -1,21 +1,23 @@
 from typing import Dict
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from einops import reduce
+from einops import rearrange, reduce
 from loguru import logger as log
 
-from il.utils.common.module_attr_mixin import ModuleAttrMixin
-from il.utils.common.normalizer import LinearNormalizer
-from il.utils.common.pytorch_util import dict_apply
+from roboverse_learn.il.utils.common.module_attr_mixin import ModuleAttrMixin
+from roboverse_learn.il.utils.common.normalizer import LinearNormalizer
+from roboverse_learn.il.utils.common.pytorch_util import dict_apply
 
 
 class BaseImagePolicy(ModuleAttrMixin):
-    # init accepts keyword argument shape_meta, see config/dp_runner.yaml
+    # init accepts keyword argument shape_meta, see config/task/*_image.yaml
 
     def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -35,11 +37,11 @@ class BaseImagePolicy(ModuleAttrMixin):
         raise NotImplementedError()
 
 
-class FlowMatchingUnetImagePolicy(BaseImagePolicy):
+class DiffusionUnetImagePolicy(BaseImagePolicy):
     def __init__(
         self,
         shape_meta: dict,
-        noise_scheduler: DDPMScheduler,
+        noise_scheduler: DDIMScheduler,
         obs_encoder: MultiImageObsEncoder,
         horizon,
         n_action_steps,
@@ -55,6 +57,9 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
         **kwargs,
     ):
         super().__init__()
+
+        # DDIM parameter
+        self.eta = 0.0  # 0.0 definite sampling, 1.0 stochastic sampling
 
         # parse shapes
         action_shape = shape_meta["action"]["shape"]
@@ -103,7 +108,7 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
 
         if num_inference_steps is None:
             num_inference_steps = noise_scheduler.config.num_train_timesteps
-        self.num_inference_steps = num_inference_steps  # number of inference steps for sampling
+        self.num_inference_steps = num_inference_steps
 
     # ========= inference  ============
     def conditional_sample(
@@ -117,8 +122,8 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
         **kwargs,
     ):
         model = self.model
+        scheduler = self.noise_scheduler
 
-        # Sample noise
         trajectory = torch.randn(
             size=condition_data.shape,
             dtype=condition_data.dtype,
@@ -126,32 +131,24 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
             generator=generator,
         )
 
-        time_steps = torch.linspace(0, 1.0, self.num_inference_steps + 1)
-        for i in range(self.num_inference_steps):
+        # set step values
+        scheduler.set_timesteps(self.num_inference_steps)
+        scheduler.eta = self.eta  # set eta for DDIM
+
+        for t in scheduler.timesteps:
 
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
 
-            # 2. compute next sample
-            # Midpoint ODE Solver x_end = x_t + (t_end - t_start) * f(x_mid, t_mid)
-            t_start = time_steps[i].view(1).expand(trajectory.shape[0])
-            t_start = t_start.to(self.device)
-            t_end = time_steps[i + 1].view(1).expand(trajectory.shape[0])
-            t_end = t_end.to(self.device)
-            t_start_expa = t_start.view(-1, 1, 1)
-            t_end_expa = t_end.view(-1, 1, 1)
-            t_mid = t_start + (t_end - t_start) / 2
-            trajectory_mid = (
-                trajectory
-                + model(trajectory, t_start, local_cond=local_cond, global_cond=global_cond)
-                * (t_end_expa - t_start_expa)
-                / 2
-            )
-            trajectory = trajectory + (t_end_expa - t_start_expa) * model(
-                trajectory_mid, t_mid, local_cond=local_cond, global_cond=global_cond
-            )
+            # 2. predict model output
+            model_output = model(trajectory, t, local_cond=local_cond, global_cond=global_cond)
+
+            # 3. compute previous imadge: x_t -> x_t-1
+            trajectory = scheduler.step(model_output, t, trajectory, generator=generator, **kwargs).prev_sample
+
         # finally make sure conditioning is enforced
         trajectory[condition_mask] = condition_data[condition_mask]
+
         return trajectory
 
     def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -177,12 +174,15 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
 
         # handle different ways of passing observation
         local_cond = None
-        global_cond = None  # used in p(A_t/O_t) policy
-        if self.obs_as_global_cond:  # p(A_t/O_t) policy
+        global_cond = None
+        if self.obs_as_global_cond:  # p(A_t/O_t)
             # condition through global feature
             this_nobs = dict_apply(nobs, lambda x: x[:, :To, ...].reshape(-1, *x.shape[2:]))
+            # print("!!To", To)
+            # print(this_nobs["head_cam"].shape, this_nobs["agent_pos"].shape)
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
+            # print("!!if", nobs_features.shape)
             global_cond = nobs_features.reshape(B, -1)
             # empty data for action
             cond_data = torch.zeros(size=(B, T, Da), device=device, dtype=dtype)
@@ -227,7 +227,7 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
         # normalize input
         assert "valid_mask" not in batch
         nobs = self.normalizer.normalize(batch["obs"])
-        nactions = self.normalizer["action"].normalize(batch["action"])  # batch_size * horizon * action_dim
+        nactions = self.normalizer["action"].normalize(batch["action"])
         batch_size = nactions.shape[0]
         horizon = nactions.shape[1]
 
@@ -254,23 +254,38 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
         # generate impainting mask
         condition_mask = self.mask_generator(trajectory.shape)
 
-        # Sample noise
+        # Sample noise that we'll add to the images
         noise = torch.randn(trajectory.shape, device=trajectory.device)
+        bsz = trajectory.shape[0]
+        # Sample a random timestep for each image
+        timesteps = torch.randint(
+            0,
+            self.noise_scheduler.config.num_train_timesteps,
+            (bsz,),
+            device=trajectory.device,
+        ).long()
+        # Add noise to the clean images according to the noise magnitude at each timestep
+        # (this is the forward diffusion process)
+        noisy_trajectory = self.noise_scheduler.add_noise(trajectory, noise, timesteps)
 
         # compute loss mask
         loss_mask = ~condition_mask
 
-        # Sample timesteps
-        timesteps = torch.rand(trajectory.shape[0], device=trajectory.device)
-        timesteps_exp = timesteps.view(-1, 1, 1)
-        # Sample middle trajectory
-        trajectory_inter = (1 - timesteps_exp) * noise + timesteps_exp * trajectory
-        # Ture flow vector
-        vertor_fm_true = trajectory - noise
+        # apply conditioning
+        noisy_trajectory[condition_mask] = cond_data[condition_mask]
+
         # Predict the noise residual
-        vector_fm_pred = self.model(trajectory_inter, timesteps, local_cond=local_cond, global_cond=global_cond)
-        # Compute the loss
-        loss = F.mse_loss(vector_fm_pred, vertor_fm_true, reduction="none")
+        pred = self.model(noisy_trajectory, timesteps, local_cond=local_cond, global_cond=global_cond)
+
+        pred_type = self.noise_scheduler.config.prediction_type
+        if pred_type == "epsilon":
+            target = noise
+        elif pred_type == "sample":
+            target = trajectory
+        else:
+            raise ValueError(f"Unsupported prediction type {pred_type}")
+
+        loss = F.mse_loss(pred, target, reduction="none")
         loss = loss * loss_mask.type(loss.dtype)
         loss = reduce(loss, "b ... -> b (...)", "mean")
         loss = loss.mean()

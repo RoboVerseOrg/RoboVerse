@@ -1,7 +1,7 @@
 task_name=close_box
 level=2
 config_name=dp_runner
-num_epochs=1               # Number of training epochs
+num_epochs=100              # Number of training epochs
 port=50010
 seed=42
 gpu=0
@@ -26,12 +26,12 @@ case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/10.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/13.40.19_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
         ;;
     1)
         # DDIM settings
         export algo_model="DDIM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/13.40.19_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
         ;;
     2)
         # FM settings
@@ -58,7 +58,7 @@ if [ "${delta_ee}" = 1 ]; then
   extra="${extra}_delta"
 fi
 
-python ~/RoboVerse/roboverse_learn/il/main.py --config-name=${config_name}.yaml \
+python ~/RoboVerse/roboverse_learn/il/dp/main.py --config-name=${config_name}.yaml \
 task_name="${task_name}_${extra}" \
 dataset_config.zarr_path="data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr" \
 train_config.training_params.seed=${seed} \

@@ -7,7 +7,7 @@ defaults:
 
 task_name: placeholder
 name: robot_${task_name}
-_target_: il.runner.dp_runner.DPRunner
+_target_: dp.runner.dp_runner.DPRunner
 
 
 image_shape: &image_shape [3, 256, 256]

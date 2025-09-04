@@ -3,7 +3,7 @@ from __future__ import annotations
 import numba
 import numpy as np
 
-from il.utils.common.replay_buffer import ReplayBuffer
+from roboverse_learn.il.utils.common.replay_buffer import ReplayBuffer
 
 
 @numba.jit(nopython=True)

@@ -21,5 +21,5 @@ Register for a Weights & Biases (wandb) account to obtain an API key.
 ## Train and eval
 
 ```bash
-./roboverse_learn/il/run.sh
+./roboverse_learn/il/dp/dp_run.sh
 ```

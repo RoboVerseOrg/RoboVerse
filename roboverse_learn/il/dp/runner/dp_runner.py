@@ -21,13 +21,13 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.constants import SimType
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
-from il.base.base_eval_runner import BaseEvalRunner
-from il.base.base_runner import BaseRunner
-from il.utils.common.eval_args import Args
-from il.utils.common.eval_runner_getter import get_runner
-from il.utils.common.json_logger import JsonLogger
-from il.utils.common.lr_scheduler import get_scheduler
-from il.utils.common.pytorch_util import dict_apply, optimizer_to
+from dp.base.base_eval_runner import BaseEvalRunner
+from dp.base.base_runner import BaseRunner
+from roboverse_learn.il.utils.common.eval_args import Args
+from roboverse_learn.il.utils.common.eval_runner_getter import get_runner
+from roboverse_learn.il.utils.common.json_logger import JsonLogger
+from roboverse_learn.il.utils.common.lr_scheduler import get_scheduler
+from roboverse_learn.il.utils.common.pytorch_util import dict_apply, optimizer_to
 from torch.utils.data import DataLoader
 
 from roboverse_pack.randomization import (

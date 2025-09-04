@@ -1,5 +1,5 @@
 eval_args:
-  _target_: il.utils.common.eval_args.Args
+  _target_: roboverse_learn.il.utils.common.eval_args.Args
   # random:
     # _target_: metasim.cfg.randomization.RandomizationCfg
     # level: 0

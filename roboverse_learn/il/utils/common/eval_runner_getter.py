@@ -1,6 +1,6 @@
 def get_runner(algo):
     if algo == "diffusion_policy":
-        from il.eval_runner.dp_eval_runner import DPEvalRunner
+        from roboverse_learn.il.dp.eval_runner.dp_eval_runner import DPEvalRunner
 
         return DPEvalRunner
     else:

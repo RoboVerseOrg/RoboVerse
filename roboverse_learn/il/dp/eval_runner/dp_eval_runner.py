@@ -4,9 +4,9 @@ import dill
 import hydra
 import numpy as np
 import torch
-from il.runner.base_policy import DiffusionPolicyCfg
-from il.base.base_eval_runner import BaseEvalRunner
-from il.runner.dp_runner import DPRunner
+from dp.runner.base_policy import DiffusionPolicyCfg
+from dp.base.base_eval_runner import BaseEvalRunner
+from dp.runner.dp_runner import DPRunner
 
 
 class DPEvalRunner(BaseEvalRunner):

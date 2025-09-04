@@ -1,4 +1,4 @@
-_target_: il.datasets.robot_image_dataset.RobotImageDataset
+_target_: dp.datasets.robot_image_dataset.RobotImageDataset
 zarr_path: data_policy/useless.zarr
 horizon: ${horizon}
 pad_before: ${eval:'${n_obs_steps}-1'}
