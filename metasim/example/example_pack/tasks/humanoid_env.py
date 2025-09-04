@@ -94,25 +94,10 @@ class BaseLocomotionEnv(RLTaskEnv):
         robots=["h1"],
     )
 
-    # def _load_task_config(self, scenario: ScenarioCfg) -> None:
-    #     self.robot_name = scenario.robots[0] if isinstance(scenario.robots[0], str) else scenario.robots[0].name
-    #     self.max_episode_steps = 800
-    #     scenario.sim_params = SimParamCfg(
-    #         dt=0.002,
-    #         contact_offset=0.01,
-    #         num_position_iterations=8,
-    #         num_velocity_iterations=0,
-    #         bounce_threshold_velocity=0.5,
-    #         replace_cylinder_with_capsule=True,
-    #     )
-    #     scenario.decimation = 10
-    #     return scenario
-
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         self.robot_name = (
             self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name
         )
-        super().__init__(scenario, device)
         self.max_episode_steps = 800
         self.scenario.sim_params = SimParamCfg(
             dt=0.002,
@@ -123,6 +108,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             replace_cylinder_with_capsule=True,
         )
         self.scenario.decimation = 10
+        super().__init__(scenario, device)
 
     def _observation(self, states: TensorState) -> torch.Tensor:
         results_state = []

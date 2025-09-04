@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.registry import register_task
 from metasim.task.rl_task import RLTaskEnv
 from metasim.utils.state import TensorState
@@ -32,19 +33,13 @@ class ReachingEnv(RLTaskEnv):
         robots=["franka"],
     )
 
-    # def _load_task_config(self, scenario) -> None:
-    #     """Configure common reaching task parameters."""
-    #     super()._load_task_config(scenario)
-
-    #     # Common configuration for reaching tasks
-    #     self.objects = []
-    #     self.max_episode_steps = 100
-
-    #     return scenario
-
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        scenario.decimation = 4
+        self.max_episode_steps = 250
+        self.scenario.sim_params = SimParamCfg(
+            dt=0.01,
+        )
         super().__init__(scenario, device)
-        self.max_episode_steps = 100
 
     def _get_initial_states(self) -> list[dict]:
         """Get the initial states of the environment."""
