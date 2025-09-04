@@ -46,7 +46,7 @@ fi
 
 if [ "${eval_enable}" = "true" ]; then
   echo "=== Evaluation ==="
-  # # export TORCH_CUDA_ARCH_LIST="8.9" 
+  # # export TORCH_CUDA_ARCH_LIST="8.9"
   python -m roboverse_learn.il.act.act_eval_runner \
   --task ${task_name} \
   --robot Franka \
@@ -54,5 +54,5 @@ if [ "${eval_enable}" = "true" ]; then
   --sim ${sim_set} \
   --algo act \
   --ckpt_path ~/RoboVerse/info/outputs/ACT/2025.09.04/01.37.14_close_box_obs:joint_pos_act:joint_pos_100 \
-  --headless True 
+  --headless True
 fi

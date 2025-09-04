@@ -46,23 +46,23 @@ from metasim.task.registry import get_task_class
 
 @dataclass
 class DomainRandomizationCfg:
-    enable: bool = True  
-    seed: int | None = 42  
-    
-    use_unified_object_randomizer: bool = True 
-    cube_mass_range: tuple[float, float] = (0.3, 0.7)  
-    robot_friction_range: tuple[float, float] = (0.5, 1.5)  
-    robot_mass_range: tuple[float, float] = (0.2, 0.4)  
-    
+    enable: bool = True
+    seed: int | None = 42
+
+    use_unified_object_randomizer: bool = True
+    cube_mass_range: tuple[float, float] = (0.3, 0.7)
+    robot_friction_range: tuple[float, float] = (0.5, 1.5)
+    robot_mass_range: tuple[float, float] = (0.2, 0.4)
+
     enable_material_random: bool = True
-    cube_material_type: str = "wood"  
-    sphere_material_type: str = "rubber"  
-    box_material_type: str = "metal" 
-    
+    cube_material_type: str = "wood"
+    sphere_material_type: str = "rubber"
+    box_material_type: str = "metal"
+
     lighting_scenario: Literal["default", "indoor_room", "outdoor_scene", "studio", "demo"] = "default"
-    
+
     camera_scenario: Literal["combined", "position_only", "orientation_only", "look_at_only", "intrinsics_only", "image_only"] = "combined"
-    camera_name: str = "camera0" 
+    camera_name: str = "camera0"
 
 
 class DomainRandomizationManager:
@@ -92,7 +92,7 @@ class DomainRandomizationManager:
             # cube_rand = ObjectRandomizer(ObjectPresets.grasping_target("cube"), seed=self.cfg.seed)
             # sphere_rand = ObjectRandomizer(ObjectPresets.bouncy_object("sphere"), seed=self.cfg.seed)
             robot_rand = ObjectRandomizer(ObjectPresets.robot_base(self.scenario.robots[0].name), seed=self.cfg.seed)
-            
+
             # for rand in [cube_rand, sphere_rand, robot_rand]:
             for rand in [robot_rand]:
                 rand.bind_handler(self.sim_handler)
@@ -115,7 +115,7 @@ class DomainRandomizationManager:
                 MaterialPresets.metal_object("box_base", use_mdl=True, randomization_mode="combined"),
                 seed=self.cfg.seed
             )
-            
+
             # for rand in [cube_mat_rand, sphere_mat_rand, box_mat_rand]:
             for rand in [box_mat_rand]:
                 rand.bind_handler(self.sim_handler)
@@ -141,7 +141,7 @@ class DomainRandomizationManager:
                     LightPresets.outdoor_daylight("light"),
                     #LightPresets.indoor_ambient("ambient_light")
                 ]
-            
+
             for cfg in light_configs:
                 light_rand = LightRandomizer(cfg, seed=self.cfg.seed)
                 light_rand.bind_handler(self.sim_handler)
@@ -491,24 +491,24 @@ class DPRunner(BaseRunner):
 
         # Setup Domain Randomization Config
         self.dr_cfg = DomainRandomizationCfg(
-            enable=True, 
+            enable=True,
             seed=args.dr_seed if hasattr(args, "dr_seed") else 42,
             use_unified_object_randomizer=True,
             lighting_scenario=args.lighting_scenario if hasattr(args, "lighting_scenario") else "default",
             camera_scenario=args.camera_scenario if hasattr(args, "camera_scenario") else "combined",
-            camera_name="camera0" 
+            camera_name="camera0"
         )
 
         num_envs: int = args.num_envs
         log.info(f"Using GPU device: {args.gpu_id}")
         task_cls = get_task_class(args.task)
-        
+
         camera = PinholeCameraCfg(
             name="camera0",
-            pos=(1.5, 0, 1.5), 
+            pos=(1.5, 0, 1.5),
             look_at=(0.0, 0.0, 0.0)
         )
-        
+
         scenario = task_cls.scenario.update(
             robots=[args.robot],
             simulator=args.sim,
@@ -526,7 +526,7 @@ class DPRunner(BaseRunner):
             self.randomization_manager = DomainRandomizationManager(
                 cfg=self.dr_cfg,
                 scenario=scenario,
-                sim_handler=env.handler 
+                sim_handler=env.handler
             )
             log.info("Domain Randomization Manager initialized successfully")
         else:
@@ -577,14 +577,14 @@ class DPRunner(BaseRunner):
         else:
             max_demos = args.max_demo
         max_demos = min(max_demos, num_demos)
-        
+
 
         for demo_start_idx in range(
             args.task_id_range_low, args.task_id_range_low + max_demos, num_envs
         ):
             demo_end_idx = min(demo_start_idx + num_envs, num_demos)
             current_demo_idxs = list(range(demo_start_idx, demo_end_idx))
-            
+
             ## Randomize environment for current batch of demos
             if self.randomization_manager is not None:
                 for demo_idx in current_demo_idxs:
@@ -603,11 +603,11 @@ class DPRunner(BaseRunner):
             TimeOut = [False] * num_envs
             images_list = []
             print(policyRunner.policy_cfg)
-            
-            dynamic_dr_interval = 20 
+
+            dynamic_dr_interval = 20
             while step < MaxStep:
                 log.debug(f"Step {step}")
-                
+
                 ## DR after dynamic_dr_interval steps
                 # if self.randomization_manager is not None and step % dynamic_dr_interval == 0 and step > 0:
                 #     log.info(f"Step {step}: Executing dynamic domain randomization")

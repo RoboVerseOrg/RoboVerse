@@ -5,11 +5,6 @@ from metasim.scenario.robot import RobotCfg
 from .allegrohand_cfg import AllegroHandCfg
 from .ant_cfg import AntCfg
 from .anymal_cfg import AnymalCfg
-<<<<<<< HEAD:metasim/cfg/robots/__init__.py
-from .arx_l5_mjcf_cfg import ArxL5Cfg
-from .base_robot_cfg import BaseRobotCfg
-=======
->>>>>>> dev/new-metasim:roboverse_pack/robots/__init__.py
 from .cartpole_cfg import CartpoleCfg
 from .fetch_cfg import FetchCfg
 from .franka_cfg import FrankaCfg
@@ -42,9 +37,4 @@ from .ur5e_2f85_cfg import Ur5E2F85Cfg
 from .ur5e_cfg import Ur5ECfg
 from .ur10e_cfg import Ur10ECfg
 from .walker_cfg import WalkerCfg
-<<<<<<< HEAD:metasim/cfg/robots/__init__.py
-from .yam_mjcf_cfg import YamCfg
-from .z1_cfg import Z1Cfg
-=======
 from .xhand_cfg import XhandRightCfg
->>>>>>> dev/new-metasim:roboverse_pack/robots/__init__.py

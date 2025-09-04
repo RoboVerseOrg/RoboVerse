@@ -409,12 +409,7 @@ class MujocoHandler(BaseSimHandler):
                 joint_names = self._get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
-<<<<<<< HEAD
-                root_np, body_np = self._pack_state(body_ids_reindex)
-
-=======
                 root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
->>>>>>> dev/new-metasim
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                     body_names=self._get_body_names(obj.name),
@@ -441,12 +436,7 @@ class MujocoHandler(BaseSimHandler):
             joint_names = self._get_joint_names(robot.name, sort=True)
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
-<<<<<<< HEAD
-
-            root_np, body_np = self._pack_state(body_ids_reindex)
-=======
             root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
->>>>>>> dev/new-metasim
 
             state = RobotState(
                 body_names=self._get_body_names(robot.name),
@@ -761,12 +751,7 @@ class MujocoHandler(BaseSimHandler):
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
-<<<<<<< HEAD
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        model_name = self.mj_objects[obj_name].model
-=======
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
->>>>>>> dev/new-metasim
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             model_name = self.mj_objects[obj_name].model
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]

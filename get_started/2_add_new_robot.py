@@ -35,13 +35,9 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
-<<<<<<< HEAD
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
-=======
     sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (
         "mujoco"
     )
->>>>>>> dev/new-metasim
 
     ## Others
     num_envs: int = 1

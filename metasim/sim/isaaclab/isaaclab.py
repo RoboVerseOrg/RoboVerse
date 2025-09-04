@@ -40,13 +40,10 @@ class IsaaclabHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
         self._simulation_app = None
         self._env = None
-<<<<<<< HEAD
-=======
 
         # XXX: Fix below in a more elegant way
         if self.optional_queries is None:
             self.optional_queries = {}
->>>>>>> dev/new-metasim
 
     ############################################################
     ## Launch
