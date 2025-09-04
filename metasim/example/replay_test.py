@@ -44,7 +44,7 @@ class Args:
     render: RenderCfg = RenderCfg()
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "isaacgym"
+        "mujoco"
     )
     renderer: (
         Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None

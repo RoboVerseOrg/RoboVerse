@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from multiprocessing import Pool
 
 import portalocker
 from huggingface_hub import HfApi, hf_hub_download
@@ -77,15 +78,6 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
         return
     os.makedirs(LOCAL_DIR, exist_ok=True)
 
-<<<<<<< HEAD
-    ## Option 1: Use multiprocessing, but sometimes the program stuck here
-    # with Pool(processes=n_processes) as p:
-    #     p.map(_check_and_download_single, filepaths)
-
-    ## Option 2: Use single process, but could be slow
-    for filepath in filepaths:
-        _check_and_download_single(filepath)
-=======
     lock_path = os.path.join(LOCAL_DIR, "download.lock")
     with portalocker.Lock(lock_path):
         # in parallel env settings, we need to prevent child processes from downloading the same file.
@@ -97,7 +89,6 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
         else:
             for filepath in filepaths:
                 check_and_download_single(filepath)
->>>>>>> dev/new-metasim
 
     new_filepaths = []
     for filepath in filepaths:
