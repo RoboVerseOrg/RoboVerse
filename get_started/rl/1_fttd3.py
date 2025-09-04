@@ -11,8 +11,8 @@ CONFIG: dict[str, Any] = {
     # Environment
     # -------------------------------------------------------------------------------
     "sim": "mjx",
-    "robots": ["franka"],
-    "task": "reach_origin",
+    "robots": ["h1"],
+    "task": "walk",
     "decimation": 10,
     "train_or_eval": "train",
     "headless": False,
@@ -26,7 +26,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Rollout & Timesteps
     # -------------------------------------------------------------------------------
-    "num_envs": 1,
+    "num_envs": 1024,
     "num_eval_envs": 1024,
     "total_timesteps": 1500,
     "learning_starts": 10,
