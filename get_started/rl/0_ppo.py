@@ -183,7 +183,7 @@ def train_ppo():
     obs_orin = env_inference.env.handler.get_states()
     obs_saver.add(obs_orin)
 
-    for _ in range(100):
+    for _ in range(250):
         actions, _ = model.predict(obs, deterministic=True)
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()

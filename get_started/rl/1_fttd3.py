@@ -15,7 +15,7 @@ CONFIG: dict[str, Any] = {
     "task": "walk",
     "decimation": 10,
     "train_or_eval": "train",
-    "headless": False,
+    "headless": True,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -28,9 +28,9 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1500,
+    "total_timesteps": 1,
     "learning_starts": 10,
-    "num_steps": 1,
+    "num_steps": 1500,
     # -------------------------------------------------------------------------------
     # Replay, Batching, Discounting
     # -------------------------------------------------------------------------------
@@ -292,16 +292,14 @@ def main() -> None:
         simulator = cfg("sim")
         num_envs = 1
         headless = True
-        cameras = (
-            [
-                PinholeCameraCfg(
-                    width=cfg("video_width", 1024),
-                    height=cfg("video_height", 1024),
-                    pos=(4.0, -4.0, 4.0),  # adjust as needed
-                    look_at=(0.0, 0.0, 0.0),
-                )
-            ],
-        )
+        cameras = [
+            PinholeCameraCfg(
+                width=cfg("video_width", 1024),
+                height=cfg("video_height", 1024),
+                pos=(4.0, -4.0, 4.0),  # adjust as needed
+                look_at=(0.0, 0.0, 0.0),
+            )
+        ]
         scenario_render = scenario.update(
             robots=robots, simulator=simulator, num_envs=num_envs, headless=headless, cameras=cameras
         )
