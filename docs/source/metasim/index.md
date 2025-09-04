@@ -68,6 +68,8 @@ features/cross_sim
 developer_guide/autotesting
 developer_guide/docstring
 developer_guide/precommit_hooks
+developer_guide/contributing_new_robot
+developer_guide/converting_asset
 developer_guide/tips/index
 ```
 
