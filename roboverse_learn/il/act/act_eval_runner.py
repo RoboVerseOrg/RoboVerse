@@ -143,7 +143,7 @@ def main():
     log.trace(f"Time to launch: {toc - tic:.2f}s")
 
     if args.algo == "act":
-        state_dim = 14
+        state_dim = 9
         franka_state_dim = 9
         lr_backbone = 1e-5
         backbone = "resnet18"
@@ -254,7 +254,7 @@ def main():
                 qpos_numpy = np.array(obs.robots['franka'].joint_pos)
                 # qpos_numpy = np.array(obs["joint_qpos"])
                 qpos = pre_process(qpos_numpy)
-                qpos = np.concatenate([qpos, np.zeros((qpos.shape[0], 14 - qpos.shape[1]))], axis=1)
+                # qpos = np.concatenate([qpos, np.zeros((qpos.shape[0], 14 - qpos.shape[1]))], axis=1)
                 qpos = torch.from_numpy(qpos).float().cuda()
                 qpos_history[:, step] = qpos
                 curr_image = np.array(obs.cameras['camera'].rgb).transpose(0, 3, 1, 2)
@@ -281,10 +281,14 @@ def main():
                 raw_action = raw_action.squeeze(0).cpu().numpy()
                 action = post_process(raw_action)
                 action = action[:franka_state_dim]
-                log.debug(f"Action: {action}")
+                # log.debug(f"Action: {action}")
 
                 action = torch.tensor(action, dtype=torch.float32, device="cuda")
-                actions = [{"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), action))}]
+
+                inner_actions = {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), action))}
+                actions = {"franka": inner_actions}
+                #actions = [{"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), action))}]
+                #log.debug(f"Actions: {actions}")
                 obs, reward, success, time_out, extras = env.step(actions)
                 env.handler.refresh_render()
                 # print(reward, success, time_out)

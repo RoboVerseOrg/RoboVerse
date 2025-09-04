@@ -249,6 +249,6 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_dim', action='store', type=int, help='hidden_dim', required=False)
     parser.add_argument('--dim_feedforward', action='store', type=int, help='dim_feedforward', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
-    parser.add_argument('--state_dim', action='store', type=int, help='state_dim', required=False, default=14)
+    parser.add_argument('--state_dim', action='store', type=int, help='state_dim', required=False, default=9)
 
     main(vars(parser.parse_args()))
