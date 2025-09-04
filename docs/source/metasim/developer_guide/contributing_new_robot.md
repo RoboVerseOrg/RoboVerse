@@ -1,9 +1,9 @@
 # Contributing New Robots
 
 ## 1. Create a Robot Configuration File
-Define a new robot in `metasim/cfg/robots/{robot_name}_cfg.py`.
+Define a new robot in `roboverse_pack/robots/{robot_name}_cfg.py`.
 
-The definition of each term is explained in [API Documentation](https://roboverse.wiki/metasim/api/metasim/metasim.scenario.robot#baserobotcfg).
+<!-- The definition of each term is explained in [API Documentation](https://roboverse.wiki/metasim/api/metasim/metasim.scenario.robot#baserobotcfg). -->
 
 The following terms are mandatory:
 - ``num_joints``
@@ -24,7 +24,9 @@ The following terms are needed if you want to use end-effector control:
 - ``curobo_tcp_rel_pos``
 - ``curobo_tcp_rel_rot``
 
-A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/franka_cfg.py) and [h1_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/h1_cfg.py), which are both well-tested.
+
+A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/roboverse_pack/robots/franka_cfg.py) and [h1_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/roboverse_pack/robots/h1_cfg.py), which are both well-tested.
+<!-- A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/franka_cfg.py) and [h1_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/h1_cfg.py), which are both well-tested. -->
 
 Also, please import the robot configuration class in `metasim/cfg/robots/__init__.py`. Please make sure the robot class name is in [camel case](https://en.wikipedia.org/wiki/Camel_case) (e.g. `FrankaPandaCfg`).
 
@@ -32,7 +34,7 @@ Also, please import the robot configuration class in `metasim/cfg/robots/__init_
 Run the following command to test the reliability of the robot:
 
 ```bash
-python metasim/scripts/random_action.py --sim=${your_simulator} --robot=${robot_name}
+python scripts/advanced/random_action.py --sim=${your_simulator} --robot=${robot_name}
 ```
 
 Please make sure the robot_name is same as above. Either in camel case (e.g. `--robot=FrankaPanda`) or snake case (e.g. `--robot=franka_panda`).
