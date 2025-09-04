@@ -3,7 +3,7 @@
 ## 1. Create a Robot Configuration File
 Define a new robot in `roboverse_pack/robots/{robot_name}_cfg.py`.
 
-Remember you can always inherit the base robot config class `metasim/scenario/robot.py:RobotCfg`, and add new fields to the robot configs and use it in your own usecase.
+Remember you can always inherit the base robot config class `metasim/scenario/robot.py:RobotCfg`, and add new fields to the robot configs and use it in your own usecase. If you want to add new features to the base config class, be carefull and make sure the feature will be globally available, used by all simulators and multiple scenarios.
 
 <!-- The definition of each term is explained in [API Documentation](https://roboverse.wiki/metasim/api/metasim/metasim.scenario.robot#baserobotcfg). -->
 
