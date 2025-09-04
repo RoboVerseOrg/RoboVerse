@@ -724,6 +724,7 @@ class IsaacgymHandler(BaseSimHandler):
     def refresh_render(self) -> None:
         # Step the physics
         self.gym.simulate(self.sim)
+        # self.gym.step_graphics(self.sim)
         self.gym.fetch_results(self.sim, True)
         self._render()
 
@@ -760,7 +761,7 @@ class IsaacgymHandler(BaseSimHandler):
             if not self.headless:
                 self.gym.poll_viewer_events(self.viewer)
 
-    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None):
+    def _set_states(self, states: list[DictEnvState] | torch.Tensor, env_ids: list[int] | None = None):
         ## Support setting status only for specified env_ids
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -852,8 +853,8 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_pos = robot_state.joint_pos
                 joint_vel = robot_state.joint_vel
                 joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
-                new_dof_states[env_ids, :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
-                new_dof_states[env_ids, :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
+                new_dof_states[env_ids, self._obj_num_dof :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
+                new_dof_states[env_ids, self._obj_num_dof :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
 
             env_ids_int32_tensor = torch.tensor(env_ids, dtype=torch.int32, device=self.device)
             self.gym.set_actor_root_state_tensor_indexed(
@@ -964,7 +965,7 @@ class IsaacgymHandler(BaseSimHandler):
     ############################################################
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            joint_names = list(self._joint_info[obj_name]["names"])
+            joint_names = deepcopy(list(self._joint_info[obj_name]["names"]))
             if sort:
                 joint_names.sort()
             return joint_names
