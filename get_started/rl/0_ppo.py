@@ -36,7 +36,7 @@ class Args:
     task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
-    sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaacgym"
+    sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
     headless: bool = False
 
 
@@ -46,17 +46,17 @@ args = tyro.cli(Args)
 class VecEnvWrapper(VecEnv):
     """Vectorized environment wrapper for RLTaskEnv to work with Stable Baselines 3."""
 
-    def __init__(self, rl_env: RLTaskEnv):
+    def __init__(self, env: RLTaskEnv):
         """Initialize the environment."""
-        self.rl_env = rl_env
+        self.env = env
 
         # Use action space directly from RLTaskEnv
-        self.action_space = rl_env.action_space
+        self.action_space = env.action_space
 
         # Use observation space directly from RLTaskEnv
-        self.observation_space = rl_env.observation_space
+        self.observation_space = env.observation_space
 
-        super().__init__(rl_env.num_envs, self.observation_space, self.action_space)
+        super().__init__(env.num_envs, self.observation_space, self.action_space)
         self.render_mode = None
 
     ############################################################
@@ -64,17 +64,17 @@ class VecEnvWrapper(VecEnv):
     ############################################################
     def reset(self):
         """Reset the environment."""
-        obs, _ = self.rl_env.reset()
+        obs, _ = self.env.reset()
         return obs.cpu().numpy()
 
     def step_async(self, actions: np.ndarray) -> None:
         """Asynchronously step the environment."""
         # Convert numpy actions to torch
-        self.pending_actions = torch.tensor(actions, device=self.rl_env.device, dtype=torch.float32)
+        self.pending_actions = torch.tensor(actions, device=self.env.device, dtype=torch.float32)
 
     def step_wait(self):
         """Wait for the step to complete."""
-        obs, reward, terminated, time_out, info = self.rl_env.step(self.pending_actions)
+        obs, reward, terminated, time_out, info = self.env.step(self.pending_actions)
 
         done = terminated | time_out
         # Convert to numpy for SB3
@@ -93,11 +93,11 @@ class VecEnvWrapper(VecEnv):
 
     def render(self):
         """Render the environment."""
-        return self.rl_env.render()
+        return self.env.render()
 
     def close(self):
         """Close the environment."""
-        self.rl_env.close()
+        self.env.close()
 
     def get_attr(self, attr_name, indices=None):
         """Get an attribute of the environment."""
@@ -128,14 +128,13 @@ def train_ppo():
 
     # # Create RLTaskEnv via registry
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rl_env = task_cls(scenario=scenario)
+    env = task_cls(scenario=scenario)
     # # Create VecEnv wrapper for SB3
-    env = VecEnvWrapper(rl_env)
+    env = VecEnvWrapper(env)
 
     log.info(f"Created environment with {env.num_envs} environments")
     log.info(f"Observation space: {env.observation_space}")
     log.info(f"Action space: {env.action_space}")
-    log.info(f"Max episode steps: {rl_env.max_episode_steps}")
 
     # PPO configuration
     model = PPO(
@@ -181,14 +180,14 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = env_inference.env.get_states()
+    obs_orin = env_inference.env.handler.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(100):
         actions, _ = model.predict(obs, deterministic=True)
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
-        obs_orin = env_inference.env.get_states()
+        obs_orin = env_inference.env.handler.get_states()
         obs_saver.add(obs_orin)
 
     # obs_saver.save()

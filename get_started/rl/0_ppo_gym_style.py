@@ -166,7 +166,7 @@ def train_ppo():
     )
 
     # Start training
-    model.learn(total_timesteps=1_00)
+    model.learn(total_timesteps=1_000_000)
 
     # Save the model
 

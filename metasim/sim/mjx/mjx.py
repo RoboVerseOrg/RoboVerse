@@ -73,7 +73,7 @@ class MJXHandler(BaseSimHandler):
         self._fix_path_cache: dict[str, int] = {}
         self._gravity_compensation = not self._robot.enabled_gravity
 
-        if self.scenario.sim_params.dt is not None:
+        if self.scenario.decimation is not None:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")

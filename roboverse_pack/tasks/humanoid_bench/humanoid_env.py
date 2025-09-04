@@ -95,7 +95,6 @@ class BaseLocomotionEnv(RLTaskEnv):
     )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
         self.robot_name = (
             self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name
         )
@@ -109,6 +108,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             replace_cylinder_with_capsule=True,
         )
         self.scenario.decimation = 10
+        super().__init__(scenario, device)
 
     def _observation(self, states: TensorState) -> torch.Tensor:
         results_state = []
