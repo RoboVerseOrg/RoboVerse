@@ -32,11 +32,20 @@ get_started/advanced/index
 <!--user_guide/multi_env-->
 <!--user_guide/cross_embodiment-->
 <!--user_guide/cross_sim-->
-user_guide/collect_demo_tutorial
-user_guide/teleoperate_demo
-user_guide/real2sim
-get_started/prepare_data_hf
-user_guide/tips/index
+tutorial/architecture
+tutorial/state
+tutorial/config
+tutorial/handler
+<!-- tutorial/scenario -->
+<!-- tutorial/robot -->
+tutorial/task
+tutorial/get_extras
+tutorial/randomization
+<!-- user_guide/collect_demo_tutorial -->
+<!-- user_guide/teleoperate_demo -->
+<!-- user_guide/real2sim -->
+<!-- get_started/prepare_data_hf -->
+<!-- user_guide/tips/index -->
 
 ```
 
@@ -45,9 +54,9 @@ user_guide/tips/index
 :maxdepth: 2
 :titlesonly:
 
-user_guide/support_matrix
-user_guide/cross_embodiment
-user_guide/cross_sim
+features/support_matrix
+features/cross_embodiment
+features/cross_sim
 
 ```
 
@@ -56,17 +65,21 @@ user_guide/cross_sim
 :maxdepth: 2
 :titlesonly:
 
+<<<<<<< HEAD
 developer_guide/precommit_hooks
 developer_guide/architecture_overview
 developer_guide/autotesting
 developer_guide/state
+=======
+<!-- developer_guide/precommit_hooks
+>>>>>>> dev/new-metasim
 developer_guide/data_structure
 developer_guide/new_task/index
 developer_guide/new_robot
 developer_guide/new_sim
 developer_guide/asset_conversions
 developer_guide/docstring
-developer_guide/tips/index
+developer_guide/tips/index -->
 ```
 
 ```{toctree}

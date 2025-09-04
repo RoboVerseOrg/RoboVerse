@@ -1,7 +1,7 @@
 """All Simulation packages."""
 
 from .base import BaseSimHandler
-from .env_wrapper import EnvWrapper, GymEnvWrapper, IdentityEnvWrapper
-from .hybrid import HybridSimEnv
+from .hybrid import HybridSimHandler
+from .parallel import ParallelSimWrapper
 
-__all__ = ["BaseSimHandler", "EnvWrapper", "GymEnvWrapper", "HybridSimEnv", "IdentityEnvWrapper"]
+__all__ = ["BaseSimHandler", "HybridSimHandler", "ParallelSimWrapper"]

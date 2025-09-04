@@ -4,16 +4,17 @@ from __future__ import annotations
 
 import os
 
+import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from metasim.cfg.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 from .parse_util import extract_mesh_paths_from_urdf, extract_paths_from_mjcf
 
 ## This is to avoid circular import
 try:
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 except ImportError:
     pass
 
@@ -23,7 +24,7 @@ LOCAL_DIR = "roboverse_data"
 hf_api = HfApi()
 
 
-def _check_and_download_single(filepath: str):
+def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
 
     Args:
@@ -74,7 +75,9 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     """
     if len(filepaths) == 0:
         return
+    os.makedirs(LOCAL_DIR, exist_ok=True)
 
+<<<<<<< HEAD
     ## Option 1: Use multiprocessing, but sometimes the program stuck here
     # with Pool(processes=n_processes) as p:
     #     p.map(_check_and_download_single, filepaths)
@@ -82,6 +85,19 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     ## Option 2: Use single process, but could be slow
     for filepath in filepaths:
         _check_and_download_single(filepath)
+=======
+    lock_path = os.path.join(LOCAL_DIR, "download.lock")
+    with portalocker.Lock(lock_path):
+        # in parallel env settings, we need to prevent child processes from downloading the same file.
+
+        # check if current process is the main process
+        if os.getpid() == os.getppid():
+            with Pool(processes=n_processes) as p:
+                p.map(check_and_download_single, filepaths)
+        else:
+            for filepath in filepaths:
+                check_and_download_single(filepath)
+>>>>>>> dev/new-metasim
 
     new_filepaths = []
     for filepath in filepaths:
@@ -112,7 +128,7 @@ class FileDownloader:
 
     def _add_from_scenario(self):
         ## TODO: delete this line after scenario is automatically overwritten by task
-        objects = self.scenario.task.objects if self.scenario.task is not None else self.scenario.objects
+        objects = self.scenario.objects
 
         for obj in objects:
             self._add_from_object(obj)
@@ -120,20 +136,20 @@ class FileDownloader:
             self._add_from_object(robot)
         if self.scenario.scene is not None:
             self._add_from_object(self.scenario.scene)
-        if self.scenario.task is not None:
-            traj_filepath = self.scenario.task.traj_filepath
-            if traj_filepath is None:
-                return
+        # if self.scenario.task is not None:
+        #     traj_filepath = self.scenario.task.traj_filepath
+        #     if traj_filepath is None:
+        #         return
 
-            ## HACK: This is hacky
-            if (
-                traj_filepath.find(".pkl") == -1
-                and traj_filepath.find(".json") == -1
-                and traj_filepath.find(".yaml") == -1
-                and traj_filepath.find(".yml") == -1
-            ):
-                traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
-            self._add(traj_filepath)
+        #     ## HACK: This is hacky
+        #     if (
+        #         traj_filepath.find(".pkl") == -1
+        #         and traj_filepath.find(".json") == -1
+        #         and traj_filepath.find(".yaml") == -1
+        #         and traj_filepath.find(".yml") == -1
+        #     ):
+        #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
+        #     self._add(traj_filepath)
 
     def _add_from_object(self, obj: BaseObjCfg):
         ## TODO: add a primitive base object class?
@@ -144,15 +160,17 @@ class FileDownloader:
         ):
             return
 
-        if self.scenario.sim in ["isaaclab"]:
+        if self.scenario.simulator in ["isaaclab", "isaacsim"]:
             self._add(obj.usd_path)
-        elif self.scenario.sim in ["pybullet", "sapien2", "sapien3", "genesis"] or (
-            self.scenario.sim == "isaacgym" and not obj.isaacgym_read_mjcf
+        elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
+            self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
         ):
             self._add(obj.urdf_path)
-        elif self.scenario.sim in ["mujoco"] or (self.scenario.sim == "isaacgym" and obj.isaacgym_read_mjcf):
+        elif self.scenario.simulator in ["mujoco"] or (
+            self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf
+        ):
             self._add(obj.mjcf_path)
-        elif self.scenario.sim in ["mjx"]:
+        elif self.scenario.simulator in ["mjx"]:
             self._add(obj.mjx_mjcf_path)
 
     def _add(self, filepath: str):

@@ -121,7 +121,7 @@ RUN mkdir -p ${HOME}/packages \
 ########################################################
 ## Install genesis
 ########################################################
-RUN mamba create -n metasim_genesis python=3.10 -y \
+RUN mamba create -n metasim_genesis python=3.11 -y \
     && mamba clean -a -y
 RUN cd ${HOME}/RoboVerse \
     && eval "$(mamba shell hook --shell bash)" \

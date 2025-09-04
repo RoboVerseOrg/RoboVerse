@@ -13,3 +13,11 @@ pip install -r requirements.txt
 ```bash
 rm -rf build/; make html; sphinx-autobuild ./source ./build/html
 ```
+
+3. If on your system, the autobuild loops forever although you did not change any file, you can use the command:
+
+```bash
+rm -rf build/; make html; sphinx-autobuild ./source ./build/html --ignore source/dataset_benchmark/tasks
+```
+
+This is due to some files are automatically generated in `source/dataset_benchmark/tasks` while building. This may interfere the change detection mechanism of sphinx-autobuild.

@@ -20,14 +20,14 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from get_started.utils import ObsSaver
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -37,7 +37,9 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (
+        "isaacsim"
+    )
 
     ## Others
     num_envs: int = 1
@@ -51,12 +53,12 @@ class Args:
 args = tyro.cli(Args)
 
 robots = [
-    BaseRobotCfg(
+    RobotCfg(
         name="new_robot_h1",
         num_joints=26,
-        usd_path="get_started/example_assets/h1/usd/h1.usd",
-        mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
-        urdf_path="get_started/example_assets/h1/urdf/h1_wrist.urdf",
+        usd_path="metasim/example/example_assets/h1/usd/h1.usd",
+        mjcf_path="metasim/example/example_assets/h1/mjcf/h1.xml",
+        urdf_path="metasim/example/example_assets/h1/urdf/h1_wrist.urdf",
         enabled_gravity=True,
         fix_base_link=False,
         enabled_self_collisions=False,
@@ -109,8 +111,7 @@ robots = [
 # initialize scenario
 scenario = ScenarioCfg(
     robots=robots,
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -168,22 +169,22 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(2, 2, 2),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
     ArticulationObjCfg(
         name="box_base",
         fix_base_link=True,
-        usd_path="get_started/example_assets/box_base/usd/box_base.usd",
-        urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
-        mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+        urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+        mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -240,7 +241,9 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states()
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -267,7 +270,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(actions)
+    env.simulate()
+    obs = env.get_states()
     obs_saver.add(obs)
     step += 1
 

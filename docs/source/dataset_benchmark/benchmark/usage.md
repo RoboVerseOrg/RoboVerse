@@ -1,6 +1,6 @@
 # Benchmark Usage
 
-The configuration for randomization can be found at `metasim.cfg.randomization`. The configuration is as follows:
+The configuration for randomization can be found at `metasim.scenario.randomization`. The configuration is as follows:
 
 ```python
 @configclass

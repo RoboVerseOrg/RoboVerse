@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from itertools import chain
 
 import torch
 from loguru import logger as log
 
-from metasim.types import EnvState
-from metasim.utils.math import convert_camera_frame_orientation_convention
+from metasim.types import Action, CameraState, DictEnvState, ObjectState, RobotState, TensorState
 
 try:
     from metasim.sim.base import BaseSimHandler
@@ -17,131 +15,9 @@ except:
     pass
 
 
-@dataclass
-class ContactForceState:
-    """State of a single contact force sensor."""
-
-    force: torch.Tensor
-    """Contact force. Shape is (num_envs, 3)."""
-
-
-SensorState = ContactForceState
-
-
-@dataclass
-class ObjectState:
-    """State of a single object."""
-
-    root_state: torch.Tensor
-    """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_names: list[str] | None = None
-    """Body names. This is only available for articulation objects."""
-    body_state: torch.Tensor | None = None
-    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13). This is only available for articulation objects."""
-    joint_pos: torch.Tensor | None = None
-    """Joint positions. Shape is (num_envs, num_joints). This is only available for articulation objects."""
-    joint_vel: torch.Tensor | None = None
-    """Joint velocities. Shape is (num_envs, num_joints). This is only available for articulation objects."""
-
-
-@dataclass
-class RobotState:
-    """State of a single robot."""
-
-    root_state: torch.Tensor
-    """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_names: list[str]
-    """Body names."""
-    body_state: torch.Tensor
-    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
-    joint_pos: torch.Tensor
-    """Joint positions. Shape is (num_envs, num_joints)."""
-    joint_vel: torch.Tensor
-    """Joint velocities. Shape is (num_envs, num_joints)."""
-    joint_pos_target: torch.Tensor
-    """Joint positions target. Shape is (num_envs, num_joints)."""
-    joint_vel_target: torch.Tensor
-    """Joint velocities target. Shape is (num_envs, num_joints)."""
-    joint_effort_target: torch.Tensor
-    """Joint effort targets. Shape is (num_envs, num_joints)."""
-
-
-@dataclass
-class CameraState:
-    """State of a single camera."""
-
-    ## Images
-    rgb: torch.Tensor | None
-    """RGB image. Shape is (num_envs, H, W, 3)."""
-    depth: torch.Tensor | None
-    """Depth image. Shape is (num_envs, H, W)."""
-    instance_id_seg: torch.Tensor | None = None
-    """Instance id segmentation for each pixel. Shape is (num_envs, H, W)."""
-    instance_id_seg_id2label: dict[int, str] | None = None
-    """Instance id segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_id_seg`."""
-    instance_seg: torch.Tensor | None = None
-    """Instance segmentation for each pixel. Shape is (num_envs, H, W).
-
-    .. warning::
-        This is experimental and subject to change.
-    """
-    instance_seg_id2label: dict[int, str] | None = None
-    """Instance segmentation id to label mapping. Keys are instance ids, values are labels. Go together with :attr:`instance_seg`.
-
-    .. warning::
-        This is experimental and subject to change.
-    """
-
-    ## Camera parameters
-    pos: torch.Tensor | None = None  # TODO: remove N
-    """Position of the camera. Shape is (num_envs, 3)."""
-    quat_world: torch.Tensor | None = None  # TODO: remove N
-    """Quaternion ``(w, x, y, z)`` of the camera, following the world frame convention. Shape is (num_envs, 4).
-
-    Note:
-        World frame convention follows the camera aligned with forward axis +X and up axis +Z.
-    """
-    intrinsics: torch.Tensor | None = None  # TODO: remove N
-    """Intrinsics matrix of the camera. Shape is (num_envs, 3, 3)."""
-
-    @property
-    def quat_ros(self) -> torch.Tensor:
-        """Quaternion ``(w, x, y, z)`` of the camera, following the ROS convention. Shape is (num_envs, 4).
-
-        Note:
-            ROS convention follows the camera aligned with forward axis +Z and up axis -Y.
-        """
-        return convert_camera_frame_orientation_convention(self.quat_world, origin="world", target="ros")
-
-    @property
-    def quat_opengl(self) -> torch.Tensor:
-        """Quaternion ``(w, x, y, z)`` of the camera, following the OpenGL convention. Shape is (num_envs, 4).
-
-        Note:
-            OpenGL convention follows the camera aligned with forward axis -Z and up axis +Y.
-        """
-        return convert_camera_frame_orientation_convention(self.quat_world, origin="world", target="opengl")
-
-
-@dataclass
-class TensorState:
-    """Tensorized state of the simulation."""
-
-    objects: dict[str, ObjectState]
-    """States of all objects."""
-    robots: dict[str, RobotState]
-    """States of all robots."""
-    cameras: dict[str, CameraState]
-    """States of all cameras."""
-    sensors: dict[str, SensorState]
-    """States of all sensors."""
-    extras: dict = field(default_factory=dict)
-    """States of Extra information"""
-
-
 def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     """Join a list of tensor states with num_envs = 1 into a single tensor state."""
-    rst = TensorState(objects={}, robots={}, cameras={}, sensors={})
+    rst = TensorState(objects={}, robots={}, cameras={})
 
     if not tensor_states:
         return rst
@@ -150,13 +26,13 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     all_object_keys = set()
     all_robot_keys = set()
     all_camera_keys = set()
-    all_sensor_keys = set()
+    # all_sensor_keys = set()
 
     for state in tensor_states:
         all_object_keys.update(state.objects.keys())
         all_robot_keys.update(state.robots.keys())
         all_camera_keys.update(state.cameras.keys())
-        all_sensor_keys.update(state.sensors.keys())
+        # all_sensor_keys.update(state.sensors.keys())
 
     # Join objects
     for key in all_object_keys:
@@ -183,9 +59,15 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
             rst.robots[key] = RobotState(
                 root_state=torch.cat([robot.root_state for robot in robot_states], dim=0),
                 body_names=robot_states[0].body_names,
-                body_state=torch.cat([robot.body_state for robot in robot_states], dim=0),
-                joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0),
-                joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0),
+                body_state=torch.cat([robot.body_state for robot in robot_states], dim=0)
+                if robot_states[0].body_state is not None
+                else None,
+                joint_pos=torch.cat([robot.joint_pos for robot in robot_states], dim=0)
+                if robot_states[0].joint_pos is not None
+                else None,
+                joint_vel=torch.cat([robot.joint_vel for robot in robot_states], dim=0)
+                if robot_states[0].joint_vel is not None
+                else None,
                 joint_pos_target=torch.cat([robot.joint_pos_target for robot in robot_states], dim=0)
                 if robot_states[0].joint_pos_target is not None
                 else None,
@@ -216,11 +98,11 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
             )
 
     # Join sensors (assuming similar structure to objects)
-    for key in all_sensor_keys:
-        sensor_states = [state.sensors[key] for state in tensor_states if key in state.sensors]
-        if sensor_states:
-            # Note: SensorState structure is not defined, so this is a placeholder
-            rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
+    # for key in all_sensor_keys:
+    #     sensor_states = [state.sensors[key] for state in tensor_states if key in state.sensors]
+    #     if sensor_states:
+    #         # Note: SensorState structure is not defined, so this is a placeholder
+    #         rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
 
     return rst
 
@@ -245,7 +127,7 @@ def _body_tensor_to_dict(body_tensor: torch.Tensor, body_names: list[str]) -> di
     }
 
 
-def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -> list[EnvState]:
+def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -> list[DictEnvState]:
     """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
     log.warning(
         "Users please ignore this message, we are working on it. For developers: You are using the very inefficient function to convert the tensorized states to old nested states. Please consider not using this function and optimize your code when number of environments is large."
@@ -263,18 +145,18 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
             if obj_state.body_state is not None:
-                bns = handler.get_body_names(obj_name)
+                bns = handler._get_body_names(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
-                jns = handler.get_joint_names(obj_name)
+                jns = handler._get_joint_names(obj_name)
                 object_states[obj_name]["dof_pos"] = _dof_tensor_to_dict(obj_state.joint_pos[env_id], jns)
             if obj_state.joint_vel is not None:
-                jns = handler.get_joint_names(obj_name)
+                jns = handler._get_joint_names(obj_name)
                 object_states[obj_name]["dof_vel"] = _dof_tensor_to_dict(obj_state.joint_vel[env_id], jns)
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
-            jns = handler.get_joint_names(robot_name)
+            jns = handler._get_joint_names(robot_name)
             robot_states[robot_name] = {
                 "pos": robot_state.root_state[env_id, :3].cpu(),
                 "rot": robot_state.root_state[env_id, 3:7].cpu(),
@@ -299,7 +181,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 else None
             )
             if robot_state.body_state is not None:
-                bns = handler.get_body_names(robot_name)
+                bns = handler._get_body_names(robot_name)
                 robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 
         camera_states = {}
@@ -350,8 +232,8 @@ def list_state_to_tensor(
 
     # -------- objects --------------------------------------------------
     for name in obj_names:
-        bnames = handler.get_body_names(name)
-        jnames = handler.get_joint_names(name)
+        bnames = handler._get_body_names(name)
+        jnames = handler._get_joint_names(name)
 
         root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
 
@@ -389,8 +271,8 @@ def list_state_to_tensor(
 
     # -------- robots ---------------------------------------------------
     for name in robot_names:
-        jnames = handler.get_joint_names(name)
-        bnames = handler.get_body_names(name)
+        jnames = handler._get_joint_names(name)
+        bnames = handler._get_body_names(name)
 
         root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
         jpos_t, jvel_t, jeff_t = (
@@ -462,5 +344,26 @@ def list_state_to_tensor(
         objects=objects,
         robots=robots,
         cameras=cameras,
-        sensors={},
     )
+
+
+def adapt_actions(
+    handler: BaseSimHandler, actions: list[Action] | TensorState
+) -> dict[str, dict[str, dict[str, float]]]:
+    """Adapt actions to the format of single env handlers.
+
+    Args:
+        handler: The handler of the simulation.
+        actions: The actions to adapt.
+    """
+    if isinstance(actions, torch.Tensor):
+        if len(actions.shape) == 2:
+            actions = actions[0]
+        actions = {
+            handler.robot.name: {
+                "dof_pos_target": _dof_tensor_to_dict(actions, handler.get_joint_names(handler.robot.name))
+            }
+        }
+    if isinstance(actions, list):
+        actions = actions[0]
+    return actions

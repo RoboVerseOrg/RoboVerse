@@ -18,20 +18,20 @@ from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
 
-from metasim.cfg.objects import (
+from metasim.queries.base import BaseQueryType
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
-from metasim.cfg.robots import BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.types import Action, EnvState
+from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
+from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
 
 
 class Sapien3Handler(BaseSimHandler):
@@ -112,7 +112,7 @@ class Sapien3Handler(BaseSimHandler):
             # self.camera_ids[camera.name] = camera_id
 
         for object in [*self.objects, self.robot]:
-            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+            if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
@@ -133,7 +133,7 @@ class Sapien3Handler(BaseSimHandler):
                 # Change dof properties
                 ###
 
-                if isinstance(object, BaseRobotCfg):
+                if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
                         stiffness = object.actuators[joint.get_name()].stiffness
@@ -163,7 +163,7 @@ class Sapien3Handler(BaseSimHandler):
                     half_size=object.half_size,
                     # color=object.color if object.color else [1.0, 1.0, 0.0],
                     material=sapien_core.render.RenderMaterial(
-                        base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
+                        base_color=list(object.color[:3]) + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),
                 )
                 box = actor_builder.build(name="box")  # Add a box
@@ -187,7 +187,7 @@ class Sapien3Handler(BaseSimHandler):
                 actor_builder.add_sphere_visual(
                     radius=object.radius,
                     material=sapien_core.render.RenderMaterial(
-                        base_color=object.color[:3] + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
+                        base_color=list(object.color[:3]) + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),
                 )
                 sphere = actor_builder.build(name="sphere")  # Add a sphere
@@ -241,7 +241,7 @@ class Sapien3Handler(BaseSimHandler):
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
-            if isinstance(object, (ArticulationObjCfg, BaseRobotCfg)):
+            if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 self.link_ids[object.name] = self.object_ids[object.name].get_links()
                 self._previous_dof_pos_target[object.name] = np.zeros(
                     (len(self.object_joint_order[object.name]),), dtype=np.float32
@@ -340,21 +340,20 @@ class Sapien3Handler(BaseSimHandler):
                 joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
-    def set_dof_targets(self, obj_name, target: list[Action]):
-        instance = self.object_ids[obj_name]
-        if isinstance(instance, sapien_core.physx.PhysxArticulation):
-            action = target[0]
-            pos_target = action.get("dof_pos_target", None)
-            vel_target = action.get("dof_vel_target", None)
-            pos_target_arr = (
-                np.array([pos_target[name] for name in self.object_joint_order[obj_name]]) if pos_target else None
-            )
-            vel_target_arr = (
-                np.array([vel_target[name] for name in self.object_joint_order[obj_name]]) if vel_target else None
-            )
-            self._previous_dof_pos_target[obj_name] = pos_target_arr
-            self._previous_dof_vel_target[obj_name] = vel_target_arr
-            self._apply_action(instance, pos_target, vel_target)
+    def _set_dof_targets(self, targets: list[Action] | TensorState):
+        targets = adapt_actions(self, targets)
+
+        for obj_name, action in targets.items():
+            instance = self.object_ids[obj_name]
+            if isinstance(instance, sapien_core.physx.PhysxArticulation):
+                pos_target = action.get("dof_pos_target", None)
+                vel_target = action.get("dof_vel_target", None)
+                jns = self.get_joint_names(obj_name, sort=True)
+                if pos_target is not None:
+                    self._previous_dof_pos_target[obj_name] = np.array([pos_target[name] for name in jns])
+                if vel_target is not None:
+                    self._previous_dof_vel_target[obj_name] = np.array([vel_target[name] for name in jns])
+                self._apply_action(instance, pos_target, vel_target)
 
     def _simulate(self):
         for i in range(self.scenario.decimation):
@@ -366,6 +365,7 @@ class Sapien3Handler(BaseSimHandler):
             camera_id.take_picture()
 
     def launch(self) -> None:
+        super().launch()
         self._build_sapien()
 
     def close(self):
@@ -392,7 +392,7 @@ class Sapien3Handler(BaseSimHandler):
         link_state_tensor = torch.cat(link_state_list, dim=0)
         return link_name_list, link_state_tensor
 
-    def _get_states(self, env_ids=None) -> list[EnvState]:
+    def _get_states(self, env_ids=None) -> list[DictEnvState]:
         object_states = {}
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
@@ -435,21 +435,9 @@ class Sapien3Handler(BaseSimHandler):
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
             link_names, link_state = self._get_link_states(robot.name)
-            pos_target = (
-                torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_pos_target[robot.name] is not None
-                else None
-            )
-            vel_target = (
-                torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_vel_target[robot.name] is not None
-                else None
-            )
-            effort_target = (
-                torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
-                if self._previous_dof_torque_target[robot.name] is not None
-                else None
-            )
+            pos_target = torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
+            vel_target = torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
+            effort_target = torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,
@@ -472,8 +460,8 @@ class Sapien3Handler(BaseSimHandler):
             depth = torch.from_numpy(depth.copy())
             state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
             camera_states[camera.name] = state
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={})
+        extras = self.get_extra()  # extra observations
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def refresh_render(self):
         self.scene.update_render()
@@ -509,7 +497,7 @@ class Sapien3Handler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.object_joint_order[obj_name])
             if sort:
@@ -518,12 +506,13 @@ class Sapien3Handler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name, sort=True):
+    def _get_body_names(self, obj_name, sort=True):
         body_names = deepcopy([link.name for link in self.link_ids[obj_name]])
         if sort:
             return sorted(body_names)
         else:
             return deepcopy(body_names)
 
-
-Sapien3Env: type[EnvWrapper[Sapien3Handler]] = GymEnvWrapper(Sapien3Handler)
+    @property
+    def robot(self):
+        return self.robots[0]

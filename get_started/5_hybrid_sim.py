@@ -21,14 +21,14 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from get_started.utils import ObsSaver
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
-from metasim.sim import HybridSimEnv
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import HybridSimHandler
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -38,8 +38,10 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
-    renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaaclab"
+    sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+    renderer: (
+        Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None
+    ) = "isaacsim"
 
     ## Others
     num_envs: int = 1
@@ -55,8 +57,7 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     renderer=args.renderer,
     headless=args.headless,
     num_envs=args.num_envs,
@@ -83,31 +84,31 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(2, 2, 2),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
     ArticulationObjCfg(
         name="box_base",
         fix_base_link=True,
-        usd_path="get_started/example_assets/box_base/usd/box_base.usd",
-        urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
-        mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+        urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+        mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
 
 
-if scenario.renderer is None:
-    log.info(f"Using simulator: {scenario.sim}")
-    env_class = get_sim_env_class(SimType(scenario.sim))
+if scenario.render is None:
+    log.info(f"Using simulator: {scenario.simulator}")
+    env_class = get_sim_handler_class(SimType(scenario.simulator))
     env = env_class(scenario)
 else:
-    log.info(f"Using simulator: {scenario.sim}, renderer: {scenario.renderer}")
-    env_class_render = get_sim_env_class(SimType(scenario.renderer))
-    env_render = env_class_render(scenario)  # Isaaclab must launch right after import
-    env_class_physics = get_sim_env_class(SimType(scenario.sim))
+    log.info(f"Using simulator: {scenario.simulator}, render: {scenario.renderer}")
+    env_class_renderer = get_sim_handler_class(SimType(scenario.renderer))
+    env_renderer = env_class_renderer(scenario)  # Isaaclab must launch right after import
+    env_class_physics = get_sim_handler_class(SimType(scenario.simulator))
     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    env = HybridSimEnv(env_physics, env_render)
+    env = HybridSimHandler(scenario, env_physics, env_renderer)
 
 init_states = [
     {
@@ -149,12 +150,14 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_{args.renderer}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_render_{args.renderer}.mp4")
 obs_saver.add(obs)
 
 step = 0
@@ -175,7 +178,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(actions)
+    env.simulate()
+    obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     step += 1
 

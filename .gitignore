@@ -12,6 +12,8 @@ GSNet
 
 deploy
 debug/
+test_output/
+test_output
 roboverse_demo/
 roboverse_demo
 roboverse_data/
@@ -34,6 +36,8 @@ Open6DOR
 _isaac_sim
 ppo_logs/
 legacy/
+
+third_party/curobo/
 
 # Data
 /assets

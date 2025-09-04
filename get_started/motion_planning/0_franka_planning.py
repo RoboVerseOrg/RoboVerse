@@ -24,7 +24,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import rootutils
-from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -32,13 +31,12 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
-from get_started.utils import ObsSaver
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.kinematics_utils import get_curobo_models
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -48,11 +46,12 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "isaaclab"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 1
     headless: bool = False
+    solver: Literal["curobo", "pyroki"] = "pyroki"
 
     def __post_init__(self):
         """Post-initialization configuration."""
@@ -61,11 +60,18 @@ class Args:
 
 args = tyro.cli(Args)
 
+if args.solver == "curobo":
+    from curobo.types.math import Pose
+
+    from metasim.utils.kinematics_utils import get_curobo_models
+
+elif args.solver == "pyroki":
+    from metasim.utils.kinematics_pyroki import get_pyroki_model
+
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -78,7 +84,7 @@ scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -0.5, 1.
 scenario.objects = []
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -104,13 +110,18 @@ init_states = [
     }
     for _ in range(args.num_envs)
 ]
-
 robot = scenario.robots[0]
-*_, robot_ik = get_curobo_models(robot)
-curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-ee_n_dof = len(robot.gripper_open_q)
 
-obs, extras = env.reset(states=init_states)
+if args.solver == "curobo":
+    *_, robot_ik = get_curobo_models(robot)
+    curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
+    ee_n_dof = len(robot.gripper_open_q)
+elif args.solver == "pyroki":
+    robot_ik = get_pyroki_model(scenario.robots[0])
+
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 ## Main loop
@@ -124,20 +135,29 @@ def move_to_pose(
     """Move the robot to the target pose."""
     curr_robot_q = obs.robots[robot.name].joint_pos
 
-    seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
+    if args.solver == "curobo":
+        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
+        result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
 
-    result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+        q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
+        ik_succ = result.success.squeeze(1)
+        q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
+        q[:, -ee_n_dof:] = 0.04 if open_gripper else 0.0
+    elif args.solver == "pyroki":
+        q_list = []
+        for i_env in range(args.num_envs):
+            q_tensor = robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
+            q_list.append(q_tensor)
+        q = torch.stack(q_list, dim=0)
 
-    q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
-    ik_succ = result.success.squeeze(1)
-    q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-    q[:, -ee_n_dof:] = 0.04 if open_gripper else 0.0
     actions = [
         {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
         for i_env in range(scenario.num_envs)
     ]
     for i in range(steps):
-        obs, reward, success, time_out, extras = env.step(actions)
+        env.set_dof_targets(actions)
+        env.simulate()
+        obs = env.get_states(mode="dict")
         obs_saver.add(obs)
     return obs
 
@@ -146,11 +166,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(4):
     log.debug(f"Step {step}")
-    states = env.handler.get_states()
-    curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-
-    seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-
+    states = env.get_states()
     rotation_transform_for_franka = torch.tensor(
         [
             [0.0, 0.0, 1.0],

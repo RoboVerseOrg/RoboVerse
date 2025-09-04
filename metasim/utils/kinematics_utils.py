@@ -1,30 +1,28 @@
 """This module provides utility functions for kinematics calculations using the curobo library."""
 
 import torch
-from curobo.cuda_robot_model.cuda_robot_model import CudaRobotModel
-from curobo.geom.types import Cuboid, WorldConfig
-from curobo.types.base import TensorDeviceType
-from curobo.types.robot import RobotConfig
-from curobo.util_file import get_robot_path, join_path, load_yaml
-from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import matrix_from_quat
 
 
-def get_curobo_models(robot_cfg: BaseRobotCfg, no_gnd=False):
+def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
     """Initializes and returns the curobo kinematic model, forward kinematics function, and inverse kinematics solver for a given robot configuration.
 
     Args:
-        robot_cfg (BaseRobotCfg): The configuration object for the robot.
-        no_gnd (bool, optional): If True, the ground plane is not included for curobo collision checking. Defaults to False.
+        robot_cfg (RobotCfg): The configuration object for the robot.
+        no_gnd (bool, optional): Whether to exclude ground collision objects. Defaults to False.
 
     Returns:
-        tuple: A tuple containing:
-            - kin_model (CudaRobotModel): The kinematic model of the robot.
-            - do_fk (function): A function that performs forward kinematics given joint positions.
-            - ik_solver (IKSolver): The inverse kinematics solver configured for the robot.
+        tuple: A tuple containing the curobo kinematic model, forward kinematics function, and IK solver.
     """
+    from curobo.cuda_robot_model.cuda_robot_model import CudaRobotModel
+    from curobo.geom.types import Cuboid, WorldConfig
+    from curobo.types.base import TensorDeviceType
+    from curobo.types.robot import RobotConfig
+    from curobo.util_file import get_robot_path, join_path, load_yaml
+    from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
+
     tensor_args = TensorDeviceType()
     config_file = load_yaml(join_path(get_robot_path(), robot_cfg.curobo_ref_cfg_name))["robot_cfg"]
     curobo_robot_cfg = RobotConfig.from_dict(config_file, tensor_args)
@@ -59,13 +57,13 @@ def get_curobo_models(robot_cfg: BaseRobotCfg, no_gnd=False):
     return kin_model, do_fk, ik_solver
 
 
-def ee_pose_from_tcp_pose(robot_cfg: BaseRobotCfg, tcp_pos: torch.Tensor, tcp_quat: torch.Tensor):
+def ee_pose_from_tcp_pose(robot_cfg: RobotCfg, tcp_pos: torch.Tensor, tcp_quat: torch.Tensor):
     """Calculate the end-effector (EE) pose from the tool center point (TCP) pose.
 
     Note that currently only the translation is considered.
 
     Args:
-        robot_cfg (BaseRobotCfg): Configuration object for the robot, containing the relative position of the TCP.
+        robot_cfg (RobotCfg): Configuration object for the robot, containing the relative position of the TCP.
         tcp_pos (torch.Tensor): The position of the TCP as a tensor.
         tcp_quat (torch.Tensor): The orientation of the TCP as a tensor, in scalar-first quaternion.
 
@@ -77,13 +75,13 @@ def ee_pose_from_tcp_pose(robot_cfg: BaseRobotCfg, tcp_pos: torch.Tensor, tcp_qu
     return ee_pos, tcp_quat
 
 
-def tcp_pose_from_ee_pose(robot_cfg: BaseRobotCfg, ee_pos: torch.Tensor, ee_quat: torch.Tensor):
+def tcp_pose_from_ee_pose(robot_cfg: RobotCfg, ee_pos: torch.Tensor, ee_quat: torch.Tensor):
     """Calculate the TCP (Tool Center Point) pose from the end-effector pose.
 
     Note that currently only the translation is considered.
 
     Args:
-        robot_cfg (BaseRobotCfg): Configuration object for the robot, containing the relative position of the TCP.
+        robot_cfg (RobotCfg): Configuration object for the robot, containing the relative position of the TCP.
         ee_pos (torch.Tensor): The position of the end-effector as a tensor.
         ee_quat (torch.Tensor): The orientation of the end-effector as a tensor, in scalar-first quaternion.
 
@@ -94,3 +92,51 @@ def tcp_pose_from_ee_pose(robot_cfg: BaseRobotCfg, ee_pos: torch.Tensor, ee_quat
     tcp_rel_pos = torch.tensor(robot_cfg.curobo_tcp_rel_pos).unsqueeze(0).to(ee_rotmat.device)
     tcp_pos = ee_pos + torch.matmul(ee_rotmat, tcp_rel_pos.unsqueeze(-1)).squeeze()
     return tcp_pos, ee_quat
+
+
+def get_ee_state(obs, robot_config, tensorize=False):
+    """Get the end-effector state (position and orientation) from robot observation data.
+
+    Args:
+        obs: The observation data containing robot states.
+        robot_config: The robot configuration object.
+        tensorize (bool, optional): Whether to return tensors instead of numpy arrays. Defaults to False.
+
+    Returns:
+        tuple: A tuple containing the end-effector position and quaternion orientation.
+    """
+    rs = obs.robots[robot_config.name]
+    device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
+
+    body_state = (
+        rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state, device=device).float()
+    )
+    joint_pos = (
+        rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos, device=device).float()
+    )
+
+    ee_idx = rs.body_names.index(robot_config.ee_body_name)
+    ee_joint_idx = rs.joint_names.index(robot_config.ee_joint_name)
+
+    ee_pos_world = body_state[:, ee_idx, 0:3]  # (B,3)
+    ee_quat_world = body_state[:, ee_idx, 3:7]  # (B,4)
+
+    joint_pos_grip = joint_pos[:, ee_joint_idx]  # (B,K)
+    open_q = torch.as_tensor(robot_config.gripper_open_q, device=device, dtype=joint_pos_grip.dtype).view(
+        1, -1
+    )  # (1,K)
+    close_q = torch.as_tensor(robot_config.gripper_close_q, device=device, dtype=joint_pos_grip.dtype).view(
+        1, -1
+    )  # (1,K)
+
+    denom = open_q - close_q
+    denom = torch.where(denom.abs() < 1e-6, torch.full_like(denom, 1e-6), denom)
+    open_per_finger = ((joint_pos_grip - close_q) / denom).clamp(0, 1)  # (B,K)
+    gripper_open = open_per_finger.mean(dim=-1)  # (B,)
+
+    ee_flat_world = torch.cat([ee_pos_world, ee_quat_world, gripper_open.unsqueeze(-1)], dim=-1)  # (B,8)
+
+    if tensorize:
+        return ee_flat_world
+    else:
+        return [{"ee_state": ee_flat_world[i]} for i in range(ee_flat_world.shape[0])]

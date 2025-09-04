@@ -20,14 +20,14 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from get_started.utils import ObsSaver
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
-from metasim.cfg.robots.base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -35,7 +35,13 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
+<<<<<<< HEAD
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+=======
+    sim: Literal["isaaclab", "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = (
+        "mujoco"
+    )
+>>>>>>> dev/new-metasim
 
     ## Others
     num_envs: int = 1
@@ -48,37 +54,37 @@ class Args:
 
 args = tyro.cli(Args)
 
-robot = BaseRobotCfg(
+robot = RobotCfg(
     name="new_robot_h1",
     num_joints=26,
-    usd_path="get_started/example_assets/h1/usd/h1.usd",
-    mjcf_path="get_started/example_assets/h1/mjcf/h1.xml",
-    urdf_path="get_started/example_assets/h1/urdf/h1_wrist.urdf",
+    usd_path="metasim/example/example_assets/h1/usd/h1.usd",
+    mjcf_path="metasim/example/example_assets/h1/mjcf/h1.xml",
+    urdf_path="metasim/example/example_assets/h1/urdf/h1_wrist.urdf",
     enabled_gravity=True,
     fix_base_link=False,
     enabled_self_collisions=False,
     isaacgym_flip_visual_attachments=False,
     collapse_fixed_joints=True,
     actuators={
-        "left_hip_yaw": BaseActuatorCfg(),
-        "left_hip_roll": BaseActuatorCfg(),
-        "left_hip_pitch": BaseActuatorCfg(),
-        "left_knee": BaseActuatorCfg(),
-        "left_ankle": BaseActuatorCfg(),
-        "right_hip_yaw": BaseActuatorCfg(),
-        "right_hip_roll": BaseActuatorCfg(),
-        "right_hip_pitch": BaseActuatorCfg(),
-        "right_knee": BaseActuatorCfg(),
-        "right_ankle": BaseActuatorCfg(),
-        "torso": BaseActuatorCfg(),
-        "left_shoulder_pitch": BaseActuatorCfg(),
-        "left_shoulder_roll": BaseActuatorCfg(),
-        "left_shoulder_yaw": BaseActuatorCfg(),
-        "left_elbow": BaseActuatorCfg(),
-        "right_shoulder_pitch": BaseActuatorCfg(),
-        "right_shoulder_roll": BaseActuatorCfg(),
-        "right_shoulder_yaw": BaseActuatorCfg(),
-        "right_elbow": BaseActuatorCfg(),
+        "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
+        "left_hip_roll": BaseActuatorCfg(stiffness=200, damping=5),
+        "left_hip_pitch": BaseActuatorCfg(stiffness=200, damping=5),
+        "left_knee": BaseActuatorCfg(stiffness=300, damping=6),
+        "left_ankle": BaseActuatorCfg(stiffness=40, damping=2),
+        "right_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
+        "right_hip_roll": BaseActuatorCfg(stiffness=200, damping=5),
+        "right_hip_pitch": BaseActuatorCfg(stiffness=200, damping=5),
+        "right_knee": BaseActuatorCfg(stiffness=300, damping=6),
+        "right_ankle": BaseActuatorCfg(stiffness=40, damping=2),
+        "torso": BaseActuatorCfg(stiffness=300, damping=6),
+        "left_shoulder_pitch": BaseActuatorCfg(stiffness=100, damping=2),
+        "left_shoulder_roll": BaseActuatorCfg(stiffness=100, damping=2),
+        "left_shoulder_yaw": BaseActuatorCfg(stiffness=100, damping=2),
+        "left_elbow": BaseActuatorCfg(stiffness=100, damping=2),
+        "right_shoulder_pitch": BaseActuatorCfg(stiffness=100, damping=2),
+        "right_shoulder_roll": BaseActuatorCfg(stiffness=100, damping=2),
+        "right_shoulder_yaw": BaseActuatorCfg(stiffness=100, damping=2),
+        "right_elbow": BaseActuatorCfg(stiffness=100, damping=2),
     },
     joint_limits={
         "left_hip_yaw": (-0.43, 0.43),
@@ -101,12 +107,53 @@ robot = BaseRobotCfg(
         "right_shoulder_yaw": (-4.45, 1.3),
         "right_elbow": (-1.25, 2.61),
     },
+    control_type={
+        "left_hip_yaw": "position",
+        "left_hip_roll": "position",
+        "left_hip_pitch": "position",
+        "left_knee": "position",
+        "left_ankle": "position",
+        "right_hip_yaw": "position",
+        "right_hip_roll": "position",
+        "right_hip_pitch": "position",
+        "right_knee": "position",
+        "right_ankle": "position",
+        "torso": "position",
+        "left_shoulder_pitch": "position",
+        "left_shoulder_roll": "position",
+        "left_shoulder_yaw": "position",
+        "left_elbow": "position",
+        "right_shoulder_pitch": "position",
+        "right_shoulder_roll": "position",
+        "right_shoulder_yaw": "position",
+        "right_elbow": "position",
+    },
+    default_joint_positions={
+        "left_hip_yaw": 0.0,
+        "left_hip_roll": 0.0,
+        "left_hip_pitch": -0.4,
+        "left_knee": 0.8,
+        "left_ankle": -0.4,
+        "right_hip_yaw": 0.0,
+        "right_hip_roll": 0.0,
+        "right_hip_pitch": -0.4,
+        "right_knee": 0.8,
+        "right_ankle": -0.4,
+        "torso": 0.0,
+        "left_shoulder_pitch": 0.0,
+        "left_shoulder_roll": 0,
+        "left_shoulder_yaw": 0.0,
+        "left_elbow": 0.0,
+        "right_shoulder_pitch": 0.0,
+        "right_shoulder_roll": 0.0,
+        "right_shoulder_yaw": 0.0,
+        "right_elbow": 0.0,
+    },
 )
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -132,22 +179,22 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(2, 2, 2),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
     ArticulationObjCfg(
         name="box_base",
         fix_base_link=True,
-        usd_path="get_started/example_assets/box_base/usd/box_base.usd",
-        urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
-        mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+        urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+        mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
     ),
 ]
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -200,7 +247,9 @@ init_states = [
         },
     }
 ]
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -226,7 +275,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    obs, reward, success, time_out, extras = env.step(actions)
+    env.set_dof_targets(actions)
+    env.simulate()
+    obs = env.get_states(mode="dict")
     obs_saver.add(obs)
     step += 1
 

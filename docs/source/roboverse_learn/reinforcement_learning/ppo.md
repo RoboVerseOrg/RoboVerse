@@ -1,22 +1,24 @@
-# PPO
+# PPO Training
 
-To run PPO, install the dependencies for each simulator first and run the following command:
+## Get Started PPO (Simple Examples)
 
-isaacgym:
+For quick start examples and simpler PPO training, see the MetaSim get started tutorials:
+
+- **Infrastructure Overview**: See [RL Infrastructure](../../metasim/get_started/advanced/rl_example/infrastructure.md) for complete setup
+- **Quick Examples**: See [Quick Start Examples](../../metasim/get_started/advanced/rl_example/quick_examples.md) for ready-to-run commands
+- **PPO Reaching Tutorial**: See [PPO Reaching](../../metasim/get_started/advanced/rl_example/0_ppo_reaching.md) for detailed walkthrough
+
+### Simple PPO Commands
+
 ```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxPPO environment.sim_name=isaacgym
+# Basic PPO training with Franka robot
+python get_started/rl/0_ppo.py --task reach_origin --robot franka --sim isaacgym
+
+# PPO with Gym interface
+python get_started/rl/0_ppo_gym.py --sim mjx --num-envs 256
 ```
 
-mujoco:
-```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxPPO environment.sim_name=mujoco
-```
+## Choosing Between Approaches
 
-
-isaaclab:
-```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxPPO environment.sim_name=isaaclab
-```
-(note: current closebox is set for franka end effector to reach the origin point)
-
-To change PPO configs, check out all files inside `roboverse_learn/rl/configs/`.
+- **Use RoboVerse Learn PPO** for: Advanced research, complex tasks, customizable configs
+- **Use Get Started PPO** for: Quick prototyping, simple tasks, learning the basics

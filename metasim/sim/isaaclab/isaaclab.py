@@ -1,26 +1,24 @@
 import argparse
 import time
 from copy import deepcopy
-from typing import Type
 
 import gymnasium as gym
 import torch
 from loguru import logger as log
 
-from metasim.cfg.objects import (
+from metasim.queries.base import BaseQueryType
+from metasim.scenario.objects import (
     ArticulationObjCfg,
     BaseArticulationObjCfg,
     BaseObjCfg,
     BaseRigidObjCfg,
     PrimitiveFrameCfg,
 )
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import ContactForceSensorCfg
-from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
-from metasim.types import Action, EnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.sim import BaseSimHandler
+from metasim.types import Action, DictEnvState
 from metasim.utils.dict import deep_get
-from metasim.utils.state import CameraState, ContactForceState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 from .env_overwriter import IsaaclabEnvOverwriter
 from .isaaclab_helper import _update_tiled_camera_pose, get_pose
@@ -42,11 +40,17 @@ class IsaaclabHandler(BaseSimHandler):
         self._actions_cache: list[Action] = []
         self._simulation_app = None
         self._env = None
+<<<<<<< HEAD
+=======
+
+        # XXX: Fix below in a more elegant way
+        if self.optional_queries is None:
+            self.optional_queries = {}
+>>>>>>> dev/new-metasim
 
     ############################################################
     ## Launch
     ############################################################
-
     def launch(self) -> None:
         # Only launch the simulation app if it hasn't been launched yet
         if self._simulation_app is None:
@@ -114,7 +118,7 @@ class IsaaclabHandler(BaseSimHandler):
         env_cfg.sim.render_interval = self.scenario.decimation
         env_cfg.scene.num_envs = self.num_envs
         env_cfg.decimation = self.scenario.decimation
-        env_cfg.episode_length_s = self.scenario.episode_length * env_cfg.sim.dt * self.scenario.decimation
+        # env_cfg.episode_length_s = self.scenario.episode_length * env_cfg.sim.dt * self.scenario.decimation
 
         ## Physx settings
         env_cfg.sim.physx.bounce_threshold_velocity = self.scenario.sim_params.bounce_threshold_velocity
@@ -164,7 +168,7 @@ class IsaaclabHandler(BaseSimHandler):
     ############################################################
     ## Gymnasium main methods
     ############################################################
-    def step(self, action: list[Action] | torch.Tensor) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+    def step(self, action: list[Action] | torch.Tensor):
         self._actions_cache = action
 
         if isinstance(action, torch.Tensor):
@@ -209,7 +213,27 @@ class IsaaclabHandler(BaseSimHandler):
 
         return states, None, success, time_out, extras
 
-    def reset(self, env_ids: list[int] | None = None) -> tuple[list[EnvState], Extra]:
+    def set_dof_targets(self, actions):
+        self._actions_cache = actions
+
+        if isinstance(actions, torch.Tensor):
+            action_tensor_all = actions
+        else:
+            action_tensors = []
+            for robot in self.robots:
+                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
+                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.env.device)
+                for env_id in range(self.num_envs):
+                    for i, actuator_name in enumerate(actuator_names):
+                        action_tensor[env_id, i] = torch.tensor(
+                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.env.device
+                        )
+                action_tensors.append(action_tensor)
+            action_tensor_all = torch.cat(action_tensors, dim=-1)
+
+        _, _, _, time_out, extras = self.env.step(action_tensor_all)
+
+    def reset(self, env_ids: list[int] | None = None) -> tuple[list[DictEnvState]]:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -321,12 +345,13 @@ class IsaaclabHandler(BaseSimHandler):
         obj_inst.write_joint_state_to_sim(pos, vel, env_ids=torch.tensor(env_ids, device=self.env.device))
         obj_inst.write_data_to_sim()
 
-    def _set_states(self, states: list[EnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
         states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
-        for obj in self.objects + self.robots + self.checker.get_debug_viewers():
+        for obj in self.objects + self.robots:
+            # for obj in self.objects + self.robots + self.checker:
             if obj.name not in states_flat[0]:
                 log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
                 pos, rot = get_pose(self.env, obj.name, env_ids=env_ids)
@@ -347,7 +372,7 @@ class IsaaclabHandler(BaseSimHandler):
                     log.warning(f"No dof_pos found for {obj.name}")
                 else:
                     dof_dict = [states_flat[env_id][obj.name]["dof_pos"] for env_id in env_ids]
-                    joint_names = self.get_joint_names(obj.name, sort=False)
+                    joint_names = self._get_joint_names(obj.name, sort=False)
                     joint_pos = torch.zeros((len(env_ids), len(joint_names)), device=self.env.device)
                     for i, joint_name in enumerate(joint_names):
                         if joint_name in dof_dict[0]:
@@ -382,7 +407,7 @@ class IsaaclabHandler(BaseSimHandler):
                 body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=body_state,
                     joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                     joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -408,7 +433,7 @@ class IsaaclabHandler(BaseSimHandler):
             body_state[:, :, 0:3] -= self.env.scene.env_origins[:, None, :]
             state = RobotState(
                 root_state=root_state,
-                body_names=self.get_body_names(obj.name),
+                body_names=self._get_body_names(obj.name),
                 body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
@@ -443,19 +468,8 @@ class IsaaclabHandler(BaseSimHandler):
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
 
-        sensor_states = {}
-        for sensor in self.sensors:
-            if isinstance(sensor, ContactForceSensorCfg):
-                sensor_inst = self.env.scene.sensors[sensor.name]
-                if sensor.source_link is None:
-                    force = sensor_inst.data.net_forces_w.squeeze(1)
-                else:
-                    force = sensor_inst.data.force_matrix_w.squeeze((1, 2))
-                sensor_states[sensor.name] = ContactForceState(force=force)
-            else:
-                raise ValueError(f"Unknown sensor type: {type(sensor)}")
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors=sensor_states)
+        extras = self.get_extra()  # extra observation
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def get_pos(self, obj_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
         if env_ids is None:
@@ -487,7 +501,7 @@ class IsaaclabHandler(BaseSimHandler):
     def _simulate(self):
         pass
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.env.scene.articulations[obj_name].joint_names)
             if sort:
@@ -496,7 +510,7 @@ class IsaaclabHandler(BaseSimHandler):
         else:
             return []
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = deepcopy(self.env.scene.articulations[obj_name].body_names)
             if sort:
@@ -535,6 +549,3 @@ class IsaaclabHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return self.env.device
-
-
-IsaaclabEnv: Type[EnvWrapper[IsaaclabHandler]] = IdentityEnvWrapper(IsaaclabHandler)

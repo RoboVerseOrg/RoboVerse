@@ -30,22 +30,22 @@ from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from get_started.utils import convert_to_ply
+from metasim.utils.obs_utils import convert_to_ply
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
 from get_started.motion_planning.util_gsnet import GSNet
-from get_started.utils import ObsSaver, get_pcd_from_rgbd
-from metasim.cfg.objects import RigidObjCfg
-from metasim.cfg.scenario import ScenarioCfg
-from metasim.cfg.sensors import PinholeCameraCfg
 from metasim.constants import PhysicStateType, SimType
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.kinematics_utils import get_curobo_models
-from metasim.utils.setup_util import get_sim_env_class
+from metasim.utils.obs_utils import ObsSaver, get_pcd_from_rgbd
+from metasim.utils.setup_util import get_sim_handler_class
 
 
 @configclass
@@ -72,8 +72,7 @@ args = tyro.cli(Args)
 # initialize scenario
 scenario = ScenarioCfg(
     robots=[args.robot],
-    try_add_table=False,
-    sim=args.sim,
+    simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -90,15 +89,15 @@ scenario.objects = [
         name="bbq_sauce",
         scale=(1.5, 1.5, 1.5),
         physics=PhysicStateType.RIGIDBODY,
-        usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-        urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+        urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+        mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
     ),
 ]
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_env_class(SimType(args.sim))
+env_class = get_sim_handler_class(SimType(args.sim))
 env = env_class(scenario)
 
 init_states = [
@@ -136,7 +135,9 @@ robot = scenario.robots[0]
 curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
 ee_n_dof = len(robot.gripper_open_q)
 
-obs, extras = env.reset(states=init_states)
+env.launch()
+env.set_states(init_states)
+obs = env.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -179,10 +180,13 @@ def move_to_pose(
     q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
     q[:, -ee_n_dof:] = 0.04 if open_gripper else 0.0
     actions = [
-        {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(scenario.num_envs)
+        {"franka": {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+        for i_env in range(scenario.num_envs)
     ]
     for i in range(steps):
-        obs, reward, success, time_out, extras = env.step(actions)
+        env.set_dof_targets(actions)
+        env.simulate()
+        obs = env.get_states(mode="dict")
         obs_saver.add(obs)
     return obs
 
@@ -191,7 +195,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
-    states = env.handler.get_states()
+    states = env.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
     seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
@@ -217,9 +221,8 @@ for step in range(1):
     gsnet = GSNet()
     gg = gsnet.inference(np.array(pcd.points))
     # gsnet.visualize(pcd, gg)
-    gsnet.visualize(pcd, gg[:1], image_only=True)
+    gsnet.visualize(pcd, gg[:1], image_only=False)
     # filter gg
-    # # import pdb; pdb.set_trace()
     # mask = [0.0 <= -gg_i.translation[2] <= 0.1 for gg_i in gg]
     # gg = gg[mask]
     # gsnet.visualize(pcd, gg[:1])
@@ -247,7 +250,6 @@ for step in range(1):
     gripper_long = torch.tensor(gripper_long)
     # rotation = np.dot(rotation, delta_m)
 
-    # breakpoint()
     rotation_transform_for_franka = torch.tensor(
         [
             [0.0, 0.0, 1.0],
@@ -255,7 +257,7 @@ for step in range(1):
             [1.0, 0.0, 0.0],
         ],
     )
-    # import pdb; pdb.set_trace()
+
     rotation_target = torch.stack(
         [
             gripper_out + 1e-4,

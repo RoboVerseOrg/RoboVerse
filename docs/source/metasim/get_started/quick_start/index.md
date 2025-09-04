@@ -16,4 +16,8 @@ We provide tutorials for using MetaSim:
 8_replay_demo
 9_cfg_task
 10_mount_camera
+<<<<<<< HEAD
+=======
+12_domain_randomization
+>>>>>>> dev/new-metasim
 ```
