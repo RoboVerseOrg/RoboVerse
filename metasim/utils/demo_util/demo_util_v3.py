@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from metasim.cfg.robots.base_robot_cfg import BaseRobotCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.types import Action, RobotAction
 
 
-def convert_state_v2_to_v3(state: dict, robot: BaseRobotCfg):
+def convert_state_v2_to_v3(state: dict, robot: RobotCfg):
     """Convert v2 state format to v3 state format.
 
     Args:
@@ -25,7 +25,7 @@ def convert_state_v2_to_v3(state: dict, robot: BaseRobotCfg):
     return state_v3
 
 
-def convert_actions_v2_to_v3(actions_v2: list[RobotAction], robot: BaseRobotCfg) -> list[Action]:
+def convert_actions_v2_to_v3(actions_v2: list[RobotAction], robot: RobotCfg) -> list[Action]:
     """Convert v2 action format to v3 action format.
 
     Args:
@@ -42,7 +42,7 @@ def convert_traj_v2_to_v3(
     init_states: list[dict] | None,
     all_actions: list[list[dict]],
     all_states: list[list[dict]] | None,
-    robot: BaseRobotCfg,
+    robot: RobotCfg,
 ):
     """Convert v2 trajectory data to v3 trajectory data.
 

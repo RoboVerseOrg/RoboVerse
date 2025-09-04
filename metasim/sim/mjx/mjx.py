@@ -25,16 +25,15 @@ from dm_control import mjcf
 from loguru import logger as log
 from mujoco import mjx
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
-from metasim.constants import TaskType
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
 
 from .mjx_helper import (
     j2t,
@@ -74,7 +73,7 @@ class MJXHandler(BaseSimHandler):
         self._fix_path_cache: dict[str, int] = {}
         self._gravity_compensation = not self._robot.enabled_gravity
 
-        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
+        if self.scenario.decimation is not None:
             self.decimation = self.scenario.decimation
         else:
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
@@ -101,22 +100,24 @@ class MJXHandler(BaseSimHandler):
             max_w = max(c.width for c in self.cameras)
             max_h = max(c.height for c in self.cameras)
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
-            self._render_data = mujoco.MjData(self._mj_model)
-
-        if not self.headless:
-            self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
-        log.info(f"MJXHandler launched · envs={self.num_envs}")
-        log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
+        self._render_data = mujoco.MjData(self._mj_model)
 
         if self.optional_queries is None:
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
 
+        if not self.headless:
+            self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
+        log.info(f"MJXHandler launched · envs={self.num_envs}")
+        log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
+
     def _simulate(self) -> None:
         if self._gravity_compensation:
             self._disable_robotgravity()
         self._data = self._substep(self._mjx_model, self._data)
+        if not self.headless:
+            self.refresh_render()
 
     def _get_states(self, env_ids: list[int] | None = None):
         """Return a structured snapshot of all robots / objects in the scene."""
@@ -212,27 +213,20 @@ class MJXHandler(BaseSimHandler):
                     rgb=rgb_tensor if want_rgb else None,
                     depth=dep_tensor if want_dep else None,
                 )
-        # ===================== Sensors ==================================
-        sensors: dict[str, torch.Tensor] = {}
-        # `sens_batch` has shape (batch, total_dim)
-        sens_batch = data.sensordata[idx]
-        for name, sl in self._sensor_slices:
-            # Convert JAX → PyTorch; result shape (batch, dim)
-            sensors[name] = j2t(sens_batch[:, sl])
 
         extras = self.get_extra()  # extra observations
-        return TensorState(objects=objects, robots=robots, sensors=sensors, cameras=camera_states, extras=extras)
+        return TensorState(objects=objects, robots=robots, cameras=camera_states, extras=extras)
 
     def _set_states(
         self,
-        ts: TensorState,
+        ts: TensorState | list[TensorState],
         env_ids: list[int] | None = None,
         *,
         zero_vel: bool = True,
     ) -> None:
-        # ts = list_state_to_tensor(self, ts)
+        if isinstance(ts, list):
+            ts = list_state_to_tensor(self, ts)
         self._init_mjx_once(ts)
-
         data = self._data
         model = self._mjx_model
 
@@ -276,6 +270,10 @@ class MJXHandler(BaseSimHandler):
 
         self._data = self._data.replace(qpos=qpos, qvel=qvel, ctrl=ctrl)
         self._data = self._forward(self._mjx_model, self._data)
+
+    def close(self):
+        if hasattr(self, "_viewer") and self._renderer is not None:
+            self._viewer.close()
 
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""
@@ -323,6 +321,7 @@ class MJXHandler(BaseSimHandler):
             return
 
         def _write_fixed_body(name, root_state):
+            """Write the root state of a fixed body to the MJX model."""
             pos = root_state[0, :3].cpu().numpy()
             quat = root_state[0, 3:7].cpu().numpy()
             full = self._fix_path_cache[name]
@@ -340,58 +339,50 @@ class MJXHandler(BaseSimHandler):
         self._init_mjx()  # compile & allocate batched data
         self._mjx_done = True
 
-    def set_dof_targets(
-        self,
-        obj_name: str,
-        actions: list[Action],
-    ) -> None:
+    def set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
+        """Accepts Tensor (N, sum(J)) or list[dict] -> writes ctrl for all robots."""
         self._actions_cache = actions
+        data = self._data
 
-        # -------- build (N, J) tensor ---------------------------------
-        jnames_local = self.get_joint_names(obj_name, sort=True)
-        tgt_torch = torch.stack(
-            [
-                torch.tensor(
-                    [actions[e]["dof_pos_target"][jn] for jn in jnames_local],
-                    dtype=torch.float32,
+        if isinstance(actions, torch.Tensor):
+            tgt_t = actions.to(torch.float32)
+            if tgt_t.ndim == 1:
+                tgt_t = tgt_t.unsqueeze(0)
+
+            off = 0
+            for robot in self.robots:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                J = len(jnames)
+                a_ids = self._robot_act_ids[robot.name]
+                chunk = tgt_t[:, off : off + J]
+                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(chunk)))
+                off += J
+
+        else:
+            if isinstance(actions, list):
+                action_map = actions
+            else:
+                raise TypeError("Unsupported actions type")
+
+            for robot in self.robots:
+                rname = robot.name
+                jnames = self._get_joint_names(rname, sort=True)
+                tgt_t = torch.stack(
+                    [
+                        torch.tensor([action_map[e][rname]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
+                        for e in range(self.num_envs)
+                    ],
+                    dim=0,
                 )
-                for e in range(self.num_envs)
-            ],
-            dim=0,
-        )  # (N, J)
-        tgt_jax = t2j(tgt_torch)
+                if tgt_t.shape != (self.num_envs, len(jnames)):
+                    raise ValueError(
+                        f"{rname}: Expected shape {(self.num_envs, len(jnames))}, got {tuple(tgt_t.shape)}"
+                    )
 
-        # -------- id maps ---------------------------------------------
-        if obj_name == self._scenario.robots[0].name:
-            a_ids = self._robot_act_ids.get(obj_name)
-        else:
-            a_ids = self._object_act_ids.get(obj_name)
+                a_ids = self._robot_act_ids[rname]
+                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(tgt_t)))
 
-        data = self._data
-        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
-        self._data = data.replace(ctrl=new_ctrl)
-
-    def set_actions(
-        self,
-        obj_name: str,
-        actions,
-    ) -> None:
-        self._actions_cache = actions
-
-        tgt_jax = t2j(actions)
-
-        # -------- id maps ---------------------------------------------
-        if obj_name == self._scenario.robots[0].name:
-            a_ids = self._robot_act_ids.get(obj_name)
-        else:
-            a_ids = self._object_act_ids.get(obj_name)
-
-        data = self._data
-        new_ctrl = data.ctrl.at[:, a_ids].set(tgt_jax)
-        self._data = data.replace(ctrl=new_ctrl)
-
-    def close(self):
-        pass
+        self._data = data
 
     ############################################################
     ## Utils
@@ -493,7 +484,7 @@ class MJXHandler(BaseSimHandler):
 
         self._viewer.sync()
 
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             names = [self._mj_model.body(i).name for i in range(self._mj_model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == obj_name]
@@ -504,7 +495,7 @@ class MJXHandler(BaseSimHandler):
         else:
             return []
 
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = [
                 self._mj_model.joint(joint_id).name
@@ -637,6 +628,3 @@ class MJXHandler(BaseSimHandler):
     @property
     def device(self) -> torch.device:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-MJXEnv: type[EnvWrapper[MJXHandler]] = GymEnvWrapper(MJXHandler)

@@ -1,5 +1,5 @@
 ⚙️ Direct Installation
-===================
+======================
 
 First, clone the RoboVerse project:
 
@@ -81,8 +81,13 @@ Install IsaacLab v1.4.1 (IsaacSim v4.2, Recommended)
 .. note::
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/index.html>`_.
 
+<<<<<<< HEAD
 Install IsaacLab v2.1.1 (IsaacSim v4.5)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=======
+Install IsaacLab v2
+--------------------
+>>>>>>> dev/new-metasim
 
 .. warning::
    We are trying to be compatible with both IsaacLab v1.4 and v2, but IsaacLab v2 may not work as robustly as v1.4.

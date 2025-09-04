@@ -2,25 +2,26 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+try:
+    import mujoco.viewer
+except ImportError:
+    pass
 import mujoco
-import mujoco.viewer
 import numpy as np
 import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.cfg.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
-from metasim.cfg.robots import BaseRobotCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.robot import RobotCfg
 
 if TYPE_CHECKING:
-    from metasim.cfg.scenario import ScenarioCfg
+    from metasim.scenario.scenario import ScenarioCfg
 
-from metasim.constants import TaskType
 from metasim.queries.base import BaseQueryType
-from metasim.sim import BaseSimHandler, EnvWrapper, GymEnvWrapper
-from metasim.sim.parallel import ParallelSimWrapper
+from metasim.sim import BaseSimHandler
 from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
 
 
 class MujocoHandler(BaseSimHandler):
@@ -31,10 +32,15 @@ class MujocoHandler(BaseSimHandler):
         if scenario.num_envs > 1:
             raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
 
-        self._mujoco_robot_name = None
-        self._robot_num_dof = None
-        self._robot_path = self.robot.mjcf_path
-        self._gravity_compensation = not self.robot.enabled_gravity
+        self._mujoco_robot_names = []
+        self._robot_num_dofs = []
+        self._robot_paths = []
+        self._gravity_compensations = []
+
+        # Support multiple robots
+        for robot in self.robots:
+            self._robot_paths.append(robot.mjcf_path)
+            self._gravity_compensations.append(not robot.enabled_gravity)
 
         self.viewer = None
         self.cameras = []
@@ -43,19 +49,13 @@ class MujocoHandler(BaseSimHandler):
         self._episode_length_buf = 0
 
         # FIXME: hard code decimation for now
-        if self.task is not None and self.task.task_type == TaskType.LOCOMOTION:
-            self.decimation = self.scenario.decimation
-        else:
-            log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
-            self.decimation = 25
+        self.decimation = 25
 
         self._manual_pd_on = False
         self._p_gains = None
         self._d_gains = None
         self._torque_limits = None
         self._robot_default_dof_pos = None
-        self._action_scale = scenario.control.action_scale
-        self._action_offset = scenario.control.action_offset
         self._effort_controlled_joints = []
         self._position_controlled_joints = []
         self._current_action = None
@@ -67,9 +67,10 @@ class MujocoHandler(BaseSimHandler):
         self.data = self.physics.data
 
         self.body_names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-        self.robot_body_names = [
-            body_name for body_name in self.body_names if body_name.startswith(self._mujoco_robot_name)
-        ]
+        self.robot_body_names = []
+        for robot_name in self._mujoco_robot_names:
+            robot_body_names = [body_name for body_name in self.body_names if body_name.startswith(robot_name)]
+            self.robot_body_names.extend(robot_body_names)
 
         self._init_torque_control()
 
@@ -84,49 +85,65 @@ class MujocoHandler(BaseSimHandler):
 
     def _init_torque_control(self):
         """Initialize torque control parameters based on robot configuration."""
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
-        self._robot_num_dof = len(joint_names)
+        self._p_gains = []
+        self._d_gains = []
+        self._torque_limits = []
+        self._robot_default_dof_pos = []
+        self._effort_controlled_joints = []
+        self._position_controlled_joints = []
 
-        self._p_gains = np.zeros(self._robot_num_dof)
-        self._d_gains = np.zeros(self._robot_num_dof)
-        self._torque_limits = np.zeros(self._robot_num_dof)
+        for robot_idx, robot in enumerate(self.robots):
+            joint_names = self._get_joint_names(robot.name, sort=True)
+            robot_num_dof = len(joint_names)
+            self._robot_num_dofs.append(robot_num_dof)
 
-        self._manual_pd_on = any(mode == "effort" for mode in self.robot.control_type.values())
+            p_gains = np.zeros(robot_num_dof)
+            d_gains = np.zeros(robot_num_dof)
+            torque_limits = np.zeros(robot_num_dof)
 
-        default_dof_pos = []
+            manual_pd_on = any(mode == "effort" for mode in robot.control_type.values())
 
-        for i, joint_name in enumerate(joint_names):
-            i_actuator_cfg = self.robot.actuators[joint_name]
-            i_control_mode = self.robot.control_type.get(joint_name, "position")
+            default_dof_pos = []
 
-            if joint_name in self.robot.default_joint_positions:
-                default_pos = self.robot.default_joint_positions[joint_name]
-            else:
-                joint_id = self.physics.model.joint(f"{self._mujoco_robot_name}{joint_name}").id
-                joint_range = self.physics.model.jnt_range[joint_id]
-                default_pos = 0.3 * (joint_range[0] + joint_range[1])
-            default_dof_pos.append(default_pos)
+            for i, joint_name in enumerate(joint_names):
+                i_actuator_cfg = robot.actuators[joint_name]
+                i_control_mode = robot.control_type.get(joint_name, "position")
 
-            if i_control_mode == "effort":
-                self._effort_controlled_joints.append(i)
-                self._p_gains[i] = i_actuator_cfg.stiffness
-                self._d_gains[i] = i_actuator_cfg.damping
-
-                if i_actuator_cfg.torque_limit is not None:
-                    torque_limit = i_actuator_cfg.torque_limit
+                if joint_name in robot.default_joint_positions:
+                    default_pos = robot.default_joint_positions[joint_name]
                 else:
-                    actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
-                    torque_limit = self.physics.model.actuator_forcerange[actuator_id, 1]
+                    joint_id = self.physics.model.joint(f"{self._mujoco_robot_names[robot_idx]}{joint_name}").id
+                    joint_range = self.physics.model.jnt_range[joint_id]
+                    default_pos = 0.3 * (joint_range[0] + joint_range[1])
+                default_dof_pos.append(default_pos)
 
-                self._torque_limits[i] = self.scenario.control.torque_limit_scale * torque_limit
+                if i_control_mode == "effort":
+                    self._effort_controlled_joints.append((robot_idx, i))
+                    p_gains[i] = i_actuator_cfg.stiffness
+                    d_gains[i] = i_actuator_cfg.damping
 
-            elif i_control_mode == "position":
-                self._position_controlled_joints.append(i)
-            else:
-                log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
-                raise ValueError
+                    if i_actuator_cfg.torque_limit is not None:
+                        torque_limit = i_actuator_cfg.torque_limit
+                    else:
+                        actuator_id = self.physics.model.actuator(
+                            f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
+                        ).id
+                        torque_limit = self.physics.model.actuator_forcerange[actuator_id, 1]
 
-        self._robot_default_dof_pos = np.array(default_dof_pos)
+                    torque_limits[i] = self.scenario.control.torque_limit_scale * torque_limit
+
+                elif i_control_mode == "position":
+                    self._position_controlled_joints.append((robot_idx, i))
+                else:
+                    log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
+                    raise ValueError
+
+            self._p_gains.append(p_gains)
+            self._d_gains.append(d_gains)
+            self._torque_limits.append(torque_limits)
+            self._robot_default_dof_pos.append(np.array(default_dof_pos))
+
+        self._manual_pd_on = len(self._effort_controlled_joints) > 0
         self._current_vel_target = None  # Initialize velocity target tracking
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):
@@ -255,30 +272,30 @@ class MujocoHandler(BaseSimHandler):
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
-        if self.scenario.try_add_table:
-            mjcf_model.asset.add(
-                "texture",
-                name="texplane",
-                type="2d",
-                builtin="checker",
-                width=512,
-                height=512,
-                rgb1=[0, 0, 0],
-                rgb2=[1.0, 1.0, 1.0],
-            )
-            mjcf_model.asset.add(
-                "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
-            )
-            ground = mjcf_model.worldbody.add(
-                "geom",
-                type="plane",
-                pos="0 0 0",
-                size="100 100 0.001",
-                quat="1 0 0 0",
-                condim="3",
-                conaffinity="15",
-                material="matplane",
-            )
+        mjcf_model.asset.add(
+            "texture",
+            name="texplane",
+            type="2d",
+            builtin="checker",
+            width=512,
+            height=512,
+            rgb1=[0, 0, 0],
+            rgb2=[1.0, 1.0, 1.0],
+        )
+        mjcf_model.asset.add(
+            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
+        )
+        ground = mjcf_model.worldbody.add(
+            "geom",
+            type="plane",
+            pos="0 0 0",
+            size="100 100 0.001",
+            quat="1 0 0 0",
+            condim="3",
+            conaffinity="15",
+            material="matplane",
+        )
+
         self.object_body_names = []
         self.mj_objects = {}
         for obj in self.objects:
@@ -297,17 +314,19 @@ class MujocoHandler(BaseSimHandler):
             self.object_body_names.append(obj_attached.full_identifier)
             self.mj_objects[obj.name] = obj_mjcf
 
-        robot_xml = mjcf.from_path(self._robot_path)
+        # Add multiple robots
+        for robot in self.robots:
+            robot_xml = mjcf.from_path(robot.mjcf_path)
 
-        if hasattr(self.robot, "scale") and self.robot.scale != (1.0, 1.0, 1.0):
-            self._apply_scale_to_mjcf(robot_xml, self.robot.scale)
+            if hasattr(robot, "scale") and robot.scale != (1.0, 1.0, 1.0):
+                self._apply_scale_to_mjcf(robot_xml, robot.scale)
 
-        robot_attached = mjcf_model.attach(robot_xml)
-        if not self.robot.fix_base_link:
-            robot_attached.add("freejoint")
-        self.robot_attached = robot_attached
-        self.mj_objects[self.robot.name] = robot_xml
-        self._mujoco_robot_name = robot_xml.full_identifier
+            robot_attached = mjcf_model.attach(robot_xml)
+            if not robot.fix_base_link:
+                robot_attached.add("freejoint")
+            self.mj_objects[robot.name] = robot_xml
+            self._mujoco_robot_names.append(robot_xml.full_identifier)
+
         return mjcf_model
 
     def _get_actuator_states(self, obj_name):
@@ -318,10 +337,22 @@ class MujocoHandler(BaseSimHandler):
             "dof_torque": {},
         }
 
+        # Find the robot index
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
+        if robot_idx is None:
+            return actuator_states
+
+        robot_name = self._mujoco_robot_names[robot_idx]
+
         for actuator_id in range(self.physics.model.nu):
             actuator = self.physics.model.actuator(actuator_id)
-            if actuator.name.startswith(self._mujoco_robot_name):
-                clean_name = actuator.name[len(self._mujoco_robot_name) :]
+            if actuator.name.startswith(robot_name):
+                clean_name = actuator.name[len(robot_name) :]
 
                 actuator_states["dof_pos_target"][clean_name] = float(
                     self.physics.data.ctrl[actuator_id].item()
@@ -356,23 +387,37 @@ class MujocoHandler(BaseSimHandler):
 
         full = np.concatenate([pos, quat, lin_world, w], axis=1)
         root_np = full[0]
-        return root_np, full  # root, bodies
+        return root_np, full[1:]  # root, bodies
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
+        """Get states of all objects and robots."""
         object_states = {}
+
+        """Get states of all objects and robots."""
+
+        # print("=== MuJoCo body names & positions ===")
+        # for i in range(self.physics.model.nbody):
+        #     body_name = self.physics.model.body(i).name
+        #     body_pos = self.physics.data.xpos[i]  # (3,) np.array
+        #     print(f"[{i}] {body_name} : pos = {body_pos}")
+        # print("=====================================")
         for obj in self.objects:
             model_name = self.mj_objects[obj.name].model
 
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             if isinstance(obj, ArticulationObjCfg):
-                joint_names = self.get_joint_names(obj.name, sort=True)
+                joint_names = self._get_joint_names(obj.name, sort=True)
                 body_ids_reindex = self._get_body_ids_reindex(obj.name)
 
+<<<<<<< HEAD
                 root_np, body_np = self._pack_state(body_ids_reindex)
 
+=======
+                root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+>>>>>>> dev/new-metasim
                 state = ObjectState(
                     root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
-                    body_names=self.get_body_names(obj.name),
+                    body_names=self._get_body_names(obj.name),
                     body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                     joint_pos=torch.tensor([
                         self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
@@ -390,17 +435,21 @@ class MujocoHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for robot in [self.robot]:
+        for robot in self.robots:
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
-            joint_names = self.get_joint_names(robot.name, sort=True)
+            joint_names = self._get_joint_names(robot.name, sort=True)
             actuator_reindex = self._get_actuator_reindex(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
+<<<<<<< HEAD
 
             root_np, body_np = self._pack_state(body_ids_reindex)
+=======
+            root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+>>>>>>> dev/new-metasim
 
             state = RobotState(
-                body_names=self.get_body_names(robot.name),
+                body_names=self._get_body_names(robot.name),
                 root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                 body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                 joint_pos=torch.tensor([
@@ -421,6 +470,7 @@ class MujocoHandler(BaseSimHandler):
         for camera in self.cameras:
             camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
             camera_states[camera.name] = {}
+            depth = None
             if "rgb" in camera.data_types:
                 rgb = self.physics.render(width=camera.width, height=camera.height, camera_id=camera_id, depth=False)
                 rgb = torch.from_numpy(rgb.copy()).unsqueeze(0)
@@ -430,24 +480,32 @@ class MujocoHandler(BaseSimHandler):
             state = CameraState(rgb=rgb, depth=depth)
             camera_states[camera.name] = state
         extras = self.get_extra()
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, sensors={}, extras=extras)
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
         """Set root position and rotation."""
         if "pos" not in obj_state and "rot" not in obj_state:
             return
 
-        if obj_name == self.robot.name:
-            if not self.robot.fix_base_link:
-                root_joint = self.physics.data.joint(self._mujoco_robot_name)
+        # Check if it's a robot
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
+        if robot_idx is not None:
+            robot = self.robots[robot_idx]
+            robot_name = self._mujoco_robot_names[robot_idx]
+            if not robot.fix_base_link:
+                root_joint = self.physics.data.joint(robot_name)
                 root_joint.qpos[:3] = obj_state.get("pos", [0, 0, 0])
                 root_joint.qpos[3:7] = obj_state.get("rot", [1, 0, 0, 0])
                 if zero_vel:
                     root_joint.qvel[:6] = 0
             else:
-                root_body = self.physics.named.model.body_pos[self._mujoco_robot_name]
-                root_body_quat = self.physics.named.model.body_quat[self._mujoco_robot_name]
+                root_body = self.physics.named.model.body_pos[robot_name]
+                root_body_quat = self.physics.named.model.body_quat[robot_name]
                 root_body[:] = obj_state.get("pos", [0, 0, 0])
                 root_body_quat[:] = obj_state.get("rot", [1, 0, 0, 0])
         else:
@@ -469,10 +527,20 @@ class MujocoHandler(BaseSimHandler):
         if "dof_pos" not in obj_state:
             return
 
+        # Check if it's a robot
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
         for joint_name, joint_pos in obj_state["dof_pos"].items():
-            full_joint_name = (
-                f"{self._mujoco_robot_name}{joint_name}" if obj_name == self.robot.name else f"{obj_name}/{joint_name}"
-            )
+            if robot_idx is not None:
+                robot_name = self._mujoco_robot_names[robot_idx]
+                full_joint_name = f"{robot_name}{joint_name}"
+            else:
+                full_joint_name = f"{obj_name}/{joint_name}"
+
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
             if zero_vel:
@@ -484,10 +552,13 @@ class MujocoHandler(BaseSimHandler):
                 pass
 
     def _set_states(self, states, env_ids=None, zero_vel=True):
+        if isinstance(states, TensorState):
+            states = state_tensor_to_nested(self, states)
         if len(states) > 1:
             raise ValueError("MujocoHandler only supports single env state setting")
 
-        states_flat = [state["objects"] | state["robots"] for state in states]
+        states_flat = [{**state["objects"], **state["robots"]} for state in states]
+
         for obj_name, obj_state in states_flat[0].items():
             self._set_root_state(obj_name, obj_state, zero_vel)
             self._set_joint_state(obj_name, obj_state, zero_vel)
@@ -503,79 +574,96 @@ class MujocoHandler(BaseSimHandler):
             self.physics.data.xfrc_applied[body_id, 0:3] = force_vec
             self.physics.data.xfrc_applied[body_id, 3:6] = 0
 
-    def _compute_effort(self, actions):
+    def _compute_effort(self, actions, robot_idx):
         """Compute effort from actions using PD controller."""
+        # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
         action_scaled = self._action_scale * actions
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
+        joint_names = self._get_joint_names(self.robots[robot_idx].name, sort=True)
         robot_dof_pos = np.array([
-            self.physics.data.joint(f"{self._mujoco_robot_name}{jn}").qpos[0] for jn in joint_names
+            self.physics.data.joint(f"{self._mujoco_robot_names[robot_idx]}{jn}").qpos[0] for jn in joint_names
         ])
         robot_dof_vel = np.array([
-            self.physics.data.joint(f"{self._mujoco_robot_name}{jn}").qvel[0] for jn in joint_names
+            self.physics.data.joint(f"{self._mujoco_robot_names[robot_idx]}{jn}").qvel[0] for jn in joint_names
         ])
 
         if self._action_offset:
             effort = (
-                self._p_gains * (action_scaled + self._robot_default_dof_pos - robot_dof_pos)
-                - self._d_gains * robot_dof_vel
+                self._p_gains[robot_idx] * (action_scaled + self._robot_default_dof_pos[robot_idx] - robot_dof_pos)
+                - self._d_gains[robot_idx] * robot_dof_vel
             )
         else:
-            effort = self._p_gains * (action_scaled - robot_dof_pos) - self._d_gains * robot_dof_vel
+            effort = (
+                self._p_gains[robot_idx] * (action_scaled - robot_dof_pos) - self._d_gains[robot_idx] * robot_dof_vel
+            )
 
-        effort = np.clip(effort, -self._torque_limits, self._torque_limits)
+        effort = np.clip(effort, -self._torque_limits[robot_idx], self._torque_limits[robot_idx])
 
         return effort
 
     def _apply_pd_control(self, actions):
         """Apply torque control using computed efforts."""
-        effort = self._compute_effort(actions)
+        for robot_idx, robot in enumerate(self.robots):
+            if any((robot_idx, i) in self._effort_controlled_joints for i in range(self._robot_num_dofs[robot_idx])):
+                effort = self._compute_effort(actions, robot_idx)
+                joint_names = self._get_joint_names(robot.name, sort=True)
+                for i in range(self._robot_num_dofs[robot_idx]):
+                    if (robot_idx, i) in self._effort_controlled_joints:
+                        joint_name = joint_names[i]
+                        actuator_id = self.physics.model.actuator(
+                            f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
+                        ).id
+                        self.physics.data.ctrl[actuator_id] = effort[i]
 
-        joint_names = self.get_joint_names(self.robot.name, sort=True)
-        for i in self._effort_controlled_joints:
-            joint_name = joint_names[i]
-            actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_name}{joint_name}").id
-            self.physics.data.ctrl[actuator_id] = effort[i]
-
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def set_dof_targets(self, actions) -> None:
+        """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
         self._actions_cache = actions
 
-        # Extract velocity targets if present
-        vel_targets = actions[0][obj_name].get("dof_vel_target", None)
-        if vel_targets:
-            joint_names = self.get_joint_names(self.robot.name, sort=True)
-            self._current_vel_target = np.zeros(self._robot_num_dof)
-            for i, joint_name in enumerate(joint_names):
-                if joint_name in vel_targets:
-                    self._current_vel_target[i] = vel_targets[joint_name]
-        else:
-            self._current_vel_target = None
+        # Fast path: tensor-like controls
+        if isinstance(actions, torch.Tensor):
+            vec = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
+            if self._manual_pd_on:
+                self._current_action = vec
+            else:
+                self.physics.data.ctrl[:] = vec
+            return
 
-        if self._manual_pd_on:
-            joint_targets = actions[0][obj_name]["dof_pos_target"]
-            joint_names = self.get_joint_names(self.robot.name, sort=True)
+        # Dict-list path
+        if isinstance(actions, list):  # Handling single-env parallell case
+            actions = actions[0]
+        for robot_idx, robot in enumerate(self.robots):
+            payload = actions[robot.name]
 
-            self._current_action = np.zeros(self._robot_num_dof)
-            for i, joint_name in enumerate(joint_names):
-                if joint_name in joint_targets:
-                    self._current_action[i] = joint_targets[joint_name]
+            # Optional velocity targets
+            vel_targets = payload.get("dof_vel_target")
+            if vel_targets:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                self._current_vel_target = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+                for i, jn in enumerate(jnames):
+                    if jn in vel_targets:
+                        self._current_vel_target[i] = vel_targets[jn]
+            else:
+                self._current_vel_target = None
 
-            for i in self._position_controlled_joints:
-                joint_name = joint_names[i]
-                if joint_name in joint_targets:
-                    actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
-                    actuator.ctrl = joint_targets[joint_name]
-        else:
-            joint_targets = actions[0][obj_name]["dof_pos_target"]
-            for joint_name, target_pos in joint_targets.items():
-                actuator = self.physics.data.actuator(f"{self._mujoco_robot_name}{joint_name}")
-                actuator.ctrl = target_pos
-
-    def set_actions(self, obj_name: str, actions):
-        self._actions_cache = actions
-        if self._manual_pd_on:
-            self._current_action = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
-        else:
-            self.physics.data.ctrl[:] = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
+            # Position targets
+            joint_targets = payload["dof_pos_target"]
+            if self._manual_pd_on:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                self._current_action = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+                for i, jn in enumerate(jnames):
+                    if jn in joint_targets:
+                        self._current_action[i] = joint_targets[jn]
+                for i in range(self._robot_num_dofs[robot_idx]):
+                    if (robot_idx, i) in self._position_controlled_joints:
+                        jn = jnames[i]
+                        if jn in joint_targets:
+                            self.physics.data.actuator(
+                                f"{self._mujoco_robot_names[robot_idx]}{jn}"
+                            ).ctrl = joint_targets[jn]
+            else:
+                for jn, pos in joint_targets.items():
+                    if torch.is_tensor(pos):
+                        pos = pos.detach().cpu().item()
+                    self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = pos
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
@@ -583,8 +671,10 @@ class MujocoHandler(BaseSimHandler):
             self.viewer.sync()
 
     def _simulate(self):
-        if self._gravity_compensation:
-            self._disable_robotgravity()
+        # Apply gravity compensation for all robots
+        for robot_idx, robot in enumerate(self.robots):
+            if self._gravity_compensations[robot_idx]:
+                self._disable_robotgravity()
 
         # Apply torque control if manual PD is enabled
         if self._manual_pd_on:
@@ -604,12 +694,19 @@ class MujocoHandler(BaseSimHandler):
     ############################################################
     ## Utils
     ############################################################
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
-            self.object_dict[obj_name], BaseRobotCfg
+            self.object_dict[obj_name], RobotCfg
         ):
-            if obj_name == self.robot.name:
-                prefix = self._mujoco_robot_name
+            # Find the robot index
+            robot_idx = None
+            for i, robot in enumerate(self.robots):
+                if robot.name == obj_name:
+                    robot_idx = i
+                    break
+
+            if robot_idx is not None:
+                prefix = self._mujoco_robot_names[robot_idx]
             else:
                 prefix = obj_name + "/"
 
@@ -619,7 +716,7 @@ class MujocoHandler(BaseSimHandler):
                 if self.physics.model.joint(joint_id).name.startswith(prefix)
             ]
 
-            if obj_name == self.robot.name:
+            if robot_idx is not None:
                 joint_names = [name[len(prefix) :] for name in joint_names]
             else:
                 joint_names = [name.split("/")[-1] for name in joint_names]
@@ -632,42 +729,50 @@ class MujocoHandler(BaseSimHandler):
             return []
 
     def _get_actuator_names(self, robot_name: str) -> list[str]:
-        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
         actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+
+        # Find the robot index
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == robot_name:
+                robot_idx = i
+                break
+
+        if robot_idx is None:
+            return []
 
         robot_actuator_names = []
         for name in actuator_names:
-            if name.startswith(self._mujoco_robot_name):
-                joint_name = name[len(self._mujoco_robot_name) :]
+            if name.startswith(self._mujoco_robot_names[robot_idx]):
+                joint_name = name[len(self._mujoco_robot_names[robot_idx]) :]
                 if joint_name:
                     robot_actuator_names.append(joint_name)
 
-        all_joint_names = self.get_joint_names(robot_name)
-
-        actuated_joint_names = []
-        for joint_name in all_joint_names:
-            if joint_name in self.robot.actuators:
-                if self.robot.actuators[joint_name].fully_actuated is not False:
-                    actuated_joint_names.append(joint_name)
-
-        assert set(robot_actuator_names) == set(actuated_joint_names), (
-            f"Actuator names {robot_actuator_names} do not match joint names {actuated_joint_names}"
+        joint_names = self._get_joint_names(robot_name)
+        assert set(robot_actuator_names) == set(joint_names), (
+            f"Actuator names {robot_actuator_names} do not match joint names {joint_names}"
         )
-
         return robot_actuator_names
 
     def _get_actuator_reindex(self, robot_name: str) -> list[int]:
-        assert isinstance(self.object_dict[robot_name], BaseRobotCfg)
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
         origin_actuator_names = self._get_actuator_names(robot_name)
         sorted_actuator_names = sorted(origin_actuator_names)
         return [origin_actuator_names.index(name) for name in sorted_actuator_names]
 
+<<<<<<< HEAD
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         model_name = self.mj_objects[obj_name].model
+=======
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+>>>>>>> dev/new-metasim
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            model_name = self.mj_objects[obj_name].model
             names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
             names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
             names = [name for name in names if name != ""]
+
             if sort:
                 names.sort()
             return names
@@ -702,14 +807,15 @@ class MujocoHandler(BaseSimHandler):
             self._body_ids_reindex_cache = {}
         if obj_name not in self._body_ids_reindex_cache:
             model_name = self.mj_objects[obj_name].model
-            body_ids_origin = [
-                bi
-                for bi in range(self.physics.model.nbody)
-                if self.physics.model.body(bi).name.split("/")[0] == model_name
-                and self.physics.model.body(bi).name != f"{model_name}/"
-            ]
+            body_ids_origin = []
+            for bi in range(self.physics.model.nbody):
+                body_name = self.physics.model.body(bi).name
+                if body_name.split("/")[0] == model_name and body_name != f"{model_name}/":
+                    body_ids_origin.append(bi)
+
             body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
             self._body_ids_reindex_cache[obj_name] = body_ids_reindex
+
         return self._body_ids_reindex_cache[obj_name]
 
     ############################################################
@@ -731,6 +837,7 @@ class MujocoHandler(BaseSimHandler):
     def device(self) -> torch.device:
         return torch.device("cpu")
 
-
-MujocoParallelHandler = ParallelSimWrapper(MujocoHandler)
-MujocoEnv: type[EnvWrapper[MujocoHandler]] = GymEnvWrapper(MujocoParallelHandler)
+    # Compatibility
+    @property
+    def robot(self) -> RobotCfg:
+        return self.robots[0]

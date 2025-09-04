@@ -1,1 +1,1 @@
-from .mjx import MJXEnv, MJXHandler  # noqa: F401
+from .mjx import MJXHandler  # noqa: F401
