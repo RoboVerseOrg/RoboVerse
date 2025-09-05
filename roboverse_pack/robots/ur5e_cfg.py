@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
-
-from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class Ur5ECfg(BaseRobotCfg):
+class Ur5ECfg(RobotCfg):
     """Configuration for the Universal Robots UR5e robot.
 
     The UR5e is a 6-DOF industrial robotic arm with medium payload capacity,

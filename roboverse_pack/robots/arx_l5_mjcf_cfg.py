@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
-
-from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class ArxL5Cfg(BaseRobotCfg):
+class ArxL5Cfg(RobotCfg):
     """Cfg for the Universal Robots UR5e robot.
 
     Args:
