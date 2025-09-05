@@ -110,6 +110,7 @@ lint.ignore = [
     "RUF005",  # allow using `+` to concatenate collections
     "RUF009",  # allow function calls in dataclass default values
     "RUF012",  # allow mutable class attributes
+    "PLE0604", # allow __all__ to be nested but still all elements are strings
 ]
 extend-exclude = [
     "roboverse_learn",
