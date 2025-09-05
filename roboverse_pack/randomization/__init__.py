@@ -1,4 +1,4 @@
-"""Randomization for RoboVerse."""
+"""Randomization for RoboVerse. Basic randomizers from metasim will be automatically imported."""
 
 from .camera_randomizer import (
     CameraImageRandomCfg,
@@ -12,6 +12,9 @@ from .light_randomizer import LightRandomCfg, LightRandomizer
 from .material_randomizer import MaterialRandomCfg, MaterialRandomizer
 from .object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
 from .presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets
+
+import metasim.randomizers as metasim_randomizers
+from metasim.randomizers import *
 
 __all__ = [
     "CameraImageRandomCfg",
@@ -32,4 +35,5 @@ __all__ = [
     "ObjectRandomizer",
     "PhysicsRandomCfg",
     "PoseRandomCfg",
+    *metasim_randomizers.__all__,
 ]
