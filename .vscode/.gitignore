@@ -1,0 +1,5 @@
+# Ignore all other files
+*.json
+
+# Note: These files are kept for development purposes only.
+!template/settings.template.json
