@@ -121,9 +121,8 @@ extend-exclude = [
     "docker"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["metasim*"]
+[tool.setuptools]
+packages = ["metasim", "roboverse_pack"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
