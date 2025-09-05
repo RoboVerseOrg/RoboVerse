@@ -186,10 +186,12 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
 
         camera_states = {}
         for camera_name, camera_state in tensor_state.cameras.items():
-            camera_states[camera_name] = {
-                "rgb": camera_state.rgb[env_id].cpu(),
-                "depth": camera_state.depth[env_id].cpu(),
-            }
+            cam_dict = {}
+            if camera_state.rgb is not None:
+                cam_dict["rgb"] = camera_state.rgb[env_id].cpu()
+            if camera_state.depth is not None:
+                cam_dict["depth"] = camera_state.depth[env_id].cpu()
+            camera_states[camera_name] = cam_dict
 
         env_state = {
             "objects": object_states,
