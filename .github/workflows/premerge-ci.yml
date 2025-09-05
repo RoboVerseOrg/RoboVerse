@@ -205,7 +205,7 @@ jobs:
           docker run --rm --entrypoint bash --runtime=nvidia --network=host \
           --name metasim-autotest \
           --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
           -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
           -v /usr/local/cuda:/usr/local/cuda \
           -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
