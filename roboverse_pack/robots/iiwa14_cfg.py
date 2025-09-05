@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
-
-from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class Iiwa14Cfg(BaseRobotCfg):
+class Iiwa14Cfg(RobotCfg):
     """Configuration for the KUKA LBR IIWA 14 R820 robot.
 
     The IIWA 14 is a 7-DOF lightweight robotic arm designed for

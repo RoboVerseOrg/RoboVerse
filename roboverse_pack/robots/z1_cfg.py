@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
-
-from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class Z1Cfg(BaseRobotCfg):
+class Z1Cfg(RobotCfg):
     """Configuration for the Unitree Z1 Robotic Arm.
 
     The Z1 is a 6-DOF lightweight robotic arm designed for research and development

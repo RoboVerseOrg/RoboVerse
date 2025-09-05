@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
-
-from .base_robot_cfg import BaseActuatorCfg, BaseRobotCfg
 
 
 @configclass
-class Gen3Cfg(BaseRobotCfg):
+class Gen3Cfg(RobotCfg):
     """Configuration for the Kinova Gen3 Robotic Arm.
 
     The Gen3 is a 7-DOF lightweight robotic arm designed for collaborative robotics
