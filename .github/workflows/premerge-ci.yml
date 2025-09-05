@@ -201,46 +201,21 @@ jobs:
           fi
 
           # begin run test
-          # run metasim-isaaclab
+          # run all test
           docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest-isaaclab \
+          --name metasim-autotest \
           --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k isaaclab" \
-          || ISAACLAB_TEST_EXIT_CODE=$?
-
-          # run metasim-mujoco
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest-mujoco \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_6d895955a29934cf6fd8d0ac54abd5cd70f71a1244-linux-gnu \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
           -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
           -v /usr/local/cuda:/usr/local/cuda \
           -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
           "$IMAGE_URI" \
           -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco" \
-          || MUJOCO_TEST_EXIT_CODE=$?
-
-          if [ "$ISAACLAB_TEST_EXIT_CODE" -eq 0 ] || [ "$MUJOCO_TEST_EXIT_CODE" -eq 0 ]; then
-            echo "===At least one test suite passed! (Union logic)==="
-            OVERALL_EXIT_CODE=0
-          else
-            echo "===All test suites failed==="
-            OVERALL_EXIT_CODE=1
-          fi
-
-          echo "Test Results Summary:"
-          echo "IsaacLab tests exit code: $ISAACLAB_TEST_EXIT_CODE"
-          echo "MuJoCo tests exit code: $MUJOCO_TEST_EXIT_CODE"
-          echo "Overall exit code (union): $OVERALL_EXIT_CODE"
+          || TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary
           touch ~/$SRC_DIR/test_exit_code.txt
-          echo "$OVERALL_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
+          echo "$TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
         " || { echo "Test execution failed"; exit 1; }
 
         echo "===Copying test reports...==="
