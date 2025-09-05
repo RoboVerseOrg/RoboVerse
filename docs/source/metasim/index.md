@@ -65,21 +65,12 @@ features/cross_sim
 :maxdepth: 2
 :titlesonly:
 
-<<<<<<< HEAD
-developer_guide/precommit_hooks
-developer_guide/architecture_overview
 developer_guide/autotesting
-developer_guide/state
-=======
-<!-- developer_guide/precommit_hooks
->>>>>>> dev/new-metasim
-developer_guide/data_structure
-developer_guide/new_task/index
-developer_guide/new_robot
-developer_guide/new_sim
-developer_guide/asset_conversions
 developer_guide/docstring
-developer_guide/tips/index -->
+developer_guide/precommit_hooks
+developer_guide/contributing_new_robot
+developer_guide/converting_asset
+developer_guide/tips/index
 ```
 
 ```{toctree}
