@@ -10,14 +10,12 @@ from metasim.utils.state import TensorState
 
 
 class RLBenchTask(BaseTaskEnv):
-    episode_length = 250
+    max_episode_steps = 250
 
     scenario = ScenarioCfg(
         objects=[],
         robots=["franka"],
     )
-
-    max_episode_steps = 250
 
     traj_filepath = None
 
@@ -43,3 +41,7 @@ class RLBenchTask(BaseTaskEnv):
             initial_states = initial_states * k + initial_states[: self.num_envs % len(initial_states)]
         self._initial_states = initial_states[: self.num_envs]
         return self._initial_states
+
+    def reset(self, states=None, env_ids=None):
+        self.checker.reset(self.handler)
+        return super().reset(states, env_ids)
