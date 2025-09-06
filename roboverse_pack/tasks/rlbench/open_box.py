@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import math
-
-from metasim.example.example_pack.tasks.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
@@ -10,8 +7,8 @@ from metasim.task.registry import register_task
 from .rl_bench import RLBenchTask
 
 
-@register_task("rlbench.close_box", "close_box")
-class CloseBoxTask(RLBenchTask):
+@register_task("rlbench.open_box", "open_box", "franka.open_box")
+class OpenBoxTask(RLBenchTask):
     max_episode_steps = 250
     scenario = ScenarioCfg(
         objects=[
@@ -25,7 +22,5 @@ class CloseBoxTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_box/v2/franka_v2.pkl.gz"
-    checker = JointPosChecker(
-        obj_name="box_base", joint_name="box_joint", mode="le", radian_threshold=-14 / 180 * math.pi
-    )
+    traj_filepath = "roboverse_data/trajs/rlbench/open_boxv2/franka_v2.pkl.gz"
+    # TODO: add checker

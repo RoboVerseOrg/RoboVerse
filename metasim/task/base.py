@@ -45,6 +45,8 @@ class BaseTaskEnv:
     - close
     """
 
+    max_episode_steps = 100
+
     def __init__(
         self,
         scenario: BaseSimHandler | ScenarioCfg | None = None,
@@ -67,7 +69,6 @@ class BaseTaskEnv:
         self._initial_states = self._get_initial_states()
         self.device = device
         self._prepare_callbacks()
-        self.max_episode_steps = 100
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
     def _get_initial_states(self) -> list[dict]:

@@ -38,13 +38,13 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class Args:
     """Replay trajectory for a given task."""
 
-    task: str = "close_box"
+    task: str = "basketball_in_hoop"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "mujoco"
+        "isaacsim"
     )
     renderer: (
         Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None
