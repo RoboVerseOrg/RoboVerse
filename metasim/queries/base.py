@@ -11,8 +11,6 @@ if TYPE_CHECKING:
 class BaseQueryType:
     """Base class for all query types."""
 
-    supported_handlers = []
-
     def __init__(self, **kwargs):
         self.handler = None
         self.query_options = kwargs
