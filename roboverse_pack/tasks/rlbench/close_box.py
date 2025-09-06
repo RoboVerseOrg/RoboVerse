@@ -31,22 +31,22 @@ class CloseBoxTask(BaseTaskEnv):
         robots=["franka"],
     )
 
-    max_episode_steps = 250
-
-    traj_filepath = "roboverse_data/trajs/rlbench/close_box/v2/franka_v2.pkl.gz"
-
-    # success checker: cube falls into a bbox above base
-    checker = JointPosChecker(
-        obj_name="box_base",
-        joint_name="box_joint",
-        mode="le",
-        radian_threshold=-14 / 180 * math.pi,
-    )
-
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        self.traj_filepath = "roboverse_data/trajs/rlbench/close_box/v2/franka_v2.pkl.gz"
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
         super().__init__(scenario, device)
+
+        # task horizon
+        self.max_episode_steps = 250
+
+        # success checker: cube falls into a bbox above base
+        self.checker = JointPosChecker(
+            obj_name="box_base",
+            joint_name="box_joint",
+            mode="le",
+            radian_threshold=-14 / 180 * math.pi,
+        )
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when cube is detected in the bbox above base."""
