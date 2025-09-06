@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import math
-
 import torch
 
-from metasim.example.example_pack.tasks.checkers.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
@@ -33,15 +30,9 @@ class CloseBoxTask(BaseTaskEnv):
 
     max_episode_steps = 250
 
-    traj_filepath = "roboverse_data/trajs/rlbench/close_box/v2/franka_v2.pkl.gz"
+    traj_filepath = None
 
-    # success checker: cube falls into a bbox above base
-    checker = JointPosChecker(
-        obj_name="box_base",
-        joint_name="box_joint",
-        mode="le",
-        radian_threshold=-14 / 180 * math.pi,
-    )
+    checker = None
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)

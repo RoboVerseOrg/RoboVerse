@@ -16,14 +16,7 @@ from loguru import logger as log
 from rich.logging import RichHandler
 
 from metasim.constants import PhysicStateType, SimType
-from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.lights import DistantLightCfg, SphereLightCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.utils import configclass
-from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
-from roboverse_pack.randomization import (
+from metasim.randomization import (
     CameraPresets,
     CameraRandomizer,
     LightPresets,
@@ -33,7 +26,14 @@ from roboverse_pack.randomization import (
     ObjectPresets,
     ObjectRandomizer,
 )
-from roboverse_pack.randomization.presets.light_presets import LightScenarios
+from metasim.randomization.presets.light_presets import LightScenarios
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.lights import DistantLightCfg, SphereLightCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.utils import configclass
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_sim_handler_class
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
