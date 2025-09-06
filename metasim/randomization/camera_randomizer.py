@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from loguru import logger
 
-from metasim.randomizers.base import BaseRandomizerType
+from metasim.randomization.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
 
 
