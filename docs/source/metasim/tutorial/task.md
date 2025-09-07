@@ -65,7 +65,7 @@ This workflow ensures tasks are:
 
 ```python
 """Train PPO for a reaching task using RLTaskEnv."""
-from roboverse_learn.registry import get_task_class
+from metasim.task.registry import get_task_class
 import torch
 task_cls = get_task_class(args.task)  # e.g., "example.my_task"
 
