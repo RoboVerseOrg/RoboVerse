@@ -193,13 +193,19 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 cam_dict["depth"] = camera_state.depth[env_id].cpu()
             camera_states[camera_name] = cam_dict
 
+        extra_states = {}
+        if isinstance(tensor_state.extras, dict) :
+            for extra_key, extra_val in tensor_state.extras.items():
+                extra_states[extra_key] = extra_val[env_id].cpu()
+
         env_state = {
             "objects": object_states,
             "robots": robot_states,
             "cameras": camera_states,
+            "extras": extra_states,
         }
+        
         env_states.append(env_state)
-
     return env_states
 
 
@@ -224,6 +230,7 @@ def list_state_to_tensor(
     obj_names = sorted({n for es in env_states for n in es["objects"].keys()})
     robot_names = sorted({n for es in env_states for n in es["robots"].keys()})
     cam_names = sorted({n for es in env_states if "cameras" in es for n in es["cameras"].keys()})
+    extra_names = sorted({n for es in env_states if "extras" in es for n in es["extras"].keys()})
 
     n_env = len(env_states)
     dev = device
@@ -231,6 +238,7 @@ def list_state_to_tensor(
     objects: dict[str, ObjectState] = {}
     robots: dict[str, RobotState] = {}
     cameras: dict[str, CameraState] = {}
+    extras: dict[str, torch.Tensor] = {}
 
     # -------- objects --------------------------------------------------
     for name in obj_names:
@@ -341,11 +349,20 @@ def list_state_to_tensor(
             [es["cameras"][cam]["depth"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
         ).to(dev)
         cameras[cam] = CameraState(rgb=rgb, depth=depth)
+        
+    # -------- extras ----------------------------------------------
+    for extra_key in extra_names :
+        extra_vec = torch.stack(
+            [es["extras"][extra_key] for es in env_states if "extras" in es and extra_key in es["extras"]],
+            dim = 0
+        ).to(dev)
+        extras[extra_key] = extra_vec
 
     return TensorState(
         objects=objects,
         robots=robots,
         cameras=cameras,
+        extras=extras
     )
 
 
