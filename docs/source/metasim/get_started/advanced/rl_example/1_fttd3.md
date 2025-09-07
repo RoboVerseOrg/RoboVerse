@@ -20,7 +20,7 @@ We provide tutorials for training FastTD3, inference and saving video.
 Run the following command to train a humanoid agent using FastTD3:
 
 ```bash
-python get_started/rl/fast_td3/1_fttd3_humanoid.py
+python get_started/rl/fast_td3/1_fttd3.py
 ```
 
 This script uses the following default configuration:
@@ -34,6 +34,8 @@ You can modify the task, robot model, or simulator by editing the `CONFIG` dicti
 
 FastTD3 achieves fast and stable convergence:
 **H1-Stand** and **H1-Walk** tasks reach success threshold in **under 10 minutes** on a **Quadro RTX 6000**.
+
+You can also use other simulators.
 
 ### You can get the video like this:
 #### Stand:

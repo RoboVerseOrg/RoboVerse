@@ -117,12 +117,12 @@ import torch
 import torch.nn.functional as F
 import tqdm
 import wandb
-from fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from loguru import logger as log
 from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
+from get_started.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 
