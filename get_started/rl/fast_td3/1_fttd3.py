@@ -28,9 +28,9 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1,
+    "total_timesteps": 1500,
     "learning_starts": 10,
-    "num_steps": 1500,
+    "num_steps": 1,
     # -------------------------------------------------------------------------------
     # Replay, Batching, Discounting
     # -------------------------------------------------------------------------------
@@ -313,7 +313,8 @@ def main() -> None:
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
             real_actions = envs.unnormalise_action(act)
-            obs, _, done, _ = env.step(real_actions.float())
+            obs, _, done, _, _ = env.step(real_actions.float())
+
             frames.append(env.render())
             if done.any():
                 break
