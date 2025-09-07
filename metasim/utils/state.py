@@ -194,7 +194,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
             camera_states[camera_name] = cam_dict
 
         extra_states = {}
-        if isinstance(tensor_state.extras, dict) :
+        if isinstance(tensor_state.extras, dict):
             for extra_key, extra_val in tensor_state.extras.items():
                 extra_states[extra_key] = extra_val[env_id].cpu()
 
@@ -204,7 +204,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
             "cameras": camera_states,
             "extras": extra_states,
         }
-        
+
         env_states.append(env_state)
     return env_states
 
@@ -349,21 +349,15 @@ def list_state_to_tensor(
             [es["cameras"][cam]["depth"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
         ).to(dev)
         cameras[cam] = CameraState(rgb=rgb, depth=depth)
-        
+
     # -------- extras ----------------------------------------------
-    for extra_key in extra_names :
+    for extra_key in extra_names:
         extra_vec = torch.stack(
-            [es["extras"][extra_key] for es in env_states if "extras" in es and extra_key in es["extras"]],
-            dim = 0
+            [es["extras"][extra_key] for es in env_states if "extras" in es and extra_key in es["extras"]], dim=0
         ).to(dev)
         extras[extra_key] = extra_vec
 
-    return TensorState(
-        objects=objects,
-        robots=robots,
-        cameras=cameras,
-        extras=extras
-    )
+    return TensorState(objects=objects, robots=robots, cameras=cameras, extras=extras)
 
 
 def adapt_actions(

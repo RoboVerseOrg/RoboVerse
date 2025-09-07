@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
-from metasim.utils.state import state_tensor_to_nested, list_state_to_tensor
+from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
+
 # from metasim.utils.hf_util import FileDownloader
 
 
@@ -33,7 +34,7 @@ class BaseSimHandler(ABC):
         self.headless = scenario.headless
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
         self._state_cache_expire = True
-        self._states : TensorState | list[DictEnvState] = None
+        self._states: TensorState | list[DictEnvState] = None
 
     def launch(self) -> None:
         """Launch the simulation."""
