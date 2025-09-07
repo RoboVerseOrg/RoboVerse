@@ -99,6 +99,9 @@ class JointPosChecker:
     def get_debug_viewers(self) -> list[BaseObjCfg]:
         return []
 
+    def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
+        pass
+
 
 @configclass
 class JointPosShiftChecker:

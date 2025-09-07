@@ -129,7 +129,7 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                 metadata = json.load(f)
 
             ee_states = metadata.get('robot_ee_state', [])
-            task_desc = metadata.get('task_name', [])
+            task_desc = metadata.get('task_desc', [])
             depth_min = metadata.get('depth_min', [])
             depth_max = metadata.get('depth_max', [])
 

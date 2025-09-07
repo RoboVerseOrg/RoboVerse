@@ -86,7 +86,7 @@ class LiberoPickButterTask(BaseTaskEnv):
 
         # task horizon
         self.max_episode_steps = 250
-        self.task_language = "Pick up the butter and place it in the basket"
+        self.task_desc = "Pick up the butter and place it in the basket"
         # success checker: cube falls into a bbox above base
         self.checker = DetectedChecker(
             obj_name="butter",

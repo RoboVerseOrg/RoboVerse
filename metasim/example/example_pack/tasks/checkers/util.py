@@ -4,8 +4,6 @@ from typing import Any
 
 import torch
 
-from metasim.utils.state import state_tensor_to_nested
-
 
 def _get_root_state(states: Any, obj_name: str) -> torch.Tensor:
     if hasattr(states, "objects") and obj_name in states.objects:
@@ -41,27 +39,32 @@ def get_rot(handler: Any, obj_name: str, env_ids: list[int] | None = None) -> to
     return root_state[env_ids, 3:7]
 
 
-def get_dof_pos(handler: Any, obj_name: str, joint_name: str, env_ids: list[int] | None = None) -> torch.FloatTensor:
-    """Return the DOF position tensor for a given joint across `env_ids`.
-
-    Falls back to inferring `num_envs` from any available object/robot `root_state`
-    when `env_ids` is None.
-    """
+def get_dof_pos(
+    handler: Any,
+    obj_name: str,
+    joint_name: str,
+    env_ids: list[int] | None = None,
+) -> torch.FloatTensor:
+    """Return joint_name positions of obj_name for each env in env_ids."""
+    # Infer env_ids if none given
     if env_ids is None:
-        # Derive num_envs by reading any available root_state
-        states_tensor = handler.get_states(mode="tensor")
-        # Try to infer number of environments from any object/robot
-        try:
-            some_state = next(iter(states_tensor.objects.values()))
-        except StopIteration:
-            some_state = next(iter(states_tensor.robots.values()))
-        num_envs = some_state.root_state.shape[0]
-        env_ids = list(range(num_envs))
+        ts = handler.get_states(mode="tensor")
+        sample = next(iter(ts.objects.values()), None) or next(iter(ts.robots.values()))
+        env_ids = list(range(sample.root_state.shape[0]))
 
-    states_tensor = handler.get_states(env_ids=env_ids, mode="tensor")
-    nested_states = state_tensor_to_nested(handler, states_tensor)
-    values = [({**es["objects"], **es["robots"]}[obj_name]["dof_pos"][joint_name]) for es in nested_states]
-    device = getattr(handler, "device", None)
-    if device is not None:
-        return torch.tensor(values, dtype=torch.float32, device=device)
-    return torch.tensor(values, dtype=torch.float32)
+    ts = handler.get_states(env_ids=env_ids, mode="tensor")
+
+    # Locate joint tensor
+    if obj_name in ts.objects:
+        joint_tensor = ts.objects[obj_name].joint_pos
+    elif obj_name in ts.robots:
+        joint_tensor = ts.robots[obj_name].joint_pos
+    else:
+        raise KeyError(f"{obj_name} not found")
+
+    j_idx = handler._get_joint_names(obj_name).index(joint_name)
+    env_tensor = torch.tensor(env_ids, dtype=torch.long, device=joint_tensor.device)
+    dof_pos = joint_tensor.index_select(0, env_tensor)[:, j_idx]
+
+    target_dev = getattr(handler, "device", joint_tensor.device)
+    return dof_pos.to(dtype=torch.float32, device=target_dev)

@@ -24,7 +24,7 @@ class Args:
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaacsim"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -53,7 +53,7 @@ class Args:
     renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
     ## Domain randomization options
-    enable_randomization: bool = True
+    enable_randomization: bool = False
     """Enable domain randomization during demo collection"""
     randomize_materials: bool = True
     """Enable material randomization (when randomization is enabled)"""
@@ -421,14 +421,14 @@ def get_run_out(all_actions, env, demo_idxs: list[int]) -> list[bool]:
     return run_out
 
 
-def save_demo_mp(save_req_queue: mp.Queue):
+def save_demo_mp(save_req_queue: mp.Queue, robot_cfg: RobotCfg, task_desc: str):
     from metasim.utils.save_util import save_demo
 
     while (save_request := save_req_queue.get()) is not None:
         demo = save_request["demo"]
         save_dir = save_request["save_dir"]
         log.info(f"Received save request, saving to {save_dir}")
-        save_demo(save_dir, demo)
+        save_demo(save_dir, demo, robot_cfg=robot_cfg, task_desc=task_desc)
 
 
 def ensure_clean_state(handler, expected_state=None):
@@ -542,12 +542,14 @@ global_step = 0
 
 
 class DemoCollector:
-    def __init__(self, handler):
+    def __init__(self, handler, robot_cfg, task_desc=""):
         assert isinstance(handler, BaseSimHandler)
         self.handler = handler
+        self.robot_cfg = robot_cfg
+        self.task_desc = task_desc
         self.cache: dict[int, list[dict]] = {}
         self.save_request_queue = mp.Queue()
-        self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue,))
+        self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue, robot_cfg, task_desc))
         self.save_proc.start()
 
         TaskName = args.task
@@ -582,7 +584,7 @@ class DemoCollector:
 
         from metasim.utils.save_util import save_demo
 
-        save_demo(save_dir, self.cache[demo_idx])
+        save_demo(save_dir, self.cache[demo_idx], self.robot_cfg, self.task_desc)
 
         ## Option 2: Save in a separate process, non-blocking, not friendly to KeyboardInterrupt
         # self.save_request_queue.put({"demo": self.cache[demo_idx], "save_dir": save_dir})
@@ -705,7 +707,9 @@ def main():
     ## CollectingDemo -> Timeout -> Retry/GiveUp -> NextDemo
 
     ## Setup
-    collector = DemoCollector(env.handler)
+    # Get task description from environment
+    task_desc = getattr(env, "task_desc", "")
+    collector = DemoCollector(env.handler, robot, task_desc)
     pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
 
     ## State variables
