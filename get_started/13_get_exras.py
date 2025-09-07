@@ -276,8 +276,8 @@ for _ in range(100):
         for _ in range(scenario.num_envs)
     ]
     env.set_dof_targets(actions)
-    env.simulate()  
-    obs = env.get_states(mode="dict")           # get dict type states
+    env.simulate()
+    obs = env.get_states(mode="dict")  # get dict type states
     obs_tensor = env.get_states(mode="tensor")  # get tensor type states
     obs_saver.add(obs)
     extras = env.get_extra()
