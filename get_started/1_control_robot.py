@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
         ## Others
         num_envs: int = 1
-        headless: bool = True
+        headless: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     env.set_states(init_states * scenario.num_envs)
     os.makedirs("get_started/output", exist_ok=True)
 
-    obs = env.get_states(mode="dict")
+    obs = env.get_states(mode="tensor")
     ## Main loop
     obs_saver = ObsSaver(video_path=f"get_started/output/1_move_robot_{args.sim}.mp4")
     obs_saver.add(obs)
@@ -166,7 +166,7 @@ if __name__ == "__main__":
         ]
         env.set_dof_targets(actions)
         env.simulate()
-        obs = env.get_states(mode="dict")
+        obs = env.get_states(mode="tensor")
         obs_saver.add(obs)
         step += 1
 
