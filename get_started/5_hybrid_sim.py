@@ -38,10 +38,8 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
-    renderer: (
-        Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None
-    ) = "isaacsim"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+    renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] | None = "isaacsim"
 
     ## Others
     num_envs: int = 1
