@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
 import genesis as gs
 import numpy as np
 import torch
@@ -75,9 +78,12 @@ class GenesisHandler(BaseSimHandler):
             pass
 
         if self.robot:
+            # Sanitize URDF to remove invalid empty collision nodes which
+            # cause genesis' urdf parser to crash.
+            robot_urdf_path = self._sanitize_urdf(self.robot.urdf_path)
             self.robot_inst: RigidEntity = self.scene_inst.add_entity(
                 gs.morphs.URDF(
-                    file=self.robot.urdf_path,
+                    file=robot_urdf_path,
                     fixed=self.robot.fix_base_link,
                     merge_fixed_links=self.robot.collapse_fixed_joints,
                 ),
@@ -102,12 +108,14 @@ class GenesisHandler(BaseSimHandler):
                     gs.morphs.Sphere(radius=obj.radius), surface=gs.surfaces.Default(color=obj.color)
                 )
             elif isinstance(obj, RigidObjCfg):
+                urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
                 obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.URDF(file=obj.urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
+                    gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
                 )
             elif isinstance(obj, ArticulationObjCfg):
+                urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
                 obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.URDF(file=obj.urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
+                    gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
                 )
             else:
                 raise NotImplementedError(f"Object type {type(obj)} not supported")
@@ -195,9 +203,29 @@ class GenesisHandler(BaseSimHandler):
         for camera in self.cameras:
             camera_inst = self.camera_inst_dict[camera.name]
             rgb, depth, _, _ = camera_inst.render(depth=True)
+
+            # Ensure tensors and normalize RGB to [0, 255] for consistency
+            if isinstance(rgb, np.ndarray):
+                rgb_t = torch.from_numpy(rgb.copy())
+            else:
+                rgb_t = torch.as_tensor(rgb)
+            if rgb_t.is_floating_point():
+                # If already [0,1], scale to [0,255]
+                try:
+                    maxv = float(rgb_t.max().item())
+                except Exception:
+                    maxv = 1.0
+                if maxv <= 1.01:
+                    rgb_t = (rgb_t * 255.0).clamp(0, 255)
+
+            if isinstance(depth, np.ndarray):
+                depth_t = torch.from_numpy(depth.copy())
+            else:
+                depth_t = torch.as_tensor(depth)
+
             state = CameraState(
-                rgb=torch.from_numpy(rgb.copy()).unsqueeze(0).repeat_interleave(self.num_envs, dim=0),  # XXX
-                depth=torch.from_numpy(depth.copy()).unsqueeze(0).repeat_interleave(self.num_envs, dim=0),  # XXX
+                rgb=rgb_t.unsqueeze(0).repeat_interleave(self.num_envs, dim=0),
+                depth=depth_t.unsqueeze(0).repeat_interleave(self.num_envs, dim=0),
             )
             camera_states[camera.name] = state
 
@@ -248,9 +276,14 @@ class GenesisHandler(BaseSimHandler):
                             envs_idx=env_ids,
                         )
                     else:
-                        qs_idx_local = torch.arange(
-                            1, 1 + len(joint_names), dtype=torch.int32, device=gs.device
-                        ).tolist()
+                        # Use actual local q indices per joint (skips FREE root qs properly)
+                        qs_idx_local: list[int] = []
+                        for j in obj_inst.joints:
+                            if j.name in joint_names:
+                                try:
+                                    qs_idx_local.extend(list(j.qs_idx_local))
+                                except Exception:
+                                    pass
                         obj_inst.set_qpos(
                             joint_pos_array,
                             qs_idx_local=qs_idx_local,
@@ -262,8 +295,13 @@ class GenesisHandler(BaseSimHandler):
         if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
             self.scene_inst.viewer.update()
 
-    def set_dof_targets(self, obj_name: str, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: list[Action]) -> None:
         self._actions_cache = actions
+
+        if not self.robot:
+            return
+
+        obj_name = self.robot.name
 
         control_mode = self._get_control_mode(obj_name)
         joint_names = self._get_joint_names(obj_name, sort=False)
@@ -351,7 +389,21 @@ class GenesisHandler(BaseSimHandler):
         obj_cfg = self.object_dict[obj_name]
         if isinstance(obj_cfg, (ArticulationObjCfg, RobotCfg)):
             joints: list[RigidJoint] = self.object_inst_dict[obj_name].joints
-            joint_names = [j.name for j in joints if j.dof_idx_local is not None]
+            # Exclude FREE and FIXED joints (e.g., floating base), and only include joints with DoFs
+            joint_names = []
+            for j in joints:
+                try:
+                    if j.type in (gs.JOINT_TYPE.FREE, gs.JOINT_TYPE.FIXED):
+                        continue
+                except Exception:
+                    pass
+                try:
+                    dofs = getattr(j, "dofs_idx_local", None)
+                    if dofs is None or len(dofs) == 0:
+                        continue
+                except Exception:
+                    continue
+                joint_names.append(j.name)
 
             if sort:
                 joint_names.sort()
@@ -377,3 +429,37 @@ class GenesisHandler(BaseSimHandler):
         self.scene_inst = None
         self.object_inst_dict = {}
         self.camera_inst_dict = {}
+
+    def _sanitize_urdf(self, urdf_path: str | None) -> str | None:
+        """
+        removing empty <collision> nodes.
+        """
+        if urdf_path is None:
+            return None
+
+        try:
+            src = Path(urdf_path)
+            if not src.exists():
+                return urdf_path
+            tree = ET.parse(src)
+            root = tree.getroot()
+            changed = False
+
+            for link in root.findall(".//link"):
+                to_remove = []
+                for coll in link.findall("collision"):
+                    if coll.find("geometry") is None:
+                        to_remove.append(coll)
+                for coll in to_remove:
+                    link.remove(coll)
+                    changed = True
+
+            if not changed:
+                return urdf_path
+
+            dst = src.with_suffix(".genesis.urdf")
+            tree.write(dst, encoding="utf-8", xml_declaration=True)
+            return str(dst)
+        except Exception as e:
+            log.warning(f"URDF sanitize failed for {urdf_path}: {e}. Using original file.")
+            return urdf_path
