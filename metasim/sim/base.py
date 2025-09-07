@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
+from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
 # from metasim.utils.hf_util import FileDownloader
 
@@ -33,6 +34,7 @@ class BaseSimHandler(ABC):
         self.headless = scenario.headless
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
         self._state_cache_expire = True
+        self._states: TensorState | list[DictEnvState] = None
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -53,7 +55,7 @@ class BaseSimHandler(ABC):
     ## Set states
     ############################################################
     @abstractmethod
-    def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
         """Set the states of the environment.
         For a new simulator, you should implement this method.
 
@@ -63,7 +65,7 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
-    def set_states(self, states: TensorState | DictEnvState, env_ids: list[int] | None = None) -> None:
+    def set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
         self._state_cache_expire = True
         self._set_states(states, env_ids)
@@ -102,12 +104,15 @@ class BaseSimHandler(ABC):
 
     def get_states(
         self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"
-    ) -> TensorState | DictEnvState:
+    ) -> TensorState | list[DictEnvState]:
         """Get the states of the environment."""
-        # TODO: do type change here
         if self._state_cache_expire:
             self._states = self._get_states(env_ids=env_ids)
             self._state_cache_expire = False
+        if isinstance(self._states, TensorState) and mode == "dict":
+            self._states = state_tensor_to_nested(self, self._states)
+        elif isinstance(self._states, list) and mode == "tensor":
+            self._states = list_state_to_tensor(self, self._states)
         return self._states
 
     ############################################################
