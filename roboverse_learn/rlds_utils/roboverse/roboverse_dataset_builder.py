@@ -1,186 +1,270 @@
 from typing import Iterator, Tuple, Any
 import os
-import glob
+import json
+import imageio.v2 as iio
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_hub as hub
-import json
 
 tfds.core.utils.gcs_utils._is_gcs_disabled = True
 os.environ['NO_GCE_CHECK'] = 'true'
 
+
 class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
-    """DatasetBuilder for example dataset."""
+    """DatasetBuilder for RoboVerse demos (mp4 + metadata)."""
 
     VERSION = tfds.core.Version('1.0.0')
-    RELEASE_NOTES = {
-      '1.0.0': 'Initial release.',
-    }
+    RELEASE_NOTES = {'1.0.0': 'Initial release.'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # sentence embed model
         self._embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
 
     def _info(self) -> tfds.core.DatasetInfo:
-        """Dataset metadata (homepage, citation,...)."""
+        """Dataset metadata (features)."""
         return self.dataset_info_from_configs(
             features=tfds.features.FeaturesDict({
                 'steps': tfds.features.Dataset({
                     'observation': tfds.features.FeaturesDict({
                         'image': tfds.features.Image(
-                            shape=(256, 256, 3),
+                            shape=(None, None, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
-                            doc='Main camera RGB observation.',
+                            doc='RGB image (H,W,3).'
                         ),
                         'depth_image': tfds.features.Image(
-                            shape=(256, 256, 3),
+                            shape=(None, None, 1),
                             dtype=np.uint8,
-                            encoding_format='png',
-                            doc='Wrist camera RGB observation.',
+                            doc='Depth (visualized as uint8) (H,W,1).'
                         ),
                         'state': tfds.features.Tensor(
                             shape=(8,),
                             dtype=np.float32,
-                            doc='Robot state, qpos or RTX version: consists of [7x robot joint angles, '
-                                '2x gripper position, 1x door opening angle].',
+                            doc='EE state (8 dims).'
                         )
                     }),
                     'action': tfds.features.Tensor(
                         shape=(8,),
                         dtype=np.float32,
-                        doc='Robot action, qpos or RTX version: consists of [7x joint velocities, '
-                            '2x gripper velocities, 1x terminate episode].',
+                        doc='Next EE state as action (8 dims).'
                     ),
-                    'discount': tfds.features.Scalar(
-                        dtype=np.float32,
-                        doc='Discount if provided, default to 1.'
-                    ),
-                    'reward': tfds.features.Scalar(
-                        dtype=np.float32,
-                        doc='Reward if provided, 1 on final step for demos.'
-                    ),
-                    'is_first': tfds.features.Scalar(
-                        dtype=np.bool_,
-                        doc='True on first step of the episode.'
-                    ),
-                    'is_last': tfds.features.Scalar(
-                        dtype=np.bool_,
-                        doc='True on last step of the episode.'
-                    ),
-                    'is_terminal': tfds.features.Scalar(
-                        dtype=np.bool_,
-                        doc='True on last step of the episode if it is a terminal step, True for demos.'
-                    ),
-                    'language_instruction': tfds.features.Text(
-                        doc='Language Instruction.'
-                    ),
+                    'discount': tfds.features.Scalar(dtype=np.float32),
+                    'reward': tfds.features.Scalar(dtype=np.float32),
+                    'is_first': tfds.features.Scalar(dtype=np.bool_),
+                    'is_last': tfds.features.Scalar(dtype=np.bool_),
+                    'is_terminal': tfds.features.Scalar(dtype=np.bool_),
+                    'language_instruction': tfds.features.Text(),
                     'language_embedding': tfds.features.Tensor(
-                        shape=(512,),
-                        dtype=np.float32,
-                        doc='Kona language embedding. '
-                            'See https://tfhub.dev/google/universal-sentence-encoder-large/5'
+                        shape=(512,), dtype=np.float32
                     ),
                 }),
                 'episode_metadata': tfds.features.FeaturesDict({
-                    'file_path': tfds.features.Text(
-                        doc='Path to the original data file.'
-                    ),
+                    'file_path': tfds.features.Text(),
+                    'depth_min': tfds.features.Tensor(shape=(None,), dtype=np.float32),
+                    'depth_max': tfds.features.Tensor(shape=(None,), dtype=np.float32),
                 }),
-            }))
+            })
+        )
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
-        """Define data splits."""
+        """Define data splits. `path` can be relative to cwd or absolute."""
+        # Use manual path 'demo/' relative to current working dir by default.
+        # If running under TFDS specifics, consider using dl_manager.manual_dir.
         return {
             'train': self._generate_examples(path='demo/'),
-            # 'val': self._generate_examples(path='data/val/episode_*.npy'),
         }
 
     def _generate_examples(self, path) -> Iterator[Tuple[str, Any]]:
-        """Generator of examples for each split."""
+        """Generator: find episodes and parse them."""
 
-        def _get_episode_paths(path):
-            episode_paths = []
-            tasks = os.listdir(path)
-            for task in tasks:
-                task_path = os.path.join(path, task)
+        def _get_episode_paths(root_path):
+            """Traverse task/robot/episode nested layout and collect episode dirs."""
+            roots = []
+            if not os.path.exists(root_path):
+                return roots
+            for task in sorted(os.listdir(root_path)):
+                task_path = os.path.join(root_path, task)
                 if not os.path.isdir(task_path):
                     continue
-                robots = os.listdir(task_path)
-                for robot in robots:
+                for robot in sorted(os.listdir(task_path)):
                     robot_path = os.path.join(task_path, robot)
-                    episodes = os.listdir(robot_path)
-                    for episode in episodes:
-                        episode_path = os.path.join(robot_path, episode)
-                        if not os.path.isdir(episode_path):
-                            continue
-                        episode_paths.append(episode_path)
-            return episode_paths
+                    if not os.path.isdir(robot_path):
+                        continue
+                    for ep in sorted(os.listdir(robot_path)):
+                        ep_path = os.path.join(robot_path, ep)
+                        if os.path.isdir(ep_path):
+                            roots.append(ep_path)
+            return roots
 
-        def _parse_example(episode_path):
-            # load raw data --> this should change for your dataset
+        def _count_frames(reader):
+            """Robust frame counting for imageio Reader."""
+            try:
+                return reader.count_frames()
+            except Exception:
+                try:
+                    return reader.get_length()
+                except Exception:
+                    # fallback: probe until get_data raises
+                    i = 0
+                    while True:
+                        try:
+                            reader.get_data(i)
+                            i += 1
+                        except Exception:
+                            break
+                    return i
 
-            metadata_path = os.path.join(episode_path, 'metadata.json')
-            camera_param_path = os.path.join(episode_path, 'cam_info.json') # if exists
-
-            assert os.path.isfile(metadata_path), f"metadata.json not found in {episode_path}"
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-
-            ee_states = metadata.get('robot_ee_state', [])
-            task_desc = metadata.get('task_desc', [])
-            depth_min = metadata.get('depth_min', [])
-            depth_max = metadata.get('depth_max', [])
-
-            images = sorted([img for img in os.listdir(episode_path) if img.startswith('rgb')],
-                            key=lambda x: int(x.split('_')[1].split('.')[0]))
-            depth_images = sorted([img for img in os.listdir(episode_path) if img.startswith('depth')],
-                            key=lambda x: int(x.split('_')[1].split('.')[0]))
-            if len(images) != len(depth_images):
+        def _safe_reader(path):
+            """Return imageio reader or None on failure."""
+            if not os.path.isfile(path):
+                return None
+            try:
+                return iio.get_reader(path, "ffmpeg")
+            except Exception:
                 return None
 
-            # assemble episode --> here we're assuming demos so we set reward to 1 at the end
-            episode = []
-            for i, step in enumerate(images):
-                # compute Kona language embedding
-                language_embedding = self._embed([task_desc[0]])[0].numpy()
+        def _parse_example(episode_path):
+            """Parse one episode folder into (id, sample) or return None on failure."""
+            # load metadata
+            meta_file = os.path.join(episode_path, "metadata.json")
+            if not os.path.isfile(meta_file):
+                return None
+            try:
+                with open(meta_file, "r") as f:
+                    meta = json.load(f)
+            except Exception:
+                return None
 
-                episode.append({
-                    'observation': {
-                        'image': os.path.join(episode_path, images[i]),
-                        'depth_image': os.path.join(episode_path, depth_images[i]),
-                        'state': ee_states[i],
-                    },
-                    'action': ee_states[i + 1] if i + 1 < len(ee_states) else ee_states[i],
-                    'discount': 1.0,
-                    'reward': float(i == (len(images) - 1)),
-                    'is_first': i == 0,
-                    'is_last': i == (len(images) - 1),
-                    'is_terminal': i == (len(images) - 1),
-                    'language_instruction': task_desc[0],
-                    'language_embedding': language_embedding,
-                })
+            # get keys (support both names)
+            ee_states = meta.get("ee_state") or meta.get("robot_ee_state") or []
+            if not ee_states:
+                return None
+            task_desc = meta.get("task_desc", "") or (meta.get("task_desc_list", [""])[0] if meta.get("task_desc_list") else "")
+            depth_min = meta.get("depth_min", [])
+            depth_max = meta.get("depth_max", [])
 
-            # create output data sample
+            # open readers
+            rgb_path = os.path.join(episode_path, "rgb.mp4")
+            depth_path = os.path.join(episode_path, "depth_uint8.mp4")  # visualized depth mp4
+
+            rgb_reader = _safe_reader(rgb_path)
+            depth_reader = _safe_reader(depth_path)
+
+            if rgb_reader is None or depth_reader is None:
+                # try alternative names if present
+                alt_rgb = os.path.join(episode_path, "rgb.mp4")
+                alt_depth = os.path.join(episode_path, "depth.mp4")
+                rgb_reader = rgb_reader or _safe_reader(alt_rgb)
+                depth_reader = depth_reader or _safe_reader(alt_depth)
+            if rgb_reader is None or depth_reader is None:
+                # cannot decode videos
+                print(f"[WARN] Missing video reader for {episode_path}")
+                return None
+
+            # count frames
+            try:
+                T_rgb = _count_frames(rgb_reader)
+                T_depth = _count_frames(depth_reader)
+            except Exception:
+                # close readers on failure
+                try:
+                    rgb_reader.close()
+                except Exception:
+                    pass
+                try:
+                    depth_reader.close()
+                except Exception:
+                    pass
+                return None
+
+            T_state = len(ee_states)
+            if not (T_rgb == T_depth == T_state):
+                # lengths must match
+                rgb_reader.close()
+                depth_reader.close()
+                print(f"[WARN] length mismatch: rgb={T_rgb}, depth={T_depth}, state={T_state} @ {episode_path}")
+                return None
+
+            # compute language embedding once
+            try:
+                lang_emb = self._embed([task_desc])[0].numpy() if task_desc is not None else np.zeros((512,), dtype=np.float32)
+            except Exception:
+                lang_emb = np.zeros((512,), dtype=np.float32)
+
+            steps = []
+            try:
+                for t in range(T_rgb):
+                    # read frames
+                    try:
+                        rgb = rgb_reader.get_data(t)           # (H,W,3) uint8
+                    except Exception:
+                        print(f"[WARN] failed read rgb frame {t} @ {episode_path}")
+                        rgb = np.zeros((256, 256, 3), dtype=np.uint8)
+
+                    try:
+                        depth = depth_reader.get_data(t)
+                        # ensure single channel
+                        if depth.ndim == 3 and depth.shape[2] > 1:
+                            depth = depth[:, :, :1]
+                        elif depth.ndim == 2:
+                            depth = depth[:, :, None]
+                    except Exception:
+                        print(f"[WARN] failed read depth frame {t} @ {episode_path}")
+                        depth = np.zeros((rgb.shape[0], rgb.shape[1], 1), dtype=np.uint8)
+
+                    state_t = np.array(ee_states[t], dtype=np.float32)
+                    action_t = np.array(ee_states[t + 1], dtype=np.float32) if t + 1 < T_state else state_t
+
+                    step = {
+                        "observation": {
+                            "image": rgb,
+                            "depth_image": depth,
+                            "state": state_t,
+                        },
+                        "action": action_t,
+                        "discount": 1.0,
+                        "reward": float(t == (T_rgb - 1)),
+                        "is_first": t == 0,
+                        "is_last": t == (T_rgb - 1),
+                        "is_terminal": t == (T_rgb - 1),
+                        "language_instruction": task_desc,
+                        "language_embedding": lang_emb,
+                    }
+                    steps.append(step)
+            finally:
+                try:
+                    rgb_reader.close()
+                except Exception:
+                    pass
+                try:
+                    depth_reader.close()
+                except Exception:
+                    pass
+
             sample = {
-                'steps': episode,
-                'episode_metadata': {
-                    'file_path': episode_path
+                "steps": steps,
+                "episode_metadata": {
+                    "file_path": episode_path,
+                    "depth_min": np.array(depth_min, dtype=np.float32).tolist(),
+                    "depth_max": np.array(depth_max, dtype=np.float32).tolist(),
                 }
             }
-
-            # if you want to skip an example for whatever reason, simply return None
             return episode_path, sample
 
+        # main loop
+        root_path = path if os.path.isabs(path) else os.path.join(os.getcwd(), path)
+        episode_paths = _get_episode_paths(root_path)
 
-        episode_paths = _get_episode_paths(path)
         for episode_path in episode_paths:
-            yield _parse_example(episode_path)
+            parsed = _parse_example(episode_path)
+            if parsed is None:
+                continue
+            yield parsed
 
-        # for large datasets use beam to parallelize data parsing (this will have initialization overhead)
+        # parallel Beam variant (commented)
         # beam = tfds.core.lazy_imports.apache_beam
         # return (
-        #         beam.Create(episode_paths)
-        #         | beam.Map(_parse_example)
+        #     beam.Create(episode_paths)
+        #     | beam.Map(_parse_example)
         # )
