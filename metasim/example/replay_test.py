@@ -32,6 +32,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+from metasim.utils.kinematics_utils import get_ee_state
 
 
 @configclass
@@ -171,7 +172,8 @@ def main():  # noqa: D103
         actions = get_actions(all_actions, step, num_envs, scenario.robots[0])
         obs, reward, success, time_out, extras = env.step(actions)
         log.trace(f"Time to step: {time.time() - t1:.2f}s")
-
+        ee_states = get_ee_state(obs, robot_config=scenario.robots[0])
+        log.info(f"EE state at step {step}: {ee_states}")
         saver_act.add(obs)
 
         try:

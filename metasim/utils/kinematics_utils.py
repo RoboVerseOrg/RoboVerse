@@ -95,16 +95,7 @@ def tcp_pose_from_ee_pose(robot_cfg: RobotCfg, ee_pos: torch.Tensor, ee_quat: to
 
 
 def get_ee_state(obs, robot_config, tensorize=False):
-    """Get the end-effector state (position and orientation) from robot observation data.
-
-    Args:
-        obs: The observation data containing robot states.
-        robot_config: The robot configuration object.
-        tensorize (bool, optional): Whether to return tensors instead of numpy arrays. Defaults to False.
-
-    Returns:
-        tuple: A tuple containing the end-effector position and quaternion orientation.
-    """
+    """Return EE [pos(3), quat(4), grip(1)] with binary grip (1=open, 0=close)."""
     rs = obs.robots[robot_config.name]
     device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
 
@@ -115,28 +106,52 @@ def get_ee_state(obs, robot_config, tensorize=False):
         rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos, device=device).float()
     )
 
-    ee_idx = rs.body_names.index(robot_config.ee_body_name)
-    ee_joint_idx = rs.joint_names.index(robot_config.ee_joint_name)
+    ee_body_index = rs.body_names.index(robot_config.ee_body_name)
+    ee_joint_indices = robot_config.ee_joint_indices
+    ee_pos_world = body_state[:, ee_body_index, 0:3]
+    ee_quat_world = body_state[:, ee_body_index, 3:7]
 
-    ee_pos_world = body_state[:, ee_idx, 0:3]  # (B,3)
-    ee_quat_world = body_state[:, ee_idx, 3:7]  # (B,4)
+    joint_pos_gripper = (
+        joint_pos[:, ee_joint_indices] if len(ee_joint_indices) > 1 else joint_pos[:, ee_joint_indices[0]].unsqueeze(-1)
+    )
+    open_q = torch.as_tensor(robot_config.gripper_open_q, device=device, dtype=joint_pos_gripper.dtype).view(1, -1)
+    close_q = torch.as_tensor(robot_config.gripper_close_q, device=device, dtype=joint_pos_gripper.dtype).view(1, -1)
+    denom = (open_q - close_q).clamp_min(1e-6)
+    open_ratio = ((joint_pos_gripper - close_q) / denom).clamp(0.0, 1.0)
+    gripper_open_binary = (open_ratio.mean(dim=-1) >= 0.5).to(joint_pos_gripper.dtype)
 
-    joint_pos_grip = joint_pos[:, ee_joint_idx]  # (B,K)
-    open_q = torch.as_tensor(robot_config.gripper_open_q, device=device, dtype=joint_pos_grip.dtype).view(
-        1, -1
-    )  # (1,K)
-    close_q = torch.as_tensor(robot_config.gripper_close_q, device=device, dtype=joint_pos_grip.dtype).view(
-        1, -1
-    )  # (1,K)
+    ee_flat_world = torch.cat([ee_pos_world, ee_quat_world, gripper_open_binary.unsqueeze(-1)], dim=-1)
 
-    denom = open_q - close_q
-    denom = torch.where(denom.abs() < 1e-6, torch.full_like(denom, 1e-6), denom)
-    open_per_finger = ((joint_pos_grip - close_q) / denom).clamp(0, 1)  # (B,K)
-    gripper_open = open_per_finger.mean(dim=-1)  # (B,)
+    return ee_flat_world if tensorize else [{"ee_state": ee_flat_world[i]} for i in range(ee_flat_world.shape[0])]
 
-    ee_flat_world = torch.cat([ee_pos_world, ee_quat_world, gripper_open.unsqueeze(-1)], dim=-1)  # (B,8)
 
-    if tensorize:
-        return ee_flat_world
-    else:
-        return [{"ee_state": ee_flat_world[i]} for i in range(ee_flat_world.shape[0])]
+def get_ee_state_from_list(env_states, robot_config, tensorize=False):
+    """Return per-env EE [pos(3), quat(4), grip(1)] with binary grip (1=open, 0=close)."""
+    robot_name = robot_config.name
+    ee_body_name = robot_config.ee_body_name
+    ee_joint_names = robot_config.ee_joint_names
+
+    gripper_open_q = torch.as_tensor(robot_config.gripper_open_q, dtype=torch.float32).view(-1)
+    gripper_close_q = torch.as_tensor(robot_config.gripper_close_q, dtype=torch.float32).view(-1)
+    if gripper_open_q.numel() != len(ee_joint_names) or gripper_close_q.numel() != len(ee_joint_names):
+        raise ValueError("gripper_(open|close)_q must match ee_joint_names length")
+
+    ee_states = []
+    for env_state in env_states:
+        robot_state = env_state["robots"][robot_name]
+        body_state = robot_state["body"][ee_body_name]
+
+        ee_pos_world = torch.as_tensor(body_state["pos"], dtype=torch.float32).view(3)
+        ee_quat_world = torch.as_tensor(body_state["rot"], dtype=torch.float32).view(4)
+
+        finger_positions = torch.stack(
+            [torch.as_tensor(robot_state["dof_pos"][j], dtype=torch.float32) for j in ee_joint_names], dim=0
+        )
+        denom = (gripper_open_q - gripper_close_q).clamp_min(1e-6)
+        open_ratio = ((finger_positions - gripper_close_q) / denom).clamp(0.0, 1.0)
+        gripper_open_binary = (open_ratio.mean() >= 0.5).to(torch.float32)
+
+        ee_states.append(torch.cat([ee_pos_world, ee_quat_world, gripper_open_binary.view(1)], dim=0))
+
+    ee_states = torch.stack(ee_states, dim=0)
+    return ee_states if tensorize else [{"ee_state": ee_states[i]} for i in range(ee_states.shape[0])]
