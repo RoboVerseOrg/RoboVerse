@@ -31,6 +31,7 @@ CONFIG: dict[str, Any] = {
     "total_timesteps": 1500,
     "learning_starts": 10,
     "num_steps": 1,
+
     # -------------------------------------------------------------------------------
     # Replay, Batching, Discounting
     # -------------------------------------------------------------------------------
@@ -314,6 +315,7 @@ def main() -> None:
                 act = actor(obs_normalizer(obs))
             real_actions = envs.unnormalise_action(act)
             obs, _, done, _, _ = env.step(real_actions.float())
+
             frames.append(env.render())
             if done.any():
                 break
