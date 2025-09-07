@@ -193,13 +193,19 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 cam_dict["depth"] = camera_state.depth[env_id].cpu()
             camera_states[camera_name] = cam_dict
 
+        extra_states = {}
+        if isinstance(tensor_state.extras, dict):
+            for extra_key, extra_val in tensor_state.extras.items():
+                extra_states[extra_key] = extra_val[env_id].cpu()
+
         env_state = {
             "objects": object_states,
             "robots": robot_states,
             "cameras": camera_states,
+            "extras": extra_states,
         }
-        env_states.append(env_state)
 
+        env_states.append(env_state)
     return env_states
 
 
@@ -217,13 +223,14 @@ def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | Non
 
 def list_state_to_tensor(
     handler: BaseSimHandler,
-    env_states: list[dict],
+    env_states: list[DictEnvState],
     device: torch.device | str = "cpu",
 ) -> TensorState:
     """Convert nested python list-states to a batched TensorState."""
     obj_names = sorted({n for es in env_states for n in es["objects"].keys()})
     robot_names = sorted({n for es in env_states for n in es["robots"].keys()})
     cam_names = sorted({n for es in env_states if "cameras" in es for n in es["cameras"].keys()})
+    extra_names = sorted({n for es in env_states if "extras" in es for n in es["extras"].keys()})
 
     n_env = len(env_states)
     dev = device
@@ -231,6 +238,7 @@ def list_state_to_tensor(
     objects: dict[str, ObjectState] = {}
     robots: dict[str, RobotState] = {}
     cameras: dict[str, CameraState] = {}
+    extras: dict[str, torch.Tensor] = {}
 
     # -------- objects --------------------------------------------------
     for name in obj_names:
@@ -298,15 +306,15 @@ def list_state_to_tensor(
             root[e, 7:10] = vel
             root[e, 10:13] = ang_vel
             for i, jn in enumerate(sorted(jnames)):
-                if "dof_pos" in s and jn in s["dof_pos"]:
+                if "dof_pos" in s and s["dof_pos"] is not None and jn in s["dof_pos"]:
                     jpos[e, i] = s["dof_pos"][jn]
-                if "dof_vel" in s and jn in s["dof_vel"]:
+                if "dof_vel" in s and s["dof_vel"] is not None and jn in s["dof_vel"]:
                     jvel[e, i] = s["dof_vel"][jn]
-                if "dof_pos_target" in s and jn in s["dof_pos_target"]:
+                if "dof_pos_target" in s and s["dof_pos_target"] is not None and jn in s["dof_pos_target"]:
                     jpos_t[e, i] = s["dof_pos_target"][jn]
-                if "dof_vel_target" in s and jn in s["dof_vel_target"]:
+                if "dof_vel_target" in s and s["dof_vel_target"] is not None and jn in s["dof_vel_target"]:
                     jvel_t[e, i] = s["dof_vel_target"][jn]
-                if "dof_torque" in s and jn in s["dof_torque"]:
+                if "dof_torque" in s and s["dof_torque"] is not None and jn in s["dof_torque"]:
                     jeff_t[e, i] = s["dof_torque"][jn]
 
             if body is not None and "body" in s:
@@ -342,11 +350,14 @@ def list_state_to_tensor(
         ).to(dev)
         cameras[cam] = CameraState(rgb=rgb, depth=depth)
 
-    return TensorState(
-        objects=objects,
-        robots=robots,
-        cameras=cameras,
-    )
+    # -------- extras ----------------------------------------------
+    for extra_key in extra_names:
+        extra_vec = torch.stack(
+            [es["extras"][extra_key] for es in env_states if "extras" in es and extra_key in es["extras"]], dim=0
+        ).to(dev)
+        extras[extra_key] = extra_vec
+
+    return TensorState(objects=objects, robots=robots, cameras=cameras, extras=extras)
 
 
 def adapt_actions(
