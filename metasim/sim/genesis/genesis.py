@@ -245,8 +245,12 @@ class GenesisHandler(BaseSimHandler):
 
             obj_inst = self.object_inst_dict[obj.name]
 
-            positions = np.array([states_flat[env_id][obj.name]["pos"] for env_id in env_ids])
-            rotations = np.array([states_flat[env_id][obj.name]["rot"] for env_id in env_ids])
+            positions = torch.stack(
+                [torch.as_tensor(states_flat[env_id][obj.name]["pos"]) for env_id in env_ids], dim=0
+            )
+            rotations = torch.stack(
+                [torch.as_tensor(states_flat[env_id][obj.name]["rot"]) for env_id in env_ids], dim=0
+            )
 
             obj_inst.set_pos(positions)
             obj_inst.set_quat(rotations)
@@ -262,13 +266,13 @@ class GenesisHandler(BaseSimHandler):
                         env_joint_pos = []
                         for jn in joint_names:
                             if jn in states_flat[env_id][obj.name]["dof_pos"]:
-                                pos_val = float(states_flat[env_id][obj.name]["dof_pos"][jn])
-                                env_joint_pos.append(pos_val)
+                                pos_val = states_flat[env_id][obj.name]["dof_pos"][jn]
+                                env_joint_pos.append(float(pos_val))
                             else:
                                 env_joint_pos.append(0.0)
                         joint_positions.append(env_joint_pos)
 
-                    joint_pos_array = np.array(joint_positions)
+                    joint_pos_array = torch.tensor(joint_positions, dtype=torch.float32)
 
                     if obj.fix_base_link:
                         obj_inst.set_qpos(
@@ -295,21 +299,48 @@ class GenesisHandler(BaseSimHandler):
         if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
             self.scene_inst.viewer.update()
 
-    def _set_dof_targets(self, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
         self._actions_cache = actions
 
         if not self.robot:
             return
 
         obj_name = self.robot.name
-
-        control_mode = self._get_control_mode(obj_name)
-        joint_names = self._get_joint_names(obj_name, sort=False)
-
         obj_inst = self.object_inst_dict[obj_name]
+        control_mode = self._get_control_mode(obj_name)
+        sim_joint_names = self._get_joint_names(obj_name, sort=False)
+
+        # Fast-path: tensor input (VectorEnv). Assume position control.
+        if isinstance(actions, torch.Tensor):
+            # Map tensor joint order (RobotCfg order) -> simulator joint order
+            cfg_joint_order = list(self.object_dict[obj_name].joint_limits.keys())
+            idxs = [cfg_joint_order.index(jn) for jn in sim_joint_names if jn in cfg_joint_order]
+            if len(idxs) == 0:
+                return
+            # Select and shape per Genesis expectations
+            if actions.dim() == 1:
+                actions = actions.unsqueeze(0)
+            position = actions[:, idxs]
+
+            dofs_idx_local: list[int] = []
+            for j in obj_inst.joints:
+                if j.name in sim_joint_names and j.dofs_idx_local is not None:
+                    dofs_idx_local.extend(j.dofs_idx_local)
+
+            if dofs_idx_local:
+                obj_inst.control_dofs_position(position=position, dofs_idx_local=dofs_idx_local)
+            return
+
+        # Dict/list input path
+        joint_names = sim_joint_names
 
         if control_mode == "effort":
-            if actions and obj_name in actions[0] and "dof_effort_target" in actions[0][obj_name]:
+            if (
+                isinstance(actions, list)
+                and len(actions) > 0
+                and obj_name in actions[0]
+                and "dof_effort_target" in actions[0][obj_name]
+            ):
                 available_joints = set(actions[0][obj_name]["dof_effort_target"].keys())
                 joint_names = [jn for jn in joint_names if jn in available_joints]
 
@@ -329,7 +360,12 @@ class GenesisHandler(BaseSimHandler):
                     dofs_idx_local=dofs_idx_local,
                 )
         else:
-            if actions and obj_name in actions[0] and "dof_pos_target" in actions[0][obj_name]:
+            if (
+                isinstance(actions, list)
+                and len(actions) > 0
+                and obj_name in actions[0]
+                and "dof_pos_target" in actions[0][obj_name]
+            ):
                 available_joints = set(actions[0][obj_name]["dof_pos_target"].keys())
                 joint_names = [jn for jn in joint_names if jn in available_joints]
 
