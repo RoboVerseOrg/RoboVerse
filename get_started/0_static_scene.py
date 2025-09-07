@@ -135,14 +135,9 @@ if __name__ == "__main__":
     ]
     env.launch()
     env.set_states(init_states)
-    # while True:
-    #     env.simulate()
-    obs = env.get_states(mode="dict")
-    obs_tensor = env.get_states(mode="tensor")
+    obs = env.get_states(mode="dict")           # get states as a dictionary
+    obs_tensor = env.get_states(mode="tensor")  # get states as a tensor
     
-    import ipdb
-    
-    ipdb.set_trace()
     os.makedirs("get_started/output", exist_ok=True)
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"
     log.info(f"Saving image to {save_path}")

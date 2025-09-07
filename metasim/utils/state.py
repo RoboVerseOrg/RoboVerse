@@ -298,15 +298,15 @@ def list_state_to_tensor(
             root[e, 7:10] = vel
             root[e, 10:13] = ang_vel
             for i, jn in enumerate(sorted(jnames)):
-                if "dof_pos" in s and jn in s["dof_pos"]:
+                if "dof_pos" in s and s["dof_pos"] is not None and jn in s["dof_pos"]:
                     jpos[e, i] = s["dof_pos"][jn]
-                if "dof_vel" in s and jn in s["dof_vel"]:
+                if "dof_vel" in s and s["dof_vel"] is not None and jn in s["dof_vel"]:
                     jvel[e, i] = s["dof_vel"][jn]
-                if "dof_pos_target" in s and jn in s["dof_pos_target"]:
+                if "dof_pos_target" in s and s["dof_pos_target"] is not None and jn in s["dof_pos_target"]:
                     jpos_t[e, i] = s["dof_pos_target"][jn]
-                if "dof_vel_target" in s and jn in s["dof_vel_target"]:
+                if "dof_vel_target" in s and s["dof_vel_target"] is not None and jn in s["dof_vel_target"]:
                     jvel_t[e, i] = s["dof_vel_target"][jn]
-                if "dof_torque" in s and jn in s["dof_torque"]:
+                if "dof_torque" in s and s["dof_torque"] is not None and jn in s["dof_torque"]:
                     jeff_t[e, i] = s["dof_torque"][jn]
 
             if body is not None and "body" in s:
