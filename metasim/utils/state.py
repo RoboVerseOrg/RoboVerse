@@ -217,7 +217,7 @@ def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | Non
 
 def list_state_to_tensor(
     handler: BaseSimHandler,
-    env_states: list[dict],
+    env_states: list[DictEnvState],
     device: torch.device | str = "cpu",
 ) -> TensorState:
     """Convert nested python list-states to a batched TensorState."""
