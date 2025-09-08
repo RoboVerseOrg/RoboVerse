@@ -29,25 +29,25 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                 'steps': tfds.features.Dataset({
                     'observation': tfds.features.FeaturesDict({
                         'image': tfds.features.Image(
-                            shape=(None, None, 3),
+                            shape=(256, 256, 3),
                             dtype=np.uint8,
                             doc='RGB image (H,W,3).'
                         ),
                         'depth_image': tfds.features.Image(
-                            shape=(None, None, 1),
+                            shape=(256, 256, 3),
                             dtype=np.uint8,
                             doc='Depth (visualized as uint8) (H,W,1).'
                         ),
                         'state': tfds.features.Tensor(
-                            shape=(8,),
+                            shape=(7,),
                             dtype=np.float32,
-                            doc='EE state (8 dims).'
+                            doc='EE state (7 dims).'
                         )
                     }),
                     'action': tfds.features.Tensor(
-                        shape=(8,),
+                        shape=(7,),
                         dtype=np.float32,
-                        doc='Next EE state as action (8 dims).'
+                        doc='Delta action (next_state - current_state) (7 dims).'
                     ),
                     'discount': tfds.features.Scalar(dtype=np.float32),
                     'reward': tfds.features.Scalar(dtype=np.float32),
@@ -102,18 +102,15 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
             try:
                 return reader.count_frames()
             except Exception:
-                try:
-                    return reader.get_length()
-                except Exception:
-                    # fallback: probe until get_data raises
-                    i = 0
-                    while True:
-                        try:
-                            reader.get_data(i)
-                            i += 1
-                        except Exception:
-                            break
-                    return i
+                # fallback: probe until get_data raises
+                i = 0
+                while True:
+                    try:
+                        reader.get_data(i)
+                        i += 1
+                    except Exception:
+                        break
+                return i
 
         def _safe_reader(path):
             """Return imageio reader or None on failure."""
@@ -130,11 +127,9 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
             meta_file = os.path.join(episode_path, "metadata.json")
             if not os.path.isfile(meta_file):
                 return None
-            try:
-                with open(meta_file, "r") as f:
-                    meta = json.load(f)
-            except Exception:
-                return None
+
+            with open(meta_file, "r") as f:
+                meta = json.load(f)
 
             # get keys (support both names)
             ee_states = meta.get("ee_state") or meta.get("robot_ee_state") or []
@@ -163,20 +158,8 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                 return None
 
             # count frames
-            try:
-                T_rgb = _count_frames(rgb_reader)
-                T_depth = _count_frames(depth_reader)
-            except Exception:
-                # close readers on failure
-                try:
-                    rgb_reader.close()
-                except Exception:
-                    pass
-                try:
-                    depth_reader.close()
-                except Exception:
-                    pass
-                return None
+            T_rgb = _count_frames(rgb_reader)
+            T_depth = _count_frames(depth_reader)
 
             T_state = len(ee_states)
             if not (T_rgb == T_depth == T_state):
@@ -187,60 +170,56 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                 return None
 
             # compute language embedding once
-            try:
-                lang_emb = self._embed([task_desc])[0].numpy() if task_desc is not None else np.zeros((512,), dtype=np.float32)
-            except Exception:
-                lang_emb = np.zeros((512,), dtype=np.float32)
+            lang_emb = self._embed([task_desc])[0].numpy() if task_desc else np.zeros((512,), dtype=np.float32)
 
             steps = []
-            try:
-                for t in range(T_rgb):
-                    # read frames
-                    try:
-                        rgb = rgb_reader.get_data(t)           # (H,W,3) uint8
-                    except Exception:
-                        print(f"[WARN] failed read rgb frame {t} @ {episode_path}")
-                        rgb = np.zeros((256, 256, 3), dtype=np.uint8)
-
-                    try:
-                        depth = depth_reader.get_data(t)
-                        # ensure single channel
-                        if depth.ndim == 3 and depth.shape[2] > 1:
-                            depth = depth[:, :, :1]
-                        elif depth.ndim == 2:
-                            depth = depth[:, :, None]
-                    except Exception:
-                        print(f"[WARN] failed read depth frame {t} @ {episode_path}")
-                        depth = np.zeros((rgb.shape[0], rgb.shape[1], 1), dtype=np.uint8)
-
-                    state_t = np.array(ee_states[t], dtype=np.float32)
-                    action_t = np.array(ee_states[t + 1], dtype=np.float32) if t + 1 < T_state else state_t
-
-                    step = {
-                        "observation": {
-                            "image": rgb,
-                            "depth_image": depth,
-                            "state": state_t,
-                        },
-                        "action": action_t,
-                        "discount": 1.0,
-                        "reward": float(t == (T_rgb - 1)),
-                        "is_first": t == 0,
-                        "is_last": t == (T_rgb - 1),
-                        "is_terminal": t == (T_rgb - 1),
-                        "language_instruction": task_desc,
-                        "language_embedding": lang_emb,
-                    }
-                    steps.append(step)
-            finally:
+            for t in range(T_rgb):
+                # read frames
                 try:
-                    rgb_reader.close()
+                    rgb = rgb_reader.get_data(t)           # (H,W,3) uint8
                 except Exception:
-                    pass
+                    print(f"[WARN] failed read rgb frame {t} @ {episode_path}")
+                    rgb = np.zeros((256, 256, 3), dtype=np.uint8)
+
                 try:
-                    depth_reader.close()
+                    depth = depth_reader.get_data(t)
+                    # ensure single channel
+                    if depth.ndim == 3 and depth.shape[2] > 1:
+                        depth = depth[:, :, :1]
+                    elif depth.ndim == 2:
+                        depth = depth[:, :, None]
                 except Exception:
-                    pass
+                    print(f"[WARN] failed read depth frame {t} @ {episode_path}")
+                    depth = np.zeros((rgb.shape[0], rgb.shape[1], 1), dtype=np.uint8)
+
+                state_t = np.array(ee_states[t], dtype=np.float32)
+                # Calculate delta action (next_state - current_state)
+                if t + 1 < T_state:
+                    next_state = np.array(ee_states[t + 1], dtype=np.float32)
+                    action_t = next_state - state_t  # delta action
+                else:
+                    action_t = np.zeros_like(state_t)  # zero action for last step
+
+                step = {
+                    "observation": {
+                        "image": rgb,
+                        "depth_image": depth,
+                        "state": state_t,
+                    },
+                    "action": action_t,
+                    "discount": 1.0,
+                    "reward": float(t == (T_rgb - 1)),
+                    "is_first": t == 0,
+                    "is_last": t == (T_rgb - 1),
+                    "is_terminal": t == (T_rgb - 1),
+                    "language_instruction": task_desc,
+                    "language_embedding": lang_emb,
+                }
+                steps.append(step)
+
+            # close readers
+            rgb_reader.close()
+            depth_reader.close()
 
             sample = {
                 "steps": steps,
