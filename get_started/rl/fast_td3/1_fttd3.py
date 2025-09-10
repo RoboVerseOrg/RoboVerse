@@ -104,7 +104,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 try:
     import isaacgym
-    
+
 except ImportError:
     pass
 
@@ -161,7 +161,7 @@ def main() -> None:
     else:
         if torch.cuda.is_available():
             device = torch.device(f"cuda:{cfg('device_rank')}")
-            
+
         elif torch.backends.mps.is_available():
             device = torch.device(f"mps:{cfg('device_rank')}")
         else:

@@ -85,7 +85,6 @@ class H1Cfg(RobotCfg):
         "right_elbow": 0.0,
     }
 
-
     control_type: dict[str, Literal["position", "effort"]] = {
         "left_hip_yaw": "position",
         "left_hip_roll": "position",
@@ -107,7 +106,6 @@ class H1Cfg(RobotCfg):
         "right_shoulder_yaw": "position",
         "right_elbow": "position",
     }
-
 
     # rigid body name substrings, to find indices of rigid bodies.
     feet_links: list[str] = [
