@@ -10,12 +10,12 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
     # -------------------------------------------------------------------------------
-    "sim": "mjx",
+    "sim": "isaacgym",
     "robots": ["h1"],
     "task": "walk",
     "decimation": 10,
     "train_or_eval": "train",
-    "headless": True,
+    "headless": False,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -102,17 +102,16 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import torch
 
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
-try:
-    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
-except ImportError:
-    pass
-
 import torch
 import torch.nn.functional as F
 import tqdm
@@ -161,6 +160,7 @@ def main() -> None:
     else:
         if torch.cuda.is_available():
             device = torch.device(f"cuda:{cfg('device_rank')}")
+
         elif torch.backends.mps.is_available():
             device = torch.device(f"mps:{cfg('device_rank')}")
         else:
