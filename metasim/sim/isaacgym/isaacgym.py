@@ -735,7 +735,8 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _simulate(self) -> None:
         # Step the physics
-        self._simulate_one_physics_step()
+        for _ in range(self.decimation):
+            self._simulate_one_physics_step()
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_jacobian_tensors(self.sim)

@@ -10,12 +10,12 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
     # -------------------------------------------------------------------------------
-    "sim": "mjx",
+    "sim": "isaacgym",
     "robots": ["h1"],
     "task": "walk",
     "decimation": 10,
     "train_or_eval": "train",
-    "headless": True,
+    "headless": False,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -42,15 +42,15 @@ CONFIG: dict[str, Any] = {
     # Update Schedule
     # -------------------------------------------------------------------------------
     "policy_frequency": 2,
-    "num_updates": 12,
+    "num_updates": 8,
     # -------------------------------------------------------------------------------
     # Optimizer & Network
     # -------------------------------------------------------------------------------
     "critic_learning_rate": 0.0003,
     "actor_learning_rate": 0.0003,
     "weight_decay": 0.1,
-    "critic_hidden_dim": 1024,
-    "actor_hidden_dim": 512,
+    "critic_hidden_dim": 4096,
+    "actor_hidden_dim": 2048,
     "init_scale": 0.01,
     "num_atoms": 101,
     # -------------------------------------------------------------------------------
@@ -102,16 +102,16 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+try:
+    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
+except ImportError:
+    pass
+
 import torch
 
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
-try:
-    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
-except ImportError:
-    pass
 
 import torch
 import torch.nn.functional as F
