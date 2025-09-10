@@ -42,15 +42,15 @@ CONFIG: dict[str, Any] = {
     # Update Schedule
     # -------------------------------------------------------------------------------
     "policy_frequency": 2,
-    "num_updates": 8,
+    "num_updates": 12,
     # -------------------------------------------------------------------------------
     # Optimizer & Network
     # -------------------------------------------------------------------------------
     "critic_learning_rate": 0.0003,
     "actor_learning_rate": 0.0003,
     "weight_decay": 0.1,
-    "critic_hidden_dim": 4096,
-    "actor_hidden_dim": 2048,
+    "critic_hidden_dim": 1024,
+    "actor_hidden_dim": 512,
     "init_scale": 0.01,
     "num_atoms": 101,
     # -------------------------------------------------------------------------------
@@ -103,7 +103,8 @@ import rootutils
 rootutils.setup_root(__file__, pythonpath=True)
 
 try:
-    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
+    import isaacgym
+    
 except ImportError:
     pass
 
@@ -112,7 +113,6 @@ import torch
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
 import torch
 import torch.nn.functional as F
 import tqdm
@@ -161,6 +161,7 @@ def main() -> None:
     else:
         if torch.cuda.is_available():
             device = torch.device(f"cuda:{cfg('device_rank')}")
+            
         elif torch.backends.mps.is_available():
             device = torch.device(f"mps:{cfg('device_rank')}")
         else:
