@@ -42,11 +42,5 @@ class RLBenchTask(BaseTaskEnv):
     def reset(self, states=None, env_ids=None):
         """Reset the checker."""
         states = super().reset(states, env_ids)
-        # Some checkers (e.g., JointPosChecker) don't require a reset hook
-        if hasattr(self.checker, "reset"):
-            try:
-                self.checker.reset(self.handler, env_ids=env_ids)
-            except TypeError:
-                # In case checker.reset has a different signature
-                self.checker.reset(self.handler)
+        self.checker.reset(self.handler, env_ids=env_ids)
         return states
