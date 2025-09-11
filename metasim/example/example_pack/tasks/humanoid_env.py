@@ -126,7 +126,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             {
                 "objects": {},
                 "robots": {
-                    "h1": {
+                    self.robot_name: {
                         "dof_pos": {
                             "left_hip_yaw": 0.0,
                             "left_hip_roll": 0.0,
@@ -156,7 +156,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             for _ in range(self.num_envs)
         ]
 
-        return list_state_to_tensor(init)
+        return init
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]
