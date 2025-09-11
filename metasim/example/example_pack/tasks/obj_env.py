@@ -50,10 +50,11 @@ class ObjectEnv(BaseTaskEnv):
         robots=["franka"],
     )
 
+    max_episode_steps = 100
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = []
-        self.max_episode_steps = 100
 
     def _get_initial_states(self) -> list[dict]:
         """Get the initial states of the environment."""
