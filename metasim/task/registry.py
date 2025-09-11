@@ -26,7 +26,7 @@ def register_task(*names):
 
     def _decorator(cls):
         if not issubclass(cls, BaseTaskEnv):
-            log.warning(f"Register subclasses of {cls!r} is not a subclass of BaseTaskEnv")
+            log.warning(f"Register class {cls!r} is not a subclass of BaseTaskEnv")
         for raw_name in names:
             key = raw_name.strip().lower()
             if not key:
