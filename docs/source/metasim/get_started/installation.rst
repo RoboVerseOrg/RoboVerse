@@ -46,11 +46,11 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - ``uv pip install -e ".[pybullet]"``
      - 3.6-3.11
      - 3.10
-   * - Isaacsim v4.5.0
+   * - IsaacSim v4.5.0
      - See below
      - 3.10
      - 3.10
-   * - Isaacsim v5.0.0
+   * - IsaacSim v5.0.0
      - See below
      - 3.11
      - 3.11
@@ -64,21 +64,21 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
-Install IsaacSim v5.0.0 (IsaacLab v2.2.0, Recommended) 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab220]"
+    uv pip install -e ".[isaaclab221]"
     cd third_party
-    git clone --depth 1 --branch v2.2.0 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
+    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
 
 .. note::
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_. We no longer support IsaacSim v4.2.0 (IsaacLab v1.4.x).
 
 Install Isaacsim v4.5.0 (IsaacLab v2.1.1)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -127,13 +127,13 @@ Install IsaacGym
 Install Multiple Simulators
 ---------------------------
 
-Feel free to combine the above commands to install multiple simulators in one environment. For example, to install MuJoCo and IsaacLab v1.4 at the same time, you can run:
+Feel free to combine the above commands to install multiple simulators in one environment. For example, to install MuJoCo and IsaacSim at the same time, you can run:
 
 .. code-block:: bash
 
-    uv pip install -e ".[mujoco,isaaclab]"
+    uv pip install -e ".[mujoco,isaaclab221]"
     cd third_party
-    git clone --depth 1 --branch v1.4.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab141 && cd IsaacLab141
+    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
 
 .. note::
