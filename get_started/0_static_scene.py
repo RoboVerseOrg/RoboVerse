@@ -24,7 +24,12 @@ import imageio
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_handler_class
@@ -38,7 +43,16 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+        sim: Literal[
+            "isaacsim",
+            "isaacgym",
+            "genesis",
+            "pybullet",
+            "sapien2",
+            "sapien3",
+            "mujoco",
+            "mjx",
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 1
@@ -51,11 +65,22 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
 
     # initialize scenario
-    scenario = ScenarioCfg(robots=[args.robot], headless=args.headless, num_envs=args.num_envs, simulator=args.sim)
+    scenario = ScenarioCfg(
+        robots=[args.robot],
+        headless=args.headless,
+        num_envs=args.num_envs,
+        simulator=args.sim,
+    )
 
     # add cameras
     scenario.cameras = [
-        PinholeCameraCfg(name="camera", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+        PinholeCameraCfg(
+            name="camera",
+            width=1024,
+            height=1024,
+            pos=(1.5, -1.5, 1.5),
+            look_at=(0.0, 0.0, 0.0),
+        )
     ]
 
     # add objects
@@ -135,10 +160,9 @@ if __name__ == "__main__":
     ]
     env.launch()
     env.set_states(init_states)
-    obs = env.get_states(mode="dict")  # get states as a dictionary
     obs_tensor = env.get_states(mode="tensor")  # get states as a tensor
 
     os.makedirs("get_started/output", exist_ok=True)
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"
     log.info(f"Saving image to {save_path}")
-    imageio.imwrite(save_path, next(iter(obs.cameras.values())).rgb[0].cpu().numpy())
+    imageio.imwrite(save_path, next(iter(obs_tensor.cameras.values())).rgb[0].cpu().numpy())

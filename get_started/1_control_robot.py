@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
@@ -38,7 +43,15 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+        sim: Literal[
+            "isaacsim",
+            "isaacgym",
+            "genesis",
+            "pybullet",
+            "sapien2",
+            "sapien3",
+            "mujoco",
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 1
@@ -59,7 +72,11 @@ if __name__ == "__main__":
     )
 
     # add cameras
-    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+    scenario.cameras = [
+        PinholeCameraCfg(
+            width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
+        )
+    ]
 
     # add objects
     scenario.objects = [
@@ -155,7 +172,10 @@ if __name__ == "__main__":
                     "dof_pos_target": {
                         joint_name: (
                             torch.rand(1).item()
-                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                            * (
+                                robot.joint_limits[joint_name][1]
+                                - robot.joint_limits[joint_name][0]
+                            )
                             + robot.joint_limits[joint_name][0]
                         )
                         for joint_name in robot.joint_limits.keys()

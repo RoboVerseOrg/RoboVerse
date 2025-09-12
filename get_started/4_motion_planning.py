@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
@@ -37,7 +42,16 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal[
+        "isaacsim",
+        "isaacgym",
+        "genesis",
+        "pybullet",
+        "sapien2",
+        "sapien3",
+        "mujoco",
+        "mjx",
+    ] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -68,7 +82,11 @@ scenario = ScenarioCfg(
 )
 
 # add cameras
-scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+scenario.cameras = [
+    PinholeCameraCfg(
+        width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
+    )
+]
 
 # add objects
 scenario.objects = [
@@ -181,7 +199,7 @@ elif args.solver == "pyroki":
     robot_ik = get_pyroki_model(robot)
 
 env.set_states(init_states)
-obs = env.get_states(mode="dict")
+obs = env.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 ## Main loop
@@ -212,7 +230,9 @@ for step in range(200):
             device="cuda:0",
         )
     elif scenario.robots[0].name == "kinova_gen3_robotiq_2f85":
-        ee_pos_target = torch.tensor([[0.2 + 0.2 * (step / 100), 0.0, 0.4]], device="cuda:0").repeat(args.num_envs, 1)
+        ee_pos_target = torch.tensor(
+            [[0.2 + 0.2 * (step / 100), 0.0, 0.4]], device="cuda:0"
+        ).repeat(args.num_envs, 1)
         ee_quat_target = torch.tensor(
             [[0.0, 0.0, 1.0, 0.0]] * args.num_envs,
             device="cuda:0",
@@ -220,8 +240,14 @@ for step in range(200):
 
     if args.solver == "curobo":
         curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-        result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+        seed_config = (
+            curr_robot_q[:, :curobo_n_dof]
+            .unsqueeze(1)
+            .tile([1, robot_ik._num_seeds, 1])
+        )
+        result = robot_ik.solve_batch(
+            Pose(ee_pos_target, ee_quat_target), seed_config=seed_config
+        )
         ik_succ = result.success.squeeze(1)
         q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
         q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
@@ -234,13 +260,17 @@ for step in range(200):
         q = torch.stack(q_list, dim=0)
 
     actions = [
-        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+        {
+            robot.name: {
+                "dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))
+            }
+        }
         for i_env in range(scenario.num_envs)
     ]
 
     env.set_dof_targets(actions)
     env.simulate()
-    obs = env.get_states(mode="dict")
+    obs = env.get_states(mode="tensor")
     # obs, reward, success, time_out, extras = env.step(actions)
 
     obs_saver.add(obs)

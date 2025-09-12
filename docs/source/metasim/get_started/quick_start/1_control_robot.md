@@ -13,9 +13,9 @@ By running the above command, you will give random control actions to the robot 
 
 ### Examples
 
-#### IsaacLab
+#### IsaacSim
 ```bash
-python get_started/1_control_robot.py  --sim isaaclab
+python get_started/1_control_robot.py  --sim isaacsim
 ```
 
 #### Isaac Gym
@@ -54,7 +54,7 @@ You will get the following videos:
             <video width="100%" autoplay loop muted playsinline>
                 <source src="https://roboverse.wiki/_static/standard_output/1_move_robot_isaaclab.mp4" type="video/mp4">
             </video>
-            <p style="margin-top: 5px;">IsaacLab</p>
+            <p style="margin-top: 5px;">IsaacSim</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>

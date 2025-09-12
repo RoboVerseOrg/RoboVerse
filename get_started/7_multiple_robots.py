@@ -37,6 +37,7 @@ class Args:
     decimation: int = 20
     max_steps: int = 100
     save_video: bool = True
+    headless: bool = False
 
 
 def main():
@@ -63,6 +64,7 @@ def main():
         simulator=args.sim,
         num_envs=args.num_envs,
         decimation=args.decimation,
+        headless=args.headless,
     )
 
     log.info(f"Using simulator: {args.sim}")
@@ -174,7 +176,8 @@ def main():
                 robot.name: {
                     "dof_pos_target": {
                         jn: (
-                            torch.rand(1).item() * (robot.joint_limits[jn][1] - robot.joint_limits[jn][0])
+                            torch.rand(1).item()
+                            * (robot.joint_limits[jn][1] - robot.joint_limits[jn][0])
                             + robot.joint_limits[jn][0]
                         )
                         for jn in robot.actuators.keys()

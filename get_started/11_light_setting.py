@@ -25,7 +25,12 @@ import imageio
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, DistantLightCfg, DomeLightCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
@@ -55,11 +60,18 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
 
     # initialize scenario
-    scenario = ScenarioCfg(robots=[args.robot], headless=args.headless, num_envs=args.num_envs, simulator=args.sim)
+    scenario = ScenarioCfg(
+        robots=[args.robot],
+        headless=args.headless,
+        num_envs=args.num_envs,
+        simulator=args.sim,
+    )
 
     # Configure lighting based on preset
     if args.designed_lighting:
-        log.info(f"Using designed lighting configuration with preset: {args.lighting_preset}")
+        log.info(
+            f"Using designed lighting configuration with preset: {args.lighting_preset}"
+        )
 
         if args.lighting_preset == "natural":
             # Natural outdoor lighting - combines dome light with directional sun
@@ -112,11 +124,15 @@ if __name__ == "__main__":
                 ),
             ]
         else:
-            log.warning(f"Unknown lighting preset: {args.lighting_preset}, using natural preset")
+            log.warning(
+                f"Unknown lighting preset: {args.lighting_preset}, using natural preset"
+            )
             args.lighting_preset = "natural"
 
         if args.sim in ["isaacsim"]:
-            scenario.render = RenderCfg(mode="pathtracing")  # Best quality for complex lighting
+            scenario.render = RenderCfg(
+                mode="pathtracing"
+            )  # Best quality for complex lighting
             log.info("Using pathtracing render mode for optimal lighting quality")
 
     else:
@@ -150,16 +166,16 @@ if __name__ == "__main__":
             name="bbq_sauce",
             scale=(2, 2, 2),
             physics=PhysicStateType.RIGIDBODY,
-            usd_path="get_started/example_assets/bbq_sauce/usd/bbq_sauce.usd",
-            urdf_path="get_started/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            mjcf_path="get_started/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
         ArticulationObjCfg(
             name="box_base",
             fix_base_link=True,
-            usd_path="get_started/example_assets/box_base/usd/box_base.usd",
-            urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
-            mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+            usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+            urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+            mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
 
@@ -211,10 +227,12 @@ if __name__ == "__main__":
     env.set_states(init_states)
     # while True:
     #     env.simulate()
-    obs = env.get_states(mode="dict")
+    obs = env.get_states(mode="tensor")
     os.makedirs("get_started/output", exist_ok=True)
     if args.designed_lighting:
-        save_path = f"get_started/output/11_light_setting_{args.sim}_{args.lighting_preset}.png"
+        save_path = (
+            f"get_started/output/11_light_setting_{args.sim}_{args.lighting_preset}.png"
+        )
     else:
         save_path = f"get_started/output/11_light_setting_{args.sim}_default.png"
     log.info(f"Saving image to {save_path}")

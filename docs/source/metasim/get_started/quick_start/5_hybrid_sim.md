@@ -13,9 +13,9 @@ By running the above command, you will simulate a hybrid system and it will auto
 
 ### Examples
 
-#### IsaacLab + Mujoco
+#### IsaacSim + Mujoco
 ```bash
-python get_started/5_hybrid_sim.py  --sim mujoco --renderer isaaclab
+python get_started/5_hybrid_sim.py  --sim mujoco --renderer isaacsim
 ```
 
 You will get the following videos:
@@ -25,10 +25,10 @@ You will get the following videos:
             <video width="100%" autoplay loop muted playsinline>
                 <source src="https://roboverse.wiki/_static/standard_output/5_hybrid_sim_mujoco.mp4" type="video/mp4">
             </video>
-            <p style="margin-top: 5px;">Mujoco as physics engine & IsaacLab as renderer</p>
+            <p style="margin-top: 5px;">Mujoco as physics engine & IsaacSim as renderer</p>
         </div>
     </div>
 </div>
 
 
-This hybrid simulation approach allows us to leverage the best of both worlds - the accurate physics simulation from `Mujoco` combined with the high-quality rendering capabilities of `IsaacLab`. This powerful combination enables both efficient physics computations and visually appealing results.
+This hybrid simulation approach allows us to leverage the best of both worlds - the accurate physics simulation from `Mujoco` combined with the high-quality rendering capabilities of `IsaacSim`. This powerful combination enables both efficient physics computations and visually appealing results.
