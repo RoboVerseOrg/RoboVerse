@@ -72,11 +72,7 @@ if __name__ == "__main__":
     )
 
     # add cameras
-    scenario.cameras = [
-        PinholeCameraCfg(
-            width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
-        )
-    ]
+    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
 
     # add objects
     scenario.objects = [
@@ -172,10 +168,7 @@ if __name__ == "__main__":
                     "dof_pos_target": {
                         joint_name: (
                             torch.rand(1).item()
-                            * (
-                                robot.joint_limits[joint_name][1]
-                                - robot.joint_limits[joint_name][0]
-                            )
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
                             + robot.joint_limits[joint_name][0]
                         )
                         for joint_name in robot.joint_limits.keys()

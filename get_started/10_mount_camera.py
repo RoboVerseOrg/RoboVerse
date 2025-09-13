@@ -273,11 +273,7 @@ for _ in range(100):
             robot.name: {
                 "dof_pos_target": {
                     joint_name: (
-                        torch.rand(1).item()
-                        * (
-                            robot_joint_limits[joint_name][1]
-                            - robot_joint_limits[joint_name][0]
-                        )
+                        torch.rand(1).item() * (robot_joint_limits[joint_name][1] - robot_joint_limits[joint_name][0])
                         + robot_joint_limits[joint_name][0]
                     )
                     for joint_name in robot_joint_limits.keys()

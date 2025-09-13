@@ -176,8 +176,7 @@ def main():
                 robot.name: {
                     "dof_pos_target": {
                         jn: (
-                            torch.rand(1).item()
-                            * (robot.joint_limits[jn][1] - robot.joint_limits[jn][0])
+                            torch.rand(1).item() * (robot.joint_limits[jn][1] - robot.joint_limits[jn][0])
                             + robot.joint_limits[jn][0]
                         )
                         for jn in robot.actuators.keys()

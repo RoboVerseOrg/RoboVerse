@@ -41,9 +41,7 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal[
-            "isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"
-        ] = "mujoco"
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"] = "mujoco"
 
         ## Others
         num_envs: int = 4

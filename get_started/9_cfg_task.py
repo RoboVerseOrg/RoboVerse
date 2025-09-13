@@ -103,10 +103,7 @@ def main():
                     "dof_pos_target": {
                         joint_name: (
                             torch.rand(1).item()
-                            * (
-                                robot.joint_limits[joint_name][1]
-                                - robot.joint_limits[joint_name][0]
-                            )
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
                             + robot.joint_limits[joint_name][0]
                         )
                         for joint_name in robot.joint_limits.keys()
@@ -120,9 +117,7 @@ def main():
         # Save observations for video
         if obs_saver is not None:
             try:
-                raw_states = (
-                    env.env.handler.get_states()
-                )  # Access the underlying simulator
+                raw_states = env.env.handler.get_states()  # Access the underlying simulator
                 obs_saver.add(raw_states)
             except Exception as e:
                 log.debug(f"Could not get camera data: {e}")

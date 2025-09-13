@@ -43,9 +43,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal[
-        "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"
-    ] = "mujoco"
+    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -68,12 +66,8 @@ scenario = ScenarioCfg(
 
 # add cameras
 scenario.cameras = [
-    PinholeCameraCfg(
-        "cam0", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
-    ),
-    PinholeCameraCfg(
-        "cam1", width=1024, height=1024, pos=(1.5, 1.5, 1.5), look_at=(0.0, 0.0, 0.0)
-    ),
+    PinholeCameraCfg("cam0", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)),
+    PinholeCameraCfg("cam1", width=1024, height=1024, pos=(1.5, 1.5, 1.5), look_at=(0.0, 0.0, 0.0)),
 ]
 
 # add objects

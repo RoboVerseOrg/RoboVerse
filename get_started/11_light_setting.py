@@ -69,9 +69,7 @@ if __name__ == "__main__":
 
     # Configure lighting based on preset
     if args.designed_lighting:
-        log.info(
-            f"Using designed lighting configuration with preset: {args.lighting_preset}"
-        )
+        log.info(f"Using designed lighting configuration with preset: {args.lighting_preset}")
 
         if args.lighting_preset == "natural":
             # Natural outdoor lighting - combines dome light with directional sun
@@ -124,15 +122,11 @@ if __name__ == "__main__":
                 ),
             ]
         else:
-            log.warning(
-                f"Unknown lighting preset: {args.lighting_preset}, using natural preset"
-            )
+            log.warning(f"Unknown lighting preset: {args.lighting_preset}, using natural preset")
             args.lighting_preset = "natural"
 
         if args.sim in ["isaacsim"]:
-            scenario.render = RenderCfg(
-                mode="pathtracing"
-            )  # Best quality for complex lighting
+            scenario.render = RenderCfg(mode="pathtracing")  # Best quality for complex lighting
             log.info("Using pathtracing render mode for optimal lighting quality")
 
     else:
@@ -230,9 +224,7 @@ if __name__ == "__main__":
     obs = env.get_states(mode="tensor")
     os.makedirs("get_started/output", exist_ok=True)
     if args.designed_lighting:
-        save_path = (
-            f"get_started/output/11_light_setting_{args.sim}_{args.lighting_preset}.png"
-        )
+        save_path = f"get_started/output/11_light_setting_{args.sim}_{args.lighting_preset}.png"
     else:
         save_path = f"get_started/output/11_light_setting_{args.sim}_default.png"
     log.info(f"Saving image to {save_path}")

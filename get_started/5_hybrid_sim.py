@@ -43,9 +43,7 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal[
-        "isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"
-    ] = "mujoco"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
     renderer: (
         Literal[
             "isaacsim",
@@ -80,11 +78,7 @@ scenario = ScenarioCfg(
 )
 
 # add cameras
-scenario.cameras = [
-    PinholeCameraCfg(
-        width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0)
-    )
-]
+scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
 
 # add objects
 scenario.objects = [
@@ -125,9 +119,7 @@ if scenario.render is None:
 else:
     log.info(f"Using simulator: {scenario.simulator}, render: {scenario.renderer}")
     env_class_renderer = get_sim_handler_class(SimType(scenario.renderer))
-    env_renderer = env_class_renderer(
-        scenario
-    )  # Isaaclab must launch right after import
+    env_renderer = env_class_renderer(scenario)  # Isaaclab must launch right after import
     env_class_physics = get_sim_handler_class(SimType(scenario.simulator))
     env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
     env = HybridSimHandler(scenario, env_physics, env_renderer)
@@ -179,9 +171,7 @@ os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(
-    video_path=f"get_started/output/5_hybrid_sim_{args.sim}_render_{args.renderer}.mp4"
-)
+obs_saver = ObsSaver(video_path=f"get_started/output/5_hybrid_sim_{args.sim}_render_{args.renderer}.mp4")
 obs_saver.add(obs)
 
 step = 0
@@ -193,11 +183,7 @@ for _ in range(100):
             robot.name: {
                 "dof_pos_target": {
                     joint_name: (
-                        torch.rand(1).item()
-                        * (
-                            robot.joint_limits[joint_name][1]
-                            - robot.joint_limits[joint_name][0]
-                        )
+                        torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
                         + robot.joint_limits[joint_name][0]
                     )
                     for joint_name in robot.joint_limits.keys()
