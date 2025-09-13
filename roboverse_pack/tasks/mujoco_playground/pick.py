@@ -189,11 +189,11 @@ class PandaPickCube(RLTaskEnv):
         close_to_box = (gripper_box_dist <= distance_threshold).float()
 
         # Reward for closing (only when close)
-        close_reward = 0.5 * close_to_box * (gripper_closure / 0.08)
+        close_reward = close_to_box * (gripper_closure / 0.08)
 
         # Bonus: fingers not at joint extremes (0.00 or 0.04)
         finger_min, finger_max = 0.0, 0.04
-        eps = 1e-4  # tolerance
+        eps = 1e-3  # tolerance
         safe_f1 = ((finger1_pos > finger_min + eps) & (finger1_pos < finger_max - eps)).float()
         safe_f2 = ((finger2_pos > finger_min + eps) & (finger2_pos < finger_max - eps)).float()
 
