@@ -6,6 +6,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.registry import register_task
 from metasim.task.rl_task import RLTaskEnv
+from metasim.types import TensorState
 from metasim.utils import humanoid_reward_util
 from metasim.utils.humanoid_robot_util import (
     actuator_forces_tensor,
@@ -14,7 +15,6 @@ from metasim.utils.humanoid_robot_util import (
     robot_velocity_tensor,
     torso_upright_tensor,
 )
-from metasim.utils.state import TensorState
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -185,6 +185,7 @@ class RunEnv(BaseLocomotionEnv):
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=5.0)]
+
         self.reward_weights = [1.0]
 
 
@@ -196,5 +197,6 @@ class StandEnv(BaseLocomotionEnv):
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
+
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
         self.reward_weights = [1.0]
