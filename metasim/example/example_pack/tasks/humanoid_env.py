@@ -18,6 +18,7 @@ from metasim.utils.humanoid_robot_util import (
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
+
 G1_STAND_NECK_HEIGHT = 1.00
 
 
@@ -183,7 +184,8 @@ class RunEnv(BaseLocomotionEnv):
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
+        self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=5.0)]
+
         self.reward_weights = [1.0]
 
 
@@ -194,5 +196,7 @@ class StandEnv(BaseLocomotionEnv):
     max_episode_steps = 1000
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        super().__init__(scenario, device)
+
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
         self.reward_weights = [1.0]
