@@ -33,8 +33,6 @@ class DictObjectState(TypedDict):
     ang_vel: torch.Tensor | None
     dof_pos: Dof | None
     dof_vel: Dof | None
-    com: torch.Tensor | None
-    com_vel: torch.Tensor | None
 
 
 class DictRobotState(DictObjectState):
