@@ -170,37 +170,46 @@ class PandaPickCube(RLTaskEnv):
     def _reward_gripper_box(self, env_states) -> torch.Tensor:
         """Reward for gripper approaching the box and closing when close enough."""
         box_pos = env_states.objects["box"].root_state[:, 0:3]  # [num_envs, 3]
+
         gripper_pos = env_states.extras["gripper_pos"]  # [num_envs, 3]
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)  # [num_envs]
 
-        # Approach reward: nearer → higher
+        # print("gripper_pos[0]:", gripper_pos[0], "gripper_box_dist[0]:", gripper_box_dist[0])
+
+        # Basic approach reward
         approach_reward = 1 - torch.tanh(5 * gripper_box_dist)
 
-        # Finger joint positions
+        # Get gripper joint positions (finger joints)
         robot_joint_pos = env_states.robots[self.robot_name].joint_pos  # [num_envs, num_joints]
         finger1_pos = robot_joint_pos[:, 0]  # panda_finger_joint1
         finger2_pos = robot_joint_pos[:, 1]  # panda_finger_joint2
 
-        # Closure: 0 = open, 0.08 = closed
+        # Calculate gripper closure (0 = fully open, 0.08 = fully closed)
         gripper_closure = 0.08 - finger1_pos - finger2_pos  # [num_envs]
 
-        # Distance mask: only encourage closing when close to box
-        distance_threshold = 0.01
-        close_to_box = (gripper_box_dist <= distance_threshold).float()
+        # Distance-based gripper behavior reward
+        # When far: encourage open (low closure), when close: encourage close (high closure)
+        distance_threshold = 0.01  # [m]
+        far_from_box = (gripper_box_dist > distance_threshold).float()  # [num_envs]
+        close_to_box = (gripper_box_dist <= distance_threshold).float()  # [num_envs]
 
-        # Reward for closing (only when close)
-        close_reward = close_to_box * (gripper_closure / 0.08)
+        # When far: reward each finger to be around 0.01 (slightly open)
+        finger1_target = 0.01
+        finger2_target = 0.01
+        finger1_reward = 1.0 - torch.abs(finger1_pos - finger1_target) / 0.03  # [num_envs]
+        finger2_reward = 1.0 - torch.abs(finger2_pos - finger2_target) / 0.03  # [num_envs]
+        far_finger_reward = (finger1_reward + finger2_reward) / 2.0  # [num_envs]
 
-        # Bonus: fingers not at joint extremes (0.00 or 0.04)
-        finger_min, finger_max = 0.0, 0.04
-        eps = 1e-3  # tolerance
-        safe_f1 = ((finger1_pos > finger_min + eps) & (finger1_pos < finger_max - eps)).float()
-        safe_f2 = ((finger2_pos > finger_min + eps) & (finger2_pos < finger_max - eps)).float()
+        # When close: reward for closing (high closure)
+        close_reward = gripper_closure / 0.08  # [num_envs]
 
-        limit_bonus = 0.1 * (safe_f1 + safe_f2)  # [num_envs], 0/1/2
+        # Combine rewards based on distance
+        gripper_behavior_reward = (
+            far_from_box * far_finger_reward  # Far: reward each finger around 0.01
+            + close_to_box * close_reward  # Close: reward closed
+        )  # [num_envs]
 
-        # Final reward
-        return approach_reward + close_reward + limit_bonus
+        return approach_reward + gripper_behavior_reward
 
     def _reward_no_floor_collision(self, env_states) -> torch.Tensor:
         """Reward for not colliding with the floor."""
