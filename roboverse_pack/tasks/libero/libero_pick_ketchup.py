@@ -17,7 +17,7 @@ class LiberoPickKetchupTask(LiberoBaseTask):
     """
 
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="bbq_sauce",
                 physics=PhysicStateType.RIGIDBODY,
@@ -69,7 +69,6 @@ class LiberoPickKetchupTask(LiberoBaseTask):
             ),
         ]
     )
-    
 
     # task horizon
     max_episode_steps = 250

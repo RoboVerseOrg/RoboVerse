@@ -14,8 +14,9 @@ class LiberoBaseTask(BaseTaskEnv):
 
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl
     """
-    scenario =None
-    max_episode_steps=250
+
+    scenario = None
+    max_episode_steps = 250
     task_desc = None
     checker = None
     traj_filepath = None
@@ -24,7 +25,6 @@ class LiberoBaseTask(BaseTaskEnv):
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
         super().__init__(scenario, device)
-
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when cube is detected in the bbox above base."""

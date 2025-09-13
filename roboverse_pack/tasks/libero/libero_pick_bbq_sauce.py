@@ -9,7 +9,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 
 
-@register_task("libero.pick_bbq_sauce","pick_bbq_sauce")
+@register_task("libero.pick_bbq_sauce", "pick_bbq_sauce")
 class LiberoPickBbqSauceTask(LiberoBaseTask):
     """Configuration for the Libero pick bbq sauce task.
 
@@ -17,7 +17,7 @@ class LiberoPickBbqSauceTask(LiberoBaseTask):
     """
 
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="bbq_sauce",
                 physics=PhysicStateType.RIGIDBODY,

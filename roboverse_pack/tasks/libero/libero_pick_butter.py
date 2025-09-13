@@ -16,6 +16,7 @@ class LiberoPickButterTask(LiberoBaseTask):
 
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl
     """
+
     scenario = ScenarioCfg(
         objects=[
             RigidObjCfg(
@@ -84,10 +85,4 @@ class LiberoPickButterTask(LiberoBaseTask):
             checker_upper=[0.08, 0.08, 0.05],
         ),
     )
-    traj_filepath= "roboverse_data/trajs/libero/pick_up_the_butter_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
-
-
-
-
-
-
+    traj_filepath = "roboverse_data/trajs/libero/pick_up_the_butter_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"

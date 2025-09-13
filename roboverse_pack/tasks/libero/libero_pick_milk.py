@@ -17,7 +17,7 @@ class LiberoPickMilkTask(LiberoBaseTask):
     """
 
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="milk",
                 physics=PhysicStateType.RIGIDBODY,

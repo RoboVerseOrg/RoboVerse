@@ -9,7 +9,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 
 
-@register_task("maniskill.plug_charger","plug_charger")
+@register_task("maniskill.plug_charger", "plug_charger")
 class PlugChargerTask(ManiskillBaseTask):
     """The plug charger task from ManiSkill.
 
@@ -20,7 +20,7 @@ class PlugChargerTask(ManiskillBaseTask):
 
     max_episode_steps = 250
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="base",
                 usd_path="roboverse_data/assets/maniskill/charger/base/base.usd",

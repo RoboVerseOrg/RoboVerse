@@ -17,7 +17,7 @@ class LiberoPickTomatoSauceTask(LiberoBaseTask):
     """
 
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="tomato_sauce",
                 physics=PhysicStateType.RIGIDBODY,
@@ -69,7 +69,7 @@ class LiberoPickTomatoSauceTask(LiberoBaseTask):
             ),
         ]
     )
-    
+
     # task horizon
     max_episode_steps = 250
     task_desc = "Pick the tomato sauce and place it in the basket"
@@ -83,4 +83,6 @@ class LiberoPickTomatoSauceTask(LiberoBaseTask):
             checker_upper=[0.08, 0.08, 0.05],
         ),
     )
-    traj_filepath = "roboverse_data/trajs/libero/pick_up_the_tomato_sauce_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    traj_filepath = (
+        "roboverse_data/trajs/libero/pick_up_the_tomato_sauce_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    )

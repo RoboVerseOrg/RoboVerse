@@ -15,58 +15,59 @@ class LiberoPickAlphabetSoupTask(LiberoBaseTask):
 
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_alphabet_soup_and_place_it_in_the_basket.bddl
     """
+
     scenario = ScenarioCfg(
-        objects = [
-        RigidObjCfg(
-            name="alphabet_soup",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/usd/alphabet_soup.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/urdf/alphabet_soup.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/mjcf/alphabet_soup.xml",
-        ),
-        RigidObjCfg(
-            name="basket",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/usd/basket.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/urdf/basket.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/mjcf/basket.xml",
-        ),
-        RigidObjCfg(
-            name="salad_dressing",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/usd/salad_dressing.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/urdf/salad_dressing.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/mjcf/salad_dressing.xml",
-        ),
-        RigidObjCfg(
-            name="cream_cheese",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/usd/cream_cheese.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/urdf/cream_cheese.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/mjcf/cream_cheese.xml",
-        ),
-        RigidObjCfg(
-            name="milk",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/usd/milk.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/urdf/milk.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/mjcf/milk.xml",
-        ),
-        RigidObjCfg(
-            name="tomato_sauce",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/usd/tomato_sauce.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/urdf/tomato_sauce.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/mjcf/tomato_sauce.xml",
-        ),
-        RigidObjCfg(
-            name="butter",
-            physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/usd/butter.usd",
-            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/urdf/butter.urdf",
-            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/mjcf/butter.xml",
-        ),
-    ]
+        objects=[
+            RigidObjCfg(
+                name="alphabet_soup",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/usd/alphabet_soup.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/urdf/alphabet_soup.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/mjcf/alphabet_soup.xml",
+            ),
+            RigidObjCfg(
+                name="basket",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/usd/basket.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/urdf/basket.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/mjcf/basket.xml",
+            ),
+            RigidObjCfg(
+                name="salad_dressing",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/usd/salad_dressing.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/urdf/salad_dressing.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/salad_dressing/mjcf/salad_dressing.xml",
+            ),
+            RigidObjCfg(
+                name="cream_cheese",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/usd/cream_cheese.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/urdf/cream_cheese.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/cream_cheese/mjcf/cream_cheese.xml",
+            ),
+            RigidObjCfg(
+                name="milk",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/usd/milk.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/urdf/milk.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/milk/mjcf/milk.xml",
+            ),
+            RigidObjCfg(
+                name="tomato_sauce",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/usd/tomato_sauce.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/urdf/tomato_sauce.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/mjcf/tomato_sauce.xml",
+            ),
+            RigidObjCfg(
+                name="butter",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/usd/butter.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/urdf/butter.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/butter/mjcf/butter.xml",
+            ),
+        ]
     )
 
     # task horizon
@@ -82,4 +83,6 @@ class LiberoPickAlphabetSoupTask(LiberoBaseTask):
             checker_upper=[0.08, 0.08, 0.05],
         ),
     )
-    traj_filepath = "roboverse_data/trajs/libero/pick_up_the_alphabet_soup_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    traj_filepath = (
+        "roboverse_data/trajs/libero/pick_up_the_alphabet_soup_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    )

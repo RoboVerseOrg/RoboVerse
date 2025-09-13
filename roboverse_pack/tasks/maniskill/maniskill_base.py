@@ -13,7 +13,7 @@ class ManiskillBaseTask(BaseTaskEnv):
     """Pick up the red cube with a Panda robot and lift it by 0.1 m."""
 
     scenario = None
-    max_episode_steps = 250   
+    max_episode_steps = 250
     checker = None
     traj_filepath = None
 
@@ -21,8 +21,6 @@ class ManiskillBaseTask(BaseTaskEnv):
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super().__init__ because handler init
         super().__init__(scenario, device)
-
-        
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success when the cube has been lifted sufficiently along z from its reset height."""

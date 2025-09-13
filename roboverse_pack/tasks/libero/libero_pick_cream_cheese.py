@@ -15,8 +15,9 @@ class LiberoPickCreamCheeseTask(LiberoBaseTask):
 
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_cream_cheese_and_place_it_in_the_basket.bddl
     """
+
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="cream_cheese",
                 physics=PhysicStateType.RIGIDBODY,
@@ -68,7 +69,7 @@ class LiberoPickCreamCheeseTask(LiberoBaseTask):
             ),
         ]
     )
-    
+
     # task horizon
     max_episode_steps = 250
     task_desc = "Pick the cream cheese and place it in the basket"
@@ -82,4 +83,6 @@ class LiberoPickCreamCheeseTask(LiberoBaseTask):
             checker_upper=[0.08, 0.08, 0.05],
         ),
     )
-    traj_filepath = "roboverse_data/trajs/libero/pick_up_the_cream_cheese_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    traj_filepath = (
+        "roboverse_data/trajs/libero/pick_up_the_cream_cheese_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    )

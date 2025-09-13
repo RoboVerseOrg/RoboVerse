@@ -17,7 +17,7 @@ class LiberoPickChocolatePuddingCfg(LiberoBaseTask):
     """
 
     scenario = ScenarioCfg(
-        objects = [
+        objects=[
             RigidObjCfg(
                 name="chocolate_pudding",
                 physics=PhysicStateType.RIGIDBODY,
@@ -134,6 +134,6 @@ class LiberoPickChocolatePuddingCfg(LiberoBaseTask):
             checker_upper=[0.08, 0.08, 0.05],
         ),
     )
-    traj_filepath = "roboverse_data/trajs/libero/pick_up_the_chocolate_pudding_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
-
-    
+    traj_filepath = (
+        "roboverse_data/trajs/libero/pick_up_the_chocolate_pudding_and_place_it_in_the_basket/v2/franka_v2.pkl.gz"
+    )

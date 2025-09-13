@@ -49,4 +49,3 @@ class StackCubeTask(ManiskillBaseTask):
     max_episode_steps = 250
 
     traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2/franka_v2.pkl.gz"
-

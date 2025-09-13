@@ -30,9 +30,7 @@ class PickCubeTask(BaseTaskEnv):
     max_episode_steps = 250
 
     checker = PositionShiftChecker(
-            obj_name="cube",
-            distance=0.1,
-            axis="z",
+        obj_name="cube",
+        distance=0.1,
+        axis="z",
     )
-
-
