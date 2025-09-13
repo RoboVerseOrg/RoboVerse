@@ -347,6 +347,19 @@ class MJXHandler(BaseSimHandler):
                                 self._mj_model.geom_conaffinity[geom_id] = 0
                                 self._mj_model.geom_contype[geom_id] = 0
 
+    def _disable_gravity(self):
+        """Apply m·g wrench to robot and object bodies to emulate gravity compensation."""
+        g_vec = jnp.array([0.0, 0.0, -9.81])
+
+        # Use pre-computed body IDs for better performance
+        if len(self._gravity_compensation_body_ids) > 0:
+            mass = self._mjx_model.body_mass[self._gravity_compensation_body_ids]  # (B,)
+            force = -g_vec * mass[:, None]  # (B, 3)
+
+            xfrc = self._data.xfrc_applied.at[:, :, :].set(0.0)  # clear previous
+            xfrc = xfrc.at[:, self._gravity_compensation_body_ids, 0:3].set(force)  # apply −m·g
+            self._data = self._data.replace(xfrc_applied=xfrc)
+
     def _init_mjx_once(self, ts: TensorState) -> None:
         """One-time MJX initialisation"""
         if getattr(self, "_mjx_done", False):
