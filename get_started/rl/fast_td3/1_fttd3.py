@@ -6,7 +6,6 @@ import sys
 import time
 from typing import Any
 
-
 CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
