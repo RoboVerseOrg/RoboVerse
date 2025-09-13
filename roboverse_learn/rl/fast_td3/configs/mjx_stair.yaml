@@ -8,4 +8,3 @@ sim: "mjx"
 robots: ["h1"]
 task: "stair"
 total_timesteps: 10000
-

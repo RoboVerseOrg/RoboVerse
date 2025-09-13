@@ -17,18 +17,18 @@ def load_config(config_path: str) -> dict[str, Any]:
 def get_config():
     """Get configuration with command line argument support."""
     parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml', 
+    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml',
                        help='YAML configuration file name (will be loaded from configs/ directory)')
     args = parser.parse_args()
-    
+
     # Get the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     configs_dir = os.path.join(script_dir, 'configs')
     config_path = os.path.join(configs_dir, args.config)
-    
+
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
+
     return load_config(config_path)
 
 # Load configuration
