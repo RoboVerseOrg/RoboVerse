@@ -18,6 +18,7 @@ from metasim.utils.state import TensorState
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
+
 G1_STAND_NECK_HEIGHT = 1.00
 
 
