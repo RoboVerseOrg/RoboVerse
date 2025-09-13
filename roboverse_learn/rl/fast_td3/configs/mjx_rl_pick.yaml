@@ -1,12 +1,14 @@
+# MJX RL Pick Task Configuration
+# FastTD3 training configuration for pick task with MJX simulator
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
-sim: mjx
-robots: [h1]
-task: humanoidbench:Stand
-decimation: 10
-train_or_eval: train
+sim: "mjx"
+robots: ["franka"]
+task: "pick_rl"
+train_or_eval: "train"
+headless: false
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -19,16 +21,16 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 128
-num_eval_envs: 128
-total_timesteps: 100000
+num_envs: 1024
+num_eval_envs: 1024
+total_timesteps: 30000
 learning_starts: 10
 num_steps: 1
 
 # -------------------------------------------------------------------------------
 # Replay, Batching, Discounting
 # -------------------------------------------------------------------------------
-buffer_size: 51200
+buffer_size: 20480
 batch_size: 32768
 gamma: 0.99
 tau: 0.1
@@ -37,7 +39,7 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 2
+num_updates: 8
 
 # -------------------------------------------------------------------------------
 # Optimizer & Network
@@ -53,11 +55,11 @@ num_atoms: 101
 # -------------------------------------------------------------------------------
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
-v_min: -250.0
-v_max: 250.0
+v_min: 0.0
+v_max: 2000.0
 policy_noise: 0.001
 std_min: 0.001
-std_max: 0.4
+std_max: 0.02
 noise_clip: 0.5
 
 # -------------------------------------------------------------------------------
@@ -68,24 +70,18 @@ compile: true
 obs_normalization: true
 max_grad_norm: 0.0
 amp: true
-amp_dtype: fp16
+amp_dtype: "fp16"
 disable_bootstrap: false
 measure_burnin: 3
 
 # -------------------------------------------------------------------------------
-# Optional Environment-Specific Features
-# -------------------------------------------------------------------------------
-use_domain_randomization: false
-use_push_randomization: false
-use_tuned_reward: false
-action_bounds: 1.0
-
-# -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: fast_td3_mjx128
-exp_name: fasttd3_mjx128
-use_wandb: true
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3"
+use_wandb: false
 checkpoint_path: null
-eval_interval: 1000
-save_interval: 1000
+eval_interval: 700
+save_interval: 700
+video_width: 1024
+video_height: 1024

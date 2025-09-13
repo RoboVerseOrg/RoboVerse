@@ -1,0 +1,10 @@
+# MJX Run Task Configuration
+# Inherits from base.yaml
+
+# -------------------------------------------------------------------------------
+# Environment
+# -------------------------------------------------------------------------------
+sim: "mjx"
+robots: ["h1"]
+task: "slide"
+total_timesteps: 10000

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from maniskill_base import ManiskillBaseTask
-
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
 from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
+
+from .maniskill_base import ManiskillBaseTask
 
 
 # @register_task("maniskill.stack_cube", "stack_cube")

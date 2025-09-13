@@ -1,0 +1,9 @@
+# IsaacGym Walk Task Configuration
+# Inherits from base.yaml
+
+# -------------------------------------------------------------------------------
+# Environment
+# -------------------------------------------------------------------------------
+sim: "isaacgym"
+robots: ["h1"]
+task: "walk"

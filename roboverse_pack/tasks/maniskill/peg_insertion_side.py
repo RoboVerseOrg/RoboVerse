@@ -1,12 +1,12 @@
 """The base class and derived classes for the peg-insertion task from ManiSkill."""
 
-from maniskill_base import ManiskillBaseTask
-
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
+
+from .maniskill_base import ManiskillBaseTask
 
 
 @register_task("maniskill.peg_insertion_side_base", "peg_insertion_side_base")
@@ -73,7 +73,7 @@ class PegInsertionSide976Task(PegInsertionSideBaseTask):
     traj_filepath = "roboverse_data/trajs/maniskill/peg_insertion_side/trajectory-franka-976_v2.pkl"
 
 
-@register_task("maniskill.peg_insertion_side_458", "peg_insertion_side_base")
+@register_task("maniskill.peg_insertion_side_458", "peg_insertion_side_458")
 class PegInsertionSide458Task(PegInsertionSideBaseTask):
     scenario = ScenarioCfg(
         objects=[

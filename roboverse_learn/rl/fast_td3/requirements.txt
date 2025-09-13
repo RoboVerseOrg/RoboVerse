@@ -1,0 +1,10 @@
+tqdm
+wandb
+torchrl==0.7.2
+tensordict==0.7.2
+tyro
+loguru
+jax[cuda12]<0.7.0
+mujoco
+mujoco-mjx
+dm_control

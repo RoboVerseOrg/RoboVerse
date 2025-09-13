@@ -5,85 +5,34 @@ import random
 import sys
 import time
 from typing import Any
+import yaml
+import argparse
 
-CONFIG: dict[str, Any] = {
-    # -------------------------------------------------------------------------------
-    # Environment
-    # -------------------------------------------------------------------------------
-    "sim": "mjx",
-    "robots": ["franka"],
-    "task": "pick_rl",
-    "train_or_eval": "train",
-    "headless": False,
-    # -------------------------------------------------------------------------------
-    # Seeds & Device
-    # -------------------------------------------------------------------------------
-    "seed": 1,
-    "cuda": True,
-    "torch_deterministic": True,
-    "device_rank": 0,
-    # -------------------------------------------------------------------------------
-    # Rollout & Timesteps
-    # -------------------------------------------------------------------------------
-    "num_envs": 1024,
-    "num_eval_envs": 1024,
-    "total_timesteps": 30000,
-    "learning_starts": 10,
-    "num_steps": 1,
-    # -------------------------------------------------------------------------------
-    # Replay, Batching, Discounting
-    # -------------------------------------------------------------------------------
-    "buffer_size": 20480,
-    "batch_size": 32768,
-    "gamma": 0.99,
-    "tau": 0.1,
-    # -------------------------------------------------------------------------------
-    # Update Schedule
-    # -------------------------------------------------------------------------------
-    "policy_frequency": 2,
-    "num_updates": 8,
-    # -------------------------------------------------------------------------------
-    # Optimizer & Network
-    # -------------------------------------------------------------------------------
-    "critic_learning_rate": 0.0003,
-    "actor_learning_rate": 0.0003,
-    "weight_decay": 0.1,
-    "critic_hidden_dim": 1024,
-    "actor_hidden_dim": 512,
-    "init_scale": 0.01,
-    "num_atoms": 101,
-    # -------------------------------------------------------------------------------
-    # Value Distribution & Exploration
-    # -------------------------------------------------------------------------------
-    "v_min": 0,
-    "v_max": 1500.0,
-    "policy_noise": 0.001,
-    "std_min": 0.001,
-    "std_max": 0.02,
-    "noise_clip": 0.5,
-    # -------------------------------------------------------------------------------
-    # Algorithm Flags
-    # -------------------------------------------------------------------------------
-    "use_cdq": True,
-    "compile": True,
-    "obs_normalization": True,
-    "max_grad_norm": 0.0,
-    "amp": True,
-    "amp_dtype": "fp16",
-    "disable_bootstrap": False,
-    "measure_burnin": 3,
-    # -------------------------------------------------------------------------------
-    # Logging & Checkpointing
-    # -------------------------------------------------------------------------------
-    "wandb_project": "get_started_fttd3",
-    "exp_name": "get_started_fttd3",
-    "use_wandb": False,
-    "checkpoint_path": None,
-    "eval_interval": 700,
-    "save_interval": 700,
-    "video_width": 1024,
-    "video_height": 1024,
-}
+def load_config(config_path: str) -> dict[str, Any]:
+    """Load configuration from YAML file."""
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
+
+def get_config():
+    """Get configuration with command line argument support."""
+    parser = argparse.ArgumentParser(description='FastTD3 Training')
+    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml',
+                       help='YAML configuration file name (will be loaded from configs/ directory)')
+    args = parser.parse_args()
+
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    configs_dir = os.path.join(script_dir, 'configs')
+    config_path = os.path.join(configs_dir, args.config)
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    return load_config(config_path)
+
+# Load configuration
+CONFIG = get_config()
 cfg = CONFIG.get
 
 os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
@@ -99,17 +48,16 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import torch
 
 torch.set_float32_matmul_precision("high")
 
 import numpy as np
-
-try:
-    import isaacgym  # noqa: F401 – optional, only if sim == "isaacgym"
-except ImportError:
-    pass
-
 import torch
 import torch.nn.functional as F
 import tqdm
@@ -119,7 +67,7 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
-from get_started.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
+from roboverse_learn.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 
@@ -159,6 +107,7 @@ def main() -> None:
         if torch.cuda.is_available():
             device = torch.device(f"cuda:{cfg('device_rank')}")
             torch.cuda.set_device(cfg("device_rank"))
+
         elif torch.backends.mps.is_available():
             device = torch.device(f"mps:{cfg('device_rank')}")
         else:
@@ -263,9 +212,7 @@ def main() -> None:
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 obs = normalize_obs(obs)
                 actions = actor(obs)
-            # real_actions = envs.unnormalise_action(actions)
-            real_actions = actions
-            next_obs, rewards, terminated, time_out, infos = eval_envs.step(real_actions.float())
+            next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -288,7 +235,7 @@ def main() -> None:
 
         robots = cfg("robots")
         simulator = cfg("sim")
-        num_envs = 1
+        num_envs = cfg("num_envs")
         headless = True
         cameras = [
             PinholeCameraCfg(
@@ -309,10 +256,8 @@ def main() -> None:
 
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
-                act = actor(obs_normalizer(obs))
-            # real_actions = envs.unnormalise_action(act)
-            real_actions = actions
-            obs, _, done, _, _ = env.step(real_actions.float())
+                actions = actor(obs_normalizer(obs))
+            obs, _, done, _, _ = env.step(actions.float())
 
             frames.append(env.render())
             if done.any():
@@ -452,9 +397,7 @@ def main() -> None:
         with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
             norm_obs = normalize_obs(obs)
             actions = policy(obs=norm_obs, dones=dones)
-        real_actions = actions
-        # real_actions = envs.unnormalise_action(actions)
-        next_obs, rewards, terminated, time_out, infos = envs.step(real_actions.float())
+        next_obs, rewards, terminated, time_out, infos = envs.step(actions.float())
         dones = terminated | time_out
 
         # Compute 'true' next_obs and next_critic_obs for saving

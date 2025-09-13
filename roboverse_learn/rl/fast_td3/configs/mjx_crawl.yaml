@@ -1,0 +1,12 @@
+
+# MJX Run Task Configuration
+# Inherits from base.yaml
+
+# -------------------------------------------------------------------------------
+# Environment
+# -------------------------------------------------------------------------------
+
+sim: "mjx"
+robots: ["h1_body_collision"]
+task: "crawl"
+total_timesteps: 3000
