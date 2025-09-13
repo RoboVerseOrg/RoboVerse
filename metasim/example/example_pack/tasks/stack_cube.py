@@ -37,28 +37,24 @@ class StackCubeTask(BaseTaskEnv):
         ],
         robots=["franka"],
     )
+    max_episode_steps = 250
+    checker = DetectedChecker(
+        obj_name="cube",
+        detector=RelativeBboxDetector(
+            base_obj_name="base",
+            relative_pos=(0.0, 0.0, 0.04),
+            relative_quat=(1.0, 0.0, 0.0, 0.0),
+            checker_lower=(-0.02, -0.02, -0.02),
+            checker_upper=(0.02, 0.02, 0.02),
+            ignore_base_ori=True,
+        ),
+    )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         self.traj_filepath = "roboverse_data/trajs/maniskill/stack_cube/v2/franka_v2.pkl.gz"
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
         super().__init__(scenario, device)
-
-        # task horizon
-        self.max_episode_steps = 250
-
-        # success checker: cube falls into a bbox above base
-        self.checker = DetectedChecker(
-            obj_name="cube",
-            detector=RelativeBboxDetector(
-                base_obj_name="base",
-                relative_pos=(0.0, 0.0, 0.04),
-                relative_quat=(1.0, 0.0, 0.0, 0.0),
-                checker_lower=(-0.02, -0.02, -0.02),
-                checker_upper=(0.02, 0.02, 0.02),
-                ignore_base_ori=True,
-            ),
-        )
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when cube is detected in the bbox above base."""

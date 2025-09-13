@@ -31,14 +31,14 @@ class ReachingEnv(RLTaskEnv):
     scenario = ScenarioCfg(
         objects=[],
         robots=["franka"],
+        sim_params=SimParamCfg(
+            dt=0.01,
+        ),
+        decimation=4,
     )
+    max_episode_steps = 250
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        scenario.decimation = 4
-        self.max_episode_steps = 250
-        self.scenario.sim_params = SimParamCfg(
-            dt=0.01,
-        )
         super().__init__(scenario, device)
 
     def _get_initial_states(self) -> list[dict]:
@@ -84,16 +84,6 @@ class ReachOriginEnv(ReachingEnv):
     The reward is based on the negative distance to the origin.
     """
 
-    # def _load_task_config(self, scenario) -> None:
-    #     """Configure for reaching origin task."""
-    #     super()._load_task_config(scenario)
-
-    #     # Reward function: negative distance to origin
-    #     self.reward_functions = [negative_distance]
-    #     self.reward_weights = [1.0]
-
-    #     return scenario
-
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = [negative_distance]
@@ -107,16 +97,6 @@ class ReachFarAwayEnv(ReachingEnv):
     This task encourages the robot's end effector to move as far as possible
     in the positive x direction.
     """
-
-    # def _load_task_config(self, scenario) -> None:
-    #     """Configure for reaching far away task."""
-    #     super()._load_task_config(scenario)
-
-    #     # Reward function: x-distance (encourages moving away in x direction)
-    #     self.reward_functions = [x_distance]
-    #     self.reward_weights = [1.0]
-
-    #     return scenario
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
