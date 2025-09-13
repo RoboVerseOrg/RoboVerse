@@ -117,4 +117,3 @@ class CrawlEnv(BaseLocomotionEnv):
     def _terminated(self, states: TensorState) -> torch.Tensor:
         terminated = [False] * self.num_envs
         return torch.tensor(terminated)
-

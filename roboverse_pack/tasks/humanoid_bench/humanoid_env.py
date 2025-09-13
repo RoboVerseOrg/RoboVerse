@@ -196,4 +196,3 @@ class StandEnv(BaseLocomotionEnv):
         super().__init__(scenario, device)
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
         self.reward_weights = [1.0]
-
