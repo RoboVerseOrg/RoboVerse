@@ -95,10 +95,9 @@ class SlideEnv(BaseLocomotionEnv):
         ],
         robots=["h1"],
     )
-
+    max_episode_steps = 1000
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        self.max_episode_steps = 1000
         self.reward_functions = [SlideReward(self.robot_name)]
         self.reward_weights = [1.0]
 

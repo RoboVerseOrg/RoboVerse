@@ -92,22 +92,21 @@ class BaseLocomotionEnv(RLTaskEnv):
     scenario = ScenarioCfg(
         objects=[],
         robots=["h1"],
-    )
-
-    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        self.robot_name = (
-            self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name
-        )
-        self.max_episode_steps = 800
-        self.scenario.sim_params = SimParamCfg(
+        sim_params = SimParamCfg(
             dt=0.002,
             contact_offset=0.01,
             num_position_iterations=8,
             num_velocity_iterations=0,
             bounce_threshold_velocity=0.5,
             replace_cylinder_with_capsule=True,
+        ),
+        decimation = 10,
+    )
+    max_episode_steps = 800
+    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
+        self.robot_name = (
+            self.scenario.robots[0] if isinstance(self.scenario.robots[0], str) else self.scenario.robots[0].name
         )
-        self.scenario.decimation = 10
         super().__init__(scenario, device)
 
     def _observation(self, states: TensorState) -> torch.Tensor:
@@ -166,10 +165,9 @@ class BaseLocomotionEnv(RLTaskEnv):
 @register_task("humanoid.walk", "walk", "h1.walk")
 class WalkEnv(BaseLocomotionEnv):
     """Walking task for humanoid robots."""
-
+    max_episode_steps = 1000
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
         self.reward_weights = [1.0]
 
@@ -177,10 +175,9 @@ class WalkEnv(BaseLocomotionEnv):
 @register_task("humanoid.run", "run", "h1.run")
 class RunEnv(BaseLocomotionEnv):
     """Run task for humanoid robots."""
-
+    max_episode_steps = 1000
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=5.0)]
         self.reward_weights = [1.0]
 
@@ -188,9 +185,8 @@ class RunEnv(BaseLocomotionEnv):
 @register_task("humanoid.stand", "stand", "h1.stand")
 class StandEnv(BaseLocomotionEnv):
     """Stand task for humanoid robots."""
-
+    max_episode_steps = 1000
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
-        self.max_episode_steps = 1000
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
         self.reward_weights = [1.0]

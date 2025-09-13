@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import torch
 
+from metasim.constants import PhysicStateType
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 from metasim.utils.humanoid_reward_util import tolerance_tensor
@@ -86,14 +88,14 @@ class CrawlEnv(BaseLocomotionEnv):
     """Crawl task environment for humanoid robots."""
 
     scenario = ScenarioCfg(
-        # objects=[
-        #     RigidObjCfg(
-        #         name="tunnel",
-        #         mjcf_path="roboverse_data/assets/humanoidbench/crawl/tunnel/mjcf/tunnel.xml",
-        #         physics=PhysicStateType.GEOM,
-        #         fix_base_link=True,
-        #     )
-        # ],
+        objects=[
+            RigidObjCfg(
+                name="tunnel",
+                mjcf_path="roboverse_data/assets/humanoidbench/crawl/tunnel/mjcf/tunnel.xml",
+                physics=PhysicStateType.GEOM,
+                fix_base_link=True,
+            )
+        ],
         robots=["h1"],
     )
 
