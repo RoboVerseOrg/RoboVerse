@@ -1,0 +1,51 @@
+# FastTD3 Training Configuration
+
+## Configuration Structure
+
+```
+configs/
+├── base.yaml              # Base config (IsaacGym + H1)
+├── mjx_rl_pick.yaml      # MJX pick task
+├── mjx_walk.yaml         # MJX + walk
+├── mjx_stand.yaml        # MJX + stand  
+├── mjx_run.yaml          # MJX + run
+├── isaacgym_walk.yaml    # IsaacGym + walk
+├── isaacgym_stand.yaml   # IsaacGym + stand
+└── isaacgym_run.yaml     # IsaacGym + run
+```
+
+## Usage
+
+### Basic Command
+```bash
+python train.py --config <config_name>
+```
+
+### Available Configurations
+```bash
+# MJX Tasks
+python train.py --config mjx_walk.yaml
+python train.py --config mjx_stand.yaml
+python train.py --config mjx_run.yaml
+python train.py --config mjx_rl_pick.yaml
+
+# IsaacGym Tasks  
+python train.py --config isaacgym_walk.yaml
+python train.py --config isaacgym_stand.yaml
+python train.py --config isaacgym_run.yaml
+
+# Default config
+python train.py  # Uses mjx_rl_pick.yaml
+```
+
+## Configuration Notes
+
+- **MJX**: Uses Franka robot, suitable for pick tasks
+- **IsaacGym**: Uses H1 humanoid robot, suitable for locomotion tasks
+- Each config only defines key differences, other params inherit from base.yaml
+
+## Custom Configuration
+
+1. Copy existing config file
+2. Modify key parameters (sim, robots, task, etc.)
+3. Run: `python train.py --config your_config.yaml`

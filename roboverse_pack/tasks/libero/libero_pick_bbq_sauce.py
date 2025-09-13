@@ -1,6 +1,6 @@
 """Configuration for the Libero pick bbq sauce task."""
 
-from libero_base import LiberoBaseTask
+from .libero_base import LiberoBaseTask
 
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers import DetectedChecker, RelativeBboxDetector

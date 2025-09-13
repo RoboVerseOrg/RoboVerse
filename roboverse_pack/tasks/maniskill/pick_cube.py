@@ -4,12 +4,13 @@ from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
+
+from .maniskill_base import ManiskillBaseTask
 
 
 @register_task("maniskill.pick_cube", "pick_cube")
-class PickCubeTask(BaseTaskEnv):
+class PickCubeTask(ManiskillBaseTask):
     """Pick up the red cube with a Panda robot and lift it by 0.1 m."""
 
     scenario = ScenarioCfg(

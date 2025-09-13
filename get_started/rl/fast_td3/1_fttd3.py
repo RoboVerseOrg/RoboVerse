@@ -14,7 +14,7 @@ CONFIG: dict[str, Any] = {
     "robots": ["franka"],
     "task": "pick_rl",
     "train_or_eval": "train",
-    "headless": False,
+    "headless": True,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "wandb_project": "get_started_fttd3",
     "exp_name": "get_started_fttd3",
-    "use_wandb": False,
+    "use_wandb": True,
     "checkpoint_path": None,
     "eval_interval": 700,
     "save_interval": 700,
@@ -263,9 +263,7 @@ def main() -> None:
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 obs = normalize_obs(obs)
                 actions = actor(obs)
-            # real_actions = envs.unnormalise_action(actions)
-            real_actions = actions
-            next_obs, rewards, terminated, time_out, infos = eval_envs.step(real_actions.float())
+            next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -288,13 +286,13 @@ def main() -> None:
 
         robots = cfg("robots")
         simulator = cfg("sim")
-        num_envs = 1
+        num_envs = cfg("num_envs")
         headless = True
         cameras = [
             PinholeCameraCfg(
                 width=cfg("video_width", 1024),
                 height=cfg("video_height", 1024),
-                pos=(4.0, -4.0, 4.0),  # adjust as needed
+                pos=(3.0, -3.0, 3.0),  # adjust as needed
                 look_at=(0.0, 0.0, 0.0),
             )
         ]
@@ -309,10 +307,8 @@ def main() -> None:
 
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
-                act = actor(obs_normalizer(obs))
-            # real_actions = envs.unnormalise_action(act)
-            real_actions = actions
-            obs, _, done, _, _ = env.step(real_actions.float())
+                actions = actor(obs_normalizer(obs))
+            obs, _, done, _, _ = env.step(actions.float())
 
             frames.append(env.render())
             if done.any():
@@ -452,9 +448,7 @@ def main() -> None:
         with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
             norm_obs = normalize_obs(obs)
             actions = policy(obs=norm_obs, dones=dones)
-        real_actions = actions
-        # real_actions = envs.unnormalise_action(actions)
-        next_obs, rewards, terminated, time_out, infos = envs.step(real_actions.float())
+        next_obs, rewards, terminated, time_out, infos = envs.step(actions.float())
         dones = terminated | time_out
 
         # Compute 'true' next_obs and next_critic_obs for saving
