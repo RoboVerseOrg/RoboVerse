@@ -10,10 +10,9 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Environment
     # -------------------------------------------------------------------------------
-    "sim": "isaacgym",
-    "robots": ["h1"],
-    "task": "walk",
-    "decimation": 10,
+    "sim": "mjx",
+    "robots": ["franka"],
+    "task": "pick_rl",
     "train_or_eval": "train",
     "headless": False,
     # -------------------------------------------------------------------------------
@@ -28,7 +27,7 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     "num_envs": 1024,
     "num_eval_envs": 1024,
-    "total_timesteps": 1500,
+    "total_timesteps": 30000,
     "learning_starts": 10,
     "num_steps": 1,
     # -------------------------------------------------------------------------------
@@ -42,7 +41,7 @@ CONFIG: dict[str, Any] = {
     # Update Schedule
     # -------------------------------------------------------------------------------
     "policy_frequency": 2,
-    "num_updates": 12,
+    "num_updates": 8,
     # -------------------------------------------------------------------------------
     # Optimizer & Network
     # -------------------------------------------------------------------------------
@@ -56,11 +55,11 @@ CONFIG: dict[str, Any] = {
     # -------------------------------------------------------------------------------
     # Value Distribution & Exploration
     # -------------------------------------------------------------------------------
-    "v_min": -250.0,
-    "v_max": 250.0,
+    "v_min": 0.0,
+    "v_max": 2000.0,
     "policy_noise": 0.001,
     "std_min": 0.001,
-    "std_max": 0.4,
+    "std_max": 0.02,
     "noise_clip": 0.5,
     # -------------------------------------------------------------------------------
     # Algorithm Flags
@@ -89,8 +88,6 @@ cfg = CONFIG.get
 
 os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
-if cfg("cuda") and os.environ.get("CUDA_VISIBLE_DEVICES") is None:
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(cfg("device_rank"))
 if sys.platform != "darwin":
     os.environ["MUJOCO_GL"] = "egl"
 else:
@@ -160,6 +157,7 @@ def main() -> None:
     else:
         if torch.cuda.is_available():
             device = torch.device(f"cuda:{cfg('device_rank')}")
+            torch.cuda.set_device(cfg("device_rank"))
 
         elif torch.backends.mps.is_available():
             device = torch.device(f"mps:{cfg('device_rank')}")
@@ -172,7 +170,6 @@ def main() -> None:
     scenario = task_cls.scenario.update(
         robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
     )
-    scenario.decimation = cfg("decimation", 1)
     envs = task_cls(scenario, device=device)
     eval_envs = envs
 
@@ -266,7 +263,8 @@ def main() -> None:
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 obs = normalize_obs(obs)
                 actions = actor(obs)
-            real_actions = envs.unnormalise_action(actions)
+            # real_actions = envs.unnormalise_action(actions)
+            real_actions = actions
             next_obs, rewards, terminated, time_out, infos = eval_envs.step(real_actions.float())
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
@@ -312,8 +310,8 @@ def main() -> None:
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 act = actor(obs_normalizer(obs))
-            real_actions = envs.unnormalise_action(act)
-
+            # real_actions = envs.unnormalise_action(act)
+            real_actions = actions
             obs, _, done, _, _ = env.step(real_actions.float())
 
             frames.append(env.render())
@@ -454,7 +452,8 @@ def main() -> None:
         with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
             norm_obs = normalize_obs(obs)
             actions = policy(obs=norm_obs, dones=dones)
-        real_actions = envs.unnormalise_action(actions)
+        real_actions = actions
+        # real_actions = envs.unnormalise_action(actions)
         next_obs, rewards, terminated, time_out, infos = envs.step(real_actions.float())
         dones = terminated | time_out
 

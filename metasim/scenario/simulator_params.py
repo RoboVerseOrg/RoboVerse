@@ -39,6 +39,10 @@ class SimParamCfg:
     max_depenetration_velocity: float = 1.0
     default_buffer_size_multiplier: int = 2.0
 
+    ## MJX specific parameters
+    nconmax: int | None = None
+    njmax: int | None = None
+
     ## Resource management
     num_threads: int = 0
     # XXX: these parameters should be replaced by "device" in the future

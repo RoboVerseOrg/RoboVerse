@@ -25,6 +25,7 @@ from dm_control import mjcf
 from loguru import logger as log
 from mujoco import mjx
 
+from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 
 if TYPE_CHECKING:
@@ -96,6 +97,12 @@ class MJXHandler(BaseSimHandler):
         ]
         self.robot_body_names = [n for n in self.body_names if n.startswith(self._mujoco_robot_name)]
 
+        # Pre-compute gravity compensation body IDs for performance
+        self._gravity_compensation_body_ids = self._prepare_gravity_compensation_bodies()
+
+        # Disable collision for XFORM objects
+        self._disable_collision_for_xform_objects()
+
         if self.cameras:
             max_w = max(c.width for c in self.cameras)
             max_h = max(c.height for c in self.cameras)
@@ -114,7 +121,7 @@ class MJXHandler(BaseSimHandler):
 
     def _simulate(self) -> None:
         if self._gravity_compensation:
-            self._disable_robotgravity()
+            self._disable_gravity()
         self._data = self._substep(self._mjx_model, self._data)
         if not self.headless:
             self.refresh_render()
@@ -213,7 +220,7 @@ class MJXHandler(BaseSimHandler):
                     rgb=rgb_tensor if want_rgb else None,
                     depth=dep_tensor if want_dep else None,
                 )
-
+        # self._print_ncon_geoms()
         extras = self.get_extra()  # extra observations
         return TensorState(objects=objects, robots=robots, cameras=camera_states, extras=extras)
 
@@ -301,19 +308,57 @@ class MJXHandler(BaseSimHandler):
             self._object_joint_ids[oname] = jnp.asarray(j_ids, dtype=jnp.int32)
             self._object_act_ids[oname] = jnp.asarray(a_ids, dtype=jnp.int32)
 
-    def _disable_robotgravity(self):
-        """Apply m·g wrench to each robot body to emulate gravity compensation."""
+    def _prepare_gravity_compensation_bodies(self):
+        """Pre-compute body IDs for gravity compensation to avoid repeated computation."""
+        body_names_to_compensate = []
+
+        # Add robot body names
+        body_names_to_compensate.extend(self.robot_body_names)
+
+        # Add object body names that are not RIGIDBODY type
+        for obj in self._scenario.objects:
+            if hasattr(obj, "physics") and obj.physics is not None and obj.physics != PhysicStateType.RIGIDBODY:
+                # Get all body names for this object
+                obj_body_names = [n for n in self.body_names if n.startswith(self.mj_objects[obj.name].full_identifier)]
+                body_names_to_compensate.extend(obj_body_names)
+
+        # Convert body names to IDs
+        if body_names_to_compensate:
+            return jnp.asarray([
+                mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, n) for n in body_names_to_compensate
+            ])
+        else:
+            return jnp.array([], dtype=jnp.int32)
+
+    def _disable_collision_for_xform_objects(self):
+        """Disable collision detection for XFORM objects in the MuJoCo model."""
+        for obj in self._scenario.objects:
+            if hasattr(obj, "physics") and obj.physics is not None and obj.physics == PhysicStateType.XFORM:
+                # Get all body names for this object
+                obj_body_names = [n for n in self.body_names if n.startswith(self.mj_objects[obj.name].full_identifier)]
+
+                for body_name in obj_body_names:
+                    body_id = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+                    if body_id >= 0:  # Valid body ID
+                        # Find all geoms attached to this body and disable their collision
+                        for geom_id in range(self._mj_model.ngeom):
+                            if self._mj_model.geom_bodyid[geom_id] == body_id:
+                                # Set conaffinity and contype to 0 to disable collision
+                                self._mj_model.geom_conaffinity[geom_id] = 0
+                                self._mj_model.geom_contype[geom_id] = 0
+
+    def _disable_gravity(self):
+        """Apply m·g wrench to robot and object bodies to emulate gravity compensation."""
         g_vec = jnp.array([0.0, 0.0, -9.81])
-        body_ids = jnp.asarray([
-            mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, n) for n in self.robot_body_names
-        ])
 
-        mass = self._mjx_model.body_mass[body_ids]  # (B,)
-        force = -g_vec * mass[:, None]  # (B, 3)
+        # Use pre-computed body IDs for better performance
+        if len(self._gravity_compensation_body_ids) > 0:
+            mass = self._mjx_model.body_mass[self._gravity_compensation_body_ids]  # (B,)
+            force = -g_vec * mass[:, None]  # (B, 3)
 
-        xfrc = self._data.xfrc_applied.at[:, :, :].set(0.0)  # clear previous
-        xfrc = xfrc.at[:, body_ids, 0:3].set(force)  # apply −m·g
-        self._data = self._data.replace(xfrc_applied=xfrc)
+            xfrc = self._data.xfrc_applied.at[:, :, :].set(0.0)  # clear previous
+            xfrc = xfrc.at[:, self._gravity_compensation_body_ids, 0:3].set(force)  # apply −m·g
+            self._data = self._data.replace(xfrc_applied=xfrc)
 
     def _init_mjx_once(self, ts: TensorState) -> None:
         """One-time MJX initialisation"""
@@ -434,6 +479,7 @@ class MJXHandler(BaseSimHandler):
         )
         mjcf_model.worldbody.add(
             "geom",
+            name="floor",
             type="plane",
             pos="0 0 0",
             size="100 100 0.001",
@@ -559,6 +605,15 @@ class MJXHandler(BaseSimHandler):
     def _init_mjx(self) -> None:
         if self._mj_model.opt.solver == mujoco.mjtSolver.mjSOL_PGS:
             self._mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
+
+        # # Store MJX-specific parameters from scenario if available
+        # nconmax = None
+        # njmax = None
+        # if hasattr(self._scenario.sim_params, "nconmax") and self._scenario.sim_params.nconmax is not None:
+        #     nconmax = self._scenario.sim_params.nconmax
+        # if hasattr(self._scenario.sim_params, "njmax") and self._scenario.sim_params.njmax is not None:
+        #     njmax = self._scenario.sim_params.njmax
+
         self._mjx_model = mjx.put_model(self._mj_model)
         self._build_joint_name_map()
         self._build_root_bid_cache()
@@ -571,6 +626,8 @@ class MJXHandler(BaseSimHandler):
             return jax.tree_util.tree_map(lambda y: jnp.broadcast_to(y, (self.num_envs, *y.shape)), x)
 
         self._data = _broadcast(data_single)
+
+        # Print all ncon geoms and their names
 
         # sub-step & forward kernel
         self._substep = self._make_substep(self.decimation)
