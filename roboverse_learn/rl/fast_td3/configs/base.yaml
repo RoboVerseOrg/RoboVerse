@@ -9,7 +9,7 @@ robots: ["h1"]
 task: "walk"
 decimation: 10
 train_or_eval: "train"
-headless: false
+headless: true
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
