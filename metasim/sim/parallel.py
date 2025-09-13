@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing as mp
+import platform
 import sys
 import traceback
 from copy import deepcopy
@@ -100,7 +101,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             # but is more user friendly (does not require to wrap the code in
             # a `if __name__ == "__main__":`)
             forkserver_available = "forkserver" in mp.get_all_start_methods()
-            start_method = "forkserver" if forkserver_available else "spawn"
+            start_method = "forkserver" if forkserver_available and platform.system() != "Darwin" else "spawn"
             ctx = mp.get_context(start_method)
             self.error_queue = ctx.Queue()
 
