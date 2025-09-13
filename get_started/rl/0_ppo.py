@@ -133,9 +133,6 @@ def train_ppo():
     env = VecEnvWrapper(env)
 
     log.info(f"Created environment with {env.num_envs} environments")
-    log.info(f"Observation space: {env.observation_space}")
-    log.info(f"Action space: {env.action_space}")
-
     # PPO configuration
     model = PPO(
         "MlpPolicy",

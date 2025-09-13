@@ -111,6 +111,11 @@ class BaseLocomotionEnv(RLTaskEnv):
         )
         super().__init__(scenario, device)
 
+    def step(self, actions):
+        """Step with unnomormalization."""
+        actions = self.unnormalise_action(actions)
+        return super().step(actions)
+
     def _observation(self, states: TensorState) -> torch.Tensor:
         results_state = []
         for _, object_state in sorted(states.objects.items()):

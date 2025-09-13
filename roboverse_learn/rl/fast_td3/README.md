@@ -18,24 +18,24 @@ configs/
 
 ### Basic Command
 ```bash
-python train.py --config <config_name>
+python roboverse_learn/rl/fast_td3/train.py --config <config_name>
 ```
 
 ### Available Configurations
 ```bash
 # MJX Tasks
-python train.py --config mjx_walk.yaml
-python train.py --config mjx_stand.yaml
-python train.py --config mjx_run.yaml
-python train.py --config mjx_rl_pick.yaml
+python roboverse_learn/rl/fast_td3/train.py --config mjx_walk.yaml
+python roboverse_learn/rl/fast_td3/train.py --config mjx_stand.yaml
+python roboverse_learn/rl/fast_td3/train.py --config mjx_run.yaml
+python roboverse_learn/rl/fast_td3/train.py --config mjx_rl_pick.yaml
 
 # IsaacGym Tasks  
-python train.py --config isaacgym_walk.yaml
-python train.py --config isaacgym_stand.yaml
-python train.py --config isaacgym_run.yaml
+python roboverse_learn/rl/fast_td3/train.py --config isaacgym_walk.yaml
+python roboverse_learn/rl/fast_td3/train.py --config isaacgym_stand.yaml
+python roboverse_learn/rl/fast_td3/train.py --config isaacgym_run.yaml
 
 # Default config
-python train.py  # Uses mjx_rl_pick.yaml
+python roboverse_learn/rl/fast_td3/train.py  
 ```
 
 ## Configuration Notes
@@ -48,4 +48,4 @@ python train.py  # Uses mjx_rl_pick.yaml
 
 1. Copy existing config file
 2. Modify key parameters (sim, robots, task, etc.)
-3. Run: `python train.py --config your_config.yaml`
+3. Run: `python roboverse_learn/rl/fast_td3/train.py --config your_config.yaml`

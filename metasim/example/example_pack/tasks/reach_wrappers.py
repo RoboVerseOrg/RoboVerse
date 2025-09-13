@@ -38,6 +38,11 @@ class ReachingEnv(RLTaskEnv):
     )
     max_episode_steps = 250
 
+    def step(self, actions):
+        """Step with unnomormalization."""
+        actions = self.unnormalise_action(actions)
+        return super().step(actions)
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
 
