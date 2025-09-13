@@ -64,3 +64,53 @@ class SitePos(BaseQueryType):
             return torch.as_tensor(pos).unsqueeze(0)
 
         raise ValueError(f"Unsupported handler type: {type(self.handler)} for SitePos query")
+
+
+class SiteMat(BaseQueryType):
+    """World-frame rotation matrix of a MuJoCo site (works for MJX & raw MuJoCo)."""
+
+    def __init__(self, site_name: str):
+        super().__init__()
+        self.site_name = site_name
+        self._sid: int | None = None  # site id resolved during bind
+
+    def bind_handler(self, handler, *args, **kwargs):
+        """Remember the site-id once the handler is known."""
+        super().bind_handler(handler, *args, **kwargs)  # Remember to call the base method
+        mod = handler.__class__.__module__
+        if mod.startswith("metasim.sim.mjx"):
+            robot_name = handler._robot.name
+            full_name = f"{robot_name}/{self.site_name}" if "/" not in self.site_name else self.site_name
+            self._sid = _get_site_id(handler._mj_model, full_name)
+
+        elif mod.startswith("metasim.sim.mujoco"):
+            robot_name = handler.robot.name
+            full_name = f"{robot_name}/{self.site_name}" if "/" not in self.site_name else self.site_name
+            self._sid = _get_site_id(handler.physics.model, full_name)
+
+        else:
+            raise ValueError(f"Unsupported handler type: {type(handler)} for SiteMat query")
+
+    def __call__(self):
+        """Return (N_env, 9) site rotation matrix whenever `get_extra()` is invoked.
+
+        * Heavy libraries are imported **inside** the relevant branch only.
+        """
+        mod = self.handler.__class__.__module__
+
+        if mod.startswith("metasim.sim.mjx"):
+            # ── MJX branch ────────────────────────────────────────────────
+            torch = importlib.import_module("torch")
+            jax = importlib.import_module("jax")
+
+            val = self.handler._data.site_xmat[:, self._sid]  # (N_env, 9)
+            return torch.from_dlpack(val.__dlpack__())
+
+        elif mod.startswith("metasim.sim.mujoco"):
+            # ── raw MuJoCo branch ────────────────────────────────────────
+            torch = importlib.import_module("torch")
+
+            mat = self.handler.data.site_xmat[self._sid]  # (9,)
+            return torch.as_tensor(mat).unsqueeze(0)  # (1, 9)
+
+        raise ValueError(f"Unsupported handler type: {type(self.handler)} for SiteMat query")

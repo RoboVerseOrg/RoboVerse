@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import torch
 
-from metasim.queries.site import SitePos
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 from metasim.utils.humanoid_reward_util import tolerance_tensor
@@ -14,6 +13,7 @@ from metasim.utils.humanoid_robot_util import (
     robot_velocity_tensor,
 )
 from metasim.utils.state import TensorState
+from roboverse_pack.queries.site import SitePos
 
 from .humanoid_env import BaseLocomotionEnv
 
