@@ -5,8 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.checkers import _PackageChecker
-from metasim.scenario.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.scenario.objects import RigidObjCfg
 from metasim.types import EnvState
 from metasim.utils import configclass
 from metasim.utils.humanoid_robot_util import left_hand_position, right_hand_position

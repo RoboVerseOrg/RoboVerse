@@ -120,7 +120,7 @@ class SitEnv(BaseLocomotionEnv):
         robots=["h1"],
     )
     max_episode_steps = 1000
-    
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = [SitReward(self.robot_name)]

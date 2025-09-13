@@ -87,11 +87,12 @@ class BaseLocomotionReward:
 # ---------- task env ----------
 class BaseLocomotionEnv(RLTaskEnv):
     """locomotion reward with _move_speed = 0."""
+
     max_episode_steps = 800
     scenario = ScenarioCfg(
         objects=[],
         robots=["h1"],
-        sim_params = SimParamCfg(
+        sim_params=SimParamCfg(
             dt=0.002,
             contact_offset=0.01,
             num_position_iterations=8,
@@ -99,7 +100,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             bounce_threshold_velocity=0.5,
             replace_cylinder_with_capsule=True,
         ),
-        decimation = 10
+        decimation=10,
     )
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
@@ -164,7 +165,9 @@ class BaseLocomotionEnv(RLTaskEnv):
 # @register_task("humanoid.walk", "walk", "h1.walk")
 class WalkEnv(BaseLocomotionEnv):
     """Walking task for humanoid robots."""
+
     max_episode_steps = 1000
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
@@ -174,7 +177,9 @@ class WalkEnv(BaseLocomotionEnv):
 # @register_task("humanoid.run", "run", "h1.run")
 class RunEnv(BaseLocomotionEnv):
     """Run task for humanoid robots."""
+
     max_episode_steps = 1000
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
@@ -184,7 +189,9 @@ class RunEnv(BaseLocomotionEnv):
 # @register_task("humanoid.stand", "stand", "h1.stand")
 class StandEnv(BaseLocomotionEnv):
     """Stand task for humanoid robots."""
+
     max_episode_steps = 1000
+
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         super().__init__(scenario, device)
         self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]

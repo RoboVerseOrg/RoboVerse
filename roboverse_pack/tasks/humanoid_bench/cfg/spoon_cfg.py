@@ -8,8 +8,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.checkers import _SpoonChecker
-from metasim.scenario.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.scenario.objects import RigidObjCfg
 from metasim.types import EnvState
 from metasim.utils import configclass
 

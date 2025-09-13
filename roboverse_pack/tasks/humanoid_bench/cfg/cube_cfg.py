@@ -5,8 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.cfg.checkers import _CubeChecker
-from metasim.scenario.objects import RigidObjCfg
 from metasim.constants import PhysicStateType
+from metasim.scenario.objects import RigidObjCfg
 from metasim.types import EnvState
 from metasim.utils import configclass, humanoid_reward_util, humanoid_robot_util
 
