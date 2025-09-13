@@ -14,6 +14,7 @@ from metasim.utils.humanoid_robot_util import (
     robot_velocity_tensor,
     torso_upright_tensor,
 )
+from metasim.utils.state import list_state_to_tensor
 
 # thresholds
 H1_STAND_NECK_HEIGHT = 1.41
@@ -154,7 +155,7 @@ class BaseLocomotionEnv(RLTaskEnv):
             for _ in range(self.num_envs)
         ]
 
-        return init
+        return list_state_to_tensor(init)
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         robot_position_tensor = states.robots[self.robot_name].root_state[:, 0:3]
