@@ -37,6 +37,7 @@ class Args:
     decimation: int = 20
     max_steps: int = 100
     save_video: bool = True
+    headless: bool = False
 
 
 def main():
@@ -63,6 +64,7 @@ def main():
         simulator=args.sim,
         num_envs=args.num_envs,
         decimation=args.decimation,
+        headless=args.headless,
     )
 
     log.info(f"Using simulator: {args.sim}")

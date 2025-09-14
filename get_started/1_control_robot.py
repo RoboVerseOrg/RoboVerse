@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
@@ -38,7 +43,15 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+        sim: Literal[
+            "isaacsim",
+            "isaacgym",
+            "genesis",
+            "pybullet",
+            "sapien2",
+            "sapien3",
+            "mujoco",
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 1

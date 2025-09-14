@@ -25,7 +25,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_sim_handler_class
@@ -148,5 +153,11 @@ os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/multiple_cameras_{args.sim}.png"
 log.info(f"Saving image to {save_path}")
 
-img_cat = np.concatenate([obs.cameras["cam0"].rgb[0].cpu().numpy(), obs.cameras["cam1"].rgb[0].cpu().numpy()], axis=1)
+img_cat = np.concatenate(
+    [
+        obs.cameras["cam0"].rgb[0].cpu().numpy(),
+        obs.cameras["cam1"].rgb[0].cpu().numpy(),
+    ],
+    axis=1,
+)
 imageio.imwrite(save_path, img_cat)

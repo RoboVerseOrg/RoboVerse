@@ -29,7 +29,11 @@ from metasim.randomization import (
 from metasim.randomization.presets.light_presets import LightScenarios
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DistantLightCfg, SphereLightCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
@@ -39,7 +43,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
 def log_randomization_result(
-    randomizer_type: str, obj_name: str, property_name: str, before_value, after_value, unit: str = ""
+    randomizer_type: str,
+    obj_name: str,
+    property_name: str,
+    before_value,
+    after_value,
+    unit: str = "",
 ):
     """Log randomization results in a consistent format."""
     if isinstance(before_value, torch.Tensor):
@@ -66,7 +75,7 @@ def log_randomization_header(randomizer_name: str, description: str = ""):
 
 def run_domain_randomization(args):
     """Demonstrate domain randomization with specified simulator."""
-    log.info(f"=== {args.simulator.upper()} Domain Randomization Demo ===")
+    log.info(f"=== {args.sim.upper()} Domain Randomization Demo ===")
 
     # Set up reproducible randomization
     if args.seed is not None:
@@ -81,13 +90,19 @@ def run_domain_randomization(args):
     scenario = ScenarioCfg(
         robots=["franka"],
         num_envs=args.num_envs,  # Multiple environments for parallel testing
-        simulator=args.simulator,  # Will be overridden
+        simulator=args.sim,  # Will be overridden
         headless=args.headless,  # Will be overridden
     )
 
     # Add single camera for video recording and randomization
     scenario.cameras = [
-        PinholeCameraCfg(name="main_camera", width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+        PinholeCameraCfg(
+            name="main_camera",
+            width=1024,
+            height=1024,
+            pos=(1.5, -1.5, 1.5),
+            look_at=(0.0, 0.0, 0.0),
+        )
     ]
 
     # Demo: Using LightScenarios for complex lighting setups
@@ -95,7 +110,12 @@ def run_domain_randomization(args):
         # Use LightScenarios for indoor room setup
         scenario.lights = [
             DistantLightCfg(
-                name="ceiling_light", intensity=800.0, color=(1.0, 1.0, 0.9), polar=0.0, azimuth=0.0, is_global=True
+                name="ceiling_light",
+                intensity=800.0,
+                color=(1.0, 1.0, 0.9),
+                polar=0.0,
+                azimuth=0.0,
+                is_global=True,
             ),
             SphereLightCfg(
                 name="window_light",
@@ -118,17 +138,32 @@ def run_domain_randomization(args):
         # Use LightScenarios for outdoor setup
         scenario.lights = [
             DistantLightCfg(
-                name="sun_light", intensity=2000.0, color=(1.0, 0.95, 0.8), polar=45.0, azimuth=30.0, is_global=True
+                name="sun_light",
+                intensity=2000.0,
+                color=(1.0, 0.95, 0.8),
+                polar=45.0,
+                azimuth=30.0,
+                is_global=True,
             ),
             DistantLightCfg(
-                name="sky_light", intensity=600.0, color=(0.7, 0.8, 1.0), polar=80.0, azimuth=0.0, is_global=True
+                name="sky_light",
+                intensity=600.0,
+                color=(0.7, 0.8, 1.0),
+                polar=80.0,
+                azimuth=0.0,
+                is_global=True,
             ),
         ]
     elif args.lighting_scenario == "studio":
         # Use LightScenarios for studio setup
         scenario.lights = [
             DistantLightCfg(
-                name="key_light", intensity=1500.0, color=(1.0, 1.0, 1.0), polar=30.0, azimuth=45.0, is_global=True
+                name="key_light",
+                intensity=1500.0,
+                color=(1.0, 1.0, 1.0),
+                polar=30.0,
+                azimuth=45.0,
+                is_global=True,
             ),
             SphereLightCfg(
                 name="fill_light",
@@ -153,7 +188,12 @@ def run_domain_randomization(args):
         scenario.lights = [
             # Main distant light for overall scene lighting and color changes
             DistantLightCfg(
-                name="rainbow_light", intensity=3000.0, color=(1.0, 0.0, 0.0), polar=60.0, azimuth=45.0, is_global=True
+                name="rainbow_light",
+                intensity=3000.0,
+                color=(1.0, 0.0, 0.0),
+                polar=60.0,
+                azimuth=45.0,
+                is_global=True,
             ),
             # Strong sphere light for position-based shadow changes (lower initial position)
             SphereLightCfg(
@@ -178,7 +218,12 @@ def run_domain_randomization(args):
         # Default simple setup
         scenario.lights = [
             DistantLightCfg(
-                name="main_light", intensity=1000.0, color=(1.0, 1.0, 1.0), polar=45.0, azimuth=30.0, is_global=True
+                name="main_light",
+                intensity=1000.0,
+                color=(1.0, 1.0, 1.0),
+                polar=45.0,
+                azimuth=30.0,
+                is_global=True,
             ),
             SphereLightCfg(
                 name="ambient_light",
@@ -214,7 +259,7 @@ def run_domain_randomization(args):
     ]
 
     # Get handler class based on simulator
-    env_class = get_sim_handler_class(SimType(args.simulator))
+    env_class = get_sim_handler_class(SimType(args.sim))
     env = env_class(scenario)
 
     env.launch()
@@ -259,8 +304,8 @@ def run_domain_randomization(args):
 
     # Initialize video recording
     os.makedirs("get_started/output", exist_ok=True)
-    obs_saver = ObsSaver(video_path=f"get_started/output/12_domain_randomization_{args.simulator}.mp4")
-    obs = env.get_states(mode="dict")
+    obs_saver = ObsSaver(video_path=f"get_started/output/12_domain_randomization_{args.sim}.mp4")
+    obs = env.get_states(mode="tensor")
     obs_saver.add(obs)
 
     # Initialize object randomizers using unified approach
@@ -286,19 +331,22 @@ def run_domain_randomization(args):
 
     # Cube: Wood with MDL textures (combined mode - physics + visual)
     cube_material_randomizer = MaterialRandomizer(
-        MaterialPresets.wood_object("cube", use_mdl=True, randomization_mode="combined"), seed=args.seed
+        MaterialPresets.wood_object("cube", use_mdl=True, randomization_mode="combined"),
+        seed=args.seed,
     )
     cube_material_randomizer.bind_handler(env)
 
     # Sphere: Rubber with high bounce (combined mode - physics + visual)
     sphere_material_randomizer = MaterialRandomizer(
-        MaterialPresets.rubber_object("sphere", randomization_mode="combined"), seed=args.seed
+        MaterialPresets.rubber_object("sphere", randomization_mode="combined"),
+        seed=args.seed,
     )
     sphere_material_randomizer.bind_handler(env)
 
     # Box: Metal with MDL textures (combined mode - physics + visual)
     box_material_randomizer = MaterialRandomizer(
-        MaterialPresets.wood_object("box_base", use_mdl=True, randomization_mode="combined"), seed=args.seed
+        MaterialPresets.wood_object("box_base", use_mdl=True, randomization_mode="combined"),
+        seed=args.seed,
     )
     box_material_randomizer.bind_handler(env)
 
@@ -342,18 +390,21 @@ def run_domain_randomization(args):
 
         # Use demo presets for maximum visual impact
         rainbow_randomizer = LightRandomizer(
-            LightPresets.demo_colors("rainbow_light", randomization_mode="color_only"), seed=args.seed
+            LightPresets.demo_colors("rainbow_light", randomization_mode="color_only"),
+            seed=args.seed,
         )
         rainbow_randomizer.bind_handler(env)
 
         # Use position randomizers for shadow effects
         position_randomizer = LightRandomizer(
-            LightPresets.demo_positions("disco_light", randomization_mode="position_only"), seed=args.seed
+            LightPresets.demo_positions("disco_light", randomization_mode="position_only"),
+            seed=args.seed,
         )
         position_randomizer.bind_handler(env)
 
         shadow_randomizer = LightRandomizer(
-            LightPresets.demo_positions("shadow_light", randomization_mode="position_only"), seed=args.seed
+            LightPresets.demo_positions("shadow_light", randomization_mode="position_only"),
+            seed=args.seed,
         )
         shadow_randomizer.bind_handler(env)
 
@@ -362,12 +413,14 @@ def run_domain_randomization(args):
         # Default simple setup using individual presets
         log.info("Using default lighting setup with 2 lights")
         main_light_randomizer = LightRandomizer(
-            LightPresets.outdoor_daylight("main_light", randomization_mode="combined"), seed=args.seed
+            LightPresets.outdoor_daylight("main_light", randomization_mode="combined"),
+            seed=args.seed,
         )
         main_light_randomizer.bind_handler(env)
 
         ambient_light_randomizer = LightRandomizer(
-            LightPresets.indoor_ambient("ambient_light", randomization_mode="combined"), seed=args.seed
+            LightPresets.indoor_ambient("ambient_light", randomization_mode="combined"),
+            seed=args.seed,
         )
         ambient_light_randomizer.bind_handler(env)
 
@@ -378,37 +431,44 @@ def run_domain_randomization(args):
 
     if args.camera_scenario == "position_only":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="position_only"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="position_only"),
+            seed=args.seed,
         )
         log.info("Using position-only camera randomization")
     elif args.camera_scenario == "orientation_only":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="orientation_only"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="orientation_only"),
+            seed=args.seed,
         )
         log.info("Using orientation-only camera randomization (rotation deltas)")
     elif args.camera_scenario == "look_at_only":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="look_at_only"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="look_at_only"),
+            seed=args.seed,
         )
         log.info("Using look-at-only camera randomization (target point changes)")
     elif args.camera_scenario == "intrinsics_only":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="intrinsics_only"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="intrinsics_only"),
+            seed=args.seed,
         )
         log.info("Using intrinsics-only camera randomization")
     elif args.camera_scenario == "image_only":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="image_only"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="image_only"),
+            seed=args.seed,
         )
         log.info("Using image-only camera randomization")
     elif args.camera_scenario == "combined":
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="combined"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="combined"),
+            seed=args.seed,
         )
         log.info("Using combined camera randomization")
     else:
         camera_randomizer = CameraRandomizer(
-            CameraPresets.surveillance_camera("main_camera", randomization_mode="combined"), seed=args.seed
+            CameraPresets.surveillance_camera("main_camera", randomization_mode="combined"),
+            seed=args.seed,
         )
         log.info("Using default camera randomization")
 
@@ -460,14 +520,31 @@ def run_domain_randomization(args):
     cube_randomizer()
     cube_new_props = cube_randomizer.get_properties()
     if "mass" in cube_new_props and "mass" in cube_properties:
-        log_randomization_result("Object", "cube", "mass", cube_properties["mass"], cube_new_props["mass"], "kg")
+        log_randomization_result(
+            "Object",
+            "cube",
+            "mass",
+            cube_properties["mass"],
+            cube_new_props["mass"],
+            "kg",
+        )
     if "friction" in cube_new_props and "friction" in cube_properties:
         log_randomization_result(
-            "Object", "cube", "friction", cube_properties["friction"][0], cube_new_props["friction"][0], ""
+            "Object",
+            "cube",
+            "friction",
+            cube_properties["friction"][0],
+            cube_new_props["friction"][0],
+            "",
         )
     if "position" in cube_new_props and "position" in cube_properties:
         log_randomization_result(
-            "Object", "cube", "position", cube_properties["position"], cube_new_props["position"], "m"
+            "Object",
+            "cube",
+            "position",
+            cube_properties["position"],
+            cube_new_props["position"],
+            "m",
         )
 
     # Randomize sphere (bouncy object preset)
@@ -475,14 +552,31 @@ def run_domain_randomization(args):
     sphere_randomizer()
     sphere_new_props = sphere_randomizer.get_properties()
     if "mass" in sphere_new_props and "mass" in sphere_properties:
-        log_randomization_result("Object", "sphere", "mass", sphere_properties["mass"], sphere_new_props["mass"], "kg")
+        log_randomization_result(
+            "Object",
+            "sphere",
+            "mass",
+            sphere_properties["mass"],
+            sphere_new_props["mass"],
+            "kg",
+        )
     if "restitution" in sphere_new_props and "restitution" in sphere_properties:
         log_randomization_result(
-            "Object", "sphere", "restitution", sphere_properties["restitution"], sphere_new_props["restitution"], ""
+            "Object",
+            "sphere",
+            "restitution",
+            sphere_properties["restitution"],
+            sphere_new_props["restitution"],
+            "",
         )
     if "position" in sphere_new_props and "position" in sphere_properties:
         log_randomization_result(
-            "Object", "sphere", "position", sphere_properties["position"], sphere_new_props["position"], "m"
+            "Object",
+            "sphere",
+            "position",
+            sphere_properties["position"],
+            sphere_new_props["position"],
+            "m",
         )
 
     # Randomize franka (robot base preset)
@@ -490,10 +584,22 @@ def run_domain_randomization(args):
     franka_randomizer()
     franka_new_props = franka_randomizer.get_properties()
     if "mass" in franka_new_props and "mass" in franka_properties:
-        log_randomization_result("Object", "franka", "mass", franka_properties["mass"], franka_new_props["mass"], "kg")
+        log_randomization_result(
+            "Object",
+            "franka",
+            "mass",
+            franka_properties["mass"],
+            franka_new_props["mass"],
+            "kg",
+        )
     if "friction" in franka_new_props and "friction" in franka_properties:
         log_randomization_result(
-            "Object", "franka", "friction", franka_properties["friction"][0], franka_new_props["friction"][0], ""
+            "Object",
+            "franka",
+            "friction",
+            franka_properties["friction"][0],
+            franka_new_props["friction"][0],
+            "",
         )
 
     # run material randomization
@@ -546,7 +652,8 @@ def run_domain_randomization(args):
 
     # run light randomization for all lights in the scenario
     log_randomization_header(
-        "LIGHT RANDOMIZATION", f"{args.lighting_scenario} scenario with {len(light_randomizers)} lights"
+        "LIGHT RANDOMIZATION",
+        f"{args.lighting_scenario} scenario with {len(light_randomizers)} lights",
     )
 
     # Initial light randomization
@@ -576,11 +683,21 @@ def run_domain_randomization(args):
                 )
             if "color" in initial_light_props and "color" in new_light_props:
                 log_randomization_result(
-                    "Light", light_name, "color", initial_light_props["color"], new_light_props["color"], "RGB"
+                    "Light",
+                    light_name,
+                    "color",
+                    initial_light_props["color"],
+                    new_light_props["color"],
+                    "RGB",
                 )
             if "position" in initial_light_props and "position" in new_light_props:
                 log_randomization_result(
-                    "Light", light_name, "position", initial_light_props["position"], new_light_props["position"], "m"
+                    "Light",
+                    light_name,
+                    "position",
+                    initial_light_props["position"],
+                    new_light_props["position"],
+                    "m",
                 )
 
         except Exception as e:
@@ -588,7 +705,8 @@ def run_domain_randomization(args):
 
     # run camera randomization for all cameras in the scenario
     log_randomization_header(
-        "CAMERA RANDOMIZATION", f"{args.camera_scenario} mode with {len(camera_randomizers)} cameras"
+        "CAMERA RANDOMIZATION",
+        f"{args.camera_scenario} mode with {len(camera_randomizers)} cameras",
     )
 
     # Initial camera randomization
@@ -627,7 +745,12 @@ def run_domain_randomization(args):
                 )
             if "look_at" in initial_camera_props and "look_at" in new_camera_props:
                 log_randomization_result(
-                    "Camera", camera_name, "look_at", initial_camera_props["look_at"], new_camera_props["look_at"], "m"
+                    "Camera",
+                    camera_name,
+                    "look_at",
+                    initial_camera_props["look_at"],
+                    new_camera_props["look_at"],
+                    "m",
                 )
 
         except Exception as e:
@@ -639,7 +762,7 @@ def run_domain_randomization(args):
     for step in range(100):
         log.debug(f"Simulation step {step}")
         env.simulate()
-        obs = env.get_states(mode="dict")
+        obs = env.get_states(mode="tensor")
         obs_saver.add(obs)
 
         # Apply randomization every 10 steps to show material and lighting changes very frequently
@@ -686,7 +809,7 @@ def main():
         robot: str = "franka"
 
         ## Handlers
-        simulator: Literal["isaacsim"] = "isaacsim"
+        sim: Literal["isaacsim"] = "isaacsim"
 
         ## Lighting scenarios
         lighting_scenario: Literal["default", "indoor_room", "outdoor_scene", "studio", "demo"] = "default"
@@ -694,7 +817,12 @@ def main():
 
         ## Camera randomization modes
         camera_scenario: Literal[
-            "combined", "position_only", "orientation_only", "look_at_only", "intrinsics_only", "image_only"
+            "combined",
+            "position_only",
+            "orientation_only",
+            "look_at_only",
+            "intrinsics_only",
+            "image_only",
         ] = "combined"
         """Choose camera randomization mode: combined, position_only, orientation_only, look_at_only, intrinsics_only, or image_only"""
 
@@ -778,7 +906,7 @@ def main():
     # Run IsaacSim demo
     run_domain_randomization(args)
     log.info("\nRandomization demo completed! Check the logs above for detailed results.")
-    log.info(f"Video saved to: get_started/output/12_domain_randomization_{args.simulator}.mp4")
+    log.info(f"Video saved to: get_started/output/12_domain_randomization_{args.sim}.mp4")
 
 
 if __name__ == "__main__":

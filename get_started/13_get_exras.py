@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.constants import PhysicStateType, SimType
 from metasim.queries.site import SitePos
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
@@ -36,7 +41,16 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal[
+        "isaacsim",
+        "isaacgym",
+        "genesis",
+        "pybullet",
+        "sapien2",
+        "sapien3",
+        "mujoco",
+        "mjx",
+    ] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -249,12 +263,12 @@ init_states = [
 ]
 env.launch()
 env.set_states(init_states)
-obs = env.get_states(mode="dict")
+obs = env.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 
 ## Main loop
-obs_saver = ObsSaver(video_path=f"get_started/output/2_add_new_robot_{args.sim}.mp4")
+obs_saver = ObsSaver(video_path=f"get_started/output/13_get_exras_{args.sim}.mp4")
 obs_saver.add(obs)
 
 step = 0
@@ -277,9 +291,8 @@ for _ in range(100):
     ]
     env.set_dof_targets(actions)
     env.simulate()
-    obs = env.get_states(mode="dict")  # get dict type states
     obs_tensor = env.get_states(mode="tensor")  # get tensor type states
-    obs_saver.add(obs)
+    obs_saver.add(obs_tensor)
     extras = env.get_extra()
     print("Extras:", extras)  # noqa: T201
     step += 1

@@ -13,9 +13,9 @@ By running the above command, you will add a new robot to MetaSim and it will au
 
 ### Examples
 
-#### Isaac Lab
+#### IsaacSim
 ```bash
-python get_started/2_add_new_robot.py  --sim isaaclab
+python get_started/2_add_new_robot.py  --sim isaacsim
 ```
 
 #### Isaac Gym

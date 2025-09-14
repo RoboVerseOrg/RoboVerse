@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
@@ -143,7 +148,7 @@ init_states = [
 ]
 env.set_states(init_states)
 env.refresh_render()
-obs = env.get_states(mode="dict")
+obs = env.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/6_advanced_rendering_{args.sim}_{args.render.mode}.png"
 log.info(f"Saving image to {save_path}")

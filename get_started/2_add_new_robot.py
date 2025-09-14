@@ -22,7 +22,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
@@ -35,7 +40,16 @@ class Args:
     """Arguments for the static scene."""
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal[
+        "isaacsim",
+        "isaacgym",
+        "genesis",
+        "pybullet",
+        "sapien2",
+        "sapien3",
+        "mujoco",
+        "mjx",
+    ] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -243,7 +257,7 @@ init_states = [
 ]
 env.launch()
 env.set_states(init_states)
-obs = env.get_states(mode="dict")
+obs = env.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -271,7 +285,7 @@ for _ in range(100):
     ]
     env.set_dof_targets(actions)
     env.simulate()
-    obs = env.get_states(mode="dict")
+    obs = env.get_states(mode="tensor")
     obs_saver.add(obs)
     step += 1
 

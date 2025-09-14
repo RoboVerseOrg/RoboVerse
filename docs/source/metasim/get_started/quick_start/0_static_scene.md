@@ -12,9 +12,9 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 #### Isaac Lab
 ```bash
-python get_started/0_static_scene.py  --sim isaaclab
+python get_started/0_static_scene.py  --sim isaacsim
 ```
-
+/isaacsim
 #### Isaac Gym
 ```bash
 python get_started/0_static_scene.py  --sim isaacgym

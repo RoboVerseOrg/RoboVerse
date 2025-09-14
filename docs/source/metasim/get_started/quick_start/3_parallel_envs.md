@@ -13,9 +13,9 @@ By running the above command, you will run multiple environments in parallel and
 
 ### Examples
 
-#### Isaac Lab
+#### IsaacSim
 ```bash
-python get_started/3_parallel_envs.py  --sim isaaclab --num_envs 4
+python get_started/3_parallel_envs.py  --sim isaacsim --num_envs 4
 ```
 
 #### Isaac Gym

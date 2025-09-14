@@ -41,9 +41,7 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal[
-            "isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"
-        ] = "mujoco"
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien", "sapien2", "sapien3"] = "mujoco"
 
         ## Others
         num_envs: int = 4
@@ -146,7 +144,7 @@ if __name__ == "__main__":
     env.set_states(init_states)
     os.makedirs("get_started/output", exist_ok=True)
 
-    obs = env.get_states(mode="dict")
+    obs = env.get_states(mode="tensor")
     ## Main loop
     obs_saver = ObsSaver(video_path=f"get_started/output/3_parallel_envs_{args.sim}.mp4")
     obs_saver.add(obs)
@@ -172,7 +170,7 @@ if __name__ == "__main__":
         ]
         env.set_dof_targets(actions)
         env.simulate()
-        obs = env.get_states(mode="dict")
+        obs = env.get_states(mode="tensor")
         obs_saver.add(obs)
         step += 1
 
