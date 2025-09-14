@@ -6,7 +6,7 @@ In this tutorial, we demonstrate how to add and mount cameras in MetaSim.
 ```bash
 python get_started/10_mount_camera.py  --sim <simulator>
 ```
-you can also render in the headless mode by adding `--headless` flag, only supported in `IsaacGym` and `IsaacLab`.
+you can also render in the headless mode by adding `--headless` flag, only supported in `IsaacGym` and `IsaacSim`.
 
 This script sets up a simulated scene and records video from two different camera perspectives
 - Third-person view: A fixed camera placed above and behind the robot, observing the scene from a distance.

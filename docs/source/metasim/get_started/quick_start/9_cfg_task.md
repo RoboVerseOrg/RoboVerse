@@ -9,9 +9,9 @@ python get_started/9_cfg_task.py --sim <simulator> --num_envs <num_envs> --task 
 
 ### Examples
 
-#### IsaacLab
+#### IsaacSim
 ```bash
-python get_started/9_cfg_task.py --sim isaaclab --num_envs 4 --task close_box
+python get_started/9_cfg_task.py --sim isaacsim --num_envs 4 --task close_box
 ```
 
 #### Isaac Gym
