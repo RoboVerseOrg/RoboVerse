@@ -180,8 +180,6 @@ class PandaOpenCabinet(RLTaskEnv):
         # mj: return {"box_target": box_target * info["reached_box"], ...}
 
         handle_pos = env_states.objects["handle"].root_state[:, 0:3]  # [num_envs, 3]
-        handle_rot = env_states.objects["handle"].root_state[:, 3:7]
-        print(handle_rot[0])
         target_pos = env_states.objects["target"].root_state[:, 0:3]  # [num_envs, 3]
         gripper_pos = env_states.extras["gripper_pos"]  # (B, 3)
 
