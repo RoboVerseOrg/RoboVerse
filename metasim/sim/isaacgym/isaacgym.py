@@ -84,9 +84,6 @@ class IsaacgymHandler(BaseSimHandler):
             None  # for the configuration: desire_pos = action_scale * action + default_pos
         )
         self._action_offset: bool = False  # for configuration: desire_pos = action_scale * action + default_pos
-        self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
-        self._d_gains: torch.Tensor | None = None
-        self._torque_limits: torch.Tensor | None = None
         self._effort: torch.Tensor | None = None  # output of pd controller, used for effort control
         self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
         self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
@@ -126,7 +123,7 @@ class IsaacgymHandler(BaseSimHandler):
         # TODO move more params into sim_params cfg
         sim_params = gymapi.SimParams()
         sim_params.up_axis = gymapi.UP_AXIS_Z
-        sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.8)
+        sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.81)
         if self.scenario.sim_params.dt is not None:
             # IsaacGym has a different dt definition than IsaacLab, see https://isaac-sim.github.io/IsaacLab/main/source/migration/migrating_from_isaacgymenvs.html#simulation-config
             sim_params.dt = self.scenario.sim_params.dt
@@ -147,6 +144,8 @@ class IsaacgymHandler(BaseSimHandler):
 
         compute_device_id = 0
         graphics_device_id = 0
+        if self.headless:
+            graphics_device_id = -1
         self.sim = self.gym.create_sim(compute_device_id, graphics_device_id, physics_engine, sim_params)
         if self.sim is None:
             raise Exception("Failed to create sim")
@@ -295,10 +294,6 @@ class IsaacgymHandler(BaseSimHandler):
         self._action_scale = torch.tensor(1.0, device=self.device)
         self._action_offset = torch.tensor(0.0, device=self.device)
 
-        self._torque_limits = torch.zeros(
-            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-        )
-
         robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
 
         robot_lower_limits = robot_dof_props["lower"]
@@ -331,11 +326,11 @@ class IsaacgymHandler(BaseSimHandler):
                 default_dof_pos.append(robot_upper_limits[i])
             # pd control effort mode
             if i_control_mode == "effort":
-                # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
+                # effort control should set all to zeros
 
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
-                robot_dof_props["damping"][i] = i_actuator_cfg.damping
+                robot_dof_props["stiffness"][i] = 0.0
+                robot_dof_props["damping"][i] = 0.0
 
             # built-in position mode
             elif i_control_mode == "position":
@@ -526,7 +521,10 @@ class IsaacgymHandler(BaseSimHandler):
                 self._env_rigid_body_global_indices[-1][self.objects[obj_i].name] = object_rigid_body_indices
 
             # # carefully add robot
-            robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 2)
+            if self.robots[0].enabled_self_collisions:
+                robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 0, 0)
+            else:
+                robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 2)
             assert self.robots[0].scale[0] == 1.0 and self.robots[0].scale[1] == 1.0 and self.robots[0].scale[2] == 1.0
             self._robot_handles.append(robot_handle)
             # set dof properties
@@ -621,7 +619,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         camera_states = {}
 
-        self.refresh_render()
         self.gym.start_access_image_tensors(self.sim)
 
         for cam_id, cam in enumerate(self.cameras):
@@ -722,21 +719,17 @@ class IsaacgymHandler(BaseSimHandler):
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
     def refresh_render(self) -> None:
-        # Step the physics
-        self.gym.simulate(self.sim)
         self.gym.fetch_results(self.sim, True)
         self._render()
 
     def _simulate_one_physics_step(self):
         self.gym.simulate(self.sim)
-        if self.device == "cpu":
-            self.gym.fetch_results(self.sim, True)
+        self.gym.fetch_results(self.sim, True)
         self.gym.refresh_dof_state_tensor(self.sim)
 
     def _simulate(self) -> None:
         # Step the physics
-        for _ in range(self.decimation):
-            self._simulate_one_physics_step()
+        self._simulate_one_physics_step()
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_jacobian_tensors(self.sim)
@@ -1032,11 +1025,6 @@ class IsaacgymHandler(BaseSimHandler):
     def default_dof_pos(self) -> torch.tensor:
         joint_reindex = self.get_joint_reindex(self.robot.name)
         return self._robot_default_dof_pos[:, joint_reindex]
-
-    @property
-    def torque_limits(self) -> torch.tensor:
-        joint_reindex = self.get_joint_reindex(self.robot.name)
-        return self._torque_limits[:, joint_reindex]
 
     @property
     def robot_num_dof(self) -> int:
