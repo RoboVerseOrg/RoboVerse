@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 from metasim.task.rl_task import RLTaskEnv
@@ -44,12 +44,12 @@ class PandaOpenCabinet(RLTaskEnv):
     scenario = ScenarioCfg(
         objects=[
             # Cabinet handle (the object the robot needs to interact with)
-            RigidObjCfg(
+            ArticulationObjCfg(
                 name="handle",
                 mjcf_path="roboverse_data/assets/playground/open_cabinet/mjcf/handle.xml",
-                physics=PhysicStateType.RIGIDBODY,
                 fix_base_link=True,
             ),
+            
             # Target position for the handle
             PrimitiveSphereCfg(
                 name="target",
@@ -62,8 +62,7 @@ class PandaOpenCabinet(RLTaskEnv):
             RigidObjCfg(
                 name="barrier",
                 mjcf_path="roboverse_data/assets/playground/open_cabinet/mjcf/barrier.xml",
-                physics=PhysicStateType.RIGIDBODY,
-                fix_base_link=True,
+                physics=PhysicStateType.GEOM,
             ),
         ],
         robots=["franka"],
@@ -312,15 +311,15 @@ class PandaOpenCabinet(RLTaskEnv):
                 "objects": {
                     "handle": {
                         "pos": torch.tensor([0.5, 0.0, 0.5]),
-                        "rot": torch.tensor([0, -0.707, 0, 0.707]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "target": {
                         "pos": torch.tensor([0.3, 0.0, 0.5]),
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "barrier": {
-                        "pos": torch.tensor([0.52, 0.0, 0.0]),
-                        "rot": torch.tensor([0, -0.707, 0, 0.707]),
+                        "pos": torch.tensor([0.52, 0.0, 0.5]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                 },
                 "robots": {
@@ -329,14 +328,14 @@ class PandaOpenCabinet(RLTaskEnv):
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                         "dof_pos": {
                             "panda_joint1": 0.0,
-                            "panda_joint2": 0.3,
+                            "panda_joint2": 0.0,
                             "panda_joint3": 0.0,
-                            "panda_joint4": -1.57079,
+                            "panda_joint4": 0.0,
                             "panda_joint5": 0.0,
-                            "panda_joint6": 2.0,
-                            "panda_joint7": -0.7853,
-                            "panda_finger_joint1": 0.04,
-                            "panda_finger_joint2": 0.04,
+                            "panda_joint6": 0.0,
+                            "panda_joint7": 0.0,
+                            "panda_finger_joint1": 0.0,
+                            "panda_finger_joint2": 0.0,
                         },
                     }
                 },

@@ -23,7 +23,12 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
@@ -38,7 +43,15 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+        sim: Literal[
+            "isaacsim",
+            "isaacgym",
+            "genesis",
+            "pybullet",
+            "sapien2",
+            "sapien3",
+            "mujoco",
+        ] = "mujoco"
 
         ## Others
         num_envs: int = 1
@@ -63,26 +76,32 @@ if __name__ == "__main__":
 
     # add objects
     scenario.objects = [
-        RigidObjCfg(
-            name="handle",
-            mjcf_path="roboverse_data/assets/playground/open_cabinet/mjcf/handle.xml",
+        PrimitiveCubeCfg(
+            name="cube",
+            size=(0.1, 0.1, 0.1),
+            color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
-            fix_base_link=True,
         ),
-        # Target position for the handle
         PrimitiveSphereCfg(
-            name="target",
-            mass=0.01,
-            radius=0.02,
-            physics=PhysicStateType.XFORM,
-            color=(0.7, 1.0, 0.7),  # Green color for target
-        ),
-        # Barrier to avoid collision
-        RigidObjCfg(
-            name="barrier",
-            mjcf_path="roboverse_data/assets/playground/open_cabinet/mjcf/barrier.xml",
+            name="sphere",
+            radius=0.1,
+            color=[0.0, 0.0, 1.0],
             physics=PhysicStateType.RIGIDBODY,
+        ),
+        RigidObjCfg(
+            name="bbq_sauce",
+            scale=(2, 2, 2),
+            physics=PhysicStateType.RIGIDBODY,
+            usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+            urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+            mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
+        ArticulationObjCfg(
+            name="box_base",
             fix_base_link=True,
+            usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+            urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+            mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
 
