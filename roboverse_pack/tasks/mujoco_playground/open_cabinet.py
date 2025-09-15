@@ -213,6 +213,7 @@ class PandaOpenCabinet(RLTaskEnv):
         # Distance-based gripper behavior reward
         # When far: encourage open (low closure), when close: encourage close (high closure)
         distance_threshold = 0.015  # [m]
+
         far_from_handle = (gripper_handle_dist > distance_threshold).float()  # [num_envs]
         close_to_handle = (gripper_handle_dist <= distance_threshold).float()  # [num_envs]
 
