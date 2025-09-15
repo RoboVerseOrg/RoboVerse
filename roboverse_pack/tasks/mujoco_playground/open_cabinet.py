@@ -212,7 +212,8 @@ class PandaOpenCabinet(RLTaskEnv):
 
         # Distance-based gripper behavior reward
         # When far: encourage open (low closure), when close: encourage close (high closure)
-        distance_threshold = 0.01  # [m]
+        distance_threshold = 0.015  # [m]
+
         far_from_handle = (gripper_handle_dist > distance_threshold).float()  # [num_envs]
         close_to_handle = (gripper_handle_dist <= distance_threshold).float()  # [num_envs]
 
@@ -221,7 +222,7 @@ class PandaOpenCabinet(RLTaskEnv):
         finger2_target = 0.03
         finger1_reward = 1.0 - torch.abs(finger1_pos - finger1_target) / 0.03  # [num_envs]
         finger2_reward = 1.0 - torch.abs(finger2_pos - finger2_target) / 0.03  # [num_envs]
-        far_finger_reward = 0.5 * (finger1_reward + finger2_reward) / 2.0  # [num_envs]
+        far_finger_reward = 0.2 * (finger1_reward + finger2_reward) / 2.0  # [num_envs]
 
         # When close: reward for closing (high closure)
         close_reward = gripper_closure / 0.08  # [num_envs]
@@ -356,18 +357,18 @@ class PandaOpenCabinet(RLTaskEnv):
                 },
                 "robots": {
                     "franka": {
-                        "pos": torch.tensor([0.0, 0.0, 0.0]),
+                        "pos": torch.tensor([-0.4, 0.0, 0.0]),
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                         "dof_pos": {
                             "panda_joint1": 0.0,
-                            "panda_joint2": 0.0,
+                            "panda_joint2": 0.3,
                             "panda_joint3": 0.0,
-                            "panda_joint4": 0.0,
+                            "panda_joint4": -1.57079,
                             "panda_joint5": 0.0,
-                            "panda_joint6": 0.0,
-                            "panda_joint7": 0.0,
-                            "panda_finger_joint1": 0.0,
-                            "panda_finger_joint2": 0.0,
+                            "panda_joint6": 2.0,
+                            "panda_joint7": -0.7853,
+                            "panda_finger_joint1": 0.04,
+                            "panda_finger_joint2": 0.04,
                         },
                     }
                 },
