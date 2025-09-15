@@ -101,7 +101,7 @@ def get_task_class(name: str) -> type[BaseTaskEnv]:
         return TASK_REGISTRY[key]
     except KeyError as exc:
         available = ", ".join(sorted(TASK_REGISTRY.keys())) or "<none>"
-        raise KeyError(f"Unknown task '{name}'. Available tasks: {available}") from exc
+        raise KeyError(f"Unknown task '{name}' ") from exc
 
 
 def list_tasks():
