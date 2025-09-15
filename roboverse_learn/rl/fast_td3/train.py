@@ -17,7 +17,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 def get_config():
     """Get configuration with command line argument support."""
     parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml',
+    parser.add_argument('--config', type=str, default='mjx_rl_open_cabinet.yaml',
                        help='YAML configuration file name (will be loaded from configs/ directory)')
     args = parser.parse_args()
 
@@ -43,7 +43,8 @@ else:
     os.environ["MUJOCO_GL"] = "glfw"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
-# Ensure repository root is on sys.path for local package imports
+# Ensure repos
+# itory root is on sys.path for local package imports
 import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
