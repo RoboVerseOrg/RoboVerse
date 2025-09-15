@@ -1,0 +1,41 @@
+terrain:
+  width: 40. # m
+  length: 10. # m
+  horizontal_scale: 0.1 # m
+  vertical_scale: 0.005 # m
+  margin: 5 # m
+  repeat_direction_gap: [5, 'column', 1]  # (repeat, repeat_direction, gap)
+  difficulty: [1.0, 2.0, 'linear']
+  elements:
+    - type: slope
+      origin: [0.0, 0.0]
+      size: [10.0, 10.0]
+      slope: 0.5  # radians
+      random: True
+      platform_size: 1.0
+    - type: stair
+      origin: [10.0, 0.0]
+      size: [10.0, 10.0]
+      step: [0.30, 0.1]
+      platform_size: 1.0 # size of the platform at the top of the stairs when use pyramid_stairs_terrain
+    - type: obstacle
+      origin: [20., 0]
+      size: [10.0, 10.0]
+      rectangle_params: [1.0, 2.0, 30] # (min_size, max_size, num_rectangles)
+      max_height: 0.2  # height of the obstacles in meters
+      platform_size: 1.0
+    - type: stone
+      origin: [30.0, 0]
+      size: [10.0, 10.0]
+      stone_params: [0.8, 1.0]
+      max_height: 0.2  # height of the stones in meters
+      platform_size: 1.0
+    # - type: gap
+    #   origin: [40.0, 0]
+    #   size: [10.0, 10.0]
+    #   gap_size: 1.0  # size of the gap in meters
+    #   platform_size: 1.0
+    # - type: pit
+    #   position: [50.0, 0]
+    #   size: [10.0, 10.0]
+    #   depth: 1.0
