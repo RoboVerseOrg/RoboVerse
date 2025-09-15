@@ -49,7 +49,6 @@ class PandaOpenCabinet(RLTaskEnv):
                 mjcf_path="roboverse_data/assets/playground/open_cabinet/mjcf/handle.xml",
                 fix_base_link=True,
             ),
-            
             # Target position for the handle
             PrimitiveSphereCfg(
                 name="target",
@@ -310,6 +309,7 @@ class PandaOpenCabinet(RLTaskEnv):
                     "handle": {
                         "pos": torch.tensor([0.5, 0.0, 0.5]),
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                        "dof_pos": {"handle_joint": 0.0},
                     },
                     "target": {
                         "pos": torch.tensor([0.3, 0.0, 0.5]),
