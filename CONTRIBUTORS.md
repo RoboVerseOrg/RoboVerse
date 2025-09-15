@@ -30,13 +30,11 @@ Guidelines for modifications:
 * Haozhe Lou
 * Jiangran Lyu
 * Krishnan Srinivasan
-* Mingyuan Sun
 * Peihao Li
 * Ran Gong
 * Siheng Zhao
 * Songlin Wei
 * Yikai Tang
-* Yongce Liu
 * Yuran Wang
 * Yutong Liang
 * Yuyang Li

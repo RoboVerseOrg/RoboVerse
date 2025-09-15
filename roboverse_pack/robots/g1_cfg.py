@@ -16,7 +16,7 @@ class G1Cfg(RobotCfg):
     urdf_path: str = "roboverse_data/robots/g1/urdf/g1_29dof_lock_waist_rev_1_0_modified.urdf"
     enabled_gravity: bool = True
     fix_base_link: bool = False
-    enabled_self_collisions: bool = True
+    enabled_self_collisions: bool = False
     isaacgym_flip_visual_attachments: bool = False
     collapse_fixed_joints: bool = True
 

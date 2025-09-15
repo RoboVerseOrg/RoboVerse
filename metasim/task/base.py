@@ -67,7 +67,7 @@ class BaseTaskEnv:
             self._instantiate_env(self.scenario)
 
         self._initial_states = self._get_initial_states()
-        self.device = self.handler.device
+        self.device = device
         self._prepare_callbacks()
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
