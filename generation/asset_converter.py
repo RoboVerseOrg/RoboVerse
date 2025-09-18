@@ -40,6 +40,19 @@ class AssetConverterBase(ABC):
     def convert(self, urdf_path: str, output_path: str, **kwargs) -> str:
         pass
 
+    def transform_mesh(self, input_mesh: str, output_mesh: str, mesh_origin: ET.Element) -> None:
+        """Apply transform to the mesh based on the origin element in URDF."""
+        mesh = trimesh.load(input_mesh)
+        rpy = list(map(float, mesh_origin.get("rpy").split(" ")))
+        rotation = Rotation.from_euler("xyz", rpy, degrees=False)
+        offset = list(map(float, mesh_origin.get("xyz").split(" ")))
+        mesh.vertices = (mesh.vertices @ rotation.as_matrix().T) + offset
+
+        os.makedirs(os.path.dirname(output_mesh), exist_ok=True)
+        _ = mesh.export(output_mesh)
+
+        return
+
     def __enter__(self):
         return self
 
@@ -52,10 +65,9 @@ class MeshtoMJCFConverter(AssetConverterBase):
 
     def __init__(
         self,
-        rotate_wxyz: tuple[float] = (1, 0, 0, 0),
         **kwargs,
     ) -> None:
-        self.rotate_wxyz = [round(num, 4) for num in rotate_wxyz]
+        self.kwargs = kwargs
 
     def _copy_asset_file(self, src: str, dst: str) -> None:
         if os.path.exists(dst):
@@ -93,11 +105,9 @@ class MeshtoMJCFConverter(AssetConverterBase):
         # Preprocess the mesh by applying rotation.
         input_mesh = f"{input_dir}/{filename}"
         output_mesh = f"{output_dir}/{filename}"
-        mesh = trimesh.load(input_mesh)
-        rotation = Rotation.from_quat(self.rotate_wxyz, scalar_first=True)
-        mesh.vertices = mesh.vertices @ rotation.as_matrix().T
-        os.makedirs(os.path.dirname(output_mesh), exist_ok=True)
-        _ = mesh.export(output_mesh)
+        mesh_origin = element.find("origin")
+        if mesh_origin is not None:
+            self.transform_mesh(input_mesh, output_mesh, mesh_origin)
 
         if material is not None:
             geom.set("material", material.get("name"))
@@ -161,12 +171,7 @@ class MeshtoMJCFConverter(AssetConverterBase):
         os.makedirs(output_dir, exist_ok=True)
         for idx, link in enumerate(root.findall("link")):
             link_name = link.get("name", "unnamed_link")
-            body_attrs = dict(
-                name=link_name,
-                # pos=" ".join(map(str, self.body_pos_xyz)),
-                # quat=" ".join(map(str, self.rotate_wxyz)),
-            )
-            body = ET.SubElement(mujoco_worldbody, "body", **body_attrs)
+            body = ET.SubElement(mujoco_worldbody, "body", name=link_name)
 
             material = self.add_materials(
                 mujoco_asset,
@@ -222,7 +227,6 @@ class MeshtoUSDConverter(AssetConverterBase):
         force_usd_conversion: bool = True,
         make_instanceable: bool = False,
         simulation_app=None,
-        rotate_wxyz: tuple[float] = (1, 0, 0, 0),
         **kwargs,
     ):
         self.usd_parms = dict(
@@ -230,7 +234,6 @@ class MeshtoUSDConverter(AssetConverterBase):
             make_instanceable=make_instanceable,
             **kwargs,
         )
-        self.rotate_wxyz = rotate_wxyz
         if simulation_app is not None:
             self.simulation_app = simulation_app
 
@@ -267,19 +270,15 @@ class MeshtoUSDConverter(AssetConverterBase):
         tree = ET.parse(urdf_path)
         root = tree.getroot()
         mesh_file = root.find("link/visual/geometry/mesh").get("filename")
-        mesh_path = os.path.join(os.path.dirname(urdf_path), mesh_file)
+        input_mesh = os.path.join(os.path.dirname(urdf_path), mesh_file)
         output_dir = os.path.abspath(os.path.dirname(output_file))
-
-        # Preprocess the mesh by applying rotation.
-        mesh = trimesh.load(mesh_path)
-        rotation = Rotation.from_quat(self.rotate_wxyz, scalar_first=True)
-        mesh.vertices = mesh.vertices @ rotation.as_matrix().T
-        mesh_path = f"{output_dir}/mesh/{os.path.basename(mesh_file)}"
-        os.makedirs(os.path.dirname(mesh_path), exist_ok=True)
-        _ = mesh.export(mesh_path)
+        output_mesh = f"{output_dir}/mesh/{os.path.basename(mesh_file)}"
+        mesh_origin = root.find("link/visual/origin")
+        if mesh_origin is not None:
+            self.transform_mesh(input_mesh, output_mesh, mesh_origin)
 
         cfg = MeshConverterCfg(
-            asset_path=mesh_path,
+            asset_path=output_mesh,
             usd_dir=output_dir,
             usd_file_name=os.path.basename(output_file),
             **self.usd_parms,
@@ -320,12 +319,6 @@ class MeshtoUSDConverter(AssetConverterBase):
                     api_schemas.appendedItems = api_list
                     prim.SetMetadata("apiSchemas", api_schemas)
 
-                # elif prim.GetName() == "geometry":
-                #     xformable = UsdGeom.Xformable(prim)
-                #     xformable.ClearXformOpOrder()
-                #     orient_op = xformable.AddOrientOp(UsdGeom.XformOp.PrecisionDouble)
-                #     orient_op.Set(Gf.Quatd(*self.rotate_wxyz))
-
         layer.Save()
         logger.info(f"Successfully converted {urdf_path} → {usd_path}")
 
@@ -349,7 +342,7 @@ class URDFtoUSDConverter(MeshtoUSDConverter):
         force_usd_conversion: bool = True,
         collision_from_visuals: bool = True,
         joint_drive=None,
-        rotate_wxyz: tuple[float] = (1, 0, 0, 0),
+        rotate_wxyz: tuple[float] | None = None,
         simulation_app=None,
         **kwargs,
     ):
@@ -406,11 +399,12 @@ class URDFtoUSDConverter(MeshtoUSDConverter):
                     api_schemas.appendedItems = api_list
                     prim.SetMetadata("apiSchemas", api_schemas)
 
-        inner_prim = next(p for p in stage.GetDefaultPrim().GetChildren() if p.IsA(UsdGeom.Xform))
-        xformable = UsdGeom.Xformable(inner_prim)
-        xformable.ClearXformOpOrder()
-        orient_op = xformable.AddOrientOp(UsdGeom.XformOp.PrecisionDouble)
-        orient_op.Set(Gf.Quatd(*self.rotate_wxyz))
+        if self.rotate_wxyz is not None:
+            inner_prim = next(p for p in stage.GetDefaultPrim().GetChildren() if p.IsA(UsdGeom.Xform))
+            xformable = UsdGeom.Xformable(inner_prim)
+            xformable.ClearXformOpOrder()
+            orient_op = xformable.AddOrientOp(UsdGeom.XformOp.PrecisionDouble)
+            orient_op.Set(Gf.Quatd(*self.rotate_wxyz))
 
         layer.Save()
         logger.info(f"Successfully converted {urdf_path} → {usd_path}")
@@ -447,40 +441,32 @@ if __name__ == "__main__":
         "outputs/layouts_gens/task_0002/asset3d/table/result/table.urdf",
     ]
 
-    quat_wxyz = (0.7071, 0.7071, 0, 0)  # rotate 90 deg around the X-axis
     if target_asset_type == AssetType.MJCF:
         output_files = [
-            "outputs/layouts_gens/task_0000/mujoco/apple/apple.mjcf",
-            "outputs/layouts_gens/task_0000/mujoco/banana/banana.mjcf",
-            "outputs/layouts_gens/task_0000/mujoco/mug/mug.mjcf",
-            "outputs/layouts_gens/task_0000/mujoco/napkin/napkin.mjcf",
-            "outputs/layouts_gens/task_0000/mujoco/plate/plate.mjcf",
-            "outputs/layouts_gens/task_0000/mujoco/table/table.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/apple/apple.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/banana/banana.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/mug/mug.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/napkin/napkin.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/plate/plate.mjcf",
+            "outputs/layouts_gens/task_0000/mujoco2/table/table.mjcf",
         ]
-        # # rotate 90 deg around the X-axis, then 180 deg around the Z-axis
-        # rot_x = Rotation.from_quat([0.7071, 0, 0, 0.7071])
-        # rot_z = Rotation.from_quat([0, 0, 1, 0])
-        # quat_wxyz = (rot_z * rot_x).as_quat()[[3, 0, 1, 2]]
-
         asset_converter = AssetConverterFactory.create(
             target_type=AssetType.MJCF,
             source_type=AssetType.URDF,
-            rotate_wxyz=quat_wxyz,
         )
 
     elif target_asset_type == AssetType.USD:
         output_files = [
-            "outputs/layouts_gens/task_0000/isaac/apple/apple.usd",
-            "outputs/layouts_gens/task_0000/isaac/banana/banana.usd",
-            "outputs/layouts_gens/task_0000/isaac/mug/mug.usd",
-            "outputs/layouts_gens/task_0000/isaac/napkin/napkin.usd",
-            "outputs/layouts_gens/task_0000/isaac/plate/plate.usd",
-            "outputs/layouts_gens/task_0000/isaac/table/table.usd",
+            "outputs/layouts_gens/task_0000/isaac2/apple/apple.usd",
+            "outputs/layouts_gens/task_0000/isaac2/banana/banana.usd",
+            "outputs/layouts_gens/task_0000/isaac2/mug/mug.usd",
+            "outputs/layouts_gens/task_0000/isaac2/napkin/napkin.usd",
+            "outputs/layouts_gens/task_0000/isaac2/plate/plate.usd",
+            "outputs/layouts_gens/task_0000/isaac2/table/table.usd",
         ]
         asset_converter = AssetConverterFactory.create(
             target_type=AssetType.USD,
             source_type=AssetType.MESH,
-            rotate_wxyz=quat_wxyz,
         )
 
     with asset_converter:
@@ -488,7 +474,7 @@ if __name__ == "__main__":
             asset_converter.convert(urdf_path, output_file)
 
     # urdf_path = "outputs/layouts_gens/task_0000/asset3d/desk/result/desk.urdf"
-    # output_file = "outputs/layouts_gens/task_0000/asset3d/desk/test_cvt_usd3/desk.usd"
+    # output_file = "outputs/layouts_gens/task_0000/asset3d/desk/test_cvt_usd/desk.usd"
 
     # asset_converter = AssetConverterFactory.create(
     #     target_type=AssetType.USD,
