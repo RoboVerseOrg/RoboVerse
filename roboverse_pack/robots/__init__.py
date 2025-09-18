@@ -3,6 +3,7 @@
 from metasim.scenario.robot import RobotCfg
 
 from .allegrohand_cfg import AllegroHandCfg
+from .aloha import AlohaCfg
 from .ant_cfg import AntCfg
 from .anymal_cfg import AnymalCfg
 from .cartpole_cfg import CartpoleCfg

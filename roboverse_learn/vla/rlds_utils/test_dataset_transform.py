@@ -20,7 +20,7 @@ TARGET_SPEC = {
                   'dtype': np.uint8,
                   'range': (0, 255)}
     },
-    'action': {'shape': (8,),
+    'action': {'shape': (7,),
                'dtype': np.float32,
                'range': [(-1, -1, -1, -2*np.pi, -2*np.pi, -2*np.pi, -1, 0),
                          (+1, +1, +1, +2*np.pi, +2*np.pi, +2*np.pi, +1, 1)]},
