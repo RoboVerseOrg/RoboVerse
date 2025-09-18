@@ -406,7 +406,6 @@ class URDFtoUSDConverter(MeshtoUSDConverter):
                     api_schemas.appendedItems = api_list
                     prim.SetMetadata("apiSchemas", api_schemas)
 
-        # inner_prim = [p for p in stage.GetDefaultPrim().GetChildren() if p.IsA(UsdGeom.Xform)][0]
         inner_prim = next(p for p in stage.GetDefaultPrim().GetChildren() if p.IsA(UsdGeom.Xform))
         xformable = UsdGeom.Xformable(inner_prim)
         xformable.ClearXformOpOrder()
