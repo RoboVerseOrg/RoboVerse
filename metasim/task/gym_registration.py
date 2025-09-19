@@ -49,9 +49,9 @@ class GymEnvWrapper(gym.Env):
         self.task_cls = get_task_class(task_name)
         updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
         self.scenario = updated_scenario_cfg
-        self.env = self.task_cls(updated_scenario_cfg)
-        self.action_space = self.env.action_space
-        self.observation_space = self.env.observation_space
+        self.task_env = self.task_cls(updated_scenario_cfg)
+        self.action_space = self.task_env.action_space
+        self.observation_space = self.task_env.observation_space
 
         # Instance-level metadata; declare autoreset mode with the official enum
         self.metadata = dict(getattr(self, "metadata", {}))
@@ -62,7 +62,7 @@ class GymEnvWrapper(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""
         super().reset(seed=seed)
-        obs, info = self.env.reset()
+        obs, info = self.task_env.reset()
 
         if torch.is_tensor(obs):
             obs = obs.detach().cpu().numpy()
@@ -102,7 +102,7 @@ class GymEnvWrapper(gym.Env):
             action_t = action_t.unsqueeze(0)
 
         # Backend is expected to return (obs, reward, terminated, truncated, info).
-        obs, reward, terminated, truncated, info = self.env.step(action_t)
+        obs, reward, terminated, truncated, info = self.task_env.step(action_t)
 
         # De-batch observation for single-env wrapper if needed.
         try:
@@ -115,13 +115,13 @@ class GymEnvWrapper(gym.Env):
 
     def render(self):
         """Render the environment."""
-        img = self.env.render()
+        img = self.task_env.render()
         # Return a safe copy in case the backend reuses buffers.
         return None if img is None else np.array(img, copy=True)
 
     def close(self):
         """Close the environment."""
-        self.env.close()
+        self.task_env.close()
 
 
 # -------------------------
@@ -151,23 +151,23 @@ class GymVectorEnvAdapter(VectorEnv):
 
         self.task_cls = get_task_class(task_name)
         updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
-        self.env = self.task_cls(updated_scenario_cfg)
+        self.task_env = self.task_cls(updated_scenario_cfg)
         self.scenario = updated_scenario_cfg
         # scenario = ScenarioCfg(**scenario_kwargs)
-        # self.env = load_task(task_name, scenario, device=self._device)
-        # self.scenario = self.env.scenario
+        # self.task_env = load_task(task_name, scenario, device=self._device)
+        # self.scenario = self.task_env.scenario
         # Use positional args to be compatible across Gymnasium versions.
         try:
-            super().__init__(self.env.num_envs, self.env.observation_space, self.env.action_space)
+            super().__init__(self.task_env.num_envs, self.task_env.observation_space, self.task_env.action_space)
         except TypeError:
             # Some versions may not define VectorEnv.__init__.
-            self.num_envs = self.env.num_envs
-            self.observation_space = self.env.observation_space
-            self.action_space = self.env.action_space
+            self.num_envs = self.task_env.num_envs
+            self.observation_space = self.task_env.observation_space
+            self.action_space = self.task_env.action_space
 
         # Optional single-space hints consumed by some libraries.
-        self.single_observation_space = self.env.observation_space
-        self.single_action_space = self.env.action_space
+        self.single_observation_space = self.task_env.observation_space
+        self.single_action_space = self.task_env.action_space
 
         self._pending_actions: torch.Tensor | None = None
 
@@ -178,7 +178,7 @@ class GymVectorEnvAdapter(VectorEnv):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""
         # super().reset(seed=seed)
-        obs, info = self.env.reset()
+        obs, info = self.task_env.reset()
         # VectorEnv API: return (obs_batch, infos_list) where len(infos) == num_envs.
         return obs, info
 
@@ -213,7 +213,7 @@ class GymVectorEnvAdapter(VectorEnv):
         if self._pending_actions is None:
             raise RuntimeError("step_async must be called before step_wait.")
 
-        out = self.env.step(self._pending_actions)
+        out = self.task_env.step(self._pending_actions)
         if len(out) != 5:
             raise RuntimeError(
                 f"Backend returned {len(out)} items; expected 5 (obs, reward, terminated, truncated, info)."
@@ -246,12 +246,12 @@ class GymVectorEnvAdapter(VectorEnv):
 
     def render(self):
         """Render the environment."""
-        img = self.env.render()
+        img = self.task_env.render()
         return None if img is None else np.array(img, copy=True)
 
     def close(self):
         """Close the environment."""
-        self.env.close()
+        self.task_env.close()
 
 
 # -------------------------
