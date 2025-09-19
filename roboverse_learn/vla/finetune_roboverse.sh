@@ -6,11 +6,11 @@
 set -e
 
 # Configuration
-VLA_PATH="openvla/openvla-7b"
-DATA_ROOT_DIR="/datasets/v2p/current/murphy"
+VLA_PATH="third_party/openvla/openvla-7b"
+DATA_ROOT_DIR="."
 DATASET_NAME="roboverse_dataset"
-RUN_ROOT_DIR="/datasets/v2p/current/murphy/openvla_runs"
-ADAPTER_TMP_DIR="/datasets/v2p/current/murphy/openvla_adapters"
+RUN_ROOT_DIR="./openvla_runs"
+ADAPTER_TMP_DIR="./openvla_adapters"
 LORA_RANK=32
 BATCH_SIZE=8  # Reduced for smaller dataset
 GRAD_ACCUMULATION_STEPS=2
@@ -38,7 +38,7 @@ echo "Image augmentation: $IMAGE_AUG"
 export CUDA_VISIBLE_DEVICES=5 # Use GPU 1 instead of GPU 0
 
 # Launch the fine-tuning script
-cd /datasets/v2p/current/murphy/openvla
+cd third_party/openvla
 
 torchrun --standalone --nnodes 1 --nproc-per-node 1 vla-scripts/finetune.py \
   --max_steps "$MAX_STEPS" \
