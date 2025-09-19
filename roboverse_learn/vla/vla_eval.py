@@ -125,19 +125,19 @@ class OpenVLARunner:
         x = rgb_data[0].detach().cpu() if rgb_data.dim() == 4 else rgb_data.detach().cpu()
         image = x.numpy()
         image = Image.fromarray(image)
-        
+
         instruction = self.env.task_env.task_desc
-        
+
         # Process inputs manually for OpenVLAForActionPrediction
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
         inputs = self.processor(text=prompt, images=image, return_tensors="pt")
-        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype) 
+        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
                  for k, v in inputs.items()}
-        
+
         # Use the model's predict_action method with input_ids
         with torch.no_grad():
             action = self.model.predict_action(
-                input_ids=inputs["input_ids"], 
+                input_ids=inputs["input_ids"],
                 pixel_values=inputs["pixel_values"],
                 unnorm_key="roboverse_dataset",
                 do_sample=False
@@ -208,7 +208,7 @@ class OpenVLARunner:
 
         # Compose robot command
         q = curr_robot_q.clone()
-        
+
         if self.solver == "curobo":
             ik_succ = result.success.squeeze(1)
             # print("IK success flags:", ik_succ)
@@ -216,7 +216,7 @@ class OpenVLARunner:
         elif self.solver == "pyroki":
             # For pyroki, assume all IK solutions are valid (pyroki handles failures internally)
             q[:, :pyroki_result.shape[1]] = pyroki_result
-        
+
         q[:, -self.ee_n_dof:] = gripper_widths
 
         q_use = q[:, :self.n_robot_dof]
