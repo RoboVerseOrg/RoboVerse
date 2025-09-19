@@ -4,6 +4,7 @@ import hydra
 import numpy as np
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
+
 from scripts.deploy.arm_hand_deployment.consts import CONFIG_PATH
 from scripts.deploy.arm_hand_deployment.franka.communication.client import FrankaClient
 from scripts.deploy.arm_hand_deployment.utils.client_context import robot_client_context
