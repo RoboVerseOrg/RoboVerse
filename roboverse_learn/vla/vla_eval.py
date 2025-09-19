@@ -13,16 +13,13 @@ import torch
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 from pytorch3d import transforms
-from curobo.types.math import Pose
-
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from metasim.task.gym_registration import make_vec
 from metasim.utils import configclass
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.utils.obs_utils import ObsSaver
-from roboverse_learn.il.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
-from metasim.utils.kinematics_utils import get_curobo_models
+from roboverse_learn.il.dp.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
 
 
 @configclass
@@ -48,6 +45,7 @@ class OpenVLARunner:
         subset: str,
         device: str,
         robot_name: str,
+        solver: str = "pyroki",
     ):
         self.env = env
         self.scenario = scenario
@@ -55,6 +53,7 @@ class OpenVLARunner:
         self.device = device
         self.task_name = task_name
         self.robot_name = robot_name
+        self.solver = solver
         self.ee_body_name = self.scenario.robots[0].ee_body_name
         self.ee_body_idx = None
 
@@ -80,7 +79,7 @@ class OpenVLARunner:
             torch_dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
-            attn_implementation="eager",
+            attn_implementation="flash_attention_2",
         ).to(self.device).eval()
 
         # Important: give norm stats to the model; unnorm_key used in predict_action
@@ -91,11 +90,20 @@ class OpenVLARunner:
     # ---------------- IK ----------------
     def _setup_ik(self):
         self.robot_cfg = self.scenario.robots[0]
-        *_, self.robot_ik = get_curobo_models(self.robot_cfg)
         self.joint_names = list(self.robot_cfg.joint_limits.keys())
         self.n_robot_dof = len(self.joint_names)
-        self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
         self.ee_n_dof = len(self.robot_cfg.gripper_open_q)
+
+        if self.solver == "curobo":
+            from curobo.types.math import Pose
+            from metasim.utils.kinematics_utils import get_curobo_models
+            *_, self.robot_ik = get_curobo_models(self.robot_cfg)
+            self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
+        elif self.solver == "pyroki":
+            from metasim.utils.kinematics_pyroki import get_pyroki_model
+            self.robot_ik = get_pyroki_model(self.robot_cfg)
+        else:
+            raise ValueError(f"Unknown solver: {self.solver}. Choose 'curobo' or 'pyroki'.")
 
     # ---------------- Per-step helpers ----------------
     def update_obs(self, current_obs):
@@ -114,27 +122,26 @@ class OpenVLARunner:
         # Take first camera
         first_cam = next(iter(latest_obs.cameras.values()))
         rgb_data = first_cam.rgb
-        print(f"RGB data shape: {rgb_data.shape}, dtype: {rgb_data.dtype}, min: {rgb_data.min()}, max: {rgb_data.max()}")
-
-        if isinstance(rgb_data, torch.Tensor):
-            x = rgb_data[0].detach().cpu() if rgb_data.dim() == 4 else rgb_data.detach().cpu()
-            if x.ndim == 3 and x.shape[-1] in (3, 4):        # HWC
-                image = x.numpy()
-            elif x.ndim == 3 and x.shape[0] in (1, 3, 4):    # CHW -> HWC
-                image = x.permute(1, 2, 0).numpy()
-            else:
-                raise ValueError(f"Unexpected RGB shape: {tuple(x.shape)}")
-        else:
-            image = np.array(rgb_data)
-
+        x = rgb_data[0].detach().cpu() if rgb_data.dim() == 4 else rgb_data.detach().cpu()
+        image = x.numpy()
         image = Image.fromarray(image)
-        instruction = self.env.env.task_language
+
+        instruction = self.env.task_env.task_desc
+
+        # Process inputs manually for OpenVLAForActionPrediction
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
-        inputs = self.processor(prompt, image).to(self.device, dtype=torch.bfloat16)
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
+                 for k, v in inputs.items()}
 
-
+        # Use the model's predict_action method with input_ids
         with torch.no_grad():
-            action = self.model.predict_action(**inputs, unnorm_key="bridge_orig", do_sample=False)
+            action = self.model.predict_action(
+                input_ids=inputs["input_ids"],
+                pixel_values=inputs["pixel_values"],
+                unnorm_key="roboverse_dataset",
+                do_sample=False
+            )
 
         print(f"Raw VLA model output: {action}")
         action = torch.tensor(action, dtype=torch.float32, device=self.device)
@@ -175,16 +182,22 @@ class OpenVLARunner:
             transforms.euler_angles_to_matrix(ee_rot_delta, "XYZ")
         )
         gripper_open = action[:num_envs, -1]
-        # print(f"curr_ee_pos_locald: {curr_ee_pos_local}")
         ee_pos_target = curr_ee_pos_local + ee_pos_delta
         ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_delta)
 
-        # print(f"Delta position (local): {ee_pos_delta}")
-        # print(f"Target position (world): {ee_pos_target}")
 
         # 4) IK (seed = current q)
-        seed_config = curr_robot_q[:, :self.curobo_n_dof].unsqueeze(1).tile([1, self.robot_ik._num_seeds, 1])
-        result = self.robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+        if self.solver == "curobo":
+            from curobo.types.math import Pose
+            seed_config = curr_robot_q[:, :self.curobo_n_dof].unsqueeze(1).tile([1, self.robot_ik._num_seeds, 1])
+            result = self.robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+        elif self.solver == "pyroki":
+            # For pyroki, we need to solve IK for each environment individually
+            q_list = []
+            for i_env in range(num_envs):
+                q_tensor = self.robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
+                q_list.append(q_tensor)
+            pyroki_result = torch.stack(q_list, dim=0)  # (B, n_dof)
 
         # 5) Gripper control
         gripper_pos = 1 - gripper_open.cpu()
@@ -195,9 +208,15 @@ class OpenVLARunner:
 
         # Compose robot command
         q = curr_robot_q.clone()
-        ik_succ = result.success.squeeze(1)
-        # print("IK success flags:", ik_succ)
-        q[ik_succ, :self.curobo_n_dof] = result.solution[ik_succ, 0].clone()
+
+        if self.solver == "curobo":
+            ik_succ = result.success.squeeze(1)
+            # print("IK success flags:", ik_succ)
+            q[ik_succ, :self.curobo_n_dof] = result.solution[ik_succ, 0].clone()
+        elif self.solver == "pyroki":
+            # For pyroki, assume all IK solutions are valid (pyroki handles failures internally)
+            q[:, :pyroki_result.shape[1]] = pyroki_result
+
         q[:, -self.ee_n_dof:] = gripper_widths
 
         q_use = q[:, :self.n_robot_dof]
@@ -244,12 +263,14 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: in
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenVLA Evaluation (EE control + cuRobo IK)")
-    parser.add_argument("--model_path", type=str, default="/datasets/v2p/current/murphy/vla_model/openvla-7b")
+    parser = argparse.ArgumentParser(description="OpenVLA Evaluation (EE control + IK)")
+    parser.add_argument("--model_path", type=str, default="/datasets/v2p/current/murphy/openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
     parser.add_argument("--task", type=str, default="pick_butter")
     parser.add_argument("--robot", type=str, default="franka")
     parser.add_argument("--sim", type=str, default="mujoco",
                         choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"])
+    parser.add_argument("--solver", type=str, default="pyroki", choices=["curobo", "pyroki"],
+                        help="IK solver to use: curobo or pyroki")
     parser.add_argument("--num_envs", type=int, default=1)
     parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--max_steps", type=int, default=100)
@@ -263,7 +284,7 @@ def main():
         print("CUDA not available, switching to CPU")
         args.device = "cpu"
 
-    print(f"OpenVLA Eval: task={args.task} robot={args.robot} sim={args.sim} device={args.device}")
+    print(f"OpenVLA Eval: task={args.task} robot={args.robot} sim={args.sim} solver={args.solver} device={args.device}")
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -297,6 +318,7 @@ def main():
         subset=args.task,
         device=args.device,
         robot_name=args.robot,
+        solver=args.solver,
     )
 
     start_time = time.time()
