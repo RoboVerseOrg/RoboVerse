@@ -1,9 +1,11 @@
-"""This module provides utility functions for kinematics calculations using the curobo library."""
+"""This module provides utility functions for kinematics calculations using both curobo and pyroki libraries."""
 
 import torch
 
 from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import matrix_from_quat
+
+# ==================== CUROBO FUNCTIONS ====================
 
 
 def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
@@ -57,6 +59,80 @@ def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
     return kin_model, do_fk, ik_solver
 
 
+# ==================== PYROKI FUNCTIONS ====================
+
+
+def get_pyroki_model(robot_cfg: RobotCfg):
+    """Get the Pyroki robot model and IK solver.
+
+    Args:
+        robot_cfg: Robot configuration containing urdf_path and ee_body_name.
+
+    Returns:
+        dict: Dictionary containing the pyroki robot model and solve_ik function.
+    """
+    import jax.numpy as jnp
+    import pyroki as pk
+    import third_party.pyroki.examples.pyroki_snippets as pks
+    from yourdfpy import URDF
+
+    from metasim.utils.hf_util import check_and_download_single
+
+    urdf_path = robot_cfg.urdf_path
+    check_and_download_single(urdf_path)
+    ee_link_name = getattr(robot_cfg, "ee_body_name", None)
+    if ee_link_name is None:
+        raise ValueError("robot_cfg must have 'ee_body_name' defined")
+
+    # Load URDF model from file
+    urdf = URDF.load(urdf_path, load_meshes=False)
+
+    # Initialize Pyroki robot model from URDF
+    pk_robot = pk.Robot.from_urdf(urdf)
+
+    def solve_ik(pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
+        """Solve IK for target pose.
+
+        Args:
+            pos_target: Target position (3D)
+            quat_target: Target quaternion (wxyz)
+
+        Returns:
+            Joint angle solution
+        """
+        # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
+        try:
+            # Convert PyTorch to JAX via DLPack (try CUDA)
+            pos = jnp.from_dlpack(pos_target)
+            quat = jnp.from_dlpack(quat_target)
+        except RuntimeError as e:
+            # JAX doesn't support CUDA, use CPU
+            pos = jnp.from_dlpack(pos_target.cpu())
+            quat = jnp.from_dlpack(quat_target.cpu())
+
+        # Solve IK
+        solution = pks.solve_ik(
+            pk_robot,
+            ee_link_name,
+            target_wxyz=quat,
+            target_position=pos,
+        )
+
+        # Convert JAX to PyTorch via DLPack
+        q_tensor = torch.from_dlpack(solution)
+
+        # Move to same device as input if needed
+        if pos_target.is_cuda and q_tensor.device.type == "cpu":
+            q_tensor = q_tensor.cuda()
+
+        return q_tensor
+
+    return {"robot": pk_robot, "solve_ik": solve_ik, "ee_link_name": ee_link_name}
+
+
+# ==================== TCP/EE POSE CONVERSION FUNCTIONS ====================
+
+
 def ee_pose_from_tcp_pose(robot_cfg: RobotCfg, tcp_pos: torch.Tensor, tcp_quat: torch.Tensor):
     """Calculate the end-effector (EE) pose from the tool center point (TCP) pose.
 
@@ -94,10 +170,9 @@ def tcp_pose_from_ee_pose(robot_cfg: RobotCfg, ee_pos: torch.Tensor, ee_quat: to
     return tcp_pos, ee_quat
 
 
-import torch
+# ==================== UTILITY FUNCTIONS ====================
 
 
-# ---------- utils ----------
 def _quat_wxyz_to_rpy(q: torch.Tensor) -> torch.Tensor:
     """Quaternion (w,x,y,z) -> Euler RPY (radians), intrinsic XYZ."""
     q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-12)
@@ -120,7 +195,9 @@ def _quat_wxyz_to_rpy(q: torch.Tensor) -> torch.Tensor:
     return torch.stack([roll, pitch, yaw], dim=-1)
 
 
-# ---------- batched obs ----------
+# ==================== END-EFFECTOR STATE FUNCTIONS ====================
+
+
 def get_ee_state(obs, robot_config, tensorize: bool = False, use_rpy: bool = True):
     """Return EE state.
 
@@ -163,7 +240,6 @@ def get_ee_state(obs, robot_config, tensorize: bool = False, use_rpy: bool = Tru
     return ee_flat_world if tensorize else [{"ee_state": ee_flat_world[i]} for i in range(ee_flat_world.shape[0])]
 
 
-# ---------- list of dicts ----------
 def get_ee_state_from_list(env_states, robot_config, tensorize: bool = False, use_rpy: bool = True):
     """Return per-env EE state.
 
