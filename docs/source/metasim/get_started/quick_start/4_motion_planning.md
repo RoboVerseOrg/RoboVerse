@@ -42,8 +42,7 @@ q_solution, ik_success = ik_solver.solve_ik_batch(
 )
 
 # q_solution: (B, n_dof_ik) - arm joint positions only
-# ik_success: (B,) - boolean mask indicating successful IK solutions
-```
+# ik_success: (B,) - boolean mask indicating successful IK solutions, pyroki does not need this
 
 #### 2. `compose_full_joint_command()` - Combine Arm + Gripper
 
@@ -85,7 +84,7 @@ actions = ik_solver.compose_full_joint_command(
 # Tensor order (alphabetical):
 # [finger1, finger2, joint1, joint2, joint3, joint4, joint5, joint6, joint7]
 
-# Dictionary order (original):
+# Dictionary order (original, with keys):
 # [joint1, joint2, joint3, joint4, joint5, joint6, joint7, finger1, finger2]
 ```
 
@@ -125,9 +124,6 @@ actions = ik_solver.compose_full_joint_command(
     return_dict=True  # Return action dictionaries directly
 )
 
-# Alternative: Get tensor first, then create actions
-# q_full = ik_solver.compose_full_joint_command(q_arm, gripper_widths)
-# actions = ik_solver.compose_full_joint_command(q_arm, gripper_widths, return_dict=True)
 ```
 
 ### Backend-Specific Notes
