@@ -90,10 +90,10 @@ class OpenVLARunner:
     # ---------------- IK ----------------
     def _setup_ik(self):
         from metasim.utils.ik_solver import setup_ik_solver
-        
+
         self.robot_cfg = self.scenario.robots[0]
         self.ik_solver = setup_ik_solver(self.robot_cfg, self.solver)
-        
+
         # Convenience properties (delegated to ik_solver)
         self.joint_names = self.ik_solver.joint_names
         self.n_robot_dof = self.ik_solver.n_robot_dof
@@ -131,19 +131,19 @@ class OpenVLARunner:
         x = rgb_data[0].detach().cpu() if rgb_data.dim() == 4 else rgb_data.detach().cpu()
         image = x.numpy()
         image = Image.fromarray(image)
-        
+
         instruction = self.env.task_env.task_desc
-        
+
         # Process inputs manually for OpenVLAForActionPrediction
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
         inputs = self.processor(text=prompt, images=image, return_tensors="pt")
-        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype) 
+        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
                  for k, v in inputs.items()}
-        
+
         # Use the model's predict_action method with input_ids
         with torch.no_grad():
             action = self.model.predict_action(
-                input_ids=inputs["input_ids"], 
+                input_ids=inputs["input_ids"],
                 pixel_values=inputs["pixel_values"],
                 unnorm_key="roboverse_dataset",
                 do_sample=False

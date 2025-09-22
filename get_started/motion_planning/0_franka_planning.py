@@ -128,12 +128,13 @@ def move_to_pose(
     # Solve IK using the unified interface
     seed_q = curr_robot_q if args.solver == "curobo" else None
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
-    
+
     # Process gripper command
     from metasim.utils.ik_solver import process_gripper_command
+
     gripper_open_tensor = torch.tensor([1.0 if open_gripper else 0.0] * scenario.num_envs, device=ee_pos_target.device)
     gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
-    
+
     # Compose full joint command
     q = ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
 

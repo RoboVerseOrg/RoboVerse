@@ -25,7 +25,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import rootutils
-from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -177,12 +176,13 @@ def move_to_pose(
 
     # Solve IK using the unified interface
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q=curr_robot_q)
-    
+
     # Process gripper command
     from metasim.utils.ik_solver import process_gripper_command
+
     gripper_open_tensor = torch.tensor([1.0 if open_gripper else 0.0] * scenario.num_envs, device=ee_pos_target.device)
     gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
-    
+
     # Compose full joint command
     q = ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
     actions = [

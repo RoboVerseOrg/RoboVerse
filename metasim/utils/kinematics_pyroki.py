@@ -1,10 +1,7 @@
-
-
 import pyroki as pk
+import third_party.pyroki.examples.pyroki_snippets as pks
 import torch
 from yourdfpy import URDF
-
-import third_party.pyroki.examples.pyroki_snippets as pks
 
 from metasim.utils.hf_util import check_and_download_single
 
@@ -44,7 +41,7 @@ class get_pyroki_model:
 
     def solve_ik(self, pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
         """Solve IK for target pose.
-        
+
         Args:
             pos_target: Target position (3D)
             quat_target: Target quaternion (wxyz)
@@ -53,7 +50,7 @@ class get_pyroki_model:
             Joint angle solution
         """
         import jax.numpy as jnp
-        
+
         # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
         try:
             # Convert PyTorch to JAX via DLPack (try CUDA)
@@ -73,9 +70,9 @@ class get_pyroki_model:
 
         # Convert JAX to PyTorch via DLPack
         q_tensor = torch.from_dlpack(solution)
-        
+
         # Move to same device as input if needed
-        if pos_target.is_cuda and q_tensor.device.type == 'cpu':
+        if pos_target.is_cuda and q_tensor.device.type == "cpu":
             q_tensor = q_tensor.cuda()
-            
+
         return q_tensor

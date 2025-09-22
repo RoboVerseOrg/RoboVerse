@@ -195,19 +195,19 @@ class RoboverseDataset(tfds.core.GeneratorBasedBuilder):
                 # Calculate delta action with proper angle handling
                 if t + 1 < T_state:
                     next_state = np.array(ee_states[t + 1], dtype=np.float32)
-                    
+
                     # Position delta (first 3 dimensions: x, y, z)
                     pos_delta = next_state[:3] - state_t[:3]
-                    
+
                     # Angle delta (dimensions 3-5: rotation angles) - use shortest angle difference
                     # Vectorized calculation to avoid ±2π jumps
                     theta1_vec = state_t[3:6]
                     theta2_vec = next_state[3:6]
                     angle_delta = ((theta2_vec - theta1_vec + np.pi) % (2 * np.pi)) - np.pi
-                    
+
                     # Gripper state (dimension 6) - use absolute state
                     gripper_state = next_state[6]
-                    
+
                     # Combine all deltas
                     action_t = np.concatenate([pos_delta, angle_delta, [gripper_state]], dtype=np.float32)
                 else:

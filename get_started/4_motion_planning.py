@@ -226,16 +226,16 @@ for step in range(200):
 
     # Get current robot state for curobo seeding
     curr_robot_q = states.robots[robot.name].joint_pos.cuda() if args.solver == "curobo" else None
-    
+
     # Solve IK
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
-    
+
     # Process gripper command (fixed open position)
     gripper_binary = torch.ones(scenario.num_envs, device="cuda:0")  # all open
     gripper_widths = process_gripper_command(gripper_binary, robot, "cuda:0")
     # Compose full joint command
     q_full = ik_solver.compose_full_joint_command(q_solution, gripper_widths, curr_robot_q)
-    
+
     # Create actions
     actions = ik_solver.create_actions_dict(q_full)
 
