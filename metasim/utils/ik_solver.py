@@ -70,25 +70,40 @@ class IKSolver:
             return q_solution, ik_succ
 
     def compose_full_joint_command(
-        self, q_solution: torch.Tensor, gripper_widths: torch.Tensor, current_q: torch.Tensor | None = None
-    ) -> torch.Tensor:
+        self,
+        q_solution: torch.Tensor,
+        gripper_widths: torch.Tensor,
+        current_q: torch.Tensor | None = None,
+        return_dict: bool = False,
+    ) -> torch.Tensor | list:
         """Compose full joint command with arm + gripper.
 
         Args:
             q_solution: IK solution for arm joints (B, n_dof_ik)
             gripper_widths: Gripper joint positions (B, ee_n_dof) or (B,) or (ee_n_dof,)
             current_q: Current full joint state to preserve non-IK joints (B, n_robot_dof). Optional.
+            return_dict: If True, return action dictionaries; if False, return tensor (default).
+
+        Returns:
+            If return_dict=False: torch.Tensor of shape (B, n_robot_dof) in dictionary order
+            If return_dict=True: list of action dictionaries for env execution
         """
         num_envs = q_solution.shape[0]
         device = q_solution.device
 
-        q_full = (
+        # Get joint names in different orders
+        joint_names_dict_order = list(self.robot_cfg.actuators.keys())  # Original dict order
+        joint_names_alpha_order = sorted(self.robot_cfg.actuators.keys())  # Alphabetical order
+
+        # Build q_full in original dict order first
+        q_full_dict_order = (
             current_q[:, : self.n_robot_dof].clone()
             if current_q is not None
             else torch.zeros((num_envs, self.n_robot_dof), device=device)
         )
 
-        q_full[:, : self.n_dof_ik] = q_solution
+        # Place IK solution in the first n_dof_ik positions
+        q_full_dict_order[:, : self.n_dof_ik] = q_solution
 
         # Handle gripper dimensions
         if gripper_widths.dim() == 0:
@@ -99,15 +114,25 @@ class IKSolver:
             elif gripper_widths.shape[0] == self.ee_n_dof:
                 gripper_widths = gripper_widths.unsqueeze(0).expand(num_envs, -1)
 
-        q_full[:, -self.ee_n_dof :] = gripper_widths
-        return q_full
+        # Place gripper positions in the last ee_n_dof positions
+        q_full_dict_order[:, -self.ee_n_dof :] = gripper_widths
 
-    def create_actions_dict(self, q_full: torch.Tensor) -> list:
-        """Create action dicts for env execution."""
-        return [
-            {self.robot_cfg.name: {"dof_pos_target": dict(zip(self.robot_cfg.actuators.keys(), q_full[i].tolist()))}}
-            for i in range(q_full.shape[0])
-        ]
+        if return_dict:
+            # Return action dictionaries using original dict order
+            return [
+                {
+                    self.robot_cfg.name: {
+                        "dof_pos_target": dict(zip(joint_names_dict_order, q_full_dict_order[i].tolist()))
+                    }
+                }
+                for i in range(q_full_dict_order.shape[0])
+            ]
+        else:
+            # Convert from dict order to alphabetical order
+            # Create reindexing mapping: from dict order to alphabetical order
+            dict_to_alpha_idx = [joint_names_dict_order.index(name) for name in joint_names_alpha_order]
+            q_full_alpha_order = q_full_dict_order[:, dict_to_alpha_idx]
+            return q_full_alpha_order
 
 
 def setup_ik_solver(

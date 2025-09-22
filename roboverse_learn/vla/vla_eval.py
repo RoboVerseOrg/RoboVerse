@@ -90,26 +90,8 @@ class OpenVLARunner:
     # ---------------- IK ----------------
     def _setup_ik(self):
         from metasim.utils.ik_solver import setup_ik_solver
-
         self.robot_cfg = self.scenario.robots[0]
         self.ik_solver = setup_ik_solver(self.robot_cfg, self.solver)
-
-        # Convenience properties (delegated to ik_solver)
-        self.joint_names = self.ik_solver.joint_names
-        self.n_robot_dof = self.ik_solver.n_robot_dof
-        self.ee_n_dof = self.ik_solver.ee_n_dof
-        self.n_dof_ik = self.ik_solver.n_dof_ik
-
-        if self.solver == "curobo":
-            from curobo.types.math import Pose
-            from metasim.utils.kinematics_utils import get_curobo_models
-            *_, self.robot_ik = get_curobo_models(self.robot_cfg)
-            self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
-        elif self.solver == "pyroki":
-            from metasim.utils.kinematics_pyroki import get_pyroki_model
-            self.robot_ik = get_pyroki_model(self.robot_cfg)
-        else:
-            raise ValueError(f"Unknown solver: {self.solver}. Choose 'curobo' or 'pyroki'.")
 
     # ---------------- Per-step helpers ----------------
     def update_obs(self, current_obs):
@@ -201,14 +183,7 @@ class OpenVLARunner:
         gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose robot command
-        q = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
-
-        q_use = q[:, :self.n_robot_dof]
-        actions = [
-            {self.robot_name: {"dof_pos_target": {jn: float(q_use[i, j]) for j, jn in enumerate(self.joint_names)}}}
-            for i in range(num_envs)
-        ]
-        print(f"final actions {actions}")
+        actions = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
         return actions
 
     def reset(self):
@@ -248,7 +223,7 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: in
 
 def main():
     parser = argparse.ArgumentParser(description="OpenVLA Evaluation (EE control + IK)")
-    parser.add_argument("--model_path", type=str, default="/datasets/v2p/current/murphy/openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
+    parser.add_argument("--model_path", type=str, default="openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
     parser.add_argument("--task", type=str, default="pick_butter")
     parser.add_argument("--robot", type=str, default="franka")
     parser.add_argument("--sim", type=str, default="mujoco",
@@ -256,8 +231,8 @@ def main():
     parser.add_argument("--solver", type=str, default="pyroki", choices=["curobo", "pyroki"],
                         help="IK solver to use: curobo or pyroki")
     parser.add_argument("--num_envs", type=int, default=1)
-    parser.add_argument("--num_episodes", type=int, default=10)
-    parser.add_argument("--max_steps", type=int, default=200)
+    parser.add_argument("--num_episodes", type=int, default=1)
+    parser.add_argument("--max_steps", type=int, default=250)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, default="./eval_output")

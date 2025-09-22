@@ -234,10 +234,7 @@ for step in range(200):
     gripper_binary = torch.ones(scenario.num_envs, device="cuda:0")  # all open
     gripper_widths = process_gripper_command(gripper_binary, robot, "cuda:0")
     # Compose full joint command
-    q_full = ik_solver.compose_full_joint_command(q_solution, gripper_widths, curr_robot_q)
-
-    # Create actions
-    actions = ik_solver.create_actions_dict(q_full)
+    actions = ik_solver.compose_full_joint_command(q_solution, gripper_widths, curr_robot_q, return_dict=True)
 
     env.set_dof_targets(actions)
     env.simulate()
