@@ -11,6 +11,140 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 By running the above command, you will plan a motion for a robot and it will automatically record a video.
 
+## IK Solver Usage
+
+MetaSim provides a unified IK solver that supports both `curobo` and `pyroki` backends for end-effector control. The IK solver is designed to work with multiple environments simultaneously and provides two main functions for end-effector control.
+
+### Backend Options
+
+The IK solver supports two backends:
+
+- **`curobo`**: High-performance CUDA-accelerated IK solver with collision checking
+- **`pyroki`**: JAX-based differentiable IK solver (default)
+
+### Key Functions
+
+#### 1. `solve_ik_batch()` - Compute Arm Joint Positions
+
+This function solves inverse kinematics for a batch of target end-effector poses, returning only the arm joint positions (excluding finger/gripper joints).
+
+```python
+from metasim.utils.ik_solver import setup_ik_solver
+
+# Initialize IK solver
+ik_solver = setup_ik_solver(robot_cfg, solver="pyroki")  # or "curobo"
+
+# Solve IK for multiple environments
+q_solution, ik_success = ik_solver.solve_ik_batch(
+    ee_pos_target=target_positions,    # (B, 3) - target EE positions
+    ee_quat_target=target_quaternions, # (B, 4) - target EE quaternions (wxyz)
+    seed_q=seed_joint_configs          # (B, n_dof) - seed configs (required for curobo)
+)
+
+# q_solution: (B, n_dof_ik) - arm joint positions only
+# ik_success: (B,) - boolean mask indicating successful IK solutions
+```
+
+#### 2. `compose_full_joint_command()` - Combine Arm + Gripper
+
+This function combines the arm joint positions from IK with gripper positions to create the complete joint command. It can return either a tensor or action dictionaries.
+
+```python
+# Convert binary gripper command to joint widths
+gripper_widths = process_gripper_command(
+    gripper_binary=gripper_open_close,  # (B,) or (B, 1) - binary gripper state
+    robot_cfg=robot_cfg,
+    device=device
+)
+
+# Option 1: Return tensor in alphabetical order (default)
+q_full = ik_solver.compose_full_joint_command(
+    q_solution=q_solution,           # (B, n_dof_ik) - arm joint positions from IK
+    gripper_widths=gripper_widths,   # (B, ee_n_dof) - gripper joint positions
+    current_q=current_joint_state,   # (B, n_robot_dof) - optional current state
+    return_dict=False                # Default: return tensor
+)
+# q_full: (B, n_robot_dof) - complete joint command in alphabetical order
+
+# Option 2: Return action dictionaries directly
+actions = ik_solver.compose_full_joint_command(
+    q_solution=q_solution,
+    gripper_widths=gripper_widths,
+    current_q=current_joint_state,
+    return_dict=True                 # Return action dictionaries
+)
+# actions: list of action dictionaries for env execution
+```
+
+**Note on Joint Ordering:**
+- **Tensor output** (`return_dict=False`): Joints are ordered alphabetically, including end-effector joints
+- **Dictionary output** (`return_dict=True`): Joints maintain the original dictionary order from robot configuration
+
+**Example for Franka robot:**
+```python
+# Tensor order (alphabetical):
+# [finger1, finger2, joint1, joint2, joint3, joint4, joint5, joint6, joint7]
+
+# Dictionary order (original):
+# [joint1, joint2, joint3, joint4, joint5, joint6, joint7, finger1, finger2]
+```
+
+### Complete End-Effector Control Example
+
+```python
+import torch
+from metasim.utils.ik_solver import setup_ik_solver, process_gripper_command
+
+# Setup
+ik_solver = setup_ik_solver(robot_cfg, solver="pyroki")
+num_envs = 4
+device = torch.device("cuda")
+
+# Target end-effector poses
+target_positions = torch.randn(num_envs, 3, device=device)  # (B, 3)
+target_quaternions = torch.randn(num_envs, 4, device=device)  # (B, 4) wxyz
+gripper_commands = torch.randint(0, 2, (num_envs,), device=device)  # (B,) binary
+
+# Step 1: Solve IK for arm joints
+q_arm, ik_success = ik_solver.solve_ik_batch(
+    ee_pos_target=target_positions,
+    ee_quat_target=target_quaternions
+)
+
+# Step 2: Process gripper commands
+gripper_widths = process_gripper_command(
+    gripper_binary=gripper_commands,
+    robot_cfg=robot_cfg,
+    device=device
+)
+
+# Step 3: Compose full joint command and create actions directly
+actions = ik_solver.compose_full_joint_command(
+    q_solution=q_arm,
+    gripper_widths=gripper_widths,
+    return_dict=True  # Return action dictionaries directly
+)
+
+# Alternative: Get tensor first, then create actions
+# q_full = ik_solver.compose_full_joint_command(q_arm, gripper_widths)
+# actions = ik_solver.compose_full_joint_command(q_arm, gripper_widths, return_dict=True)
+```
+
+### Backend-Specific Notes
+
+**Curobo Backend:**
+- Requires `seed_q` parameter for initialization
+- Supports collision checking and optimization
+- Better performance for complex environments
+- Requires CUDA installation
+
+**Pyroki Backend (Default):**
+- No seed configuration required
+- JAX-based differentiable solver
+- Lighter weight installation
+- Good for research and prototyping
+
+This IK solver design separates arm control (IK solving) from gripper control, making it easy to implement end-effector-based manipulation tasks across multiple environments.
 
 ### Examples
 
