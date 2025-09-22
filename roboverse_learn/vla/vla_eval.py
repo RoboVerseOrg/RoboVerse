@@ -100,6 +100,17 @@ class OpenVLARunner:
         self.ee_n_dof = self.ik_solver.ee_n_dof
         self.n_dof_ik = self.ik_solver.n_dof_ik
 
+        if self.solver == "curobo":
+            from curobo.types.math import Pose
+            from metasim.utils.kinematics_utils import get_curobo_models
+            *_, self.robot_ik = get_curobo_models(self.robot_cfg)
+            self.curobo_n_dof = len(self.robot_ik.robot_config.cspace.joint_names)
+        elif self.solver == "pyroki":
+            from metasim.utils.kinematics_pyroki import get_pyroki_model
+            self.robot_ik = get_pyroki_model(self.robot_cfg)
+        else:
+            raise ValueError(f"Unknown solver: {self.solver}. Choose 'curobo' or 'pyroki'.")
+
     # ---------------- Per-step helpers ----------------
     def update_obs(self, current_obs):
         self.obs.append(current_obs)
