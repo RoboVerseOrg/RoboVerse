@@ -27,11 +27,11 @@ class IKSolver:
 
     def _setup_solver(self):
         if self.solver == "curobo":
-            from metasim.utils.kinematics_utils import get_curobo_models
+            from metasim.utils.kinematics import get_curobo_models
 
             *_, self.backend_solver = get_curobo_models(self.robot_cfg, self.no_gnd)
         elif self.solver == "pyroki":
-            from metasim.utils.kinematics_pyroki import get_pyroki_model
+            from metasim.utils.kinematics import get_pyroki_model
 
             self.backend_solver = get_pyroki_model(self.robot_cfg)
         else:
@@ -64,7 +64,7 @@ class IKSolver:
             return q_solution, ik_succ
 
         else:  # pyroki
-            q_list = [self.backend_solver.solve_ik(ee_pos_target[i], ee_quat_target[i]) for i in range(num_envs)]
+            q_list = [self.backend_solver["solve_ik"](ee_pos_target[i], ee_quat_target[i]) for i in range(num_envs)]
             q_solution = torch.stack(q_list, dim=0)[:, : self.n_dof_ik]
             ik_succ = torch.ones(num_envs, dtype=torch.bool, device=ee_pos_target.device)
             return q_solution, ik_succ
