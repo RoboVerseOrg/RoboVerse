@@ -8,3 +8,4 @@ outputs
 tmp
 wandb
 !metasim
+!roboverse_pack
