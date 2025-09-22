@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Fine-tuning script for roboverse_dataset using OpenVLA LoRA
-# Usage: bash finetune_robo_verse.sh
+# Usage: bash finetune_roboverse.sh
 
 set -e
 
@@ -15,11 +15,11 @@ LORA_RANK=32
 BATCH_SIZE=8  # Reduced for smaller dataset
 GRAD_ACCUMULATION_STEPS=2
 LEARNING_RATE=5e-4
-IMAGE_AUG="True"
+IMAGE_AUG="False"
 WANDB_PROJECT="openvla_roboverse"
-WANDB_ENTITY="murphy_priosin"  # Change this to your wandb entity
-SAVE_STEPS=100
-MAX_STEPS=200
+WANDB_ENTITY=""  # Change this to your wandb entity
+SAVE_STEPS=5000
+MAX_STEPS=5000
 # Create directories if they don't exist
 mkdir -p "$RUN_ROOT_DIR"
 mkdir -p "$ADAPTER_TMP_DIR"

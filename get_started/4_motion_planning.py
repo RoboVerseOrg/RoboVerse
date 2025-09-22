@@ -55,7 +55,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
     solver: Literal["curobo", "pyroki"] = "pyroki"
 
     def __post_init__(self):
@@ -65,13 +65,7 @@ class Args:
 
 args = tyro.cli(Args)
 
-if args.solver == "curobo":
-    from curobo.types.math import Pose
-
-    from metasim.utils.kinematics_utils import get_curobo_models
-
-elif args.solver == "pyroki":
-    from metasim.utils.kinematics_pyroki import get_pyroki_model
+# IK solver imports are now handled in the unified solver
 
 # initialize scenario
 scenario = ScenarioCfg(
@@ -187,12 +181,10 @@ init_states = [
 
 robot = scenario.robots[0]
 
-if args.solver == "curobo":
-    *_, robot_ik = get_curobo_models(robot)
-    curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_open_q)
-elif args.solver == "pyroki":
-    robot_ik = get_pyroki_model(robot)
+from metasim.utils.ik_solver import process_gripper_command, setup_ik_solver
+
+# Setup unified IK solver
+ik_solver = setup_ik_solver(robot, args.solver)
 
 env.set_states(init_states)
 obs = env.get_states(mode="tensor")
@@ -232,25 +224,20 @@ for step in range(200):
             device="cuda:0",
         )
 
-    if args.solver == "curobo":
-        curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-        result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
-        ik_succ = result.success.squeeze(1)
-        q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
-        q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-        q[:, -ee_n_dof:] = 0.04
-    elif args.solver == "pyroki":
-        q_list = []
-        for i_env in range(args.num_envs):
-            q_tensor = robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
-            q_list.append(q_tensor)
-        q = torch.stack(q_list, dim=0)
+    # Get current robot state for curobo seeding
+    curr_robot_q = states.robots[robot.name].joint_pos.cuda() if args.solver == "curobo" else None
 
-    actions = [
-        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
-        for i_env in range(scenario.num_envs)
-    ]
+    # Solve IK
+    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
+
+    # Process gripper command (fixed open position)
+    gripper_binary = torch.ones(scenario.num_envs, device="cuda:0")  # all open
+    gripper_widths = process_gripper_command(gripper_binary, robot, "cuda:0")
+    # Compose full joint command
+    q_full = ik_solver.compose_full_joint_command(q_solution, gripper_widths, curr_robot_q)
+
+    # Create actions
+    actions = ik_solver.create_actions_dict(q_full)
 
     env.set_dof_targets(actions)
     env.simulate()

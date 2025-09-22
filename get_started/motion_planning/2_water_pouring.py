@@ -25,7 +25,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 import rootutils
-from curobo.types.math import Pose
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -43,7 +42,7 @@ from metasim.utils import configclass
 
 # from get_started.motion_planning.util_gsnet import GSNet
 from metasim.utils.camera_util import get_cam_params
-from metasim.utils.kinematics_utils import get_curobo_models
+from metasim.utils.ik_solver import setup_ik_solver
 from metasim.utils.obs_utils import ObsSaver, get_pcd_from_rgbd
 from metasim.utils.setup_util import get_sim_handler_class
 
@@ -137,9 +136,8 @@ init_states = [
 
 
 robot = scenario.robots[0]
-*_, robot_ik = get_curobo_models(robot)
-curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-ee_n_dof = len(robot.gripper_open_q)
+# Setup IK solver (hardcoded to curobo for this example)
+ik_solver = setup_ik_solver(robot, "curobo")
 env.launch()
 env.set_states(init_states)
 obs = env.get_states(mode="dict")
@@ -171,19 +169,22 @@ def get_point_cloud_from_obs(obs, save_pcd=False):
 
 
 def move_to_pose(
-    obs, obs_saver, robot_ik, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
 ):
     """Move the robot to a given pose."""
     curr_robot_q = obs.robots[robot.name].joint_pos
 
-    seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
+    # Solve IK using the unified interface
+    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q=curr_robot_q)
 
-    result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+    # Process gripper command
+    from metasim.utils.ik_solver import process_gripper_command
 
-    q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
-    ik_succ = result.success.squeeze(1)
-    q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-    q[:, -ee_n_dof:] = 0.04 if open_gripper else 0.0
+    gripper_open_tensor = torch.tensor([1.0 if open_gripper else 0.0] * scenario.num_envs, device=ee_pos_target.device)
+    gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
+
+    # Compose full joint command
+    q = ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
     actions = [
         {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))} for i_env in range(scenario.num_envs)
     ]
@@ -201,8 +202,6 @@ for step in range(1):
     log.debug(f"Step {step}")
     states = env.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
-
-    seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
 
     gripper_out = torch.tensor([1, 0, 0])
     gripper_long = torch.tensor([0, 1, 0])
@@ -248,16 +247,16 @@ for step in range(1):
     lift_pos[:, 2] += 0.3
     lift_pos[:, 1] += 0.2
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, pre_grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs, obs_saver, ik_solver, robot, scenario, pre_grasp_pos, ee_quat_target, steps=50, open_gripper=True
     )
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs, obs_saver, ik_solver, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=True
     )
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=False
+        obs, obs_saver, ik_solver, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=False
     )
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, lift_pos, ee_quat_target, steps=50, open_gripper=False
+        obs, obs_saver, ik_solver, robot, scenario, lift_pos, ee_quat_target, steps=50, open_gripper=False
     )
 
     gripper_out2 = torch.tensor([1, 0, 0])
@@ -276,7 +275,7 @@ for step in range(1):
     quat2 = R.from_matrix(rotation2).as_quat()
     ee_quat_target[0] = torch.tensor(quat2, device="cuda:0")
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, lift_pos, ee_quat_target, steps=50, open_gripper=False
+        obs, obs_saver, ik_solver, robot, scenario, lift_pos, ee_quat_target, steps=50, open_gripper=False
     )
 
     # result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)

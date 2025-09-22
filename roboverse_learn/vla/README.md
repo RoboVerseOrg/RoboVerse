@@ -1,54 +1,121 @@
 # RoboVerse VLA Training Pipeline
 
-Complete Vision-Language-Action model training workflow
+A brief workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data and OpenVLA framework.
 
-## 🚀 Training Steps
 
-### 1. Collect Demo Trajectories
+
+## Workflow
+
+### Step 1: Collect Demonstration Trajectories
+
+Generate robotic demonstration data using the RoboVerse simulation environment:
+
 ```bash
 python scripts/advanced/collect_demo.py \
-  --sim=mujoco --task=pick_butter --robot=franka \
-  --max_demo_idx=100 --headless --run_all
+  --sim=mujoco --task=pick_butter --headless --run_all
 ```
 
-### 2. Create Soft Link and Convert to RLDS Format
+**Parameters:**
+- `--sim`: Simulation backend (mujoco)
+- `--task`: Specific manipulation task (pick_butter)
+- `--headless`: Run without GUI for efficiency
+- `--run_all`: Execute all available episodes
+
+### Step 2: Data Format Conversion to RLDS
+
+Convert collected demonstrations to the Robot Learning Dataset Specification (RLDS) format:
+
 ```bash
-# Navigate to rlds utils directory
+# Navigate to RLDS utilities directory
 cd roboverse_learn/vla/rlds_utils/roboverse/
 
-# Create soft link for demo data
-ln -s ../../../../roboverse_demo demo
+# Create symbolic link for demo data
+# Note: Adjust folder name according to your task & simulation setup
+mkdir -p demo
+ln -s /absolute/path/to/roboverse_demo/demo_mujoco/pick_butter- demo/pick_butter-
 
-# Activate environment
+
+
+# Set up conversion environment
 conda env create -f ../environment_ubuntu.yml
 conda activate rlds_env
 
 # Convert to RLDS format
 tfds build --overwrite
-
-# Verify conversion results
-cd ..
-python visualize_dataset.py roboverse_dataset
 ```
 
-### 3. Fine-tune OpenVLA Model
+**Output:** Converted dataset stored in `~/tensorflow_datasets/roboverse_dataset/`
+
+### Step 3: OpenVLA Model Fine-tuning
+
+#### 3.1 Environment Setup
+
+```bash
+# Navigate to third-party dependencies
+cd thirdparty
+
+# Clone OpenVLA repository
+git clone https://github.com/openvla/openvla.git
+```
+
+#### 3.2 Installation
+
+Follow the official OpenVLA installation guide:
+
+```bash
+# Create and activate conda environment
+conda create -n openvla python=3.10 -y
+conda activate openvla
+
+# Install PyTorch with CUDA support
+# Check https://pytorch.org/get-started/locally/ for platform-specific instructions
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+
+# Install OpenVLA package
+cd openvla
+pip install -e .
+
+# Install Flash Attention 2 for efficient training
+# Reference: https://github.com/Dao-AILab/flash-attention
+pip install packaging ninja
+ninja --version; echo $?  # Verify Ninja installation (should return exit code "0")
+pip install "flash-attn==2.5.5" --no-build-isolation
+```
+
+#### 3.3 Fine-tuning Execution
+
 ```bash
 cd roboverse_learn/vla/
 bash finetune_roboverse.sh
 ```
 
-### 4. Evaluate Model Performance
+**Important:** Ensure dataset and model paths in the script match your actual directory structure.
+
+### Step 4: Model Evaluation
+
+Assess the trained model's performance on specific tasks:
+
 ```bash
 python roboverse_learn/vla/vla_eval.py \
   --model_path openvla_runs/path/to/checkpoint \
-  --task pick_butter \
-  --num_episodes 10
+  --task pick_butter
 ```
 
-## 📁 Data Flow
+## Data Pipeline
 
 ```
-Collect Demo → Soft Link → RLDS Convert → VLA Finetune → Model Eval
+Demo Collection → RLDS Conversion → VLA Fine-tuning → Model Evaluation
+     ↓                    ↓                ↓                ↓
+Raw Trajectories → Standardized Format → Trained Model → Performance Metrics
 ```
 
-Converted dataset is stored in `~/tensorflow_datasets/roboverse_dataset/`
+## Dataset Information
+
+- **Format:** RLDS (Robot Learning Dataset Specification)
+- **Storage Location:** `~/tensorflow_datasets/roboverse_dataset/`
+
+## Configuration Notes
+
+- Adjust simulation parameters in `collect_demo.py` based on your specific tasks
+- Modify dataset paths in `finetune_roboverse.sh` to match your environment
+

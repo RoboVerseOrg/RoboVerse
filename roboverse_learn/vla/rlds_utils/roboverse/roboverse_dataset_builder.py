@@ -11,7 +11,7 @@ tfds.core.utils.gcs_utils._is_gcs_disabled = True
 os.environ['NO_GCE_CHECK'] = 'true'
 
 
-class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
+class RoboverseDataset(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder for RoboVerse demos (mp4 + metadata)."""
 
     VERSION = tfds.core.Version('1.0.0')
@@ -34,7 +34,7 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                             doc='RGB image (H,W,3).'
                         ),
                         'depth_image': tfds.features.Image(
-                            shape=(256, 256, 3),
+                            shape=(256, 256, 1),
                             dtype=np.uint8,
                             doc='Depth (visualized as uint8) (H,W,1).'
                         ),
@@ -77,7 +77,6 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
 
     def _generate_examples(self, path) -> Iterator[Tuple[str, Any]]:
         """Generator: find episodes and parse them."""
-
         def _get_episode_paths(root_path):
             """Traverse task/robot/episode nested layout and collect episode dirs."""
             roots = []
@@ -193,10 +192,24 @@ class RoboVerseDataset(tfds.core.GeneratorBasedBuilder):
                     depth = np.zeros((rgb.shape[0], rgb.shape[1], 1), dtype=np.uint8)
 
                 state_t = np.array(ee_states[t], dtype=np.float32)
-                # Calculate delta action (next_state - current_state)
+                # Calculate delta action with proper angle handling
                 if t + 1 < T_state:
                     next_state = np.array(ee_states[t + 1], dtype=np.float32)
-                    action_t = next_state - state_t  # delta action
+
+                    # Position delta (first 3 dimensions: x, y, z)
+                    pos_delta = next_state[:3] - state_t[:3]
+
+                    # Angle delta (dimensions 3-5: rotation angles) - use shortest angle difference
+                    # Vectorized calculation to avoid ±2π jumps
+                    theta1_vec = state_t[3:6]
+                    theta2_vec = next_state[3:6]
+                    angle_delta = ((theta2_vec - theta1_vec + np.pi) % (2 * np.pi)) - np.pi
+
+                    # Gripper state (dimension 6) - use absolute state
+                    gripper_state = next_state[6]
+
+                    # Combine all deltas
+                    action_t = np.concatenate([pos_delta, angle_delta, [gripper_state]], dtype=np.float32)
                 else:
                     action_t = np.zeros_like(state_t)  # zero action for last step
 

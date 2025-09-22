@@ -50,7 +50,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
     solver: Literal["curobo", "pyroki"] = "pyroki"
 
     def __post_init__(self):
@@ -60,13 +60,7 @@ class Args:
 
 args = tyro.cli(Args)
 
-if args.solver == "curobo":
-    from curobo.types.math import Pose
-
-    from metasim.utils.kinematics_utils import get_curobo_models
-
-elif args.solver == "pyroki":
-    from metasim.utils.kinematics_pyroki import get_pyroki_model
+from metasim.utils.ik_solver import setup_ik_solver
 
 # initialize scenario
 scenario = ScenarioCfg(
@@ -112,16 +106,12 @@ init_states = [
 ]
 robot = scenario.robots[0]
 
-if args.solver == "curobo":
-    *_, robot_ik = get_curobo_models(robot)
-    curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_open_q)
-elif args.solver == "pyroki":
-    robot_ik = get_pyroki_model(scenario.robots[0])
+# Setup IK solver
+ik_solver = setup_ik_solver(robot, args.solver)
 
 env.launch()
 env.set_states(init_states)
-obs = env.get_states(mode="dict")
+obs = env.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 ## Main loop
@@ -130,25 +120,23 @@ obs_saver.add(obs)
 
 
 def move_to_pose(
-    obs, obs_saver, robot_ik, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
 ):
     """Move the robot to the target pose."""
     curr_robot_q = obs.robots[robot.name].joint_pos
 
-    if args.solver == "curobo":
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-        result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
+    # Solve IK using the unified interface
+    seed_q = curr_robot_q if args.solver == "curobo" else None
+    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
 
-        q = torch.zeros((scenario.num_envs, robot.num_joints), device="cuda:0")
-        ik_succ = result.success.squeeze(1)
-        q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-        q[:, -ee_n_dof:] = 0.04 if open_gripper else 0.0
-    elif args.solver == "pyroki":
-        q_list = []
-        for i_env in range(args.num_envs):
-            q_tensor = robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
-            q_list.append(q_tensor)
-        q = torch.stack(q_list, dim=0)
+    # Process gripper command
+    from metasim.utils.ik_solver import process_gripper_command
+
+    gripper_open_tensor = torch.tensor([1.0 if open_gripper else 0.0] * scenario.num_envs, device=ee_pos_target.device)
+    gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
+
+    # Compose full joint command
+    q = ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
 
     actions = [
         {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
@@ -157,7 +145,7 @@ def move_to_pose(
     for i in range(steps):
         env.set_dof_targets(actions)
         env.simulate()
-        obs = env.get_states(mode="dict")
+        obs = env.get_states(mode="tensor")
         obs_saver.add(obs)
     return obs
 
@@ -211,7 +199,7 @@ for step in range(4):
     ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
 
     obs = move_to_pose(
-        obs, obs_saver, robot_ik, robot, scenario, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
+        obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
     )
     step += 1
 

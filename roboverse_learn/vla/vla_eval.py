@@ -89,10 +89,16 @@ class OpenVLARunner:
 
     # ---------------- IK ----------------
     def _setup_ik(self):
+        from metasim.utils.ik_solver import setup_ik_solver
+
         self.robot_cfg = self.scenario.robots[0]
-        self.joint_names = list(self.robot_cfg.joint_limits.keys())
-        self.n_robot_dof = len(self.joint_names)
-        self.ee_n_dof = len(self.robot_cfg.gripper_open_q)
+        self.ik_solver = setup_ik_solver(self.robot_cfg, self.solver)
+
+        # Convenience properties (delegated to ik_solver)
+        self.joint_names = self.ik_solver.joint_names
+        self.n_robot_dof = self.ik_solver.n_robot_dof
+        self.ee_n_dof = self.ik_solver.ee_n_dof
+        self.n_dof_ik = self.ik_solver.n_dof_ik
 
         if self.solver == "curobo":
             from curobo.types.math import Pose
@@ -186,38 +192,16 @@ class OpenVLARunner:
         ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_delta)
 
 
-        # 4) IK (seed = current q)
-        if self.solver == "curobo":
-            from curobo.types.math import Pose
-            seed_config = curr_robot_q[:, :self.curobo_n_dof].unsqueeze(1).tile([1, self.robot_ik._num_seeds, 1])
-            result = self.robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
-        elif self.solver == "pyroki":
-            # For pyroki, we need to solve IK for each environment individually
-            q_list = []
-            for i_env in range(num_envs):
-                q_tensor = self.robot_ik.solve_ik(ee_pos_target[i_env], ee_quat_target[i_env])
-                q_list.append(q_tensor)
-            pyroki_result = torch.stack(q_list, dim=0)  # (B, n_dof)
+        # 4) IK (seed = current q for curobo)
+        seed_q = curr_robot_q if self.solver == "curobo" else None
+        q_solution, ik_succ = self.ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
 
         # 5) Gripper control
-        gripper_pos = 1 - gripper_open.cpu()
-        if gripper_pos.mean().item() > 0.5:
-            gripper_widths = torch.tensor(self.robot_cfg.gripper_close_q).to(self.device)
-        else:
-            gripper_widths = torch.tensor(self.robot_cfg.gripper_open_q).to(self.device)
+        from metasim.utils.ik_solver import process_gripper_command
+        gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose robot command
-        q = curr_robot_q.clone()
-
-        if self.solver == "curobo":
-            ik_succ = result.success.squeeze(1)
-            # print("IK success flags:", ik_succ)
-            q[ik_succ, :self.curobo_n_dof] = result.solution[ik_succ, 0].clone()
-        elif self.solver == "pyroki":
-            # For pyroki, assume all IK solutions are valid (pyroki handles failures internally)
-            q[:, :pyroki_result.shape[1]] = pyroki_result
-
-        q[:, -self.ee_n_dof:] = gripper_widths
+        q = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
 
         q_use = q[:, :self.n_robot_dof]
         actions = [
@@ -272,8 +256,8 @@ def main():
     parser.add_argument("--solver", type=str, default="pyroki", choices=["curobo", "pyroki"],
                         help="IK solver to use: curobo or pyroki")
     parser.add_argument("--num_envs", type=int, default=1)
-    parser.add_argument("--num_episodes", type=int, default=1)
-    parser.add_argument("--max_steps", type=int, default=100)
+    parser.add_argument("--num_episodes", type=int, default=10)
+    parser.add_argument("--max_steps", type=int, default=200)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, default="./eval_output")

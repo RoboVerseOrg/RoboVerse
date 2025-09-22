@@ -1,16 +1,7 @@
-import os
-import sys
-
-import jax.numpy as jnp
-import numpy as np
 import pyroki as pk
+import third_party.pyroki.examples.pyroki_snippets as pks
 import torch
 from yourdfpy import URDF
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-import third_party.pyroki.examples.pyroki_snippets as pks
 
 from metasim.utils.hf_util import check_and_download_single
 
@@ -49,24 +40,27 @@ class get_pyroki_model:
         self.pk_robot = pk.Robot.from_urdf(self.urdf)
 
     def solve_ik(self, pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
-        """Solve inverse kinematics for a single target pose.
-
-        Converts the input PyTorch tensors to JAX numpy arrays,
-        calls Pyroki IK solver, and converts the solution back to a
-        PyTorch tensor.
+        """Solve IK for target pose.
 
         Args:
-            pos_target (torch.Tensor): Target position tensor (3D).
-            quat_target (torch.Tensor): Target orientation quaternion tensor (wxyz).
+            pos_target: Target position (3D)
+            quat_target: Target quaternion (wxyz)
 
         Returns:
-            torch.Tensor: Joint angle solution tensor.
+            Joint angle solution
         """
-        # Convert PyTorch tensors to JAX numpy arrays for Pyroki compatibility
-        pos = jnp.array(pos_target.detach().cpu().numpy())
-        quat = jnp.array(quat_target.detach().cpu().numpy())
+        import jax.numpy as jnp
 
-        # Solve IK using Pyroki
+        # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
+        try:
+            # Convert PyTorch to JAX via DLPack (try CUDA)
+            pos = jnp.from_dlpack(pos_target)
+            quat = jnp.from_dlpack(quat_target)
+        except RuntimeError as e:
+            # JAX doesn't support CUDA, use CPU
+            pos = jnp.from_dlpack(pos_target.cpu())
+            quat = jnp.from_dlpack(quat_target.cpu())
+        # Solve IK
         solution = pks.solve_ik(
             self.pk_robot,
             self.ee_link_name,
@@ -74,9 +68,11 @@ class get_pyroki_model:
             target_position=pos,
         )
 
-        # Append fixed joint values [0.04, 0.04] as required by your robot setup
-        q_list = np.concatenate([solution, [0.04, 0.04]])
+        # Convert JAX to PyTorch via DLPack
+        q_tensor = torch.from_dlpack(solution)
 
-        # Convert numpy array back to PyTorch tensor, move to GPU if available
-        q_tensor = torch.tensor(q_list, dtype=torch.float32)
-        return q_tensor.cuda() if torch.cuda.is_available() else q_tensor
+        # Move to same device as input if needed
+        if pos_target.is_cuda and q_tensor.device.type == "cpu":
+            q_tensor = q_tensor.cuda()
+
+        return q_tensor
