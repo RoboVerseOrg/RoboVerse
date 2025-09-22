@@ -611,14 +611,17 @@ class MujocoHandler(BaseSimHandler):
         # Fast path: tensor-like controls
         if isinstance(actions, torch.Tensor):
             vec = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
-
+            if vec.ndim > 1:
+                vec = vec.squeeze()
             # Reindex tensor from dictionary order to MuJoCo internal order
             if len(self.robots) == 1:
+                vec_reindexed = np.zeros_like(vec)
                 # Single robot case
                 robot = self.robots[0]
                 # Get inverse reindex: from dictionary order to original order
                 reindex = self.get_joint_reindex(robot.name, inverse=True)
-                vec_reindexed = vec[reindex]
+
+                vec_reindexed[reindex] = vec
             else:
                 # Multi-robot case - need to reindex each robot's joints separately
                 vec_reindexed = np.zeros_like(vec)
@@ -628,7 +631,7 @@ class MujocoHandler(BaseSimHandler):
                     end_idx = start_idx + robot_dofs
                     # Get inverse reindex: from dictionary order to original order
                     reindex = self.get_joint_reindex(robot.name, inverse=True)
-                    vec_reindexed[start_idx:end_idx] = vec[start_idx:end_idx][reindex]
+                    vec_reindexed[start_idx:end_idx][reindex] = vec[start_idx:end_idx]
                     start_idx = end_idx
 
             if self._manual_pd_on:
