@@ -223,7 +223,7 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: in
 
 def main():
     parser = argparse.ArgumentParser(description="OpenVLA Evaluation (EE control + IK)")
-    parser.add_argument("--model_path", type=str, default="/datasets/v2p/current/murphy/openvla_runs1/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
+    parser.add_argument("--model_path", type=str, default="openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
     parser.add_argument("--task", type=str, default="pick_butter")
     parser.add_argument("--robot", type=str, default="franka")
     parser.add_argument("--sim", type=str, default="mujoco",
