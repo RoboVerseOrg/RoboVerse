@@ -201,14 +201,7 @@ class OpenVLARunner:
         gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose robot command
-        q = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
-
-        q_use = q[:, :self.n_robot_dof]
-        actions = [
-            {self.robot_name: {"dof_pos_target": {jn: float(q_use[i, j]) for j, jn in enumerate(self.joint_names)}}}
-            for i in range(num_envs)
-        ]
-        print(f"final actions {actions}")
+        actions = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
         return actions
 
     def reset(self):
