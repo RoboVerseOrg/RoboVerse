@@ -72,45 +72,8 @@ class GymEnvWrapper(gym.Env):
 
     def step(self, action):
         """Step the environment with the given action."""
-        # Three cases: numpy -> tensor, list-of-dict -> stacked tensor, torch -> move to device
-        if isinstance(action, torch.Tensor):
-            action_t = action.to(self._device)
-        elif isinstance(action, np.ndarray):
-            action_t = torch.as_tensor(action, dtype=torch.float32, device=self._device)
-        elif isinstance(action, list):
-            robot = self.scenario.robots[0]
-            joint_names = list(robot.joint_limits.keys())
-
-            if len(action) != 1:
-                raise ValueError(f"Single-env wrapper expects exactly 1 action dict, got {len(action)}")
-
-            vec = torch.tensor(
-                [action[0][robot.name]["dof_pos_target"][jn] for jn in joint_names],
-                dtype=torch.float32,
-                device=self._device,
-            )
-
-            action_t = vec.unsqueeze(0)
-
-        else:
-            raise TypeError(
-                f"Unsupported action type: {type(action)}. Expected torch.Tensor, numpy.ndarray, or list/dict of action dicts."
-            )
-
-        # Ensure batch dimension for single-env backend.
-        if action_t.ndim == 1:
-            action_t = action_t.unsqueeze(0)
-
         # Backend is expected to return (obs, reward, terminated, truncated, info).
-        obs, reward, terminated, truncated, info = self.task_env.step(action_t)
-
-        # De-batch observation for single-env wrapper if needed.
-        try:
-            if hasattr(obs, "ndim") and obs.ndim >= 2 and obs.shape[0] == 1:
-                obs = obs[0]
-        except Exception:
-            pass
-
+        obs, reward, terminated, truncated, info = self.task_env.step(action)
         return obs, reward, terminated, truncated, info
 
     def render(self):
