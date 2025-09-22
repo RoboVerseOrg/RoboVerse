@@ -43,7 +43,6 @@ q_solution, ik_success = ik_solver.solve_ik_batch(
 
 # q_solution: (B, n_dof_ik) - arm joint positions only
 # ik_success: (B,) - boolean mask indicating successful IK solutions, pyroki does not need this
-```
 
 #### 2. `compose_full_joint_command()` - Combine Arm + Gripper
 
