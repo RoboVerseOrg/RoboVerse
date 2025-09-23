@@ -47,6 +47,7 @@ q_solution, ik_success = ik_solver.solve_ik_batch(
 
 #### 2. `compose_joint_action()` - Combine Arm + Gripper
 
+
 This function combines the arm joint positions from IK with gripper positions to create the complete joint command. It can return either a tensor or action dictionaries.
 
 ```python
