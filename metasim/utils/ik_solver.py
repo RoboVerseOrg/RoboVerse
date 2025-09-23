@@ -69,7 +69,7 @@ class IKSolver:
             ik_succ = torch.ones(num_envs, dtype=torch.bool, device=ee_pos_target.device)
             return q_solution, ik_succ
 
-    def compose_full_joint_command(
+    def compose_joint_action(
         self,
         q_solution: torch.Tensor,
         gripper_widths: torch.Tensor,

@@ -43,8 +43,10 @@ q_solution, ik_success = ik_solver.solve_ik_batch(
 
 # q_solution: (B, n_dof_ik) - arm joint positions only
 # ik_success: (B,) - boolean mask indicating successful IK solutions, pyroki does not need this
+```
 
-#### 2. `compose_full_joint_command()` - Combine Arm + Gripper
+#### 2. `compose_joint_action()` - Combine Arm + Gripper
+
 
 This function combines the arm joint positions from IK with gripper positions to create the complete joint command. It can return either a tensor or action dictionaries.
 
@@ -57,7 +59,7 @@ gripper_widths = process_gripper_command(
 )
 
 # Option 1: Return tensor in alphabetical order (default)
-q_full = ik_solver.compose_full_joint_command(
+actions_tensor = ik_solver.compose_joint_action(
     q_solution=q_solution,           # (B, n_dof_ik) - arm joint positions from IK
     gripper_widths=gripper_widths,   # (B, ee_n_dof) - gripper joint positions
     current_q=current_joint_state,   # (B, n_robot_dof) - optional current state
@@ -66,7 +68,7 @@ q_full = ik_solver.compose_full_joint_command(
 # q_full: (B, n_robot_dof) - complete joint command in alphabetical order
 
 # Option 2: Return action dictionaries directly
-actions = ik_solver.compose_full_joint_command(
+actions_dict = ik_solver.compose_joint_action(
     q_solution=q_solution,
     gripper_widths=gripper_widths,
     current_q=current_joint_state,
@@ -118,7 +120,7 @@ gripper_widths = process_gripper_command(
 )
 
 # Step 3: Compose full joint command and create actions directly
-actions = ik_solver.compose_full_joint_command(
+actions = ik_solver.compose_joint_action(
     q_solution=q_arm,
     gripper_widths=gripper_widths,
     return_dict=True  # Return action dictionaries directly

@@ -12,7 +12,7 @@ import torch
 
 from metasim.types import DictEnvState
 from metasim.utils.io_util import write_16bit_depth_video
-from metasim.utils.kinematics_utils import get_ee_state_from_list
+from metasim.utils.kinematics import get_ee_state_from_list
 
 
 def _normalize_depth(depth: np.ndarray) -> np.ndarray:

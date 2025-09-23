@@ -32,7 +32,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-from metasim.utils.kinematics_utils import get_ee_state
+from metasim.utils.kinematics import get_ee_state
 
 
 @configclass
