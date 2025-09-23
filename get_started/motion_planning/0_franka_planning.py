@@ -136,7 +136,7 @@ def move_to_pose(
     gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
 
     # Compose full joint command
-    q = ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q)
+    q = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q)
 
     actions = [
         {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}

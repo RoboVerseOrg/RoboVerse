@@ -183,7 +183,7 @@ class OpenVLARunner:
         gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose robot command
-        actions = self.ik_solver.compose_full_joint_command(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
+        actions = self.ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
         return actions
 
     def reset(self):
