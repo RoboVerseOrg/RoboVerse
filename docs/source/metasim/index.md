@@ -23,7 +23,7 @@ get_started/advanced/index
 ```
 
 ```{toctree}
-:caption: Tutorials
+:caption: Developer Tutorials
 :maxdepth: 2
 :titlesonly:
 

@@ -49,7 +49,7 @@ from rich.logging import RichHandler
 from tqdm.rich import tqdm, trange
 
 from metasim.utils.demo_util.loader import load_traj_file, save_traj_file
-from metasim.utils.kinematics_utils import ee_pose_from_tcp_pose, get_curobo_models, tcp_pose_from_ee_pose
+from metasim.utils.kinematics import ee_pose_from_tcp_pose, get_curobo_models, tcp_pose_from_ee_pose
 from metasim.utils.setup_util import get_robot, get_task
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])

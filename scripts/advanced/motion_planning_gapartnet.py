@@ -20,7 +20,7 @@ from metasim.constants import SimType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.sensors import PinholeCameraCfg
 from metasim.utils.demo_util import get_traj
-from metasim.utils.kinematics_utils import get_curobo_models
+from metasim.utils.kinematics import get_curobo_models
 from metasim.utils.math import quat_from_euler_xyz
 from metasim.utils.setup_util import get_robot, get_sim_env_class
 

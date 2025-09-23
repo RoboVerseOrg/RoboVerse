@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 # from metasim.scenario.scenario import ScenarioCfg
-from metasim.utils.kinematics_utils import get_curobo_models
+from metasim.utils.kinematics import get_curobo_models
 
 from metasim.task.registry import get_task_class
 

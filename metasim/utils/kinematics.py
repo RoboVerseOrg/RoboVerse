@@ -73,9 +73,9 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     """
     import jax.numpy as jnp
     import pyroki as pk
-    import third_party.pyroki.examples.pyroki_snippets as pks
     from yourdfpy import URDF
 
+    import third_party.pyroki.examples.pyroki_snippets as pks
     from metasim.utils.hf_util import check_and_download_single
 
     urdf_path = robot_cfg.urdf_path

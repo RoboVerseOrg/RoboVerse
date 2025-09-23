@@ -2,7 +2,7 @@ from dp.runner.base_policy import BasePolicyCfg
 
 try:
     from curobo.types.math import Pose
-    from metasim.utils.kinematics_utils import get_curobo_models
+    from metasim.utils.kinematics import get_curobo_models
     from pytorch3d import transforms
 except ImportError:
     pass
