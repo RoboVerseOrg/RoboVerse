@@ -64,7 +64,11 @@ class IKSolver:
             return q_solution, ik_succ
 
         else:  # pyroki
-            q_list = [self.backend_solver["solve_ik"](ee_pos_target[i], ee_quat_target[i]) for i in range(num_envs)]
+            q_list = []
+            for i in range(num_envs):
+                seed_cfg = seed_q[i, : self.n_dof_ik]
+                q_sol = self.backend_solver["solve_ik_with_seed"](ee_pos_target[i], ee_quat_target[i], seed_cfg)
+                q_list.append(q_sol)
             q_solution = torch.stack(q_list, dim=0)[:, : self.n_dof_ik]
             ik_succ = torch.ones(num_envs, dtype=torch.bool, device=ee_pos_target.device)
             return q_solution, ik_succ
@@ -90,8 +94,6 @@ class IKSolver:
         """
         num_envs = q_solution.shape[0]
         device = q_solution.device
-
-        # Get joint names in different orders
         joint_names_dict_order = list(self.robot_cfg.actuators.keys())  # Original dict order
         joint_names_alpha_order = sorted(self.robot_cfg.actuators.keys())  # Alphabetical order
 
@@ -102,19 +104,7 @@ class IKSolver:
             else torch.zeros((num_envs, self.n_robot_dof), device=device)
         )
 
-        # Place IK solution in the first n_dof_ik positions
         q_full_dict_order[:, : self.n_dof_ik] = q_solution
-
-        # Handle gripper dimensions
-        if gripper_widths.dim() == 0:
-            gripper_widths = gripper_widths.expand(num_envs, self.ee_n_dof)
-        elif gripper_widths.dim() == 1:
-            if gripper_widths.shape[0] == num_envs:
-                gripper_widths = gripper_widths.unsqueeze(-1).expand(-1, self.ee_n_dof)
-            elif gripper_widths.shape[0] == self.ee_n_dof:
-                gripper_widths = gripper_widths.unsqueeze(0).expand(num_envs, -1)
-
-        # Place gripper positions in the last ee_n_dof positions
         q_full_dict_order[:, -self.ee_n_dof :] = gripper_widths
 
         if return_dict:
@@ -129,7 +119,6 @@ class IKSolver:
             ]
         else:
             # Convert from dict order to alphabetical order
-            # Create reindexing mapping: from dict order to alphabetical order
             dict_to_alpha_idx = [joint_names_dict_order.index(name) for name in joint_names_alpha_order]
             q_full_alpha_order = q_full_dict_order[:, dict_to_alpha_idx]
             return q_full_alpha_order

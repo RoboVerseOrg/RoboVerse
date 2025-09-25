@@ -5,8 +5,6 @@ import torch
 from metasim.scenario.robot import RobotCfg
 from metasim.utils.math import matrix_from_quat
 
-# ==================== CUROBO FUNCTIONS ====================
-
 
 def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
     """Initializes and returns the curobo kinematic model, forward kinematics function, and inverse kinematics solver for a given robot configuration.
@@ -59,9 +57,6 @@ def get_curobo_models(robot_cfg: RobotCfg, no_gnd=False):
     return kin_model, do_fk, ik_solver
 
 
-# ==================== PYROKI FUNCTIONS ====================
-
-
 def get_pyroki_model(robot_cfg: RobotCfg):
     """Get the Pyroki robot model and IK solver.
 
@@ -102,15 +97,12 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         """
         # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
         try:
-            # Convert PyTorch to JAX via DLPack (try CUDA)
             pos = jnp.from_dlpack(pos_target)
             quat = jnp.from_dlpack(quat_target)
         except RuntimeError as e:
-            # JAX doesn't support CUDA, use CPU
             pos = jnp.from_dlpack(pos_target.cpu())
             quat = jnp.from_dlpack(quat_target.cpu())
 
-        # Solve IK
         solution = pks.solve_ik(
             pk_robot,
             ee_link_name,
@@ -118,16 +110,74 @@ def get_pyroki_model(robot_cfg: RobotCfg):
             target_position=pos,
         )
 
-        # Convert JAX to PyTorch via DLPack
         q_tensor = torch.from_dlpack(solution)
-
-        # Move to same device as input if needed
         if pos_target.is_cuda and q_tensor.device.type == "cpu":
             q_tensor = q_tensor.cuda()
 
         return q_tensor
 
-    return {"robot": pk_robot, "solve_ik": solve_ik, "ee_link_name": ee_link_name}
+    import jax_dataclasses as jdc
+    import jaxlie
+    import jaxls
+    import pyroki as pk
+
+    @jdc.jit
+    def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):
+        joint_var = robot.joint_var_cls(0)
+        factors = [
+            pk.costs.pose_cost_analytic_jac(
+                robot,
+                joint_var,
+                jaxlie.SE3.from_rotation_and_translation(jaxlie.SO3(target_wxyz), target_position),
+                target_link_index,
+                pos_weight=50.0,
+                ori_weight=10.0,
+            ),
+            pk.costs.limit_cost(robot, joint_var, weight=100.0),
+        ]
+        sol = (
+            jaxls.LeastSquaresProblem(factors, [joint_var])
+            .analyze()
+            .solve(
+                verbose=False,
+                linear_solver="dense_cholesky",
+                initial_vals=jaxls.VarValues.make([joint_var.with_value(prev_cfg)]),
+            )
+        )
+        return sol[joint_var]
+
+    def solve_ik_with_seed(
+        pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor = None
+    ) -> torch.Tensor:
+        if seed_q is not None:
+            import numpy as np
+
+            pos_np = pos_target.detach().cpu().numpy()
+            quat_np = quat_target.detach().cpu().numpy()
+            seed_np = seed_q.detach().cpu().numpy()
+            num_actuated_joints = pk_robot.joints.num_actuated_joints
+            if seed_np.shape[0] != num_actuated_joints:
+                if seed_np.shape[0] < num_actuated_joints:
+                    padding = np.zeros(num_actuated_joints - seed_np.shape[0])
+                    seed_np = np.concatenate([seed_np, padding])
+                else:
+                    seed_np = seed_np[:num_actuated_joints]
+
+            target_link_index = pk_robot.links.names.index(ee_link_name)
+            cfg = _solve_ik_jax_with_seed(
+                pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
+            )
+            q_tensor = torch.from_numpy(np.array(cfg)).to(pos_target.device)
+        else:
+            q_tensor = solve_ik(pos_target, quat_target)
+        return q_tensor
+
+    return {
+        "robot": pk_robot,
+        "solve_ik": solve_ik,
+        "solve_ik_with_seed": solve_ik_with_seed,
+        "ee_link_name": ee_link_name,
+    }
 
 
 # ==================== TCP/EE POSE CONVERSION FUNCTIONS ====================
