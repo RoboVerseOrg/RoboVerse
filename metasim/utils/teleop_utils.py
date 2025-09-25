@@ -358,7 +358,10 @@ def quaternion_to_rotation_matrix(quaternion):
 #############################################################
 ################### Pico VR
 #############################################################
-import xrobotoolkit_sdk as xrt
+try:
+    import xrobotoolkit_sdk as xrt
+except ImportError:
+    xrt = None
 
 
 class XrClient:
