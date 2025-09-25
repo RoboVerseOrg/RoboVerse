@@ -59,16 +59,15 @@ class ContactData(BaseQueryType):
 
             nenv = self.handler.num_envs
             has_contact = np.zeros(nenv, dtype=bool)
-            for env_id in range(nenv):
-                data = self.handler.data[env_id]
-                for i in range(data.ncon):
-                    con = data.contact[i]
-                    if (con.geom1 == self._geom1_id and con.geom2 == self._geom2_id) or (
-                        con.geom1 == self._geom2_id and con.geom2 == self._geom1_id
-                    ):
-                        if con.dist < 1e-6:
-                            has_contact[env_id] = True
-                            break
+            data = self.handler.data
+            for i in range(data.ncon):
+                con = data.contact[i]
+                if (con.geom1 == self._geom1_id and con.geom2 == self._geom2_id) or (
+                    con.geom1 == self._geom2_id and con.geom2 == self._geom1_id
+                ):
+                    if con.dist < 1e-6:
+                        has_contact = True
+                        break
 
             return torch.tensor(has_contact, dtype=torch.float32, device=self.handler.device)
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import argparse
 import os
 import sys
 import time
+from typing import Literal
 
 try:
     import isaacgym  # noqa: F401
@@ -12,73 +12,90 @@ except ImportError:
 
 import pygame
 import torch
-from curobo.types.math import Pose
+import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.constants import SimType
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.sensors import PinholeCameraCfg
+from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.render import RenderCfg
+from metasim.task.registry import get_task_class
+from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
-from metasim.utils.kinematics import get_curobo_models
+from metasim.utils.ik_solver import IKSolver, process_gripper_command
 from metasim.utils.math import matrix_from_euler, quat_apply, quat_from_matrix, quat_inv, quat_mul
-from metasim.utils.setup_util import get_robot, get_sim_env_class, get_task
 from metasim.utils.teleop_utils import PygameKeyboardClient, process_kb_input
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--task", type=str, required=True)
-    parser.add_argument("--robot", type=str, default="franka")
-    parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
-    parser.add_argument(
-        "--sim",
-        type=str,
-        default="isaaclab",
-        choices=["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"],
-    )
-    args = parser.parse_args()
-    return args
+@configclass
+class Args:
+    task: str = "stack_cube"
+    robot: str = "franka"
+    scene: str | None = None
+    render: RenderCfg = RenderCfg()
+
+    ## Handlers
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
+
+    ## Others
+    num_envs: int = 1
+    headless: bool = False
+
+    ## IK Solver
+    ik_solver: Literal["curobo", "pyroki"] = "pyroki"
+    no_gnd: bool = False
+
+    def __post_init__(self):
+        log.info(f"Args: {self}")
+
+
+args = tyro.cli(Args)
 
 
 def main():
-    args = parse_args()
-    num_envs: int = args.num_envs
-    device = "cuda:0"
-    task = get_task(args.task)
-    robot = get_robot(args.robot)
-    camera = PinholeCameraCfg(pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = ScenarioCfg(task=task, robots=[robot], cameras=[camera], num_envs=num_envs)
+    task_cls = get_task_class(args.task)
+    camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+    scenario = task_cls.scenario.update(
+        robots=[args.robot],
+        scene=args.scene,
+        cameras=[camera],
+        render=args.render,
+        simulator=args.sim,
+        renderer=args.renderer,
+        num_envs=args.num_envs,
+        headless=args.headless,
+    )
+
+    num_envs: int = scenario.num_envs
 
     tic = time.time()
-    env_class = get_sim_env_class(SimType(args.sim))
-    env = env_class(scenario)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = task_cls(scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
 
-    # data
+    traj_filepath = env.traj_filepath
+    ## Data
     tic = time.time()
-    assert os.path.exists(task.traj_filepath), f"Trajectory file: {task.traj_filepath} does not exist."
-    init_states, all_actions, all_states = get_traj(task, robot, env.handler)
+    assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
+    init_states, all_actions, all_states = get_traj(
+        traj_filepath, scenario.robots[0], env.handler
+    )  # XXX: only support one robot
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 
-    # reset before first step
+    ## Reset before first step
     tic = time.time()
-    states, extras = env.reset(states=init_states[:num_envs])
+    obs, extras = env.reset()
     toc = time.time()
     log.trace(f"Time to reset: {toc - tic:.2f}s")
 
-    # cuRobo IKSysFont()
-    *_, robot_ik = get_curobo_models(robot)
-    curobo_n_dof = len(robot_ik.robot_config.cspace.joint_names)
-    ee_n_dof = len(robot.gripper_open_q)
+    # Setup IK Solver
+    ik_solver = IKSolver(scenario.robots[0], solver=args.ik_solver, no_gnd=args.no_gnd)
 
     keyboard_client = PygameKeyboardClient(width=670, height=870, title="Keyboard Control")
-    gripper_actuate_tensor = torch.tensor(robot.gripper_close_q, dtype=torch.float32, device=device)
-    gripper_release_tensor = torch.tensor(robot.gripper_open_q, dtype=torch.float32, device=device)
 
     for line, instruction in enumerate(keyboard_client.instructions):
         log.info(f"{line:2d}: {instruction}")
@@ -99,12 +116,12 @@ def main():
         keyboard_client.draw_instructions()
 
         # compute target
-        reorder_idx = env.handler.get_joint_reindex(robot.name)
+        reorder_idx = env.handler.get_joint_reindex(scenario.robots[0].name)
         inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
-        curr_robot_q = states.robots[robot.name].joint_pos[:, inverse_reorder_idx]
-        ee_idx = states.robots[robot.name].body_names.index(robot.ee_body_name)
-        robot_pos, robot_quat = states.robots[robot.name].root_state[0, :7].split([3, 4])
-        curr_ee_pos, curr_ee_quat = states.robots[robot.name].body_state[0, ee_idx, :7].split([3, 4])
+        curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
+        ee_idx = obs.robots[scenario.robots[0].name].body_names.index(scenario.robots[0].ee_body_name)
+        robot_pos, robot_quat = obs.robots[scenario.robots[0].name].root_state[0, :7].split([3, 4])
+        curr_ee_pos, curr_ee_quat = obs.robots[scenario.robots[0].name].body_state[0, ee_idx, :7].split([3, 4])
         curr_robot_q = curr_robot_q.to(device)
         curr_ee_pos = curr_ee_pos.to(device)
         curr_ee_quat = curr_ee_quat.to(device)
@@ -117,35 +134,33 @@ def main():
         d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.01, drot=0.05)
         d_pos_tensor = torch.tensor(d_pos, dtype=torch.float32, device=device)
         d_rot_tensor = torch.tensor(d_rot_local, dtype=torch.float32, device=device)
-        gripper_q = gripper_actuate_tensor if close_gripper else gripper_release_tensor
+
         # delta quaternion
         d_rot_mat_local = matrix_from_euler(d_rot_tensor.unsqueeze(0), "XYZ")
         d_quat_local = quat_from_matrix(d_rot_mat_local)[0]  # (4,)
         ee_pos_target = curr_ee_pos + d_pos_tensor
         ee_quat_target_local = quat_mul(curr_ee_quat_local, d_quat_local)
 
-        seed_config = curr_robot_q[:, :curobo_n_dof].unsqueeze(1).tile([1, robot_ik._num_seeds, 1])
-        result = robot_ik.solve_batch(
-            Pose(ee_pos_target.unsqueeze(0), ee_quat_target_local.unsqueeze(0)), seed_config=seed_config
+        # Solve IK using the modern IKSolver
+        q_solution, ik_succ = ik_solver.solve_ik_batch(
+            ee_pos_target.unsqueeze(0), ee_quat_target_local.unsqueeze(0), seed_q=curr_robot_q
         )
 
-        ik_succ = result.success.squeeze(1)
-        q = curr_robot_q.clone()  # shape: [num_envs, robot.num_joints]
-        q[ik_succ, :curobo_n_dof] = result.solution[ik_succ, 0].clone()
-        q[:, -ee_n_dof:] = gripper_q
+        # Process gripper command
+        gripper_widths = process_gripper_command(
+            torch.tensor(close_gripper, dtype=torch.float32, device=device), scenario.robots[0], device
+        )
 
-        # XXX: this may not work for all simulators, since the order of joints may be different
-        actions = [
-            {robot.name: {"dof_pos_target": dict(zip(robot.joint_limits.keys(), q[i_env].tolist()))}}
-            for i_env in range(num_envs)
-        ]
-        states, _, _, _, _ = env.step(actions)
+        # Compose joint action
+        actions = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
+
+        obs, reward, success, time_out, extras = env.step(actions)
 
         step += 1
         log.debug(f"Step {step}")
 
     keyboard_client.close()
-    env.handler.close()
+    env.close()
     sys.exit()
 
 
