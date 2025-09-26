@@ -14,11 +14,9 @@ Let's understand each component:
 
 ### 1. Handler: The Physics Engine Interface
 
-#### What is a Handler?
 
 A **Handler** is the core component that directly interfaces with physics engines (like MuJoCo, IsaacSim, PyBullet, etc.). Think of it as a translator that speaks the language of different simulators.
 
-#### Key Handler Methods
 
 ```python
 # Get current simulation state, including RGB Data
@@ -79,8 +77,6 @@ A **Task** is a wrapper built on top of a Handler that provides Gym-style APIs (
 
 #### Use RoboVerse as Unified Simulator
 
-**Goal**: Integrate RoboVerse into your existing project
-
 **Steps**:
 1. **Choose a simulator** based on your needs
 2. **Define your scenario** with robots, objects, cameras
@@ -113,8 +109,6 @@ obs = handler.get_state(mode="tensor")  # Get updated state
 ```
 
 #### Use Pre-built Tasks
-
-**Goal**: Run existing tasks and training scripts
 
 **What Tasks Provide**:
 - Pre-configured scenarios (robots, objects, cameras)
