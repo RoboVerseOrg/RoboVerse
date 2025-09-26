@@ -5,7 +5,7 @@ There are two control modes for replay. The `physics` mode replays the physics a
 ## Physics replay
 
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --task=CloseBox --num_envs 4
+python metasim/scripts/replay_demo.py --sim=isaacsim --task=CloseBox --num_envs 4
 ```
 
 task could also be:
@@ -17,7 +17,7 @@ task could also be:
 ## States replay
 
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --task=CloseBox --num_envs 4 --object-states
+python metasim/scripts/replay_demo.py --sim=isaacsim--task=CloseBox --num_envs 4 --object-states
 ```
 task could also be:
 - `CloseBox`
@@ -30,11 +30,11 @@ task could also be:
 e.g.
 
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --task=LiberoPickButter
+python metasim/scripts/replay_demo.py --sim=isaacsim --task=LiberoPickButter
 ```
 
 Simulator:
-- `isaaclab`
+- `isaacsim`
 - `mujoco`
 
 Task:
@@ -52,7 +52,7 @@ Task:
 e.g.
 
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --num_envs=1 --robot=h1 --task=Stand --object-states
+python metasim/scripts/replay_demo.py --sim=isaacsim --num_envs=1 --robot=h1 --task=Stand --object-states
 ```
 
 ```bash
@@ -60,7 +60,7 @@ python metasim/scripts/replay_demo.py --sim=mujoco --num_envs=1 --robot=h1 --tas
 ```
 
 Simulator:
-- `isaaclab`
+- `isaacsim`
 - `mujoco`
 
 Task:
@@ -74,5 +74,5 @@ Note:
 ### Add scene:
 Note: only single environment is supported for adding scene.
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --task=CloseBox --num_envs 1 --scene=tapwater_scene_131
+python metasim/scripts/replay_demo.py --sim=isaacsim --task=CloseBox --num_envs 1 --scene=tapwater_scene_131
 ```

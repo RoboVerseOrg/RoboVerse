@@ -11,6 +11,88 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 By running the above command, you will plan a motion for a robot and it will automatically record a video.
 
+
+#### IsaacSim
+```bash
+python get_started/4_motion_planning.py  --sim isaacsim
+```
+
+#### Isaac Gym
+```bash
+python get_started/4_motion_planning.py  --sim isaacgym
+```
+
+#### Mujoco
+```bash
+python get_started/4_motion_planning.py  --sim mujoco --headless
+```
+Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
+
+
+#### Genesis
+```bash
+python get_started/4_motion_planning.py  --sim genesis
+```
+Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
+
+#### Sapien
+```bash
+python get_started/4_motion_planning.py  --sim sapien3
+```
+
+#### Pybullet
+```bash
+python get_started/4_motion_planning.py  --sim pybullet
+```
+
+You will get the following videos:
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaaclab.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">IsaacSim</p>
+        </div>
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaacgym.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Isaac Gym</p>
+        </div>
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_mujoco.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Mujoco</p>
+        </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_genesis.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Genesis</p>
+        </div>
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_sapien3.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Sapien</p>
+        </div>
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_pybullet.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">PyBullet</p>
+        </div>
+    </div>
+
+</div>
+
+
+
 ## IK Solver Usage
 
 MetaSim provides a unified IK solver that supports both `curobo` and `pyroki` backends for end-effector control. The IK solver is designed to work with multiple environments simultaneously and provides two main functions for end-effector control.
@@ -22,7 +104,6 @@ The IK solver supports two backends:
 - **`curobo`**: High-performance CUDA-accelerated IK solver with collision checking
 - **`pyroki`**: JAX-based differentiable IK solver (default)
 
-### Key Functions
 
 #### 1. `solve_ik_batch()` - Compute Arm Joint Positions
 
@@ -145,84 +226,3 @@ actions = ik_solver.compose_joint_action(
 This IK solver design separates arm control (IK solving) from gripper control, making it easy to implement end-effector-based manipulation tasks across multiple environments.
 
 ### Examples
-
-#### IsaacSim
-```bash
-python get_started/4_motion_planning.py  --sim isaacsim
-```
-
-#### Isaac Gym
-```bash
-python get_started/4_motion_planning.py  --sim isaacgym
-```
-
-#### Mujoco
-```bash
-python get_started/4_motion_planning.py  --sim mujoco --headless
-```
-Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
-
-
-#### Genesis
-```bash
-python get_started/4_motion_planning.py  --sim genesis
-```
-Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
-
-#### Sapien
-```bash
-python get_started/4_motion_planning.py  --sim sapien3
-```
-
-#### Pybullet
-```bash
-python get_started/4_motion_planning.py  --sim pybullet
-```
-
-You will get the following videos:
-
-<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
-    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaaclab.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">IsaacSim</p>
-        </div>
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaacgym.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">Isaac Gym</p>
-        </div>
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_mujoco.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">Mujoco</p>
-        </div>
-    </div>
-    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_genesis.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">Genesis</p>
-        </div>
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_sapien3.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">Sapien</p>
-        </div>
-        <div style="width: 32%; text-align: center;">
-            <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_pybullet.mp4" type="video/mp4">
-            </video>
-            <p style="margin-top: 5px;">PyBullet</p>
-        </div>
-    </div>
-
-</div>
-
-
