@@ -15,7 +15,9 @@ from transformers import AutoModelForVision2Seq, AutoProcessor
 from pytorch3d import transforms
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from metasim.task.gym_registration import make_vec
+# from metasim.task.gym_registration import make_vec
+import metasim
+from gymnasium import make_vec
 from metasim.utils import configclass
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.utils.obs_utils import ObsSaver

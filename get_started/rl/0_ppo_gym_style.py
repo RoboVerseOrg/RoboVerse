@@ -23,7 +23,11 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 # Ensure reaching tasks are registered exactly once from the canonical module
-from metasim.task.gym_registration import make_vec
+# from metasim.task.gym_registration import make_vec
+from gymnasium import make_vec
+
+import metasim  # noqa: F401
+from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.utils.obs_utils import ObsSaver
 
 
@@ -71,7 +75,7 @@ class VecEnvWrapper(VecEnv):
 
     def step_async(self, actions):
         """Send actions to the vectorized env."""
-        self.actions = actions
+        self.actions = torch.tensor(actions, device=self.gym_vec.device, dtype=torch.float32)
 
     def step_wait(self):
         """Step the envs and adapt outputs for SB3."""
@@ -164,7 +168,7 @@ def train_ppo():
     )
 
     # Start training
-    model.learn(total_timesteps=1)
+    model.learn(total_timesteps=1_00_0000)
 
     # Save the model
 
@@ -180,10 +184,9 @@ def train_ppo():
         simulator=args.sim,
         num_envs=args.num_envs,
         headless=args.headless,
-        cameras=[],
+        cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         device=args.device,
     )
-
     env_inference = VecEnvWrapper(env_inference)
 
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
