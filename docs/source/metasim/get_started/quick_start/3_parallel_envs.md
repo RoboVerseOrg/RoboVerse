@@ -61,3 +61,21 @@ You will get the following videos:
     </div>
 
 </div>
+
+## Code Highlights
+
+**Parallel Environment Setup**: Simply change `num_envs` to enable parallel execution:
+```python
+scenario = ScenarioCfg(
+    robots=["franka"],
+    simulator=args.sim,
+    num_envs=4,  # Enable 4 parallel environments
+    headless=args.headless,
+)
+handler = get_handler(scenario)
+```
+
+**Simulator Handling**:
+- **Native parallel simulators** (IsaacSim, IsaacGym, Genesis): Directly use handler with multiple environments
+- **Single-environment simulators** (MuJoCo): Automatically wrapped with ParallelHandler for multi-threaded scheduling
+- **Same API**: All simulators provide identical interface regardless of underlying implementation

@@ -57,10 +57,11 @@ scenario = ScenarioCfg(
 
 ```
 
-Fields include: `robots` (robot configurations), `objects` (scene objects), `simulator` (physics engine), `num_envs` (number of parallel environments), `headless` (run without GUI), `cameras` (camera sensors), `lights` (lighting setup), and `sim_params` (physics parameters like timestep and gravity).
----
+Fields include: `robots` (robot configurations), `objects` (scene objects), `simulator` (physics engine), `num_envs` (number of parallel environments), `headless` (run without GUI), `cameras` (camera sensors), `lights` (lighting setup), and `sim_params` (physics parameters like timestep).
+
 
 ### 3. Task: The High-Level Interface
+
 
 
 A **Task** is a wrapper built on top of a Handler that provides Gym-style APIs (`step`, `reset`, `observation_space`, `action_space`). It adds task-specific logic like rewards, termination conditions, and observations.
