@@ -2,8 +2,6 @@
 
 This guide is designed for users who want to understand RoboVerse's core concepts and get started quickly. 
 
-## Core Concepts Overview
-
 RoboVerse is built around three key components that work together:
 
 ```
@@ -14,13 +12,11 @@ Let's understand each component:
 
 ---
 
-## 1. Handler: The Physics Engine Interface
+### 1. Handler: The Physics Engine Interface
 
-### What is a Handler?
 
 A **Handler** is the core component that directly interfaces with physics engines (like MuJoCo, IsaacSim, PyBullet, etc.). Think of it as a translator that speaks the language of different simulators.
 
-### Key Handler Methods
 
 ```python
 # Get current simulation state, including RGB Data
@@ -42,13 +38,10 @@ body_names = handler.get_body_names()
 
 ---
 
-## 2. Scenario: The Configuration Blueprint
-
-### What is a Scenario?
+### 2. Scenario: The Configuration Blueprint
 
 A **Scenario** (`ScenarioCfg`) is a configuration that tells the Handler what to simulate. It's like a blueprint that describes everything needed for a simulation.
 
-### Creating a Scenario
 
 Here's how to create a basic scenario:
 
@@ -64,18 +57,14 @@ scenario = ScenarioCfg(
 
 ```
 
-### Key Scenario Fields Explained
-
 Fields include: `robots` (robot configurations), `objects` (scene objects), `simulator` (physics engine), `num_envs` (number of parallel environments), `headless` (run without GUI), `cameras` (camera sensors), `lights` (lighting setup), and `sim_params` (physics parameters like timestep and gravity).
 ---
 
-## 3. Task: The High-Level Interface
+### 3. Task: The High-Level Interface
 
-### What is a Task?
 
 A **Task** is a wrapper built on top of a Handler that provides Gym-style APIs (`step`, `reset`, `observation_space`, `action_space`). It adds task-specific logic like rewards, termination conditions, and observations.
 
-### Task vs Handler
 
 | Aspect | Handler | Task |
 |--------|---------|------|
@@ -85,11 +74,8 @@ A **Task** is a wrapper built on top of a Handler that provides Gym-style APIs (
 | **Usage** | For custom control | For training, data collection, evaluation |
 
 
-## Getting Started: Two User Paths
 
-### Path A: Use RoboVerse as Unified Simulator
-
-**Goal**: Integrate RoboVerse into your existing project
+#### Use RoboVerse as Unified Simulator
 
 **Steps**:
 1. **Choose a simulator** based on your needs
@@ -122,21 +108,14 @@ handler.simulate()                  # Step physics
 obs = handler.get_state(mode="tensor")  # Get updated state
 ```
 
-### Path B: Use Pre-built Tasks
-
-**Goal**: Run existing tasks and training scripts
+#### Use Pre-built Tasks
 
 **What Tasks Provide**:
 - Pre-configured scenarios (robots, objects, cameras)
 - Task logic (max episode length, initial states)
-- Reward functions and termination conditions
-- Ready-to-use training scripts
-
+- Reward functions (For RL tasks) and termination conditions
 ---
 。
-There are two ways to use pre-built tasks:
-
-#### Method 1: Via Task Registry (Direct Task Class)
 
 ```python
 from metasim.task.registry import get_task_class
@@ -170,7 +149,7 @@ obs, reward, terminated, truncated, info = env.step(action)
 
 ---
 
-## Next Steps
+### Next Steps
 
 For more detailed information, you can explore the concept tutorials which cover advanced topics such as state system content and format, domain randomization techniques, handler implementation details, task system architecture, and configuration management.
 
