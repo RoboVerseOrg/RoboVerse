@@ -1,5 +1,37 @@
 # 📦 Prerequisites
 
+## Light-weight Installation
+
+You can [directly install](./installation.rst) the specific simulator backends as you need.
+
+You may choose one or more of the following simulators, according to your operating system.
+
+ For beginners， we recommend choosing one specific simulator for each environment, which makes environment configuration simpler and provides better isolation.
+
+| OS      | IsaacSim | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet |
+|---------|----------|----------|--------|---------|---------|---------|----------|
+| MacOS   |          |          | ✓      |         | ✓       | ✓       |          |
+| Windows | ✓        |          | ✓      |         | ✓       | ✓       |          |
+| Ubuntu  | ✓        | ✓        | ✓      | ✓       | ✓       | ✓       | ✓        |
+
+```{note}
+RoboVerse team hasn't got the chance to fully test MetaSim on MacOS and Windows. Please let us know if you have any issues.
+```
+
+For more information about the supported platforms, please refer to the official guide of each simulator:
+- [IsaacSim](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html)
+- [IsaacGym](https://docs.robotsfan.com/isaacgym/install.html)
+- [MuJoCo](https://mujoco.readthedocs.io/en/stable/python.html)
+- [SAPIEN2](https://sapien.ucsd.edu/docs/latest/tutorial/basic/installation.html)
+- [SAPIEN3](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#system-support)
+- [Genesis](https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html)
+- [PyBullet](https://github.com/bulletphysics/bullet3)
+
+## Docker Installation
+
+You can also [install with Docker](./docker.md) on Ubuntu. 
+
+
 ## Use All Simulators Supported by MetaSim
 
 To develop with the full capability of MetaSim, it is recommended to [install with Docker](./docker.md) on Ubuntu. The recommended setup is as follows:
@@ -27,29 +59,3 @@ To develop with the full capability of MetaSim, it is recommended to [install wi
 - Check your CUDA toolkit version with `nvcc --version`.
 
 For more information about the supported NVIDIA driver versions, please refer to [Technical Requirements](https://docs.omniverse.nvidia.com/materials-and-rendering/latest/common/technical-requirements.html).
-
-
-## Light-weight Installation
-
-If you only want to try MetaSim, you can [directly install](./installation.rst) the specific simulator backends as you need.
-
-You may choose one or more of the following simulators, according to your operating system.
-
-| OS      | IsaacSim | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet |
-|---------|----------|----------|--------|---------|---------|---------|----------|
-| MacOS   |          |          | ✓      |         | ✓       | ✓       |          |
-| Windows | ✓        |          | ✓      |         | ✓       | ✓       |          |
-| Ubuntu  | ✓        | ✓        | ✓      | ✓       | ✓       | ✓       | ✓        |
-
-```{note}
-RoboVerse team hasn't got the chance to fully test MetaSim on MacOS and Windows. Please let us know if you have any issues.
-```
-
-For more information about the supported platforms, please refer to the official guide of each simulator:
-- [IsaacSim](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html)
-- [IsaacGym](https://docs.robotsfan.com/isaacgym/install.html)
-- [MuJoCo](https://mujoco.readthedocs.io/en/stable/python.html)
-- [SAPIEN2](https://sapien.ucsd.edu/docs/latest/tutorial/basic/installation.html)
-- [SAPIEN3](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#system-support)
-- [Genesis](https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html)
-- [PyBullet](https://github.com/bulletphysics/bullet3)

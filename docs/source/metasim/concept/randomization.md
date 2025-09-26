@@ -1,7 +1,6 @@
 # Randomization
 
-## Design Philosophy
-
+## Overview
 Metasim itself is a deterministic simulation system. In order to mimic the uncertainties we met in real world, we use randomizers to create uncertainties.
 
 There are two types of randomizers: 1) the ones that only changes the simulation result (noise adder), and 2) the ones that modifies the simulation iteself (light, mass, friction, etc.).

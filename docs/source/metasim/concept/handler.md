@@ -1,7 +1,6 @@
+# Handlers
 
-# Metasim Handlers
-
-## Architecture and Philosophy
+## Overview
 
 A **handler** is a basic class that transforms a scenario config into a simulated instance. We support multiple handler backends including `mujoco`, `mujoco-mjx`, `isaacgym`, `isaaclab`, `isaacsim`, `pybullet`, `genesis`, `sapien` and more.
 

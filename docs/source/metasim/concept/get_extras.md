@@ -1,6 +1,6 @@
-# Custom Extra Observations in MetaSim (`get_extra`)
+# Custom Extra Observations
 
-## Design Philosophy
+## Overview
 
 By default, MetaSim (RoboVerse) provides standard observations such as robot joint states, velocities, and camera images. However, there are situations when you might need specific data that is **not directly included in RoboVerse's default state**. 
 
@@ -75,13 +75,6 @@ When creating your simulation Handler, pass your extras dictionary (`_extra_spec
 ```python
 task = CrawlEnv(CrawlEnv.scenario)
 extra_queries = task._extra_spec()
-
-handler = YourSimHandler(
-    scenario=task.scenario,
-    optional_queries=extra_queries
-)
-
-handler.launch()  # Extras get bound here
 ```
 
 ---
