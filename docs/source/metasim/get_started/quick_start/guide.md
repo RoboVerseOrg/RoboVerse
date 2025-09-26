@@ -1,6 +1,6 @@
-# User Guide: Understanding RoboVerse Core Concepts
+# Guide
 
-This guide is designed for users who want to understand RoboVerse's core concepts and get started quickly. Whether you're planning to use RoboVerse as a unified simulator or run pre-built tasks, this guide will help you understand the fundamental building blocks.
+This guide is designed for users who want to understand RoboVerse's core concepts and get started quickly. 
 
 ## Core Concepts Overview
 
@@ -66,14 +66,7 @@ scenario = ScenarioCfg(
 
 ### Key Scenario Fields Explained
 
-| Field | Purpose | Example |
-|-------|---------|---------|
-| `robots` | Define which robots to load | `[RobotCfg(name="franka")]` |
-| `objects` | Objects in the scene | `[BoxCfg(name="cube")]` |
-| `simulator` | Choose physics engine | `"mujoco"` or `"isaacsim"` |
-| `num_envs` | Number of parallel environments | `1` for single, `1024` for parallel |
-| `headless` | Run without GUI | `True` for faster training |
-| `cameras` | Camera sensors | `[CameraCfg(name="front_cam")]` |
+Fields include: `robots` (robot configurations), `objects` (scene objects), `simulator` (physics engine), `num_envs` (number of parallel environments), `headless` (run without GUI), `cameras` (camera sensors), `lights` (lighting setup), and `sim_params` (physics parameters like timestep and gravity).
 ---
 
 ## 3. Task: The High-Level Interface
@@ -167,25 +160,6 @@ env = task_cls(scenario=scenario, device=device)
 
 
 ```
-
-#### Method 2: Via make_vec (Gym-style)
-
-```python
-from metasim.task.gym_registration import make_vec
-
-# Create environment using make_vec
-env_id = f"RoboVerse/{args.task}"
-env = make_vec(
-    env_id,
-    robots=[args.robot],
-    simulator=args.sim,
-    num_envs=args.num_envs,
-    headless=args.headless,
-    cameras=[],
-    device=args.device,
-)
-```
-
 
 ```python
 obs, info = env.reset()
