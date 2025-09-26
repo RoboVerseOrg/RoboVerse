@@ -87,7 +87,8 @@ env = task_cls(scenario=scenario, device=device)
 `make_vec` provides a standardized helper that wraps task instantiation in a **Gym‑compatible API**. It is the recommended entry point for creating environments.
 
 ```python
-from metasim.task.gym_registration import make_vec
+import metasim # triggering the registration of tasks with Gymnasium
+from gymnasium import make_vec
 
 env = make_vec(
     env_id,                      # e.g., "example.my_task"
@@ -123,7 +124,7 @@ Task modules under the following directories are **auto‑imported and registere
 
 ```python
 from metasim.task.base import BaseTaskEnv
-from metasim.task.gym_registration import register_task
+from metasim.task.registry import register_task
 from metasim.scenario.scenario import ScenarioCfg
 
 @register_task("example.my_task")
