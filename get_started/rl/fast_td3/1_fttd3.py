@@ -122,6 +122,7 @@ from torch.amp import GradScaler, autocast
 from get_started.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
+from metasim.utils.obs_utils import ObsSaver
 
 
 def main() -> None:
@@ -276,8 +277,6 @@ def main() -> None:
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
-        import imageio.v2 as iio
-
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
@@ -304,22 +303,26 @@ def main() -> None:
 
         obs_normalizer.eval()
         obs, info = env.reset()
-        frames = [env.render()]
+
+        # Initialize video recording
+        os.makedirs("get_started/output/rl", exist_ok=True)
+        obs_saver = ObsSaver(video_path=f"get_started/output/rl/1_fttd3_{simulator}.mp4")
+        obs_orin = env.handler.get_states()
+        obs_saver.add(obs_orin)
 
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 actions = actor(obs_normalizer(obs))
             obs, _, done, _, _ = env.step(actions.float())
 
-            frames.append(env.render())
+            obs_orin = env.handler.get_states()
+            obs_saver.add(obs_orin)
             if done.any():
                 break
 
+        obs_saver.save()
         env.close()
         obs_normalizer.train()
-
-        iio.mimsave(video_path, frames, fps=30)
-        return frames
 
     def update_main(data, logs_dict):
         with autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):

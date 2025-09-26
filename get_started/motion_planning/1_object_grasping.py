@@ -36,7 +36,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
 from get_started.motion_planning.util_gsnet import GSNet
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -44,7 +44,7 @@ from metasim.utils import configclass
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.ik_solver import setup_ik_solver
 from metasim.utils.obs_utils import ObsSaver, get_pcd_from_rgbd
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -96,8 +96,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_handler_class(SimType(args.sim))
-env = env_class(scenario)
+handler = get_handler(scenario)
 
 init_states = [
     {
@@ -133,9 +132,8 @@ robot = scenario.robots[0]
 # Setup IK solver (hardcoded to curobo for this example)
 ik_solver = setup_ik_solver(robot, "curobo")
 
-env.launch()
-env.set_states(init_states)
-obs = env.get_states(mode="dict")
+handler.set_states(init_states)
+obs = handler.get_states(mode="dict")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -185,9 +183,9 @@ def move_to_pose(
         for i_env in range(scenario.num_envs)
     ]
     for i in range(steps):
-        env.set_dof_targets(actions)
-        env.simulate()
-        obs = env.get_states(mode="dict")
+        handler.set_dof_targets(actions)
+        handler.simulate()
+        obs = handler.get_states(mode="dict")
         obs_saver.add(obs)
     return obs
 
@@ -196,7 +194,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
-    states = env.get_states()
+    states = handler.get_states()
     curr_robot_q = states.robots[robot.name].joint_pos.cuda()
 
     pcd = get_point_cloud_from_obs(obs)

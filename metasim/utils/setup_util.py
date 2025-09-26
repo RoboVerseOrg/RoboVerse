@@ -15,6 +15,32 @@ from metasim.sim.parallel import ParallelSimWrapper
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
+def get_handler(scenario):
+    """Get a launched simulator handler from scenario configuration.
+
+    This function combines three steps into one:
+    1. Get handler class from scenario.simulator
+    2. Create handler instance with scenario
+    3. Launch the handler
+
+    Args:
+        scenario: ScenarioCfg instance containing simulation configuration
+
+    Returns:
+        Launched simulator handler ready for use
+    """
+    # Step 1: Get handler class
+    handler_class = get_sim_handler_class(SimType(scenario.simulator))
+
+    # Step 2: Create handler instance
+    handler = handler_class(scenario)
+
+    # Step 3: Launch handler
+    handler.launch()
+
+    return handler
+
+
 def get_sim_handler_class(sim: SimType):
     """Get the simulator handler class from the simulator type.
 

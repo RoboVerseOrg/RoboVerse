@@ -8,12 +8,11 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.base import BaseSimHandler
 from metasim.types import Action, Info, Obs, Reward, Success, Termination, TimeOut
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 class BaseTaskEnv:
@@ -64,7 +63,7 @@ class BaseTaskEnv:
         if isinstance(self.scenario, BaseSimHandler):
             self.handler = self.scenario
         else:
-            self._instantiate_env(self.scenario)
+            self.handler = self._instantiate_env(self.scenario)
 
         self._initial_states = self._get_initial_states()
         self.device = device
@@ -81,9 +80,7 @@ class BaseTaskEnv:
         Args:
             scenario: The scenario configuration
         """
-        handler_class = get_sim_handler_class(SimType(scenario.simulator))
-        self.handler: BaseSimHandler = handler_class(scenario, self.extra_spec)
-        self.handler.launch()
+        return get_handler(scenario)
 
     def _prepare_callbacks(self) -> None:
         """Prepare the callbacks for the environment."""

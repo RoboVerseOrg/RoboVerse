@@ -42,7 +42,7 @@ class Args:
         "sapien3",
         "mujoco",
         "mjx",
-    ] = "isaacsim"
+    ] = "mujoco"
 
     ## Others
     num_envs: int = 1
@@ -117,7 +117,7 @@ def main():
         # Save observations for video
         if obs_saver is not None:
             try:
-                raw_states = env.env.handler.get_states()  # Access the underlying simulator
+                raw_states = env.task_env.handler.get_states()  # Access the underlying simulator
                 obs_saver.add(raw_states)
             except Exception as e:
                 log.debug(f"Could not get camera data: {e}")

@@ -1,6 +1,6 @@
 # Configuration System
 
-## Design Philosophy
+## Overview
 
 The **configuration system** in RoboVerse ensures that all simulation-related settings remain **simulator-agnostic**. Instead of embedding parameters directly into task logic, each simulation instance is fully defined by a **ScenarioCfg**.
 
@@ -95,7 +95,7 @@ The class provides mechanisms for asset management and dynamic updates:
 
 
 
-## Robot Configuration Specification (Simplified)
+## Robot Configuration Specification
 
 ### Purpose
 

@@ -4,15 +4,13 @@
 
 RoboVerse is a unified framework for robotic simulation and learning. It spans from multi-simulator abstraction, task systems, and scenario management to reinforcement learning (RL) and imitation learning (IL) modules. The design goal is to provide a highly modular, reusable, and extensible ecosystem that allows researchers and developers to quickly build, migrate, and evaluate diverse robotic learning tasks.
 
-In Metasim, we followed the principles of object oriented programming, and used wrapper + hook framework to keep the logic clear and make the framework extendable. We proposed 4 layers of simulations defined in the following figure.
-
-![Architecture]
+In Metasim, we followed the principles of object oriented programming, and used wrapper + hook framework to keep the logic clear and make the framework extendable.
 
 From the core to the shell, we have `Handlers`, whose responsibility is to run the physics simulation with different backends, `Task Env`, who constructs the Gym-like pipeline, `Domain Randomizer`, who plays an improtant role in creating randomized simulation.
 
 **Handlers in metasim**: All static contents of a simulation (robots used, objects used, lightings, physics parameters) are defined inside of a configuration system we call `Scenario Config`. Such configs are then instantiated with `Handlers` with different backends (mujoco, isaaclab, etc.).
 
-**Task Wrapper**: `Handlers` are then wrapped in a `Task Env` that provide gym-style APIs to users. Each task wrapper corresponds to a task. A task wrapper is shipped with a default `Scenario Config`, which defines the static scene of the task. Other features realted to the task, including reward function and success reporting, are explicitely implemented in this wrapper for each task.
+**Task Env**: `Handlers` are then wrapped in a `Task Env` that provide gym-style APIs to users. Each task wrapper corresponds to a task. A task wrapper is shipped with a default `Scenario Config`, which defines the static scene of the task. Other features realted to the task, including reward function and success reporting, are explicitely implemented in this wrapper for each task.
 
 **Domain Randomizer**: `Domain Randomizer` will be responsible for both static randomizations (object mass, friction, lightings) at reset of the simulation (similar to what you can do in Isaaclab), as well as real-time randomizations that randomizes the observations and actions for each step. The randomizer will wrap the `Task` to form a randomized task.
 
@@ -121,6 +119,6 @@ The RoboVerse architecture emphasizes modularity and decoupling:
 
 * **Metasim**: Unified simulation interface and scenario management.
 * **RoboVerse Learn**: Algorithm adapters, implementations, and standardized training scripts.
-* **RoboVerse Pack**: Out-of-the-box robot, scene, and task configurations.
+* **RoboVerse Pack**: Customized robot, scene, and task configurations.
 * **Get Started**: Quick-start examples for fast adoption.
 * **Scripts**: Supporting utilities and advanced tools.

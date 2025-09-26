@@ -21,7 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -32,7 +32,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 if __name__ == "__main__":
 
@@ -106,8 +106,7 @@ if __name__ == "__main__":
     ]
 
     log.info(f"Using simulator: {args.sim}")
-    env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
+    handler = get_handler(scenario)
 
     init_states = [
         {
@@ -149,11 +148,10 @@ if __name__ == "__main__":
             },
         }
     ]
-    env.launch()
-    env.set_states(init_states * scenario.num_envs)
+    handler.set_states(init_states * scenario.num_envs)
     os.makedirs("get_started/output", exist_ok=True)
 
-    obs = env.get_states(mode="tensor")
+    obs = handler.get_states(mode="tensor")
     ## Main loop
     obs_saver = ObsSaver(video_path=f"get_started/output/1_move_robot_{args.sim}.mp4")
     obs_saver.add(obs)
@@ -177,9 +175,9 @@ if __name__ == "__main__":
             }
             for _ in range(scenario.num_envs)
         ]
-        env.set_dof_targets(actions)
-        env.simulate()
-        obs = env.get_states(mode="tensor")
+        handler.set_dof_targets(actions)
+        handler.simulate()
+        obs = handler.get_states(mode="tensor")
         obs_saver.add(obs)
         step += 1
 

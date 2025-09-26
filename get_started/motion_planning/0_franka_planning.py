@@ -31,12 +31,11 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
-from metasim.constants import SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -78,8 +77,7 @@ scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -0.5, 1.
 scenario.objects = []
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_handler_class(SimType(args.sim))
-env = env_class(scenario)
+handler = get_handler(scenario)
 
 init_states = [
     {
@@ -109,9 +107,8 @@ robot = scenario.robots[0]
 # Setup IK solver
 ik_solver = setup_ik_solver(robot, args.solver)
 
-env.launch()
-env.set_states(init_states)
-obs = env.get_states(mode="tensor")
+handler.set_states(init_states)
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 ## Main loop
@@ -143,9 +140,9 @@ def move_to_pose(
         for i_env in range(scenario.num_envs)
     ]
     for i in range(steps):
-        env.set_dof_targets(actions)
-        env.simulate()
-        obs = env.get_states(mode="tensor")
+        handler.set_dof_targets(actions)
+        handler.simulate()
+        obs = handler.get_states(mode="tensor")
         obs_saver.add(obs)
     return obs
 
@@ -154,7 +151,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(4):
     log.debug(f"Step {step}")
-    states = env.get_states()
+    states = handler.get_states()
     rotation_transform_for_franka = torch.tensor(
         [
             [0.0, 0.0, 1.0],

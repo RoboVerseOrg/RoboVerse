@@ -193,7 +193,7 @@ def train_ppo():
 
     # inference
     obs = env_inference.reset()
-    obs_orin = env_inference.gym_vec.env.handler.get_states()
+    obs_orin = env_inference.gym_vec.task_env.handler.get_states()
     obs_saver.add(obs_orin)
 
     for _ in range(250):
@@ -201,7 +201,7 @@ def train_ppo():
         env_inference.step_async(actions)
         obs, _, _, _ = env_inference.step_wait()
 
-        obs_orin = env_inference.gym_vec.env.handler.get_states()
+        obs_orin = env_inference.gym_vec.task_env.handler.get_states()
         obs_saver.add(obs_orin)
 
     obs_saver.save()

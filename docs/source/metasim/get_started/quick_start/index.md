@@ -4,7 +4,7 @@ We provide tutorials for using MetaSim:
 
 ```{toctree}
 :titlesonly:
-
+guide
 0_static_scene
 1_control_robot
 2_add_new_robot
@@ -16,8 +16,5 @@ We provide tutorials for using MetaSim:
 8_replay_demo
 9_cfg_task
 10_mount_camera
-<<<<<<< HEAD
-=======
 12_domain_randomization
->>>>>>> dev/new-metasim
 ```

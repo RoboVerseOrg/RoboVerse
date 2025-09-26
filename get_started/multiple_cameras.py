@@ -23,7 +23,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -33,7 +33,7 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -46,7 +46,7 @@ class Args:
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
 
     ## Others
-    num_envs: int = 1
+    num_handlers: int = 1
     headless: bool = False
 
     def __post_init__(self):
@@ -61,7 +61,7 @@ scenario = ScenarioCfg(
     robots=[args.robot],
     simulator=args.sim,
     headless=args.headless,
-    num_envs=args.num_envs,
+    num_handlers=args.num_handlers,
 )
 
 # add cameras
@@ -103,8 +103,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_handler_class(SimType(args.sim))
-env = env_class(scenario)
+handler = get_handler(scenario)
 
 init_states = [
     {
@@ -146,9 +145,8 @@ init_states = [
         },
     }
 ]
-env.launch()
-env.set_states(init_states)
-obs = env.get_states()
+handler.set_states(init_states)
+obs = handler.get_states()
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/multiple_cameras_{args.sim}.png"
 log.info(f"Saving image to {save_path}")

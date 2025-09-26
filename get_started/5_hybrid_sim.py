@@ -21,7 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -33,7 +33,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import HybridSimHandler
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -72,7 +72,6 @@ args = tyro.cli(Args)
 scenario = ScenarioCfg(
     robots=[args.robot],
     simulator=args.sim,
-    renderer=args.renderer,
     headless=args.headless,
     num_envs=args.num_envs,
 )
@@ -113,16 +112,14 @@ scenario.objects = [
 
 
 if scenario.render is None:
-    log.info(f"Using simulator: {scenario.simulator}")
-    env_class = get_sim_handler_class(SimType(scenario.simulator))
-    env = env_class(scenario)
+    log.info(f"Using simulator: {args.sim}")
+    handler = get_handler(scenario)
 else:
-    log.info(f"Using simulator: {scenario.simulator}, render: {scenario.renderer}")
-    env_class_renderer = get_sim_handler_class(SimType(scenario.renderer))
-    env_renderer = env_class_renderer(scenario)  # Isaaclab must launch right after import
-    env_class_physics = get_sim_handler_class(SimType(scenario.simulator))
-    env_physics = env_class_physics(scenario)  # Isaaclab must launch right after import
-    env = HybridSimHandler(scenario, env_physics, env_renderer)
+    log.info(f"Using simulator: {args.sim}, render: {args.renderer}")
+    handler_physics = get_handler(scenario)
+    scenario.update(simulator=args.renderer)
+    handler_renderer = get_handler(scenario)
+    handler = HybridSimHandler(scenario, handler_physics, handler_renderer)
 
 init_states = [
     {
@@ -164,9 +161,8 @@ init_states = [
         },
     }
 ]
-env.launch()
-env.set_states(init_states)
-obs = env.get_states(mode="tensor")
+handler.set_states(init_states)
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -192,9 +188,9 @@ for _ in range(100):
         }
         for _ in range(scenario.num_envs)
     ]
-    env.set_dof_targets(actions)
-    env.simulate()
-    obs = env.get_states(mode="tensor")
+    handler.set_dof_targets(actions)
+    handler.simulate()
+    obs = handler.get_states(mode="tensor")
     obs_saver.add(obs)
     step += 1
 

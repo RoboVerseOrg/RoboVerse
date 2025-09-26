@@ -21,7 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -32,7 +32,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -110,9 +110,7 @@ scenario.objects = [
 ]
 
 log.info(f"Using simulator: {args.sim}")
-env_class = get_sim_handler_class(SimType(args.sim))
-env = env_class(scenario)
-env.launch()
+handler = get_handler(scenario)
 
 if args.robot == "franka":
     robot_dict = {
@@ -186,8 +184,8 @@ from metasim.utils.ik_solver import process_gripper_command, setup_ik_solver
 # Setup unified IK solver
 ik_solver = setup_ik_solver(robot, args.solver)
 
-env.set_states(init_states)
-obs = env.get_states(mode="tensor")
+handler.set_states(init_states)
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 ## Main loop
@@ -198,7 +196,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(200):
     log.debug(f"Step {step}")
-    states = env.get_states()
+    states = handler.get_states()
 
     if scenario.robots[0].name == "franka":
         x_target = 0.3 + 0.1 * (step / 100)
@@ -236,10 +234,10 @@ for step in range(200):
     # Compose full joint command
     actions = ik_solver.compose_joint_action(q_solution, gripper_widths, curr_robot_q, return_dict=True)
 
-    env.set_dof_targets(actions)
-    env.simulate()
-    obs = env.get_states(mode="tensor")
-    # obs, reward, success, time_out, extras = env.step(actions)
+    handler.set_dof_targets(actions)
+    handler.simulate()
+    obs = handler.get_states(mode="tensor")
+    # obs, reward, success, time_out, extras = handler.step(actions)
 
     obs_saver.add(obs)
     step += 1
