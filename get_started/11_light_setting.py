@@ -22,7 +22,7 @@ import os
 
 import imageio
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, DistantLightCfg, DomeLightCfg
 from metasim.scenario.objects import (
@@ -34,7 +34,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 if __name__ == "__main__":
 
@@ -174,8 +174,7 @@ if __name__ == "__main__":
     ]
 
     log.info(f"Using simulator: {args.sim}")
-    env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
+    handler = get_handler(scenario)
 
     init_states = [
         {
@@ -217,11 +216,10 @@ if __name__ == "__main__":
             },
         }
     ]
-    env.launch()
-    env.set_states(init_states)
+    handler.set_states(init_states)
     # while True:
-    #     env.simulate()
-    obs = env.get_states(mode="tensor")
+    #     handler.simulate()
+    obs = handler.get_states(mode="tensor")
     os.makedirs("get_started/output", exist_ok=True)
     if args.designed_lighting:
         save_path = f"get_started/output/11_light_setting_{args.sim}_{args.lighting_preset}.png"

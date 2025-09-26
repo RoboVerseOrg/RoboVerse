@@ -16,11 +16,10 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from metasim.constants import SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 from roboverse_pack.robots import FrankaCfg, H1Cfg
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -68,9 +67,7 @@ def main():
     )
 
     log.info(f"Using simulator: {args.sim}")
-    env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
-    env.launch()
+    handler = get_handler(scenario)
 
     init_states = [
         {
@@ -159,7 +156,7 @@ def main():
             "objects": {},
         }
     ] * scenario.num_envs
-    env.set_states(init_states)
+    handler.set_states(init_states)
 
     # Initialize video saver
     obs_saver = None
@@ -188,12 +185,12 @@ def main():
             for _ in range(scenario.num_envs)
         ]
         for robot in scenario.robots:
-            env.set_dof_targets(actions)
-        env.simulate()
+            handler.set_dof_targets(actions)
+        handler.simulate()
 
         # Save observations for video
         if obs_saver is not None:
-            states = env.get_states()
+            states = handler.get_states()
             obs_saver.add(states)
 
         step += 1

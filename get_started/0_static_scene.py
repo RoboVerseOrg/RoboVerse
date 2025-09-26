@@ -22,7 +22,7 @@ import os
 
 import imageio
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -32,7 +32,7 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 if __name__ == "__main__":
 
@@ -115,9 +115,7 @@ if __name__ == "__main__":
     ]
 
     log.info(f"Using simulator: {args.sim}")
-    env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
-
+    handler = get_handler(scenario)
     init_states = [
         {
             "objects": {
@@ -158,9 +156,8 @@ if __name__ == "__main__":
             },
         }
     ]
-    env.launch()
-    env.set_states(init_states)
-    obs_tensor = env.get_states(mode="tensor")  # get states as a tensor
+    handler.set_states(init_states)
+    obs_tensor = handler.get_states(mode="tensor")  # get states as a tensor
 
     os.makedirs("get_started/output", exist_ok=True)
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"

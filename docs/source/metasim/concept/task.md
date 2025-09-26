@@ -1,6 +1,6 @@
 # Task System
 
-## 1.Architecture and Philosophy
+## 1.Overview
 
 In RoboVerse, a **task** is a wrapper built on top of a Handler and exposes **Gym-style APIs** (`step`, `reset`, etc.).
 

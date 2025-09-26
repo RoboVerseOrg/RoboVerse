@@ -15,7 +15,7 @@ import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.randomization import (
     CameraPresets,
     CameraRandomizer,
@@ -37,7 +37,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -89,7 +89,7 @@ def run_domain_randomization(args):
     # Create scenario and update simulator
     scenario = ScenarioCfg(
         robots=["franka"],
-        num_envs=args.num_envs,  # Multiple environments for parallel testing
+        num_handlers=args.num_handlers,  # Multiple handlerironments for parallel testing
         simulator=args.sim,  # Will be overridden
         headless=args.headless,  # Will be overridden
     )
@@ -258,11 +258,8 @@ def run_domain_randomization(args):
         ),
     ]
 
-    # Get handler class based on simulator
-    env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
-
-    env.launch()
+    # Get handler based on simulator
+    handler = get_handler(scenario)
     init_states = [
         {
             "objects": {
@@ -298,14 +295,14 @@ def run_domain_randomization(args):
                 },
             },
         }
-    ] * scenario.num_envs
+    ] * scenario.num_handlers
 
-    env.set_states(init_states)
+    handler.set_states(init_states)
 
     # Initialize video recording
     os.makedirs("get_started/output", exist_ok=True)
     obs_saver = ObsSaver(video_path=f"get_started/output/12_domain_randomization_{args.sim}.mp4")
-    obs = env.get_states(mode="tensor")
+    obs = handler.get_states(mode="tensor")
     obs_saver.add(obs)
 
     # Initialize object randomizers using unified approach
@@ -314,15 +311,15 @@ def run_domain_randomization(args):
 
     # Cube: Grasping target with comprehensive randomization
     cube_randomizer = ObjectRandomizer(ObjectPresets.grasping_target("cube"), seed=args.seed)
-    cube_randomizer.bind_handler(env)
+    cube_randomizer.bind_handler(handler)
 
     # Sphere: Bouncy object with varied physics and pose
     sphere_randomizer = ObjectRandomizer(ObjectPresets.bouncy_object("sphere"), seed=args.seed)
-    sphere_randomizer.bind_handler(env)
+    sphere_randomizer.bind_handler(handler)
 
     # Robot: Base randomization for payload simulation
     franka_randomizer = ObjectRandomizer(ObjectPresets.robot_base("franka"), seed=args.seed)
-    franka_randomizer.bind_handler(env)
+    franka_randomizer.bind_handler(handler)
 
     # Store for later use
     object_randomizers = [cube_randomizer, sphere_randomizer, franka_randomizer]
@@ -334,21 +331,21 @@ def run_domain_randomization(args):
         MaterialPresets.wood_object("cube", use_mdl=True, randomization_mode="combined"),
         seed=args.seed,
     )
-    cube_material_randomizer.bind_handler(env)
+    cube_material_randomizer.bind_handler(handler)
 
     # Sphere: Rubber with high bounce (combined mode - physics + visual)
     sphere_material_randomizer = MaterialRandomizer(
         MaterialPresets.rubber_object("sphere", randomization_mode="combined"),
         seed=args.seed,
     )
-    sphere_material_randomizer.bind_handler(env)
+    sphere_material_randomizer.bind_handler(handler)
 
     # Box: Metal with MDL textures (combined mode - physics + visual)
     box_material_randomizer = MaterialRandomizer(
         MaterialPresets.wood_object("box_base", use_mdl=True, randomization_mode="combined"),
         seed=args.seed,
     )
-    box_material_randomizer.bind_handler(env)
+    box_material_randomizer.bind_handler(handler)
 
     # Initialize light randomizers using LightScenarios for complex setups
     light_randomizers = []
@@ -361,7 +358,7 @@ def run_domain_randomization(args):
         # Create randomizers for each light in the scenario
         for config in light_configs:
             randomizer = LightRandomizer(config, seed=args.seed)
-            randomizer.bind_handler(env)
+            randomizer.bind_handler(handler)
             light_randomizers.append(randomizer)
 
     elif args.lighting_scenario == "outdoor_scene":
@@ -371,7 +368,7 @@ def run_domain_randomization(args):
 
         for config in light_configs:
             randomizer = LightRandomizer(config, seed=args.seed)
-            randomizer.bind_handler(env)
+            randomizer.bind_handler(handler)
             light_randomizers.append(randomizer)
 
     elif args.lighting_scenario == "studio":
@@ -381,7 +378,7 @@ def run_domain_randomization(args):
 
         for config in light_configs:
             randomizer = LightRandomizer(config, seed=args.seed)
-            randomizer.bind_handler(env)
+            randomizer.bind_handler(handler)
             light_randomizers.append(randomizer)
 
     elif args.lighting_scenario == "demo":
@@ -393,20 +390,20 @@ def run_domain_randomization(args):
             LightPresets.demo_colors("rainbow_light", randomization_mode="color_only"),
             seed=args.seed,
         )
-        rainbow_randomizer.bind_handler(env)
+        rainbow_randomizer.bind_handler(handler)
 
         # Use position randomizers for shadow effects
         position_randomizer = LightRandomizer(
             LightPresets.demo_positions("disco_light", randomization_mode="position_only"),
             seed=args.seed,
         )
-        position_randomizer.bind_handler(env)
+        position_randomizer.bind_handler(handler)
 
         shadow_randomizer = LightRandomizer(
             LightPresets.demo_positions("shadow_light", randomization_mode="position_only"),
             seed=args.seed,
         )
-        shadow_randomizer.bind_handler(env)
+        shadow_randomizer.bind_handler(handler)
 
         light_randomizers = [rainbow_randomizer, position_randomizer, shadow_randomizer]
     else:
@@ -416,13 +413,13 @@ def run_domain_randomization(args):
             LightPresets.outdoor_daylight("main_light", randomization_mode="combined"),
             seed=args.seed,
         )
-        main_light_randomizer.bind_handler(env)
+        main_light_randomizer.bind_handler(handler)
 
         ambient_light_randomizer = LightRandomizer(
             LightPresets.indoor_ambient("ambient_light", randomization_mode="combined"),
             seed=args.seed,
         )
-        ambient_light_randomizer.bind_handler(env)
+        ambient_light_randomizer.bind_handler(handler)
 
         light_randomizers = [main_light_randomizer, ambient_light_randomizer]
 
@@ -472,7 +469,7 @@ def run_domain_randomization(args):
         )
         log.info("Using default camera randomization")
 
-    camera_randomizer.bind_handler(env)
+    camera_randomizer.bind_handler(handler)
     camera_randomizers = [camera_randomizer]
 
     # Get initial object properties for comparison
@@ -761,8 +758,8 @@ def run_domain_randomization(args):
 
     for step in range(100):
         log.debug(f"Simulation step {step}")
-        env.simulate()
-        obs = env.get_states(mode="tensor")
+        handler.simulate()
+        obs = handler.get_states(mode="tensor")
         obs_saver.add(obs)
 
         # Apply randomization every 10 steps to show material and lighting changes very frequently
@@ -797,7 +794,7 @@ def run_domain_randomization(args):
     log_randomization_header("COMPLETION", "Saving results and cleanup")
     log.info("Saving video and closing simulation...")
     obs_saver.save()
-    env.close()
+    handler.close()
     log.info("Domain randomization demo completed successfully!")
 
 
@@ -827,7 +824,7 @@ def main():
         """Choose camera randomization mode: combined, position_only, orientation_only, look_at_only, intrinsics_only, or image_only"""
 
         ## Others
-        num_envs: int = 1
+        num_handlers: int = 1
         headless: bool = False
         seed: int | None = None
         """Random seed for reproducible randomization. If None, uses random seed."""

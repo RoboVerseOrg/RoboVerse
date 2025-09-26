@@ -21,7 +21,7 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -32,7 +32,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.setup_util import get_sim_handler_class
+from metasim.utils.setup_util import get_handler
 
 
 @configclass
@@ -101,11 +101,7 @@ scenario.objects = [
 
 
 log.info(f"Using simulator: {scenario.simulator}")
-env_class = get_sim_handler_class(SimType(scenario.simulator))
-env = env_class(scenario)
-
-
-env.launch()
+handler = get_handler(scenario)
 init_states = [
     {
         "objects": {
@@ -146,9 +142,9 @@ init_states = [
         },
     }
 ]
-env.set_states(init_states)
-env.refresh_render()
-obs = env.get_states(mode="tensor")
+handler.set_states(init_states)
+handler.refresh_render()
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/6_advanced_rendering_{args.sim}_{args.render.mode}.png"
 log.info(f"Saving image to {save_path}")
