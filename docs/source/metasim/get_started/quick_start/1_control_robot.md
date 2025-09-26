@@ -90,3 +90,31 @@ You will get the following videos:
         </div>
     </div>
 </div>
+
+## Code Highlights
+
+**Robot Control**: Use `handler.set_dof_targets(actions)` to control robot joints. Actions follow the format:
+```python
+actions = [
+    {
+        robot.name: {
+            "dof_pos_target": {
+                joint_name: (
+                    torch.rand(1).item()
+                    * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                    + robot.joint_limits[joint_name][0]
+                )
+                for joint_name in robot.joint_limits.keys()
+            }
+        }
+    }
+    for _ in range(scenario.num_envs)
+]
+handler.set_dof_targets(actions)
+handler.simulate()
+```
+
+**Key Points**:
+- Can also use direct tensor actions instead of dictionary format ，Action order matches `robot.actuators` and `robot.joint_limits` configuration
+- `set_dof_targets()` only sets targets - call `handler.simulate()` to step physics
+- Unlike Task's `step()`, Handler requires separate `simulate()` call

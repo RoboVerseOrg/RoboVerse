@@ -90,3 +90,41 @@ You will get the following videos:
         </div>
     </div>
 </div>
+
+## Code Highlights
+
+**Robot Configuration**: Create a custom `RobotCfg` with essential components:
+```python
+robot = RobotCfg(
+    name="new_robot_h1",
+    num_joints=26,
+    usd_path="roboverse_data/robots/h1/usd/h1.usd",
+    mjcf_path="roboverse_data/robots/h1/mjcf/h1.xml", 
+    urdf_path="roboverse_data/robots/h1/urdf/h1.urdf",
+    actuators={
+        "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
+        "left_knee": BaseActuatorCfg(stiffness=300, damping=6),
+        # ... more joints
+    },
+    joint_limits={
+        "left_hip_yaw": (-0.43, 0.43),
+        "left_knee": (-0.26, 2.05),
+        # ... more limits
+    },
+    control_type={
+        "left_hip_yaw": "position",
+        "left_knee": "position",
+        # ... more control modes
+    }
+)
+```
+
+**Key Components**:
+- **Asset paths**: USD/MJCF/URDF files for different simulators
+- **Actuators**: Per-joint stiffness, damping, and torque limits
+- **Joint limits**: Min/max ranges for each joint
+- **Control types**: Position, velocity, or effort control per joint
+
+For detailed RobotCfg configuration options, see the [Robot Configuration section](../../concept/config.md#robot-configuration-specification) in the concept documentation.
+
+

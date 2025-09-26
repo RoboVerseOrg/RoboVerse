@@ -53,3 +53,20 @@ You will get the following image:
 | Genesis | Sapien | PyBullet |
 |:---:|:---:|:---:|
 | ![Genesis](../../../_static/standard_output/0_static_scene_genesis.png) | ![Sapien](../../../_static/standard_output/0_static_scene_sapien3.png) | ![Pybullet](../../../_static/standard_output/0_static_scene_pybullet.png) |
+
+## Code Highlights
+
+**Object Configuration**: Objects are added to `scenario.objects` with different types:
+- `PrimitiveCubeCfg` / `PrimitiveSphereCfg`: Simple geometric objects
+- `RigidObjCfg`: Static objects with physics properties  
+- `ArticulationObjCfg`: Objects with joints (like the box_base)
+
+**Initial State Setup**: Use `handler.set_states()` to position objects:
+```python
+init_states = [{
+    "objects": {
+        "cube": {"pos": torch.tensor([0.3, -0.2, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
+        "sphere": {"pos": torch.tensor([0.4, -0.6, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
+    }
+}]
+```
