@@ -22,7 +22,7 @@ import os
 
 import imageio
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, DistantLightCfg, DomeLightCfg
 from metasim.scenario.objects import (

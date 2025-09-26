@@ -277,8 +277,6 @@ def main() -> None:
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
-        import imageio.v2 as iio
-
         """
         Collect a short rollout and return a list of RGB frames (H, W, 3, uint8).
         Works with FastTD3EnvWrapper: render_env.render() must return one frame.
@@ -325,7 +323,6 @@ def main() -> None:
         obs_saver.save()
         env.close()
         obs_normalizer.train()
-
 
     def update_main(data, logs_dict):
         with autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):

@@ -15,7 +15,7 @@ import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.randomization import (
     CameraPresets,
     CameraRandomizer,

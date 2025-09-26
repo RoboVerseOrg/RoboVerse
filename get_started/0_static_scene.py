@@ -22,7 +22,7 @@ import os
 
 import imageio
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,

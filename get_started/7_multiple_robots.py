@@ -16,7 +16,6 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from metasim.constants import SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.obs_utils import ObsSaver

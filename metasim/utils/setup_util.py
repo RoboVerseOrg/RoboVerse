@@ -142,8 +142,6 @@ def get_sim_handler_class(sim: SimType):
         raise ValueError(f"Invalid simulator type: {sim}")
 
 
-
-
 def get_robot(robot_name: str) -> RobotCfg:
     """Get the robot cfg instance from the robot name.
 

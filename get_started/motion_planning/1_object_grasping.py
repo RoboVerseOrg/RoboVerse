@@ -36,7 +36,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
 from get_started.motion_planning.util_gsnet import GSNet
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg

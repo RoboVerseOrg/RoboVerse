@@ -34,7 +34,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from scipy.spatial.transform import Rotation as R
 
-from metasim.constants import PhysicStateType, SimType
+from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
