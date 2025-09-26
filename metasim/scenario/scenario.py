@@ -43,18 +43,6 @@ class ScenarioCfg:
         ]
         | None
     ) = None
-    renderer: (
-        Literal[
-            "isaaclab",
-            "isaacgym",
-            "sapien2",
-            "sapien3",
-            "genesis",
-            "pybullet",
-            "mujoco",
-        ]
-        | None
-    ) = None
 
     # misc
     num_envs: int = 1
