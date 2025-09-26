@@ -23,7 +23,7 @@ python get_started/9_cfg_task.py --sim isaacgym --num_envs 4 --task close_box
 
 **Gym-style Task Creation**: Use `make_vec()` to create environments with Gym-style API:
 ```python
-from metasim.task.gym_registration import make_vec
+from gymnasium import make_vec
 
 env = make_vec(
     env_id=f"RoboVerse/{task_name}",

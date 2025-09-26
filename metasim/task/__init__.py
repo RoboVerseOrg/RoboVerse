@@ -27,3 +27,13 @@ def _auto_import_submodules() -> None:
 
 
 _auto_import_submodules()
+
+# After tasks are discoverable, automatically register all tasks with Gymnasium
+# so users can call gymnasium.make / gymnasium.make_vec without manual steps.
+try:
+    from .gym_registration import register_all_tasks_with_gym as _register_all_tasks_with_gym
+
+    _register_all_tasks_with_gym()
+except Exception:
+    # Best-effort: scripts can still call register_task_with_gym on-demand.
+    pass
