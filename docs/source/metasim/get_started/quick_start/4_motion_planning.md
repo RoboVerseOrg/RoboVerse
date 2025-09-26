@@ -212,17 +212,12 @@ actions = ik_solver.compose_joint_action(
 ### Backend-Specific Notes
 
 **Curobo Backend:**
-- Requires `seed_q` parameter for initialization
-- Supports collision checking and optimization
-- Better performance for complex environments
+- Better performance for parallel environments
 - Requires CUDA installation
 
 **Pyroki Backend (Default):**
-- No seed configuration required
 - JAX-based differentiable solver
 - Lighter weight installation
 - Good for research and prototyping
 
 This IK solver design separates arm control (IK solving) from gripper control, making it easy to implement end-effector-based manipulation tasks across multiple environments.
-
-### Examples
