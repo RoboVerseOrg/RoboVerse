@@ -63,6 +63,7 @@ Fields include: `robots` (robot configurations), `objects` (scene objects), `sim
 ### 3. Task: The High-Level Interface
 
 
+
 A **Task** is a wrapper built on top of a Handler that provides Gym-style APIs (`step`, `reset`, `observation_space`, `action_space`). It adds task-specific logic like rewards, termination conditions, and observations.
 
 
