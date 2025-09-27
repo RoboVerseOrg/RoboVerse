@@ -1,4 +1,4 @@
-# TD3 Training
+# TD3
 
 RoboVerse provides CleanRL-based TD3 implementation for continuous control tasks.
 
