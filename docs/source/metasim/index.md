@@ -23,7 +23,7 @@ get_started/advanced/index
 ```
 
 ```{toctree}
-:caption: Developer Tutorials
+:caption: Concept
 :maxdepth: 2
 :titlesonly:
 
@@ -32,15 +32,15 @@ get_started/advanced/index
 <!--user_guide/multi_env-->
 <!--user_guide/cross_embodiment-->
 <!--user_guide/cross_sim-->
-tutorial/architecture
-tutorial/state
-tutorial/config
-tutorial/handler
+concept/architecture
+concept/state
+concept/config
+concept/handler
 <!-- tutorial/scenario -->
 <!-- tutorial/robot -->
-tutorial/task
-tutorial/get_extras
-tutorial/randomization
+concept/task
+concept/get_extras
+concept/randomization
 <!-- user_guide/collect_demo_tutorial -->
 <!-- user_guide/teleoperate_demo -->
 <!-- user_guide/real2sim -->

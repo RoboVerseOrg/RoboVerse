@@ -71,4 +71,3 @@ CONFIG = {
 
 - [RL Infrastructure](../../metasim/get_started/advanced/rl_example/infrastructure.md) - Complete setup guide
 - [PPO Training](ppo.md) - Alternative on-policy algorithm
-- [Humanoid Bench RL](humanoidbench_rl.md) - Specialized humanoid tasks
