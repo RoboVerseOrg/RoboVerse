@@ -17,7 +17,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 def get_config():
     """Get configuration with command line argument support."""
     parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='mjx_rl_open_cabinet.yaml',
+    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml',
                        help='YAML configuration file name (will be loaded from configs/ directory)')
     args = parser.parse_args()
 
@@ -71,6 +71,7 @@ from torch.amp import GradScaler, autocast
 from roboverse_learn.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
+from roboverse_learn.rl.episode_tracker import EpisodeTracker
 
 
 def main() -> None:
@@ -389,6 +390,9 @@ def main() -> None:
     start_time = None
     desc = ""
 
+    # Initialize episode tracker
+    episode_tracker = EpisodeTracker(cfg("num_envs"), device)
+
     while global_step < cfg("total_timesteps"):
         logs_dict = TensorDict()
         if start_time is None and global_step >= cfg("measure_burnin") + cfg("learning_starts"):
@@ -400,6 +404,9 @@ def main() -> None:
             actions = policy(obs=norm_obs, dones=dones)
         next_obs, rewards, terminated, time_out, infos = envs.step(actions.float())
         dones = terminated | time_out
+
+        # Update episode tracker
+        episode_tracker.update(rewards, terminated, time_out)
 
         # Compute 'true' next_obs and next_critic_obs for saving
         true_next_obs = torch.where(dones[:, None] > 0, infos["observations"]["raw"]["obs"], next_obs)
@@ -445,6 +452,10 @@ def main() -> None:
                 speed = (global_step - measure_burnin) / (time.time() - start_time)
                 pbar.set_description(f"{speed: 4.4f} sps, " + desc)
                 with torch.no_grad():
+                    # Get episode statistics
+                    avg_return, avg_length = episode_tracker.get_stats()
+                    episode_count = episode_tracker.get_episode_count()
+
                     logs = {
                         "actor_loss": logs_dict["actor_loss"].mean(),
                         "qf_loss": logs_dict["qf_loss"].mean(),
@@ -455,6 +466,13 @@ def main() -> None:
                         "buffer_rewards": logs_dict["buffer_rewards"].mean(),
                         "env_rewards": rewards.mean(),
                     }
+
+                    # Add episode statistics to logs
+                    if episode_count > 0:
+                        logs["avg_episodic_return"] = avg_return
+                        logs["avg_episodic_length"] = avg_length
+                        logs["episode_count"] = episode_count
+                        log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
 
                     if cfg("eval_interval") > 0 and global_step % cfg("eval_interval") == 0:
                         log.info(f"Evaluating at global step {global_step}")
