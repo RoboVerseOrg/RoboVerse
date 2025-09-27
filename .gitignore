@@ -13,6 +13,7 @@ wandb/
 GSNet
 
 deploy
+runs
 debug/
 test_output/
 test_output
