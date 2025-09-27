@@ -40,11 +40,11 @@ class GymEnvWrapper(gym.Env):
     ) -> None:
         # Force single environment when created via gym.make.
         scenario_kwargs["num_envs"] = 1
-
+        self.device = device
         self.task_cls = get_task_class(task_name)
         updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
         self.scenario = updated_scenario_cfg
-        self.task_env = self.task_cls(updated_scenario_cfg)
+        self.task_env = self.task_cls(updated_scenario_cfg, device)
         self.action_space = self.task_env.action_space
         self.observation_space = self.task_env.observation_space
         # Instance-level metadata; declare autoreset mode with the official enum
@@ -52,7 +52,6 @@ class GymEnvWrapper(gym.Env):
         self.metadata["autoreset_mode"] = (
             AutoresetMode.SAME_STEP if AutoresetMode is not None else "same-step"
         )  # If enum missing, string fallback (may still warn on older Gymnasium)
-        self.device = self.task_env.device
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""
@@ -89,11 +88,12 @@ class GymVectorEnvAdapter(VectorEnv):
     def __init__(
         self,
         task_name: str,
+        device: str | torch.device | None = None,
         **scenario_kwargs: Any,
     ) -> None:
         self.task_cls = get_task_class(task_name)
         updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
-        self.task_env = self.task_cls(updated_scenario_cfg)
+        self.task_env = self.task_cls(updated_scenario_cfg, device)
         self.scenario = updated_scenario_cfg
         self.device = self.task_env.device
         try:
