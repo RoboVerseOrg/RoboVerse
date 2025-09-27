@@ -1,0 +1,53 @@
+defaults:
+  - ../default
+
+task_name: "ogbench:AntMazeLargeNavigate"
+robot_name: "none"  # OGBench tasks don't use robot configs
+
+algo: "ppo"
+
+observation_space:
+  shape: [29]  # Ant observation dimensions
+observation_shape: [29]
+
+ppo:
+  action_num: 8  # Ant has 8 action dimensions
+  multi_gpu: ${experiment.multi_gpu}
+  num_actors: ${environment.num_envs}
+
+  # Network architecture
+  network:
+    mlp:
+      units: [256, 256, 128]
+    separate_value_mlp: False
+
+  # Core PPO parameters
+  e_clip: 0.2
+  clip_value: True
+  entropy_coef: 0.001
+  critic_coef: 2.0
+  bounds_loss_coef: 0.0001
+  gamma: 0.99
+  tau: 0.95
+  truncate_grads: True
+  grad_norm: 1.0
+  value_bootstrap: True
+  normalize_advantage: True
+  normalize_input: True
+  normalize_value: True
+  reward_scale_value: 1.0
+  clip_value_loss: True
+
+  # Training schedule
+  horizon_length: 256
+  minibatch_size: 128
+  mini_epochs: 4
+  learning_rate: 3e-4
+  lr_schedule: "adaptive"
+  max_agent_steps: 10000000
+  kl_threshold: 0.008
+
+  # Logging and saving
+  save_frequency: 50
+  save_best_after: 100
+  seq_len: 4
