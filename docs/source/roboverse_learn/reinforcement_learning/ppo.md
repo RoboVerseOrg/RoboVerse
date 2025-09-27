@@ -1,4 +1,4 @@
-# PPO Training
+# PPO
 
 RoboVerse provides two PPO implementations with different features and use cases:
 
