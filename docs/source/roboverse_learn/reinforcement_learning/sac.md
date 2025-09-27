@@ -1,4 +1,4 @@
-# SAC Training
+# SAC
 
 RoboVerse provides CleanRL-based SAC implementation for continuous control tasks.
 
