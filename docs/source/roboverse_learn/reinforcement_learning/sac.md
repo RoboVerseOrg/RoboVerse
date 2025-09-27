@@ -1,22 +1,25 @@
-# SAC
+# SAC Training
 
-To run SAC, install the dependencies for each simulator first and run the following command:
+RoboVerse provides CleanRL-based SAC implementation for continuous control tasks.
 
-isaacgym:
+## Usage
+
 ```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxSAC environment.sim_name=isaacgym
+# SAC training with RoboVerse environment
+python roboverse_learn/rl/clean_rl/sac.py --task reach_origin --robot franka --sim mjx --num_envs 128
 ```
 
-mujoco:
-```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxSAC environment.sim_name=mujoco
-```
+## Configuration
 
+Check the file header in `roboverse_learn/rl/clean_rl/sac.py` for available configuration options including:
+- Task selection (`--task`)
+- Robot type (`--robot`)
+- Simulator backend (`--sim`)
+- Training hyperparameters (`--num_envs`, `--learning_rate`, etc.)
 
-isaaclab:
-```bash
-python roboverse_learn/rl/train_rl.py train=CloseBoxSAC environment.sim_name=isaaclab
-```
-(note: current closebox is set for franka end effector to reach the origin point)
+## Features
 
-To change SAC configs, check out all files inside `roboverse_learn/rl/configs/`.
+- Based on [CleanRL](https://github.com/vwxyzjn/cleanrl) SAC implementation
+- Vectorized environment support with RoboVerse
+- Automatic entropy tuning
+- Episode tracking without relying on info dicts
