@@ -1,4 +1,8 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/td3/#td3_continuous_actionpy
+#
+# This file is based on CleanRL's TD3 implementation and has been adapted for RoboVerse.
+# Original CleanRL code is licensed under MIT License.
+
 import os
 import random
 import time
