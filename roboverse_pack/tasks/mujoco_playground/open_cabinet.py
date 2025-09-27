@@ -203,37 +203,37 @@ class PandaOpenCabinet(RLTaskEnv):
         approach_reward = 1 - torch.tanh(5 * gripper_handle_dist)
 
         # Get gripper joint positions (finger joints)
-        robot_joint_pos = env_states.robots[self.robot_name].joint_pos  # [num_envs, num_joints]
-        finger1_pos = robot_joint_pos[:, 0]  # panda_finger_joint1
-        finger2_pos = robot_joint_pos[:, 1]  # panda_finger_joint2
+        # robot_joint_pos = env_states.robots[self.robot_name].joint_pos  # [num_envs, num_joints]
+        # finger1_pos = robot_joint_pos[:, 0]  # panda_finger_joint1
+        # finger2_pos = robot_joint_pos[:, 1]  # panda_finger_joint2
 
-        # Calculate gripper closure (0 = fully open, 0.08 = fully closed)
-        gripper_closure = 0.08 - finger1_pos - finger2_pos  # [num_envs]
+        # # Calculate gripper closure (0 = fully open, 0.08 = fully closed)
+        # gripper_closure = 0.08 - finger1_pos - finger2_pos  # [num_envs]
 
-        # Distance-based gripper behavior reward
-        # When far: encourage open (low closure), when close: encourage close (high closure)
-        distance_threshold = 0.015  # [m]
+        # # Distance-based gripper behavior reward
+        # # When far: encourage open (low closure), when close: encourage close (high closure)
+        # distance_threshold = 0.008  # [m]
 
-        far_from_handle = (gripper_handle_dist > distance_threshold).float()  # [num_envs]
-        close_to_handle = (gripper_handle_dist <= distance_threshold).float()  # [num_envs]
+        # far_from_handle = (gripper_handle_dist > distance_threshold).float()  # [num_envs]
+        # close_to_handle = (gripper_handle_dist <= distance_threshold).float()  # [num_envs]
 
-        # When far: reward each finger to be around 0.03 (slightly open)
-        finger1_target = 0.03
-        finger2_target = 0.03
-        finger1_reward = 1.0 - torch.abs(finger1_pos - finger1_target) / 0.03  # [num_envs]
-        finger2_reward = 1.0 - torch.abs(finger2_pos - finger2_target) / 0.03  # [num_envs]
-        far_finger_reward = 0.2 * (finger1_reward + finger2_reward) / 2.0  # [num_envs]
+        # # When far: reward each finger to be around 0.03 (slightly open)
+        # finger1_target = 0.03
+        # finger2_target = 0.03
+        # finger1_reward = 1.0 - torch.abs(finger1_pos - finger1_target) / 0.03  # [num_envs]
+        # finger2_reward = 1.0 - torch.abs(finger2_pos - finger2_target) / 0.03  # [num_envs]
+        # far_finger_reward = 0.2 * (finger1_reward + finger2_reward) / 2.0  # [num_envs]
 
-        # When close: reward for closing (high closure)
-        close_reward = gripper_closure / 0.08  # [num_envs]
+        # # When close: reward for closing (high closure)
+        # close_reward = gripper_closure / 0.08 # [num_envs]
 
-        # Combine rewards based on distance
-        gripper_behavior_reward = (
-            far_from_handle * far_finger_reward  # Far: reward each finger around 0.03
-            + close_to_handle * close_reward  # Close: reward closed
-        )  # [num_envs]
+        # # Combine rewards based on distance
+        # gripper_behavior_reward = (
+        #     far_from_handle * far_finger_reward  # Far: reward each finger around 0.03
+        #     + close_to_handle * close_reward  # Close: reward closed
+        # )  # [num_envs]
 
-        return approach_reward + gripper_behavior_reward
+        return approach_reward
 
     def _reward_no_barrier_collision(self, env_states) -> torch.Tensor:
         """Reward for not colliding with the barrier."""
@@ -357,7 +357,7 @@ class PandaOpenCabinet(RLTaskEnv):
                 },
                 "robots": {
                     "franka": {
-                        "pos": torch.tensor([-0.4, 0.0, 0.0]),
+                        "pos": torch.tensor([0.0, 0.0, 0.0]),
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                         "dof_pos": {
                             "panda_joint1": 0.0,

@@ -76,7 +76,7 @@ class Args:
     """the learning rate of the optimizer"""
     num_envs: int = 2048
     """the number of parallel game environments"""
-    num_steps: int = 16
+    num_steps: int = 64
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -84,9 +84,9 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 64
+    num_minibatches: int = 128
     """the number of mini-batches"""
-    update_epochs: int = 10
+    update_epochs: int = 5
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -217,14 +217,13 @@ if __name__ == "__main__":
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
-    start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
     next_obs = next_obs.to(device)
     next_done = torch.zeros(args.num_envs, dtype=torch.bool, device=device)
 
     # Initialize episode tracker
     episode_tracker = EpisodeTracker(args.num_envs, device)
-
+    start_time = time.time()
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
