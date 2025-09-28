@@ -66,6 +66,7 @@ class Args:
 args = tyro.cli(Args)
 
 # IK solver imports are now handled in the unified solver
+log.info(f"Using IK solver: {args.solver}")
 
 # initialize scenario
 scenario = ScenarioCfg(
