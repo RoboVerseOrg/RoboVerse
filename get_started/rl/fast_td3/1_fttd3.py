@@ -266,6 +266,7 @@ def main() -> None:
                 obs = normalize_obs(obs)
                 actions = actor(obs)
             next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
+            dones = terminated | time_out
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -274,6 +275,7 @@ def main() -> None:
             obs = next_obs
 
         obs_normalizer.train()
+        obs, info = eval_envs.reset()
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
