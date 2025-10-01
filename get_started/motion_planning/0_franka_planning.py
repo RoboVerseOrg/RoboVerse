@@ -117,14 +117,16 @@ obs_saver.add(obs)
 
 
 def move_to_pose(
-    obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs, obs_saver, ik_solver, robot, scenario, handler, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
 ):
     """Move the robot to the target pose."""
-    curr_robot_q = obs.robots[robot.name].joint_pos
+    # IK solver expects original joint order, but state uses alphabetical order
+    reorder_idx = handler.get_joint_reindex(robot.name)
+    inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+    curr_robot_q = obs.robots[robot.name].joint_pos[:, inverse_reorder_idx]
 
     # Solve IK using the unified interface
-    seed_q = curr_robot_q if args.solver == "curobo" else None
-    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
+    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
 
     # Process gripper command
     from metasim.utils.ik_solver import process_gripper_command
@@ -196,7 +198,7 @@ for step in range(4):
     ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
 
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
+        obs, obs_saver, ik_solver, robot, scenario, handler, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
     )
     step += 1
 

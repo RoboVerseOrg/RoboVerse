@@ -38,7 +38,7 @@ class IKSolver:
             raise ValueError(f"Unknown solver: {self.solver}")
 
     def solve_ik_batch(
-        self, ee_pos_target: torch.Tensor, ee_quat_target: torch.Tensor, seed_q: torch.Tensor | None = None
+        self, ee_pos_target: torch.Tensor, ee_quat_target: torch.Tensor, seed_q: torch.Tensor
     ):
         """Solve IK for batch of poses. Returns (q_solution, ik_succ).
 
@@ -52,8 +52,6 @@ class IKSolver:
         if self.solver == "curobo":
             from curobo.types.math import Pose
 
-            if seed_q is None:
-                raise ValueError("seed_q required for curobo solver")
 
             seed_config = seed_q[:, : self.n_dof_ik].unsqueeze(1).tile([1, self.backend_solver._num_seeds, 1])
             result = self.backend_solver.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)

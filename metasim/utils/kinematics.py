@@ -68,7 +68,6 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     """
     import jax.numpy as jnp
     import pyroki as pk
-    import third_party.pyroki.examples.pyroki_snippets as pks
     from yourdfpy import URDF
 
     from metasim.utils.hf_util import check_and_download_single
@@ -84,37 +83,6 @@ def get_pyroki_model(robot_cfg: RobotCfg):
 
     # Initialize Pyroki robot model from URDF
     pk_robot = pk.Robot.from_urdf(urdf)
-
-    def solve_ik(pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
-        """Solve IK for target pose.
-
-        Args:
-            pos_target: Target position (3D)
-            quat_target: Target quaternion (wxyz)
-
-        Returns:
-            Joint angle solution
-        """
-        # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
-        try:
-            pos = jnp.from_dlpack(pos_target)
-            quat = jnp.from_dlpack(quat_target)
-        except RuntimeError as e:
-            pos = jnp.from_dlpack(pos_target.cpu())
-            quat = jnp.from_dlpack(quat_target.cpu())
-
-        solution = pks.solve_ik(
-            pk_robot,
-            ee_link_name,
-            target_wxyz=quat,
-            target_position=pos,
-        )
-
-        q_tensor = torch.from_dlpack(solution)
-        if pos_target.is_cuda and q_tensor.device.type == "cpu":
-            q_tensor = q_tensor.cuda()
-
-        return q_tensor
 
     import jax_dataclasses as jdc
     import jaxlie
@@ -147,34 +115,30 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         return sol[joint_var]
 
     def solve_ik_with_seed(
-        pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor = None
+        pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor
     ) -> torch.Tensor:
-        if seed_q is not None:
-            import numpy as np
+        import numpy as np
 
-            pos_np = pos_target.detach().cpu().numpy()
-            quat_np = quat_target.detach().cpu().numpy()
-            seed_np = seed_q.detach().cpu().numpy()
-            num_actuated_joints = pk_robot.joints.num_actuated_joints
-            if seed_np.shape[0] != num_actuated_joints:
-                if seed_np.shape[0] < num_actuated_joints:
-                    padding = np.zeros(num_actuated_joints - seed_np.shape[0])
-                    seed_np = np.concatenate([seed_np, padding])
-                else:
-                    seed_np = seed_np[:num_actuated_joints]
+        pos_np = pos_target.detach().cpu().numpy()
+        quat_np = quat_target.detach().cpu().numpy()
+        seed_np = seed_q.detach().cpu().numpy()
+        num_actuated_joints = pk_robot.joints.num_actuated_joints
+        if seed_np.shape[0] != num_actuated_joints:
+            if seed_np.shape[0] < num_actuated_joints:
+                padding = np.zeros(num_actuated_joints - seed_np.shape[0])
+                seed_np = np.concatenate([seed_np, padding])
+            else:
+                seed_np = seed_np[:num_actuated_joints]
 
-            target_link_index = pk_robot.links.names.index(ee_link_name)
-            cfg = _solve_ik_jax_with_seed(
-                pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
-            )
-            q_tensor = torch.from_numpy(np.array(cfg)).to(pos_target.device)
-        else:
-            q_tensor = solve_ik(pos_target, quat_target)
+        target_link_index = pk_robot.links.names.index(ee_link_name)
+        cfg = _solve_ik_jax_with_seed(
+            pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
+        )
+        q_tensor = torch.from_numpy(np.array(cfg)).to(pos_target.device)
         return q_tensor
 
     return {
         "robot": pk_robot,
-        "solve_ik": solve_ik,
         "solve_ik_with_seed": solve_ik_with_seed,
         "ee_link_name": ee_link_name,
     }
