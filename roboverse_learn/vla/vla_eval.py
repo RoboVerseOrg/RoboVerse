@@ -147,7 +147,7 @@ class OpenVLARunner:
 
         # 2) Robot state (TensorState -> tensors)
         rs = obs.robots[self.robot_name]
-        
+
         # IK solver expects original joint order, but state uses alphabetical order
         reorder_idx = self.env.handler.get_joint_reindex(self.robot_name)
         inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]

@@ -613,6 +613,11 @@ class DPRunner(BaseRunner):
                 #     log.info(f"Step {step}: Executing dynamic domain randomization")
                 #     self.randomization_manager.randomize_for_demo(demo_idx=demo_start_idx + step//dynamic_dr_interval)
 
+                # IK solver expects original joint order, but state uses alphabetical order
+                reorder_idx = env.handler.get_joint_reindex(args.robot)
+                inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+                joint_pos_reordered = obs.robots[args.robot].joint_pos[:, inverse_reorder_idx]
+
                 new_obs = {
                     "rgb": obs.cameras["camera0"].rgb,
                     "joint_qpos": obs.robots[args.robot].joint_pos,
