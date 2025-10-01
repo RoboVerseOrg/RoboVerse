@@ -117,7 +117,16 @@ obs_saver.add(obs)
 
 
 def move_to_pose(
-    obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs,
+    obs_saver,
+    ik_solver,
+    robot,
+    scenario,
+    inverse_reorder_idx,
+    ee_pos_target,
+    ee_quat_target,
+    steps=10,
+    open_gripper=False,
 ):
     """Move the robot to the target pose."""
     # IK solver expects original joint order, but state uses alphabetical order
@@ -196,7 +205,16 @@ for step in range(4):
     ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
 
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, ee_pos_target, ee_quat_target, steps=10, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        ee_pos_target,
+        ee_quat_target,
+        steps=10,
+        open_gripper=True,
     )
     step += 1
 

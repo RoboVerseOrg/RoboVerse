@@ -167,7 +167,16 @@ def get_point_cloud_from_obs(obs, save_pcd=False):
 
 
 def move_to_pose(
-    obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs,
+    obs_saver,
+    ik_solver,
+    robot,
+    scenario,
+    inverse_reorder_idx,
+    ee_pos_target,
+    ee_quat_target,
+    steps=10,
+    open_gripper=False,
 ):
     """Move the robot to a given pose."""
     # IK solver expects original joint order, but state uses alphabetical order
@@ -248,16 +257,52 @@ for step in range(1):
     lift_pos[:, 2] += 0.3
     lift_pos[:, 1] += 0.2
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, pre_grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        pre_grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=True,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=True,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, grasp_pos, ee_quat_target, steps=50, open_gripper=False
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=False,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, lift_pos, ee_quat_target, steps=50, open_gripper=False
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        lift_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=False,
     )
 
     gripper_out2 = torch.tensor([1, 0, 0])
@@ -276,7 +321,16 @@ for step in range(1):
     quat2 = R.from_matrix(rotation2).as_quat()
     ee_quat_target[0] = torch.tensor(quat2, device="cuda:0")
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, lift_pos, ee_quat_target, steps=50, open_gripper=False
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        lift_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=False,
     )
 
     # result = robot_ik.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
