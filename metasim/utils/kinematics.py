@@ -114,9 +114,7 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         )
         return sol[joint_var]
 
-    def solve_ik_with_seed(
-        pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor
-    ) -> torch.Tensor:
+    def solve_ik_with_seed(pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor) -> torch.Tensor:
         import numpy as np
 
         pos_np = pos_target.detach().cpu().numpy()
