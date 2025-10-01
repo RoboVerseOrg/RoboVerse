@@ -84,22 +84,19 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     # Initialize Pyroki robot model from URDF
     pk_robot = pk.Robot.from_urdf(urdf)
 
-    import jax_dataclasses as jdc
     import jaxlie
     import jaxls
     import pyroki as pk
 
     # @jdc.jit
-    def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):  
+    def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):
         joint_var = robot.joint_var_cls(0)
 
         factors = [
             pk.costs.pose_cost_analytic_jac(
                 robot,
                 joint_var,
-                jaxlie.SE3.from_rotation_and_translation(
-                    jaxlie.SO3(target_wxyz), target_position
-                ),
+                jaxlie.SE3.from_rotation_and_translation(jaxlie.SO3(target_wxyz), target_position),
                 target_link_index,
                 pos_weight=50.0,
                 ori_weight=10.0,
@@ -119,7 +116,6 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         )
         return sol[joint_var]
 
-        
     def solve_ik_with_seed(pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor) -> torch.Tensor:
         import numpy as np
 
