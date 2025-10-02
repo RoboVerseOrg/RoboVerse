@@ -54,7 +54,9 @@ class SitePos(BaseQueryType):
             jax = importlib.import_module("jax")
 
             val = self.handler._data.site_xpos[:, self._sid]
-            return torch.from_dlpack(val.__dlpack__())
+            from metasim.sim.mjx.mjx_helper import j2t
+
+            return j2t(val)
 
         elif mod.startswith("metasim.sim.mujoco"):
             # ── raw MuJoCo branch ────────────────────────────────────────

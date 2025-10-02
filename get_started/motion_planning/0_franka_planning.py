@@ -49,7 +49,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
     solver: Literal["curobo", "pyroki"] = "pyroki"
 
     def __post_init__(self):
@@ -67,6 +67,7 @@ scenario = ScenarioCfg(
     simulator=args.sim,
     headless=args.headless,
     num_envs=args.num_envs,
+    decimation=4,
 )
 
 # add cameras
