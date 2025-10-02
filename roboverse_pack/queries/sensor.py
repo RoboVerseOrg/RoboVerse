@@ -59,7 +59,9 @@ class SensorData(BaseQueryType):
 
             sensor_adr, sensor_dim = self._sensor_info
             val = self.handler._data.sensordata[sensor_adr : sensor_adr + sensor_dim]
-            return torch.from_dlpack(val.__dlpack__())
+            from metasim.sim.mjx.mjx_helper import j2t
+
+            return j2t(val)
 
         elif mod.startswith("metasim.sim.mujoco"):
             # ── raw MuJoCo branch ────────────────────────────────────────

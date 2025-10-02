@@ -17,7 +17,13 @@ def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.nd
     """Convert a PyTorch tensor to a JAX array, keeping it on the requested device."""
     if device is not None and arr.device != torch.device(device):
         arr = arr.to(device, non_blocking=True)
-    return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
+
+    # Try JAX 7.0+ new API first
+    try:
+        return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
+    except AttributeError:
+        # Fallback to old API
+        return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
 
 
 def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
@@ -27,7 +33,13 @@ def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
         plat = "gpu" if tgt.type == "cuda" else tgt.type
         if a.device.platform != plat:
             a = jax.device_put(a, jax.devices(plat)[tgt.index or 0])
-    return torch.from_dlpack(jax.dlpack.to_dlpack(a))
+
+    # Try JAX 7.0+ new API first
+    try:
+        return torch.from_dlpack(jax.dlpack.to_dlpack(a))
+    except AttributeError:
+        # Fallback to old API
+        return torch.from_dlpack(a.__dlpack__())
 
 
 # -----------------------------------------------------------------------------
