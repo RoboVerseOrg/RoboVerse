@@ -104,8 +104,8 @@ init_states = [
 ]
 robot = scenario.robots[0]
 
-# Setup IK solver
-ik_solver = setup_ik_solver(robot, args.solver)
+# Setup IK solver, disable seed for pyroki
+ik_solver = setup_ik_solver(robot, args.solver, use_seed=False)
 
 handler.set_states(init_states)
 obs = handler.get_states(mode="tensor")
@@ -205,7 +205,7 @@ for step in range(4):
     ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
 
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, ee_pos_target, ee_quat_target, steps=20, open_gripper=True
+        obs, obs_saver, ik_solver, robot, scenario, inverse_reorder_idx, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
     )
     step += 1
 

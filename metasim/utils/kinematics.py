@@ -66,7 +66,6 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     Returns:
         dict: Dictionary containing the pyroki robot model and solve_ik function.
     """
-    import jax.numpy as jnp
     import pyroki as pk
     from yourdfpy import URDF
 
@@ -87,22 +86,15 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     import jax_dataclasses as jdc
     import jaxlie
     import jaxls
-    import pyroki as pk
 
-    # @jdc.jit
-    def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):  
+    @jdc.jit
+    def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):
         joint_var = robot.joint_var_cls(0)
-
         factors = [
             pk.costs.pose_cost_analytic_jac(
-                robot,
-                joint_var,
-                jaxlie.SE3.from_rotation_and_translation(
-                    jaxlie.SO3(target_wxyz), target_position
-                ),
-                target_link_index,
-                pos_weight=50.0,
-                ori_weight=10.0,
+                robot, joint_var,
+                jaxlie.SE3.from_rotation_and_translation(jaxlie.SO3(target_wxyz), target_position),
+                target_link_index, pos_weight=50.0, ori_weight=10.0,
             ),
             pk.costs.limit_cost(robot, joint_var, weight=100.0),
         ]
@@ -112,20 +104,44 @@ def get_pyroki_model(robot_cfg: RobotCfg):
             .analyze()
             .solve(
                 initial_vals=jaxls.VarValues.make([joint_var.with_value(prev_cfg)]),
-                verbose=False,
-                linear_solver="dense_cholesky",
-                trust_region=jaxls.TrustRegionConfig(lambda_initial=0.01),
+                verbose=False, linear_solver="dense_cholesky",
+                trust_region=jaxls.TrustRegionConfig(lambda_initial=1.00),
+            )
+        )
+        return sol[joint_var]
+
+    @jdc.jit
+    def _solve_ik_jax_without_seed(robot, target_link_index, target_wxyz, target_position):
+        joint_var = robot.joint_var_cls(0)
+        factors = [
+            pk.costs.pose_cost_analytic_jac(
+                robot, joint_var,
+                jaxlie.SE3.from_rotation_and_translation(jaxlie.SO3(target_wxyz), target_position),
+                target_link_index, pos_weight=50.0, ori_weight=10.0,
+            ),
+            pk.costs.limit_cost(robot, joint_var, weight=100.0),
+        ]
+
+        sol = (
+            jaxls.LeastSquaresProblem(factors, [joint_var])
+            .analyze()
+            .solve(
+                verbose=False, linear_solver="dense_cholesky",
+                trust_region=jaxls.TrustRegionConfig(lambda_initial=1.00),
             )
         )
         return sol[joint_var]
 
         
     def solve_ik_with_seed(pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor) -> torch.Tensor:
+        import jax.numpy as jnp
         import numpy as np
 
         pos_np = pos_target.detach().cpu().numpy()
         quat_np = quat_target.detach().cpu().numpy()
         seed_np = seed_q.detach().cpu().numpy()
+        target_link_index = pk_robot.links.names.index(ee_link_name)
+        
         num_actuated_joints = pk_robot.joints.num_actuated_joints
         if seed_np.shape[0] != num_actuated_joints:
             if seed_np.shape[0] < num_actuated_joints:
@@ -133,17 +149,29 @@ def get_pyroki_model(robot_cfg: RobotCfg):
                 seed_np = np.concatenate([seed_np, padding])
             else:
                 seed_np = seed_np[:num_actuated_joints]
-
-        target_link_index = pk_robot.links.names.index(ee_link_name)
+        
         cfg = _solve_ik_jax_with_seed(
             pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
         )
-        q_tensor = torch.from_numpy(np.array(cfg)).to(pos_target.device)
-        return q_tensor
+        return torch.from_numpy(np.array(cfg)).to(pos_target.device)
+
+    def solve_ik_without_seed(pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
+        import jax.numpy as jnp
+        import numpy as np
+
+        pos_np = pos_target.detach().cpu().numpy()
+        quat_np = quat_target.detach().cpu().numpy()
+        target_link_index = pk_robot.links.names.index(ee_link_name)
+        
+        cfg = _solve_ik_jax_without_seed(
+            pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np)
+        )
+        return torch.from_numpy(np.array(cfg)).to(pos_target.device)
 
     return {
         "robot": pk_robot,
         "solve_ik_with_seed": solve_ik_with_seed,
+        "solve_ik_without_seed": solve_ik_without_seed,
         "ee_link_name": ee_link_name,
     }
 
