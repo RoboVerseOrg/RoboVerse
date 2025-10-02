@@ -250,10 +250,7 @@ def main():
 
                 image_list.append(np.array(obs.cameras['camera'].rgb)[0])
 
-                # IK solver expects original joint order, but state uses alphabetical order
-                reorder_idx = env.handler.get_joint_reindex('franka')
-                inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
-                qpos_numpy = np.array(obs.robots['franka'].joint_pos[:, inverse_reorder_idx])
+                qpos_numpy = np.array(obs.robots['franka'].joint_pos)
                 # qpos_numpy = np.array(obs["joint_qpos"])
                 qpos = pre_process(qpos_numpy)
                 # qpos = np.concatenate([qpos, np.zeros((qpos.shape[0], 14 - qpos.shape[1]))], axis=1)
