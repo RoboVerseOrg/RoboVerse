@@ -114,12 +114,15 @@ from metasim.utils.ik_solver import setup_ik_solver
 
 # Initialize IK solver
 ik_solver = setup_ik_solver(robot_cfg, solver="pyroki")  # or "curobo"
-
+# IK solver expects original joint order, but state uses alphabetical order
+reorder_idx = handler.get_joint_reindex(scenario.robots[0].name)
+inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
 # Solve IK for multiple environments
 q_solution, ik_success = ik_solver.solve_ik_batch(
     ee_pos_target=target_positions,    # (B, 3) - target EE positions
     ee_quat_target=target_quaternions, # (B, 4) - target EE quaternions (wxyz)
-    seed_q=seed_joint_configs          # (B, n_dof) - seed configs (required for curobo)
+    seed_q=curr_robot_q         # (B, n_dof) - seed configs (required for curobo)
 )
 
 # q_solution: (B, n_dof_ik) - arm joint positions only
@@ -188,9 +191,16 @@ target_quaternions = torch.randn(num_envs, 4, device=device)  # (B, 4) wxyz
 gripper_commands = torch.randint(0, 2, (num_envs,), device=device)  # (B,) binary
 
 # Step 1: Solve IK for arm joints
+ik_solver = setup_ik_solver(robot_cfg, solver="pyroki")  # or "curobo"
+# IK solver expects original joint order, but state uses alphabetical order
+reorder_idx = handler.get_joint_reindex(scenario.robots[0].name)
+inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
+
 q_arm, ik_success = ik_solver.solve_ik_batch(
     ee_pos_target=target_positions,
-    ee_quat_target=target_quaternions
+    ee_quat_target=target_quaternions,
+    seed_q=curr_robot_q 
 )
 
 # Step 2: Process gripper commands
