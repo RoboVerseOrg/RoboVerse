@@ -12,10 +12,17 @@ from metasim.scenario.robot import RobotCfg
 class IKSolver:
     """Unified IK solver with curobo/pyroki backends."""
 
-    def __init__(self, robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False):
+    def __init__(
+        self,
+        robot_cfg: RobotCfg,
+        solver: Literal["curobo", "pyroki"] = "pyroki",
+        no_gnd: bool = False,
+        use_seed: bool = True,
+    ):
         self.robot_cfg = robot_cfg
         self.solver = solver
         self.no_gnd = no_gnd
+        self.use_seed = use_seed if solver == "pyroki" else True  # curobo always uses seed
 
         # Robot properties
         self.joint_names = list(robot_cfg.joint_limits.keys())
@@ -37,15 +44,13 @@ class IKSolver:
         else:
             raise ValueError(f"Unknown solver: {self.solver}")
 
-    def solve_ik_batch(
-        self, ee_pos_target: torch.Tensor, ee_quat_target: torch.Tensor, seed_q: torch.Tensor | None = None
-    ):
+    def solve_ik_batch(self, ee_pos_target: torch.Tensor, ee_quat_target: torch.Tensor, seed_q: torch.Tensor = None):
         """Solve IK for batch of poses. Returns (q_solution, ik_succ).
 
         Args:
             ee_pos_target: Target end-effector positions (B, 3)
             ee_quat_target: Target end-effector quaternions (B, 4)
-            seed_q: Seed joint configuration for IK initialization (B, n_dof). Required for curobo.
+            seed_q: Seed joint configuration for IK initialization (B, n_dof). Required for curobo, optional for pyroki.
         """
         num_envs = ee_pos_target.shape[0]
 
@@ -53,7 +58,7 @@ class IKSolver:
             from curobo.types.math import Pose
 
             if seed_q is None:
-                raise ValueError("seed_q required for curobo solver")
+                raise ValueError("seed_q is required for curobo solver")
 
             seed_config = seed_q[:, : self.n_dof_ik].unsqueeze(1).tile([1, self.backend_solver._num_seeds, 1])
             result = self.backend_solver.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
@@ -66,8 +71,13 @@ class IKSolver:
         else:  # pyroki
             q_list = []
             for i in range(num_envs):
-                seed_cfg = seed_q[i, : self.n_dof_ik]
-                q_sol = self.backend_solver["solve_ik_with_seed"](ee_pos_target[i], ee_quat_target[i], seed_cfg)
+                if self.use_seed:
+                    if seed_q is None:
+                        raise ValueError("seed_q is required when use_seed=True")
+                    seed_cfg = seed_q[i, : self.n_dof_ik]
+                    q_sol = self.backend_solver["solve_ik_with_seed"](ee_pos_target[i], ee_quat_target[i], seed_cfg)
+                else:
+                    q_sol = self.backend_solver["solve_ik_without_seed"](ee_pos_target[i], ee_quat_target[i])
                 q_list.append(q_sol)
             q_solution = torch.stack(q_list, dim=0)[:, : self.n_dof_ik]
             ik_succ = torch.ones(num_envs, dtype=torch.bool, device=ee_pos_target.device)
@@ -125,10 +135,17 @@ class IKSolver:
 
 
 def setup_ik_solver(
-    robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False
+    robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False, use_seed: bool = True
 ) -> IKSolver:
-    """Setup IK solver."""
-    return IKSolver(robot_cfg, solver, no_gnd)
+    """Setup IK solver.
+
+    Args:
+        robot_cfg: Robot configuration
+        solver: Backend solver ("curobo" or "pyroki")
+        no_gnd: Whether to exclude ground collision objects
+        use_seed: Whether to use seed for IK (only applies to pyroki, curobo always uses seed)
+    """
+    return IKSolver(robot_cfg, solver, no_gnd, use_seed)
 
 
 def process_gripper_command(

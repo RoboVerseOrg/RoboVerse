@@ -104,8 +104,8 @@ init_states = [
 ]
 robot = scenario.robots[0]
 
-# Setup IK solver
-ik_solver = setup_ik_solver(robot, args.solver)
+# Setup IK solver, disable seed for pyroki
+ik_solver = setup_ik_solver(robot, args.solver, use_seed=False)
 
 handler.set_states(init_states)
 obs = handler.get_states(mode="tensor")
@@ -117,14 +117,23 @@ obs_saver.add(obs)
 
 
 def move_to_pose(
-    obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs,
+    obs_saver,
+    ik_solver,
+    robot,
+    scenario,
+    inverse_reorder_idx,
+    ee_pos_target,
+    ee_quat_target,
+    steps=10,
+    open_gripper=False,
 ):
     """Move the robot to the target pose."""
-    curr_robot_q = obs.robots[robot.name].joint_pos
+    # IK solver expects original joint order, but state uses alphabetical order
+    curr_robot_q = obs.robots[robot.name].joint_pos[:, inverse_reorder_idx]
 
     # Solve IK using the unified interface
-    seed_q = curr_robot_q if args.solver == "curobo" else None
-    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
+    q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
 
     # Process gripper command
     from metasim.utils.ik_solver import process_gripper_command
@@ -133,12 +142,7 @@ def move_to_pose(
     gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
 
     # Compose full joint command
-    q = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q)
-
-    actions = [
-        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
-        for i_env in range(scenario.num_envs)
-    ]
+    actions = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
     for i in range(steps):
         handler.set_dof_targets(actions)
         handler.simulate()
@@ -146,6 +150,11 @@ def move_to_pose(
         obs_saver.add(obs)
     return obs
 
+
+# Calculate joint reordering once
+# IK solver expects original joint order, but state uses alphabetical order
+reorder_idx = handler.get_joint_reindex(robot.name)
+inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
 
 step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
@@ -196,7 +205,16 @@ for step in range(4):
     ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
 
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=100, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        ee_pos_target,
+        ee_quat_target,
+        steps=100,
+        open_gripper=True,
     )
     step += 1
 

@@ -162,10 +162,20 @@ def get_point_cloud_from_obs(obs, save_pcd=False):
 
 
 def move_to_pose(
-    obs, obs_saver, ik_solver, robot, scenario, ee_pos_target, ee_quat_target, steps=10, open_gripper=False
+    obs,
+    obs_saver,
+    ik_solver,
+    robot,
+    scenario,
+    inverse_reorder_idx,
+    ee_pos_target,
+    ee_quat_target,
+    steps=10,
+    open_gripper=False,
 ):
     """Move the robot to the target pose."""
-    curr_robot_q = obs.robots[robot.name].joint_pos
+    # IK solver expects original joint order, but state uses alphabetical order
+    curr_robot_q = obs.robots[robot.name].joint_pos[:, inverse_reorder_idx]
 
     # Solve IK using the unified interface
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q=curr_robot_q)
@@ -177,11 +187,7 @@ def move_to_pose(
     gripper_widths = process_gripper_command(gripper_open_tensor, robot, ee_pos_target.device)
 
     # Compose full joint command
-    q = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q)
-    actions = [
-        {"franka": {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
-        for i_env in range(scenario.num_envs)
-    ]
+    actions = ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
     for i in range(steps):
         handler.set_dof_targets(actions)
         handler.simulate()
@@ -190,12 +196,17 @@ def move_to_pose(
     return obs
 
 
+# Calculate joint reordering once
+# IK solver expects original joint order, but state uses alphabetical order
+reorder_idx = handler.get_joint_reindex(robot.name)
+inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+
 step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
     states = handler.get_states()
-    curr_robot_q = states.robots[robot.name].joint_pos.cuda()
+    curr_robot_q = states.robots[robot.name].joint_pos[:, inverse_reorder_idx].cuda()
 
     pcd = get_point_cloud_from_obs(obs)
 
@@ -284,16 +295,52 @@ for step in range(1):
     lift_pos[:] -= gripper_out * 0.05
     lift_pos[:, 2] += 0.3
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, pre_grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        pre_grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=True,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=True
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=True,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, grasp_pos, ee_quat_target, steps=50, open_gripper=False
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        grasp_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=False,
     )
     obs = move_to_pose(
-        obs, obs_saver, ik_solver, robot, scenario, lift_pos, ee_quat_target, steps=50, open_gripper=False
+        obs,
+        obs_saver,
+        ik_solver,
+        robot,
+        scenario,
+        inverse_reorder_idx,
+        lift_pos,
+        ee_quat_target,
+        steps=50,
+        open_gripper=False,
     )
 
     step += 1

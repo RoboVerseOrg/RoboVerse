@@ -250,7 +250,6 @@ def main():
 
                 image_list.append(np.array(obs.cameras['camera'].rgb)[0])
 
-                # act
                 qpos_numpy = np.array(obs.robots['franka'].joint_pos)
                 # qpos_numpy = np.array(obs["joint_qpos"])
                 qpos = pre_process(qpos_numpy)
