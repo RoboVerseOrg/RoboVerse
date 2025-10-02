@@ -66,9 +66,7 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     Returns:
         dict: Dictionary containing the pyroki robot model and solve_ik function.
     """
-    import jax.numpy as jnp
     import pyroki as pk
-    import third_party.pyroki.examples.pyroki_snippets as pks
     from yourdfpy import URDF
 
     from metasim.utils.hf_util import check_and_download_single
@@ -85,41 +83,9 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     # Initialize Pyroki robot model from URDF
     pk_robot = pk.Robot.from_urdf(urdf)
 
-    def solve_ik(pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
-        """Solve IK for target pose.
-
-        Args:
-            pos_target: Target position (3D)
-            quat_target: Target quaternion (wxyz)
-
-        Returns:
-            Joint angle solution
-        """
-        # Try CUDA first, fallback to CPU if JAX doesn't support CUDA
-        try:
-            pos = jnp.from_dlpack(pos_target)
-            quat = jnp.from_dlpack(quat_target)
-        except RuntimeError as e:
-            pos = jnp.from_dlpack(pos_target.cpu())
-            quat = jnp.from_dlpack(quat_target.cpu())
-
-        solution = pks.solve_ik(
-            pk_robot,
-            ee_link_name,
-            target_wxyz=quat,
-            target_position=pos,
-        )
-
-        q_tensor = torch.from_dlpack(solution)
-        if pos_target.is_cuda and q_tensor.device.type == "cpu":
-            q_tensor = q_tensor.cuda()
-
-        return q_tensor
-
     import jax_dataclasses as jdc
     import jaxlie
     import jaxls
-    import pyroki as pk
 
     @jdc.jit
     def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):
@@ -135,47 +101,82 @@ def get_pyroki_model(robot_cfg: RobotCfg):
             ),
             pk.costs.limit_cost(robot, joint_var, weight=100.0),
         ]
+
+        sol = (
+            jaxls.LeastSquaresProblem(factors, [joint_var])
+            .analyze()
+            .solve(
+                initial_vals=jaxls.VarValues.make([joint_var.with_value(prev_cfg)]),
+                verbose=False,
+                linear_solver="dense_cholesky",
+                trust_region=jaxls.TrustRegionConfig(lambda_initial=1.00),
+            )
+        )
+        return sol[joint_var]
+
+    @jdc.jit
+    def _solve_ik_jax_without_seed(robot, target_link_index, target_wxyz, target_position):
+        joint_var = robot.joint_var_cls(0)
+        factors = [
+            pk.costs.pose_cost_analytic_jac(
+                robot,
+                joint_var,
+                jaxlie.SE3.from_rotation_and_translation(jaxlie.SO3(target_wxyz), target_position),
+                target_link_index,
+                pos_weight=50.0,
+                ori_weight=10.0,
+            ),
+            pk.costs.limit_cost(robot, joint_var, weight=100.0),
+        ]
+
         sol = (
             jaxls.LeastSquaresProblem(factors, [joint_var])
             .analyze()
             .solve(
                 verbose=False,
                 linear_solver="dense_cholesky",
-                initial_vals=jaxls.VarValues.make([joint_var.with_value(prev_cfg)]),
+                trust_region=jaxls.TrustRegionConfig(lambda_initial=1.00),
             )
         )
         return sol[joint_var]
 
-    def solve_ik_with_seed(
-        pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor = None
-    ) -> torch.Tensor:
-        if seed_q is not None:
-            import numpy as np
+    def solve_ik_with_seed(pos_target: torch.Tensor, quat_target: torch.Tensor, seed_q: torch.Tensor) -> torch.Tensor:
+        import jax.numpy as jnp
+        import numpy as np
 
-            pos_np = pos_target.detach().cpu().numpy()
-            quat_np = quat_target.detach().cpu().numpy()
-            seed_np = seed_q.detach().cpu().numpy()
-            num_actuated_joints = pk_robot.joints.num_actuated_joints
-            if seed_np.shape[0] != num_actuated_joints:
-                if seed_np.shape[0] < num_actuated_joints:
-                    padding = np.zeros(num_actuated_joints - seed_np.shape[0])
-                    seed_np = np.concatenate([seed_np, padding])
-                else:
-                    seed_np = seed_np[:num_actuated_joints]
+        pos_np = pos_target.detach().cpu().numpy()
+        quat_np = quat_target.detach().cpu().numpy()
+        seed_np = seed_q.detach().cpu().numpy()
+        target_link_index = pk_robot.links.names.index(ee_link_name)
 
-            target_link_index = pk_robot.links.names.index(ee_link_name)
-            cfg = _solve_ik_jax_with_seed(
-                pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
-            )
-            q_tensor = torch.from_numpy(np.array(cfg)).to(pos_target.device)
-        else:
-            q_tensor = solve_ik(pos_target, quat_target)
-        return q_tensor
+        num_actuated_joints = pk_robot.joints.num_actuated_joints
+        if seed_np.shape[0] != num_actuated_joints:
+            if seed_np.shape[0] < num_actuated_joints:
+                padding = np.zeros(num_actuated_joints - seed_np.shape[0])
+                seed_np = np.concatenate([seed_np, padding])
+            else:
+                seed_np = seed_np[:num_actuated_joints]
+
+        cfg = _solve_ik_jax_with_seed(
+            pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np), jnp.array(seed_np)
+        )
+        return torch.from_numpy(np.array(cfg)).to(pos_target.device)
+
+    def solve_ik_without_seed(pos_target: torch.Tensor, quat_target: torch.Tensor) -> torch.Tensor:
+        import jax.numpy as jnp
+        import numpy as np
+
+        pos_np = pos_target.detach().cpu().numpy()
+        quat_np = quat_target.detach().cpu().numpy()
+        target_link_index = pk_robot.links.names.index(ee_link_name)
+
+        cfg = _solve_ik_jax_without_seed(pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np))
+        return torch.from_numpy(np.array(cfg)).to(pos_target.device)
 
     return {
         "robot": pk_robot,
-        "solve_ik": solve_ik,
         "solve_ik_with_seed": solve_ik_with_seed,
+        "solve_ik_without_seed": solve_ik_without_seed,
         "ee_link_name": ee_link_name,
     }
 

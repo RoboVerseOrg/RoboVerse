@@ -223,8 +223,11 @@ for step in range(200):
             device="cuda:0",
         )
 
-    # Get current robot state for curobo seeding
-    curr_robot_q = states.robots[robot.name].joint_pos.cuda() if args.solver == "curobo" else None
+    # Get current robot state for seeding
+    # IK solver expects original joint order, but state uses alphabetical order
+    reorder_idx = handler.get_joint_reindex(scenario.robots[0].name)
+    inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+    curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
 
     # Solve IK
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
