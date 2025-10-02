@@ -22,7 +22,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
 
 class SinglePybulletHandler(BaseSimHandler):
@@ -76,8 +76,8 @@ class SinglePybulletHandler(BaseSimHandler):
 
         for object in [*self.objects, self.robot]:
             if isinstance(object, (ArticulationObjCfg, RobotCfg)):
-                pos = np.array([0, 0, 0])
-                rot = np.array([1, 0, 0, 0])
+                pos = np.asarray(object.default_position)
+                rot = convert_quat(np.asarray(object.default_orientation), to="xyzw")
                 object_file = object.urdf_path
                 useFixedBase = object.fix_base_link
                 flags = 0
@@ -90,7 +90,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 curr_id = p.loadURDF(
                     object_file,
                     pos,
-                    convert_quat(rot, to="xyzw"),
+                    rot,
                     useFixedBase=useFixedBase,
                     flags=flags,
                     globalScaling=object.scale[0],
@@ -150,40 +150,40 @@ class SinglePybulletHandler(BaseSimHandler):
 
             elif isinstance(object, PrimitiveCubeCfg):
                 box_dimensions = object.half_size
-                pos = np.array([0, 0, 0])
-                rot = np.array([1, 0, 0, 0])
+                pos = np.asarray(object.default_position)
+                rot = convert_quat(np.asarray(object.default_orientation), to="xyzw")
                 box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=box_dimensions)
                 curr_id = p.createMultiBody(
                     baseMass=object.mass,
                     baseCollisionShapeIndex=box_id,
                     basePosition=pos,
-                    baseOrientation=convert_quat(rot, to="xyzw"),
+                    baseOrientation=rot,
                 )
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
             elif isinstance(object, PrimitiveSphereCfg):
                 radius = object.radius
-                pos = np.array([0, 0, 0])
-                rot = np.array([1, 0, 0, 0])
+                pos = np.asarray(object.default_position)
+                rot = convert_quat(np.asarray(object.default_orientation), to="xyzw")
                 sphere_id = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)
                 curr_id = p.createMultiBody(
                     baseMass=object.mass,
                     baseCollisionShapeIndex=sphere_id,
                     basePosition=pos,
-                    baseOrientation=convert_quat(rot, to="xyzw"),
+                    baseOrientation=rot,
                 )
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
             elif isinstance(object, RigidObjCfg):
                 useFixedBase = object.fix_base_link
-                pos = np.array([0, 0, 0])
-                rot = np.array([1, 0, 0, 0])
+                pos = np.asarray(object.default_position)
+                rot = convert_quat(np.asarray(object.default_orientation), to="xyzw")
                 curr_id = p.loadURDF(
                     object.urdf_path,
                     pos,
-                    convert_quat(rot, to="xyzw"),
+                    rot,
                     useFixedBase=useFixedBase,
                     globalScaling=object.scale[0],
                 )
@@ -244,7 +244,7 @@ class SinglePybulletHandler(BaseSimHandler):
             target: The target joint positions
         """
         # For multi-env version, rewrite this function
-        actions = adapt_actions(self, actions)
+        actions = adapt_actions_to_dict(self, actions)
         self._actions_cache = actions
 
         for obj_name, action in actions.items():

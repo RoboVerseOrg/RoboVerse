@@ -147,7 +147,12 @@ class OpenVLARunner:
 
         # 2) Robot state (TensorState -> tensors)
         rs = obs.robots[self.robot_name]
-        curr_robot_q = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).to(self.device).float()
+
+        # IK solver expects original joint order, but state uses alphabetical order
+        reorder_idx = self.env.handler.get_joint_reindex(self.robot_name)
+        inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+        joint_pos_raw = rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)
+        curr_robot_q = joint_pos_raw[:, inverse_reorder_idx].to(self.device).float()
         robot_ee_state = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()
         robot_root_state = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float()
 
@@ -176,9 +181,8 @@ class OpenVLARunner:
         ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_delta)
 
 
-        # 4) IK (seed = current q for curobo)
-        seed_q = curr_robot_q if self.solver == "curobo" else None
-        q_solution, ik_succ = self.ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, seed_q)
+        # 4) IK (seed = current q)
+        q_solution, ik_succ = self.ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
 
         # 5) Gripper control
         from metasim.utils.ik_solver import process_gripper_command

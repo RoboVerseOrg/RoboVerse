@@ -31,7 +31,9 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
+
+from .sapien2 import _load_init_pose
 
 
 class Sapien3Handler(BaseSimHandler):
@@ -117,7 +119,7 @@ class Sapien3Handler(BaseSimHandler):
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
                 curr_id = self.loader.load(file_path)
-                curr_id.set_root_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                curr_id.set_root_pose(_load_init_pose(object))
 
                 self.object_ids[object.name] = curr_id
 
@@ -167,7 +169,7 @@ class Sapien3Handler(BaseSimHandler):
                     ),
                 )
                 box = actor_builder.build(name="box")  # Add a box
-                box.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                box.set_pose(_load_init_pose(object))
                 # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
                 # if agent.vel:
                 #     box.set_velocity(agent.vel)
@@ -191,7 +193,7 @@ class Sapien3Handler(BaseSimHandler):
                     ),
                 )
                 sphere = actor_builder.build(name="sphere")  # Add a sphere
-                sphere.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                sphere.set_pose(_load_init_pose(object))
                 # sphere.set_damping(
                 #     agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping
                 # )
@@ -236,7 +238,7 @@ class Sapien3Handler(BaseSimHandler):
                 if isinstance(curr_id, list):
                     ## HACK
                     curr_id = curr_id[0]
-                curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                curr_id.set_pose(_load_init_pose(object))
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -341,7 +343,7 @@ class Sapien3Handler(BaseSimHandler):
         # instance.set_drive_target(action)
 
     def _set_dof_targets(self, targets: list[Action] | TensorState):
-        targets = adapt_actions(self, targets)
+        targets = adapt_actions_to_dict(self, targets)
 
         for obj_name, action in targets.items():
             instance = self.object_ids[obj_name]

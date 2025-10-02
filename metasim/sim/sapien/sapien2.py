@@ -21,6 +21,7 @@ from sapien.utils import Viewer
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import (
     ArticulationObjCfg,
+    BaseObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
     PrimitiveSphereCfg,
@@ -31,7 +32,17 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
 from metasim.utils.math import quat_from_euler_np
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
+
+
+def _load_init_pose(obj: BaseObjCfg):
+    assert isinstance(obj, BaseObjCfg)
+    init_pose = sapien_core.Pose(p=np.asarray([0, 0, 0]), q=np.asarray([1, 0, 0, 0]))
+    if obj.default_position is not None:
+        init_pose.set_p(obj.default_position)
+    if obj.default_orientation is not None:
+        init_pose.set_q(obj.default_orientation)
+    return init_pose
 
 
 class Sapien2Handler(BaseSimHandler):
@@ -145,6 +156,8 @@ class Sapien2Handler(BaseSimHandler):
                     for id, joint in enumerate(active_joints):
                         joint.set_drive_property(0, 0)
 
+                # Set initial pose
+                curr_id.set_root_pose(_load_init_pose(object))
                 # if agent.dof.init:
                 #     robot.set_qpos(agent.dof.init)
 
@@ -164,7 +177,7 @@ class Sapien2Handler(BaseSimHandler):
                     color=object.color if object.color else [1.0, 1.0, 0.0],
                 )
                 box = actor_builder.build(name="box")  # Add a box
-                box.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                box.set_pose(_load_init_pose(object))
                 # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
                 # if agent.vel:
                 #     box.set_velocity(agent.vel)
@@ -185,7 +198,9 @@ class Sapien2Handler(BaseSimHandler):
                     radius=object.radius, color=object.color if object.color else [1.0, 1.0, 0.0]
                 )
                 sphere = actor_builder.build(name="sphere")  # Add a sphere
-                sphere.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+
+                sphere.set_pose(_load_init_pose(object))
+                # sphere.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
                 # sphere.set_damping(
                 #     agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping
                 # )
@@ -206,6 +221,8 @@ class Sapien2Handler(BaseSimHandler):
                 builder.add_visual_from_file(object.usd_path, scene_pose)
                 curr_id = builder.build_static(name=object.name)
 
+                curr_id.set_pose(_load_init_pose(object))
+
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
@@ -214,7 +231,7 @@ class Sapien2Handler(BaseSimHandler):
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
                 curr_id = self.loader.load(file_path)
-                curr_id.set_root_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                curr_id.set_root_pose(_load_init_pose(object))
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -315,7 +332,7 @@ class Sapien2Handler(BaseSimHandler):
             instance.set_drive_velocity_target(vel_action)
 
     def _set_dof_targets(self, actions: list[Action] | TensorState):
-        actions = adapt_actions(self, actions)
+        actions = adapt_actions_to_dict(self, actions)
         for obj_name, action in actions.items():
             instance = self.object_ids[obj_name]
             if isinstance(instance, sapien_core.Articulation):
