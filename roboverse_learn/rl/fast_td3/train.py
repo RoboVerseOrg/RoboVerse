@@ -17,7 +17,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 def get_config():
     """Get configuration with command line argument support."""
     parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='mjx_rl_pick.yaml',
+    parser.add_argument('--config', type=str, default='mjx_walk.yaml',
                        help='YAML configuration file name (will be loaded from configs/ directory)')
     args = parser.parse_args()
 
@@ -215,6 +215,7 @@ def main() -> None:
                 obs = normalize_obs(obs)
                 actions = actor(obs)
             next_obs, rewards, terminated, time_out, infos = eval_envs.step(actions.float())
+            dones = terminated | time_out
             episode_returns = torch.where(~done_masks, episode_returns + rewards, episode_returns)
             episode_lengths = torch.where(~done_masks, episode_lengths + 1, episode_lengths)
             done_masks = torch.logical_or(done_masks, dones)
@@ -223,6 +224,7 @@ def main() -> None:
             obs = next_obs
 
         obs_normalizer.train()
+        obs, info = eval_envs.reset()
         return episode_returns.mean().item(), episode_lengths.mean().item()
 
     def render_with_rollout() -> list:
@@ -238,7 +240,7 @@ def main() -> None:
         robots = cfg("robots")
         simulator = cfg("sim")
         num_envs = cfg("num_envs")
-        headless = True
+        headless = cfg("headless")
         cameras = [
             PinholeCameraCfg(
                 width=cfg("video_width", 1024),
@@ -472,7 +474,7 @@ def main() -> None:
                         logs["avg_episodic_return"] = avg_return
                         logs["avg_episodic_length"] = avg_length
                         logs["episode_count"] = episode_count
-                        log.info(f"avg_return={eval_avg_return:.4f}, avg_length={eval_avg_length:.4f}")
+                        log.info(f"avg_return={avg_return:.4f}, avg_length={avg_length:.4f}")
 
                     if cfg("eval_interval") > 0 and global_step % cfg("eval_interval") == 0:
                         log.info(f"Evaluating at global step {global_step}")
