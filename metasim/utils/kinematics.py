@@ -83,7 +83,6 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     # Initialize Pyroki robot model from URDF
     pk_robot = pk.Robot.from_urdf(urdf)
 
-    import jax_dataclasses as jdc
     import jaxlie
     import jaxls
 
