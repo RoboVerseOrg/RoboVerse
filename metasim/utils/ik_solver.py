@@ -12,7 +12,13 @@ from metasim.scenario.robot import RobotCfg
 class IKSolver:
     """Unified IK solver with curobo/pyroki backends."""
 
-    def __init__(self, robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False, use_seed: bool = True):
+    def __init__(
+        self,
+        robot_cfg: RobotCfg,
+        solver: Literal["curobo", "pyroki"] = "pyroki",
+        no_gnd: bool = False,
+        use_seed: bool = True,
+    ):
         self.robot_cfg = robot_cfg
         self.solver = solver
         self.no_gnd = no_gnd
@@ -53,7 +59,7 @@ class IKSolver:
 
             if seed_q is None:
                 raise ValueError("seed_q is required for curobo solver")
-            
+
             seed_config = seed_q[:, : self.n_dof_ik].unsqueeze(1).tile([1, self.backend_solver._num_seeds, 1])
             result = self.backend_solver.solve_batch(Pose(ee_pos_target, ee_quat_target), seed_config=seed_config)
 
@@ -132,7 +138,7 @@ def setup_ik_solver(
     robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False, use_seed: bool = True
 ) -> IKSolver:
     """Setup IK solver.
-    
+
     Args:
         robot_cfg: Robot configuration
         solver: Backend solver ("curobo" or "pyroki")
