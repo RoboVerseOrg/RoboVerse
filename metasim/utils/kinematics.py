@@ -86,6 +86,7 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     import jax_dataclasses as jdc
     import jaxlie
     import jaxls
+
     @jdc.jit
     def _solve_ik_jax_with_seed(robot, target_link_index, target_wxyz, target_position, prev_cfg):
         joint_var = robot.joint_var_cls(0)
