@@ -117,7 +117,11 @@ pip install "flash-attn==2.5.5" --no-build-isolation
 ```
 
 #### Step 3.3 Fine-tuning Execution
-
+If you haven't downloaded the OpenVLA checkpoints yet, set your Hugging Face token as an environment variable and then run:
+```bash
+cd roboverse_learn/vla/
+export HF_token=your_hf_token
+```
 Launch training with the RoboVerse wrapper script:
 
 ```bash
