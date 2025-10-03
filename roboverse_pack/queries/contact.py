@@ -50,7 +50,9 @@ class ContactData(BaseQueryType):
             dist_mask = contacts.dist < 1e-6
             mask = pair_mask & dist_mask  # [num_env, nconmax]
             has_contact = jax.numpy.any(mask, axis=1)  # [num_env]
-            has_contact = torch.from_dlpack(has_contact.__dlpack__())
+            from metasim.sim.mjx.mjx_helper import j2t
+
+            has_contact = j2t(has_contact)
             return has_contact.to(dtype=torch.float32, device=self.handler.device)
 
         elif mod.startswith("metasim.sim.mujoco"):

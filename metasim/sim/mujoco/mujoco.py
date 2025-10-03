@@ -48,8 +48,7 @@ class MujocoHandler(BaseSimHandler):
             self.cameras.append(camera)
         self._episode_length_buf = 0
 
-        # FIXME: hard code decimation for now
-        self.decimation = 25
+        self.decimation = scenario.decimation
 
         self._manual_pd_on = False
         self._p_gains = None
