@@ -108,7 +108,7 @@ def main():
         if command_name == "minimal":
             command = f"conda run --no-capture-output -n {conda_envs[simulator]} python dashboard/minimal_test_script.py --task={task} --robot={robot} --sim={simulator} --save_dir={result_dir}"
         elif command_name == "replay_demo":
-            command = f"conda run --no-capture-output -n {conda_envs[simulator]} python metasim/scripts/replay_demo.py --task={task} --robot={robot} --sim={simulator} --save-video-path={os.path.join(result_dir, 'video.mp4')} --headless --stop-on-runout"
+            command = f"conda run --no-capture-output -n {conda_envs[simulator]} python scripts/advanced/replay_demo.py --task={task} --robot={robot} --sim={simulator} --save-video-path={os.path.join(result_dir, 'video.mp4')} --headless --stop-on-runout"
         else:
             raise ValueError(f"Command {command_name} not found")
 

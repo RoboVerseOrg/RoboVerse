@@ -3,7 +3,7 @@
 For parallel gripper on tabletop manipulation, you can specify different robot for the same task. For example, you can specify `iiwa` for `StackCube` task.
 
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaaclab --task=StackCube --num_envs=4 --robot=iiwa
+python scripts/advanced/replay_demo.py --sim=isaaclab --task=StackCube --num_envs=4 --robot=iiwa
 ```
 
 ## Retarget between Robots

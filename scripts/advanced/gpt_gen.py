@@ -406,7 +406,7 @@ def main():
     # # Here: the user wants to run with the CamelCase name WITHOUT "Cfg" appended
     # # So the final run command is: --task=SOME_CAMEL_CASE, not --task=...Cfg
     # print("You can replay your task by running this command line (no 'Cfg' in the name):")
-    # print(f"  python metasim/scripts/replay_demo.py --sim=isaaclab --task={camel_task_name} --num_envs 1\n")
+    # print(f"  python scripts/advanced/replay_demo.py --sim=isaaclab --task={camel_task_name} --num_envs 1\n")
 
     print(Fore.CYAN + "🔹 Task Name: " + Style.BRIGHT + partial_task["task_name"] + Style.RESET_ALL)
 
@@ -442,7 +442,7 @@ def main():
     )
     print(
         Fore.WHITE
-        + f"  python metasim/scripts/replay_demo.py --sim=isaaclab --task=gpt:{camel_task_name} --num_envs 1"
+        + f"  python scripts/advanced/replay_demo.py --sim=isaaclab --task=gpt:{camel_task_name} --num_envs 1"
         + Style.RESET_ALL
         + "\n"
     )
