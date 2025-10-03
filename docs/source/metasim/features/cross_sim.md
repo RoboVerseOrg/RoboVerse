@@ -8,7 +8,7 @@ By default, the simulator is set to `isaaclab`. You can change it to other simul
 ## IsaacGym example
 For example, to replay the demo in IsaacGym, you can run:
 ```bash
-python metasim/scripts/replay_demo.py --sim=isaacgym --task=StackCube
+python scripts/advanced/replay_demo.py --sim=isaacgym --task=StackCube
 ```
 
 task could also be:
