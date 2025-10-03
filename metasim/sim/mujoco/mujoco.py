@@ -236,16 +236,55 @@ class MujocoHandler(BaseSimHandler):
         return xml.strip()
 
     def _init_mujoco(self) -> mjcf.RootElement:
-        mjcf_model = mjcf.RootElement()
+        """Initialize MuJoCo model with optional scene support."""
+
+        if self.scenario.scene is not None:
+            mjcf_model = mjcf.from_path(self.scenario.scene.mjcf_path)
+            log.info(f"Loaded scene from: {self.scenario.scene.mjcf_path}")
+        else:
+            mjcf_model = mjcf.RootElement()
+            self._add_default_ground(mjcf_model)
+
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
 
-        ## Optional: Add ground grid
-        # mjcf_model.asset.add('texture', name="texplane", type="2d", builtin="checker", width=512, height=512, rgb1=[0.2, 0.3, 0.4], rgb2=[0.1, 0.2, 0.3])
-        # mjcf_model.asset.add('material', name="matplane", reflectance="0.", texture="texplane", texrepeat=[1, 1], texuniform=True)
+        self._add_cameras_to_model(mjcf_model)
+        self._add_objects_to_model(mjcf_model)
+        self._add_robots_to_model(mjcf_model)
 
+        return mjcf_model
+
+    def _add_default_ground(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add default ground plane."""
+        mjcf_model.asset.add(
+            "texture",
+            name="texplane",
+            type="2d",
+            builtin="checker",
+            width=512,
+            height=512,
+            rgb1=[0, 0, 0],
+            rgb2=[1.0, 1.0, 1.0],
+        )
+        mjcf_model.asset.add(
+            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
+        )
+        ground = mjcf_model.worldbody.add(
+            "geom",
+            type="plane",
+            pos="0 0 0",
+            size="100 100 0.001",
+            quat="1 0 0 0",
+            condim="3",
+            conaffinity="15",
+            material="matplane",
+        )
+
+    def _add_cameras_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add cameras to the model."""
         camera_max_width = 640
         camera_max_height = 480
+
         for camera in self.cameras:
             direction = np.array([
                 camera.look_at[0] - camera.pos[0],
@@ -271,32 +310,11 @@ class MujocoHandler(BaseSimHandler):
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
 
-        mjcf_model.asset.add(
-            "texture",
-            name="texplane",
-            type="2d",
-            builtin="checker",
-            width=512,
-            height=512,
-            rgb1=[0, 0, 0],
-            rgb2=[1.0, 1.0, 1.0],
-        )
-        mjcf_model.asset.add(
-            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
-        )
-        ground = mjcf_model.worldbody.add(
-            "geom",
-            type="plane",
-            pos="0 0 0",
-            size="100 100 0.001",
-            quat="1 0 0 0",
-            condim="3",
-            conaffinity="15",
-            material="matplane",
-        )
-
+    def _add_objects_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add individual objects to the model."""
         self.object_body_names = []
         self.mj_objects = {}
+
         for obj in self.objects:
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
                 xml_str = self._create_primitive_xml(obj)
@@ -313,7 +331,8 @@ class MujocoHandler(BaseSimHandler):
             self.object_body_names.append(obj_attached.full_identifier)
             self.mj_objects[obj.name] = obj_mjcf
 
-        # Add multiple robots
+    def _add_robots_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add robots to the model."""
         for robot in self.robots:
             robot_xml = mjcf.from_path(robot.mjcf_path)
 
@@ -325,8 +344,6 @@ class MujocoHandler(BaseSimHandler):
                 robot_attached.add("freejoint")
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
-
-        return mjcf_model
 
     def _get_actuator_states(self, obj_name):
         """Get actuator states (targets and forces)."""
