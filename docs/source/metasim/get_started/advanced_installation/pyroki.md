@@ -13,7 +13,12 @@ git clone https://github.com/chungmin99/pyroki.git
 cd pyroki
 pip install -e .
 ```
+For Isaacsim, also need the following commands:
+```bash
+pip install numpy==1.26.0 # For Isaacsim
+pip install jax==0.6.0 # For Isaacsim
+```
 
-This installation typically takes ~2-3 minutes.
+
 
 
