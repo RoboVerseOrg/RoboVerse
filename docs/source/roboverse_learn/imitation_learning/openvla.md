@@ -116,6 +116,18 @@ ninja --version   # should print a version number
 pip install "flash-attn==2.5.5" --no-build-isolation
 ```
 
+**Troubleshooting Flash Attention Installation:**
+
+If you encounter the following error with CUDA 12+ and PyTorch 2.6:
+
+```
+undefined symbol: _ZN3c105ErrorC2ENS_14SourceLocationENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+```
+
+**Solution:** Download the appropriate wheel file for your CUDA and PyTorch versions from the official Flash Attention releases: [https://github.com/Dao-AILab/flash-attention/releases](https://github.com/Dao-AILab/flash-attention/releases)
+
+For a stable CUDA 12 environment, we recommend using **flash-attn 2.7.4**.
+
 #### Step 3.3 Fine-tuning Execution
 If you haven't downloaded the OpenVLA checkpoints yet, set your Hugging Face token as an environment variable and then run:
 ```bash

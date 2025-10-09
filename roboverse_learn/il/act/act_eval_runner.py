@@ -199,7 +199,7 @@ def main():
         if args.temporal_agg:
             query_frequency = 1
             num_queries = policy_config["num_queries"]
-        max_timesteps = env.episode_length
+        max_timesteps = env.max_episode_steps
         max_timesteps = int(max_timesteps * 1)
 
     ckpt_name = args.ckpt_path.split("/")[-1]
