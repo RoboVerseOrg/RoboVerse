@@ -19,3 +19,13 @@ jax-cuda12-plugin          0.6.0
 jaxlib                     0.6.0
 dm_control                 1.0.27
 ```
+
+## Troubleshooting
+
+If you encounter cuDNN-related issues, try the following solution:
+
+1. Install cuDNN 9.1 and CUDA 12 in your conda environment
+2. Add the following line before running:
+```bash
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+```
