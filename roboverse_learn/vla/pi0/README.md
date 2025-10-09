@@ -131,3 +131,30 @@ uv run scripts/train.py pi05_roboverse_lora --exp-name=roboverse_pi05_lora --ove
 ```
 
 To fine-tune π₀ or π₀-FAST, switch the `model` field to `Pi0Config`/`Pi0FASTConfig` variants and adapt the LoRA settings accordingly.
+
+### 5. Evaluate the trained checkpoint
+
+  1. Start the policy server from *inside* the openpi repo (pointing to whatever checkpoint you want to
+  test; here we use iteration 6000):
+
+     ```bash
+     cd ~/codes/openpi
+     uv run scripts/serve_policy.py policy:checkpoint \
+       --policy.config=pi05_roboverse_lora \
+       --policy.dir=<your_checkpoint_path>
+
+  2. In a separate terminal, launch the RoboVerse evaluation client:
+     ```bash
+     cd ~/codes/RoboVerse
+     python roboverse_learn/vla/pi0/pi_eval.py \
+       --task <task_name> --robot franka --sim mujoco \
+       --policy-host localhost --policy-port 8000
+     ```
+   
+
+        You can shrink the command frequency by supplying --actions-per-call N (e.g., --actions-per-call 5
+  executes five cached commands before querying the server again), and other options such as --max_steps,
+  --num_episodes, or --output-dir.
+  3. After each run, a metrics JSON and an episode video will appear in pi_eval_output/ (for example
+  pi_eval_output/episode_001.mp4). Review the MP4 to check the rollout qualitatively.
+
