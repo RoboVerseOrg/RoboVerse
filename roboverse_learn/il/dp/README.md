@@ -26,7 +26,7 @@ Register for a Weights & Biases (wandb) account to obtain an API key.
 ### 3.1 Train only
 ```bash
 train_enable=True
-eval_enable=TruFalsee
+eval_enable=False
 ```
 ### 3.2 Eval only
 ```bash

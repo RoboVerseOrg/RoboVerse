@@ -40,7 +40,7 @@ from roboverse_pack.randomization import (
     ObjectPresets,
     ObjectRandomizer,
 )
-from roboverse_pack.randomization.presets.light_presets import LightScenarios
+# from roboverse_pack.randomization.presets.light_presets import LightScenarios
 
 from metasim.task.registry import get_task_class
 
@@ -122,30 +122,30 @@ class DomainRandomizationManager:
                 randomizers["material"].append(rand)
 
         # 3. Initialize light randomizers
-        if self.cfg.enable:
-            light_configs = []
-            if self.cfg.lighting_scenario == "indoor_room":
-                light_configs = LightScenarios.indoor_room()
-            elif self.cfg.lighting_scenario == "outdoor_scene":
-                light_configs = LightScenarios.outdoor_scene()
-            elif self.cfg.lighting_scenario == "studio":
-                light_configs = LightScenarios.three_point_studio()
-            elif self.cfg.lighting_scenario == "demo":
-                light_configs = [
-                    LightPresets.demo_colors("rainbow_light"),
-                    LightPresets.demo_positions("disco_light"),
-                    LightPresets.demo_positions("shadow_light")
-                ]
-            else:  # default
-                light_configs = [
-                    LightPresets.outdoor_daylight("light"),
-                    #LightPresets.indoor_ambient("ambient_light")
-                ]
+        # if self.cfg.enable:
+        #     light_configs = []
+        #     if self.cfg.lighting_scenario == "indoor_room":
+        #         light_configs = LightScenarios.indoor_room()
+        #     elif self.cfg.lighting_scenario == "outdoor_scene":
+        #         light_configs = LightScenarios.outdoor_scene()
+        #     elif self.cfg.lighting_scenario == "studio":
+        #         light_configs = LightScenarios.three_point_studio()
+        #     elif self.cfg.lighting_scenario == "demo":
+        #         light_configs = [
+        #             LightPresets.demo_colors("rainbow_light"),
+        #             LightPresets.demo_positions("disco_light"),
+        #             LightPresets.demo_positions("shadow_light")
+        #         ]
+        #     else:  # default
+        #         light_configs = [
+        #             LightPresets.outdoor_daylight("light"),
+        #             #LightPresets.indoor_ambient("ambient_light")
+        #         ]
 
-            for cfg in light_configs:
-                light_rand = LightRandomizer(cfg, seed=self.cfg.seed)
-                light_rand.bind_handler(self.sim_handler)
-                randomizers["light"].append(light_rand)
+        #     for cfg in light_configs:
+        #         light_rand = LightRandomizer(cfg, seed=self.cfg.seed)
+        #         light_rand.bind_handler(self.sim_handler)
+        #         randomizers["light"].append(light_rand)
 
         # 4. Initialize camera randomizer
         if self.cfg.enable:
@@ -491,7 +491,7 @@ class DPRunner(BaseRunner):
 
         # Setup Domain Randomization Config
         self.dr_cfg = DomainRandomizationCfg(
-            enable=True,
+            enable=False,
             seed=args.dr_seed if hasattr(args, "dr_seed") else 42,
             use_unified_object_randomizer=True,
             lighting_scenario=args.lighting_scenario if hasattr(args, "lighting_scenario") else "default",
