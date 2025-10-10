@@ -48,8 +48,8 @@ def parse_args():
     parser.add_argument(
         "--sim",
         type=str,
-        default="isaaclab",
-        choices=["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"],
+        default="isaacsim",
+        choices=["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"],
     )
     parser.add_argument(
         "--algo",
@@ -72,6 +72,11 @@ def parse_args():
         "--headless",
         type=bool,
         default=False,
+    )
+    parser.add_argument(
+        "--num_eval",
+        type=int,
+        default=10,
     )
 
     args = parser.parse_args()
@@ -221,8 +226,9 @@ def main():
 
     ## Reset before first step
     TotalSuccess = 0
+    num_eval: int = args.num_eval
 
-    for i in range(100):
+    for i in range(num_eval):
         tic = time.time()
         obs, extras = env.reset(states=[init_states[-(i + 1)]])
         toc = time.time()
@@ -310,7 +316,7 @@ def main():
 
             images_to_video(image_list, f"tmp/{args.algo}/{args.task}/{ckpt_name}/{i}.mp4")
 
-    print("Success Rate: ", TotalSuccess / 100.0)
+    print("Success Rate: ", TotalSuccess / num_eval)
     env.close()
 
 
