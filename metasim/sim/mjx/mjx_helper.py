@@ -23,7 +23,7 @@ def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.nd
         return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
     except AttributeError:
         # Fallback to old API
-        return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
+        return jax.dlpack.from_dlpack(arr.__dlpack__())
 
 
 def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
