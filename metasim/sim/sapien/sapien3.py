@@ -8,15 +8,19 @@ Currently using Sapien 2.2
 from __future__ import annotations
 
 import math
+import os
+import xml.etree.ElementTree as ET
 from copy import deepcopy
 
 import numpy as np
 import sapien
 import sapien.core as sapien_core
+import sapien.physx as physx
 import torch
 from loguru import logger as log
 from packaging.version import parse as parse_version
 from sapien.utils import Viewer
+from scipy.spatial.transform import Rotation as R
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import (
@@ -34,6 +38,91 @@ from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
 from .sapien2 import _load_init_pose
+
+__all__ = [
+    "Sapien3Handler",
+    "load_actor_from_urdf",
+]
+
+
+def load_actor_from_urdf(
+    scene: sapien.Scene,
+    file_path: str,
+    pose: sapien.Pose | None = None,
+    use_static: bool = False,
+    update_mass: bool = False,
+    scale: float | np.ndarray = 1.0,
+) -> sapien.pysapien.Entity:
+    def _get_local_pose(origin_tag: ET.Element | None) -> sapien.Pose:
+        local_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
+        if origin_tag is not None:
+            xyz = list(map(float, origin_tag.get("xyz", "0 0 0").split()))
+            rpy = list(map(float, origin_tag.get("rpy", "0 0 0").split()))
+            qx, qy, qz, qw = R.from_euler("xyz", rpy, degrees=False).as_quat()
+            local_pose = sapien.Pose(p=xyz, q=[qw, qx, qy, qz])
+
+        return local_pose
+
+    tree = ET.parse(file_path)
+    root = tree.getroot()
+    node_name = root.get("name")
+    file_dir = os.path.dirname(file_path)
+
+    visual_mesh = root.find(".//visual/geometry/mesh")
+    visual_file = visual_mesh.get("filename")
+    visual_scale = visual_mesh.get("scale", "1.0 1.0 1.0")
+    visual_scale = np.array([float(x) for x in visual_scale.split()]) * np.array(scale)
+
+    collision_mesh = root.find(".//collision/geometry/mesh")
+    collision_file = collision_mesh.get("filename")
+    collision_scale = collision_mesh.get("scale", "1.0 1.0 1.0")
+    collision_scale = np.array([float(x) for x in collision_scale.split()]) * np.array(scale)
+
+    visual_pose = _get_local_pose(root.find(".//visual/origin"))
+    collision_pose = _get_local_pose(root.find(".//collision/origin"))
+
+    visual_file = os.path.join(file_dir, visual_file)
+    collision_file = os.path.join(file_dir, collision_file)
+    mu1 = root.find(".//collision/gazebo/mu1")
+    mu2 = root.find(".//collision/gazebo/mu2")
+    static_fric = mu1.text if mu1 is not None else 0.5
+    dynamic_fric = mu2.text if mu2 is not None else 0.5
+
+    material = physx.PhysxMaterial(
+        static_friction=np.clip(float(static_fric), 0.1, 0.7),
+        dynamic_friction=np.clip(float(dynamic_fric), 0.1, 0.6),
+        restitution=0.05,
+    )
+    builder = scene.create_actor_builder()
+
+    body_type = "static" if use_static else "dynamic"
+    builder.set_physx_body_type(body_type)
+    builder.add_multiple_convex_collisions_from_file(
+        collision_file,
+        material=material,
+        scale=collision_scale,
+        # decomposition="coacd",
+        # decomposition_params=dict(
+        #     threshold=0.05, max_convex_hull=64, verbose=False
+        # ),
+        pose=collision_pose,
+    )
+
+    builder.add_visual_from_file(
+        visual_file,
+        scale=visual_scale,
+        pose=visual_pose,
+    )
+    if pose is None:
+        pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
+    builder.set_initial_pose(pose)
+    actor = builder.build(name=node_name)
+
+    if update_mass and hasattr(actor.components[1], "mass"):
+        node_mass = float(root.find(".//inertial/mass").get("value"))
+        actor.components[1].set_mass(node_mass)
+
+    return actor
 
 
 class Sapien3Handler(BaseSimHandler):
@@ -221,25 +310,25 @@ class Sapien3Handler(BaseSimHandler):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
-                curr_id: sapien_core.Entity
-                try:
-                    curr_id = self.loader.load(file_path)
-                except Exception as e:
-                    log.warning(f"Error loading {file_path}: {e}")
-                    curr_id_list = self.loader.load_multiple(file_path)
-                    # TODO:
-                    # Don't understand why some urdf are treated as multiple entities
-                    # Needs to figure out a better way to load!
-                    for id in curr_id_list:
-                        if len(id):
-                            curr_id = id
-                            break
-                # builder = self.loader.load_file_as_articulation_builder(file_path)
-                if isinstance(curr_id, list):
-                    ## HACK
-                    curr_id = curr_id[0]
-                curr_id.set_pose(_load_init_pose(object))
-
+                # curr_id: sapien_core.Entity
+                # try:
+                #     curr_id = self.loader.load(file_path)
+                # except Exception as e:
+                #     log.warning(f"Error loading {file_path}: {e}")
+                #     curr_id_list = self.loader.load_multiple(file_path)
+                #     # TODO:
+                #     # Don't understand why some urdf are treated as multiple entities
+                #     # Needs to figure out a better way to load!
+                #     for id in curr_id_list:
+                #         if len(id):
+                #             curr_id = id
+                #             break
+                # # builder = self.loader.load_file_as_articulation_builder(file_path)
+                # if isinstance(curr_id, list):
+                #     ## HACK
+                #     curr_id = curr_id[0]
+                # curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
+                curr_id = load_actor_from_urdf(self.scene, file_path, scale=object.scale)
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
