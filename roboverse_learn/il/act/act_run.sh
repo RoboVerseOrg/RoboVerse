@@ -1,14 +1,5 @@
-# Examples:
-# bash roboverse_learn/il/utils/act/train_act.sh roboverse_demo/demo_mujoco/close_box-/robot-franka close_box 100 0 2000 ee ee
-
-# 'metadata_dir' means path to metadata directory. e.g. roboverse_demo/demo_isaaclab/CloseBox-Level0/robot-franka
-# 'task_name' gives a name to the policy, which can include the task robot and level ie CloseBoxFrankaL0
-# 'expert_data_num' means number of training data. e.g.100
-# 'gpu_id' means single gpu id, e.g.0
-
-
-train_enable=true
-eval_enable=false
+train_enable=false
+eval_enable=true
 
 
 task_name=close_box
@@ -23,7 +14,7 @@ delta_ee=0 # 0 or 1 (only matters if act_space is ee, 0 means absolute 1 means d
 
 alg_name=ACT
 seed=42
-level=2
+level=0
 
 extra="obs:${obs_space}_act:${act_space}"
 if [ "${delta_ee}" = 1 ]; then
@@ -53,6 +44,7 @@ if [ "${eval_enable}" = "true" ]; then
   --num_envs 1 \
   --sim ${sim_set} \
   --algo act \
-  --ckpt_path ~/RoboVerse/info/outputs/ACT/2025.09.04/01.37.14_close_box_obs:joint_pos_act:joint_pos_100 \
-  --headless True
+  --ckpt_path /home/jjindou/RoboVerse/info/outputs/ACT/2025.10.09/12.45.48_close_box_obs:joint_pos_act:joint_pos_100 \
+  --headless True \
+  --num_eval 10
 fi
