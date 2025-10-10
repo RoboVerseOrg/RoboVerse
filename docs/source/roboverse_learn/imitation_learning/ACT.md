@@ -105,3 +105,5 @@ pip install pandas wandb
 
 
 num_eval
+
+**Outputs**: Training result is stored in `~/RoboVerse/info/outputs/ACT`. Evaluation result is stored in `~/RoboVerse/tmp/act`
