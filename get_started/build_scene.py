@@ -207,7 +207,7 @@ if __name__ == "__main__":
     @configclass
     class Args:
         robot: str = "franka"
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
         num_envs: int = 1
         headless: bool = False
         step_size: float = 0.01
