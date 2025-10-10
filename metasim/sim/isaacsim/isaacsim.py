@@ -570,7 +570,7 @@ class IsaacsimHandler(BaseSimHandler):
         ## Rigid object
         if isinstance(obj, RigidObjCfg):
             usd_file_cfg = sim_utils.UsdFileCfg(
-                usd_path=obj.usd_path,
+                usd_path=os.path.abspath(obj.usd_path),
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
