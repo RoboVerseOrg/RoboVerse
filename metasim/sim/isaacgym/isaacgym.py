@@ -834,40 +834,69 @@ class IsaacgymHandler(BaseSimHandler):
 
         # if states is TensorState, reindex the tensors and set state
         elif isinstance(states, TensorState):
-            new_root_states = self._root_states.view(self.num_envs, -1, 13)
-            new_dof_states = self._dof_states.view(self.num_envs, -1, 2)
-            for idx, obj in enumerate(self.objects):
-                obj_state = states.objects[obj.name]
-                roo_state = self._reorder_quat_xyzw_to_wxyz(obj_state.root_state, reverse=True)
-                new_root_states[env_ids, idx, :] = roo_state[env_ids, :]
-                if isinstance(obj, ArticulationObjCfg):
-                    joint_pos = obj_state.joint_pos
-                    joint_vel = obj_state.joint_vel
-                    joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
-                    new_dof_states[env_ids, :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
-                    new_dof_states[env_ids, :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
-            for idx, robot in enumerate(self.robots):
-                robot_state = states.robots[robot.name]
-                root_state = self._reorder_quat_xyzw_to_wxyz(robot_state.root_state, reverse=True)
-                new_root_states[env_ids, len(self.objects) + idx, :] = root_state[env_ids, :]
-                joint_pos = robot_state.joint_pos
-                joint_vel = robot_state.joint_vel
-                joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
-                new_dof_states[env_ids, self._obj_num_dof :, 0] = joint_pos[env_ids, :][:, joint_ids_reindex]
-                new_dof_states[env_ids, self._obj_num_dof :, 1] = joint_vel[env_ids, :][:, joint_ids_reindex]
+            new_root_states = self._root_states.clone()
+            new_dof_states = self._dof_states.clone()
+            
+            # Calculate actor indices that need to be updated
+            actor_indices = []
+            for env_id in env_ids:
+                env_offset = env_id * (len(self.objects) + len(self.robots))
+                # Set object states
+                for idx, obj in enumerate(self.objects):
+                    obj_state = states.objects[obj.name]
+                    root_state = self._reorder_quat_xyzw_to_wxyz(obj_state.root_state, reverse=True)
+                    actor_idx = env_offset + idx
+                    new_root_states[actor_idx, :] = root_state[env_id, :]
+                    actor_indices.append(actor_idx)
+                    
+                    # Only articulated objects have DOF states
+                    if isinstance(obj, ArticulationObjCfg):
+                        joint_pos = obj_state.joint_pos
+                        joint_vel = obj_state.joint_vel
+                        # Get global joint indices for this object (already in sorted order)
+                        joint_ids_global = self._get_joint_ids_reindex(obj.name)
+                        # Set DOF states - convert to linear indices
+                        # Note: joint_pos/vel from get_states are already in sorted order
+                        for local_j_idx, global_j_idx in enumerate(joint_ids_global):
+                            # Calculate linear index in flattened DOF tensor
+                            dof_linear_idx = env_id * self._num_joints + global_j_idx
+                            new_dof_states[dof_linear_idx, 0] = joint_pos[env_id, local_j_idx]
+                            new_dof_states[dof_linear_idx, 1] = joint_vel[env_id, local_j_idx]
+                
+                # Set robot states
+                for idx, robot in enumerate(self.robots):
+                    robot_state = states.robots[robot.name]
+                    root_state = self._reorder_quat_xyzw_to_wxyz(robot_state.root_state, reverse=True)
+                    actor_idx = env_offset + len(self.objects) + idx
+                    new_root_states[actor_idx, :] = root_state[env_id, :]
+                    actor_indices.append(actor_idx)
+                    joint_pos = robot_state.joint_pos
+                    joint_vel = robot_state.joint_vel
+                    # Get global joint indices for robot (already in sorted order)
+                    joint_ids_global = self._get_joint_ids_reindex(robot.name)
+                    # Set DOF states - convert to linear indices
+                    # Note: joint_pos/vel from get_states are already in sorted order
+                    for local_j_idx, global_j_idx in enumerate(joint_ids_global):
+                        # Calculate linear index in flattened DOF tensor
+                        dof_linear_idx = env_id * self._num_joints + global_j_idx
+                        new_dof_states[dof_linear_idx, 0] = joint_pos[env_id, local_j_idx]
+                        new_dof_states[dof_linear_idx, 1] = joint_vel[env_id, local_j_idx]
 
-            env_ids_int32_tensor = torch.tensor(env_ids, dtype=torch.int32, device=self.device)
+            # Convert the actor indices to a tensor
+            actor_indices_tensor = torch.tensor(actor_indices, dtype=torch.int32, device=self.device)
+            
+            # Use indexed setting to set the root state
             self.gym.set_actor_root_state_tensor_indexed(
                 self.sim,
                 gymtorch.unwrap_tensor(new_root_states),
-                gymtorch.unwrap_tensor(env_ids_int32_tensor),
-                len(env_ids),
+                gymtorch.unwrap_tensor(actor_indices_tensor),
+                len(actor_indices),
             )
-            self.gym.set_dof_state_tensor_indexed(
+            
+            # Use set_dof_state_tensor (not indexed) as we've already modified the specific DOF indices
+            self.gym.set_dof_state_tensor(
                 self.sim,
                 gymtorch.unwrap_tensor(new_dof_states),
-                gymtorch.unwrap_tensor(env_ids_int32_tensor),
-                len(env_ids),
             )
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
