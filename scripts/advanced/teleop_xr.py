@@ -135,7 +135,7 @@ def main():
 
         right_grip = xr_client.get_key_value_by_name("right_grip")
         teleop_active = right_grip > 0.5
-        gripper_close = xr_client.get_key_value_by_name("right_trigger") > 0.5
+        gripper_open = xr_client.get_key_value_by_name("right_trigger") < 0.5
 
         if teleop_active:
             controller_pose = xr_client.get_pose_by_name("right_controller")
@@ -187,7 +187,7 @@ def main():
 
         # Process gripper command
         gripper_widths = process_gripper_command(
-            torch.tensor(gripper_close, dtype=torch.float32, device=device), scenario.robots[0], device
+            torch.tensor(gripper_open, dtype=torch.float32, device=device), scenario.robots[0], device
         )
 
         # Compose joint action
