@@ -836,7 +836,7 @@ class IsaacgymHandler(BaseSimHandler):
         elif isinstance(states, TensorState):
             new_root_states = self._root_states.clone()
             new_dof_states = self._dof_states.clone()
-            
+
             # Calculate actor indices that need to be updated
             actor_indices = []
             for env_id in env_ids:
@@ -848,7 +848,7 @@ class IsaacgymHandler(BaseSimHandler):
                     actor_idx = env_offset + idx
                     new_root_states[actor_idx, :] = root_state[env_id, :]
                     actor_indices.append(actor_idx)
-                    
+
                     # Only articulated objects have DOF states
                     if isinstance(obj, ArticulationObjCfg):
                         joint_pos = obj_state.joint_pos
@@ -862,7 +862,7 @@ class IsaacgymHandler(BaseSimHandler):
                             dof_linear_idx = env_id * self._num_joints + global_j_idx
                             new_dof_states[dof_linear_idx, 0] = joint_pos[env_id, local_j_idx]
                             new_dof_states[dof_linear_idx, 1] = joint_vel[env_id, local_j_idx]
-                
+
                 # Set robot states
                 for idx, robot in enumerate(self.robots):
                     robot_state = states.robots[robot.name]
@@ -884,7 +884,7 @@ class IsaacgymHandler(BaseSimHandler):
 
             # Convert the actor indices to a tensor
             actor_indices_tensor = torch.tensor(actor_indices, dtype=torch.int32, device=self.device)
-            
+
             # Use indexed setting to set the root state
             self.gym.set_actor_root_state_tensor_indexed(
                 self.sim,
@@ -892,7 +892,7 @@ class IsaacgymHandler(BaseSimHandler):
                 gymtorch.unwrap_tensor(actor_indices_tensor),
                 len(actor_indices),
             )
-            
+
             # Use set_dof_state_tensor (not indexed) as we've already modified the specific DOF indices
             self.gym.set_dof_state_tensor(
                 self.sim,
