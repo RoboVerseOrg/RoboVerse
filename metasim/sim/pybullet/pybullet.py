@@ -24,6 +24,11 @@ from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
+PYBULLET_DEFAULT_POSITION_GAIN = 0.1
+PYBULLET_DEFAULT_VELOCITY_GAIN = 1.0
+PYBULLET_DEFAULT_JOINT_MAX_VEL = 1.0
+PYBULLET_DEFAULT_JOINT_MAX_TORQUE = 1.0
+
 
 class SinglePybulletHandler(BaseSimHandler):
     """Pybullet Handler class."""
@@ -43,7 +48,6 @@ class SinglePybulletHandler(BaseSimHandler):
         self.client = p.connect(p.DIRECT if self.headless else p.GUI)
         p.setPhysicsEngineParameter(
             fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
-            deterministicOverlappingPairs=1,
         )
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
@@ -124,10 +128,10 @@ class SinglePybulletHandler(BaseSimHandler):
                             jointIndex=j,
                             controlMode=p.POSITION_CONTROL,
                             targetPosition=default_target,
-                            positionGain=joint_config.stiffness or 100,
-                            velocityGain=joint_config.damping or 10,
-                            maxVelocity=joint_config.velocity_limit or 2.0,
-                            force=joint_config.torque_limit or 1000,
+                            positionGain=joint_config.stiffness or PYBULLET_DEFAULT_POSITION_GAIN,
+                            velocityGain=joint_config.damping or PYBULLET_DEFAULT_VELOCITY_GAIN,
+                            maxVelocity=joint_config.velocity_limit or PYBULLET_DEFAULT_JOINT_MAX_VEL,
+                            force=joint_config.torque_limit or PYBULLET_DEFAULT_JOINT_MAX_TORQUE,
                         )
 
                 ### TODO:
