@@ -24,6 +24,11 @@ from metasim.types import Action, DictEnvState
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
+PYBULLET_DEFAULT_POSITION_GAIN = 0.1
+PYBULLET_DEFAULT_VELOCITY_GAIN = 1.0
+PYBULLET_DEFAULT_JOINT_MAX_VEL = 1.0
+PYBULLET_DEFAULT_JOINT_MAX_TORQUE = 1.0
+
 
 class SinglePybulletHandler(BaseSimHandler):
     """Pybullet Handler class."""
@@ -43,7 +48,6 @@ class SinglePybulletHandler(BaseSimHandler):
         self.client = p.connect(p.DIRECT if self.headless else p.GUI)
         p.setPhysicsEngineParameter(
             fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
-            numSolverIterations=300,
         )
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
@@ -110,12 +114,25 @@ class SinglePybulletHandler(BaseSimHandler):
                 jointIndices = range(num_joints)
 
                 if isinstance(object, RobotCfg):
-                    p.setJointMotorControlMultiDofArray(
-                        curr_id,
-                        jointIndices,
-                        p.POSITION_CONTROL,
-                        # targetPositions = agent.dof.target
-                    )
+                    # p.setJointMotorControlMultiDofArray(
+                    #     curr_id,
+                    #     jointIndices,
+                    #     p.POSITION_CONTROL,
+                    #     # targetPositions = agent.dof.target
+                    # )
+                    for j in range(num_joints):
+                        joint_config = object.actuators[cur_joint_names[j]]
+                        default_target = object.default_joint_positions.get(cur_joint_names[j], 0.0)
+                        p.setJointMotorControl2(
+                            bodyIndex=curr_id,
+                            jointIndex=j,
+                            controlMode=p.POSITION_CONTROL,
+                            targetPosition=default_target,
+                            positionGain=joint_config.stiffness or PYBULLET_DEFAULT_POSITION_GAIN,
+                            velocityGain=joint_config.damping or PYBULLET_DEFAULT_VELOCITY_GAIN,
+                            maxVelocity=joint_config.velocity_limit or PYBULLET_DEFAULT_JOINT_MAX_VEL,
+                            force=joint_config.torque_limit or PYBULLET_DEFAULT_JOINT_MAX_TORQUE,
+                        )
 
                 ### TODO:
                 # Add dof properties for articulated objects
@@ -261,8 +278,6 @@ class SinglePybulletHandler(BaseSimHandler):
 
         for i in range(self.scenario.decimation):
             p.stepSimulation()
-
-        # return None, None, np.zeros(1), np.zeros(1), np.zeros(1)
 
     def refresh_render(self):
         """Refresh the render."""
