@@ -14,7 +14,7 @@ from rich.logging import RichHandler
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 conda_envs = {
-    "isaaclab": "metasim",
+    "isaacsim": "metasim",
     "mujoco": "metasim",
     "sapien3": "metasim",
     "pybullet": "metasim",
@@ -106,11 +106,13 @@ def main():
         log_dir = os.path.join(base_log_dir, f"{task}_{robot}_{simulator}", command_name)
         result_dir = os.path.join(log_dir, "results")
         if command_name == "minimal":
-            command = f"conda run --no-capture-output -n {conda_envs[simulator]} python dashboard/minimal_test_script.py --task={task} --robot={robot} --sim={simulator} --save_dir={result_dir}"
+            command = f"python dashboard/minimal_test_script.py --task={task} --robot={robot} --sim={simulator} --save_dir={result_dir}"
         elif command_name == "replay_demo":
-            command = f"conda run --no-capture-output -n {conda_envs[simulator]} python scripts/advanced/replay_demo.py --task={task} --robot={robot} --sim={simulator} --save-video-path={os.path.join(result_dir, 'video.mp4')} --headless --stop-on-runout"
+            command = f"python scripts/advanced/replay_demo.py --task={task} --robot={robot} --sim={simulator} --save-video-path={os.path.join(result_dir, 'video.mp4')} --headless --stop-on-runout"
         else:
             raise ValueError(f"Command {command_name} not found")
+
+        command = f"conda run --no-capture-output -n {conda_envs[simulator]} " + command
 
         if not should_run(log_dir):
             log.info(f"Skipping {log_dir} because it is already finished")

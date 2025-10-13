@@ -45,8 +45,8 @@ class Args:
     # random: RandomizationCfg = RandomizationCfg()
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
-    renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
     num_envs: int = 1
@@ -227,6 +227,8 @@ def main():
 
     obs_saver.save()
     env.close()
+    if args.sim == "isaacsim":
+        env.handler.simulation_app.close()
 
 
 if __name__ == "__main__":

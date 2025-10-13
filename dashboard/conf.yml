@@ -2,152 +2,152 @@ tasks:
   maniskill:
   - pick_cube
   - stack_cube
-  - maniskill:plug_charger
-  - maniskill:peg_insertion_side_363
-  - maniskill:pick_single_egad_d_113
-  - maniskill:pick_single_ycb_lego_duplo
-  - maniskill:pick_single_ycb_master_chef_can
+  # - maniskill.plug_charger
+  # - maniskill.peg_insertion_side_363
+  # - maniskill.pick_single_egad_d_113
+  # - maniskill.pick_single_ycb_lego_duplo
+  # - maniskill.pick_single_ycb_master_chef_can
   rlbench:
   - close_box
-  - basketball_in_hoop
-  - rlbench:beat_the_buzz
-  - rlbench:block_pyramid
-  - rlbench:change_channel
-  - rlbench:change_clock
-  - rlbench:close_door
-  - rlbench:open_door
-  - rlbench:close_drawer
-  - rlbench:open_drawer
-  - rlbench:close_fridge
-  - rlbench:open_fridge
-  - rlbench:close_grill
-  - rlbench:close_jar
-  - rlbench:close_laptop_lid
-  - rlbench:close_microwave
-  - rlbench:open_microwave
-  - rlbench:empty_dishwasher
-  - rlbench:get_ice_from_fridge
-  - rlbench:hang_frame_on_hanger
-  - rlbench:hit_ball_with_queue
-  - rlbench:hockey
-  - rlbench:insert_onto_square_peg
-  - rlbench:lamp_off
-  - rlbench:lamp_on
-  - rlbench:lift_numbered_block
-  - rlbench:light_bulb_in
-  - rlbench:light_bulb_out
-  - rlbench:meat_off_grill
-  - rlbench:meat_on_grill
-  - rlbench:open_box
-  - rlbench:open_grill
-  - rlbench:open_jar
-  - rlbench:open_oven
-  - rlbench:put_tray_in_oven
-  - rlbench:take_tray_out_of_oven
-  - rlbench:open_washing_machine
-  - rlbench:open_window
-  - rlbench:open_wine_bottle
-  - rlbench:phone_on_base
-  - rlbench:pick_and_lift
-  - rlbench:pick_and_lift_small
-  - rlbench:pick_up_cup
-  - rlbench:place_cups
-  - rlbench:remove_cups
-  - rlbench:place_shape_in_shape_sorter
-  - rlbench:play_jenga
-  - rlbench:plug_charger_in_power_supply
-  - rlbench:pour_from_cup_to_cup
-  - rlbench:press_switch
-  - rlbench:push_button
-  - rlbench:push_buttons
-  - rlbench:put_all_groceries_in_cupboard
-  - rlbench:put_books_on_bookshelf
-  - rlbench:put_bottle_in_fridge
-  - rlbench:put_groceries_in_cupboard
-  - rlbench:put_item_in_drawer
-  - rlbench:put_knife_in_knife_block
-  - rlbench:put_knife_on_chopping_board
-  - rlbench:put_money_in_safe
-  - rlbench:put_plate_in_colored_dish_rack
-  - rlbench:put_rubbish_in_bin
-  - rlbench:put_shoes_in_box
-  - rlbench:put_toilet_roll_on_stand
-  - rlbench:put_umbrella_in_umbrella_stand
-  - rlbench:reach_and_drag
-  - rlbench:reach_target
-  - rlbench:scoop_with_spatula
-  - rlbench:screw_nail
-  - rlbench:set_the_table
-  - rlbench:setup_checkers
-  - rlbench:setup_chess
-  - rlbench:slide_block_to_target
-  - rlbench:slide_cabinet_open_and_place_cups
-  - rlbench:take_cup_out_from_cabinet
-  - rlbench:stack_blocks
-  - rlbench:stack_chairs
-  - rlbench:stack_cups
-  - rlbench:stack_wine
-  - rlbench:sweep_to_dustpan
+  # - basketball_in_hoop
+  # - rlbench.beat_the_buzz
+  # - rlbench.block_pyramid
+  # - rlbench.change_channel
+  # - rlbench.change_clock
+  # - rlbench.close_door
+  # - rlbench.open_door
+  # - rlbench.close_drawer
+  # - rlbench.open_drawer
+  # - rlbench.close_fridge
+  # - rlbench.open_fridge
+  # - rlbench.close_grill
+  # - rlbench.close_jar
+  # - rlbench.close_laptop_lid
+  # - rlbench.close_microwave
+  # - rlbench.open_microwave
+  # - rlbench.empty_dishwasher
+  # - rlbench.get_ice_from_fridge
+  # - rlbench.hang_frame_on_hanger
+  # - rlbench.hit_ball_with_queue
+  # - rlbench.hockey
+  # - rlbench.insert_onto_square_peg
+  # - rlbench.lamp_off
+  # - rlbench.lamp_on
+  # - rlbench.lift_numbered_block
+  # - rlbench.light_bulb_in
+  # - rlbench.light_bulb_out
+  # - rlbench.meat_off_grill
+  # - rlbench.meat_on_grill
+  # - rlbench.open_box
+  # - rlbench.open_grill
+  # - rlbench.open_jar
+  # - rlbench.open_oven
+  # - rlbench.put_tray_in_oven
+  # - rlbench.take_tray_out_of_oven
+  # - rlbench.open_washing_machine
+  # - rlbench.open_window
+  # - rlbench.open_wine_bottle
+  # - rlbench.phone_on_base
+  # - rlbench.pick_and_lift
+  # - rlbench.pick_and_lift_small
+  # - rlbench.pick_up_cup
+  # - rlbench.place_cups
+  # - rlbench.remove_cups
+  # - rlbench.place_shape_in_shape_sorter
+  # - rlbench.play_jenga
+  # - rlbench.plug_charger_in_power_supply
+  # - rlbench.pour_from_cup_to_cup
+  # - rlbench.press_switch
+  # - rlbench.push_button
+  # - rlbench.push_buttons
+  # - rlbench.put_all_groceries_in_cupboard
+  # - rlbench.put_books_on_bookshelf
+  # - rlbench.put_bottle_in_fridge
+  # - rlbench.put_groceries_in_cupboard
+  # - rlbench.put_item_in_drawer
+  # - rlbench.put_knife_in_knife_block
+  # - rlbench.put_knife_on_chopping_board
+  # - rlbench.put_money_in_safe
+  # - rlbench.put_plate_in_colored_dish_rack
+  # - rlbench.put_rubbish_in_bin
+  # - rlbench.put_shoes_in_box
+  # - rlbench.put_toilet_roll_on_stand
+  # - rlbench.put_umbrella_in_umbrella_stand
+  # - rlbench.reach_and_drag
+  # - rlbench.reach_target
+  # - rlbench.scoop_with_spatula
+  # - rlbench.screw_nail
+  # - rlbench.set_the_table
+  # - rlbench.setup_checkers
+  # - rlbench.setup_chess
+  # - rlbench.slide_block_to_target
+  # - rlbench.slide_cabinet_open_and_place_cups
+  # - rlbench.take_cup_out_from_cabinet
+  # - rlbench.stack_blocks
+  # - rlbench.stack_chairs
+  # - rlbench.stack_cups
+  # - rlbench.stack_wine
+  # - rlbench.sweep_to_dustpan
   libero:
-  - libero_pick_alphabet_soup
-  - libero_pick_bbq_sauce
-  - libero_pick_butter
-  - libero_pick_chocolate_pudding
-  - libero_pick_cream_cheese
-  - libero_pick_ketchup
-  - libero_pick_milk
-  - libero_pick_orange_juice
-  - libero_pick_salad_dressing
-  - libero_pick_tomato_sauce
-  calvin:
-  - calvin:lift_red_block_table_a
-  - calvin:lift_red_block_table_b
-  - calvin:lift_red_block_table_c
-  - calvin:lift_red_block_table_d
-  - calvin:lift_red_block_slider_a
-  - calvin:lift_red_block_drawer_a
-  - calvin:lift_blue_block_table_a
-  - calvin:lift_blue_block_slider_a
-  - calvin:lift_blue_block_drawer_a
-  - calvin:lift_pink_block_table_a
-  - calvin:lift_pink_block_slider_a
-  - calvin:lift_pink_block_drawer_a
-  - calvin:place_in_slider_a
-  - calvin:place_in_drawer_a
-  - calvin:rotate_red_block_right_a
-  - calvin:rotate_red_block_left_a
-  - calvin:rotate_blue_block_right_a
-  - calvin:rotate_blue_block_left_a
-  - calvin:rotate_pink_block_right_a
-  - calvin:rotate_pink_block_left_a
-  - calvin:push_red_block_right_a
-  - calvin:push_red_block_left_a
-  - calvin:push_blue_block_right_a
-  - calvin:push_blue_block_left_a
-  - calvin:push_pink_block_right_a
-  - calvin:push_pink_block_left_a
-  - calvin:move_slider_left_a
-  - calvin:move_slider_right_a
-  - calvin:open_drawer_a
-  - calvin:close_drawer_a
-  - calvin:stack_block_a
-  - calvin:unstack_block_a
-  - calvin:push_into_drawer_a
+  # - libero.pick_alphabet_soup
+  - libero.pick_bbq_sauce
+  - libero.pick_butter
+  # - libero.pick_chocolate_pudding
+  # - libero.pick_cream_cheese
+  # - libero.pick_ketchup
+  # - libero.pick_milk
+  # - libero.pick_orange_juice
+  # - libero.pick_salad_dressing
+  # - libero.pick_tomato_sauce
+  calvin: []
+  # - calvin.lift_red_block_table_a
+  # - calvin.lift_red_block_table_b
+  # - calvin.lift_red_block_table_c
+  # - calvin.lift_red_block_table_d
+  # - calvin.lift_red_block_slider_a
+  # - calvin.lift_red_block_drawer_a
+  # - calvin.lift_blue_block_table_a
+  # - calvin.lift_blue_block_slider_a
+  # - calvin.lift_blue_block_drawer_a
+  # - calvin.lift_pink_block_table_a
+  # - calvin.lift_pink_block_slider_a
+  # - calvin.lift_pink_block_drawer_a
+  # - calvin.place_in_slider_a
+  # - calvin.place_in_drawer_a
+  # - calvin.rotate_red_block_right_a
+  # - calvin.rotate_red_block_left_a
+  # - calvin.rotate_blue_block_right_a
+  # - calvin.rotate_blue_block_left_a
+  # - calvin.rotate_pink_block_right_a
+  # - calvin.rotate_pink_block_left_a
+  # - calvin.push_red_block_right_a
+  # - calvin.push_red_block_left_a
+  # - calvin.push_blue_block_right_a
+  # - calvin.push_blue_block_left_a
+  # - calvin.push_pink_block_right_a
+  # - calvin.push_pink_block_left_a
+  # - calvin.move_slider_left_a
+  # - calvin.move_slider_right_a
+  # - calvin.open_drawer_a
+  # - calvin.close_drawer_a
+  # - calvin.stack_block_a
+  # - calvin.unstack_block_a
+  # - calvin.push_into_drawer_a
   graspnet: []
-  gapartnet:
-  - gapartnet:gapartnet_open_drawer
-  - gapartnet:gapartnet_close_drawer
-  - gapartnet:gapartnet_open_door
-  - gapartnet:gapartnet_close_door
-  - gapartnet:gapartnet_press_button
+  gapartnet: []
+  # - gapartnet.gapartnet_open_drawer
+  # - gapartnet.gapartnet_close_drawer
+  # - gapartnet.gapartnet_open_door
+  # - gapartnet.gapartnet_close_door
+  # - gapartnet.gapartnet_press_button
   arnold: []
   unidoormanip: []
   simpler: []
-  robosuite:
-  - robosuite:square_d0
-  - robosuite:square_d1
-  - robosuite:square_d2
-  - robosuite:stack_d0
+  robosuite: []
+  # - robosuite.square_d0
+  # - robosuite.square_d1
+  # - robosuite.square_d2
+  # - robosuite.stack_d0
   metaworld: []
   rlafford: []
 
@@ -155,14 +155,13 @@ robots:
 - franka
 
 simulators:
-- isaaclab
+- isaacsim
 - mujoco
 - isaacgym
 - sapien3
 - pybullet
 - genesis
-# - blender
 
 commands:
-- minimal
+# - minimal
 - replay_demo
