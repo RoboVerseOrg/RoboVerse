@@ -208,3 +208,5 @@ dict_traj_state = {
     ...
 }
 ```
+
+Trajectories can be loaded with `metasim.utils.demo_util.loader.load_traj_file()`, and can be saved with `metasim.utils.demo_util.loader.save_traj_file()`.
