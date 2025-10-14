@@ -1,6 +1,6 @@
 # Contributing Trajectories
 
-Witha task defined, we can also define the related trajectories for the task, to be the demonstration for the environment. 
+With a task defined, we can also define the related trajectories for the task, to be the demonstration for the environment. 
 
 ## 1. Record the Trajectories
 
