@@ -20,4 +20,4 @@ python scripts/advanced/replay_demo.py --sim=${simulator} --robot=${robot_name} 
 
 ## 3. Uploading the Trajectories
 
-Add the trajectories to the [RoboVerse data repository](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data) by a creating a PR. Please follow the [data structure](https://roboverse.wiki/metasim/developer_guide/data_structure). We thank you for your contribution!
+Add the trajectories to the [RoboVerse data repository](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data) by creating a PR. Please follow the [data structure](https://roboverse.wiki/metasim/developer_guide/data_structure). We thank you for your contribution!
