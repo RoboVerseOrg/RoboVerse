@@ -1,8 +1,10 @@
-# States
+# States and Trajectories
 
 ## Overview
 
 States are how we communicate with simulated environments. We provide two state types: `TensorState` and `DictEnvState` . `TensorState` is implemented with torch tensors as base data structure and designed for efficiency, while `DictEnvState` is implemented with dicts for more user-friendly interactions.
+
+When multiple states are organized as a sequence, we will have a `Trajectory`.
 
 ## Tensor State
 
@@ -161,3 +163,50 @@ object_pos = dict_state["objects"]["ball"]["pos"]
 `DictEnvState` instances can also be passed into the handler to set the simulation state.
 
 The disadvantage of `DictState` is its speed. In some cases, `DictState` is extremely slow due to frequent dict access and discontinuous memory access.
+
+## Trajectory
+
+A `Trajectory` is a file that contains a sequence of states.
+
+In Metasim, we have different versions of Trajectory formats. The most recent one is the v2 trajectory format, which is a dumped dict:
+
+```python
+trajs = {
+    <robot_name>: [
+        DictTraj1,
+        DictTraj2,
+        ...
+    ]
+}
+```
+
+Where `DictTraj` is a dict with the following structure:
+
+```python
+dict_traj = {
+    "actions": List[Dict[str, np.ndarray]],  # List of actions
+    "states": [
+        DictTrajState1,
+        DictTrajState2,
+        ...
+    ]
+}
+```
+
+Where `DictTrajState` is a dict with the following structure:
+
+```python
+dict_traj_state = {
+    <object_name1>: {
+        "pos": np.ndarray,
+        "rot": np.ndarray,
+    },
+    <object_name2>: {
+        "pos": np.ndarray,
+        "rot": np.ndarray,
+    },
+    ...
+}
+```
+
+Trajectories can be loaded with `metasim.utils.demo_util.loader.load_traj_file()`, and can be saved with `metasim.utils.demo_util.loader.save_traj_file()`.
