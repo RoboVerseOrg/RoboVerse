@@ -58,7 +58,7 @@ class Sapien2Handler(BaseSimHandler):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
         self.renderer = sapien_core.SapienRenderer()  # Create a renderer
 
-        self.time_step = 1 / 100.0
+        self.time_step = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100.0
 
         scene_config = sapien_core.SceneConfig()
         # scene_config.default_dynamic_friction = self.physical_params.dynamic_friction
