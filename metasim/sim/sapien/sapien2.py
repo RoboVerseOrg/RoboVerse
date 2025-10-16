@@ -395,6 +395,12 @@ class Sapien2Handler(BaseSimHandler):
             link_name_list.append(link.get_name())
             link_state_list.append(link_state)
         link_state_tensor = torch.cat(link_state_list, dim=0)
+
+        # sort the links by name
+        sorted_indices = sorted(range(len(link_name_list)), key=lambda i: link_name_list[i])
+        link_name_list = [link_name_list[i] for i in sorted_indices]
+        link_state_tensor = link_state_tensor[sorted_indices]
+
         return link_name_list, link_state_tensor
 
     def _get_states(self, env_ids=None) -> list[DictEnvState]:
