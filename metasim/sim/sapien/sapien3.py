@@ -69,12 +69,12 @@ def load_actor_from_urdf(
     file_dir = os.path.dirname(file_path)
 
     visual_mesh = root.find(".//visual/geometry/mesh")
-    visual_file = visual_mesh.get("filename")
+    visual_file = visual_mesh.get("filename").replace("package://", "")
     visual_scale = visual_mesh.get("scale", "1.0 1.0 1.0")
     visual_scale = np.array([float(x) for x in visual_scale.split()]) * np.array(scale)
 
     collision_mesh = root.find(".//collision/geometry/mesh")
-    collision_file = collision_mesh.get("filename")
+    collision_file = collision_mesh.get("filename").replace("package://", "")
     collision_scale = collision_mesh.get("scale", "1.0 1.0 1.0")
     collision_scale = np.array([float(x) for x in collision_scale.split()]) * np.array(scale)
 
@@ -235,6 +235,12 @@ class Sapien3Handler(BaseSimHandler):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
                         joint.set_drive_property(0, 0)
+
+                if hasattr(object, "default_joint_positions") and object.default_joint_positions:
+                    qpos_list = []
+                    for i, joint_name in enumerate(cur_joint_names):
+                        qpos_list.append(object.default_joint_positions[joint_name])
+                    curr_id.set_qpos(qpos_list)
 
                 # if agent.dof.init:
                 #     robot.set_qpos(agent.dof.init)
