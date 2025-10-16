@@ -81,8 +81,8 @@ def load_actor_from_urdf(
     visual_pose = _get_local_pose(root.find(".//visual/origin"))
     collision_pose = _get_local_pose(root.find(".//collision/origin"))
 
-    visual_file = os.path.join(file_dir, visual_file)
-    collision_file = os.path.join(file_dir, collision_file)
+    visual_file = os.path.join(file_dir, visual_file).replace("package://", "")
+    collision_file = os.path.join(file_dir, collision_file).replace("package://", "")
     mu1 = root.find(".//collision/gazebo/mu1")
     mu2 = root.find(".//collision/gazebo/mu2")
     static_fric = mu1.text if mu1 is not None else 0.5
@@ -308,6 +308,7 @@ class Sapien3Handler(BaseSimHandler):
                 builder.add_nonconvex_collision_from_file(object.usd_path, scene_pose)
                 builder.add_visual_from_file(object.usd_path, scene_pose)
                 curr_id = builder.build_static(name=object.name)
+                curr_id.set_pose(_load_init_pose(object))
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -335,6 +336,8 @@ class Sapien3Handler(BaseSimHandler):
                 #     curr_id = curr_id[0]
                 # curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
                 curr_id = load_actor_from_urdf(self.scene, file_path, scale=object.scale)
+                curr_id.set_pose(_load_init_pose(object))
+
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
@@ -476,7 +479,6 @@ class Sapien3Handler(BaseSimHandler):
 
         if len(self.link_ids[obj_name]) == 0:
             return [], torch.zeros((0, 13), dtype=torch.float32)
-
         for link in self.link_ids[obj_name]:
             pose = link.get_pose()
             pos = torch.tensor(pose.p)

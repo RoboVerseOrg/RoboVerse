@@ -149,18 +149,18 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 "ang_vel": obj_state.root_state[env_id, 10:13].cpu(),
             }
             if obj_state.body_state is not None:
-                bns = handler._get_body_names(obj_name)
+                bns = handler.get_body_names(obj_name)
                 object_states[obj_name]["body"] = _body_tensor_to_dict(obj_state.body_state[env_id], bns)
             if obj_state.joint_pos is not None:
-                jns = handler._get_joint_names(obj_name)
+                jns = handler.get_joint_names(obj_name)
                 object_states[obj_name]["dof_pos"] = _dof_tensor_to_dict(obj_state.joint_pos[env_id], jns)
             if obj_state.joint_vel is not None:
-                jns = handler._get_joint_names(obj_name)
+                jns = handler.get_joint_names(obj_name)
                 object_states[obj_name]["dof_vel"] = _dof_tensor_to_dict(obj_state.joint_vel[env_id], jns)
 
         robot_states = {}
         for robot_name, robot_state in tensor_state.robots.items():
-            jns = handler._get_joint_names(robot_name)
+            jns = handler.get_joint_names(robot_name)
             robot_states[robot_name] = {
                 "pos": robot_state.root_state[env_id, :3].cpu(),
                 "rot": robot_state.root_state[env_id, 3:7].cpu(),
@@ -185,7 +185,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
                 else None
             )
             if robot_state.body_state is not None:
-                bns = handler._get_body_names(robot_name)
+                bns = handler.get_body_names(robot_name)
                 robot_states[robot_name]["body"] = _body_tensor_to_dict(robot_state.body_state[env_id], bns)
 
         camera_states = {}
@@ -246,8 +246,8 @@ def list_state_to_tensor(
 
     # -------- objects --------------------------------------------------
     for name in obj_names:
-        bnames = handler._get_body_names(name)
-        jnames = handler._get_joint_names(name)
+        bnames = handler.get_body_names(name)
+        jnames = handler.get_joint_names(name)
 
         root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
 
@@ -285,8 +285,8 @@ def list_state_to_tensor(
 
     # -------- robots ---------------------------------------------------
     for name in robot_names:
-        jnames = handler._get_joint_names(name)
-        bnames = handler._get_body_names(name)
+        jnames = handler.get_joint_names(name)
+        bnames = handler.get_body_names(name)
 
         root, body, jpos, jvel = _alloc_state_tensors(n_env, len(bnames) or None, len(jnames) or None, dev)
         jpos_t, jvel_t, jeff_t = (
