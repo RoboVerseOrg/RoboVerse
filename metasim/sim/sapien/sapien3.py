@@ -148,7 +148,7 @@ class Sapien3Handler(BaseSimHandler):
         # scene_config.enable_pcm = True
         # scene_config.solver_iterations = self.sim_params.num_position_iterations
         # scene_config.solver_velocity_iterations = self.sim_params.num_velocity_iterations
-        scene_config.gravity = [0, 0, -9.81]
+        scene_config.gravity = np.array(self.scenario.gravity)
         # scene_config.bounce_threshold = self.sim_params.bounce_threshold
 
         self.engine.set_renderer(self.renderer)
