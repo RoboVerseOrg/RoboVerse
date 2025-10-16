@@ -50,7 +50,7 @@ class SinglePybulletHandler(BaseSimHandler):
             fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
         )
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setGravity(0, 0, -9.81)
+        p.setGravity(*self.scenario.gravity)
 
         # add plane
         self.plane_id = p.loadURDF("plane.urdf")
