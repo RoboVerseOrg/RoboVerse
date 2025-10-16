@@ -19,24 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-isaaclab = [
-    "pillow==10.2.0",  # ImportError: The _imaging extension was built for another version of Pillow or PIL
-    "protobuf<5",
-    "pyglet<2",
-    "warp-lang<1.8",  # warp==1.8.0 has bug with IsaacLab v1.4.1
-    "torch==2.4.0+cu118",
-    "torchvision==0.19.0+cu118",
-    "isaacsim==4.2.0.2",
-    "isaacsim-extscache-physics==4.2.0.2",
-    "isaacsim-extscache-kit==4.2.0.2",
-    "isaacsim-extscache-kit-sdk==4.2.0.2",
-]
-isaaclab211 = [
-    "torch==2.7.0+cu128",
-    "torchvision==0.22.0+cu128",
-    "isaacsim[all,extscache]==4.5.0",
-]
-isaaclab221 = [
+isaacsim = [
     "torch==2.7.0+cu128",
     "torchvision==0.22.0+cu128",
     "isaacsim[all,extscache]==5.0.0",
@@ -60,10 +43,9 @@ genesis = [
 index-strategy = "unsafe-best-match"
 
 [tool.uv.pip]
+index-url = "https://download.pytorch.org/whl/cu128"
 extra-index-url = [
     "https://pypi.org/simple",
-    "https://download.pytorch.org/whl/cu118",
-    "https://download.pytorch.org/whl/cu128",
     "https://pypi.nvidia.com",
 ]
 
