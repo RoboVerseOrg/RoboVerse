@@ -155,9 +155,15 @@ class Sapien2Handler(BaseSimHandler):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
                         joint.set_drive_property(0, 0)
-
                 # Set initial pose
                 curr_id.set_root_pose(_load_init_pose(object))
+
+                if hasattr(object, "default_joint_positions") and object.default_joint_positions:
+                    qpos_list = []
+                    for i, joint_name in enumerate(cur_joint_names):
+                        qpos_list.append(object.default_joint_positions[joint_name])
+                    curr_id.set_qpos(qpos_list)
+
                 # if agent.dof.init:
                 #     robot.set_qpos(agent.dof.init)
 
@@ -338,7 +344,7 @@ class Sapien2Handler(BaseSimHandler):
             if isinstance(instance, sapien_core.Articulation):
                 pos_target = action.get("dof_pos_target", None)
                 vel_target = action.get("dof_vel_target", None)
-                jns = self.get_joint_names(obj_name, sort=True)
+                jns = self.object_joint_order[obj_name]
                 if pos_target is not None:
                     pos_target = np.array([pos_target[name] for name in jns])
                     self._previous_dof_pos_target[obj_name] = pos_target
