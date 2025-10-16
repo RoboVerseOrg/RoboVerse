@@ -134,6 +134,11 @@ class SinglePybulletHandler(BaseSimHandler):
                             force=joint_config.torque_limit or PYBULLET_DEFAULT_JOINT_MAX_TORQUE,
                         )
 
+                if hasattr(object, "default_joint_positions"):
+                    for j in range(num_joints):
+                        default_pos = object.default_joint_positions[cur_joint_names[j]]
+                        p.resetJointState(bodyUniqueId=curr_id, jointIndex=j, targetValue=default_pos)
+
                 ### TODO:
                 # Add dof properties for articulated objects
                 # if agent.dof.drive_mode == "position":
