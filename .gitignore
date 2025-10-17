@@ -99,3 +99,6 @@ id_rsa*
 
 # for sapien
 *.convex.stl
+
+# for test cache
+.pytest_cache/

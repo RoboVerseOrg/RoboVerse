@@ -571,7 +571,7 @@ class MujocoHandler(BaseSimHandler):
         self.physics.forward()
 
     def _disable_robotgravity(self):
-        gravity_vec = np.array([0.0, 0.0, -9.81])
+        gravity_vec = np.array(self.scenario.gravity)
 
         self.physics.data.xfrc_applied[:] = 0
         for body_name in self.robot_body_names:

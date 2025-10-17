@@ -58,7 +58,7 @@ class Sapien2Handler(BaseSimHandler):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
         self.renderer = sapien_core.SapienRenderer()  # Create a renderer
 
-        self.time_step = 1 / 100.0
+        self.time_step = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100.0
 
         scene_config = sapien_core.SceneConfig()
         # scene_config.default_dynamic_friction = self.physical_params.dynamic_friction
@@ -68,7 +68,7 @@ class Sapien2Handler(BaseSimHandler):
         # scene_config.enable_pcm = True
         # scene_config.solver_iterations = self.sim_params.num_position_iterations
         # scene_config.solver_velocity_iterations = self.sim_params.num_velocity_iterations
-        scene_config.gravity = [0, 0, -9.81]
+        scene_config.gravity = np.array(self.scenario.gravity)
         # scene_config.bounce_threshold = self.sim_params.bounce_threshold
 
         self.engine.set_renderer(self.renderer)
@@ -155,9 +155,15 @@ class Sapien2Handler(BaseSimHandler):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
                         joint.set_drive_property(0, 0)
-
                 # Set initial pose
                 curr_id.set_root_pose(_load_init_pose(object))
+
+                if hasattr(object, "default_joint_positions") and object.default_joint_positions:
+                    qpos_list = []
+                    for i, joint_name in enumerate(cur_joint_names):
+                        qpos_list.append(object.default_joint_positions[joint_name])
+                    curr_id.set_qpos(qpos_list)
+
                 # if agent.dof.init:
                 #     robot.set_qpos(agent.dof.init)
 
@@ -338,7 +344,7 @@ class Sapien2Handler(BaseSimHandler):
             if isinstance(instance, sapien_core.Articulation):
                 pos_target = action.get("dof_pos_target", None)
                 vel_target = action.get("dof_vel_target", None)
-                jns = self.get_joint_names(obj_name, sort=True)
+                jns = self.object_joint_order[obj_name]
                 if pos_target is not None:
                     pos_target = np.array([pos_target[name] for name in jns])
                     self._previous_dof_pos_target[obj_name] = pos_target
@@ -389,6 +395,12 @@ class Sapien2Handler(BaseSimHandler):
             link_name_list.append(link.get_name())
             link_state_list.append(link_state)
         link_state_tensor = torch.cat(link_state_list, dim=0)
+
+        # sort the links by name
+        sorted_indices = sorted(range(len(link_name_list)), key=lambda i: link_name_list[i])
+        link_name_list = [link_name_list[i] for i in sorted_indices]
+        link_state_tensor = link_state_tensor[sorted_indices]
+
         return link_name_list, link_state_tensor
 
     def _get_states(self, env_ids=None) -> list[DictEnvState]:

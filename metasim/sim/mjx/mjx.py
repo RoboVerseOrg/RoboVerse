@@ -349,7 +349,7 @@ class MJXHandler(BaseSimHandler):
 
     def _disable_gravity(self):
         """Apply m·g wrench to robot and object bodies to emulate gravity compensation."""
-        g_vec = jnp.array([0.0, 0.0, -9.81])
+        g_vec = jnp.array(self.scenario.gravity)
 
         # Use pre-computed body IDs for better performance
         if len(self._gravity_compensation_body_ids) > 0:

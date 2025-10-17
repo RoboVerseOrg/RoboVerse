@@ -1,5 +1,5 @@
 services:
-  metasim:
+  roboverse-metasim:
     user: ${DOCKER_UID}:${DOCKER_GID}
     build:
       context: .
@@ -10,7 +10,7 @@ services:
         - DOCKER_UID=${DOCKER_UID:-1000}
         - DOCKER_GID=${DOCKER_GID:-1000}
         - DOCKER_USER=${DOCKER_USER:-user}
-    container_name: metasim
+    container_name: roboverse-metasim
     privileged: true
     runtime: nvidia
     environment:

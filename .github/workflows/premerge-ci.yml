@@ -213,9 +213,32 @@ jobs:
           -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco" \
           || TEST_EXIT_CODE=$?
 
+          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+          --name metasim-autotest \
+          --user 1000:1000 --privileged \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+          -v /usr/local/cuda:/usr/local/cuda \
+          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+          "$IMAGE_URI" \
+          -c "/home/$EC2_USER_NAME/conda/envs/metasim_isaacgym/bin/python3 -m pytest -k isaacgym" \
+          || ISAACGYM_TEST_EXIT_CODE=$?
+
+          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+          --name metasim-autotest \
+          --user 1000:1000 --privileged \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+          -v /usr/local/cuda:/usr/local/cuda \
+          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+          "$IMAGE_URI" \
+          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3" \
+          || SAPIEN3_TEST_EXIT_CODE=$?
+
           # TODO check if test_exit_code necessary
           touch ~/$SRC_DIR/test_exit_code.txt
           echo "$TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
+          echo "$ISAACGYM_TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
         " || { echo "Test execution failed"; exit 1; }
 
         echo "===Copying test reports...==="

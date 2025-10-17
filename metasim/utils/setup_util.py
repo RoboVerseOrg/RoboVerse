@@ -101,7 +101,7 @@ def get_sim_handler_class(sim: SimType):
             raise e
     elif sim == SimType.SAPIEN2:
         try:
-            from metasim.sim.sapien import Sapien2Handler
+            from metasim.sim.sapien.sapien2 import Sapien2Handler
 
             return ParallelSimWrapper(Sapien2Handler)
         except ImportError as e:
@@ -109,7 +109,7 @@ def get_sim_handler_class(sim: SimType):
             raise e
     elif sim == SimType.SAPIEN3:
         try:
-            from metasim.sim.sapien import Sapien3Handler
+            from metasim.sim.sapien.sapien3 import Sapien3Handler
 
             return ParallelSimWrapper(Sapien3Handler)
         except ImportError as e:

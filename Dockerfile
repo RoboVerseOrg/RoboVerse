@@ -82,7 +82,7 @@ WORKDIR ${HOME}/RoboVerse
 ########################################################
 
 ## Create conda environment
-RUN mamba create -n metasim python=3.10 -y \
+RUN mamba create -n metasim python=3.11 -y \
     && mamba clean -a -y
 RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
 
@@ -90,34 +90,23 @@ RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
 RUN cd ${HOME}/RoboVerse \
     && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
-    && uv pip install -e ".[isaaclab,mujoco,sapien3,pybullet]" \
+    && uv pip install -e ".[isaacsim,mujoco,sapien3,pybullet]" \
     && uv cache clean
 
 # Test proxy connection
 # RUN wget --method=HEAD --output-document - https://www.google.com/
 
-## Install IsaacLab v1.4.1
+## Install IsaacLab v2.2.0
 RUN mkdir -p ${HOME}/packages \
     && cd ${HOME}/packages \
     && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
-    && git clone --depth 1 --branch v1.4.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab \
-    && cd IsaacLab \
-    && sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py \
+    && git clone --depth 1 --branch v2.2.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab220 \
+    && cd IsaacLab220 \
+    && sed -i '/^EXTRAS_REQUIRE = {/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n}' source/isaaclab_rl/setup.py \
+    && sed -i 's/if platform\.system() == "Linux":/if False:/' source/isaaclab_mimic/setup.py \
     && ./isaaclab.sh -i \
     && pip cache purge
-
-## Install IsaacLab v2.1.0
-# RUN mkdir -p ${HOME}/packages \
-#     && cd ${HOME}/packages \
-#     && eval "$(mamba shell hook --shell bash)" \
-#     && mamba activate metasim \
-#     && git clone --depth 1 --branch v2.1.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab2 \
-#     && cd IsaacLab2 \
-#     && sed -i '/^EXTRAS_REQUIRE = {/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n}' source/isaaclab_rl/setup.py \
-#     && sed -i 's/if platform\.system() == "Linux":/if False:/' source/isaaclab_mimic/setup.py \
-#     && ./isaaclab.sh -i \
-#     && pip cache purge
 
 ########################################################
 ## Install genesis
@@ -146,6 +135,7 @@ RUN cd ${HOME}/RoboVerse \
     && mamba activate metasim_isaacgym \
     && uv pip install -e ".[isaacgym]" "isaacgym @ ${HOME}/packages/isaacgym/python" \
     && uv cache clean
+
 ## Fix error: libpython3.8.so.1.0: cannot open shared object file
 ## Refer to https://stackoverflow.com/a/75872751
 RUN export CONDA_PREFIX=${HOME}/conda/envs/metasim_isaacgym \

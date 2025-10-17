@@ -69,20 +69,20 @@ def load_actor_from_urdf(
     file_dir = os.path.dirname(file_path)
 
     visual_mesh = root.find(".//visual/geometry/mesh")
-    visual_file = visual_mesh.get("filename")
+    visual_file = visual_mesh.get("filename").replace("package://", "")
     visual_scale = visual_mesh.get("scale", "1.0 1.0 1.0")
     visual_scale = np.array([float(x) for x in visual_scale.split()]) * np.array(scale)
 
     collision_mesh = root.find(".//collision/geometry/mesh")
-    collision_file = collision_mesh.get("filename")
+    collision_file = collision_mesh.get("filename").replace("package://", "")
     collision_scale = collision_mesh.get("scale", "1.0 1.0 1.0")
     collision_scale = np.array([float(x) for x in collision_scale.split()]) * np.array(scale)
 
     visual_pose = _get_local_pose(root.find(".//visual/origin"))
     collision_pose = _get_local_pose(root.find(".//collision/origin"))
 
-    visual_file = os.path.join(file_dir, visual_file)
-    collision_file = os.path.join(file_dir, collision_file)
+    visual_file = os.path.join(file_dir, visual_file).replace("package://", "")
+    collision_file = os.path.join(file_dir, collision_file).replace("package://", "")
     mu1 = root.find(".//collision/gazebo/mu1")
     mu2 = root.find(".//collision/gazebo/mu2")
     static_fric = mu1.text if mu1 is not None else 0.5
@@ -148,7 +148,7 @@ class Sapien3Handler(BaseSimHandler):
         # scene_config.enable_pcm = True
         # scene_config.solver_iterations = self.sim_params.num_position_iterations
         # scene_config.solver_velocity_iterations = self.sim_params.num_velocity_iterations
-        scene_config.gravity = [0, 0, -9.81]
+        scene_config.gravity = np.array(self.scenario.gravity)
         # scene_config.bounce_threshold = self.sim_params.bounce_threshold
 
         self.engine.set_renderer(self.renderer)
@@ -236,6 +236,12 @@ class Sapien3Handler(BaseSimHandler):
                     for id, joint in enumerate(active_joints):
                         joint.set_drive_property(0, 0)
 
+                if hasattr(object, "default_joint_positions") and object.default_joint_positions:
+                    qpos_list = []
+                    for i, joint_name in enumerate(cur_joint_names):
+                        qpos_list.append(object.default_joint_positions[joint_name])
+                    curr_id.set_qpos(qpos_list)
+
                 # if agent.dof.init:
                 #     robot.set_qpos(agent.dof.init)
 
@@ -302,6 +308,7 @@ class Sapien3Handler(BaseSimHandler):
                 builder.add_nonconvex_collision_from_file(object.usd_path, scene_pose)
                 builder.add_visual_from_file(object.usd_path, scene_pose)
                 curr_id = builder.build_static(name=object.name)
+                curr_id.set_pose(_load_init_pose(object))
 
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -329,6 +336,8 @@ class Sapien3Handler(BaseSimHandler):
                 #     curr_id = curr_id[0]
                 # curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
                 curr_id = load_actor_from_urdf(self.scene, file_path, scale=object.scale)
+                curr_id.set_pose(_load_init_pose(object))
+
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
@@ -470,7 +479,6 @@ class Sapien3Handler(BaseSimHandler):
 
         if len(self.link_ids[obj_name]) == 0:
             return [], torch.zeros((0, 13), dtype=torch.float32)
-
         for link in self.link_ids[obj_name]:
             pose = link.get_pose()
             pos = torch.tensor(pose.p)
@@ -481,6 +489,12 @@ class Sapien3Handler(BaseSimHandler):
             link_name_list.append(link.get_name())
             link_state_list.append(link_state)
         link_state_tensor = torch.cat(link_state_list, dim=0)
+
+        # sort the links by name
+        sorted_indices = sorted(range(len(link_name_list)), key=lambda i: link_name_list[i])
+        link_name_list = [link_name_list[i] for i in sorted_indices]
+        link_state_tensor = link_state_tensor[sorted_indices]
+
         return link_name_list, link_state_tensor
 
     def _get_states(self, env_ids=None) -> list[DictEnvState]:

@@ -137,7 +137,7 @@ def main():
 
         ee_to_world_matpose = np.eye(4)
         ee_to_world_matpose[:3, :3] = quaternion_to_rotation_matrix(
-            transform_orientation(curr_ee_quat[0].cpu().numpy().copy())
+            transform_orientation(curr_ee_quat.cpu().numpy().copy())
         )
         ee_to_world_matpose[:3, 3] = curr_ee_pos.cpu().numpy().copy()
         goal_to_ee_matpose = np.eye(4)

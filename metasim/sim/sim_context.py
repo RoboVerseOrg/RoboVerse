@@ -13,28 +13,26 @@ _is_first_isaaclab_context = True
 class HandlerContext:
     def __init__(self, scenario: ScenarioCfg):
         self.scenario = scenario
-        self.handler = get_sim_handler_class(SimType(self.scenario.simulator))(scenario)
+        self.env_class = get_sim_handler_class(SimType(self.scenario.simulator))(scenario)
 
     def __enter__(self) -> BaseSimHandler:
-        if self.scenario.simulator == "isaaclab":
-            global _is_first_isaaclab_context
-            if _is_first_isaaclab_context:
-                _is_first_isaaclab_context = False
-                self.handler.launch()
-            else:
-                try:
-                    from omni.isaac.core.utils.stage import create_new_stage
-                except ModuleNotFoundError:
-                    from isaacsim.core.utils.stage import create_new_stage
-                create_new_stage()
-                self.handler._setup_environment()
-        else:
-            self.handler.launch()
-        return self.handler
+        # if self.scenario.simulator == "isaacsim":
+        #     global _is_first_isaaclab_context
+        #     if _is_first_isaaclab_context:
+        #         _is_first_isaaclab_context = False
+        #         self.handler.launch()
+        #     else:
+
+        #         from isaacsim.core.utils.stage import create_new_stage
+        #         create_new_stage()
+        #         self.handler._setup_environment()
+        # else:
+        self.env_class.launch()
+        return self.env_class
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if exc_type is not None:
             log.error("Error in SimContext:")
             traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-        self.handler.close()
+        self.env_class.close()
