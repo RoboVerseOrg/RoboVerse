@@ -13,6 +13,11 @@ from torchvision.utils import make_grid, save_image
 
 from metasim.utils.state import TensorState
 
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 
 class ObsSaver:
     """Save the observations to images or videos."""
@@ -168,3 +173,116 @@ def convert_to_ply(points, filename):
     # Write to a PLY file
     o3d.io.write_point_cloud(filename, pcd)
     log.info(f"Point cloud saved to '{filename}'.")
+
+
+def display_obs(obs, width: int, height: int, window_name: str = "Camera View - Real-time Robot View") -> bool:
+    """Display camera observations using OpenCV - split screen for multiple cameras.
+
+    Args:
+        obs: Observation object with cameras attribute containing camera data
+        width: Display window width
+        height: Display window height
+        window_name: Name of the OpenCV window
+
+    Returns:
+        bool: True if should continue running, False if ESC key was pressed
+    """
+    if cv2 is None:
+        log.warning("OpenCV not available for camera display")
+        return True
+
+    if not hasattr(obs, "cameras") or len(obs.cameras) == 0:
+        # Create a blank dark gray image if no camera data
+        blank_img = np.full((height, width, 3), 50, dtype=np.uint8)
+        cv2.imshow(window_name, blank_img)
+        return True
+
+    camera_names = list(obs.cameras.keys())
+    num_cameras = len(camera_names)
+
+    # Create display image
+    display_img = np.zeros((height, width, 3), dtype=np.uint8)
+
+    # Split the display area into two halves for dual camera view
+    half_width = width // 2
+    half_height = height
+
+    # Display first camera on the left
+    if num_cameras >= 1:
+        camera_name_1 = camera_names[0]
+        rgb_data_1 = obs.cameras[camera_name_1].rgb
+
+        if rgb_data_1 is not None:
+            # Convert to numpy array and handle different formats
+            if isinstance(rgb_data_1, torch.Tensor):
+                rgb_np_1 = rgb_data_1.cpu().numpy()
+                if rgb_np_1.max() <= 1.0:
+                    rgb_np_1 = (rgb_np_1 * 255).astype(np.uint8)
+            else:
+                rgb_np_1 = np.array(rgb_data_1)
+
+            # Handle different shapes
+            if len(rgb_np_1.shape) == 4:  # (N, C, H, W)
+                rgb_np_1 = rgb_np_1[0]  # Take first environment
+            if len(rgb_np_1.shape) == 3 and rgb_np_1.shape[0] == 3:  # (C, H, W)
+                rgb_np_1 = np.transpose(rgb_np_1, (1, 2, 0))  # (H, W, C)
+
+            try:
+                # Resize image to fit the left half
+                if rgb_np_1.shape[:2] != (half_height, half_width):
+                    rgb_resized_1 = cv2.resize(rgb_np_1, (half_width, half_height))
+                else:
+                    rgb_resized_1 = rgb_np_1
+                display_img[:, :half_width] = rgb_resized_1
+            except Exception as e:
+                log.warning(f"Error displaying camera 1 image: {e}")
+                # Draw error rectangle on left half
+                cv2.rectangle(display_img, (0, 0), (half_width, half_height), (50, 50, 100), -1)
+
+    # Display second camera on the right
+    if num_cameras >= 2:
+        camera_name_2 = camera_names[1]
+        rgb_data_2 = obs.cameras[camera_name_2].rgb
+
+        if rgb_data_2 is not None:
+            # Convert to numpy array and handle different formats
+            if isinstance(rgb_data_2, torch.Tensor):
+                rgb_np_2 = rgb_data_2.cpu().numpy()
+                if rgb_np_2.max() <= 1.0:
+                    rgb_np_2 = (rgb_np_2 * 255).astype(np.uint8)
+            else:
+                rgb_np_2 = np.array(rgb_data_2)
+
+            # Handle different shapes
+            if len(rgb_np_2.shape) == 4:  # (N, C, H, W)
+                rgb_np_2 = rgb_np_2[0]  # Take first environment
+            if len(rgb_np_2.shape) == 3 and rgb_np_2.shape[0] == 3:  # (C, H, W)
+                rgb_np_2 = np.transpose(rgb_np_2, (1, 2, 0))  # (H, W, C)
+
+            try:
+                # Resize image to fit the right half
+                if rgb_np_2.shape[:2] != (half_height, half_width):
+                    rgb_resized_2 = cv2.resize(rgb_np_2, (half_width, half_height))
+                else:
+                    rgb_resized_2 = rgb_np_2
+                display_img[:, half_width:] = rgb_resized_2
+            except Exception as e:
+                log.warning(f"Error displaying camera 2 image: {e}")
+                # Draw error rectangle on right half
+                cv2.rectangle(display_img, (half_width, 0), (width, half_height), (50, 50, 100), -1)
+
+    # Fill areas if cameras are missing
+    if num_cameras == 0:
+        display_img.fill(50)  # Dark gray
+    elif num_cameras == 1:
+        # Fill right half with darker gray
+        display_img[:, half_width:] = 30
+
+    # Show the combined image
+    cv2.imshow(window_name, display_img)
+
+    # Handle key events for OpenCV window
+    key = cv2.waitKey(1) & 0xFF
+    if key == 27:  # ESC key
+        return False  # Signal to exit
+    return True  # Continue running
