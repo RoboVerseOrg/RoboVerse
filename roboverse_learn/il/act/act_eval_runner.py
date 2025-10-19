@@ -294,7 +294,7 @@ def main():
 
 
                 action = torch.tensor(action, dtype=torch.float32, device="cuda")
-                
+
                 # IK solver expects original joint order, but state uses alphabetical order
                 reorder_idx = env.handler.get_joint_reindex(args.robot)
                 inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
@@ -314,10 +314,10 @@ def main():
                 #     print(f"Env {i} Success")
                 if success[0] and not SuccessOnce[0]:
                     TotalSuccess += 1
-                    SuccessOnce[0] = True  
+                    SuccessOnce[0] = True
                     print(f"Env {i} Success")
 
-                log.debug(f"TotalSuccess: {TotalSuccess}")       
+                log.debug(f"TotalSuccess: {TotalSuccess}")
                 SuccessOnce = [SuccessOnce[i] or success[i] for i in range(num_envs)]
                 TimeOut = [TimeOut[i] or time_out[i] for i in range(num_envs)]
                 for TimeOutIndex in range(num_envs):
@@ -330,10 +330,10 @@ def main():
                 step += 1
 
             images_to_video(image_list, f"tmp/{args.algo}/{args.task}/{ckpt_name}/{i}.mp4")
-    
+
     success_rate = TotalSuccess / num_eval
     print("Success Rate: ", success_rate)
-    
+
     result_dir = f"tmp/{args.algo}/{args.task}/{ckpt_name}"
     result_file = os.path.join(result_dir, "success_rate.txt")
     with open(result_file, "w") as f:

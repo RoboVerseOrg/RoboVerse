@@ -59,7 +59,7 @@ for ((i=0; i<1; i++)); do
   if [ "${eval_enable}" = "true" ]; then
     echo "=== Evaluation ==="
     # # export TORCH_CUDA_ARCH_LIST="8.9"
-    ckpt_path=$(cat ./roboverse_learn/il/act/ckpt_dir_path.txt)  
+    ckpt_path=$(cat ./roboverse_learn/il/act/ckpt_dir_path.txt)
     python -m roboverse_learn.il.act.act_eval_runner \
     --task ${task_name} \
     --robot franka \
