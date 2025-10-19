@@ -114,9 +114,16 @@ def main():
             demo_dir = os.path.join(load_dir, f"demo_{demo_id}")
             # current_demo_index += 1
 
-        with open(os.path.join(demo_dir, "metadata.json"), encoding="utf-8") as f:
-            # print("metadata load dir:", demo_dir)
-            metadata = json.load(f)
+         # Check metadata.json
+        metadata_path = os.path.join(demo_dir, "metadata.json")
+        if not os.path.isfile(metadata_path):
+          print(f"Skipping episode {current_ep} as metadata.json does not exist.")
+          continue
+        else:
+            with open(os.path.join(demo_dir, "metadata.json"), encoding="utf-8") as f:
+                # print("metadata load dir:", demo_dir)
+                metadata = json.load(f)
+
         data_length = len(metadata["joint_qpos"])
         rgbs = iio.mimread(os.path.join(demo_dir, "rgb.mp4"))
         for i, rgb in enumerate(rgbs):

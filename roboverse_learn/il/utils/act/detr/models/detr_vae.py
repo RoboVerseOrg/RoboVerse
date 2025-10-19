@@ -10,6 +10,9 @@ from .transformer import build_transformer, TransformerEncoder, TransformerEncod
 
 import numpy as np
 
+from loguru import logger as log
+
+
 import IPython
 e = IPython.embed
 
