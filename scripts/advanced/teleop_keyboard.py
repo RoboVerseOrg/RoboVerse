@@ -39,7 +39,7 @@ class Args:
     render: RenderCfg = RenderCfg()
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
@@ -182,6 +182,9 @@ def main():
     tic = time.time()
     device = torch.device("cpu")
     env = task_cls(scenario, device=device)
+    from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+
+    env = TaskViserWrapper(env)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
 
@@ -372,7 +375,6 @@ def main():
                 break
 
         step += 1
-        log.debug(f"Step {step}")
 
     # Close OpenCV camera display window if it exists
     if args.display_camera:

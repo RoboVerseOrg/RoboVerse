@@ -176,7 +176,7 @@ def main() -> None:
 
     # Optionally wrap with Viser for real-time visualization
     if cfg("use_viser"):
-        envs = TaskViserWrapper(envs)
+        envs = TaskViserWrapper(envs, update_freq=1)
         eval_envs = envs
     else:
         eval_envs = envs
