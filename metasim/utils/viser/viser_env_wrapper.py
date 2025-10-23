@@ -1,7 +1,5 @@
 from typing import Any
 
-from metasim.utils.state import list_state_to_tensor
-
 
 class TaskViserWrapper:
     """Simple wrapper for RLTaskEnv with real-time Viser visualization.
@@ -9,65 +7,74 @@ class TaskViserWrapper:
     Only renders the first environment for simplicity. Designed for fast_td3 integration.
     """
 
-    def __init__(self, task_env, port: int = 8080, update_freq: int = 1):
+    def __init__(self, task_env, port: int = 8080, update_freq: int = 10):
         """Initialize the wrapper.
 
         Args:
             task_env: RLTaskEnv or similar environment with handler
-            port: Port for Viser server
-            update_freq: Update visualization every N steps to reduce resource usage
+            port: Port for Viser server (default: 8080)
+            update_freq: Update visualization every N steps to reduce resource usage (default: 10)
         """
         self.env = task_env
         self.visualizer = None
         self.update_freq = update_freq
         self.step_count = 0
+        self.handler = self._get_handler()  # Cache handler for efficiency
         self._setup_visualization(port)
+
+    def _get_handler(self):
+        """Get the actual handler object, supporting both gym and non-gym environments."""
+        # Try gym environment path first (gym_vec.task_env.handler)
+        if hasattr(self.env, "task_env"):
+            if hasattr(self.env.task_env, "handler") and self.env.task_env.handler is not None:
+                return self.env.task_env.handler
+
+        # Fall back to direct handler access (env.handler)
+        if hasattr(self.env, "handler") and self.env.handler is not None:
+            return self.env.handler
+
+        return None
 
     def _setup_visualization(self, port: int):
         """Setup Viser visualization."""
-        try:
-            from metasim.utils.viser.viser_util import ViserVisualizer
+        from metasim.utils.viser.viser_util import ViserVisualizer
 
-            self.visualizer = ViserVisualizer(port=port)
-            self.visualizer.add_grid()
-            self.visualizer.add_frame("/world_frame")
+        self.visualizer = ViserVisualizer(port=port)
+        self.visualizer.add_grid()
+        self.visualizer.add_frame("/world_frame")
 
-            # Download URDF files for visualization
-            try:
-                from get_started.viser.viser_demo import download_urdf_files
+        # Download URDF files for visualization
+        from get_started.viser.viser_demo import download_urdf_files
 
-                download_urdf_files(self.env.scenario)
-            except ImportError:
-                pass  # Skip if function not available
+        download_urdf_files(self.env.scenario)
 
-            # Get initial states using env.handler
-            obs = self.env.handler.get_states(mode="tensor")
+        # Get initial states using handler
+        if self.handler is None:
+            return
+        obs = self.handler.get_states(mode="tensor")
 
-            # Extract initial states for first environment only using helper method
-            if hasattr(obs, "objects") and hasattr(obs, "robots"):
-                default_object_states = self._extract_states_from_obs(obs, "objects")
-                default_robot_states = self._extract_states_from_obs(obs, "robots")
+        # Extract initial states for first environment only using helper method
+        if hasattr(obs, "objects") and hasattr(obs, "robots"):
+            default_object_states = self._extract_states_from_obs(obs, "objects")
+            default_robot_states = self._extract_states_from_obs(obs, "robots")
 
-                # Visualize all objects and robots (like viser_demo.py)
-                if hasattr(self.env.scenario, "objects") and self.env.scenario.objects:
-                    self.visualizer.visualize_scenario_items(self.env.scenario.objects, default_object_states)
+            # Visualize all objects and robots (like viser_demo.py)
+            if hasattr(self.env.scenario, "objects") and self.env.scenario.objects:
+                self.visualizer.visualize_scenario_items(self.env.scenario.objects, default_object_states)
 
-                if hasattr(self.env.scenario, "robots") and self.env.scenario.robots:
-                    self.visualizer.visualize_scenario_items(self.env.scenario.robots, default_robot_states)
+            if hasattr(self.env.scenario, "robots") and self.env.scenario.robots:
+                self.visualizer.visualize_scenario_items(self.env.scenario.robots, default_robot_states)
 
-            # Setup camera
-            self.visualizer.enable_camera_controls(
-                initial_position=[1.5, -1.5, 1.5],
-                render_width=1024,
-                render_height=1024,
-                look_at_position=[0, 0, 0],
-                initial_fov=71.28,
-            )
+        # Setup camera
+        self.visualizer.enable_camera_controls(
+            initial_position=[1.5, -1.5, 1.5],
+            render_width=1024,
+            render_height=1024,
+            look_at_position=[0, 0, 0],
+            initial_fov=71.28,
+        )
 
-            # Viser visualization successfully initialized
-
-        except ImportError:
-            pass  # Silently disable visualization if Viser not available
+        # Viser visualization successfully initialized
 
     def _extract_states_from_obs(self, obs, key):
         """Extract states from observation tensor (first environment only).
@@ -96,8 +103,11 @@ class TaskViserWrapper:
 
             # Extract joint positions (first environment only)
             if hasattr(item, "joint_pos") and item.joint_pos is not None:
-                joint_names = self.env.handler._get_joint_names(name, sort=True)
-                state_dict["dof_pos"] = {joint_names[i]: item.joint_pos[0, i].item() for i in range(len(joint_names))}
+                if self.handler is not None:
+                    joint_names = self.handler._get_joint_names(name, sort=True)
+                    state_dict["dof_pos"] = {
+                        joint_names[i]: item.joint_pos[0, i].item() for i in range(len(joint_names))
+                    }
 
             result[name] = state_dict
 
@@ -108,70 +118,44 @@ class TaskViserWrapper:
         if self.visualizer is None or obs is None:
             return
 
-        try:
-            # Extract states from first environment using helper method
-            if hasattr(obs, "objects") and hasattr(obs, "robots"):
-                # Update objects from first environment
-                if hasattr(self.env.scenario, "objects"):
-                    object_states = self._extract_states_from_obs(obs, "objects")
-                    for name, state in object_states.items():
-                        self.visualizer.update_item_pose(name, state)
+        # Extract states from first environment using helper method
+        if hasattr(obs, "objects") and hasattr(obs, "robots"):
+            # Update objects from first environment
+            if hasattr(self.env.scenario, "objects"):
+                object_states = self._extract_states_from_obs(obs, "objects")
+                for name, state in object_states.items():
+                    self.visualizer.update_item_pose(name, state)
 
-                # Update robots from first environment
-                if hasattr(self.env.scenario, "robots"):
-                    robot_states = self._extract_states_from_obs(obs, "robots")
-                    for name, state in robot_states.items():
-                        self.visualizer.update_item_pose(name, state)
+            # Update robots from first environment
+            if hasattr(self.env.scenario, "robots"):
+                robot_states = self._extract_states_from_obs(obs, "robots")
+                for name, state in robot_states.items():
+                    self.visualizer.update_item_pose(name, state)
 
-            self.visualizer.refresh_camera_view()
-        except Exception as e:
-            # Silently handle visualization errors to not break training
-            pass
+        self.visualizer.refresh_camera_view()
 
     def reset(self, **kwargs):
         """Reset environment and update visualization."""
         result = self.env.reset(**kwargs)
         obs = result[0] if isinstance(result, tuple) and len(result) > 0 else result
 
-        # Get states using env.handler for consistency
-        if hasattr(self.env, "handler") and self.env.handler is not None:
-            handler_obs = self.env.handler.get_states(mode="tensor")
+        # Get states using handler for consistency
+        if self.handler is not None:
+            handler_obs = self.handler.get_states(mode="tensor")
             if handler_obs is not None:
                 obs = handler_obs
 
         self._update_viser_states(obs)
         return result
 
-    def set_states(self, states):
-        """Set environment states using handler.
-
-        Args:
-            states: List of state dictionaries, one per environment, or single state dict
-                   Each state dict should have format:
-                   {
-                       "objects": {obj_name: {"pos": [...], "rot": [...], "dof_pos": {...}}},
-                       "robots": {robot_name: {"pos": [...], "rot": [...], "dof_pos": {...}}}
-                   }
-        """
-        if not hasattr(self.env, "handler") or self.env.handler is None:
-            return
-
-        # Convert to list format if single state dict provided
-        if isinstance(states, dict) and "objects" in states and "robots" in states:
-            states = [states] * (self.env.num_envs if hasattr(self.env, "num_envs") else 1)
-
-        # Convert nested state dict to tensor state and set
-        tensor_state = list_state_to_tensor(self.env.handler, states)
-        self.env.handler.set_states(tensor_state)
-
     def step(self, actions):
         """Step environment and update visualization."""
         result = self.env.step(actions)
         obs = result[0] if isinstance(result, tuple) and len(result) > 0 else result
 
-        # Get states using env.handler for consistency
-        if hasattr(self.env, "handler") and self.env.handler is not None:
-            handler_obs = self.env.handler.get_states(mode="tensor")
+        # Get states using handler for consistency
+        if self.handler is not None:
+            handler_obs = self.handler.get_states(mode="tensor")
             if handler_obs is not None:
                 obs = handler_obs
 

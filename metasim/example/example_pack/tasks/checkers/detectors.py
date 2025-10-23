@@ -5,13 +5,11 @@ from __future__ import annotations
 from dataclasses import MISSING
 
 import torch
-from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg
 from metasim.utils.configclass import configclass
 from metasim.utils.math import matrix_from_quat, quat_from_matrix
-from metasim.utils.tensor_util import tensor_to_str
 
 from .util import get_pos, get_rot
 
@@ -121,10 +119,6 @@ class RelativeBboxDetector(BaseDetector):
             (obj_pos_checker_local < self.checker_upper.unsqueeze(0))
             & (obj_pos_checker_local > self.checker_lower.unsqueeze(0))
         ).all(dim=-1)
-        log.debug(
-            f"Object {obj_name} local position in checker based on {self.base_obj_name}:"
-            f" {tensor_to_str(obj_pos_checker_local)}"
-        )
         return object_in_checker
 
     def get_debug_viewers(self) -> list[BaseObjCfg]:
