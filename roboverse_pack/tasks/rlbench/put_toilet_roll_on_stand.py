@@ -32,5 +32,5 @@ class PutToiletRollOnStandTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_toilet_roll_on_standv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_toilet_roll_on_stand/v2/franka_v2.pkl.gz"
     # TODO: add checker

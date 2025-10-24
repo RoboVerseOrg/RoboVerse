@@ -33,5 +33,5 @@ class PutPlateInColoredDishRackTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_plate_in_colored_dish_rackv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_plate_in_colored_dish_rack/v2/franka_v2.pkl.gz"
     # TODO: add checker

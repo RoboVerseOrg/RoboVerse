@@ -31,7 +31,7 @@ class PutKnifeInKnifeBlockTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_knife_in_knife_blockv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_knife_in_knife_block/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -60,5 +60,5 @@ class PutKnifeOnChoppingBoardTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_knife_on_chopping_boardv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_knife_on_chopping_board/v2/franka_v2.pkl.gz"
     # TODO: add checker

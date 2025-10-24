@@ -48,5 +48,5 @@ class PickAndLiftSmallTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/pick_and_lift_smallv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/pick_and_lift_small/v2/franka_v2.pkl.gz"
     # TODO: add checker

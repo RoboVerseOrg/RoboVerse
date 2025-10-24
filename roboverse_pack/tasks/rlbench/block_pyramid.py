@@ -8,7 +8,7 @@ from .rl_bench import RLBenchTask
 @register_task("rlbench.block_pyramid", "block_pyramid", "franka.block_pyramid")
 class BlockPyramidTask(RLBenchTask):
     max_episode_steps = 200
-    traj_filepath = "roboverse_data/trajs/rlbench/block_pyramidv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/block_pyramid/v2/franka_v2.pkl.gz"
     objects = [
         RigidObjCfg(
             name="block_pyramid_plane",

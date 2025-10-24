@@ -31,5 +31,5 @@ class StackChairsTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/stack_chairsv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/stack_chairs/v2/franka_v2.pkl.gz"
     # TODO: add checker

@@ -49,5 +49,5 @@ class PlaceShapeInShapeSorterTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/place_shape_in_shape_sorterv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/place_shape_in_shape_sorter/v2/franka_v2.pkl.gz"
     # TODO: add checker

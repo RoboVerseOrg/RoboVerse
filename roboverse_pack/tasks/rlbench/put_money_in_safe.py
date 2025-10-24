@@ -25,5 +25,5 @@ class PutMoneyInSafeTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_money_in_safev2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_money_in_safe/v2/franka_v2.pkl.gz"
     # TODO: add checker

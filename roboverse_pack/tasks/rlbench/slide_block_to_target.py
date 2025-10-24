@@ -27,5 +27,5 @@ class SlideBlockToTargetTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/slide_block_to_targetv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/slide_block_to_target/v2/franka_v2.pkl.gz"
     # TODO: add checker

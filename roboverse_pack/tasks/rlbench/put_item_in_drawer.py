@@ -26,5 +26,5 @@ class PutItemInDrawerTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_item_in_drawerv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_item_in_drawer/v2/franka_v2.pkl.gz"
     # TODO: add checker

@@ -66,7 +66,7 @@ class PutGroceriesInCupboardTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_groceries_in_cupboardv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_groceries_in_cupboard/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -120,5 +120,5 @@ class PutAllGroceriesInCupboardTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_all_groceries_in_cupboardv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_all_groceries_in_cupboard/v2/franka_v2.pkl.gz"
     # TODO: add checker

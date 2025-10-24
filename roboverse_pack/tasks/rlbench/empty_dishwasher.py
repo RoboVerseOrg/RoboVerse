@@ -25,5 +25,5 @@ class EmptyDishwasherTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/empty_dishwasherv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/empty_dishwasher/v2/franka_v2.pkl.gz"
     # TODO: add checker

@@ -27,5 +27,5 @@ class PushButtonsTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/push_buttonsv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/push_buttons/v2/franka_v2.pkl.gz"
     # TODO: add checker

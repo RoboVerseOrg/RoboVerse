@@ -41,5 +41,5 @@ class LightBulbInTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/light_bulb_inv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/light_bulb_in/v2/franka_v2.pkl.gz"
     # TODO: add checker
