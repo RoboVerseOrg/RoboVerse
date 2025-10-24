@@ -29,7 +29,7 @@ class SlideCabinetOpenAndPlaceCupsTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/slide_cabinet_open_and_place_cupsv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/slide_cabinet_open_and_place_cups/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -50,5 +50,5 @@ class TakeCupOutFromCabinetTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/take_cup_out_from_cabinetv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/take_cup_out_from_cabinet/v2/franka_v2.pkl.gz"
     # TODO: add checker

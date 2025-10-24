@@ -57,5 +57,5 @@ class HitBallWithQueueTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/hit_ball_with_queuev2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/hit_ball_with_queue/v2/franka_v2.pkl.gz"
     # TODO: add checker

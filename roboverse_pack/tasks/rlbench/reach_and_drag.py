@@ -33,5 +33,5 @@ class ReachAndDragTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/reach_and_dragv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/reach_and_drag/v2/franka_v2.pkl.gz"
     # TODO: add checker

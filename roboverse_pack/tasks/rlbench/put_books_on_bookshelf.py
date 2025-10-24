@@ -36,5 +36,5 @@ class PutBooksOnBookshelfTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_books_on_bookshelfv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_books_on_bookshelf/v2/franka_v2.pkl.gz"
     # TODO: add checker

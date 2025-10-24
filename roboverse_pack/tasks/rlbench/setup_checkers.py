@@ -44,5 +44,5 @@ class SetupCheckersTask(RLBenchTask):
         objects=[_CHESS_BOARD] + _WHITE_CHECKERS + _RED_CHECKERS,
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/setup_checkersv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/setup_checkers/v2/franka_v2.pkl.gz"
     # TODO: add checker

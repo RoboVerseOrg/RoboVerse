@@ -41,7 +41,7 @@ class PlaceCupsTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/place_cupsv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/place_cups/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -78,5 +78,5 @@ class RemoveCupsTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/remove_cupsv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/remove_cups/v2/franka_v2.pkl.gz"
     # TODO: add checker

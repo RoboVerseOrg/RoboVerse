@@ -25,5 +25,5 @@ class CloseLaptopLidTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_laptop_lidv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/close_laptop_lid/v2/franka_v2.pkl.gz"
     # TODO: add checker

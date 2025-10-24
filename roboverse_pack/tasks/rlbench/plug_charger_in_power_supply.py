@@ -33,5 +33,5 @@ class PlugChargerInPowerSupplyTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/plug_charger_in_power_supplyv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/plug_charger_in_power_supply/v2/franka_v2.pkl.gz"
     # TODO: add checker

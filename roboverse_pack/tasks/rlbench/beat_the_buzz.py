@@ -26,5 +26,5 @@ class BeatTheBuzzTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/beat_the_buzzv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/beat_the_buzz/v2/franka_v2.pkl.gz"
     # TODO: add checker

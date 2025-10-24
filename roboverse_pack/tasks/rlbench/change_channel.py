@@ -8,7 +8,7 @@ from .rl_bench import RLBenchTask
 @register_task("rlbench.change_channel", "change_channel", "franka.change_channel")
 class ChangeChannelTask(RLBenchTask):
     max_episode_steps = 200
-    traj_filepath = "roboverse_data/trajs/rlbench/change_channelv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/change_channel/v2/franka_v2.pkl.gz"
     objects = [
         ArticulationObjCfg(
             name="tv_remote",

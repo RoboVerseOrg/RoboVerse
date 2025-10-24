@@ -31,7 +31,7 @@ class MeatOffGrillTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/meat_off_grillv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/meat_off_grill/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -58,5 +58,5 @@ class MeatOnGrillTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/meat_on_grillv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/meat_on_grill/v2/franka_v2.pkl.gz"
     # TODO: add checker

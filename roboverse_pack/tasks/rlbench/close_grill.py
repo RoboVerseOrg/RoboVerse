@@ -19,5 +19,5 @@ class CloseGrillTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_grillv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/close_grill/v2/franka_v2.pkl.gz"
     # TODO: add checker

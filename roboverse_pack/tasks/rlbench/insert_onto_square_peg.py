@@ -45,5 +45,5 @@ class InsertOntoSquarePegTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/insert_onto_square_pegv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/insert_onto_square_peg/v2/franka_v2.pkl.gz"
     # TODO: add checker
