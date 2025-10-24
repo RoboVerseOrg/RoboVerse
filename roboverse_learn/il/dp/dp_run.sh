@@ -12,10 +12,11 @@ eval_num_envs=1
 eval_max_step=500
 expert_data_num=100
 sim_set=mujoco
+eval_ckpt_name=100          # Checkpoint epoch to evaluate
 
 ## Seperate training and evaluation
-train_enable=False
-eval_enable=True
+train_enable=True
+eval_enable=False
 
 ## Choose training or inference algorithm
 algo_choose=0  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based
@@ -26,22 +27,22 @@ case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.10.09/13.25.24_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     1)
         # DDIM settings
         export algo_model="DDIM_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/13.40.19_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     2)
         # FM settings
         export algo_model="fm_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     3)
         # Score-based settings
         export algo_model="Score_model"
-        eval_path="/home/jjindou/RoboVerse/info/outputs/DP/2025.09.03/02.39.59_close_box_obs:joint_pos_act:joint_pos/checkpoints/100.ckpt"
+        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     *)
         echo "Invalid algorithm choice: $algo_choose"
@@ -58,9 +59,9 @@ if [ "${delta_ee}" = 1 ]; then
   extra="${extra}_delta"
 fi
 
-python ~/RoboVerse/roboverse_learn/il/dp/main.py --config-name=${config_name}.yaml \
-task_name="${task_name}_${extra}" \
-dataset_config.zarr_path="data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr" \
+python ./roboverse_learn/il/dp/main.py --config-name=${config_name}.yaml \
+task_name="${task_name}" \
+dataset_config.zarr_path="./data_policy/${task_name}FrankaL${level}_${extra}_${expert_data_num}.zarr" \
 train_config.training_params.seed=${seed} \
 train_config.training_params.num_epochs=${num_epochs} \
 train_config.training_params.device=${gpu} \
