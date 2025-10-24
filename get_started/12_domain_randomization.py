@@ -89,7 +89,7 @@ def run_domain_randomization(args):
     # Create scenario and update simulator
     scenario = ScenarioCfg(
         robots=["franka"],
-        num_handlers=args.num_handlers,  # Multiple handlerironments for parallel testing
+        num_envs=args.num_envs,  # Multiple environments for parallel testing
         simulator=args.sim,  # Will be overridden
         headless=args.headless,  # Will be overridden
     )
@@ -295,7 +295,7 @@ def run_domain_randomization(args):
                 },
             },
         }
-    ] * scenario.num_handlers
+    ] * scenario.num_envs
 
     handler.set_states(init_states)
 
@@ -824,7 +824,7 @@ def main():
         """Choose camera randomization mode: combined, position_only, orientation_only, look_at_only, intrinsics_only, or image_only"""
 
         ## Others
-        num_handlers: int = 1
+        num_envs: int = 1
         headless: bool = False
         seed: int | None = None
         """Random seed for reproducible randomization. If None, uses random seed."""
