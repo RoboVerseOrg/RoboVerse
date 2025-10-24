@@ -76,11 +76,9 @@ def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
         with open(mdl_file_path, encoding="utf-8") as f:
             content = f.read()
 
-        # Parse material declaration in MDL files
-        # Pattern: material <name>( or export material <name>(
         import re
 
-        material_pattern = r'(?:export\s+)?material\s+(\w+)\s*\('
+        material_pattern = r'(?:export\s+)?material\s+(\w+)\s*\('      # Cork_mat --> Cork_mat   
         match = re.search(material_pattern, content)
 
         if match:
