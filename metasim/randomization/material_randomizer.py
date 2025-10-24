@@ -78,7 +78,7 @@ def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
 
         import re
 
-        material_pattern = r'(?:export\s+)?material\s+(\w+)\s*\('      # Cork_mat --> Cork_mat   
+        material_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("  # Cork_mat --> Cork_mat
         match = re.search(material_pattern, content)
 
         if match:
