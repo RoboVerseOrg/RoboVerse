@@ -74,6 +74,51 @@ from metasim.task.registry import get_task_class
 from roboverse_learn.rl.episode_tracker import EpisodeTracker
 
 
+def cpu_state(state_dict):
+    """Move state dict to CPU."""
+    return {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in state_dict.items()}
+
+
+def save_params(
+    global_step,
+    actor,
+    qnet,
+    qnet_target,
+    obs_normalizer,
+    critic_obs_normalizer,
+    config,
+    save_path,
+):
+    """Save model parameters and training configuration to disk."""
+
+    def get_ddp_state_dict(model):
+        """Get state dict from model, handling DDP wrapper if present."""
+        if hasattr(model, "module"):
+            return model.module.state_dict()
+        return model.state_dict()
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    save_dict = {
+        "actor_state_dict": cpu_state(get_ddp_state_dict(actor)),
+        "qnet_state_dict": cpu_state(get_ddp_state_dict(qnet)),
+        "qnet_target_state_dict": cpu_state(get_ddp_state_dict(qnet_target)),
+        "obs_normalizer_state": (
+            cpu_state(obs_normalizer.state_dict())
+            if hasattr(obs_normalizer, "state_dict")
+            else None
+        ),
+        "critic_obs_normalizer_state": (
+            cpu_state(critic_obs_normalizer.state_dict())
+            if hasattr(critic_obs_normalizer, "state_dict")
+            else None
+        ),
+        "config": config,  # Save configuration
+        "global_step": global_step,
+    }
+    torch.save(save_dict, save_path, _use_new_zipfile_serialization=True)
+    log.info(f"Saved parameters and configuration to {save_path}")
+
+
 def main() -> None:
     GAMMA = float(cfg("gamma"))
     USE_CDQ = bool(cfg("use_cdq"))
@@ -496,6 +541,19 @@ def main() -> None:
 
             if cfg("save_interval") > 0 and global_step > 0 and global_step % cfg("save_interval") == 0:
                 log.info(f"Saving model at global step {global_step}")
+                model_dir = cfg("model_dir", "models")
+                run_name = cfg("run_name", cfg("task"))
+                save_path = os.path.join(model_dir, f"{run_name}_{global_step}.pt")
+                save_params(
+                    global_step,
+                    actor,
+                    qnet,
+                    qnet_target,
+                    obs_normalizer,
+                    critic_obs_normalizer,
+                    CONFIG,
+                    save_path,
+                )
 
         global_step += 1
         pbar.update(1)
