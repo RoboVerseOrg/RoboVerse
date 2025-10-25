@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# kitchen_scene1_open_bottom_drawer
+# kitchen_scene1_open_drawer_put_bowl
+# kitchen_scene1_open_top_drawer
+# kitchen_scene1_put_the_black_bowl_on_the_plate
+# kitchen_scene1_put_the_black_bowl_on_top_of_the_cabinet
+# kitchen_scene2_open_the_top_drawer_of_the_cabinet
+# kitchen_scene2_put_the_black_bowl_at_the_back_on_the_plate
+# kitchen_scene2_put_the_black_bowl_at_the_front_on_the_plate
+# kitchen_scene2_put_the_black_bowl_in_the_middle_on_the_plate
+# kitchen_scene2_put_the_middle_black_bowl_on_top_of_the_cabinet
+# kitchen_scene2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle
+# kitchen_scene2_stack_the_middle_black_bowl_on_the_back_black_bowl
+# mujoco isaacsim
+for task in kitchen_scene2_stack_the_middle_black_bowl_on_the_back_black_bowl; do
+    python scripts/advanced/collect_demo.py --sim=mujoco --task=libero_90.$task --num_envs=1 --max_demo_idx=1 # --render.mode pathtracing  --cust_name new_render_256_pathtracing_0
+done

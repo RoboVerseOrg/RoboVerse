@@ -165,7 +165,8 @@ class FileDownloader:
             self._add(obj.mjx_mjcf_path)
 
     def _add(self, filepath: str):
-        self.files_to_download.append(filepath)
+        if filepath is not None:
+            self.files_to_download.append(filepath)
 
     def do_it(self):
         """Download the files specified in the scenario."""

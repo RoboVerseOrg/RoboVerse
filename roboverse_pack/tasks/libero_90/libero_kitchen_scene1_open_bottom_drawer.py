@@ -12,7 +12,7 @@ from metasim.task.registry import register_task
 from .libero_90_base import Libero90BaseTask
 
 
-@register_task("libero_90.kitchen_open_bottom_drawer", "kitchen_open_bottom_drawer")
+@register_task("libero_90.kitchen_scene1_open_bottom_drawer", "kitchen_open_bottom_drawer")
 class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
     """Configuration for the Libero kitchen open bottom drawer task.
 
@@ -24,7 +24,7 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
 
     This is a manipulation task that requires:
     1. Grasping and manipulating the cabinet drawer (articulated object)
-    2. Opening the bottom drawer to the required position
+    2. Opening the bottom drawer to the required positionw2
 
     Objects from BDDL:
     - wooden_cabinet_1 (fixture): The cabinet with drawers
@@ -39,23 +39,23 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
             # Movable objects (from BDDL :objects section)
             RigidObjCfg(
                 name="akita_black_bowl",
-                physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/akita_black_bowl/usd/akita_black_bowl.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/akita_black_bowl/urdf/akita_black_bowl.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/akita_black_bowl/mjcf/akita_black_bowl.xml",
+                physics=PhysicStateType.RIGIDBODY,
             ),
             RigidObjCfg(
                 name="plate",
-                physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/plate/usd/plate.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/plate/urdf/plate.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/plate/mjcf/plate.xml",
+                physics=PhysicStateType.RIGIDBODY,
             ),
             # Fixed fixtures (from BDDL :fixtures section)
             # Note: kitchen_table is handled by the scene/arena
             ArticulationObjCfg(
                 name="wooden_cabinet",
-                fix_base_link= True,
+                fix_base_link=True,
                 usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/usd/wooden_cabinet.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/urdf/wooden_cabinet.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/mjcf/wooden_cabinet.xml",
@@ -65,7 +65,7 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
         # Scene configuration (from BDDL problem domain)
         scene=SceneCfg(
             name="libero_kitchen_tabletop",
-            mjcf_path="roboverse_data/LIBERO/libero/libero/assets/scenes/libero_kitchen_tabletop_base_style.xml",
+            mjcf_path="roboverse_data/assets/libero/scenes/libero_tabletop_base_style.xml",
         ),
     )
 
@@ -88,4 +88,15 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
     )
 
     # Trajectory file path
-    traj_filepath = "libero_traj_output/libero_90_kitchen_scene1_traj_v2.pkl"
+    traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_traj_v2.pkl"
+
+    # # rewrite terminate
+    # def _terminated(self, states: TensorState) -> torch.Tensor:
+    #     """No terminate condition yet. Will terminate when time is up."""
+    #     return torch.tensor([False])
+
+    # # rewrite checker
+    # def reset(self, states=None, env_ids=None):
+    #     """Skip checker reset."""
+    #     states = super(Libero90BaseTask, self).reset(states, env_ids)
+    #     return states
