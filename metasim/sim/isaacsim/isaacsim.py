@@ -426,7 +426,11 @@ class IsaacsimHandler(BaseSimHandler):
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         self.scene.write_data_to_sim()
-        self.sim.step(render=False)
+
+        # Decimation: run physics multiple times per control step for better stability
+        for _ in range(self.decimation):
+            self.sim.step(render=False)
+
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
         self.scene.update(dt=self.dt)

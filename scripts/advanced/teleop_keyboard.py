@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 import sys
 import time
+from datetime import datetime
 from typing import Literal
 
 import cv2  # OpenCV for camera display
-import numpy as np
 import pygame
 import torch
 import tyro
@@ -23,9 +23,10 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
-from metasim.utils.demo_util import get_traj
+from metasim.utils.demo_util import save_traj_file
 from metasim.utils.ik_solver import IKSolver, process_gripper_command
 from metasim.utils.math import matrix_from_euler, quat_apply, quat_from_matrix, quat_inv, quat_mul
+from metasim.utils.obs_utils import display_obs
 from metasim.utils.teleop_utils import PygameKeyboardClient, process_kb_input
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -33,7 +34,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
-    task: str = "stack_cube"
+    task: str = "close_box"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
@@ -44,7 +45,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
 
     ## IK Solver
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
@@ -55,6 +56,15 @@ class Args:
     display_width: int = 1200  # Display window width (adjusted for dual camera split-screen)
     display_height: int = 600  # Display window height
 
+    ## Trajectory saving
+    save_traj: bool = True  # Whether to save trajectory
+    traj_dir: str = "teleop_trajs"  # Directory to save trajectories
+    save_states: bool = True  # Whether to save full states (not just actions)
+    save_every_n_steps: int = 5  # Save every N steps (1=save all, 2=save every other step, etc.)
+
+    ## Step timing
+    min_step_time: float = 0.001  # Minimum time per step in seconds (controls operation speed)
+
     def __post_init__(self):
         log.info(f"Args: {self}")
 
@@ -62,110 +72,72 @@ class Args:
 args = tyro.cli(Args)
 
 
-def display_camera_observation_opencv(obs, width, height):
-    """Display camera observations using OpenCV - split screen for two cameras."""
-    if not hasattr(obs, "cameras") or len(obs.cameras) == 0:
-        # Create a blank dark gray image if no camera data
-        blank_img = np.full((height, width, 3), 50, dtype=np.uint8)
-        cv2.imshow("Camera View - Real-time Robot View", blank_img)
-        return
+def extract_state_dict(obs, scenario):
+    """Extract state dictionary from TensorState observation.
 
-    camera_names = list(obs.cameras.keys())
-    num_cameras = len(camera_names)
+    Args:
+        obs: TensorState observation
+        scenario: Scenario configuration to get joint names
 
-    # Create display image
-    display_img = np.zeros((height, width, 3), dtype=np.uint8)
+    Returns:
+        Dictionary containing positions, rotations, and joint positions for all objects and robots
+    """
+    state_dict = {}
 
-    # Split the display area into two halves
-    half_width = width // 2
-    half_height = height
+    # Create lookup dicts for configurations
+    obj_cfg_dict = {obj.name: obj for obj in scenario.objects}
+    robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
 
-    # Display first camera on the left
-    if num_cameras >= 1:
-        camera_name_1 = camera_names[0]
-        rgb_data_1 = obs.cameras[camera_name_1].rgb
+    # Extract object states
+    for obj_name, obj_state in obs.objects.items():
+        pos = obj_state.root_state[0, :3].cpu().numpy()  # [x, y, z]
+        quat = obj_state.root_state[0, 3:7].cpu().numpy()  # [w, x, y, z]
 
-        if rgb_data_1 is not None:
-            # Debug: Print RGB data range and info
-            if isinstance(rgb_data_1, torch.Tensor):
-                rgb_np_1 = rgb_data_1.cpu().numpy()
-                if rgb_np_1.max() <= 1.0:
-                    rgb_np_1 = (rgb_np_1 * 255).astype(np.uint8)
-            else:
-                rgb_np_1 = np.array(rgb_data_1)
+        state_entry = {
+            "pos": pos,
+            "rot": quat,
+        }
 
-            # Handle different shapes
-            if len(rgb_np_1.shape) == 4:  # (N, C, H, W)
-                rgb_np_1 = rgb_np_1[0]  # Take first environment
-            if len(rgb_np_1.shape) == 3 and rgb_np_1.shape[0] == 3:  # (C, H, W)
-                rgb_np_1 = np.transpose(rgb_np_1, (1, 2, 0))  # (H, W, C)
+        # Add joint positions if the object has joints
+        if obj_state.joint_pos is not None and obj_name in obj_cfg_dict:
+            obj_cfg = obj_cfg_dict[obj_name]
+            if hasattr(obj_cfg, "actuators") and obj_cfg.actuators is not None:
+                # Joint names are sorted alphabetically (standard in handlers)
+                joint_names = sorted(obj_cfg.actuators.keys())
+                joint_positions = obj_state.joint_pos[0].cpu().numpy()
+                state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
 
-            try:
-                # Resize image to fit the left half
-                if rgb_np_1.shape[:2] != (half_height, half_width):
-                    rgb_resized_1 = cv2.resize(rgb_np_1, (half_width, half_height))
-                else:
-                    rgb_resized_1 = rgb_np_1
-                display_img[:, :half_width] = rgb_resized_1
-            except Exception as e:
-                log.warning(f"Error displaying camera 1 image: {e}")
-                # Draw error rectangle on left half
-                cv2.rectangle(display_img, (0, 0), (half_width, half_height), (50, 50, 100), -1)
+        state_dict[obj_name] = state_entry
 
-    # Display second camera on the right
-    if num_cameras >= 2:
-        camera_name_2 = camera_names[1]
-        rgb_data_2 = obs.cameras[camera_name_2].rgb
+    # Extract robot states
+    for robot_name, robot_state in obs.robots.items():
+        pos = robot_state.root_state[0, :3].cpu().numpy()  # [x, y, z]
+        quat = robot_state.root_state[0, 3:7].cpu().numpy()  # [w, x, y, z]
 
-        if rgb_data_2 is not None:
-            # Debug: Print RGB data range and info
-            if isinstance(rgb_data_2, torch.Tensor):
-                rgb_np_2 = rgb_data_2.cpu().numpy()
-                if rgb_np_2.max() <= 1.0:
-                    rgb_np_2 = (rgb_np_2 * 255).astype(np.uint8)
-            else:
-                rgb_np_2 = np.array(rgb_data_2)
+        state_entry = {
+            "pos": pos,
+            "rot": quat,
+        }
 
-            # Handle different shapes
-            if len(rgb_np_2.shape) == 4:  # (N, C, H, W)
-                rgb_np_2 = rgb_np_2[0]  # Take first environment
-            if len(rgb_np_2.shape) == 3 and rgb_np_2.shape[0] == 3:  # (C, H, W)
-                rgb_np_2 = np.transpose(rgb_np_2, (1, 2, 0))  # (H, W, C)
+        # Add joint positions for robot
+        if robot_name in robot_cfg_dict:
+            robot_cfg = robot_cfg_dict[robot_name]
+            if robot_cfg.actuators is not None:
+                # Joint names are sorted alphabetically (standard in handlers)
+                joint_names = sorted(robot_cfg.actuators.keys())
+                joint_positions = robot_state.joint_pos[0].cpu().numpy()
+                state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
 
-            try:
-                # Resize image to fit the right half
-                if rgb_np_2.shape[:2] != (half_height, half_width):
-                    rgb_resized_2 = cv2.resize(rgb_np_2, (half_width, half_height))
-                else:
-                    rgb_resized_2 = rgb_np_2
-                display_img[:, half_width:] = rgb_resized_2
-            except Exception as e:
-                log.warning(f"Error displaying camera 2 image: {e}")
-                # Draw error rectangle on right half
-                cv2.rectangle(display_img, (half_width, 0), (width, half_height), (50, 50, 100), -1)
+        state_dict[robot_name] = state_entry
 
-    # Fill areas if cameras are missing
-    if num_cameras == 0:
-        display_img.fill(50)  # Dark gray
-    elif num_cameras == 1:
-        # Fill right half with darker gray
-        display_img[:, half_width:] = 30
-
-    # Show the combined image
-    cv2.imshow("Camera View - Real-time Robot View", display_img)
-
-    # Handle key events for OpenCV window
-    key = cv2.waitKey(1) & 0xFF
-    if key == 27:  # ESC key
-        return False  # Signal to exit
-    return True  # Continue running
+    return state_dict
 
 
 def main():
     task_cls = get_task_class(args.task)
     # Create two cameras with different viewpoints
-    camera1 = PinholeCameraCfg(name="camera_1", pos=(1.0, -1.0, 1.0), look_at=(0.0, 0.0, 0.0))
-    camera2 = PinholeCameraCfg(name="camera_2", pos=(1.5, -0.2, 0.5), look_at=(0.0, 0.0, 0.0))
+    camera1 = PinholeCameraCfg(name="camera_1", pos=(2.0, -2.0, 2.0), look_at=(0.0, 0.0, 0.0))
+    camera2 = PinholeCameraCfg(name="camera_2", pos=(2.5, -1.2, 2.5), look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
@@ -182,27 +154,28 @@ def main():
     tic = time.time()
     device = torch.device("cpu")
     env = task_cls(scenario, device=device)
-    from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    # from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
-    env = TaskViserWrapper(env)
+    # env = TaskViserWrapper(env)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
-
-    traj_filepath = env.traj_filepath
-    ## Data
-    tic = time.time()
-    assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
-    init_states, all_actions, all_states = get_traj(
-        traj_filepath, scenario.robots[0], env.handler
-    )  # XXX: only support one robot
-    toc = time.time()
-    log.trace(f"Time to load data: {toc - tic:.2f}s")
-
     ## Reset before first step
     tic = time.time()
     obs, extras = env.reset()
     toc = time.time()
     log.trace(f"Time to reset: {toc - tic:.2f}s")
+
+    # Initialize trajectory recording - support multiple episodes
+    all_episodes = []  # List of completed trajectories
+    current_episode_actions = []
+    current_episode_states = [] if args.save_states else None
+    current_episode_init_state = None
+    episode_count = 1
+
+    if args.save_traj:
+        # Record initial state for first episode
+        current_episode_init_state = extract_state_dict(obs, scenario)
+        log.info(f"Episode {episode_count}: Initial state recorded")
 
     # Setup IK Solver
     ik_solver = IKSolver(scenario.robots[0], solver=args.ik_solver, no_gnd=args.no_gnd)
@@ -226,36 +199,114 @@ def main():
         "z": False,
         "x": False,
         "space": False,
+        "r": False,  # Reset key (discard current episode)
     }
+
+    # Episode control flags
+    reset_requested = False  # Reset and discard current episode (R key)
+    complete_requested = False  # Complete current episode like timeout (C key)
+    save_to_file_requested = False  # Save all episodes to file (S key)
 
     def on_key_press(key):
         """Handle key press events"""
-        nonlocal running, space_pressed
+        nonlocal running, space_pressed, reset_requested, complete_requested, save_to_file_requested
         try:
             key_name = key.char.lower() if hasattr(key, "char") and key.char else str(key).split(".")[-1]
             if key_name in key_states:
                 key_states[key_name] = True
             if key_name == "space":
                 space_pressed = True
+            if key_name == "r":
+                reset_requested = True
+                log.info("Reset requested (discard current episode)")
+            if key_name == "v":
+                complete_requested = True
+                log.info("Complete requested (save current episode and reset)")
         except AttributeError:
-            if str(key) == "<Key.esc>":
+            # Handle special keys (ESC, etc.)
+            if str(key) == "Key.esc":
                 log.debug("ESC pressed, exiting simulation...")
                 running = False
 
     def on_key_release(key):
         """Handle key release events"""
-        nonlocal space_pressed
+        nonlocal space_pressed, reset_requested, complete_requested, save_to_file_requested
         try:
             key_name = key.char.lower() if hasattr(key, "char") and key.char else str(key).split(".")[-1]
             if key_name in key_states:
                 key_states[key_name] = False
             if key_name == "space":
                 space_pressed = False
+            if key_name == "r":
+                reset_requested = False
+            if key_name == "v":
+                complete_requested = False
         except AttributeError:
             pass
 
+    def save_current_episode():
+        """Save current episode to the episodes list"""
+        nonlocal current_episode_init_state, current_episode_actions, current_episode_states
+        nonlocal all_episodes
+
+        if len(current_episode_actions) > 0:
+            episode_data = {
+                "init_state": current_episode_init_state,
+                "actions": current_episode_actions,
+                "states": current_episode_states if args.save_states else None,
+            }
+            all_episodes.append(episode_data)
+            log.info(f"Episode {episode_count} saved ({len(current_episode_actions)} steps)")
+            return True
+        else:
+            log.warning(f"Episode {episode_count} has no actions, not saved")
+            return False
+
+    def reset_episode():
+        """Reset episode tracking variables"""
+        nonlocal current_episode_init_state, current_episode_actions, current_episode_states
+        nonlocal episode_count
+
+        current_episode_actions = []
+        current_episode_states = [] if args.save_states else None
+        current_episode_init_state = None
+        episode_count += 1
+
+    def save_all_episodes_to_file():
+        """Save all collected episodes to file"""
+        if len(all_episodes) == 0:
+            log.warning("No episodes to save")
+            return
+
+        # Organize in v2 format
+        trajs = {scenario.robots[0].name: all_episodes}
+
+        # Create output directory
+        os.makedirs(args.traj_dir, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{args.task}_{scenario.robots[0].name}_{timestamp}_v2.pkl"
+        filepath = os.path.join(args.traj_dir, filename)
+
+        # Save trajectory
+        save_traj_file(trajs, filepath)
+        log.info(f"All episodes saved to {filepath}")
+        log.info(f"  - Total episodes: {len(all_episodes)}")
+        log.info(f"  - Total steps: {sum(len(ep['actions']) for ep in all_episodes)}")
+
     # Setup keyboard listener
     keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
+
+    # Print control instructions
+    log.info("=" * 60)
+    log.info("KEYBOARD CONTROLS:")
+    log.info("  Movement: Arrow keys (↑↓←→), E/D (up/down)")
+    log.info("  Rotation: Q/W (roll), A/S (pitch), Z/X (yaw)")
+    log.info("  Gripper: SPACE (close/open)")
+    log.info("  Episode: V (complete & save), R (reset & discard)")
+    log.info("  Exit: ESC (save all and quit)")
+    log.info("=" * 60)
 
     if args.display_camera:
         # Initialize OpenCV window for camera display
@@ -274,6 +325,9 @@ def main():
     step = 0
     running = True
     while running:
+        # Record step start time for timing control
+        step_start_time = time.time()
+
         # Handle keyboard events
         if keyboard_client is not None:
             # update keyboard events every frame
@@ -306,7 +360,7 @@ def main():
         curr_ee_quat_local = quat_mul(quat_inv(robot_quat), curr_ee_quat)
 
         if keyboard_client is not None:
-            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.01, drot=0.05)
+            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.0005, drot=0.01)
         else:
             # Handle keyboard input using pynput key states
             d_pos = [0.0, 0.0, 0.0]
@@ -368,11 +422,72 @@ def main():
 
         obs, reward, success, time_out, extras = env.step(actions)
 
+        # Record trajectory data (with downsampling)
+        if args.save_traj and (step % args.save_every_n_steps == 0):
+            # Extract robot action from action list
+            # actions is a list of dicts: [{robot_name: {dof_pos_target: {...}}}]
+            robot_action = actions[0][scenario.robots[0].name]
+
+            # Record action in v2 format
+            action_record = {
+                "dof_pos_target": {k: float(v) for k, v in robot_action.get("dof_pos_target", {}).items()},
+                "dof_effort_target": {k: float(v) for k, v in robot_action.get("dof_effort_target", {}).items()}
+                if "dof_effort_target" in robot_action
+                else None,
+            }
+            current_episode_actions.append(action_record)
+
+            # Record state if requested
+            if args.save_states:
+                current_state = extract_state_dict(obs, scenario)
+                current_episode_states.append(current_state)
+
+        # Check for episode completion
+        episode_done = False
+
+        # Note: success and timeout just notify, don't auto-save or reset
+        # User must press V to save or R to discard
+        if success.any():
+            log.info(f"Episode {episode_count}: Task succeeded! Press V to save, or R to discard and reset")
+
+        if time_out.any():
+            log.info(f"Episode {episode_count}: Timeout! Press V to save, or R to discard and reset")
+
+        # Handle manual complete request (save current episode)
+        if complete_requested:
+            log.info(f"Episode {episode_count}: Saving episode...")
+            if args.save_traj:
+                save_current_episode()
+            episode_done = True
+
+        # Handle manual reset request (discard current episode)
+        if reset_requested:
+            log.info(f"Episode {episode_count}: Discarding episode and resetting...")
+            episode_done = True
+            # Don't save the episode, just reset
+
+        # Reset environment if episode is done
+        if episode_done:
+            reset_episode()
+            obs, extras = env.reset()
+            if args.save_traj:
+                current_episode_init_state = extract_state_dict(obs, scenario)
+                log.info(f"Episode {episode_count}: Started (total episodes collected: {len(all_episodes)})")
+            step = 0
+            reset_requested = False
+            complete_requested = False
+            continue
+
         # Display camera observation if requested
         if args.display_camera:
-            running = display_camera_observation_opencv(obs, args.display_width, args.display_height)
+            running = display_obs(obs, args.display_width, args.display_height)
             if not running:
                 break
+
+        # Enforce minimum step time to control operation speed
+        step_elapsed_time = time.time() - step_start_time
+        if step_elapsed_time < args.min_step_time:
+            time.sleep(args.min_step_time - step_elapsed_time)
 
         step += 1
 
@@ -388,6 +503,15 @@ def main():
     # Close keyboard client if it exists
     if keyboard_client is not None:
         keyboard_client.close()
+
+    # Save current episode if it has data (before exiting)
+    if args.save_traj and len(current_episode_actions) > 0:
+        log.info("Saving current episode before exit...")
+        save_current_episode()
+
+    # Save all collected episodes
+    if args.save_traj:
+        save_all_episodes_to_file()
 
     env.close()
     sys.exit()

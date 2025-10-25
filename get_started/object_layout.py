@@ -16,7 +16,7 @@ from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.math import matrix_from_euler, quat_from_matrix, quat_mul
@@ -341,7 +341,7 @@ if __name__ == "__main__":
     @configclass
     class Args:
         robot: str = "franka"
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
         num_envs: int = 1
         headless: bool = False
         step_size: float = 0.01
@@ -361,32 +361,71 @@ if __name__ == "__main__":
         simulator=args.sim,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         objects=[
-            PrimitiveCubeCfg(
-                name="cube",
-                size=(0.1, 0.1, 0.1),
-                color=[1.0, 0.0, 0.0],
-                physics=PhysicStateType.RIGIDBODY,
-            ),
-            PrimitiveSphereCfg(
-                name="sphere",
-                radius=0.1,
-                color=[0.0, 0.0, 1.0],
-                physics=PhysicStateType.RIGIDBODY,
+            # EmbodiedGen Assets - Put Banana in Mug Scene
+            RigidObjCfg(
+                name="table",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.GEOM,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.mjcf",
+                fix_base_link=True,
             ),
             RigidObjCfg(
-                name="bbq_sauce",
-                scale=(2, 2, 2),
+                name="banana",
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
-                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
-                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
-                enabled_gravity=False,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.mjcf",
             ),
-            ArticulationObjCfg(
-                name="box_base",
-                usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
-                urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
-                mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
+            RigidObjCfg(
+                name="mug",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.mjcf",
+            ),
+            RigidObjCfg(
+                name="book",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/usd/book.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.mjcf",
+            ),
+            RigidObjCfg(
+                name="lamp",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/usd/lamp.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/result/lamp.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/mjcf/lamp.mjcf",
+            ),
+            RigidObjCfg(
+                name="remote_control",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/usd/remote_control.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/result/remote_control.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/mjcf/remote_control.mjcf",
+            ),
+            RigidObjCfg(
+                name="rubiks_cube",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/usd/rubik's_cube.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/result/rubik's_cube.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/mjcf/rubik's_cube.mjcf",
+            ),
+            RigidObjCfg(
+                name="vase",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/usd/vase.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/result/vase.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.mjcf",
             ),
         ],
     )
@@ -397,18 +436,42 @@ if __name__ == "__main__":
     init_states = [
         {
             "objects": {
-                "cube": {"pos": torch.tensor([0.3, -0.2, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
-                "sphere": {"pos": torch.tensor([0.4, -0.6, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
-                "bbq_sauce": {"pos": torch.tensor([0.7, -0.3, 0.14]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
-                "box_base": {
-                    "pos": torch.tensor([0.5, 0.2, 0.1]),
-                    "rot": torch.tensor([0.0, 0.7071, 0.0, 0.7071]),
-                    "dof_pos": {"box_joint": 0.0},
+                "table": {
+                    "pos": torch.tensor([0.4, -0.2, 0.4]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "banana": {
+                    "pos": torch.tensor([0.28, -0.58, 0.825]),  # Starting position on table (left)
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "mug": {
+                    "pos": torch.tensor([0.68, -0.34, 0.863]),  # Target: mug on table (right)
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "book": {
+                    "pos": torch.tensor([0.3, -0.28, 0.82]),  # Book on table
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "lamp": {
+                    "pos": torch.tensor([0.68, 0.10, 1.05]),  # Lamp on table
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "remote_control": {
+                    "pos": torch.tensor([0.68, -0.54, 0.811]),  # Remote on table
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "rubiks_cube": {
+                    "pos": torch.tensor([0.48, -0.54, 0.83]),  # Rubik's cube on table
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "vase": {
+                    "pos": torch.tensor([0.30, 0.05, 0.95]),  # Vase on table
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
             "robots": {
                 "franka": {
-                    "pos": torch.tensor([0.0, 0.0, 0.0]),
+                    "pos": torch.tensor([0.8, -0.8, 0.78]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "panda_joint1": 0.0,
@@ -435,6 +498,7 @@ if __name__ == "__main__":
     entity_joints = {}
 
     # Get joints from objects (articulated objects)
+    # Note: EmbodiedGen objects are rigid bodies without joints
     for obj in scenario.objects:
         if hasattr(obj, "actuators") and obj.actuators:
             entity_joints[obj.name] = list(obj.actuators.keys())
@@ -446,7 +510,7 @@ if __name__ == "__main__":
                 if dof_pos:
                     entity_joints[obj.name] = list(dof_pos.keys())
                 else:
-                    entity_joints[obj.name] = []
+                    entity_joints[obj.name] = []  # No joints for rigid objects like banana, mug, etc.
             else:
                 entity_joints[obj.name] = []
 
