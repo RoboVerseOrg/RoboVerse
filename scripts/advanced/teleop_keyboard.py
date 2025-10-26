@@ -51,6 +51,10 @@ class Args:
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
     no_gnd: bool = False
 
+    ## Viser Visualization
+    enable_viser: bool = False  # Enable real-time Viser 3D visualization
+    viser_port: int = 8080  # Port for Viser server
+
     ## Display
     display_camera: bool = True  # Whether to display camera view in real-time
     display_width: int = 1200  # Display window width (adjusted for dual camera split-screen)
@@ -154,9 +158,14 @@ def main():
     tic = time.time()
     device = torch.device("cpu")
     env = task_cls(scenario, device=device)
-    # from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
-    # env = TaskViserWrapper(env)
+    # Optionally wrap with Viser visualization
+    if args.enable_viser:
+        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+
+        env = TaskViserWrapper(env, port=args.viser_port)
+        log.info(f"Viser visualization enabled on port {args.viser_port}")
+
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
     ## Reset before first step
