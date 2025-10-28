@@ -7,6 +7,10 @@ In this example, we will train a PPO agent to reach as far away as possible and 
 ## One Command to Train PPO, Inference and Save Video
 We provide tutorials for training PPO, inference and saving video. In this example, we will use stable baseline 3 to train PPO.
 
+**If you are using MacOS**: We only support mujoco with no parallelism now. Please run these code with `mjpython` instead of `python` and with additional tag `--num_envs 1`.
+
+**If you are using Windows**: We only support mujoco with no parallelism now. Please use additional tag `--num_envs 1`.
+
 ### Task: Reach Far Away
 
 ```bash

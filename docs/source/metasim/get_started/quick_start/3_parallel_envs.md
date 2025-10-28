@@ -29,6 +29,12 @@ python get_started/3_parallel_envs.py  --sim genesis --num_envs 4
 ```
 Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
 
+#### Mujoco
+```bash
+# For mac users, replace python with mjpython
+python get_started/3_parallel_envs.py  --sim mujoco --num_envs 4 --headless
+```
+**If you are on mac**, please avoid running this task without the `headless` tag.
 
 We can open multiple environments at the same time.
 

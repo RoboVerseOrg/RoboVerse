@@ -77,7 +77,8 @@ def _extract_obj_dependencies(obj_file_path):
     obj_dir = os.path.dirname(obj_file_path)
 
     try:
-        with open(obj_file_path) as f:
+        # Explicitly read as UTF-8 and replace undecodable bytes to avoid Unicode errors on Windows
+        with open(obj_file_path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 line = line.strip()
                 if line.startswith("mtllib "):
@@ -106,7 +107,8 @@ def _extract_mtl_textures(mtl_file_path):
     mtl_dir = os.path.dirname(mtl_file_path)
 
     try:
-        with open(mtl_file_path) as f:
+        # Explicitly read as UTF-8 and replace undecodable bytes to avoid Unicode errors on Windows
+        with open(mtl_file_path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 line = line.strip()
                 if line.startswith("map_"):
@@ -131,7 +133,8 @@ def extract_paths_from_mjcf(xml_file_path: str) -> list[str]:
         list: List of absolute paths to all referenced mesh, texture, and include-xml files
     """
     path = Path(xml_file_path)
-    mujoco_xml = path.read_text()
+    # Read MJCF XML as UTF-8 and replace invalid bytes (Windows default encoding can be cp1252)
+    mujoco_xml = path.read_text(encoding="utf-8", errors="replace")
     root = ET.fromstring(mujoco_xml)
 
     # Handle texture paths

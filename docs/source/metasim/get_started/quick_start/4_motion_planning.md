@@ -24,6 +24,7 @@ python get_started/4_motion_planning.py  --sim isaacgym
 
 #### Mujoco
 ```bash
+# For mac users, replace python with mjpython.
 python get_started/4_motion_planning.py  --sim mujoco --headless
 ```
 Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
