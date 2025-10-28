@@ -1,8 +1,10 @@
-# States and Trajectories
+# States, Actions and Trajectories
 
 ## Overview
 
 States are how we communicate with simulated environments. We provide two state types: `TensorState` and `DictEnvState` . `TensorState` is implemented with torch tensors as base data structure and designed for efficiency, while `DictEnvState` is implemented with dicts for more user-friendly interactions.
+
+Actions are how we control robots in the simulation. The most basic action type is joint angle control, where you directly specify target joint positions for the robot.
 
 When multiple states are organized as a sequence, we will have a `Trajectory`.
 
@@ -163,6 +165,157 @@ object_pos = dict_state["objects"]["ball"]["pos"]
 `DictEnvState` instances can also be passed into the handler to set the simulation state.
 
 The disadvantage of `DictState` is its speed. In some cases, `DictState` is extremely slow due to frequent dict access and discontinuous memory access.
+
+## Actions
+
+Actions are used to control robots in the simulation. The most fundamental action type is **joint angle control**, where you directly specify target joint positions for each joint.
+
+### Basic Joint Angle Control
+
+Actions are passed to the simulator as a **list of dictionaries**, where each dictionary corresponds to one environment. The basic format for joint angle control is:
+
+```python
+actions = [
+    {
+        <robot_name>: {
+            "dof_pos_target": {
+                <joint_name_1>: <target_value_1>,
+                <joint_name_2>: <target_value_2>,
+                ...
+            }
+        }
+    },
+    # ... more dicts for additional environments
+]
+```
+
+You can apply actions using `handler.set_dof_target(actions)`.
+
+### Example: Franka Panda Robot Control
+
+Here's a concrete example of controlling a Franka Panda robot. The Franka has 7 arm joints and 2 finger joints:
+
+```python
+# Example 1: Set Franka to home position, num_envs=1
+actions = [{
+    "franka": {
+        "dof_pos_target": {
+            "panda_joint1": 0.0,
+            "panda_joint2": -0.785398,
+            "panda_joint3": 0.0,
+            "panda_joint4": -2.356194,
+            "panda_joint5": 0.0,
+            "panda_joint6": 1.570796,
+            "panda_joint7": 0.785398,
+            "panda_finger_joint1": 0.04,
+            "panda_finger_joint2": 0.04,
+        }
+    }
+}]
+handler.set_dof_target(actions)
+```
+
+```python
+# Example 2: Random joint positions within joint limits, num_envs=1
+import torch
+
+actions = [{
+    "franka": {
+        "dof_pos_target": {
+            joint_name: (
+                torch.rand(1).item()
+                * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                + robot.joint_limits[joint_name][0]
+            )
+            for joint_name in robot.joint_limits.keys()
+        }
+    }
+}]
+handler.set_dof_target(actions)
+```
+
+```python
+# Example 3: Multiple environments with different actions, num_envs=3
+actions = [
+    {
+        "franka": {
+            "dof_pos_target": {
+                "panda_joint1": 0.0,
+                "panda_joint2": -0.785398,
+                # ... other joints
+            }
+        }
+    },
+    {
+        "franka": {
+            "dof_pos_target": {
+                "panda_joint1": 0.5,
+                "panda_joint2": -1.0,
+                # ... other joints
+            }
+        }
+    },
+    {
+        "franka": {
+            "dof_pos_target": {
+                "panda_joint1": -0.5,
+                "panda_joint2": -0.5,
+                # ... other joints
+            }
+        }
+    },
+]
+handler.set_dof_target(actions)
+```
+
+### Important Notes
+
+- **List of Dictionaries**: Actions must be provided as a list of dictionaries, where the length of the list equals `num_envs`. Each dictionary specifies the actions for one environment.
+- **No Scaling by Default**: The action values are directly applied as target joint positions. There is no normalization or scaling by default (e.g., no automatic mapping from [-1, 1] to joint limits).
+- **Joint Limits**: Make sure your target values are within the robot's joint limits. You can access joint limits via `robot.joint_limits`.
+- **Partial Updates**: You can specify only a subset of joints in the action. Unspecified joints will maintain their previous target values.
+
+### Tensor Format (Advanced)
+
+For efficiency in vectorized operations, `set_dof_target` also supports a **2D torch tensor** format with shape `(num_envs, num_actuators)` instead of list of dictionaries:
+
+```python
+import torch
+
+# Shape: (num_envs, num_actuators)
+# Joint values are ordered by joint name in alphabetical (dictionary) order
+# For Franka: [panda_finger_joint1, panda_finger_joint2, panda_joint1, ..., panda_joint7]
+actions_tensor = torch.tensor([
+    [0.04, 0.04, 0.0, -0.785398, 0.0, -2.356194, 0.0, 1.570796, 0.785398],  # env 0
+    [0.04, 0.04, 0.5, -1.0, 0.2, -2.0, 0.1, 1.5, 0.8],  # env 1
+    # ... more environments
+])
+
+handler.set_dof_target(actions_tensor)
+```
+
+**Important**: When using tensor format, the joint values must be ordered by **joint name in alphabetical (dictionary) order**. For Franka Panda, this order is:
+1. `panda_finger_joint1`
+2. `panda_finger_joint2`
+3. `panda_joint1`
+4. `panda_joint2`
+5. `panda_joint3`
+6. `panda_joint4`
+7. `panda_joint5`
+8. `panda_joint6`
+9. `panda_joint7`
+
+You can check the exact order using `sorted(robot.joint_limits.keys())`.
+
+### Higher-Level Control
+
+For higher-level control modes such as:
+- End-effector (EE) position/orientation control
+- Delta joint control (incremental movements)
+- Velocity control
+- Torque control
+
+These can be implemented in your task's `step()` function by converting the high-level actions to joint-level commands. The base simulator interface uses direct joint angle control as the fundamental action space.
 
 ## Trajectory
 
