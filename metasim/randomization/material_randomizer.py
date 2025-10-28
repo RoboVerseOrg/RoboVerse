@@ -469,75 +469,85 @@ class MaterialRandomizer(BaseRandomizerType):
             raise ValueError(f"Unknown selection strategy: {self.cfg.mdl.selection_strategy}")
 
     def _apply_mdl_to_prim(self, mdl_path: str, prim_path: str) -> None:
-        """Apply MDL material to a specific prim using project's proven method."""
-        try:
-            # Use the existing utility function from the project
-            from metasim.sim.isaaclab.utils.material_util import apply_mdl_to_prim
+        """Apply MDL material to a specific prim.
 
-            # Ensure UV coordinates first
-            prim = prim_utils.get_prim_at_path(prim_path)
-            if prim:
-                self._ensure_uv_for_hierarchy(prim)
+        This is the internal implementation that was originally in material_util.py
+        """
+        # Convert to absolute path for IsaacSim
+        mdl_path = os.path.abspath(mdl_path)
 
-            # Apply using the proven utility
-            apply_mdl_to_prim(mdl_path, prim_path)
+        if not os.path.exists(mdl_path):
+            raise FileNotFoundError(f"Material file {mdl_path} does not exist")
+        if not mdl_path.endswith(".mdl"):
+            raise ValueError(f"Material file {mdl_path} must have .mdl extension")
 
-        except ImportError:
-            # Fallback to our implementation if utility is not available
-            self._apply_mdl_fallback(mdl_path, prim_path)
-        except Exception as e:
-            logger.warning(f"Failed to apply MDL {mdl_path} to {prim_path}: {e}")
+        import isaacsim.core.utils.prims as prim_utils
 
-    def _apply_mdl_fallback(self, mdl_path: str, prim_path: str) -> None:
-        """Fallback MDL application method."""
         prim = prim_utils.get_prim_at_path(prim_path)
         if not prim:
             raise ValueError(f"Prim not found at path {prim_path}")
 
-        # Extract the actual material name from the MDL file
-        mtl_name = extract_material_name_from_mdl(mdl_path)
-        if mtl_name is None:
-            # Fallback to filename-based name if extraction fails
-            mtl_base_name = os.path.basename(mdl_path).removesuffix(".mdl")
-            mtl_name = mtl_base_name
-            logger.warning(f"Could not extract material name from {mdl_path}, using filename: {mtl_name}")
+        # Ensure UV coordinates first
+        self._ensure_uv_for_hierarchy(prim)
+
+        # Material name should match the MDL file basename (without .mdl extension)
+        # Don't add _mat or timestamp - let IsaacSim use the exported material name from MDL
+        mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+        import omni.kit.commands
+        from omni.kit.material.library import get_material_prim_path
+        from pxr import UsdShade
 
         _, mtl_prim_path = get_material_prim_path(mtl_name)
 
-        success, _ = omni.kit.commands.execute(
+        logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
+
+        success, result = omni.kit.commands.execute(
             "CreateMdlMaterialPrim",
             mtl_url=mdl_path,
             mtl_name=mtl_name,
             mtl_path=mtl_prim_path,
             select_new_prim=False,
         )
+        if not success:
+            logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
+            raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
 
-        if success:
-            success_bind, _ = omni.kit.commands.execute(
-                "BindMaterial",
-                prim_path=prim.GetPath(),
-                material_path=mtl_prim_path,
-                strength=UsdShade.Tokens.strongerThanDescendants,
-            )
-            if not success_bind:
-                logger.warning(f"Failed to bind MDL material {mtl_name}")
-        else:
-            logger.warning(f"Failed to create MDL material {mtl_name}")
+        logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
 
-    def _ensure_uv_for_hierarchy(self, prim) -> None:
-        """Ensure UV coordinates for all meshes in the prim hierarchy."""
+        success, result = omni.kit.commands.execute(
+            "BindMaterial",
+            prim_path=prim.GetPath(),
+            material_path=mtl_prim_path,
+            strength=UsdShade.Tokens.strongerThanDescendants,
+        )
+
+        if not success:
+            logger.error(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
+            raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
+
+        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+
+    def _ensure_uv_for_hierarchy(self, prim, tile_scale: float = 1.0) -> None:
+        """Ensure UV coordinates for all meshes in the prim hierarchy.
+
+        Args:
+            prim: USD prim to process
+            tile_scale: Scale factor for UV tiling (passed to UV generation functions)
+        """
         from pxr import Usd, UsdGeom
 
         # Process all meshes in the hierarchy
         for p in Usd.PrimRange(prim):
             if p.IsA(UsdGeom.Mesh):
                 try:
-                    self._ensure_uv_coordinates_improved(UsdGeom.Mesh(p))
+                    self._ensure_uv_coordinates_improved(
+                        UsdGeom.Mesh(p), tile=1.0 / tile_scale if tile_scale > 0 else 0.2
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to generate UV for mesh {p.GetPath()}: {e}")
             elif p.IsA(UsdGeom.Gprim) and not p.IsA(UsdGeom.Mesh):
                 try:
-                    self._ensure_basic_uv_for_gprim(p)
+                    self._ensure_basic_uv_for_gprim(p, tile_scale=tile_scale)
                 except Exception as e:
                     logger.warning(f"Failed to generate UV for gprim {p.GetPath()}: {e}")
 
@@ -593,26 +603,53 @@ class MaterialRandomizer(BaseRandomizerType):
         except Exception as e:
             logger.warning(f"Failed to create UV coordinates for mesh: {e}")
 
-    def _ensure_basic_uv_for_gprim(self, gprim) -> None:
-        """Basic UV coordinate generation for geometric primitives."""
-        from pxr import Gf, UsdGeom, Vt
+    def _ensure_basic_uv_for_gprim(self, gprim, tile_scale: float = 1.0) -> None:
+        """Enhanced UV coordinate generation for geometric primitives (Cube, Sphere, etc.).
+
+        Args:
+            gprim: The geometric primitive to generate UVs for
+            tile_scale: Scale factor for UV tiling (smaller = more repetitions)
+        """
+        from pxr import Gf, Sdf, UsdGeom, Vt
 
         try:
             pvapi = UsdGeom.PrimvarsAPI(gprim)
             if pvapi.HasPrimvar("st"):
                 return  # UV coordinates already exist
 
-            # Create basic UV coordinates for primitive shapes
-            # This is a simple approach that should work for most primitives
-            basic_uvs = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+            prim_type = gprim.GetTypeName()
 
-            st = Vt.Vec2fArray([Gf.Vec2f(u, v) for (u, v) in basic_uvs])
-            pv = pvapi.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.vertex)
-            pv.Set(st)
-            pv.SetInterpolation(UsdGeom.Tokens.vertex)
+            if prim_type == "Cube":
+                # Proper UV mapping for cube: 6 faces, 4 vertices per face = 24 faceVarying UVs
+                # Each face gets proper 0-1 UV coordinates for correct texture mapping
+                # Face order in USD Cube: -X, +X, -Y, +Y, -Z, +Z
+                cube_uvs = []
+                for face_idx in range(6):
+                    # Each face gets a 0-1 UV square
+                    cube_uvs.extend([
+                        (0.0, 0.0),  # bottom-left
+                        (tile_scale, 0.0),  # bottom-right
+                        (tile_scale, tile_scale),  # top-right
+                        (0.0, tile_scale),  # top-left
+                    ])
+
+                st = Vt.Vec2fArray([Gf.Vec2f(u, v) for (u, v) in cube_uvs])
+                pv = pvapi.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.faceVarying)
+                pv.Set(st)
+                pv.SetInterpolation(UsdGeom.Tokens.faceVarying)
+                logger.debug(f"Generated {len(cube_uvs)} faceVarying UVs for Cube with tile_scale={tile_scale}")
+            else:
+                # For other primitives, use simpler vertex-based UVs
+                basic_uvs = [(0.0, 0.0), (tile_scale, 0.0), (tile_scale, tile_scale), (0.0, tile_scale)]
+
+                st = Vt.Vec2fArray([Gf.Vec2f(u, v) for (u, v) in basic_uvs])
+                pv = pvapi.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.vertex)
+                pv.Set(st)
+                pv.SetInterpolation(UsdGeom.Tokens.vertex)
+                logger.debug(f"Generated {len(basic_uvs)} vertex UVs for {prim_type}")
 
         except Exception as e:
-            logger.warning(f"Failed to create basic UV coordinates for {gprim.GetPath()}: {e}")
+            logger.warning(f"Failed to create UV coordinates for {gprim.GetPath()}: {e}")
 
     def get_physical_properties(self) -> dict:
         """Get current physical properties for logging."""
