@@ -78,7 +78,7 @@ class SinglePybulletHandler(BaseSimHandler):
 
             self.camera_ids[camera.name] = (width, height, view_matrix, projection_matrix)
 
-        for object in [*self.objects, self.robot]:
+        for object in [*self.objects, *self.robots]:
             if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 pos = np.asarray(object.default_position)
                 rot = convert_quat(np.asarray(object.default_orientation), to="xyzw")
@@ -363,7 +363,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for robot in [self.robot]:
+        for robot in self.robots:
             joint_reindex = self.get_joint_reindex(robot.name)
             obj_id = self.object_ids[robot.name]
             pos, rot = p.getBasePositionAndOrientation(obj_id)

@@ -16,14 +16,14 @@ We are now actively collecting scenes from multiple sources and updating the exi
 | [GAPartNet](#gapartnet) | `metasim/cfg/tasks/gapartnet` | Manipulation (5) |
 | GPT(GPT Generated Tasks) | `metasim/cfg/tasks/gpt` | Manipulation (1) |
 | [GraspNet](#graspnet) | `metasim/cfg/tasks/graspnet` | Grasping (1) |
-| [HumanoidBench](#humanoidbench) | `metasim/cfg/tasks/humanoidbench` | Humanoid (19) |
+| [HumanoidBench](#humanoidbench) | `roboverse_pack/tasks/humanoid_bench` | Humanoid (19) |
 | [IsaacgymEnvs](#isaacgymenvs) | `metasim/cfg/tasks/isaacgym_envs` | Locomotion (1) Manipulation (1) |
-| [LIBERO](#libero) | `metasim/cfg/tasks/libero` | Manipulation (10) |
-| [Maniskill](#maniskill) | `metasim/cfg/tasks/maniskill` | Manipulation (7) |
+| [LIBERO](#libero) | `roboverse_pack/tasks/libero` | Manipulation (10) |
+| [Maniskill](#maniskill) | `roboverse_pack/tasks/maniskill` | Manipulation (7) |
 | [MetaWorld](#metaworld) | `metasim/cfg/tasks/metaworld` | Manipulation (6) |
 | [Open6Dor](#open6dor) | `metasim/cfg/tasks/open6dor` | Manipulation (68) |
 | [RLAfford](#rlafford) | `metasim/cfg/tasks/rlafford` | Manipulation (1) |
-| [RLBench](#rlbench) | `metasim/cfg/tasks/rlbench` | Manipulation (68) |
+| [RLBench](#rlbench) | `roboverse_pack/tasks/rlbench` | Manipulation (68) |
 | [RoboSuite](#robosuite) | `metasim/cfg/tasks/robosuite` | Manipulation (7) |
 | [SimplerEnv](#simplerenv) | `metasim/cfg/tasks/simpler_env` | Manipulation (1) |
 | [UH1](#uh1) | `metasim/cfg/tasks/uh1` | Humanoid (1) |
