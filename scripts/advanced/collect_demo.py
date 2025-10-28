@@ -249,6 +249,8 @@ class DomainRandomizationManager:
 
     def _setup_light_randomizers(self, seed: int | None):
         """Setup light randomizers for all lights."""
+        from metasim.scenario.lights import DiskLightCfg, DomeLightCfg, SphereLightCfg
+
         lights = getattr(self.scenario, "lights", [])
         if not lights:
             log.info("  No lights found for light randomization")
@@ -257,7 +259,14 @@ class DomainRandomizationManager:
         log.info(f"  Setting up light randomizers for {len(lights)} lights")
         for light in lights:
             light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
-            config = LightPresets.indoor_ambient(light_name, randomization_mode="combined")
+
+            if isinstance(light, DomeLightCfg):
+                config = LightPresets.dome_ambient(light_name, randomization_mode="combined")
+            elif isinstance(light, (SphereLightCfg, DiskLightCfg)):
+                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
+            else:
+                log.warning(f"Unknown light type for {light_name}, using sphere_ceiling_light preset")
+                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
 
             randomizer = LightRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)

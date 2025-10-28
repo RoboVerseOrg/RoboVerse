@@ -89,8 +89,6 @@ class DomainRandomizationManager:
 
         if self.cfg.enable and self.cfg.use_unified_object_randomizer:
             # Unified Object Randomization
-            # cube_rand = ObjectRandomizer(ObjectPresets.grasping_target("cube"), seed=self.cfg.seed)
-            # sphere_rand = ObjectRandomizer(ObjectPresets.bouncy_object("sphere"), seed=self.cfg.seed)
             robot_rand = ObjectRandomizer(ObjectPresets.robot_base(self.scenario.robots[0].name), seed=self.cfg.seed)
 
             # for rand in [cube_rand, sphere_rand, robot_rand]:

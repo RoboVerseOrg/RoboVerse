@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from multiprocessing import Pool
 
 import portalocker
@@ -23,6 +24,51 @@ REPO_ID = "RoboVerseOrg/roboverse_data"
 LOCAL_DIR = "roboverse_data"
 
 hf_api = HfApi()
+
+
+def _extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
+    """Extract texture file paths referenced in an MDL file by parsing its content.
+
+    Args:
+        mdl_file_path: Path to the MDL file
+
+    Returns:
+        List of absolute texture file paths referenced in the MDL file
+    """
+    texture_paths = []
+
+    if not os.path.exists(mdl_file_path):
+        return texture_paths
+
+    mdl_dir = os.path.dirname(mdl_file_path)
+
+    try:
+        with open(mdl_file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        # Parse texture_2d declarations in MDL files
+        # Pattern: texture_2d("./path/to/texture.png", optional_args)
+        texture_pattern = r'texture_2d\("([^"]+)"[^)]*\)'
+        matches = re.findall(texture_pattern, content)
+
+        for match in matches:
+            if match.strip():  # Skip empty texture declarations
+                # Convert relative paths to absolute paths
+                if match.startswith("./"):
+                    texture_path = os.path.join(mdl_dir, match[2:])  # Remove './'
+                elif match.startswith("../"):
+                    texture_path = os.path.abspath(os.path.join(mdl_dir, match))
+                elif not os.path.isabs(match):
+                    texture_path = os.path.join(mdl_dir, match)
+                else:
+                    texture_path = match
+
+                texture_paths.append(os.path.normpath(texture_path))
+
+    except Exception as e:
+        log.debug(f"Failed to parse MDL file {mdl_file_path}: {e}")
+
+    return texture_paths
 
 
 def check_and_download_single(filepath: str):
@@ -105,6 +151,46 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
         elif filepath.endswith(".xml"):
             mesh_paths = extract_paths_from_mjcf(filepath)
             new_filepaths.extend(mesh_paths)
+        elif filepath.endswith(".usd") or filepath.endswith(".usda") or filepath.endswith(".usdc"):
+            # For USD files, also try to download common texture files
+            # USD files often reference textures with relative paths like '../textures/texture_map.png'
+            asset_dir = os.path.dirname(filepath)
+            # Check for textures directory at the same level as the USD directory
+            textures_dir = os.path.join(os.path.dirname(asset_dir), "textures")
+
+            # Try to download common texture file names without listing the entire repo
+            try:
+                if not os.path.relpath(textures_dir, LOCAL_DIR).startswith(".."):
+                    textures_relpath = os.path.relpath(textures_dir, LOCAL_DIR)
+                    # Common texture file names to try
+                    common_texture_names = [
+                        "texture_map.png",
+                        "texture.png",
+                        "diffuse.png",
+                        "albedo.png",
+                        "base_color.png",
+                    ]
+                    for texture_name in common_texture_names:
+                        texture_relpath = os.path.join(textures_relpath, texture_name)
+                        # Check if this specific file exists on HuggingFace
+                        if hf_api.file_exists(REPO_ID, texture_relpath, repo_type="dataset"):
+                            texture_path = os.path.join(LOCAL_DIR, texture_relpath)
+                            new_filepaths.append(texture_path)
+            except Exception as e:
+                log.debug(f"Could not check for textures for {filepath}: {e}")
+        elif filepath.endswith(".mdl"):
+            # For MDL files, parse the file content to extract texture paths
+            # This ensures we download exactly what the MDL file references
+            if os.path.exists(filepath):
+                try:
+                    # Parse MDL file and extract texture paths
+                    texture_paths = _extract_texture_paths_from_mdl(filepath)
+                    # Add textures that don't exist locally to the download list
+                    for texture_path in texture_paths:
+                        if not os.path.exists(texture_path):
+                            new_filepaths.append(texture_path)
+                except Exception as e:
+                    log.debug(f"Could not parse MDL textures for {filepath}: {e}")
 
     if len(new_filepaths) > 0:
         check_and_download_recursive(new_filepaths, n_processes)

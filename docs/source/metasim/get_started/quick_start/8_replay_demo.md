@@ -5,7 +5,7 @@ There are two control modes for replay. The `physics` mode replays the physics a
 ## Physics replay
 
 ```bash
-python scripts/advanced/replay_demo.py --sim=isaacsim --task=CloseBox --num_envs 4
+python scripts/advanced/replay_demo.py --sim=isaacsim --task=close_box --num_envs 4
 ```
 
 task could also be:
@@ -17,7 +17,7 @@ task could also be:
 ## States replay
 
 ```bash
-python scripts/advanced/replay_demo.py --sim=isaacsim --task=CloseBox --num_envs 4 --object-states
+python scripts/advanced/replay_demo.py --sim=isaacsim --task=close_box --num_envs 4 --object-states
 ```
 task could also be:
 - `CloseBox`

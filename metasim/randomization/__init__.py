@@ -10,10 +10,25 @@ from .camera_randomizer import (
     CameraRandomCfg,
     CameraRandomizer,
 )
-from .light_randomizer import LightRandomCfg, LightRandomizer
+from .light_randomizer import (
+    LightColorRandomCfg,
+    LightIntensityRandomCfg,
+    LightOrientationRandomCfg,
+    LightPositionRandomCfg,
+    LightRandomCfg,
+    LightRandomizer,
+)
 from .material_randomizer import MaterialRandomCfg, MaterialRandomizer
 from .object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
-from .presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets
+from .presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets, ScenePresets
+from .presets.light_presets import (
+    LightColorRanges,
+    LightIntensityRanges,
+    LightOrientationRanges,
+    LightPositionRanges,
+    LightScenarios,
+)
+from .scene_randomizer import SceneGeometryCfg, SceneMaterialPoolCfg, SceneRandomCfg, SceneRandomizer
 
 __all__ = [
     "CameraImageRandomCfg",
@@ -23,9 +38,18 @@ __all__ = [
     "CameraPresets",
     "CameraRandomCfg",
     "CameraRandomizer",
+    "LightColorRandomCfg",
+    "LightColorRanges",
+    "LightIntensityRandomCfg",
+    "LightIntensityRanges",
+    "LightOrientationRandomCfg",
+    "LightOrientationRanges",
+    "LightPositionRandomCfg",
+    "LightPositionRanges",
     "LightPresets",
     "LightRandomCfg",
     "LightRandomizer",
+    "LightScenarios",
     "MaterialPresets",
     "MaterialRandomCfg",
     "MaterialRandomizer",
@@ -34,4 +58,9 @@ __all__ = [
     "ObjectRandomizer",
     "PhysicsRandomCfg",
     "PoseRandomCfg",
+    "SceneGeometryCfg",
+    "SceneMaterialPoolCfg",
+    "ScenePresets",
+    "SceneRandomCfg",
+    "SceneRandomizer",
 ]
