@@ -51,6 +51,8 @@ This is **completely optional** and not required for basic teleoperation.
 
 ### Play in Simulation
 
+**Note for mac users**: Please run this task with normal python with the `--headless` tag.
+
 **Basic usage (with default PyRoki solver):**
 ```bash
 python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --sim mujoco

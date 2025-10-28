@@ -38,7 +38,10 @@ def check_and_download_single(filepath: str):
         return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
-        hf_exists = hf_api.file_exists(REPO_ID, os.path.relpath(filepath, LOCAL_DIR), repo_type="dataset")
+        # Use POSIX-style paths for the HF dataset API (Windows uses backslashes by default)
+        relpath = os.path.relpath(filepath, LOCAL_DIR)
+        relpath_posix = relpath.replace(os.sep, "/")
+        hf_exists = hf_api.file_exists(REPO_ID, relpath_posix, repo_type="dataset")
 
         if not hf_exists:
             if filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga")):
@@ -59,9 +62,10 @@ def check_and_download_single(filepath: str):
 
         ## Finally, download the file from the huggingface dataset.
         try:
+            # Ensure the filename uses POSIX separators when requesting from HF hub
             hf_hub_download(
                 repo_id=REPO_ID,
-                filename=os.path.relpath(filepath, LOCAL_DIR),
+                filename=relpath_posix,
                 repo_type="dataset",
                 local_dir=LOCAL_DIR,
             )
