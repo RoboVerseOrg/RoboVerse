@@ -13,7 +13,7 @@ from .lights import BaseLightCfg, DistantLightCfg
 from .objects import BaseObjCfg
 from .render import RenderCfg
 from .robot import RobotCfg
-from .scene import SceneCfg
+from .scene import GSSceneCfg, SceneCfg
 from .simulator_params import SimParamCfg
 
 
@@ -27,6 +27,7 @@ class ScenarioCfg:
     lights: list[BaseLightCfg] = [DistantLightCfg()]
     objects: list[BaseObjCfg] = []
     cameras: list[BaseCameraCfg] = []
+    gs_scene: GSSceneCfg | None = None
 
     # runtime
     render: RenderCfg = RenderCfg()

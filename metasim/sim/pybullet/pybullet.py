@@ -14,6 +14,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import torch
+from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
@@ -21,13 +22,26 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
+from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
+
+# Optional: RoboSplatter imports for GS background rendering
+try:
+    from robo_splatter.models.camera import Camera as SplatCamera
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
+    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
+
 
 PYBULLET_DEFAULT_POSITION_GAIN = 0.1
 PYBULLET_DEFAULT_VELOCITY_GAIN = 1.0
 PYBULLET_DEFAULT_JOINT_MAX_VEL = 1.0
 PYBULLET_DEFAULT_JOINT_MAX_TORQUE = 1.0
+
+DEPTH_EPSILON = 1e-8
 
 
 class SinglePybulletHandler(BaseSimHandler):
@@ -43,6 +57,51 @@ class SinglePybulletHandler(BaseSimHandler):
         """
         super().__init__(scenario, optional_queries)
         self._actions_cache: list[Action] = []
+
+    def _get_camera_params(self, view_matrix, projection_matrix, width, height):
+        """Get camera intrinsics and extrinsics directly from PyBullet matrices.
+
+        Args:
+            view_matrix: PyBullet view matrix (16-element list, column-major)
+            projection_matrix: PyBullet projection matrix (16-element list)
+            width: image width
+            height: image height
+
+        Returns:
+            Ks: (3, 3) intrinsic matrix
+            c2w: (4, 4) camera-to-world transformation matrix
+        """
+        # Extrinsics: convert view matrix (world-to-camera) to c2w
+        view_mat_np = np.array(view_matrix).reshape(4, 4).T
+        c2w = np.linalg.inv(view_mat_np)
+
+        # Intrinsics: extract from projection matrix
+        proj_mat = np.array(projection_matrix).reshape(4, 4).T
+        fx = proj_mat[0, 0] * width / 2.0
+        fy = proj_mat[1, 1] * height / 2.0
+        cx = width / 2.0
+        cy = height / 2.0
+        Ks = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+
+        return Ks, c2w
+
+    def _convert_depth_buffer(self, depth_buffer: np.ndarray, near_plane: float, far_plane: float) -> np.ndarray:
+        """Convert PyBullet depth buffer [0,1] to metric depth using near/far planes.
+
+        PyBullet returns a non-linear depth buffer z_b in [0,1]. The eye-space
+        distance (metric depth) is computed as:
+            depth = (far * near) / (far - (far - near) * z_b)
+        Args:
+            depth_buffer: The depth buffer from PyBullet
+            near_plane: The near plane of the camera
+            far_plane: The far plane of the camera
+
+        Returns:
+            The metric depth
+        """
+        denom = far_plane - (far_plane - near_plane) * depth_buffer
+        depth_metric = (far_plane * near_plane) / np.clip(denom, a_min=DEPTH_EPSILON, a_max=None)
+        return depth_metric.astype(np.float32, copy=False)
 
     def _build_pybullet(self):
         self.client = p.connect(p.DIRECT if self.headless else p.GUI)
@@ -76,7 +135,7 @@ class SinglePybulletHandler(BaseSimHandler):
             far_plane = camera.clipping_range[1]  # Far clipping plane
             projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, near_plane, far_plane)
 
-            self.camera_ids[camera.name] = (width, height, view_matrix, projection_matrix)
+            self.camera_ids[camera.name] = (width, height, view_matrix, projection_matrix, near_plane, far_plane)
 
         for object in [*self.objects, *self.robots]:
             if isinstance(object, (ArticulationObjCfg, RobotCfg)):
@@ -294,6 +353,8 @@ class SinglePybulletHandler(BaseSimHandler):
         """Launch the simulation."""
         super().launch()
         self._build_pybullet()
+        if self.scenario.gs_scene.with_gs_background:
+            self._build_gs_background()
         self.already_disconnect = False
 
     def close(self):
@@ -387,20 +448,54 @@ class SinglePybulletHandler(BaseSimHandler):
 
         camera_states = {}
         for camera in self.cameras:
-            width, height, view_matrix, projection_matrix = self.camera_ids[camera.name]
-            img_arr = p.getCameraImage(
-                width,
-                height,
-                view_matrix,
-                projection_matrix,
-                lightAmbientCoeff=0.5,
-            )
+            width, height, view_matrix, projection_matrix, near_plane, far_plane = self.camera_ids[camera.name]
+
+            # Get PyBullet simulation rendering
+            img_arr = p.getCameraImage(width, height, view_matrix, projection_matrix, lightAmbientCoeff=0.5)
             rgb_img = np.reshape(img_arr[2], (height, width, 4))
-            depth_img = np.reshape(img_arr[3], (height, width))
+            depth_buffer = np.reshape(img_arr[3], (height, width))
+            depth_img = self._convert_depth_buffer(depth_buffer, near_plane, far_plane)
             segmentation_mask = np.reshape(img_arr[4], (height, width))
+
+            if self.scenario.gs_scene.with_gs_background:
+                # Extract camera parameters from PyBullet
+                Ks, c2w = self._get_camera_params(view_matrix, projection_matrix, width, height)
+
+                # Render GS background
+                gs_cam = SplatCamera.init_from_pose_list(
+                    pose_list=c2w,
+                    camera_intrinsic=Ks,
+                    image_height=height,
+                    image_width=width,
+                    device="cuda" if torch.cuda.is_available() else "cpu",
+                )
+                gs_result = self.gs_background.render(gs_cam)
+                gs_result.to_numpy()
+
+                # Create foreground mask: exclude background (-1) and ground plane
+                foreground_mask = (segmentation_mask > -1) & (segmentation_mask != self.plane_id).astype(np.uint8)
+
+                # Blend RGB: foreground objects over GS background
+                sim_color = rgb_img[:, :, :3]  # rgba to rgb
+                foreground = np.concatenate([sim_color, foreground_mask[..., None] * 255], axis=-1)
+                background = gs_result.rgb.squeeze(0)
+                blended_rgb = alpha_blend_rgba(foreground, background)
+                rgb = torch.from_numpy(np.array(blended_rgb.copy()))
+
+                # Compose depth: use simulation depth for foreground, GS depth for background
+                bg_depth = gs_result.depth.squeeze(0)
+                if bg_depth.ndim == 3 and bg_depth.shape[-1] == 1:
+                    bg_depth = bg_depth[..., 0]
+                depth_comp = np.where(foreground_mask, depth_img, bg_depth)
+                depth = torch.from_numpy(depth_comp.astype(np.float32, copy=False))
+            else:
+                # Original PyBullet rendering without GS background
+                rgb = torch.from_numpy(rgb_img[:, :, :3])
+                depth = torch.from_numpy(depth_img)
+
             state = CameraState(
-                rgb=torch.from_numpy(rgb_img[:, :, :3]).unsqueeze(0),
-                depth=torch.from_numpy(depth_img).unsqueeze(0),
+                rgb=rgb.unsqueeze(0),
+                depth=depth.unsqueeze(0),
             )
             camera_states[camera.name] = state
 
