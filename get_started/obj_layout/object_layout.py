@@ -9,6 +9,7 @@ import pygame
 import rootutils
 import torch
 import tyro
+from huggingface_hub import snapshot_download
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -354,6 +355,16 @@ if __name__ == "__main__":
 
     args = tyro.cli(Args)
 
+    # Download EmbodiedGen assets from huggingface dataset
+    data_dir = "roboverse_data/assets/EmbodiedGenData"
+    snapshot_download(
+        repo_id="HorizonRobotics/EmbodiedGenData",
+        repo_type="dataset",
+        local_dir=data_dir,
+        allow_patterns="demo_assets/*",
+        local_dir_use_symlinks=False,
+    )
+
     scenario = ScenarioCfg(
         robots=[args.robot],
         headless=args.headless,
@@ -365,7 +376,7 @@ if __name__ == "__main__":
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
-                physics=PhysicStateType.GEOM,
+                physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.mjcf",

@@ -1,4 +1,5 @@
 # This naively suites for isaaclab 2.2.0 and isaacsim 5.0.0
+
 from __future__ import annotations
 
 import argparse
@@ -21,6 +22,7 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
@@ -244,17 +246,17 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids = torch.tensor(env_ids, device=self.device)
 
             for _, obj in enumerate(self.objects):
-                if obj.fix_base_link:
-                    continue
                 if isinstance(obj, ArticulationObjCfg):
                     obj_inst = self.scene.articulations[obj.name]
                 else:
                     obj_inst = self.scene.rigid_objects[obj.name]
-                # root_state = obj_inst.root_state.clone()
+
+                # Set root state (fix_base_link only affects physics, not manual state setting)
                 root_state = states.objects[obj.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
                 obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
                 obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
+                # Set joint state for articulated objects
                 if isinstance(obj, ArticulationObjCfg):
                     joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
                     obj_inst.write_joint_position_to_sim(
@@ -264,7 +266,11 @@ class IsaacsimHandler(BaseSimHandler):
                         states.objects[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                     )
 
-            for _, robot in enumerate(self.robots):
+                # For kinematic objects (fix_base_link=True), force update to sync visual mesh
+                if obj.fix_base_link:
+                    obj_inst.update(dt=0.0)
+
+            for _, robot in enumerate[RobotCfg](self.robots):
                 robot_inst = self.scene.articulations[robot.name]
                 root_state = states.robots[robot.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
@@ -435,6 +441,15 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.render()
         self.scene.update(dt=self.dt)
 
+        # Force update kinematic objects to ensure visual mesh stays in sync
+        for obj in self.objects:
+            if obj.fix_base_link:
+                if isinstance(obj, ArticulationObjCfg):
+                    obj_inst = self.scene.articulations[obj.name]
+                else:
+                    obj_inst = self.scene.rigid_objects[obj.name]
+                obj_inst.update(dt=0.0)
+
         # Ensure camera pose is correct, especially for the first few frames
         if self._step_counter < 5:
             self._update_camera_pose()
@@ -487,19 +502,23 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Articulation object
         if isinstance(obj, ArticulationObjCfg):
-            self.scene.articulations[obj.name] = Articulation(
-                ArticulationCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.UsdFileCfg(usd_path=obj.usd_path, scale=obj.scale),
-                    actuators={},
-                )
+            articulation_cfg = ArticulationCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.UsdFileCfg(
+                    usd_path=obj.usd_path,
+                    scale=obj.scale,
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
+                    articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
+                ),
+                actuators={},
             )
+            self.scene.articulations[obj.name] = Articulation(articulation_cfg)
             return
 
         if obj.fix_base_link:
             rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
         else:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg()
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity)
         if obj.collision_enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
@@ -922,6 +941,49 @@ class IsaacsimHandler(BaseSimHandler):
             env_ids=torch.tensor(env_ids, device=self.device),
         )  # ! critical
         obj_inst.write_data_to_sim()
+
+        # For fix_base_link objects, force sync visual pose to match collision pose
+        # This is necessary because kinematic objects (fix_base_link=True) only update
+        # their physics/collision layer with write_root_pose_to_sim, but not the visual layer
+        if object.fix_base_link:
+            try:
+                import omni.isaac.core.utils.prims as prim_utils
+            except ModuleNotFoundError:
+                import isaacsim.core.utils.prims as prim_utils
+
+            from pxr import Gf, UsdGeom
+
+            # Get USD stage
+            stage = prim_utils.get_current_stage()
+
+            # Update visual pose for each environment
+            for i, env_id in enumerate(env_ids):
+                prim_path = f"/World/envs/env_{env_id}/{object.name}"
+                prim = stage.GetPrimAtPath(prim_path)
+
+                if prim.IsValid():
+                    xformable = UsdGeom.Xformable(prim)
+
+                    # Convert torch tensors to numpy
+                    pos_np = pose[i, :3].cpu().numpy()
+                    quat_np = pose[i, 3:7].cpu().numpy()  # w, x, y, z
+
+                    # Create transform matrix from position and quaternion
+                    # Note: pxr quaternion is (real, i, j, k) = (w, x, y, z)
+                    quat_gf = Gf.Quatd(float(quat_np[0]), float(quat_np[1]), float(quat_np[2]), float(quat_np[3]))
+                    rotation_matrix = Gf.Matrix3d(quat_gf)
+                    translation = Gf.Vec3d(float(pos_np[0]), float(pos_np[1]), float(pos_np[2]))
+
+                    # Set transform
+                    transform_matrix = Gf.Matrix4d().SetTranslate(translation) * Gf.Matrix4d().SetRotate(
+                        rotation_matrix
+                    )
+                    xformable.ClearXformOpOrder()
+                    xform_op = xformable.AddTransformOp()
+                    xform_op.Set(transform_matrix)
+
+            # Update object data from simulation to refresh internal state
+            obj_inst.update(dt=0.0)
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):

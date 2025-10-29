@@ -93,7 +93,8 @@ if __name__ == "__main__":
         RigidObjCfg(
             name="banana",
             scale=(1, 1, 1),
-            physics=PhysicStateType.RIGIDBODY,
+            fix_base_link=True,
+            physics=PhysicStateType.GEOM,
             usd_path=f"{data_dir}/demo_assets/banana/usd/banana.usd",
             urdf_path=f"{data_dir}/demo_assets/banana/result/banana.urdf",
             mjcf_path=f"{data_dir}/demo_assets/banana/mjcf/banana.mjcf",

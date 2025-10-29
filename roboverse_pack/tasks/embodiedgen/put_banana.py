@@ -32,7 +32,6 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.mjcf",
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="banana",
