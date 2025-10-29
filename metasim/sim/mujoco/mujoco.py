@@ -8,9 +8,6 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-# Defensive monkey-patches for known mujoco/glfw shutdown issues on some platforms.
-# These replace the third-party destructors with safe wrappers that swallow exceptions
-# during interpreter teardown (where module globals may be None).
 try:
     # Patch mujoco.renderer.Renderer.__del__ to avoid noisy TypeError if glfw.free is None
     if hasattr(mujoco, "renderer") and hasattr(mujoco.renderer, "Renderer"):
@@ -39,12 +36,10 @@ try:
 
         mujoco.glfw.GLContext.__del__ = _safe_glctx_del
 except Exception:
-    # If any of the attributes aren't present or patching fails, ignore — this is defensive.
     pass
 
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
-from metasim.utils.gs_util import alpha_blend_rgba
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -202,7 +197,7 @@ class MujocoHandler(BaseSimHandler):
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
             self.viewer.sync()
 
-        if self.scenario.gs_scene.with_gs_background:
+        if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
             self._build_gs_background()
 
         if self.optional_queries is None:
@@ -607,7 +602,9 @@ class MujocoHandler(BaseSimHandler):
 
             depth = None
 
-            if self.scenario.gs_scene.with_gs_background:
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                from metasim.utils.gs_util import alpha_blend_rgba
+
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
 

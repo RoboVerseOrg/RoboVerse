@@ -22,7 +22,6 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
-from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
@@ -353,7 +352,7 @@ class SinglePybulletHandler(BaseSimHandler):
         """Launch the simulation."""
         super().launch()
         self._build_pybullet()
-        if self.scenario.gs_scene.with_gs_background:
+        if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
             self._build_gs_background()
         self.already_disconnect = False
 
@@ -457,7 +456,9 @@ class SinglePybulletHandler(BaseSimHandler):
             depth_img = self._convert_depth_buffer(depth_buffer, near_plane, far_plane)
             segmentation_mask = np.reshape(img_arr[4], (height, width))
 
-            if self.scenario.gs_scene.with_gs_background:
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                from metasim.utils.gs_util import alpha_blend_rgba
+
                 # Extract camera parameters from PyBullet
                 Ks, c2w = self._get_camera_params(view_matrix, projection_matrix, width, height)
 
