@@ -162,3 +162,4 @@ class PutBananaTask(Task):
 - Viser and camera display are **enabled by default**
 - **Press C anytime** to save current layout
 - Saved poses can be loaded in task configurations
+
