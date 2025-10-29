@@ -109,6 +109,7 @@ def main(args):
     print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
 
 
+
 def make_policy(policy_class, policy_config):
     if policy_class == 'ACT':
         policy = ACTPolicy(policy_config)
@@ -175,8 +176,24 @@ def train_bc(train_dataloader, val_dataloader, config):
         print(summary_string)
 
         # training
+
+        # policy.train()
+        # optimizer.zero_grad()
+        # for batch_idx, data in enumerate(train_dataloader):
+        #     forward_dict = forward_pass(data, policy)
+        #     # backward
+        #     loss = forward_dict['loss']
+        #     loss.backward()
+        #     optimizer.step()
+        #     optimizer.zero_grad()
+        #     train_history.append(detach_dict(forward_dict))
+        # epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
+        # epoch_train_loss = epoch_summary['loss']
+        # print(f'Train loss: {epoch_train_loss:.5f}')
+
         policy.train()
         optimizer.zero_grad()
+        epoch_train_dicts = []
         for batch_idx, data in enumerate(train_dataloader):
             forward_dict = forward_pass(data, policy)
             # backward
@@ -184,12 +201,14 @@ def train_bc(train_dataloader, val_dataloader, config):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            train_history.append(detach_dict(forward_dict))
-        epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
-        epoch_train_loss = epoch_summary['loss']
+            epoch_train_dicts.append(forward_dict)
+        epoch_train_summary = compute_dict_mean(epoch_train_dicts)
+        train_history.append(epoch_train_summary)
+        epoch_train_loss =  epoch_train_summary['loss']
         print(f'Train loss: {epoch_train_loss:.5f}')
+
         summary_string = ''
-        for k, v in epoch_summary.items():
+        for k, v in epoch_train_summary.items():
             summary_string += f'{k}: {v.item():.3f} '
         print(summary_string)
 
@@ -208,6 +227,10 @@ def train_bc(train_dataloader, val_dataloader, config):
 
     # save training curves
     plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed)
+
+    file_path = os.path.join("./roboverse_learn/il/act", "ckpt_dir_path.txt")
+    with open(file_path, 'w') as f:
+        f.write(ckpt_dir)
 
     return best_ckpt_info
 
