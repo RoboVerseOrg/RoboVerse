@@ -19,9 +19,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from loguru import logger as log
 from rich.logging import RichHandler
 
-from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
