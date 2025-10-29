@@ -12,7 +12,6 @@ from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
-from metasim.utils.gs_util import quaternion_multiply
 from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
 # from metasim.utils.hf_util import FileDownloader
@@ -24,7 +23,6 @@ try:
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
     ROBO_SPLATTER_AVAILABLE = False
-    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
 
 
 class BaseSimHandler(ABC):
@@ -281,11 +279,17 @@ class BaseSimHandler(ABC):
 
     def _build_gs_background(self):
         """Initialize GS background renderer if enabled in scenario config."""
-        if not self.scenario.gs_scene.with_gs_background:
+        if self.scenario.gs_scene is None or not self.scenario.gs_scene.with_gs_background:
             return
 
         if not ROBO_SPLATTER_AVAILABLE:
             log.error("GS background enabled but RoboSplatter not available.")
+            return
+
+        try:
+            from metasim.utils.gs_util import quaternion_multiply
+        except ImportError:
+            log.error("quaternion_multiply not available from gs_util")
             return
 
         # Parse pose transformation

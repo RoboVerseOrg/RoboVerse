@@ -22,7 +22,6 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
-from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 # Apply IGL compatibility patch
@@ -274,7 +273,13 @@ class GenesisHandler(BaseSimHandler):
                 depth_t = torch.as_tensor(depth)
 
             # GS background blending
-            if self.scenario.gs_scene.with_gs_background and ROBO_SPLATTER_AVAILABLE:
+            if (
+                self.scenario.gs_scene is not None
+                and self.scenario.gs_scene.with_gs_background
+                and ROBO_SPLATTER_AVAILABLE
+            ):
+                from metasim.utils.gs_util import alpha_blend_rgba
+
                 # Get camera parameters
                 Ks, c2w = self._get_camera_params(camera)
 

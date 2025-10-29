@@ -28,7 +28,6 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
-from metasim.utils.gs_util import alpha_blend_rgba_torch
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 # Optional: RoboSplatter imports for GS background rendering
@@ -70,63 +69,6 @@ class IsaacsimHandler(BaseSimHandler):
             self._render_viewport = False
         else:
             self._render_viewport = True
-
-    def _get_camera_params(self, camera, camera_inst):
-        """Get camera intrinsics and extrinsics for GS rendering.
-
-        Compare IsaacSim camera pose vs look-at construction to find the correct transformation.
-
-        Args:
-            camera: PinholeCameraCfg object
-            camera_inst: IsaacSim camera instance
-
-        Returns:
-            Ks_t: (3, 3) intrinsic matrix as torch tensor on device
-            c2w_t: (4, 4) camera-to-world transformation matrix as torch tensor on device
-        """
-        # Get intrinsics
-
-        Ks = np.array(camera.intrinsics, dtype=np.float32)
-        Ks_t = torch.from_numpy(Ks).to(self.device)
-
-        # # Method 1: Read from IsaacSim camera instance
-        # p_isaac = camera_inst.data.pos_w[0].detach()  # Keep as tensor
-        # q_wxyz = camera_inst.data.quat_w_world[0].detach()  # (w, x, y, z)
-
-        # # Convert quaternion to rotation matrix using torch
-        # # quaternion [w, x, y, z] -> rotation matrix
-        # w, x, y, z = q_wxyz[0], q_wxyz[1], q_wxyz[2], q_wxyz[3]
-        # R_isaac = torch.stack([
-        #     torch.stack([1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)]),
-        #     torch.stack([2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)]),
-        #     torch.stack([2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)])
-        # ]).to(self.device)
-
-        # c2w_isaac = torch.eye(4, dtype=torch.float32, device=self.device)
-        # c2w_isaac[:3, :3] = R_isaac
-        # c2w_isaac[:3, 3] = p_isaac
-
-        # Method 2: Build from look-at with -Z forward (OpenGL/MUJOCO convention)
-        pos = torch.tensor(camera.pos, dtype=torch.float32, device=self.device)
-        look = torch.tensor(camera.look_at, dtype=torch.float32, device=self.device)
-        forward = look - pos
-        forward = forward / torch.norm(forward)
-        up_world = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32, device=self.device)
-        right = torch.cross(forward, up_world)
-        right = right / torch.norm(right)
-        up = torch.cross(right, forward)
-
-        R_lookat = torch.stack([right, up, forward], dim=1)
-        # Negate Z for -Z forward convention
-        R_lookat[:, 2] = -R_lookat[:, 2]
-
-        c2w_lookat = torch.eye(4, dtype=torch.float32, device=self.device)
-        c2w_lookat[:3, :3] = R_lookat
-        c2w_lookat[:3, 3] = pos
-
-        # IsaacSim camera poses may not be reliable until after full scene updates.
-        # Using look-at construction directly is more stable.
-        return Ks_t, c2w_lookat
 
     def _init_scene(self) -> None:
         """
@@ -440,7 +382,12 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
 
             # GS background blending
-            if self.scenario.gs_scene.with_gs_background and ROBO_SPLATTER_AVAILABLE and rgb_data is not None:
+            if (
+                self.scenario.gs_scene is not None
+                and self.scenario.gs_scene.with_gs_background
+                and ROBO_SPLATTER_AVAILABLE
+                and rgb_data is not None
+            ):
                 # Get camera parameters (already as torch tensors on device)
                 Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
 
@@ -456,6 +403,8 @@ class IsaacsimHandler(BaseSimHandler):
                 gs_result = self.gs_background.render(gs_cam)
                 # Create foreground mask from instance segmentation
                 if instance_seg_data is not None:
+                    from metasim.utils.gs_util import alpha_blend_rgba_torch
+
                     # Get foreground mask from instance segmentation
                     foreground_mask = (instance_seg_data > 0).float()  # Shape: (envs, H, W)
 
@@ -1172,3 +1121,60 @@ class IsaacsimHandler(BaseSimHandler):
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
         self.sim.render()
+
+    def _get_camera_params(self, camera, camera_inst):
+        """Get camera intrinsics and extrinsics for GS rendering.
+
+        Compare IsaacSim camera pose vs look-at construction to find the correct transformation.
+
+        Args:
+            camera: PinholeCameraCfg object
+            camera_inst: IsaacSim camera instance
+
+        Returns:
+            Ks_t: (3, 3) intrinsic matrix as torch tensor on device
+            c2w_t: (4, 4) camera-to-world transformation matrix as torch tensor on device
+        """
+        # Get intrinsics
+
+        Ks = np.array(camera.intrinsics, dtype=np.float32)
+        Ks_t = torch.from_numpy(Ks).to(self.device)
+
+        # # Method 1: Read from IsaacSim camera instance
+        # p_isaac = camera_inst.data.pos_w[0].detach()  # Keep as tensor
+        # q_wxyz = camera_inst.data.quat_w_world[0].detach()  # (w, x, y, z)
+
+        # # Convert quaternion to rotation matrix using torch
+        # # quaternion [w, x, y, z] -> rotation matrix
+        # w, x, y, z = q_wxyz[0], q_wxyz[1], q_wxyz[2], q_wxyz[3]
+        # R_isaac = torch.stack([
+        #     torch.stack([1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)]),
+        #     torch.stack([2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)]),
+        #     torch.stack([2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)])
+        # ]).to(self.device)
+
+        # c2w_isaac = torch.eye(4, dtype=torch.float32, device=self.device)
+        # c2w_isaac[:3, :3] = R_isaac
+        # c2w_isaac[:3, 3] = p_isaac
+
+        # Method 2: Build from look-at with -Z forward (OpenGL/MUJOCO convention)
+        pos = torch.tensor(camera.pos, dtype=torch.float32, device=self.device)
+        look = torch.tensor(camera.look_at, dtype=torch.float32, device=self.device)
+        forward = look - pos
+        forward = forward / torch.norm(forward)
+        up_world = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32, device=self.device)
+        right = torch.cross(forward, up_world)
+        right = right / torch.norm(right)
+        up = torch.cross(right, forward)
+
+        R_lookat = torch.stack([right, up, forward], dim=1)
+        # Negate Z for -Z forward convention
+        R_lookat[:, 2] = -R_lookat[:, 2]
+
+        c2w_lookat = torch.eye(4, dtype=torch.float32, device=self.device)
+        c2w_lookat[:3, :3] = R_lookat
+        c2w_lookat[:3, 3] = pos
+
+        # IsaacSim camera poses may not be reliable until after full scene updates.
+        # Using look-at construction directly is more stable.
+        return Ks_t, c2w_lookat
