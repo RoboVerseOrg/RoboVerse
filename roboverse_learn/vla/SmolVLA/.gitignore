@@ -1,0 +1,16 @@
+# Training outputs
+smolvla_runs/
+smolvla_eval_output/
+
+# Downloaded model data
+roboverse_data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store

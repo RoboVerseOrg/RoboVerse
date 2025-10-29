@@ -1,6 +1,16 @@
 # RoboVerse VLA Training Pipeline
 
-A brief workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data and OpenVLA framework.
+A comprehensive workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data.
+
+## Supported VLA Models
+
+This folder contains implementations for multiple VLA architectures:
+
+- **OpenVLA** - Full-size VLA model using RLDS data format (see main sections below)
+- **SmolVLA** - Lightweight VLA from Hugging Face/LeRobot (see `SmolVLA/README.md`)
+- **π0 family** - Physical Intelligence's π models (see `pi0/README.md`)
+
+Each model has its own subdirectory with specific training and evaluation scripts.
 
 
 
@@ -119,4 +129,43 @@ Raw Trajectories → Standardized Format → Trained Model → Performance Metri
 
 - Adjust simulation parameters in `collect_demo.py` based on your specific tasks
 - Modify dataset paths in `finetune_roboverse.sh` to match your environment
+
+## Quick Start for Different Models
+
+### OpenVLA (this workflow)
+```bash
+# See sections above for full workflow
+bash finetune_roboverse.sh
+python vla_eval.py --model_path <checkpoint> --task pick_butter
+```
+
+### SmolVLA (lightweight alternative)
+```bash
+# See SmolVLA/README.md for details
+cd SmolVLA
+bash finetune_smolvla.sh
+python smolvla_eval.py --model_path <checkpoint> --task pick_butter
+```
+
+### π0 Models (Physical Intelligence)
+```bash
+# See pi0/README.md for details
+cd pi0
+python convert_roboverse_to_lerobot.py --input-root <demos> --repo-id <dataset>
+# Then follow pi0/README.md for training
+```
+
+## Choosing a Model
+
+| Model | Size | Data Format | Best For |
+|-------|------|-------------|----------|
+| **OpenVLA** | ~7B params | RLDS | High accuracy, research |
+| **SmolVLA** | <1B params | LeRobot | Fast training/inference, resource-constrained |
+| **π0** | Various | LeRobot | Production deployment, multi-task |
+
+## References
+
+- [OpenVLA Repository](https://github.com/openvla/openvla)
+- [LeRobot & SmolVLA](https://github.com/huggingface/lerobot)
+- [Physical Intelligence π0](https://github.com/physical-intelligence/openpi)
 
