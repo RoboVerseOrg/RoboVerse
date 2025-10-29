@@ -6,6 +6,7 @@ from typing import List, Union
 import numpy as np
 import torch
 from PIL import Image
+
 from pyquaternion import Quaternion
 
 

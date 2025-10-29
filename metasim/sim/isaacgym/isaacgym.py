@@ -8,8 +8,6 @@ import torch
 from isaacgym import gymapi, gymtorch, gymutil  # noqa: F401
 from loguru import logger as log
 
-from metasim.utils.gs_util import alpha_blend_rgba_torch
-
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
@@ -107,7 +105,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._init_gym()
         self._make_envs()
         self._set_up_camera()
-        if self.scenario.gs_scene.with_gs_background:
+        if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
             self._build_gs_background()
         # ==== prepare tensors =====
         # from now on, we will use the tensor API that can run on CPU or GPU
@@ -209,6 +207,7 @@ class IsaacgymHandler(BaseSimHandler):
         Returns:
             The camera states with blended results
         """
+        from metasim.utils.gs_util import alpha_blend_rgba_torch
 
         if not ROBO_SPLATTER_AVAILABLE or self.gs_background is None:
             return camera_states
@@ -761,7 +760,11 @@ class IsaacgymHandler(BaseSimHandler):
 
         # Apply GS background rendering if enabled
         # TODO: Render with batch parallelization for efficiency
-        if self.scenario.gs_scene.with_gs_background and self.gs_background is not None:
+        if (
+            self.scenario.gs_scene is not None
+            and self.scenario.gs_scene.with_gs_background
+            and self.gs_background is not None
+        ):
             camera_states = self._apply_gs_background_rendering(camera_states, env_ids)
 
         extras = self.get_extra()  # extra observations
