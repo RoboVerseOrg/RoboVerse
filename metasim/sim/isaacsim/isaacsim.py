@@ -6,6 +6,7 @@ import argparse
 import os
 from copy import deepcopy
 
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -27,7 +28,17 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
+from metasim.utils.gs_util import alpha_blend_rgba_torch
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+
+# Optional: RoboSplatter imports for GS background rendering
+try:
+    from robo_splatter.models.camera import Camera as SplatCamera
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
+    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
 
 
 class IsaacsimHandler(BaseSimHandler):
@@ -59,6 +70,63 @@ class IsaacsimHandler(BaseSimHandler):
             self._render_viewport = False
         else:
             self._render_viewport = True
+
+    def _get_camera_params(self, camera, camera_inst):
+        """Get camera intrinsics and extrinsics for GS rendering.
+
+        Compare IsaacSim camera pose vs look-at construction to find the correct transformation.
+
+        Args:
+            camera: PinholeCameraCfg object
+            camera_inst: IsaacSim camera instance
+
+        Returns:
+            Ks_t: (3, 3) intrinsic matrix as torch tensor on device
+            c2w_t: (4, 4) camera-to-world transformation matrix as torch tensor on device
+        """
+        # Get intrinsics
+
+        Ks = np.array(camera.intrinsics, dtype=np.float32)
+        Ks_t = torch.from_numpy(Ks).to(self.device)
+
+        # # Method 1: Read from IsaacSim camera instance
+        # p_isaac = camera_inst.data.pos_w[0].detach()  # Keep as tensor
+        # q_wxyz = camera_inst.data.quat_w_world[0].detach()  # (w, x, y, z)
+
+        # # Convert quaternion to rotation matrix using torch
+        # # quaternion [w, x, y, z] -> rotation matrix
+        # w, x, y, z = q_wxyz[0], q_wxyz[1], q_wxyz[2], q_wxyz[3]
+        # R_isaac = torch.stack([
+        #     torch.stack([1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)]),
+        #     torch.stack([2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)]),
+        #     torch.stack([2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)])
+        # ]).to(self.device)
+
+        # c2w_isaac = torch.eye(4, dtype=torch.float32, device=self.device)
+        # c2w_isaac[:3, :3] = R_isaac
+        # c2w_isaac[:3, 3] = p_isaac
+
+        # Method 2: Build from look-at with -Z forward (OpenGL/MUJOCO convention)
+        pos = torch.tensor(camera.pos, dtype=torch.float32, device=self.device)
+        look = torch.tensor(camera.look_at, dtype=torch.float32, device=self.device)
+        forward = look - pos
+        forward = forward / torch.norm(forward)
+        up_world = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32, device=self.device)
+        right = torch.cross(forward, up_world)
+        right = right / torch.norm(right)
+        up = torch.cross(right, forward)
+
+        R_lookat = torch.stack([right, up, forward], dim=1)
+        # Negate Z for -Z forward convention
+        R_lookat[:, 2] = -R_lookat[:, 2]
+
+        c2w_lookat = torch.eye(4, dtype=torch.float32, device=self.device)
+        c2w_lookat[:3, :3] = R_lookat
+        c2w_lookat[:3, 3] = pos
+
+        # IsaacSim camera poses may not be reliable until after full scene updates.
+        # Using look-at construction directly is more stable.
+        return Ks_t, c2w_lookat
 
     def _init_scene(self) -> None:
         """
@@ -174,6 +242,9 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.render()
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
+
+        # Initialize GS background if enabled
+        self._build_gs_background()
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -367,6 +438,47 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_data = instance_seg_data.squeeze(-1)
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
+
+            # GS background blending
+            if self.scenario.gs_scene.with_gs_background and ROBO_SPLATTER_AVAILABLE and rgb_data is not None:
+                # Get camera parameters (already as torch tensors on device)
+                Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
+
+                # Create GS camera and render
+                gs_cam = SplatCamera.init_from_pose_tensor(
+                    c2w=c2w_t,
+                    Ks=Ks_t,
+                    image_height=int(camera.height),
+                    image_width=int(camera.width),
+                    device=self.device,
+                )
+
+                gs_result = self.gs_background.render(gs_cam)
+                # Create foreground mask from instance segmentation
+                if instance_seg_data is not None:
+                    # Get foreground mask from instance segmentation
+                    foreground_mask = (instance_seg_data > 0).float()  # Shape: (envs, H, W)
+
+                    # Get RGB Blending with GS background
+                    sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
+                    gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
+
+                    if isinstance(gs_rgb, np.ndarray):
+                        gs_rgb = torch.from_numpy(gs_rgb)
+                    gs_rgb = gs_rgb.to(self.device)
+                    blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
+                    rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8).unsqueeze(0)
+
+                    # Get Depth Blending with GS background
+                    sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                    bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                    if isinstance(bg_depth, np.ndarray):
+                        bg_depth = torch.from_numpy(bg_depth)
+                    bg_depth = bg_depth.to(self.device)
+                    # Use torch.where for depth composition
+                    depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
+                    depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)
+
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
                 depth=depth_data,
