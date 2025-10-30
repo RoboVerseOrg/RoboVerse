@@ -10,9 +10,6 @@ from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 from metasim.task.rl_task import RLTaskEnv
 from metasim.utils.math import matrix_from_quat
-from roboverse_pack.queries.contact import ContactData
-from roboverse_pack.queries.site import SiteMat, SitePos
-from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
 
 # Default configuration as a global dictionary
 DEFAULT_CONFIG = {
@@ -38,7 +35,6 @@ DEFAULT_CONFIG = {
         "robot_pos_noise": 0.0,
         "joint_noise_range": 0.05,
     },
-
 }
 
 
@@ -124,7 +120,7 @@ class PickPlaceBase(RLTaskEnv):
                 fix_base_link=True,
             ),
         ],
-       robots=["franka"],
+        robots=["franka"],
         sim_params=SimParamCfg(
             dt=0.005,
         ),
@@ -137,13 +133,11 @@ class PickPlaceBase(RLTaskEnv):
         self._last_action = None
         self._action_scale = DEFAULT_CONFIG.get("action_scale", 0.04)
         self.num_envs = scenario.num_envs
-        
+
         self._pre_init_trajectory_tracking(scenario, device)
         self._complete_trajectory_tracking_init(device)
         super().__init__(scenario, device)
-        
 
-        
         self.reward_functions = [
             self._reward_gripper_approach,
             self._reward_gripper_close,
@@ -156,42 +150,40 @@ class PickPlaceBase(RLTaskEnv):
             DEFAULT_CONFIG["reward_config"]["scales"]["robot_target_qpos"],
             1.0,
         ]
-    
+
     def _pre_init_trajectory_tracking(self, scenario, device):
         """Pre-initialize trajectory tracking (before super().__init__())."""
         traj_config = DEFAULT_CONFIG["trajectory_tracking"]
-        
+
         if device is None:
             device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self._traj_device = torch.device(device)
         self._traj_num_envs = scenario.num_envs
-        
+
         self.num_waypoints = traj_config["num_waypoints"]
         self.reach_threshold = traj_config["reach_threshold"]
         self.grasp_check_distance = traj_config["grasp_check_distance"]
-        
-        self.current_waypoint_idx = torch.zeros(
-            self._traj_num_envs, dtype=torch.long, device=self._traj_device
-        )
+
+        self.current_waypoint_idx = torch.zeros(self._traj_num_envs, dtype=torch.long, device=self._traj_device)
         self.waypoints_reached = torch.zeros(
             self._traj_num_envs, self.num_waypoints, dtype=torch.bool, device=self._traj_device
         )
         self.prev_distance_to_waypoint = torch.zeros(self._traj_num_envs, device=self._traj_device)
-        
+
         self.object_grasped = torch.zeros(self._traj_num_envs, dtype=torch.bool, device=self._traj_device)
-        
+
         self.w_tracking_approach = DEFAULT_CONFIG["reward_config"]["scales"]["tracking_approach"]
         self.w_tracking_progress = DEFAULT_CONFIG["reward_config"]["scales"]["tracking_progress"]
-    
+
     def _complete_trajectory_tracking_init(self, device):
         """Complete trajectory tracking initialization (after super().__init__())."""
         initial_states_list = self._get_initial_states()
         if initial_states_list is None or len(initial_states_list) == 0:
             raise ValueError("No initial states found")
-        
+
         first_env_state = initial_states_list[0]
         waypoint_positions = []
-        
+
         for i in range(self.num_waypoints):
             marker_name = f"traj_marker_{i}"
             if marker_name in first_env_state["objects"]:
@@ -199,46 +191,54 @@ class PickPlaceBase(RLTaskEnv):
                 waypoint_positions.append(pos)
             else:
                 raise ValueError(f"Marker {marker_name} not found in initial states")
-        
+
         self.waypoint_positions = torch.stack(waypoint_positions).to(device)
 
     def _prepare_states(self, states, env_ids):
         """Preprocess initial states, randomizing positions within specified ranges."""
         from copy import deepcopy
+
         states = deepcopy(states)
-        
+
         rand_config = DEFAULT_CONFIG["randomization"]
-        
+
         initial_states_list = self._get_initial_states()
         box_center = initial_states_list[0]["objects"]["object"]["pos"]
         if not isinstance(box_center, torch.Tensor):
             box_center = torch.tensor(box_center, device=self.device)
         else:
             box_center = box_center.to(self.device)
-        
-        box_pos_range_val = rand_config["box_pos_range"]
-        box_pos_range = torch.tensor([
-            [box_center[0] - box_pos_range_val, box_center[1] - box_pos_range_val, box_center[2]],
-            [box_center[0] + box_pos_range_val, box_center[1] + box_pos_range_val, box_center[2]]
-        ], device=self.device)
 
-        box_pos = torch.rand(self.num_envs, 3, device=self.device) * (box_pos_range[1] - box_pos_range[0]) + box_pos_range[0]
+        box_pos_range_val = rand_config["box_pos_range"]
+        box_pos_range = torch.tensor(
+            [
+                [box_center[0] - box_pos_range_val, box_center[1] - box_pos_range_val, box_center[2]],
+                [box_center[0] + box_pos_range_val, box_center[1] + box_pos_range_val, box_center[2]],
+            ],
+            device=self.device,
+        )
+
+        box_pos = (
+            torch.rand(self.num_envs, 3, device=self.device) * (box_pos_range[1] - box_pos_range[0]) + box_pos_range[0]
+        )
         box_quat = states.objects["object"].root_state[:, 3:7].clone()
         zero_vel = torch.zeros(self.num_envs, 3, device=self.device)
         zero_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         states.objects["object"].root_state = torch.cat([box_pos, box_quat, zero_vel, zero_ang_vel], dim=-1)
-        
+
         # Keep table in place (no randomization)
         table_pos = states.objects["table"].root_state[:, 0:3].clone()
         table_quat = states.objects["table"].root_state[:, 3:7].clone()
         states.objects["table"].root_state = torch.cat([table_pos, table_quat, zero_vel, zero_ang_vel], dim=-1)
-        
+
         marker_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).expand(self.num_envs, -1)
-        
+
         for i in range(self.num_waypoints):
             marker_name = f"traj_marker_{i}"
             marker_pos = self.waypoint_positions[i].unsqueeze(0).expand(self.num_envs, -1)
-            states.objects[marker_name].root_state = torch.cat([marker_pos, marker_quat, zero_vel, zero_ang_vel], dim=-1)
+            states.objects[marker_name].root_state = torch.cat(
+                [marker_pos, marker_quat, zero_vel, zero_ang_vel], dim=-1
+            )
 
         robot_pos = states.robots[self.robot_name].root_state[:, 0:3].clone()
         robot_pos_noise_val = rand_config["robot_pos_noise"]
@@ -265,30 +265,32 @@ class PickPlaceBase(RLTaskEnv):
             self._last_action = self._initial_states.robots[self.robot_name].joint_pos[:, :]
         else:
             self._last_action[env_ids] = self._initial_states.robots[self.robot_name].joint_pos[env_ids, :]
-        
+
         if env_ids is None:
             env_ids_tensor = torch.arange(self.num_envs, device=self.device)
         else:
-            env_ids_tensor = torch.tensor(env_ids, device=self.device) if not isinstance(env_ids, torch.Tensor) else env_ids
-        
+            env_ids_tensor = (
+                torch.tensor(env_ids, device=self.device) if not isinstance(env_ids, torch.Tensor) else env_ids
+            )
+
         self.current_waypoint_idx[env_ids_tensor] = 0
         self.waypoints_reached[env_ids_tensor] = False
         self.prev_distance_to_waypoint[env_ids_tensor] = 0.0
         self.object_grasped[env_ids_tensor] = False
-        
+
         obs, info = super().reset(env_ids=env_ids)
-        
+
         states = self.handler.get_states()
-        
+
         if env_ids is None:
             env_ids_list = list(range(self.num_envs))
         else:
             env_ids_list = env_ids if isinstance(env_ids, list) else list(env_ids)
-        
+
         ee_pos, _ = self._get_ee_state(states)
         target_pos = self.waypoint_positions[0].unsqueeze(0).expand(len(env_ids_list), -1)
         self.prev_distance_to_waypoint[env_ids_list] = torch.norm(ee_pos[env_ids_list] - target_pos, dim=-1)
-        
+
         return obs, info
 
     def step(self, actions):
@@ -297,65 +299,69 @@ class PickPlaceBase(RLTaskEnv):
         box_pos = current_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(current_states)
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
-        
+
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
         real_actions = torch.maximum(torch.minimum(new_actions, self._action_high), self._action_low)
-        
+
         distance_threshold = 0.02
         gripper_values = torch.where(
             gripper_box_dist > distance_threshold,
             torch.tensor(0.04, device=self.device, dtype=real_actions.dtype),
-            torch.tensor(0.0, device=self.device, dtype=real_actions.dtype)
+            torch.tensor(0.0, device=self.device, dtype=real_actions.dtype),
         )
-        
+
         real_actions[:, 0] = gripper_values
         real_actions[:, 1] = gripper_values
-        
+
         obs, reward, terminated, time_out, info = super().step(real_actions)
         self._last_action = real_actions
-        
+
         updated_states = self.handler.get_states(mode="tensor")
         updated_box_pos = updated_states.objects["object"].root_state[:, 0:3]
         updated_gripper_pos, _ = self._get_ee_state(updated_states)
-        
+
         gripper_joint_pos = updated_states.robots[self.robot_name].joint_pos[:, :2]
-        gripper_closed = (gripper_joint_pos.mean(dim=-1) < 0.02)
+        gripper_closed = gripper_joint_pos.mean(dim=-1) < 0.02
         gripper_box_dist = torch.norm(updated_gripper_pos - updated_box_pos, dim=-1)
         is_grasping = gripper_closed & (gripper_box_dist < self.grasp_check_distance)
-        
+
         old_grasped = self.object_grasped.clone()
         self.object_grasped = is_grasping
-        
+
         newly_grasped = is_grasping & (~old_grasped)
         newly_released = (~is_grasping) & old_grasped
-        
+
         if newly_grasped.any() and newly_grasped[0]:
-            print(f"\n[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
-                  f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}")
-        
+            print(
+                f"\n[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
+                f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}"
+            )
+
         if newly_released.any() and newly_released[0]:
             print(f"\n[Env 0] Object released! Gripper distance: {gripper_box_dist[0].item():.4f}m")
-        
-        step_count = getattr(self, '_debug_step_count', 0)
+
+        step_count = getattr(self, "_debug_step_count", 0)
         self._debug_step_count = step_count + 1
-        
+
         if (step_count % 100 == 0) or terminated[0] or time_out[0]:
             num_reached = self.waypoints_reached[0].sum().item()
             current_idx = self.current_waypoint_idx[0].item()
             target_pos_final = self.waypoint_positions[current_idx]
             distance = torch.norm(updated_gripper_pos[0] - target_pos_final, dim=-1).item()
             grasped = self.object_grasped[0].item()
-            
+
             status = "Episode End" if (terminated[0] or time_out[0]) else f"Step {step_count}"
-            print(f"\n[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
-                  f"Current: #{current_idx} | Grasped: {grasped} | "
-                  f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)")
-            
+            print(
+                f"\n[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
+                f"Current: #{current_idx} | Grasped: {grasped} | "
+                f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)"
+            )
+
             if step_count % 100 == 0:
                 print(f"  Target pos: {target_pos_final.cpu().numpy()}")
                 print(f"  EE pos: {updated_gripper_pos[0].cpu().numpy()}")
-        
+
         return obs, reward, terminated, time_out, info
 
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
@@ -363,96 +369,88 @@ class PickPlaceBase(RLTaskEnv):
         box_pos = env_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(env_states)
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
-        
+
         approach_reward_far = 1 - torch.tanh(gripper_box_dist)
         approach_reward_near = 1 - torch.tanh(gripper_box_dist * 10)
-        return (approach_reward_far + approach_reward_near)
+        return approach_reward_far + approach_reward_near
 
     def _reward_gripper_close(self, env_states) -> torch.Tensor:
         """Reward for closing gripper when close to box."""
         box_pos = env_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(env_states)
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
-        
+
         close_bonus = (gripper_box_dist < 0.02).float()
         return close_bonus
-    
+
     def _reward_robot_target_qpos(self, env_states) -> torch.Tensor:
         """Reward for robot staying close to target joint positions."""
         robot_joint_pos = env_states.robots[self.robot_name].joint_pos[:, 2:]
         target_joint_pos = self._initial_states.robots[self.robot_name].joint_pos[:, 2:]
-        
+
         joint_error = torch.norm(robot_joint_pos - target_joint_pos, dim=-1)
         return 1 - torch.tanh(joint_error)
-    
+
     def _reward_trajectory_tracking(self, env_states) -> torch.Tensor:
         """Reward for tracking waypoints (only when object is grasped)."""
         ee_pos, _ = self._get_ee_state(env_states)
         grasped_mask = self.object_grasped
         tracking_reward = torch.zeros(self.num_envs, device=self.device)
-        
+
         if grasped_mask.any():
             target_pos = self.waypoint_positions[self.current_waypoint_idx]
             distance = torch.norm(ee_pos - target_pos, dim=-1)
-            
+
             approach_reward = (1 - torch.tanh(1.0 * distance)) * self.w_tracking_approach
             approach_reward = approach_reward * grasped_mask.float()
-            
+
             reached = (distance < self.reach_threshold) & grasped_mask
-            newly_reached = reached & (~self.waypoints_reached[
-                torch.arange(self.num_envs, device=self.device),
-                self.current_waypoint_idx
-            ])
+            newly_reached = reached & (
+                ~self.waypoints_reached[torch.arange(self.num_envs, device=self.device), self.current_waypoint_idx]
+            )
             progress_reward = newly_reached.float() * self.w_tracking_progress
-            
+
             if newly_reached.any():
                 if newly_reached[0]:
                     wp_idx = self.current_waypoint_idx[0].item()
-                    print(f"\n[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m")
-                
-                self.waypoints_reached[
-                    newly_reached,
-                    self.current_waypoint_idx[newly_reached]
-                ] = True
-                
+                    print(
+                        f"\n[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m"
+                    )
+
+                self.waypoints_reached[newly_reached, self.current_waypoint_idx[newly_reached]] = True
+
                 can_advance = newly_reached & (self.current_waypoint_idx < self.num_waypoints - 1)
-                
+
                 if can_advance.any() and can_advance[0]:
                     old_idx = self.current_waypoint_idx[0].item()
                     new_idx = old_idx + 1
                     print(f"   -> Advancing to waypoint #{new_idx}")
-                
+
                 self.current_waypoint_idx[can_advance] += 1
-                
+
                 if can_advance.any():
                     new_target_pos = self.waypoint_positions[self.current_waypoint_idx[can_advance]]
                     self.prev_distance_to_waypoint[can_advance] = torch.norm(
                         ee_pos[can_advance] - new_target_pos, dim=-1
                     )
-            
+
             maintain_reward = torch.zeros(self.num_envs, device=self.device)
             all_reached = self.waypoints_reached.all(dim=1)
             completed_mask = all_reached & grasped_mask
-            
+
             if completed_mask.any():
                 last_target_pos = self.waypoint_positions[-1].unsqueeze(0).expand(self.num_envs, -1)
                 distance_to_last = torch.norm(ee_pos - last_target_pos, dim=-1)
-                
+
                 maintain_reward[completed_mask] = torch.where(
                     distance_to_last[completed_mask] < self.reach_threshold,
                     torch.full((completed_mask.sum(),), 5, device=self.device),
-                    (1 - torch.tanh(1.0 * distance_to_last[completed_mask])) * self.w_tracking_approach
+                    (1 - torch.tanh(1.0 * distance_to_last[completed_mask])) * self.w_tracking_approach,
                 )
-                
-            tracking_reward = torch.where(
-                all_reached,
-                maintain_reward,
-                approach_reward + progress_reward
-            )
-        
-        return tracking_reward 
 
+            tracking_reward = torch.where(all_reached, maintain_reward, approach_reward + progress_reward)
 
+        return tracking_reward
 
     def _observation(self, env_states) -> torch.Tensor:
         """Get observation using RoboVerse tensor state."""
@@ -477,15 +475,12 @@ class PickPlaceBase(RLTaskEnv):
         target_pos = self.waypoint_positions[self.current_waypoint_idx]
         target_to_gripper = target_pos - gripper_pos
         distance_to_target = torch.norm(target_to_gripper, dim=-1, keepdim=True)
-        
-        waypoint_onehot = torch.nn.functional.one_hot(
-            self.current_waypoint_idx,
-            num_classes=self.num_waypoints
-        ).float()
-        
+
+        waypoint_onehot = torch.nn.functional.one_hot(self.current_waypoint_idx, num_classes=self.num_waypoints).float()
+
         num_reached = self.waypoints_reached.sum(dim=1, keepdim=True).float() / self.num_waypoints
         grasped_flag = self.object_grasped.float().unsqueeze(-1)
-        
+
         obs_list = [
             robot_joint_pos,
             robot_joint_vel,
@@ -504,7 +499,6 @@ class PickPlaceBase(RLTaskEnv):
         obs = torch.cat(obs_list, dim=-1)  # [num_envs, obs_dim]
 
         return obs
-
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""
@@ -564,7 +558,6 @@ class PickPlaceBase(RLTaskEnv):
 
         return init
 
-
     def _get_ee_state(self, states):
         """Return EE state using site queries.
 
@@ -581,18 +574,19 @@ class PickPlaceBase(RLTaskEnv):
             if isinstance(rs.body_state, torch.Tensor)
             else torch.tensor(rs.body_state, device=device).float()
         )
-        
+
         # Use panda_hand directly for more accurate EE position
         hand_body_index = rs.body_names.index("panda_hand")
         hand_pos = body_state[:, hand_body_index, 0:3]  # (B, 3)
         hand_quat = body_state[:, hand_body_index, 3:7]  # (B, 4) wxyz
-        
+
         # Add offset from panda_hand to actual gripper center
         from metasim.utils.math import quat_apply
+
         offset_local = torch.tensor([0.0, 0.0, 0.1034], device=device, dtype=hand_pos.dtype)  # (3,)
         offset_world = quat_apply(hand_quat, offset_local.expand(hand_pos.shape[0], -1))  # (B, 3)
-        
+
         ee_pos_world = hand_pos + offset_world  # (B, 3)
         ee_quat_world = hand_quat  # (B, 4) wxyz
-        
+
         return ee_pos_world, ee_quat_world
