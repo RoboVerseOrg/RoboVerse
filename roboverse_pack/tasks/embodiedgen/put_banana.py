@@ -21,7 +21,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
     The scene contains multiple objects on the table to make it more realistic and challenging.
     """
 
-    max_episode_steps = 250
+    max_episode_steps = 25000
 
     scenario = ScenarioCfg(
         objects=[
@@ -31,7 +31,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.GEOM,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
             ),
             RigidObjCfg(
                 name="banana",
@@ -39,7 +39,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
             ),
             RigidObjCfg(
                 name="mug",
@@ -47,7 +47,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.xml",
             ),
             RigidObjCfg(
                 name="book",
@@ -55,23 +55,23 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/usd/book.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.xml",
             ),
-            # RigidObjCfg(
-            #     name="lamp",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/usd/lamp.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/result/lamp.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/mjcf/lamp.mjcf",
-            # ),
+            RigidObjCfg(
+                name="lamp",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/usd/lamp.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/result/lamp.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/mjcf/lamp.xml",
+            ),
             RigidObjCfg(
                 name="remote_control",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/usd/remote_control.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/result/remote_control.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/mjcf/remote_control.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/mjcf/remote_control.xml",
             ),
             RigidObjCfg(
                 name="rubiks_cube",
@@ -79,7 +79,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/usd/rubik's_cube.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/result/rubik's_cube.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/mjcf/rubik's_cube.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/mjcf/rubik's_cube.xml",
             ),
             RigidObjCfg(
                 name="vase",
@@ -87,7 +87,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/usd/vase.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/result/vase.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.xml",
             ),
         ],
         robots=["franka"],
@@ -128,10 +128,10 @@ class PutBananaTask(EmbodiedGenBaseTask):
                         "pos": torch.tensor([0.3, -0.28, 0.82]),  # Book on table
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
-                    # "lamp": {
-                    #     "pos": torch.tensor([0.68, 0.10, 1.05]),  # Lamp on table
-                    #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                    # },
+                    "lamp": {
+                        "pos": torch.tensor([0.68, 0.10, 1.05]),  # Lamp on table
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    },
                     "remote_control": {
                         "pos": torch.tensor([0.68, -0.54, 0.811]),  # Remote on table
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
