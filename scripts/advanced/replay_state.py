@@ -81,7 +81,7 @@ class Args:
     """Enable material randomization for scene elements"""
     randomize_lights: bool = True
     """Enable light randomization (intensity, color, position)"""
-    base_seed: int = 0
+    base_seed: int = 1
     """Base random seed for scene randomization"""
 
     # Multi-variant options

@@ -11,7 +11,7 @@ dependencies = [
     "pytest",
     "rich",
     "rootutils",
-    "torch",
+    "torch==2.7.0",
     "torchvision",
     "tqdm",
     "tyro",
