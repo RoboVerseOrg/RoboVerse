@@ -16,7 +16,9 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 import os
 
+import imageio
 from huggingface_hub import snapshot_download
+from tqdm import tqdm
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
@@ -66,7 +68,10 @@ if __name__ == "__main__":
         headless=args.headless,
         num_envs=args.num_envs,
         simulator=args.sim,
+        decimation=2,
     )
+    if args.sim == "mujoco":
+        scenario.decimation *= 10
 
     # add cameras
     scenario.cameras = [
@@ -85,10 +90,10 @@ if __name__ == "__main__":
             name="table",
             scale=(1, 1, 1),
             physics=PhysicStateType.RIGIDBODY,
-            fix_base_link=True,
+            # fix_base_link=True,
             usd_path=f"{data_dir}/demo_assets/table/usd/table.usd",
             urdf_path=f"{data_dir}/demo_assets/table/result/table.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.xml",
         ),
         RigidObjCfg(
             name="banana",
@@ -97,7 +102,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.GEOM,
             usd_path=f"{data_dir}/demo_assets/banana/usd/banana.usd",
             urdf_path=f"{data_dir}/demo_assets/banana/result/banana.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/banana/mjcf/banana.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/banana/mjcf/banana.xml",
         ),
         RigidObjCfg(
             name="book",
@@ -105,7 +110,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/book/usd/book.usd",
             urdf_path=f"{data_dir}/demo_assets/book/result/book.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/book/mjcf/book.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/book/mjcf/book.xml",
         ),
         RigidObjCfg(
             name="lamp",
@@ -113,7 +118,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/lamp/usd/lamp.usd",
             urdf_path=f"{data_dir}/demo_assets/lamp/result/lamp.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/lamp/mjcf/lamp.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/lamp/mjcf/lamp.xml",
         ),
         RigidObjCfg(
             name="mug",
@@ -121,7 +126,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/mug/usd/mug.usd",
             urdf_path=f"{data_dir}/demo_assets/mug/result/mug.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/mug/mjcf/mug.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/mug/mjcf/mug.xml",
         ),
         RigidObjCfg(
             name="remote_control",
@@ -129,7 +134,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/remote_control/usd/remote_control.usd",
             urdf_path=f"{data_dir}/demo_assets/remote_control/result/remote_control.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/remote_control/mjcf/remote_control.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/remote_control/mjcf/remote_control.xml",
         ),
         RigidObjCfg(
             name="rubiks_cube",
@@ -137,7 +142,7 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/rubik's_cube/usd/rubik's_cube.usd",
             urdf_path=f"{data_dir}/demo_assets/rubik's_cube/result/rubik's_cube.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/rubik's_cube/mjcf/rubik's_cube.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/rubik's_cube/mjcf/rubik's_cube.xml",
         ),
         RigidObjCfg(
             name="vase",
@@ -145,11 +150,12 @@ if __name__ == "__main__":
             physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/vase/usd/vase.usd",
             urdf_path=f"{data_dir}/demo_assets/vase/result/vase.urdf",
-            mjcf_path=f"{data_dir}/demo_assets/vase/mjcf/vase.mjcf",
+            mjcf_path=f"{data_dir}/demo_assets/vase/mjcf/vase.xml",
         ),
     ]
 
     # set initial states
+    z_offset = 0.2
     init_states = [
         {
             "objects": {
@@ -158,37 +164,37 @@ if __name__ == "__main__":
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "banana": {
-                    "pos": torch.tensor([0.28, -0.58, 0.825]),
+                    "pos": torch.tensor([0.28, -0.58, 0.825 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "book": {
-                    "pos": torch.tensor([0.3, -0.28, 0.82]),
+                    "pos": torch.tensor([0.3, -0.28, 0.82 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "lamp": {
-                    "pos": torch.tensor([0.68, 0.10, 1.05]),
+                    "pos": torch.tensor([0.68, 0.10, 1.05 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "mug": {
-                    "pos": torch.tensor([0.68, -0.34, 0.863]),
+                    "pos": torch.tensor([0.68, -0.34, 0.863 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "remote_control": {
-                    "pos": torch.tensor([0.68, -0.54, 0.811]),
+                    "pos": torch.tensor([0.68, -0.54, 0.811 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "rubiks_cube": {
-                    "pos": torch.tensor([0.48, -0.54, 0.83]),
+                    "pos": torch.tensor([0.48, -0.54, 0.83 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "vase": {
-                    "pos": torch.tensor([0.30, 0.05, 0.95]),
+                    "pos": torch.tensor([0.30, 0.05, 0.95 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
             },
             "robots": {
                 "franka": {
-                    "pos": torch.tensor([0.8, -0.8, 0.78]),
+                    "pos": torch.tensor([0.8, -0.9, 0.82]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "panda_joint1": 0.0,
@@ -213,15 +219,17 @@ if __name__ == "__main__":
     handler.set_states(init_states * scenario.num_envs)
     os.makedirs("get_started/output", exist_ok=True)
 
-    obs = handler.get_states(mode="tensor")
-    ## Main loop
-    obs_saver = ObsSaver(video_path=f"get_started/output/1_move_robot_{args.sim}.mp4")
-    obs_saver.add(obs)
+    # First frame image
+    save_path = f"get_started/output/14_real_assets_{args.sim}.png"
+    log.info(f"Saving image to {save_path}")
+    obs = handler.get_states(mode="dict")[0]
+    imageio.imwrite(save_path, obs["cameras"]["camera"]["rgb"])
 
-    step = 0
+    # Video
+    obs_saver = ObsSaver(video_path=f"get_started/output/14_real_assets_dynamic_{args.sim}.mp4")
+    total_step = 100
     robot = scenario.robots[0]
-    for _ in range(100):
-        log.debug(f"Step {step}")
+    for idx in tqdm(range(total_step)):
         actions = [
             {
                 robot.name: {
@@ -241,6 +249,5 @@ if __name__ == "__main__":
         handler.simulate()
         obs = handler.get_states(mode="tensor")
         obs_saver.add(obs)
-        step += 1
 
     obs_saver.save()

@@ -156,8 +156,12 @@ class GenesisHandler(BaseSimHandler):
             elif isinstance(obj, RigidObjCfg):
                 urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
                 obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale, convexify=False),
+                    gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
                 )
+                # # Use convex decomposition mjcf file for more accurate physical collision.
+                # obj_inst = self.scene_inst.add_entity(
+                #     gs.morphs.MJCF(file=obj.mjcf_path, scale=obj.scale, convexify=False, decimate=False),
+                # )
             elif isinstance(obj, ArticulationObjCfg):
                 urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
                 obj_inst = self.scene_inst.add_entity(

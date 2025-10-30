@@ -444,6 +444,10 @@ class MujocoHandler(BaseSimHandler):
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
                 obj_mjcf = mjcf.from_path(obj.mjcf_path)
+                # Remove free joint since dm_control has limit support for it.
+                for joint in obj_mjcf.find_all("joint"):
+                    if joint.tag == "joint" and joint.type == "free":
+                        joint.remove()
 
             if hasattr(obj, "scale") and obj.scale != (1.0, 1.0, 1.0):
                 self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
