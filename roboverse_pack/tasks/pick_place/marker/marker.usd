@@ -16,7 +16,7 @@ def Xform "Sphere" (
         double3 xformOp:translate = (0, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
-    
+
     def "Physics"
     {
         float physics:mass = 0.01
@@ -24,4 +24,3 @@ def Xform "Sphere" (
         float3 physics:diagonalInertia = (0.00001, 0.00001, 0.00001)
     }
 }
-
