@@ -5,6 +5,11 @@ from __future__ import annotations
 import os
 from typing import Literal
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import pygame
 import rootutils
 import torch

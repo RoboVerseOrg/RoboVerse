@@ -7,6 +7,10 @@ import time
 from datetime import datetime
 from typing import Literal
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
 import cv2
 import pygame
 import rootutils
