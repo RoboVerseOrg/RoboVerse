@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import torch
+from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
@@ -344,15 +345,13 @@ class WipeWindow(RLTaskEnv):
         newly_released = (~is_grasping) & old_grasped
 
         if newly_grasped.any() and newly_grasped[0]:
-            print(
-                f"\n[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
-                f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}"
-            )
-
+            log.info(f"[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
+                     f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}")
+        
         if newly_released.any() and newly_released[0]:
-            print(f"\n[Env 0] Object released! Gripper distance: {gripper_box_dist[0].item():.4f}m")
-
-        step_count = getattr(self, "_debug_step_count", 0)
+            log.info(f"[Env 0] Object released! Gripper distance: {gripper_box_dist[0].item():.4f}m")
+        
+        step_count = getattr(self, '_debug_step_count', 0)
         self._debug_step_count = step_count + 1
 
         if (step_count % 100 == 0) or terminated[0] or time_out[0]:
@@ -363,16 +362,14 @@ class WipeWindow(RLTaskEnv):
             grasped = self.object_grasped[0].item()
 
             status = "Episode End" if (terminated[0] or time_out[0]) else f"Step {step_count}"
-            print(
-                f"\n[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
-                f"Current: #{current_idx} | Grasped: {grasped} | "
-                f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)"
-            )
-
+            log.info(f"[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
+                     f"Current: #{current_idx} | Grasped: {grasped} | "
+                     f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)")
+            
             if step_count % 100 == 0:
-                print(f"  Target pos: {target_pos_final.cpu().numpy()}")
-                print(f"  EE pos: {updated_gripper_pos[0].cpu().numpy()}")
-
+                log.debug(f"  Target pos: {target_pos_final.cpu().numpy()}")
+                log.debug(f"  EE pos: {updated_gripper_pos[0].cpu().numpy()}")
+        
         return obs, reward, terminated, time_out, info
 
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
@@ -424,19 +421,20 @@ class WipeWindow(RLTaskEnv):
             if newly_reached.any():
                 if newly_reached[0]:
                     wp_idx = self.current_waypoint_idx[0].item()
-                    print(
-                        f"\n[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m"
-                    )
-
-                self.waypoints_reached[newly_reached, self.current_waypoint_idx[newly_reached]] = True
-
+                    log.info(f"[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m")
+                
+                self.waypoints_reached[
+                    newly_reached,
+                    self.current_waypoint_idx[newly_reached]
+                ] = True
+                
                 can_advance = newly_reached & (self.current_waypoint_idx < self.num_waypoints - 1)
 
                 if can_advance.any() and can_advance[0]:
                     old_idx = self.current_waypoint_idx[0].item()
                     new_idx = old_idx + 1
-                    print(f"   -> Advancing to waypoint #{new_idx}")
-
+                    log.info(f"   -> Advancing to waypoint #{new_idx}")
+                
                 self.current_waypoint_idx[can_advance] += 1
 
                 if can_advance.any():
