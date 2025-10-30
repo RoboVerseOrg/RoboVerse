@@ -1,0 +1,87 @@
+# Base Configuration for FastTD3 Training
+# Default configuration with IsaacGym simulator and H1 humanoid robot
+
+# -------------------------------------------------------------------------------
+# Environment
+# -------------------------------------------------------------------------------
+sim: "isaacgym"
+robots: ["franka"]
+task: "pick_place_base"
+decimation: 4
+train_or_eval: "train"
+headless: false
+
+# -------------------------------------------------------------------------------
+# Seeds & Device
+# -------------------------------------------------------------------------------
+seed: 1
+cuda: true
+torch_deterministic: true
+device_rank: 0
+
+# -------------------------------------------------------------------------------
+# Rollout & Timesteps
+# -------------------------------------------------------------------------------
+num_envs: 800
+num_eval_envs: 800
+total_timesteps: 2000000
+learning_starts: 10
+num_steps: 1
+
+# -------------------------------------------------------------------------------
+# Replay, Batching, Discounting
+# -------------------------------------------------------------------------------
+buffer_size: 20480
+batch_size: 32768
+gamma: 0.99
+tau: 0.1
+
+# -------------------------------------------------------------------------------
+# Update Schedule
+# -------------------------------------------------------------------------------
+policy_frequency: 2
+num_updates: 6
+# -------------------------------------------------------------------------------
+# Optimizer & Network
+# -------------------------------------------------------------------------------
+critic_learning_rate: 0.0003
+actor_learning_rate: 0.0003
+weight_decay: 0.1
+critic_hidden_dim: 512
+actor_hidden_dim: 256
+init_scale: 0.01
+num_atoms: 101
+
+# -------------------------------------------------------------------------------
+# Value Distribution & Exploration
+# -------------------------------------------------------------------------------
+v_min: 0
+v_max: 1200.0
+policy_noise: 0.001
+std_min: 0.001
+std_max: 0.4
+noise_clip: 0.5
+
+# -------------------------------------------------------------------------------
+# Algorithm Flags
+# -------------------------------------------------------------------------------
+use_cdq: true
+compile: true
+obs_normalization: true
+max_grad_norm: 0.0
+amp: true
+amp_dtype: "fp16"
+disable_bootstrap: false
+measure_burnin: 3
+
+# -------------------------------------------------------------------------------
+# Logging & Checkpointing
+# -------------------------------------------------------------------------------
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3"
+use_wandb: false
+checkpoint_path: null
+eval_interval: 10000
+save_interval: 15000
+video_width: 1024
+video_height: 1024
