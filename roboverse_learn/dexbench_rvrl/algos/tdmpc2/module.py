@@ -512,15 +512,6 @@ class WorldModel(nn.Module):
         for key, value in obs.items():
             assert key in self._encoder, f"Encoder for observation type {key} not found."
             if "rgb" in key and value.ndim == 5:
-                import cv2
-                import numpy as np
-
-                img = value[0, 0]
-                img0 = img.permute(1, 2, 0).cpu().detach().numpy()  # Get the first environment's camera image
-                img0_uint8 = (img0 * 255).astype(np.uint8)
-                img0_bgr = cv2.cvtColor(img0_uint8, cv2.COLOR_RGB2BGR)
-                cv2.imwrite("tdmpc2_img.png", img0_bgr)
-                # exit(0)
                 T, B, C, H, W = value.shape
                 value = value.reshape(B * T, C, H, W)
                 embeddings.append(self._encoder[key](value).reshape(T, B, -1))

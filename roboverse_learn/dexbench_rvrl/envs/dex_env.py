@@ -166,6 +166,7 @@ class DexEnv(BaseVecEnv):
             self.img_h = None
             self.img_w = None
         self.tensor_states = None
+        self.tensor_obs = None
         log.info(f"Observation space: {self.observation_space}")
         log.info(f"Action space: {self.action_space}")
 
@@ -181,7 +182,7 @@ class DexEnv(BaseVecEnv):
         self.total_reset = 0
         self.total_success = 0
         self.mean_success_rate = 0.0
-        self.quelen = 12800 // self.num_envs
+        self.quelen = 25600 // self.num_envs
         self.reset_counts = deque(maxlen=self.quelen)
         self.success_counts = deque(maxlen=self.quelen)
 
@@ -213,6 +214,9 @@ class DexEnv(BaseVecEnv):
         observations = self.task.observation_fn(
             obs, torch.zeros((self.num_envs, self.action_shape), device=self.sim_device)
         )
+        self.tensor_obs = {
+            key: value.clone() for key, value in observations.items()
+        }
         for key, value in observations.items():
             value = torch.clamp(
                 value,
@@ -274,6 +278,7 @@ class DexEnv(BaseVecEnv):
         self.handler.simulate()
         envstates = self.handler.get_states()
         self.task.update_state(envstates)
+        self.tensor_obs = self.task.observation_fn(envstates=envstates, actions=actions, device=self.sim_device)
         self.post_physics_step(envstates, actions)
 
         rewards = deepcopy(self.episode_rewards)

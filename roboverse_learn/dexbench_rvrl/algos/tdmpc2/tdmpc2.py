@@ -23,7 +23,7 @@ from torchmetrics import MeanMetric
 import roboverse_learn.dexbench_rvrl.algos.tdmpc2.math as math
 from roboverse_learn.dexbench_rvrl.algos.tdmpc2.module import WorldModel, api_model_conversion
 from roboverse_learn.dexbench_rvrl.algos.tdmpc2.scale import RunningScale
-from roboverse_learn.dexbench_rvrl.algos.tdmpc2.storage import ReplayBuffer, ReplayBuffer_PyTorch
+from roboverse_learn.dexbench_rvrl.algos.tdmpc2.storage import Buffer
 from roboverse_learn.dexbench_rvrl.utils.metrics import MetricAggregator
 from roboverse_learn.dexbench_rvrl.utils.reproducibility import enable_deterministic_run
 from roboverse_learn.dexbench_rvrl.utils.timer import timer
@@ -114,8 +114,8 @@ class TDMPC2:
         self.discount_min = learn_cfg.get("discount_min", 0.95)
         self.rho = learn_cfg.get("rho", 0.5)
         self.entropy_coef = learn_cfg.get("entropy_coef", 1.0e-4)
-        self.max_std = learn_cfg.get("max_std", 2.0)
-        self.min_std = learn_cfg.get("min_std", 0.05)
+        self.max_std = learn_cfg.get("max_std", 1.0)
+        self.min_std = learn_cfg.get("min_std", 0.01)
         self.temperature = learn_cfg.get("temperature", 0.5)
         self.discount_denom = learn_cfg.get("discount_denom", 5)
 
@@ -143,14 +143,16 @@ class TDMPC2:
         self.latent_dim = self.model_cfg.get("latent_dim", 512)
         self.num_q = self.model_cfg.get("num_q", 5)
 
-        self.buffer = ReplayBuffer_PyTorch(
+        self.buffer = Buffer(
             self.obs_shape,
             self.action_dim,
             self.model_cfg["task_dim"],
-            "cpu",
             self.device,
             self.num_envs,
             learn_cfg.get("buffer_size", 5000),
+            batch_size=self.batch_size,
+            horizon=self.horizon,
+            max_length=self.max_episode_length,
         )
 
         # world model
@@ -280,15 +282,15 @@ class TDMPC2:
                 ## Step the environment and add to buffer
                 for _step in range(self.nstep):
                     with torch.inference_mode(), timer("time/iteration"):
-                        if iteration < self.prefill:
+                        if self.global_step < self.prefill:
                             action = torch.rand((self.num_envs, self.action_dim), device=self.device) * 2 - 1
                         else:
                             action = self.act(obs, t0=is_first)
                         next_obs, reward, terminated, truncated, info = self.env.step(action)
                         done = torch.logical_or(terminated, truncated)
                         env_step = self.env.episode_lengths
-                        is_first = env_step == 1
-                        self.buffer.add(obs, action, reward, done, terminated, None)
+                        is_first = (env_step == 0)
+                        self.buffer.add(obs, self.env.tensor_obs, action, reward, done, terminated, None)
                         for key in obs.keys():
                             obs[key].copy_(next_obs[key])
 
@@ -304,16 +306,25 @@ class TDMPC2:
                             cur_rewards_sum[done] = 0
                             cur_episode_length[done] = 0
                             action[done] = 0
+                        # import cv2
+                        # import numpy as np
+
+                        # img = obs["rgb"][0]  # Get the first environment's camera image
+                        # img0 = img.permute(1, 2, 0).cpu().detach().numpy()  # Get the first environment's camera image
+                        # img0_uint8 = (img0 * 255).astype(np.uint8)
+                        # img0_bgr = cv2.cvtColor(img0_uint8, cv2.COLOR_RGB2BGR)
+                        # cv2.imwrite("tdmpc2_img.png", img0_bgr)
+                        # exit(0)
 
                 mean_reward = self.episode_rewards_step.mean
                 ## Update the model
-                if iteration > self.prefill:
+                if self.global_step > self.prefill:
                     with timer("time/train"):
                         # gradient_steps = self.ratio(self.global_step - self.prefill)
 
                         for _ in range(self.nupdate):
                             with timer("time/data_sample"):
-                                data = self.buffer.sample(self.batch_size, self.horizon)
+                                data = self.buffer.sample(self.horizon)
                             with timer("time/learning"):
                                 self.update(data)
 
@@ -356,12 +367,13 @@ class TDMPC2:
     @torch.no_grad()
     def _estimate_value(self, z, actions, task):
         """Estimate value of a trajectory starting at latent state z and executing given actions."""
-        G, discount = 0, 1
+        G = torch.zeros(self.num_envs, self.num_samples, 1, device=z.device)
+        discount = torch.ones(self.num_envs, self.num_samples, 1, device=z.device)
         termination = torch.zeros(self.num_envs, self.num_samples, 1, dtype=torch.float32, device=z.device)
         for t in range(self.horizon):
             reward = math.two_hot_inv(
                 self.model.reward(z, actions[:, t], task), self.num_bins, self.reward_vmin, self.reward_vmax
-            )
+            ) # (num_envs, num_samples, 1)
             z = self.model.next(z, actions[:, t], task)
             G = G + discount * (1 - termination) * reward
             discount_update = self.discount[torch.tensor(task)] if self.multitask else self.discount
@@ -386,7 +398,7 @@ class TDMPC2:
                 torch.Tensor: Action to take in the environment.
         """
         # Sample policy trajectories
-        z = self.model.encode(obs, task)
+        z = self.model.encode(obs, task) # (num_envs, latent_dim)
         if self.num_pi_trajs > 0:
             pi_actions = torch.empty(
                 self.num_envs, self.horizon, self.num_pi_trajs, self.action_dim, device=self.device
@@ -405,7 +417,7 @@ class TDMPC2:
         std = torch.full(
             (self.num_envs, self.horizon, self.action_dim), self.max_std, dtype=torch.float, device=self.device
         )
-        mask = t0 == 0
+        mask = (t0 == 0)
         mean[mask, :-1] = self._prev_mean[mask, 1:]
         actions = torch.empty(self.num_envs, self.horizon, self.num_samples, self.action_dim, device=self.device)
         if self.num_pi_trajs > 0:
@@ -424,7 +436,7 @@ class TDMPC2:
                 actions = actions * self.model._action_masks[task]
 
             # Compute elite actions
-            value = self._estimate_value(z, actions, task).nan_to_num(0)
+            value = self._estimate_value(z, actions, task)
             elite_idxs = torch.topk(value.squeeze(2), self.num_elites, dim=1).indices
             elite_value = torch.gather(value, 1, elite_idxs.unsqueeze(2))
             elite_actions = actions.gather(
@@ -467,9 +479,9 @@ class TDMPC2:
         Returns:
                 float: Loss of the policy update.
         """
-        action, info = self.model.pi(zs, task)
+        action, info = self.model.pi(zs, task) # (horizon, batch_size, action_dim)
         qs = self.model.Q(zs, action, task, return_type="avg", detach=True)
-        self.scale.update(qs.mean(dim=0))
+        self.scale.update(qs[0])
         qs = self.scale(qs)
 
         # Loss is a weighted sum of Q-values
@@ -507,16 +519,26 @@ class TDMPC2:
 
     def _update(self, obs, action, reward, terminated, task=None):
         # Compute targets
+        # obs: (horizon + 1, batch_size, obs_dim)
+        # action: (horizon, batch_size, action_dim)
+        # reward: (horizon, batch_size, 1)
+        # terminated: (horizon, batch_size, 1)
+        next_obs = {
+            k: obs[k][1:] for k in obs.keys()
+        }
         with torch.no_grad():
-            next_z = self.model.encode(obs[1:], task)
-            td_targets = self._td_target(next_z, reward[:-1], terminated[:-1], task)
+            next_z = self.model.encode(next_obs, task)
+            td_targets = self._td_target(next_z, reward, terminated, task)
 
         # Prepare for update
         self.model.train()
 
         # Latent rollout
         zs = torch.empty(self.horizon + 1, self.batch_size, self.latent_dim, device=self.device)
-        z = self.model.encode(obs[0], task)
+        first_obs = {
+            k: obs[k][0] for k in obs.keys()
+        }
+        z = self.model.encode(first_obs, task)
         zs[0] = z
         consistency_loss = 0
         for t, (_action, _next_z) in enumerate(zip(action.unbind(0), next_z.unbind(0))):
@@ -526,7 +548,7 @@ class TDMPC2:
 
         # Predictions
         _zs = zs[:-1]
-        qs = self.model.Q(_zs, action, task, return_type="all")
+        qs = self.model.Q(_zs, action, task, return_type="all") # (num_q, horizon, batch_size, num_bins)
         qs_value = math.two_hot_inv(qs, self.num_bins, self.vmin, self.vmax)
         reward_preds = self.model.reward(_zs, action, task)
         if self.episodic:
@@ -626,17 +648,19 @@ class TDMPC2:
 
         if not timer.disabled:
             time_ = timer.compute()
-            fps = (self.global_step - self.prev_global_step) / time_["time/iteration"]
             if "time/train" not in time_:
                 train_time = 0.0
             else:
                 train_time = time_["time/train"]
+            collection_time = time_["time/iteration"]
+            iteration_time = collection_time + train_time
+            fps = (self.global_step - self.prev_global_step) / iteration_time
             data_sample_time = time_["time/data_sample"] if "time/data_sample" in time_ else 0.0
             learn_time = time_["time/learning"] if "time/learning" in time_ else 0.0
-            iteration_time = time_["time/iteration"]
-            time_str = f"""{"Computation:":>{pad}} {fps:.0f} steps/s (iteration {iteration_time:.3f}s, learning {train_time:.3f}s)\n"""
+            time_str = f"""{"Computation:":>{pad}} {fps:.0f} steps/s (collection {collection_time:.3f}s, learning {train_time:.3f}s)\n"""
             log_data["Train/fps"] = fps
             log_data["Time/train"] = train_time
+            log_data["Time/collection"] = collection_time
             log_data["Time/iteration"] = iteration_time
             log_data["Time/data_sample"] = data_sample_time
             log_data["Time/learning"] = learn_time

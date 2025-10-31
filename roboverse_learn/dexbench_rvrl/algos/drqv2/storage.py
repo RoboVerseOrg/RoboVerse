@@ -255,18 +255,14 @@ class Buffer:
 		self.device = device
 		self.num_envs = num_envs
 		self.capacity = capacity
-		self._batch_size = batch_size * (nstep)
+		self._batch_size = batch_size * (nstep + 1)
 
 		self._current_episode_obs = {
-			key: torch.zeros((num_envs, max_length, *obs_shape[key]), dtype=torch.float32 if "rgb" not in key else torch.uint8)
+			key: torch.zeros((num_envs, max_length + 1, *obs_shape[key]), dtype=torch.float32 if "rgb" not in key else torch.uint8)
 			for key in obs_shape.keys()
 		}
-		self._current_next_episode_obs = {
-			key: torch.zeros((num_envs, max_length, *obs_shape[key]), dtype=torch.float32 if "rgb" not in key else torch.uint8)
-			for key in obs_shape.keys()
-		}
-		self._current_episode_action = torch.zeros((num_envs, max_length, action_size), dtype=torch.float32)
-		self._current_episode_reward = torch.zeros((num_envs, max_length, 1), dtype=torch.float32)
+		self._current_episode_action = torch.zeros((num_envs, max_length + 1, action_size), dtype=torch.float32)
+		self._current_episode_reward = torch.zeros((num_envs, max_length + 1, 1), dtype=torch.float32)
 		self._current_episode_length = torch.zeros((num_envs,), dtype=torch.int32)
 
 		self.buffer_index = 0
@@ -315,10 +311,10 @@ class Buffer:
 		for key in self.obs_shape.keys():
 			if "rgb" in key:
 				self._current_episode_obs[key][i, t, ...] = (observation[key] * 255.0).detach().cpu().to(torch.uint8)
-				self._current_next_episode_obs[key][i, t, ...] = (next_observation[key] * 255.0).detach().cpu().to(torch.uint8)
+				self._current_episode_obs[key][i, t + 1, ...] = (next_observation[key] * 255.0).detach().cpu().to(torch.uint8)
 			else:
 				self._current_episode_obs[key][i, t, ...] = observation[key].detach().cpu()
-				self._current_next_episode_obs[key][i, t, ...] = next_observation[key].detach().cpu()
+				self._current_episode_obs[key][i, t + 1, ...] = next_observation[key].detach().cpu()
 		self._current_episode_action[i, t, ...] = action.detach().cpu()
 		self._current_episode_reward[i, t, ...] = reward.unsqueeze(-1).detach().cpu()
 		
@@ -326,16 +322,13 @@ class Buffer:
 		
 		if done.any():
 			for env_idx in done.nonzero(as_tuple=False).squeeze(-1).tolist():
-				L  = self._current_episode_length[env_idx]
+				L  = self._current_episode_length[env_idx] + 1  # +1 for the next_observation
 				episode = TensorDict({}, batch_size=[L])
 				episode['observation'] = TensorDict({}, batch_size=[L])	 
 				for key in self.obs_shape.keys():
-					episode['observation'][key] = self._current_episode_obs[key][env_idx, :L, ...]
-				episode['next_observation'] = TensorDict({}, batch_size=[L])
-				for key in self.obs_shape.keys():
-					episode['next_observation'][key] = self._current_next_episode_obs[key][env_idx, :L, ...]
-				episode['action'] = self._current_episode_action[env_idx, :L, ...]
-				episode['reward'] = self._current_episode_reward[env_idx, :L, ...]
+					episode['observation'][key] = self._current_episode_obs[key][env_idx, :L, ...].clone()
+				episode['action'] = self._current_episode_action[env_idx, :L, ...].clone()
+				episode['reward'] = self._current_episode_reward[env_idx, :L, ...].clone()
 				self._store_episode(episode)
 				self._current_episode_length[env_idx] = 0
 				
@@ -361,7 +354,7 @@ class Buffer:
 			for key in self.obs_shape.keys()
 		}
 		next_observation = {
-			key: batch["next_observation"][key][-1].contiguous().float() / 255.0 if "rgb" in key else batch["next_observation"][key][-1].contiguous()
+			key: batch["observation"][key][-1].contiguous().float() / 255.0 if "rgb" in key else batch["observation"][key][-1].contiguous()
 			for key in self.obs_shape.keys()
 		}
 		action = batch["action"][0].contiguous()
@@ -380,7 +373,7 @@ class Buffer:
 			"discount": discount,
 		}
 
-	def sample(self, chunk_size) -> TensorDict[str, Tensor]:
+	def sample(self, nstep) -> TensorDict[str, Tensor]:
 		"""Sample a batch of subsequences from the buffer."""
-		batch = self._buffer.sample().view(-1, chunk_size).permute(1, 0)
+		batch = self._buffer.sample().view(-1, nstep + 1).permute(1, 0)
 		return self._prepare_batch(batch)

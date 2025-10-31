@@ -38,6 +38,8 @@ learn:
   # all model params
   bins: 255
   symlog_input: True
+  vmin: -20
+  vmax: 20
 
   # world model params
   model_lr: 1.e-4

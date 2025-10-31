@@ -164,6 +164,8 @@ class DreamerV3:
         # all models
         self.bins = learn_cfg.get("bins", 255)
         self.symlog_input = learn_cfg.get("symlog_input", True)
+        self.vmin = learn_cfg.get("vmin", -20)
+        self.vmax = learn_cfg.get("vmax", 20)
 
         # world model
         self.model_lr = learn_cfg.get("model_lr", 1e-4)
@@ -500,7 +502,7 @@ class DreamerV3:
             reconstructed_obs_loss = recon_loss / len(self.obs_shape)
 
             predicted_reward_bins = self.reward_predictor(posteriors, deterministics)
-            predicted_reward_dist = TwoHotEncodingDistribution(predicted_reward_bins, dims=1)
+            predicted_reward_dist = TwoHotEncodingDistribution(predicted_reward_bins, dims=1, low=self.vmin, high=self.vmax)
             reward_loss = -predicted_reward_dist.log_prob(data["reward"][:, :]).mean()
 
             predicted_continue = self.continue_model(posteriors, deterministics)
@@ -578,8 +580,8 @@ class DreamerV3:
             states = torch.stack(states, dim=1)
             deterministics = torch.stack(deterministics, dim=1)
 
-            predicted_rewards = TwoHotEncodingDistribution(self.reward_predictor(states, deterministics), dims=1).mean
-            predicted_values = TwoHotEncodingDistribution(self.critic(states, deterministics), dims=1).mean
+            predicted_rewards = TwoHotEncodingDistribution(self.reward_predictor(states, deterministics), dims=1, low=self.vmin, high=self.vmax).mean
+            predicted_values = TwoHotEncodingDistribution(self.critic(states, deterministics), dims=1, low=self.vmin, high=self.vmax).mean
 
             continues_logits = self.continue_model(states, deterministics)
             continues = SafeBernoulli(logits=continues_logits).mode
@@ -618,7 +620,7 @@ class DreamerV3:
         # TODO: implement target critic
         with torch.autocast(self.cast_device, enabled=self.amp):
             predicted_value_bins = self.critic(states[:, :-1].detach(), deterministics[:, :-1].detach())
-            predicted_value_dist = TwoHotEncodingDistribution(predicted_value_bins, dims=1)
+            predicted_value_dist = TwoHotEncodingDistribution(predicted_value_bins, dims=1, low=self.vmin, high=self.vmax)
             value_loss = -predicted_value_dist.log_prob(lambda_values.detach())
             value_loss = (value_loss * discount.squeeze(-1)).mean()
         self.critic_optimizer.zero_grad()

@@ -6,303 +6,155 @@ from loguru import logger as log
 from rich.logging import RichHandler
 from tensordict.tensordict import TensorDict
 from torch import Tensor
+from torchrl.data.replay_buffers import ReplayBuffer, LazyTensorStorage
+from torchrl.data.replay_buffers.samplers import SliceSampler
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-class ReplayBuffer:
-    ## Not supported for multi-task setting
-    def __init__(
-        self,
-        observation_shape: dict,
-        action_size: int,
-        task_embed_size: int,
-        device: str | torch.device,
-        num_envs: int = 1,
-        capacity: int = 5000000,
-    ):
-        self.device = device
-        self.num_envs = num_envs
-        self.capacity = capacity
+class Buffer:
+	## Not supported for multi-task setting
+	def __init__(
+		self,
+		obs_shape: dict,
+		action_size: int,
+		task_embed_size: int,
+		device: str | torch.device,
+		num_envs: int = 1,
+		capacity: int = 5000000,
+		batch_size: int = 256,
+		horizon: int = 15,
+  		max_length: int = 1000,
+	):
+		self.device = device
+		self.num_envs = num_envs
+		self.capacity = capacity
+		self._batch_size = batch_size * (horizon + 1)
 
-        self.observation = {
-            key: np.empty((self.capacity, self.num_envs, shape), dtype=np.float32)
-            if "rgb" not in key
-            else np.empty((self.capacity, self.num_envs, shape), dtype=np.uint8)
-            for key, shape in observation_shape.items()
-        }
-        self.action = np.empty((self.capacity, self.num_envs, action_size), dtype=np.float32)
-        self.reward = np.empty((self.capacity, self.num_envs, 1), dtype=np.float32)
-        self.done = np.empty((self.capacity, self.num_envs, 1), dtype=np.float32)
-        self.terminated = np.empty((self.capacity, self.num_envs, 1), dtype=np.float32)
-        self.task_embed_size = task_embed_size
-        if task_embed_size > 0:
-            self.task = np.empty((self.capacity, self.num_envs, task_embed_size), dtype=np.float32)
+		self._current_episode_obs = {
+			key: torch.zeros((num_envs, max_length + 1, *obs_shape[key]), dtype=torch.float32 if "rgb" not in key else torch.uint8)
+			for key in obs_shape.keys()
+		}
+		self._current_episode_action = torch.zeros((num_envs, max_length + 1, action_size), dtype=torch.float32)
+		self._current_episode_reward = torch.zeros((num_envs, max_length + 1, 1), dtype=torch.float32)
+		self._current_episode_done = torch.zeros((num_envs, max_length + 1, 1), dtype=torch.float32)
+		self._current_episode_length = torch.zeros((num_envs,), dtype=torch.int32)
+		if task_embed_size > 0:
+			self._current_episode_task = torch.zeros((num_envs, task_embed_size), dtype=torch.float32)
+		self.task_embed_size = task_embed_size
 
-        self.buffer_index = 0
-        self.full = False
+		self.buffer_index = 0
+		self.full = False
+		self._sampler = SliceSampler(
+			num_slices=batch_size,
+			end_key=None,
+			traj_key='episode',
+			truncated_key=None,
+			strict_length=True,
+			cache_values=False,
+		)
+		self.num_eps = 0
+		self._buffer = self._reserve_buffer(
+			LazyTensorStorage(capacity, device="cpu")
+		)
+		self.obs_shape = obs_shape
+		
+	def _reserve_buffer(self, storage):
+		"""
+		Reserve a buffer with the given storage.
+		"""
+	 
+		return ReplayBuffer(
+			storage=storage,
+			sampler=self._sampler,
+			pin_memory=False,
+			prefetch=0,
+			batch_size=self._batch_size,
+		)
 
-    def __len__(self):
-        return self.capacity if self.full else self.buffer_index
+	def __len__(self):
+		return self.capacity if self.full else self.buffer_index
 
-    def add(
-        self,
-        observation: TensorDict,
-        action: Tensor,
-        reward: Tensor,
-        done: Tensor,
-        terminated: Tensor,
-        task: Tensor | None,
-    ):
-        for key in self.observation.keys():
-            if "rgb" in key:
-                self.observation[key][self.buffer_index] = (observation[key].detach().cpu().numpy() * 255.0).astype(
-                    np.uint8
-                )
-            else:
-                self.observation[key][self.buffer_index] = observation[key].detach().cpu().numpy()
-        self.action[self.buffer_index] = action.detach().cpu().numpy()
-        self.reward[self.buffer_index] = reward.unsqueeze(-1).detach().cpu().numpy()
-        self.done[self.buffer_index] = done.unsqueeze(-1).detach().cpu().numpy()
-        self.terminated[self.buffer_index] = terminated.unsqueeze(-1).detach().cpu().numpy()
-        if self.task_embed_size > 0 and task is not None:
-            self.task[self.buffer_index] = task.detach().cpu().numpy()
+	def add(
+		self,
+		observation: TensorDict,
+		next_observation: TensorDict,
+		action: Tensor,
+		reward: Tensor,
+		done: Tensor,
+		terminated: Tensor,
+		task: Tensor | None,
+	):
+		i = torch.arange(self.num_envs)
+		t = self._current_episode_length
+		for key in self.obs_shape.keys():
+			if "rgb" in key:
+				self._current_episode_obs[key][i, t, ...] = (observation[key] * 255.0).detach().cpu().to(torch.uint8)
+				self._current_episode_obs[key][i, t+1, ...] = (next_observation[key] * 255.0).detach().clone().cpu().to(torch.uint8)
+			else:
+				self._current_episode_obs[key][i, t, ...] = observation[key].detach().clone().cpu()
+				self._current_episode_obs[key][i, t+1, ...] = next_observation[key].detach().clone().cpu()
+		self._current_episode_action[i, t, ...] = action.detach().cpu()
+		self._current_episode_reward[i, t, ...] = reward.unsqueeze(-1).detach().cpu()
+		self._current_episode_done[i, t, ...] = done.unsqueeze(-1).detach().cpu().float()
+		if self.task_embed_size > 0 and task is not None:
+			self._current_episode_task[i, ...] = task.detach().cpu()
+		
+		self._current_episode_length += 1
+		
+		if done.any():
+			for env_idx in done.nonzero(as_tuple=False).squeeze(-1).tolist():
+				L  = self._current_episode_length[env_idx] + 1
+				episode = TensorDict({}, batch_size=[L])
+				episode['observation'] = TensorDict({}, batch_size=[L])	 
+				for key in self.obs_shape.keys():
+					episode['observation'][key] = self._current_episode_obs[key][env_idx, :L, ...].clone()
+				episode['action'] = self._current_episode_action[env_idx, :L, ...].clone()
+				episode['reward'] = self._current_episode_reward[env_idx, :L, ...].clone()
+				episode['done'] = self._current_episode_done[env_idx, :L, ...].clone()
+				if self.task_embed_size > 0 and task is not None:
+					episode['task'] = self._current_episode_task[env_idx, ...].clone()
+				self._store_episode(episode)
+				self._current_episode_length[env_idx] = 0
+				
+	def _store_episode(self, episode):
+		"""
+		Add an episode to the buffer.
+		"""
+		episode_idx = torch.ones_like(episode['reward'], dtype=torch.int32) * self.num_eps
+		episode_idx = episode_idx.squeeze(-1)
+		episode['episode'] = episode_idx	
+		self._buffer.extend(episode)
+		self.num_eps += 1
+		return self.num_eps
 
-        self.buffer_index = (self.buffer_index + 1) % self.capacity
-        self.full = self.full or self.buffer_index == 0
+	def _prepare_batch(self, batch):
+		"""
+		Prepare a sampled batch for training (post-processing).
+		Expects `batch` to be a TensorDict with batch size TxB.
+		"""
+		batch = batch.to(self.device, non_blocking=True)
+		observation = {
+			key: batch["observation"][key].contiguous().float() / 255.0 if "rgb" in key else batch["observation"][key].contiguous()
+			for key in self.obs_shape.keys()
+		}
+		action = batch["action"][:-1].contiguous()
+		reward = batch["reward"][:-1].contiguous()
+		done = batch["done"][:-1].contiguous()
+		terminated = batch["done"][:-1].contiguous()
+		task = batch.get("task", None)
+		if task is not None:
+			task = task[0].contiguous()
+		return {
+			"observation": observation,
+			"action": action,
+			"reward": reward,
+			"done": done,
+			"terminated": terminated,
+			"task": task,
+		}
 
-    def sample(self, batch_size, chunk_size) -> TensorDict[str, Tensor]:
-        """
-        Sample elements from the replay buffer in a sequential manner, without considering the episode
-        boundaries.
-        """
-        batch_size_per_env = batch_size // self.num_envs
-        last_filled_index = self.buffer_index - chunk_size + 1
-        if last_filled_index >= 0 and self.full:
-            sample_range = np.concatenate((
-                np.arange(self.buffer_index, self.capacity),
-                np.arange(0, last_filled_index),
-            ))
-        elif last_filled_index >= 0:
-            sample_range = np.arange(0, last_filled_index)
-        elif last_filled_index < 0 and self.full:
-            last_filled_index = self.capacity + last_filled_index
-            sample_range = np.arange(self.buffer_index, last_filled_index)
-        else:
-            raise AssertionError("Not enough data in the buffer")
-        assert len(sample_range) > batch_size_per_env, "too short dataset or too long chunk_size"
-        sample_index = np.random.choice(sample_range, size=(self.num_envs, batch_size_per_env), replace=True)
-        chunk_length = np.arange(chunk_size).reshape(1, -1)
-
-        sample_index = (sample_index + chunk_length) % self.capacity  # (num_envs, batch_size_per_env, chunk_size)
-        env_index = np.arange(self.num_envs).reshape(-1, 1, 1)
-        flattened_index = sample_index * self.num_envs + env_index[:, None]
-
-        def flatten(x: np.ndarray) -> np.ndarray:
-            return x.reshape(-1, *x.shape[2:])
-
-        observation = {
-            key: torch.as_tensor(flatten(val)[flattened_index], device=self.device)
-            .float()
-            .reshape(-1, chunk_size, *val.shape[2:])
-            .permute(1, 0, *range(2, val.ndim))
-            if "rgb" not in key
-            else (torch.as_tensor(flatten(val)[flattened_index], dtype=torch.float32, device=self.device) / 255.0)
-            .reshape(-1, chunk_size, *val.shape[2:])
-            .permute(1, 0, *range(2, val.ndim))
-            for key, val in self.observation.items()
-        }
-        action = (
-            torch.as_tensor(flatten(self.action)[flattened_index], device=self.device)
-            .reshape(-1, chunk_size, self.action.shape[2])
-            .permute(1, 0, *range(2, self.action.ndim))
-        )
-        reward = (
-            torch.as_tensor(flatten(self.reward)[flattened_index], device=self.device)
-            .reshape(-1, chunk_size, 1)
-            .permute(1, 0, 2)
-        )
-        done = (
-            torch.as_tensor(flatten(self.done)[flattened_index], device=self.device)
-            .reshape(-1, chunk_size, 1)
-            .permute(1, 0, 2)
-        )
-        terminated = (
-            torch.as_tensor(flatten(self.terminated)[flattened_index], device=self.device)
-            .reshape(-1, chunk_size, 1)
-            .permute(1, 0, 2)
-        )
-        if self.task_embed_size > 0:
-            task = (
-                torch.as_tensor(flatten(self.task)[flattened_index], device=self.device)
-                .reshape(-1, chunk_size, self.task_embed_size)
-                .permute(1, 0, *range(2, self.task.ndim))[0]
-            )
-        else:
-            task = None
-
-        sample = {
-            "observation": observation,
-            "action": action,
-            "reward": reward,
-            "done": done,
-            "terminated": terminated,
-            "task": task,
-        }
-        return sample
-
-    def mean_reward(self) -> float:
-        if self.full:
-            return float(self.reward.mean())
-        else:
-            return float(self.reward[: self.buffer_index].mean())
-
-
-class ReplayBuffer_PyTorch:
-    ## Not supported for multi-task setting
-    def __init__(
-        self,
-        observation_shape: dict,
-        action_size: int,
-        task_embed_size: int,
-        storage_device: str | torch.device = "cpu",
-        device: str | torch.device = "cpu",
-        num_envs: int = 1,
-        capacity: int = 5000000,
-    ):
-        self.storage_device = storage_device
-        self.device = device
-        self.num_envs = num_envs
-        self.capacity = capacity
-
-        self.observation = TensorDict({
-            key: torch.zeros((self.capacity, self.num_envs, *shape), dtype=torch.float32, device=storage_device)
-            if "rgb" not in key
-            else torch.zeros((self.capacity, self.num_envs, *shape), dtype=torch.uint8, device=storage_device)
-            for key, shape in observation_shape.items()
-        })
-        self.action = torch.zeros(
-            (self.capacity, self.num_envs, action_size), dtype=torch.float32, device=storage_device
-        )
-        self.reward = torch.zeros((self.capacity, self.num_envs, 1), dtype=torch.float32, device=storage_device)
-        self.done = torch.zeros((self.capacity, self.num_envs, 1), dtype=torch.float32, device=storage_device)
-        self.terminated = torch.zeros((self.capacity, self.num_envs, 1), dtype=torch.float32, device=storage_device)
-        self.task_embed_size = task_embed_size
-        if task_embed_size > 0:
-            self.task = torch.zeros(
-                (self.capacity, self.num_envs, task_embed_size), dtype=torch.float32, device=storage_device
-            )
-
-        self.buffer_index = 0
-        self.full = False
-
-    def __len__(self):
-        return self.capacity if self.full else self.buffer_index
-
-    def add(
-        self,
-        observation: TensorDict,
-        action: Tensor,
-        reward: Tensor,
-        done: Tensor,
-        terminated: Tensor,
-        task: Tensor | None,
-    ):
-        for key in self.observation.keys():
-            if "rgb" in key:
-                self.observation[key][self.buffer_index] = (
-                    (observation[key] * 255.0).detach().to(torch.uint8).to(self.storage_device)
-                )
-            else:
-                self.observation[key][self.buffer_index] = observation[key].detach().to(self.storage_device)
-        self.action[self.buffer_index] = action.detach().to(self.storage_device)
-        self.reward[self.buffer_index] = reward.unsqueeze(-1).detach().to(self.storage_device)
-        self.done[self.buffer_index] = done.unsqueeze(-1).detach().to(self.storage_device)
-        self.terminated[self.buffer_index] = terminated.unsqueeze(-1).detach().to(self.storage_device)
-        if self.task_embed_size > 0 and task is not None:
-            self.task[self.buffer_index] = task.detach().to(self.storage_device)
-
-        self.buffer_index = (self.buffer_index + 1) % self.capacity
-        self.full = self.full or self.buffer_index == 0
-
-    def sample(self, batch_size, chunk_size) -> TensorDict[str, Tensor]:
-        """
-        Sample elements from the replay buffer in a sequential manner, without considering the episode
-        boundaries.
-        """
-        batch_size_per_env = batch_size // self.num_envs
-        last_filled_index = self.buffer_index - chunk_size + 1
-        if last_filled_index >= 0 and self.full:
-            sample_range = np.concatenate((
-                np.arange(self.buffer_index, self.capacity),
-                np.arange(0, last_filled_index),
-            ))
-        elif last_filled_index >= 0:
-            sample_range = np.arange(0, last_filled_index)
-        elif last_filled_index < 0 and self.full:
-            last_filled_index = self.capacity + last_filled_index
-            sample_range = np.arange(self.buffer_index, last_filled_index)
-        else:
-            raise AssertionError("Not enough data in the buffer")
-        assert len(sample_range) > batch_size_per_env, "too short dataset or too long chunk_size"
-        sample_index = np.random.choice(sample_range, size=(self.num_envs, batch_size_per_env), replace=True)
-        sample_index = sample_index[:, :, None]  # (num_envs, batch_size_per_env, 1)
-        chunk_length = np.arange(chunk_size).reshape(1, -1)
-
-        sample_index = (sample_index + chunk_length) % self.capacity  # (num_envs, batch_size_per_env, chunk_size)
-        env_index = np.arange(self.num_envs).reshape(-1, 1, 1)
-        flattened_index = sample_index * self.num_envs + env_index
-
-        def flatten(x: np.ndarray) -> np.ndarray:
-            return x.reshape(-1, *x.shape[2:])
-
-        observation = TensorDict(
-            {
-                key: flatten(val)[flattened_index]
-                .to(self.device)
-                .reshape(-1, chunk_size, *val.shape[2:])
-                .permute(1, 0, *range(2, val.ndim))
-                if "rgb" not in key
-                else (flatten(val)[flattened_index].to(device=self.device).float() / 255.0)
-                .reshape(-1, chunk_size, *val.shape[2:])
-                .permute(1, 0, *range(2, val.ndim))
-                for key, val in self.observation.items()
-            },
-            batch_size=[chunk_size, batch_size],
-        )
-        action = (
-            flatten(self.action)[flattened_index]
-            .to(self.device)
-            .reshape(-1, chunk_size, self.action.shape[2])
-            .permute(1, 0, 2)
-        )
-        reward = flatten(self.reward)[flattened_index].to(self.device).reshape(-1, chunk_size, 1).permute(1, 0, 2)
-        done = flatten(self.done)[flattened_index].to(self.device).reshape(-1, chunk_size, 1).permute(1, 0, 2)
-        terminated = (
-            flatten(self.terminated)[flattened_index].to(self.device).reshape(-1, chunk_size, 1).permute(1, 0, 2)
-        )
-        if self.task_embed_size > 0:
-            task = (
-                flatten(self.task)[flattened_index]
-                .to(self.device)
-                .reshape(-1, chunk_size, self.task_embed_size)
-                .permute(1, 0, 2)[0]
-            )
-        else:
-            task = None
-
-        sample = {
-            "observation": observation,
-            "action": action,
-            "reward": reward,
-            "done": done,
-            "terminated": terminated,
-            "task": task,
-        }
-        return sample
-
-    def mean_reward(self) -> float:
-        if self.full:
-            return float(self.reward.mean())
-        else:
-            return float(self.reward[: self.buffer_index].mean())
+	def sample(self, chunk_size) -> TensorDict[str, Tensor]:
+		"""Sample a batch of subsequences from the buffer."""
+		batch = self._buffer.sample().view(-1, chunk_size+1).permute(1, 0)
+		return self._prepare_batch(batch)
