@@ -16,7 +16,7 @@ import copy
 
 all_joint_names = {
     "franka": [
-     
+        # 7个手臂关节 (7 DoF Arm)
         'panda_finger_joint1',
         'panda_finger_joint2',
         'panda_joint1',
@@ -26,22 +26,23 @@ all_joint_names = {
         'panda_joint5',
         'panda_joint6',
         'panda_joint7'
-     
+        # 2个夹爪关节 (2 DoF Gripper)
         
     ],
     "table": [
-       
+        # 这是可动桌子的4个关节
+        # 注意：这里的顺序必须与您URDF文件中定义的顺序或仿真器加载后的顺序一致
         'base__button', 
         'base__switch', 
         'base__slide', 
         'base__drawer'
     ]
-    
+    # 如果场景中还有其他可动物体，也应在此处添加它们的关节名列表
 }
 
 
-@register_task("calvin.base_table")
-class BaseCalvinTableTask(BaseTaskEnv):
+@register_task("calvin.base_table_A")
+class BaseCalvinTableTask_A(BaseTaskEnv):
     scenario = ScenarioCfg(
         robots=[
             FrankaWithGripperExtensionCfg(
@@ -56,6 +57,14 @@ class BaseCalvinTableTask(BaseTaskEnv):
                     "panda_joint5": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
                     "panda_joint6": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
                     "panda_joint7": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
+                    # "panda_joint1": BaseActuatorCfg(velocity_limit=2, stiffness=280, damping=10),
+                    # "panda_joint2": BaseActuatorCfg(velocity_limit=2, stiffness=280, damping=10),
+                    # "panda_joint3": BaseActuatorCfg(velocity_limit=2, stiffness=280, damping=10),
+                    # "panda_joint4": BaseActuatorCfg(velocity_limit=2, stiffness=280, damping=10),
+                    # "panda_joint5": BaseActuatorCfg(velocity_limit=2, stiffness=200, damping=5),
+                    # "panda_joint6": BaseActuatorCfg(velocity_limit=2, stiffness=200, damping=5),
+                    # "panda_joint7": BaseActuatorCfg(velocity_limit=3, stiffness=200, damping=5),
+                 
                     "panda_finger_joint1": BaseActuatorCfg(
                         velocity_limit=1.0, torque_limit=100.0, is_ee=True, stiffness=30000, damping=1000
                     ),
@@ -77,6 +86,7 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 control_type="joint_position",
                 fix_base_link=True,
                 urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/franka_panda/panda_longer_finger.urdf",
+                # urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/franka_panda/panda.urdf",
                 usd_path=None,
                 mjcf_path=None,
                 mjx_mjcf_path=None,
@@ -89,9 +99,9 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 scale=0.8,
                 default_position=[0, 0, 0],
                 default_orientation=[1, 0, 0, 0],
-
+                
                 fix_base_link=True,
-                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/calvin_table_D/urdf/calvin_table_D.urdf",
+                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/calvin_table_A/urdf/calvin_table_A.urdf",
             ),
             RigidObjCfg(
                 name="pink_cube",
@@ -99,7 +109,7 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 default_position=[1.28661989e-01, -3.77756105e-02, 4.59989266e-01 + 0.01],
                 default_orientation=quat_from_euler_np(1.10200730e-04, 3.19760378e-05, -3.94522179e-01),
                 fix_base_link=False,
-                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/blocks/block_pink_big.urdf",
+                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/blocks/block_pink_small.urdf",
             ),
             RigidObjCfg(
                 name="blue_cube",
@@ -107,7 +117,7 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 default_position=[-2.83642665e-01, 8.05351014e-02, 4.60989238e-01 + 0.01],
                 default_orientation=quat_from_euler_np(-1.10251078e-05, -5.25663348e-05, -9.06438129e-01),
                 fix_base_link=False,
-                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/blocks/block_blue_small.urdf",
+                urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/blocks/block_blue_big.urdf",
             ),
             RigidObjCfg(
                 name="red_cube",
