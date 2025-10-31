@@ -55,7 +55,8 @@ def convert_traj_v2_to_v3(
     Returns:
         The converted v3 trajectory data.
     """
-    init_states_v3 = [convert_state_v2_to_v3(init_state, robot) for init_state in init_states]
+    # init_states_v3 = [convert_state_v2_to_v3(init_state, robot) for init_state in init_states]
+    init_states_v3 = init_states
     if all_states is not None:
         all_states_v3 = [[convert_state_v2_to_v3(state, robot) for state in states] for states in all_states]
     else:
