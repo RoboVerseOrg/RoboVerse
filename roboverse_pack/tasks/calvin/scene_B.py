@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 import xml.etree.ElementTree as ET  # 导入XML解析库
-
 import gymnasium as gym
-
+import numpy as np
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.robot import BaseActuatorCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -13,30 +11,32 @@ from metasim.utils.ik_solver import setup_ik_solver
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.tensor_util import array_to_tensor
 from roboverse_pack.robots.franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
+import pybullet as p
+import copy
 
 all_joint_names = {
     "franka": [
-        # 7个手臂关节 (7 DoF Arm)
-        "panda_finger_joint1",
-        "panda_finger_joint2",
-        "panda_joint1",
-        "panda_joint2",
-        "panda_joint3",
-        "panda_joint4",
-        "panda_joint5",
-        "panda_joint6",
-        "panda_joint7",
-        # 2个夹爪关节 (2 DoF Gripper)
+      
+        'panda_finger_joint1',
+        'panda_finger_joint2',
+        'panda_joint1',
+        'panda_joint2',
+        'panda_joint3',
+        'panda_joint4',
+        'panda_joint5',
+        'panda_joint6',
+        'panda_joint7'
+       
+        
     ],
     "table": [
-        # 这是可动桌子的4个关节
-        # 注意：这里的顺序必须与您URDF文件中定义的顺序或仿真器加载后的顺序一致
-        "base__button",
-        "base__switch",
-        "base__slide",
-        "base__drawer",
-    ],
-    # 如果场景中还有其他可动物体，也应在此处添加它们的关节名列表
+      
+        'base__button', 
+        'base__switch', 
+        'base__slide', 
+        'base__drawer'
+    ]
+   
 }
 
 
@@ -49,18 +49,20 @@ class BaseCalvinTableTask_B(BaseTaskEnv):
                 default_position=[-0.34, -0.46, 0.24],
                 default_orientation=[1, 0, 0, 0],
                 actuators={
-                    "panda_joint1": BaseActuatorCfg(velocity_limit=2.175, stiffness=280, damping=10),
-                    "panda_joint2": BaseActuatorCfg(velocity_limit=2.175, stiffness=280, damping=10),
-                    "panda_joint3": BaseActuatorCfg(velocity_limit=2.175, stiffness=280, damping=10),
-                    "panda_joint4": BaseActuatorCfg(velocity_limit=2.175, stiffness=280, damping=10),
-                    "panda_joint5": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
-                    "panda_joint6": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
-                    "panda_joint7": BaseActuatorCfg(velocity_limit=2.61, stiffness=200, damping=5),
+                    "panda_joint1": BaseActuatorCfg(velocity_limit=2.175,  torque_limit=87,stiffness=280, damping=10),
+                    "panda_joint2": BaseActuatorCfg(velocity_limit=2.175,  torque_limit=87,stiffness=280, damping=10),
+                    "panda_joint3": BaseActuatorCfg(velocity_limit=2.175, torque_limit=87, stiffness=280, damping=10),
+                    "panda_joint4": BaseActuatorCfg(velocity_limit=2.175, torque_limit=87, stiffness=280, damping=10),
+                    "panda_joint5": BaseActuatorCfg(velocity_limit=2.61, torque_limit=12.0,stiffness=200, damping=5),
+                    "panda_joint6": BaseActuatorCfg(velocity_limit=2.61, torque_limit=12.0,stiffness=200, damping=5),
+                    "panda_joint7": BaseActuatorCfg(velocity_limit=2.61, torque_limit=12.0, stiffness=200, damping=5),
+        
+                 
                     "panda_finger_joint1": BaseActuatorCfg(
-                        velocity_limit=1.0, torque_limit=100.0, is_ee=True, stiffness=30000, damping=1000
+                        velocity_limit=0.2, torque_limit=20.0, is_ee=True, stiffness=30000, damping=1000
                     ),
                     "panda_finger_joint2": BaseActuatorCfg(
-                        velocity_limit=1.0, torque_limit=100.0, is_ee=True, stiffness=30000, damping=1000
+                        velocity_limit=0.2, torque_limit=20.0, is_ee=True, stiffness=30000, damping=1000
                     ),
                 },
                 default_joint_positions={
@@ -83,11 +85,13 @@ class BaseCalvinTableTask_B(BaseTaskEnv):
             )
         ],
         objects=[
+            
             ArticulationObjCfg(
                 name="table",
                 scale=0.8,
                 default_position=[0, 0, 0],
                 default_orientation=[1, 0, 0, 0],
+
                 fix_base_link=True,
                 urdf_path="/home/dyz/RoboVerse/calvin/calvin_env/calvin_env/data/calvin_table_B/urdf/calvin_table_B.urdf",
             ),
@@ -121,22 +125,18 @@ class BaseCalvinTableTask_B(BaseTaskEnv):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self._is_initialized=False
+       
         self.ik_solver = setup_ik_solver(self.scenario.robots[0], solver="pyroki", use_seed=False)
         self._articulated_object_joints = {}
         for obj_cfg in self.scenario.objects:
             if isinstance(obj_cfg, ArticulationObjCfg):
-                # 调用辅助函数，提前获取并存储关节名
+             
                 joint_names = self._get_joint_names_from_urdf(obj_cfg.urdf_path)
                 self._articulated_object_joints[obj_cfg.name] = joint_names
-
-    def set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
-        """Set the states of the environment."""
-        self._state_cache_expire = True
-
-        self._set_states(states, env_ids)
+      
 
     def _action_space(self):
+   
         if self.scenario.robots[0].control_type == "joint_position":
             return gym.spaces.Box(low=-1.0, high=1.0, shape=(9,), dtype=float)
         elif self.scenario.robots[0].control_type == "ee_pose":
@@ -147,14 +147,16 @@ class BaseCalvinTableTask_B(BaseTaskEnv):
     def step(self, action):
         try:
             if isinstance(action, list) and action and isinstance(action[0], dict):
+            
                 robot_name = self.scenario.robots[0].name
-
+            
             # Check if the robot's name is a key in the dictionary.
             if robot_name in action[0]:
+        
                 action = action[0][robot_name]
         except:
             pass
-
+        
         if self.scenario.robots[0].control_type == "joint_position":
             assert action.shape[-1] == 9, f"Expected action shape (9,), got {action.shape}"
             return super().step(action)
@@ -182,20 +184,24 @@ class BaseCalvinTableTask_B(BaseTaskEnv):
 
         else:
             raise NotImplementedError
+    
+
+
 
     @staticmethod
-    def _get_joint_names_from_urdf(urdf_path: str) -> List[str]:
-        """
-        一个辅助函数，直接从URDF文件中解析出所有非固定关节的名称。
-        """
+    def _get_joint_names_from_urdf(urdf_path: str):
+       
         try:
             tree = ET.parse(urdf_path)
             root = tree.getroot()
             joint_names = []
-            for joint in root.findall("joint"):
-                # 确保我们只获取那些需要在状态中设置的关节
-                if joint.get("type") != "fixed":
-                    joint_names.append(joint.get("name"))
+            for joint in root.findall('joint'):
+              
+                if joint.get('type') != 'fixed':
+                    joint_names.append(joint.get('name'))
             return joint_names
         except (ET.ParseError, FileNotFoundError):
             return []
+        
+
+       
