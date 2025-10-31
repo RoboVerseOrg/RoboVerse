@@ -11,7 +11,6 @@ from metasim.task.registry import register_task
 
 from .base import PickPlaceBase
 
-
 DEFAULT_CONFIG = {
     "action_scale": 0.04,
     "reward_config": {
