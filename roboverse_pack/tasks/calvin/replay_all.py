@@ -9,7 +9,6 @@ try:
     import isaacgym  # noqa: F401
 except ImportError:
     pass
-from metasim.utils.math import quat_from_euler_np
 import imageio as iio
 import numpy as np
 import rootutils
@@ -20,8 +19,6 @@ from numpy.typing import NDArray
 from rich.logging import RichHandler
 from torchvision.utils import make_grid, save_image
 
-from metasim.scenario.cameras import PinholeCameraCfg
-
 # from metasim.scenario.randomization import RandomizationCfg
 from metasim.scenario.render import RenderCfg
 from metasim.scenario.robot import RobotCfg
@@ -29,17 +26,12 @@ from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.state import TensorState
-from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
-from metasim.scenario.robot import BaseActuatorCfg
-from metasim.scenario.scenario import ScenarioCfg
-from roboverse_pack.robots.franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
-import metasim
-import numpy as np
-from gymnasium import make_vec
+
 rootutils.setup_root(__file__, pythonpath=True)
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+
 
 @configclass
 class Args:
@@ -51,7 +43,7 @@ class Args:
 
     ## Handlers
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
-    
+
     renderer: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
@@ -139,29 +131,24 @@ class ObsSaver:
 ## Main
 ###########################################################
 def main():
-   
     tic = time.time()
-   
+
     task_cls = get_task_class(args.task)  # e.g., "example.my_task"
 
-
-    
     scenario = task_cls.scenario.update(
-    
         simulator="pybullet",
-
-        
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = task_cls(scenario=scenario, device=device)
-   
+
     num_envs = 1
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
 
-    
-    traj_filepath_root = '/home/dyz/RoboVerse/roboverse_pack/tasks/calvin/data_preparation/env_D_val_out/episode_chunk_1_219635_244284/'
+    traj_filepath_root = (
+        "/home/dyz/RoboVerse/roboverse_pack/tasks/calvin/data_preparation/env_D_val_out/episode_chunk_1_219635_244284/"
+    )
     ## Data
 
     path_list = os.listdir(traj_filepath_root)
@@ -172,12 +159,10 @@ def main():
         init_states, all_actions, all_states = get_traj(
             traj_filepath, scenario.robots[0]
         )  # XXX: only support one robot
-     
-     
+
         # import ipdb
         # ipdb.set_trace()
-       
-       
+
         toc = time.time()
         log.trace(f"Time to load data: {toc - tic:.2f}s")
 
@@ -213,24 +198,28 @@ def main():
                 env.handler.refresh_render()
                 obs = env.handler.get_states()
 
-
             else:
                 # print(all_actions)
                 actions = get_actions(all_actions, step, num_envs, scenario.robots[0])
                 # print(actions)
                 # print(scenario.robots[0])
                 obs, reward, success, time_out, extras = env.step(actions)
-            
-                error = 0
-                for obj_name in ['pink_cube', 'blue_cube', 'red_cube']:
-                    # Position error
-                    error += torch.sum(torch.abs(all_states[0][step]['objects'][obj_name]['pos'] - 
-                                    obs.objects[obj_name].root_state[0][:3]))
-                    # Rotation error
-                    error += torch.sum(torch.abs(all_states[0][step]['objects'][obj_name]['rot'] - 
-                                    obs.objects[obj_name].root_state[0][3:7]))
 
-        
+                error = 0
+                for obj_name in ["pink_cube", "blue_cube", "red_cube"]:
+                    # Position error
+                    error += torch.sum(
+                        torch.abs(
+                            all_states[0][step]["objects"][obj_name]["pos"] - obs.objects[obj_name].root_state[0][:3]
+                        )
+                    )
+                    # Rotation error
+                    error += torch.sum(
+                        torch.abs(
+                            all_states[0][step]["objects"][obj_name]["rot"] - obs.objects[obj_name].root_state[0][3:7]
+                        )
+                    )
+
                 print(error)
                 if success.any():
                     log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")

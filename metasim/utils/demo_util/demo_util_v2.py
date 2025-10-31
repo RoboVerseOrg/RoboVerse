@@ -44,12 +44,10 @@ def get_traj_v2(traj_filepath, robot: RobotCfg):
     ## Parse initial states
     # print(data[0])
     if "init_state" in data[0]:
-        
         init_states = [traj["init_state"] for traj in data]
     else:
         raise ValueError("No init_state found in the trajectory data")
-  
-  
+
     if "actions" in data[0]:
         all_actions = [traj["actions"] for traj in data]
     else:
