@@ -95,6 +95,21 @@ class StackBlockCfg(BaseRLTaskCfg):
     reset_position_noise = 0.0
     reset_dof_pos_noise = 0.0
     leave_penalty = 5.0
+    randomization_cfg = {
+        "enable_floor": False,
+        "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        "enable_table": True,
+        "table_cfg" : {
+            "x_pos": 0.0,
+            "y_pos": 0.0,
+            "height": 0.702,
+            "width": 0.502,
+            "depth": 1.002,
+            "thickness": 0.702,
+        },
+        "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+    }
+
 
     def set_sim_params(self, sim_type=None) -> None:
         """Set the simulation parameters based on the simulator type."""

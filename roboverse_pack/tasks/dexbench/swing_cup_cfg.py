@@ -97,6 +97,21 @@ class SwingCupCfg(BaseRLTaskCfg):
     reset_dof_pos_noise = 0.0
     rot_reward_scale = 5.0
     rot_eps = 0.1
+    randomization_cfg = {
+        "enable_floor": False,
+        "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        "enable_table": True,
+        "table_cfg" : {
+            "x_pos": 0.0,
+            "y_pos": 0.0,
+            "height": 0.602,
+            "width": 0.602,
+            "depth": 0.602,
+            "thickness": 0.602,
+        },
+        "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+    }
+
 
     def set_sim_params(self, sim_type=None) -> None:
         """Set the simulation parameters based on the simulator type."""

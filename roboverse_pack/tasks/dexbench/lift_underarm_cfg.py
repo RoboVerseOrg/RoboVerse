@@ -58,7 +58,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         ),
         "table": PrimitiveCubeCfg(
             name="table",
-            size=(0.6, 0.6, 0.75),
+            size=(0.6, 0.6, 0.7),
             disable_gravity=True,
             fix_base_link=True,
             flip_visual_attachments=True,
@@ -95,6 +95,20 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
     fall_penalty = 0.0
     reset_position_noise = 0.1
     reset_dof_pos_noise = 0.0
+    randomization_cfg = {
+        "enable_floor": False,
+        "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        "enable_table": True,
+        "table_cfg" : {
+            "x_pos": 0.0,
+            "y_pos": -0.6,
+            "height": 0.702,
+            "width": 0.602,
+            "depth": 0.602,
+            "thickness": 0.702,
+        },
+        "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+    }
 
     def set_sim_params(self, sim_type=None) -> None:
         """Set the simulation parameters based on the simulator type."""
@@ -337,7 +351,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         self.init_states = {
             "objects": {
                 "table": {
-                    "pos": torch.tensor([0, -0.6, 0.325]),
+                    "pos": torch.tensor([0, -0.6, 0.35]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 self.current_object_type: {
