@@ -394,7 +394,8 @@ def get_states(all_states, action_idx: int, num_envs: int):
 def run_replay_with_randomization(env, randomizers, init_state, all_actions, all_states, args):
     """Replay trajectory with periodic randomization."""
     os.makedirs("get_started/output", exist_ok=True)
-    video_path = f"get_started/output/12_dr_level{args.level}_{args.sim}.mp4"
+    mode_tag = "states" if args.object_states else f"level{args.level}"
+    video_path = f"get_started/output/12_dr_{mode_tag}_{args.sim}.mp4"
     obs_saver = ObsSaver(video_path=video_path)
 
     log.info("\n" + "=" * 70)
@@ -406,19 +407,37 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
     traj_length = len(all_actions[0]) if all_actions else (len(all_states[0]) if all_states else 0)
     log.info(f"Trajectory length: {traj_length} steps")
 
-    apply_randomization(randomizers, args.level)
+    randomization_enabled = not args.object_states
+    if randomization_enabled:
+        apply_randomization(randomizers, args.level)
     obs, extras = env.reset(states=[init_state] * args.num_envs)
 
     step = 0
     num_envs = env.scenario.num_envs
 
     while True:
-        if step % args.randomize_interval == 0 and step > 0:
+        if randomization_enabled and step % args.randomize_interval == 0 and step > 0:
             log.info(f"Step {step}: Applying randomizations")
             apply_randomization(randomizers, args.level)
 
-        actions = get_actions(all_actions, step, num_envs)
-        obs, reward, success, time_out, extras = env.step(actions)
+        if args.object_states:
+            if all_states is None:
+                raise ValueError("State playback requested but no states were loaded from trajectory")
+
+            states = get_states(all_states, step, num_envs)
+            env.handler.set_states(states, env_ids=list(range(num_envs)))
+            env.handler.refresh_render()
+            obs = env.handler.get_states()
+
+            if hasattr(env, "checker"):
+                success = env.checker.check(env.handler, obs)
+            else:
+                success = torch.zeros(num_envs, dtype=torch.bool)
+
+            time_out = torch.zeros_like(success)
+        else:
+            actions = get_actions(all_actions, step, num_envs)
+            obs, reward, success, time_out, extras = env.step(actions)
 
         if success.any():
             log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded")
@@ -432,9 +451,14 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
 
         obs_saver.add(obs)
 
-        if get_runout(all_actions, step + 1):
-            log.info("Trajectory ended")
-            break
+        if args.object_states:
+            if get_runout(all_states, step + 1):
+                log.info("Trajectory ended")
+                break
+        else:
+            if get_runout(all_actions, step + 1):
+                log.info("Trajectory ended")
+                break
 
         step += 1
 
