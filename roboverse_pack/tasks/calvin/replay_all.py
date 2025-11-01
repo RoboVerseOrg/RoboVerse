@@ -220,7 +220,7 @@ def main():
                         )
                     )
 
-                print(error)
+                
                 if success.any():
                     log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
 
