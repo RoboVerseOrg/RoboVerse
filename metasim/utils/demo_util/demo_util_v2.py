@@ -42,12 +42,17 @@ def get_traj_v2(traj_filepath, robot: RobotCfg):
         data = load_traj_file(path)[robot.name]
 
     ## Parse initial states
-    # print(data[0])
     if "init_state" in data[0]:
         init_states = [traj["init_state"] for traj in data]
     else:
         raise ValueError("No init_state found in the trajectory data")
+    for demo_idx, init_state in enumerate(init_states):
+        for obj_name in init_state:
+            # import ipdb; ipdb.set_trace()
+            init_states[demo_idx][obj_name]["pos"] = torch.tensor(init_states[demo_idx][obj_name]["pos"])
+            init_states[demo_idx][obj_name]["rot"] = torch.tensor(init_states[demo_idx][obj_name]["rot"])
 
+    ## Parse actions
     if "actions" in data[0]:
         all_actions = [traj["actions"] for traj in data]
     else:
