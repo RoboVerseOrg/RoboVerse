@@ -4,63 +4,182 @@
 
 ### Dependencies
 
-Before using the keyboard controller, install the required Python library:
+**Required dependencies:**
 
 ```bash
-pip install pygame
+pip install pygame pynput opencv-python
 ```
+
+### IK Solver Setup (Choose One)
+
+The teleoperation system uses inverse kinematics (IK) solvers to control the robot. **You must install one of the following IK solvers** (choose based on your needs):
+
+#### Option 1: PyRoki (Default, Recommended)
+PyRoki is a modular and scalable robotics kinematics optimization library. It is the **default solver** and works with all simulators.
+
+```bash
+git clone https://github.com/chungmin99/pyroki.git
+cd pyroki
+pip install -e .
+```
+
+For more details, see the [PyRoki Installation Guide](../get_started/advanced_installation/pyroki.md).
+
+#### Option 2: cuRobo (Advanced, GPU-Accelerated)
+cuRobo is NVIDIA's GPU-accelerated motion planning library. It requires **CUDA 11.8** and provides faster IK solving for complex scenarios.
+
+```bash
+sudo apt install git-lfs
+git submodule update --init --recursive
+cd third_party/curobo
+uv pip install -e . --no-build-isolation
+```
+
+For more details, see the [cuRobo Installation Guide](../get_started/advanced_installation/curobo.md).
+
+**Note:** You only need to install **one** of the above IK solvers, not both.
+
+### Optional: Viser 3D Visualization
+
+If you want real-time 3D visualization in a web browser, you can optionally install Viser:
+
+```bash
+pip install viser
+```
+
+This is **completely optional** and not required for basic teleoperation.
 
 ### Play in Simulation
 
+**Note for mac users**: Please run this task with normal python with the `--headless` tag.
+
+**Basic usage (with default PyRoki solver):**
 ```bash
-python metasim/scripts/teleop_keyboard.py --task PickCube --num_envs 1
+python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --sim mujoco
 ```
 
-task could also be:
-- `PickCube`
-- `StackCube`
-- `CloseBox`
-- `BasketballInHoop`
+**Specify IK solver (choose one):**
+```bash
+# Option 1: Using PyRoki (default, no flag needed)
+python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --ik-solver pyroki
 
-### Instructions
+# Option 2: Using cuRobo (requires cuRobo installation)
+python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --ik-solver curobo
+```
 
-Movement (World Coordinates):
+**Optional: Enable Viser 3D visualization (requires viser installation):**
+```bash
+# Add --enable-viser flag to enable web-based 3D visualization
+python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --enable-viser
+
+# Customize Viser port (default: 8080)
+python scripts/advanced/teleop_keyboard.py --task close_box --robot franka --enable-viser --viser-port 9090
+```
+
+Available tasks include:
+- `close_box`
+- `pick_cube`
+- `stack_cube`
+- `basketball_in_hoop`
+- And many more from the task registry
+
+### Control Instructions
+
+**Movement (Robot Base Coordinates):**
 
 | Key    | Action                                   |
 |--------|------------------------------------------|
-| **UP** | Move +X (Move the end effector forward along the X-axis) |
-| **DOWN** | Move -X (Move the end effector backward along the X-axis) |
-| **LEFT** | Move +Y (Move the end effector left along the Y-axis) |
-| **RIGHT** | Move -Y (Move the end effector right along the Y-axis) |
-| **e**   | Move +Z (Move the end effector up along the Z-axis) |
-| **d**   | Move -Z (Move the end effector down along the Z-axis) |
+| **↑** (UP) | Move end effector +X (forward) |
+| **↓** (DOWN) | Move end effector -X (backward) |
+| **←** (LEFT) | Move end effector +Y (left) |
+| **→** (RIGHT) | Move end effector -Y (right) |
+| **E**   | Move end effector +Z (up) |
+| **D**   | Move end effector -Z (down) |
 
-Rotation (End Effector Coordinates):
+**Rotation (End Effector Local Coordinates):**
 
 | Key    | Action                                    |
 |--------|-------------------------------------------|
-| **q**  | Roll + (Rotate the end effector around its X-axis clockwise) |
-| **w**  | Roll - (Rotate the end effector around its X-axis counterclockwise) |
-| **a**  | Pitch + (Rotate the end effector around its Y-axis upwards) |
-| **s**  | Pitch - (Rotate the end effector around its Y-axis downwards) |
-| **z**  | Yaw + (Rotate the end effector around its Z-axis counterclockwise) |
-| **x**  | Yaw - (Rotate the end effector around its Z-axis clockwise) |
+| **Q**  | Roll + (rotate around EE X-axis) |
+| **W**  | Roll - (rotate around EE X-axis) |
+| **A**  | Pitch + (rotate around EE Y-axis) |
+| **S**  | Pitch - (rotate around EE Y-axis) |
+| **Z**  | Yaw + (rotate around EE Z-axis) |
+| **X**  | Yaw - (rotate around EE Z-axis) |
 
-Gripper:
-
-| Key      | Action                                      |
-|----------|---------------------------------------------|
-| **Space** | Close (hold) / Open (release) the gripper  |
-
-Simulation Control:
+**Gripper Control:**
 
 | Key      | Action                                      |
 |----------|---------------------------------------------|
-| **ESC**  | Quit the simulation and exit               |
+| **SPACE** | Close (hold) / Open (release) gripper |
 
-### Additional Notes:
+**Episode Control:**
 
-- After successfully running the simulation, a **pygame window** will appear. The window will display the instructions for keyboard control. Make sure that the **cursor is focused on the pygame window** for the controls to work. This design helps prevent conflicts with hotkeys or other functionalities in the simulation's main visualization window.
+| Key      | Action                                      |
+|----------|---------------------------------------------|
+| **V**    | Complete current episode and save |
+| **R**    | Reset and discard current episode |
+| **ESC**  | Save all episodes and exit |
+
+### Trajectory Recording
+
+The teleoperation script automatically records trajectories in the v2 format with support for multiple episodes:
+
+- Trajectories are saved to `teleop_trajs/` directory by default
+- Each episode can be saved independently using the **V** key
+- Press **R** to reset without saving the current episode
+- On exit (ESC), all collected episodes are saved to a single file
+
+Configure trajectory recording:
+```bash
+python scripts/advanced/teleop_keyboard.py \
+    --task close_box \
+    --save-traj \                    # Enable trajectory saving (default: True)
+    --save-states \                  # Save full states, not just actions (default: True)
+    --save-every-n-steps 5 \        # Downsample: save every N steps (default: 5)
+    --traj-dir my_trajs              # Custom output directory
+```
+
+### Additional Options
+
+**Display Settings:**
+```bash
+# Disable camera display (use pygame window only)
+python scripts/advanced/teleop_keyboard.py --task close_box --no-display-camera
+
+# Adjust camera display resolution
+python scripts/advanced/teleop_keyboard.py --task close_box --display-width 1920 --display-height 1080
+```
+
+**Simulation Settings:**
+```bash
+# Choose simulator backend
+python scripts/advanced/teleop_keyboard.py --task close_box --sim mujoco  # or genesis, isaacgym, etc.
+
+# Run headless (no native renderer window)
+python scripts/advanced/teleop_keyboard.py --task close_box --headless
+
+# Control simulation speed
+python scripts/advanced/teleop_keyboard.py --task close_box --min-step-time 0.01  # seconds per step
+```
+
+### Notes
+
+**IK Solver Requirements:**
+- **You must install ONE IK solver** (either PyRoki or cuRobo, not both)
+- PyRoki is the default and recommended for most users
+- cuRobo is faster but requires CUDA 11.8 and GPU
+
+**Viser Visualization:**
+- Viser is **completely optional** - the teleoperation works without it
+- Only install Viser if you want web-based 3D visualization
+- Enable with `--enable-viser` flag
+
+**General:**
+- The camera view displays real-time RGB observations from two cameras in split-screen mode
+- Keyboard input is captured globally using `pynput`, so the window focus is not required
+- The system uses IK solving to convert end-effector commands to joint positions
+- Trajectory data is saved in v2 format compatible with replay scripts
 
 
 ---

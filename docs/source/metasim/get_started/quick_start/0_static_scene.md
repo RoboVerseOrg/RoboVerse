@@ -22,6 +22,7 @@ python get_started/0_static_scene.py  --sim isaacgym
 
 #### Mujoco
 ```bash
+# For mac users, replace python with mjpython.
 python get_started/0_static_scene.py  --sim mujoco --headless
 ```
 Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.

@@ -32,7 +32,7 @@ class HockeyTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/hockeyv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/hockey/v2/franka_v2.pkl.gz"
     checker = DetectedChecker(
         obj_name="hockey_ball",
         detector=RelativeBboxDetector(

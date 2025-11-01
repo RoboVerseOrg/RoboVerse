@@ -68,9 +68,9 @@ robots = [
     RobotCfg(
         name="new_robot_h1",
         num_joints=26,
-        usd_path="metasim/example/example_assets/h1/usd/h1.usd",
-        mjcf_path="metasim/example/example_assets/h1/mjcf/h1.xml",
-        urdf_path="metasim/example/example_assets/h1/urdf/h1_wrist.urdf",
+        usd_path="roboverse_data/robots/h1/usd/h1.usd",
+        mjcf_path="roboverse_data/robots/h1/mjcf/h1.xml",
+        urdf_path="roboverse_data/robots/h1/urdf/h1.urdf",
         enabled_gravity=True,
         fix_base_link=False,
         enabled_self_collisions=False,

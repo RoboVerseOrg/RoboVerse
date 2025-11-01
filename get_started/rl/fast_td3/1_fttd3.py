@@ -16,6 +16,7 @@ CONFIG: dict[str, Any] = {
     "decimation": 10,
     "train_or_eval": "train",
     "headless": True,
+    "use_viser": True,
     # -------------------------------------------------------------------------------
     # Seeds & Device
     # -------------------------------------------------------------------------------
@@ -105,10 +106,6 @@ try:
 except ImportError:
     pass
 
-import torch
-
-torch.set_float32_matmul_precision("high")
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -119,10 +116,13 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
+torch.set_float32_matmul_precision("high")
+
 from get_started.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
 
 def main() -> None:
@@ -168,12 +168,18 @@ def main() -> None:
     log.info(f"Using device: {device}")
 
     task_cls = get_task_class(cfg("task"))
-    # Get default scenario from task class and update with specific parameters
+    headless = cfg("headless")
     scenario = task_cls.scenario.update(
-        robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
+        robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=headless, cameras=[]
     )
     envs = task_cls(scenario, device=device)
-    eval_envs = envs
+
+    # Optionally wrap with Viser for real-time visualization
+    if cfg("use_viser"):
+        envs = TaskViserWrapper(envs, update_freq=1)
+        eval_envs = envs
+    else:
+        eval_envs = envs
 
     # ---------------- derive shapes ------------------------------------
     n_act = envs.num_actions
@@ -315,7 +321,8 @@ def main() -> None:
         for _ in range(env.max_episode_steps):
             with torch.no_grad(), autocast(device_type=amp_device_type, dtype=amp_dtype, enabled=amp_enabled):
                 actions = actor(obs_normalizer(obs))
-            obs, _, done, _, _ = env.step(actions.float())
+            obs, _, terminated, time_out, _ = env.step(actions.float())
+            done = terminated | time_out
 
             obs_orin = env.handler.get_states()
             obs_saver.add(obs_orin)

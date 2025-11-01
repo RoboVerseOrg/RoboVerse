@@ -31,5 +31,5 @@ class LiftNumberedBlockTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/lift_numbered_blockv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/lift_numbered_block/v2/franka_v2.pkl.gz"
     # TODO: add checker

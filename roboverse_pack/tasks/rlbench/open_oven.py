@@ -20,7 +20,7 @@ class OpenOvenTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/open_ovenv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/open_oven/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -41,7 +41,7 @@ class PutTrayInOvenTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_tray_in_ovenv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_tray_in_oven/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -62,5 +62,5 @@ class TakeTrayOutOfOvenTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/take_tray_out_of_ovenv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/take_tray_out_of_oven/v2/franka_v2.pkl.gz"
     # TODO: add checker

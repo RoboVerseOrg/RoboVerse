@@ -43,5 +43,5 @@ class SweepToDustpanTask(RLBenchTask):
         + _DIRTS,
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/sweep_to_dustpanv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/sweep_to_dustpan/v2/franka_v2.pkl.gz"
     # TODO: add checker

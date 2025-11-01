@@ -41,5 +41,5 @@ class PourFromCupToCupTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/pour_from_cup_to_cupv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/pour_from_cup_to_cup/v2/franka_v2.pkl.gz"
     # TODO: add checker

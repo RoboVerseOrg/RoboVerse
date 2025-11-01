@@ -19,7 +19,7 @@ class CloseDoorTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_doorv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/close_door/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -35,5 +35,5 @@ class OpenDoorTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/open_doorv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/open_door/v2/franka_v2.pkl.gz"
     # TODO: add checker

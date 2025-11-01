@@ -60,6 +60,36 @@ def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
     return texture_paths
 
 
+def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
+    """Extract the actual material name from an MDL file.
+
+    Args:
+        mdl_file_path: Path to the MDL file
+
+    Returns:
+        The material name found in the MDL file, or None if not found
+    """
+    if not os.path.exists(mdl_file_path):
+        return None
+
+    try:
+        with open(mdl_file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        import re
+
+        material_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("  # Cork_mat --> Cork_mat
+        match = re.search(material_pattern, content)
+
+        if match:
+            return match.group(1)
+
+    except Exception as e:
+        logger.warning(f"Failed to extract material name from MDL file {mdl_file_path}: {e}")
+
+    return None
+
+
 @configclass
 class PhysicalMaterialCfg:
     """Configuration for physical material properties.

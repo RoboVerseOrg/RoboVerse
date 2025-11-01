@@ -31,5 +31,5 @@ class CloseJarTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_jarv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/close_jar/v2/franka_v2.pkl.gz"
     # TODO: add checker

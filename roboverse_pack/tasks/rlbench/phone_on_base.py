@@ -26,5 +26,5 @@ class PhoneOnBaseTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/phone_on_basev2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/phone_on_base/v2/franka_v2.pkl.gz"
     # TODO: add checker

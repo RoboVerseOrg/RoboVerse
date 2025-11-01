@@ -19,5 +19,5 @@ class ChangeClockTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/change_clockv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/change_clock/v2/franka_v2.pkl.gz"
     # TODO: add checker

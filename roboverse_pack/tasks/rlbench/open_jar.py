@@ -41,5 +41,5 @@ class OpenJarTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/open_jarv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/open_jar/v2/franka_v2.pkl.gz"
     # TODO: add checker

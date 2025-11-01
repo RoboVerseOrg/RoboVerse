@@ -27,5 +27,5 @@ class ScoopWithSpatulaTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/scoop_with_spatulav2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/scoop_with_spatula/v2/franka_v2.pkl.gz"
     # TODO: add checker

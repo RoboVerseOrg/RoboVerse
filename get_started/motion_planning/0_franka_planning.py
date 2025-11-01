@@ -80,6 +80,10 @@ scenario.objects = []
 log.info(f"Using simulator: {args.sim}")
 handler = get_handler(scenario)
 
+# Select device: use CUDA if available, otherwise fall back to CPU.
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+log.info(f"Using device: {device}")
+
 init_states = [
     {
         "objects": {},
@@ -197,13 +201,14 @@ for step in range(4):
     rotation = rotation_target @ rotation_transform_for_franka
 
     quat = R.from_matrix(rotation).as_quat()
-    position = torch.tensor([0.6, 0.0, 0.6], device="cuda:0")
+    position = torch.tensor([0.6, 0.0, 0.6], device=device)
 
-    ee_pos_target = torch.zeros((args.num_envs, 3), device="cuda:0")
-    ee_quat_target = torch.zeros((args.num_envs, 4), device="cuda:0")
+    ee_pos_target = torch.zeros((args.num_envs, 3), device=device)
+    ee_quat_target = torch.zeros((args.num_envs, 4), device=device)
 
-    ee_pos_target[0] = torch.tensor(position, device="cuda:0")
-    ee_quat_target[0] = torch.tensor(quat, device="cuda:0")
+    # position is already a tensor; move it to the selected device
+    ee_pos_target[0] = position.to(device)
+    ee_quat_target[0] = torch.tensor(quat, device=device)
 
     obs = move_to_pose(
         obs,

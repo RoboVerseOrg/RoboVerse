@@ -41,6 +41,7 @@ class Args:
     sim: Literal["isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "mjx"
     headless: bool = False
     device: str = "cuda"
+    enable_viser: bool = False  # Enable real-time 3D visualization with Viser
 
 
 args = tyro.cli(Args)
@@ -147,6 +148,12 @@ def train_ppo():
         device=args.device,
     )
 
+    # Optionally wrap with Viser visualization
+    if args.enable_viser:
+        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+
+        env = TaskViserWrapper(env)
+
     # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(env)
 
@@ -182,11 +189,18 @@ def train_ppo():
         env_id,
         robots=[args.robot],
         simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
+        num_envs=1,  # Use single environment for inference
+        headless=True,  # Always headless for inference to save video
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         device=args.device,
     )
+
+    # Optionally wrap inference environment with Viser visualization
+    if args.enable_viser:
+        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+
+        env_inference = TaskViserWrapper(env_inference)
+
     env_inference = VecEnvWrapper(env_inference)
 
     obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")

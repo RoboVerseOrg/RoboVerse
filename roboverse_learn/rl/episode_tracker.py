@@ -1,18 +1,19 @@
 import torch
 import numpy as np
+from collections import deque
 
 
 class EpisodeTracker:
     """Track episode returns and lengths without relying on info dict."""
 
-    def __init__(self, num_envs, device):
+    def __init__(self, num_envs, device, max_episodes=1000):
         self.num_envs = num_envs
         self.device = device
         self.episode_returns = torch.zeros(num_envs, device=device)
         self.episode_lengths = torch.zeros(num_envs, device=device)
         self.episode_count = 0
-        self.total_returns = []
-        self.total_lengths = []
+        self.total_returns = deque(maxlen=max_episodes)
+        self.total_lengths = deque(maxlen=max_episodes)
 
     def update(self, rewards, terminations, truncations):
         """Update episode tracking with new rewards and done flags."""
@@ -40,8 +41,9 @@ class EpisodeTracker:
         if len(self.total_returns) == 0:
             return 0.0, 0.0
 
-        recent_returns = self.total_returns[-window_size:]
-        recent_lengths = self.total_lengths[-window_size:]
+        # Convert deque to list for slicing
+        recent_returns = list(self.total_returns)[-window_size:]
+        recent_lengths = list(self.total_lengths)[-window_size:]
 
         avg_return = np.mean(recent_returns)
         avg_length = np.mean(recent_lengths)

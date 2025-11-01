@@ -28,5 +28,5 @@ class PutUmbrellaInUmbrellaStandTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/put_umbrella_in_umbrella_standv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/put_umbrella_in_umbrella_stand/v2/franka_v2.pkl.gz"
     # TODO: add checker

@@ -19,7 +19,7 @@ class CloseDrawerTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/close_drawerv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/close_drawer/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -35,5 +35,5 @@ class OpenDrawerTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/open_drawerv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/open_drawer/v2/franka_v2.pkl.gz"
     # TODO: add checker

@@ -426,7 +426,11 @@ class IsaacsimHandler(BaseSimHandler):
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         self.scene.write_data_to_sim()
-        self.sim.step(render=False)
+
+        # Decimation: run physics multiple times per control step for better stability
+        for _ in range(self.decimation):
+            self.sim.step(render=False)
+
         if self._step_counter % self.render_interval == 0 and is_rendering:
             self.sim.render()
         self.scene.update(dt=self.dt)
@@ -689,7 +693,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Use configured name if available, otherwise fall back to index-based naming
         light_name = (
             f"/World/{light_cfg.name}"
-            if hasattr(light_cfg, "name") and light_cfg.name
+            if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
             else f"/World/DistantLight_{light_index}"
         )
 
@@ -723,7 +727,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Use configured name if available, otherwise fall back to index-based naming
         light_name = (
             f"/World/{light_cfg.name}"
-            if hasattr(light_cfg, "name") and light_cfg.name
+            if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
             else f"/World/CylinderLight_{light_index}"
         )
 
@@ -752,7 +756,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Use configured name if available, otherwise fall back to index-based naming
         light_name = (
             f"/World/{light_cfg.name}"
-            if hasattr(light_cfg, "name") and light_cfg.name
+            if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
             else f"/World/DomeLight_{light_index}"
         )
 
@@ -783,7 +787,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Use configured name if available, otherwise fall back to index-based naming
         light_name = (
             f"/World/{light_cfg.name}"
-            if hasattr(light_cfg, "name") and light_cfg.name
+            if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
             else f"/World/SphereLight_{light_index}"
         )
 
@@ -815,7 +819,7 @@ class IsaacsimHandler(BaseSimHandler):
         # Use configured name if available, otherwise fall back to index-based naming
         light_name = (
             f"/World/{light_cfg.name}"
-            if hasattr(light_cfg, "name") and light_cfg.name
+            if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
             else f"/World/DiskLight_{light_index}"
         )
 

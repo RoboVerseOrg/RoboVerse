@@ -203,24 +203,34 @@ for step in range(200):
         x_target = 0.3 + 0.1 * (step / 100)
         y_target = 0.5 - 0.5 * (step / 100)
         z_target = 0.6 - 0.2 * (step / 100)
+
         # Randomly assign x/y/z target for each env
-        ee_pos_target = torch.zeros((args.num_envs, 3), device="cuda:0")
+        def pick_device():
+            if torch.cuda.is_available():
+                return torch.device("cuda")
+            # Optional: Apple Silicon (PyTorch 1.12+ with MPS)
+            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                return torch.device("mps")
+            return torch.device("cpu")
+
+        device = pick_device()
+        ee_pos_target = torch.zeros((args.num_envs, 3), device=device)
         for i in range(args.num_envs):
             if i % 3 == 0:
-                ee_pos_target[i] = torch.tensor([x_target, 0.0, 0.6], device="cuda:0")
+                ee_pos_target[i] = torch.tensor([x_target, 0.0, 0.6], device=device)
             elif i % 3 == 1:
-                ee_pos_target[i] = torch.tensor([0.3, y_target, 0.6], device="cuda:0")
+                ee_pos_target[i] = torch.tensor([0.3, y_target, 0.6], device=device)
             else:
-                ee_pos_target[i] = torch.tensor([0.3, 0.0, z_target], device="cuda:0")
+                ee_pos_target[i] = torch.tensor([0.3, 0.0, z_target], device=device)
         ee_quat_target = torch.tensor(
             [[0.0, 1.0, 0.0, 0.0]] * args.num_envs,
-            device="cuda:0",
+            device=device,
         )
     elif scenario.robots[0].name == "kinova_gen3_robotiq_2f85":
-        ee_pos_target = torch.tensor([[0.2 + 0.2 * (step / 100), 0.0, 0.4]], device="cuda:0").repeat(args.num_envs, 1)
+        ee_pos_target = torch.tensor([[0.2 + 0.2 * (step / 100), 0.0, 0.4]], device=device).repeat(args.num_envs, 1)
         ee_quat_target = torch.tensor(
             [[0.0, 0.0, 1.0, 0.0]] * args.num_envs,
-            device="cuda:0",
+            device=device,
         )
 
     # Get current robot state for seeding
@@ -233,8 +243,8 @@ for step in range(200):
     q_solution, ik_succ = ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
 
     # Process gripper command (fixed open position)
-    gripper_binary = torch.ones(scenario.num_envs, device="cuda:0")  # all open
-    gripper_widths = process_gripper_command(gripper_binary, robot, "cuda:0")
+    gripper_binary = torch.ones(scenario.num_envs, device=device)  # all open
+    gripper_widths = process_gripper_command(gripper_binary, robot, device)
     # Compose full joint command
     actions = ik_solver.compose_joint_action(q_solution, gripper_widths, curr_robot_q, return_dict=True)
 

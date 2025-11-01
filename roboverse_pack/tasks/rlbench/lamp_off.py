@@ -25,7 +25,7 @@ class LampOffTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/lamp_offv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/lamp_off/v2/franka_v2.pkl.gz"
     # TODO: add checker
 
 
@@ -46,5 +46,5 @@ class LampOnTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/lamp_onv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/lamp_on/v2/franka_v2.pkl.gz"
     # TODO: add checker

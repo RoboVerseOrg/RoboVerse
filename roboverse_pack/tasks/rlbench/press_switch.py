@@ -25,5 +25,5 @@ class PressSwitchTask(RLBenchTask):
         ],
         robots=["franka"],
     )
-    traj_filepath = "roboverse_data/trajs/rlbench/press_switchv2/franka_v2.pkl.gz"
+    traj_filepath = "roboverse_data/trajs/rlbench/press_switch/v2/franka_v2.pkl.gz"
     # TODO: add checker

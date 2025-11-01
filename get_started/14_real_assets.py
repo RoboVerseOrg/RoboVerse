@@ -16,7 +16,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 import os
 
-import imageio
 from huggingface_hub import snapshot_download
 
 from metasim.constants import PhysicStateType, SimType
@@ -24,6 +23,7 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
+from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
 
 
@@ -39,9 +39,9 @@ class RealAssetCfg:
         "pybullet",
         "sapien3",
         "mujoco",
-    ] = "mujoco"
+    ] = "isaacsim"
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     def __post_init__(self):
         log.info(f"RealAssetCfg: {self}")
@@ -85,6 +85,7 @@ if __name__ == "__main__":
             name="table",
             scale=(1, 1, 1),
             physics=PhysicStateType.RIGIDBODY,
+            fix_base_link=True,
             usd_path=f"{data_dir}/demo_assets/table/usd/table.usd",
             urdf_path=f"{data_dir}/demo_assets/table/result/table.urdf",
             mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.mjcf",
@@ -206,13 +207,39 @@ if __name__ == "__main__":
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_handler_class(SimType(args.sim))
-    env = env_class(scenario)
-    env.launch()
-    env.set_states(init_states)
-    obs = env.get_states(mode="dict")[0]  # get states as a dictionary
-    # obs_tensor = env.get_states(mode="tensor")  # get states as a tensor
-
+    handler = env_class(scenario)
+    handler.launch()
+    handler.set_states(init_states * scenario.num_envs)
     os.makedirs("get_started/output", exist_ok=True)
-    save_path = f"get_started/output/14_real_assets_{args.sim}.png"
-    log.info(f"Saving image to {save_path}")
-    imageio.imwrite(save_path, obs["cameras"]["camera"]["rgb"])
+
+    obs = handler.get_states(mode="tensor")
+    ## Main loop
+    obs_saver = ObsSaver(video_path=f"get_started/output/1_move_robot_{args.sim}.mp4")
+    obs_saver.add(obs)
+
+    step = 0
+    robot = scenario.robots[0]
+    for _ in range(100):
+        log.debug(f"Step {step}")
+        actions = [
+            {
+                robot.name: {
+                    "dof_pos_target": {
+                        joint_name: (
+                            torch.rand(1).item()
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                            + robot.joint_limits[joint_name][0]
+                        )
+                        for joint_name in robot.joint_limits.keys()
+                    }
+                }
+            }
+            for _ in range(scenario.num_envs)
+        ]
+        handler.set_dof_targets(actions)
+        handler.simulate()
+        obs = handler.get_states(mode="tensor")
+        obs_saver.add(obs)
+        step += 1
+
+    obs_saver.save()
