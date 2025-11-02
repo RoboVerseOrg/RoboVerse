@@ -478,7 +478,7 @@ class MaterialRandomizer(BaseRandomizerType):
         mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
         _, mtl_prim_path = get_material_prim_path(mtl_name)
 
-        logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
+        # logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
 
         success, result = omni.kit.commands.execute(
             "CreateMdlMaterialPrim",
@@ -491,7 +491,7 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
             raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
 
-        logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
+        # logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
         # from ipdb import set_trace; set_trace()
         
         success, result = omni.kit.commands.execute(
@@ -505,7 +505,7 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
             raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
 
-        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+        # logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
 
     def _ensure_uv_for_hierarchy(self, prim) -> None:
         """Ensure UV coordinates for all meshes in the prim hierarchy."""

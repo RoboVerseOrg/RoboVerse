@@ -251,7 +251,7 @@ class SceneRandomizer(BaseRandomizerType):
             material_path = self._select_material(self.cfg.floor_materials, "floor_index")
             if material_path:
                 material_name = material_path.split("/")[-1].replace(".mdl", "")
-                logger.info(f"Applying floor material: {material_name} to {floor_path}")
+                # logger.info(f"Applying floor material: {material_name} to {floor_path}")
                 self._apply_material_to_prim(material_path, floor_path)
 
     def _create_or_update_walls(self, env_prim_path: str, env_id: int):
@@ -475,7 +475,7 @@ class SceneRandomizer(BaseRandomizerType):
             # First, check and download the material file if needed
             from metasim.utils.hf_util import check_and_download_recursive
 
-            logger.debug(f"Checking and downloading material: {material_path}")
+            # logger.debug(f"Checking and downloading material: {material_path}")
             check_and_download_recursive([material_path])
 
             # Get absolute path to MDL file
@@ -511,7 +511,7 @@ class SceneRandomizer(BaseRandomizerType):
             elif prim_type in ["Cube", "Sphere", "Cylinder", "Cone", "Capsule"]:
                 # USD geometric primitives can accept materials directly
                 mesh_prims_paths.append(prim_path)
-                logger.debug(f"Target prim {prim_path} is a {prim_type} primitive")
+                # logger.debug(f"Target prim {prim_path} is a {prim_type} primitive")
             else:
                 logger.debug(f"Target prim {prim_path} is {prim_type}, searching for Mesh/Primitive children...")
 
@@ -549,9 +549,9 @@ class SceneRandomizer(BaseRandomizerType):
                         logger.warning(f"Failed to ensure UV for terrain: {e}")
 
                 dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
-                logger.debug(f"Applied material to mesh {mesh_path}")
+                # logger.debug(f"Applied material to mesh {mesh_path}")
 
-            logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
+            # logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
 
         except Exception as e:
             logger.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")

@@ -348,7 +348,7 @@ class StackBlockCfg(BaseRLTaskCfg):
             ]  # TODO
             self.obs_shape["rgb"] = (3, self.img_h, self.img_w)
         self.init_goal_pos = torch.tensor(
-            [0.0, 0.1, 0.625], dtype=torch.float, device=self.device
+            [0.0, 0.0, 0.625], dtype=torch.float, device=self.device
         )  # Initial right goal position, shape (3,)
         self.init_states = {
             "objects": {
@@ -593,8 +593,8 @@ class StackBlockCfg(BaseRLTaskCfg):
             for i, env_id in enumerate(env_ids):
                 # reset object
                 for obj_name in reset_state[env_id]["objects"].keys():
-                    reset_state[env_id]["objects"][obj_name]["pos"][:3] += (
-                        self.reset_position_noise * rand_floats[i, :3]
+                    reset_state[env_id]["objects"][obj_name]["pos"][:2] += (
+                        self.reset_position_noise * rand_floats[i, :2]
                     )
 
                 # reset shadow hand
@@ -619,7 +619,7 @@ class StackBlockCfg(BaseRLTaskCfg):
             new_object_rot = randomize_rotation(rand_floats[:, 3], rand_floats[:, 4], x_unit_tensor, y_unit_tensor)
             for obj_id, obj in enumerate(self.objects):
                 root_state = reset_state.objects[obj.name].root_state
-                root_state[env_ids, :3] += self.reset_position_noise * rand_floats[:, :3]
+                root_state[env_ids, :2] += self.reset_position_noise * rand_floats[:, :2]
                 obj_state = ObjectState(
                     root_state=root_state,
                 )
@@ -717,9 +717,6 @@ def compute_task_reward(
     stack_pos1 = target_pos.clone()
     stack_pos2 = target_pos.clone()
 
-    stack_pos1[:, 1] -= 0.1
-    stack_pos2[:, 1] -= 0.1
-    # stack_pos1[:, 2] += 0.025
     stack_pos1[:, 2] += 0.05
     # Distance from the hand to the object
     goal_dist1 = torch.norm(stack_pos1 - left_object_pos, p=2, dim=-1)

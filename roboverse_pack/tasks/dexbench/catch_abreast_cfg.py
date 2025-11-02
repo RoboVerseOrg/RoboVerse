@@ -130,6 +130,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="right_hand",
+                    shadow_hand_wrist_stiffness=8.0 if self.sim == "isaacsim" else 5.0,
                     hand_translation_scale=0.02,
                     hand_orientation_scale=0.25 * torch.pi,
                     arm_controller="ik",
@@ -140,6 +141,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="left_hand",
+                    shadow_hand_wrist_stiffness=8.0 if self.sim == "isaacsim" else 5.0,
                     hand_translation_scale=0.02,
                     hand_orientation_scale=0.25 * torch.pi,
                     arm_controller="ik",
@@ -185,7 +187,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.45, -1.15, 0.0]),
+                    "pos": torch.tensor([0.45, -1.1, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "FFJ1": 0.0,
@@ -258,7 +260,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.23, -1.15, 0.0]),
+                    "pos": torch.tensor([0.23, -1.1, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -339,7 +341,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                 self.img_w,
             )
         self.init_goal_pos = torch.tensor(
-            [-0.355, -1.15, 0.85], dtype=torch.float32, device=self.device
+            [-0.355, -1.1, 0.85], dtype=torch.float32, device=self.device
         )  # Initial goal position, shape (3,)
         self.init_goal_rot = torch.tensor(
             [1.0, 0.0, 0.0, 0.0], dtype=torch.float32, device=self.device
@@ -793,7 +795,7 @@ def compute_task_reward(
     )
 
     # Reward for throwing the object
-    thrown = (diff_xy[:, 1] >= -0.4) & (diff_xy[:, 1] <= -0.1) & (object_pos[:, 2] >= 0.7)
+    thrown = (diff_xy[:, 1] >= -0.35) & (diff_xy[:, 1] <= -0.1) & (object_pos[:, 2] >= 0.7)
     reward = torch.where(thrown, reward + throw_bonus, reward)
 
     # Success bonus: orientation is within `success_tolerance` of goal orientation
@@ -811,7 +813,7 @@ def compute_task_reward(
         dim=-1,
     )
     left_hand_base_dist = torch.norm(
-        left_hand_pos - torch.tensor([-0.25, -1.15, 0.77], dtype=torch.float, device=left_hand_pos.device), p=2, dim=-1
+        left_hand_pos - torch.tensor([-0.25, -1.1, 0.77], dtype=torch.float, device=left_hand_pos.device), p=2, dim=-1
     )
 
     reward = torch.where(right_hand_base_dist >= 0.1, reward - leave_penalty, reward)

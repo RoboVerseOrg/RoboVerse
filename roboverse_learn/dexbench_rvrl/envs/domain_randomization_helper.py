@@ -33,6 +33,7 @@ from metasim.randomization.material_randomizer import MaterialRandomCfg, Materia
 from metasim.randomization.object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
 from metasim.randomization.presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets, ScenePresets, MaterialProperties, CameraProperties, LightProperties, MDLCollections 
 from metasim.randomization.scene_randomizer import SceneGeometryCfg, SceneMaterialPoolCfg, SceneRandomCfg, SceneRandomizer
+from metasim.randomization.light_randomizer import LightColorRandomCfg, LightIntensityRandomCfg, LightOrientationRandomCfg
 from metasim.randomization.presets.scene_presets import SceneMaterialCollections
 from metasim.utils import configclass
 
@@ -120,19 +121,21 @@ class DomainRandomizationHelper:
                 
         for light in lights:
             light_randomize_cfg = self.randomize_cfg.get(light.name, None)
+            intensity_range = light_randomize_cfg.get("intensity_range", (1.0, 1.0)) if light_randomize_cfg else (1.0, 1.0)
+            intensity_range = (light.intensity * intensity_range[0], light.intensity * intensity_range[1])
             if light_randomize_cfg:
                 light_randomizer = LightRandomizer(
                     LightRandomCfg(
                         light_name=light.name,
                         intensity=LightIntensityRandomCfg(
-                            intensity_range=light_randomize_cfg.get("intensity_range", (light.intensity, light.intensity)),
+                            intensity_range=intensity_range,
                             distribution="uniform",
                             enabled=True,
                         ),
                         color=LightColorRandomCfg(
                             color_range=light_randomize_cfg.get("color_range", ((1.0, 1.0), (1.0, 1.0), (1.0, 1.0))),
                         ),
-                        oreintation=LightOrientationRandomCfg(
+                        orientation=LightOrientationRandomCfg(
                             angle_range=LightProperties.ORIENTATION_LARGE,
                             relative_to_origin=True,
                             distribution="uniform",
@@ -280,10 +283,10 @@ class DomainRandomizationHelper:
         for env_id in env_ids:
             prim_path = root_prim.replace("env_.*", f"env_{env_id}")
             try:
-                SceneRandomizer._apply_material_to_prim(material_path, prim_path)
+                SceneRandomizer._apply_material_to_prim(material_path=material_path, prim_path=prim_path)
                 log.debug(f"Applied material {material_path} to {prim_path}")
             except Exception as e:
-                log.warning(f"Failed to apply material {material_path} to {env_path}: {e}")
+                log.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")
         
     def randomiation(self, env_ids):
         for obj in self.objects:

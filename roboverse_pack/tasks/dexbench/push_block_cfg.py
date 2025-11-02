@@ -355,6 +355,12 @@ class PushBlockCfg(BaseRLTaskCfg):
         self.init_left_goal_pos = torch.tensor(
             [0.2, -0.2, 0.625], dtype=torch.float, device=self.device
         )  # Initial right goal position, shape (3,)
+        self.right_obj_init_pos = torch.tensor(
+            [0.0, 0.2, 0.625], dtype=torch.float, device=self.device
+        ).view(1, -1).repeat(self.num_envs, 1)  # shape (num_envs, 3)
+        self.left_obj_init_pos = torch.tensor(
+            [0.0, -0.2, 0.625], dtype=torch.float, device=self.device
+        ).view(1, -1).repeat(self.num_envs, 1)
         self.init_states = {
             "objects": {
                 "table": {
@@ -580,7 +586,12 @@ class PushBlockCfg(BaseRLTaskCfg):
         Args:
             env_ids (torch.Tensor): The reset goal buffer of all environments at this time, shape (num_envs_to_reset,).
         """
-        pass
+        self.right_goal_pos[env_ids] = self.right_obj_init_pos[env_ids]
+        self.right_goal_pos[env_ids, 0] += 0.2
+        self.left_goal_pos[env_ids] = self.left_obj_init_pos[env_ids]
+        self.left_goal_pos[env_ids, 0] += 0.2
+
+        return
 
     def reset_init_pose_fn(self, init_states: list[DictEnvState], env_ids: torch.Tensor) -> list[DictEnvState]:
         """Reset the initial pose of the environment.
@@ -616,6 +627,10 @@ class PushBlockCfg(BaseRLTaskCfg):
                     reset_state[env_id]["objects"][obj_name]["pos"][:2] += (
                         self.reset_position_noise * rand_floats[i, :2]
                     )
+                    if obj_name == self.current_object_type + "_1":
+                        self.right_obj_init_pos[env_id, :2] = reset_state[env_id]["objects"][obj_name]["pos"][:2]
+                    if obj_name == self.current_object_type + "_2":
+                        self.left_obj_init_pos[env_id, :2] = reset_state[env_id]["objects"][obj_name]["pos"][:2]
 
                 # reset shadow hand
                 for robot_name in reset_state[env_id]["robots"].keys():
@@ -640,6 +655,10 @@ class PushBlockCfg(BaseRLTaskCfg):
             for obj_id, obj in enumerate(self.objects):
                 root_state = reset_state.objects[obj.name].root_state
                 root_state[env_ids, :2] += self.reset_position_noise * rand_floats[:, :2]
+                if obj.name == self.current_object_type + "_1":
+                    self.right_obj_init_pos[env_ids, :2] = root_state[env_ids, :2]
+                if obj.name == self.current_object_type + "_2":
+                    self.left_obj_init_pos[env_ids, :2] = root_state[env_ids, :2]
                 obj_state = ObjectState(
                     root_state=root_state,
                 )

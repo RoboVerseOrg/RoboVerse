@@ -611,8 +611,8 @@ class GraspPlaceCfg(BaseRLTaskCfg):
             start_idx = 5
             for i, env_id in enumerate(env_ids):
                 for obj_name in reset_state[env_id]["objects"].keys():
-                    reset_state[env_id]["objects"][obj_name]["pos"][:3] += (
-                        self.reset_position_noise * rand_floats[i, :3]
+                    reset_state[env_id]["objects"][obj_name]["pos"][:2] += (
+                        self.reset_position_noise * rand_floats[i, :2]
                     )
                     reset_state[env_id]["objects"][obj_name]["rot"] = new_object_rot[i]
 
@@ -643,7 +643,7 @@ class GraspPlaceCfg(BaseRLTaskCfg):
             new_object_rot = randomize_rotation(rand_floats[:, 3], rand_floats[:, 4], x_unit_tensor, y_unit_tensor)
             for obj_id, obj in enumerate(self.objects):
                 root_state = reset_state.objects[obj.name].root_state
-                root_state[env_ids, :3] += self.reset_position_noise * rand_floats[:, :3]
+                root_state[env_ids, :2] += self.reset_position_noise * rand_floats[:, :2]
                 obj_state = ObjectState(
                     root_state=root_state,
                 )

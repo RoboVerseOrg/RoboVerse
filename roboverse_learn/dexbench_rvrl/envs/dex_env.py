@@ -331,8 +331,8 @@ class DexEnv(BaseVecEnv):
         self.episode_rewards[env_ids] = 0.0
         self.episode_success[env_ids] = 0
         self.episode_reset[env_ids] = 0
-        self.reset_goal_pose(env_ids)
         reset_states = self.task.reset_init_pose_fn(self.init_states_tensor, env_ids=env_ids)
+        self.reset_goal_pose(env_ids)
         if self.domain_randomization_helper is not None and self.use_dr:
             self.domain_randomization_helper.randomiation(env_ids=env_ids.tolist())
         self.handler.set_states(reset_states, env_ids=env_ids.tolist())

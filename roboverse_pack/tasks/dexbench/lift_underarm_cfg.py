@@ -348,6 +348,9 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         self.init_goal_pos = torch.tensor(
             [0, -0.6, 1.02], dtype=torch.float32, device=self.device
         )  # Initial goal position, shape (3,)
+        self.obj_init_pos = torch.tensor(
+            [0, -0.6, 0.77], dtype=torch.float32, device=self.device
+        ).view(1, -1).repeat(self.num_envs, 1)
         self.init_states = {
             "objects": {
                 "table": {
@@ -575,7 +578,9 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         Args:
             env_ids (torch.Tensor): The reset goal buffer of all environments at this time, shape (num_envs_to_reset,).
         """
-        pass
+        self.goal_pos[env_ids, :2] = self.obj_init_pos[env_ids, :2]
+
+        return
 
     def reset_init_pose_fn(self, init_states: list[DictEnvState], env_ids: torch.Tensor) -> list[DictEnvState]:
         """Reset the initial pose of the environment.
@@ -618,6 +623,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     reset_state[env_id]["objects"][obj_name]["pos"][:2] += (
                         self.reset_position_noise * rand_floats[i, :2]
                     )
+                    self.obj_init_pos[env_id, :2] = reset_state[env_id]["objects"][obj_name]["pos"][:2]
 
                 # reset shadow hand
                 if self.reset_dof_pos_noise > 0.0:
@@ -649,6 +655,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                 root_state = reset_state.objects[obj.name].root_state
                 if obj.name == self.current_object_type:
                     root_state[env_ids, :2] += self.reset_position_noise * rand_floats[:, :2]
+                    self.obj_init_pos[env_ids, :2] = root_state[env_ids, :2]
                 obj_state = ObjectState(
                     root_state=root_state,
                 )

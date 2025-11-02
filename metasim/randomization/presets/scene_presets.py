@@ -107,7 +107,6 @@ class SceneMaterialCollections:
         # vMaterials Stone
         vmaterials_stone = [
             "Stone/Granite_Polished.mdl",
-            "Stone/Marble_Polished.mdl",
             "Stone/Rosa_Beta.mdl",
             "Stone/Stone_Natural_Black.mdl",
             "Stone/Terrazzo.mdl",
@@ -186,7 +185,6 @@ class SceneMaterialCollections:
         # vMaterials Stone for floors
         vmaterials_stone = [
             "Stone/Granite_Polished.mdl",
-            "Stone/Marble_Polished.mdl",
             "Stone/Terrazzo.mdl",
         ]
         materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])

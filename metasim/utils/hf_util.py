@@ -81,7 +81,7 @@ def check_and_download_single(filepath: str):
     local_exists = os.path.exists(filepath)
     if local_exists:
         ## In this case, the runner has the file in their local machine.
-        log.info(f"File {filepath} found in local directory.")
+        # log.info(f"File {filepath} found in local directory.")
         return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.

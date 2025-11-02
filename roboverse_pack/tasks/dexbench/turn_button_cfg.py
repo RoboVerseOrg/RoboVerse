@@ -97,7 +97,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
     use_high_randomness = True
     randomization_cfg = {
         "enable_floor": True,
-        "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        # "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
         "enable_table": True,
         "table_cfg" : {
             "x_pos": 0.0,
@@ -107,7 +107,12 @@ class TurnButtonCfg(BaseRLTaskCfg):
             "depth": 1.02,
             "thickness": 0.552,
         },
-        "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+        # "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+        # "randomize_cfg": {
+        #     "dome_light": {
+        #     "intensity_range": (0.5, 1.5),  
+        #     },
+        # },
     }
 
     def set_sim_params(self, sim_type=None) -> None:
