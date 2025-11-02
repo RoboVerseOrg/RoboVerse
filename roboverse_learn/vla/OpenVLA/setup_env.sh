@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 echo "=========================================="
 echo "OpenVLA Environment Setup"
@@ -42,7 +42,6 @@ eval "$(conda shell.bash hook)"
 conda activate openvla
 
 echo "Installing dependencies..."
-conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
 cd openvla && pip install -e .
 pip install packaging ninja
 pip install "flash-attn==2.5.5" --no-build-isolation

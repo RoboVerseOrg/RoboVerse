@@ -72,4 +72,6 @@ MAX_STEPS=5000
 - Set `HF_TOKEN` if downloading OpenVLA weights: `export HF_TOKEN=your_token`
 - Change GPU in `finetune.sh`: `CUDA_VISIBLE_DEVICES=0`
 - Dataset path: Modify `DATA_ROOT_DIR` if needed
+- **WandB**: To enable logging, login with `wandb login` (or set `WANDB_API_KEY` env var). 
+  To skip WandB logging, set `USE_WANDB=false` in `finetune.sh`
 

@@ -8,11 +8,11 @@ set -e
 TASK_NAME="pick_butter"
 SIM_BACKEND="mujoco"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-DEMO_DIR="$PROJECT_ROOT/../roboverse_demo/demo_${SIM_BACKEND}/${TASK_NAME}-"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+DEMO_DIR="$PROJECT_ROOT/roboverse_demo/demo_${SIM_BACKEND}/${TASK_NAME}-"
 
 SKIP_CONVERT=false
-
+echo "$DEMO_DIR"
 for arg in "$@"; do
     [ "$arg" = "--skip-convert" ] && SKIP_CONVERT=true
 done
@@ -41,7 +41,7 @@ if [ "$SKIP_CONVERT" = false ]; then
     eval "$(conda shell.bash hook)"
     conda activate rlds_env
     tfds build --overwrite
-    echo "✓ RLDS conversion done → ~/tensorflow_datasets/roboverse_dataset/"
+    echo "✓ RLDS conversion done → ~/tensorflow_datasets/bridge_orig/"
 else
     echo "[1/2] Skipped (--skip-convert)"
 fi
@@ -58,7 +58,7 @@ bash finetune.sh
 
 echo ""
 echo "✓ Pipeline Complete!"
-echo "  Dataset: ~/tensorflow_datasets/roboverse_dataset/"
+echo "  Dataset: ~/tensorflow_datasets/bridge_orig/"
 echo "  Checkpoints: ./runs/"
 echo "  Adapters: ./adapters/"
 echo ""

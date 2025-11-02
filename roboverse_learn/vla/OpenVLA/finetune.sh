@@ -4,13 +4,13 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Config
 VLA_PATH="$PROJECT_ROOT/third_party/openvla/openvla-7b"
 HF_REPO="openvla/openvla-7b"
-DATA_ROOT_DIR="."
-DATASET_NAME="roboverse_dataset"
+DATA_ROOT_DIR="$HOME/tensorflow_datasets"
+DATASET_NAME="bridge_orig"
 RUN_ROOT_DIR="$SCRIPT_DIR/runs"
 ADAPTER_TMP_DIR="$SCRIPT_DIR/adapters"
 LORA_RANK=32
@@ -18,10 +18,14 @@ BATCH_SIZE=8
 GRAD_ACCUMULATION_STEPS=2
 LEARNING_RATE=5e-4
 IMAGE_AUG="False"
+# WandB Configuration
+# Set USE_WANDB=false to skip WandB logging (no login required)
+# Set USE_WANDB=true and login with: wandb login (or set WANDB_API_KEY env var)
+USE_WANDB=false
 WANDB_PROJECT="openvla_roboverse"
 WANDB_ENTITY=""
-SAVE_STEPS=5000
-MAX_STEPS=5000
+SAVE_STEPS=200
+MAX_STEPS=200
 
 mkdir -p "$RUN_ROOT_DIR" "$ADAPTER_TMP_DIR"
 
@@ -52,6 +56,15 @@ fi
 
 export CUDA_VISIBLE_DEVICES=0
 export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT/roboverse_learn/vla/rlds_utils
+
+# Disable WandB if requested
+if [ "$USE_WANDB" = false ]; then
+  export WANDB_MODE=disabled
+  echo "WandB logging disabled"
+else
+  echo "WandB logging enabled (project: $WANDB_PROJECT)"
+  echo "Note: Make sure you're logged in: wandb login (or set WANDB_API_KEY)"
+fi
 
 cd "$PROJECT_ROOT/third_party/openvla"
 
