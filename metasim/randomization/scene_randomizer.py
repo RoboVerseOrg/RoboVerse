@@ -140,7 +140,6 @@ class SceneRandomizer(BaseRandomizerType):
         for key in self._material_selection_state:
             self._material_selection_state[key] = 0
 
-
     def bind_handler(self, handler):
         """Bind the scene randomizer to a simulation handler.
 
@@ -619,7 +618,6 @@ class SceneRandomizer(BaseRandomizerType):
             dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
             logger.debug(f"Applied material to mesh {mesh_path}")
 
-
         self._sync_material_application()
         logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
 
@@ -673,7 +671,6 @@ class SceneRandomizer(BaseRandomizerType):
             logger.debug("Omniverse async engine not available; skipping wait_for_tasks")
         except Exception as err:
             logger.warning(f"Failed to wait for async tasks: {err}")
-
 
     def get_scene_properties(self) -> dict:
         """Get current scene properties.
