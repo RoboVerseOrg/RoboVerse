@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import random
 from typing import Any, Literal
 
 from loguru import logger
@@ -152,19 +151,14 @@ class CameraRandomizer(BaseRandomizerType):
             cfg: Camera randomization configuration
             seed: Random seed for reproducible randomization
         """
-        super().__init__()
         self.cfg = cfg
-
-        # Setup deterministic random number generator
-        if seed is not None:
-            # Create unique seed for this camera
-            camera_seed = seed + sum(ord(c) for c in cfg.camera_name)
-            self._rng = random.Random(camera_seed)
-
-        else:
-            self._rng = random.Random()
+        super().__init__(seed=seed)
 
         self.handler = None
+
+    def set_seed(self, seed: int | None) -> None:
+        """Set or update RNG seed."""
+        super().set_seed(seed)
 
     def bind_handler(self, handler):
         """Bind simulation handler."""

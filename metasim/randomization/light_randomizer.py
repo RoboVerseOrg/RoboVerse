@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import random
 from typing import Any, Literal
 
 import torch
@@ -128,18 +127,12 @@ class LightRandomizer(BaseRandomizerType):
     """
 
     def __init__(self, cfg: LightRandomCfg, seed: int | None = None):
-        super().__init__()
         self.cfg = cfg
+        super().__init__(seed=seed)
 
-        # Set up reproducible random state - simple and direct
-        if seed is not None:
-            # Use provided seed + simple string-to-number conversion for uniqueness
-            name_sum = sum(ord(c) for c in cfg.light_name)
-            self._seed = seed + name_sum
-        else:
-            self._seed = random.randint(0, 2**32 - 1)
-
-        self._rng = random.Random(self._seed)
+    def set_seed(self, seed: int | None) -> None:
+        """Set or update RNG seed."""
+        super().set_seed(seed)
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
