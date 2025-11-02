@@ -22,10 +22,11 @@ Calling `bind_handler` connects the randomizer to the active simulator handler. 
 
 
 ## Architecture
-Custom randomizers inherit from `metasim.randomization.base.BaseRandomizerType`. The base class exposes three key touch points:
+Custom randomizers inherit from `metasim.randomization.base.BaseRandomizerType`. The base class exposes four key touch points:
 
 - `bind_handler(handler)`: Called once when the task is constructed. Attach simulator‑specific APIs here.
 - `__call__(...)`: Implement the actual randomization. Demo scripts call this on demand (e.g., every N steps).
+- `set_seed(seed)`: Re-seed the internal RNG at runtime. Every built-in randomizer now respects the seed 1:1, so using the same seed on different randomizers produces identical RNG streams (the resulting scene changes may differ because each randomizer consumes the values in its own way).
 - `supported_handlers`: Optional allowlist to guard against unsupported simulators.
 
 Most users never touch the base class directly. Instead, you configure higher level randomizers supplied in `metasim.randomization`:

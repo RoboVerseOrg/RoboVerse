@@ -30,6 +30,7 @@ import rootutils
 rootutils.setup_root(__file__, pythonpath=True)
 
 import os
+import random
 from typing import Literal
 
 import numpy as np
@@ -499,10 +500,12 @@ def main():
     args = tyro.cli(Args)
 
     if args.seed is not None:
+        random.seed(args.seed)
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed(args.seed)
+            torch.cuda.manual_seed_all(args.seed)
 
     log.info("=" * 70)
     log.info("Domain Randomization Demo with Trajectory Replay")
