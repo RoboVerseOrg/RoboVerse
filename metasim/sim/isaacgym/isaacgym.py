@@ -389,6 +389,8 @@ class IsaacgymHandler(BaseSimHandler):
             # For XFORM physics (goal object), disable gravity
             if hasattr(object, "physics") and object.physics == PhysicStateType.XFORM:
                 asset_options.disable_gravity = True
+            asset_options.use_mesh_materials = True
+            asset_options.collapse_fixed_joints = getattr(object, "collapse_fixed_joints", False)
             asset = self.gym.load_asset(self.sim, asset_root, asset_path, asset_options)
 
         asset_link_dict = self.gym.get_asset_rigid_body_dict(asset)

@@ -153,6 +153,9 @@ class BaseArticulationObjCfg(BaseObjCfg):
 class RigidObjCfg(_FileBasedMixin, BaseRigidObjCfg):
     """Rigid object cfg."""
 
+    collapse_fixed_joints: bool = False
+    """Whether to collapse fixed joints when loading the object. Default is False."""
+
 
 @configclass
 class ArticulationObjCfg(_FileBasedMixin, BaseArticulationObjCfg):
