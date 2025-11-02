@@ -395,8 +395,10 @@ def get_states(all_states, action_idx: int, num_envs: int):
 def run_replay_with_randomization(env, randomizers, init_state, all_actions, all_states, args):
     """Replay trajectory with periodic randomization."""
     os.makedirs("get_started/output", exist_ok=True)
+
     mode_tag = "states" if args.object_states else f"level{args.level}"
     video_path = f"get_started/output/12_dr_{mode_tag}_{args.sim}.mp4"
+
     obs_saver = ObsSaver(video_path=video_path)
 
     log.info("\n" + "=" * 70)
@@ -411,6 +413,7 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
     randomization_enabled = not args.object_states
     if randomization_enabled:
         apply_randomization(randomizers, args.level)
+
     obs, extras = env.reset(states=[init_state] * args.num_envs)
 
     step = 0

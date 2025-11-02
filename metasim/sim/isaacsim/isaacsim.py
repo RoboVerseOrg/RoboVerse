@@ -1,10 +1,12 @@
 # This naively suites for isaaclab 2.2.0 and isaacsim 5.0.0
+
 from __future__ import annotations
 
 import argparse
 import os
 from copy import deepcopy
 
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -21,11 +23,21 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+
+# Optional: RoboSplatter imports for GS background rendering
+try:
+    from robo_splatter.models.camera import Camera as SplatCamera
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
+    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
 
 
 class IsaacsimHandler(BaseSimHandler):
@@ -173,6 +185,9 @@ class IsaacsimHandler(BaseSimHandler):
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
 
+        # Initialize GS background if enabled
+        self._build_gs_background()
+
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
@@ -244,17 +259,17 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids = torch.tensor(env_ids, device=self.device)
 
             for _, obj in enumerate(self.objects):
-                if obj.fix_base_link:
-                    continue
                 if isinstance(obj, ArticulationObjCfg):
                     obj_inst = self.scene.articulations[obj.name]
                 else:
                     obj_inst = self.scene.rigid_objects[obj.name]
-                # root_state = obj_inst.root_state.clone()
+
+                # Set root state (fix_base_link only affects physics, not manual state setting)
                 root_state = states.objects[obj.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
                 obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
                 obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
+                # Set joint state for articulated objects
                 if isinstance(obj, ArticulationObjCfg):
                     joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
                     obj_inst.write_joint_position_to_sim(
@@ -264,7 +279,11 @@ class IsaacsimHandler(BaseSimHandler):
                         states.objects[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                     )
 
-            for _, robot in enumerate(self.robots):
+                # For kinematic objects (fix_base_link=True), force update to sync visual mesh
+                if obj.fix_base_link:
+                    obj_inst.update(dt=0.0)
+
+            for _, robot in enumerate[RobotCfg](self.robots):
                 robot_inst = self.scene.articulations[robot.name]
                 root_state = states.robots[robot.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
@@ -361,6 +380,54 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_data = instance_seg_data.squeeze(-1)
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
+
+            # GS background blending
+            if (
+                self.scenario.gs_scene is not None
+                and self.scenario.gs_scene.with_gs_background
+                and ROBO_SPLATTER_AVAILABLE
+                and rgb_data is not None
+            ):
+                # Get camera parameters (already as torch tensors on device)
+                Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
+
+                # Create GS camera and render
+                gs_cam = SplatCamera.init_from_pose_tensor(
+                    c2w=c2w_t,
+                    Ks=Ks_t,
+                    image_height=int(camera.height),
+                    image_width=int(camera.width),
+                    device=self.device,
+                )
+
+                gs_result = self.gs_background.render(gs_cam)
+                # Create foreground mask from instance segmentation
+                if instance_seg_data is not None:
+                    from metasim.utils.gs_util import alpha_blend_rgba_torch
+
+                    # Get foreground mask from instance segmentation
+                    foreground_mask = (instance_seg_data > 0).float()  # Shape: (envs, H, W)
+
+                    # Get RGB Blending with GS background
+                    sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
+                    gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
+
+                    if isinstance(gs_rgb, np.ndarray):
+                        gs_rgb = torch.from_numpy(gs_rgb)
+                    gs_rgb = gs_rgb.to(self.device)
+                    blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
+                    rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8).unsqueeze(0)
+
+                    # Get Depth Blending with GS background
+                    sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                    bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                    if isinstance(bg_depth, np.ndarray):
+                        bg_depth = torch.from_numpy(bg_depth)
+                    bg_depth = bg_depth.to(self.device)
+                    # Use torch.where for depth composition
+                    depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
+                    depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)
+
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
                 depth=depth_data,
@@ -435,6 +502,15 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.render()
         self.scene.update(dt=self.dt)
 
+        # Force update kinematic objects to ensure visual mesh stays in sync
+        for obj in self.objects:
+            if obj.fix_base_link:
+                if isinstance(obj, ArticulationObjCfg):
+                    obj_inst = self.scene.articulations[obj.name]
+                else:
+                    obj_inst = self.scene.rigid_objects[obj.name]
+                obj_inst.update(dt=0.0)
+
         # Ensure camera pose is correct, especially for the first few frames
         if self._step_counter < 5:
             self._update_camera_pose()
@@ -487,19 +563,23 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Articulation object
         if isinstance(obj, ArticulationObjCfg):
-            self.scene.articulations[obj.name] = Articulation(
-                ArticulationCfg(
-                    prim_path=prim_path,
-                    spawn=sim_utils.UsdFileCfg(usd_path=obj.usd_path, scale=obj.scale),
-                    actuators={},
-                )
+            articulation_cfg = ArticulationCfg(
+                prim_path=prim_path,
+                spawn=sim_utils.UsdFileCfg(
+                    usd_path=obj.usd_path,
+                    scale=obj.scale,
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
+                    articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
+                ),
+                actuators={},
             )
+            self.scene.articulations[obj.name] = Articulation(articulation_cfg)
             return
 
         if obj.fix_base_link:
             rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
         else:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg()
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity)
         if obj.collision_enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
@@ -923,6 +1003,49 @@ class IsaacsimHandler(BaseSimHandler):
         )  # ! critical
         obj_inst.write_data_to_sim()
 
+        # For fix_base_link objects, force sync visual pose to match collision pose
+        # This is necessary because kinematic objects (fix_base_link=True) only update
+        # their physics/collision layer with write_root_pose_to_sim, but not the visual layer
+        if object.fix_base_link:
+            try:
+                import omni.isaac.core.utils.prims as prim_utils
+            except ModuleNotFoundError:
+                import isaacsim.core.utils.prims as prim_utils
+
+            from pxr import Gf, UsdGeom
+
+            # Get USD stage
+            stage = prim_utils.get_current_stage()
+
+            # Update visual pose for each environment
+            for i, env_id in enumerate(env_ids):
+                prim_path = f"/World/envs/env_{env_id}/{object.name}"
+                prim = stage.GetPrimAtPath(prim_path)
+
+                if prim.IsValid():
+                    xformable = UsdGeom.Xformable(prim)
+
+                    # Convert torch tensors to numpy
+                    pos_np = pose[i, :3].cpu().numpy()
+                    quat_np = pose[i, 3:7].cpu().numpy()  # w, x, y, z
+
+                    # Create transform matrix from position and quaternion
+                    # Note: pxr quaternion is (real, i, j, k) = (w, x, y, z)
+                    quat_gf = Gf.Quatd(float(quat_np[0]), float(quat_np[1]), float(quat_np[2]), float(quat_np[3]))
+                    rotation_matrix = Gf.Matrix3d(quat_gf)
+                    translation = Gf.Vec3d(float(pos_np[0]), float(pos_np[1]), float(pos_np[2]))
+
+                    # Set transform
+                    transform_matrix = Gf.Matrix4d().SetTranslate(translation) * Gf.Matrix4d().SetRotate(
+                        rotation_matrix
+                    )
+                    xformable.ClearXformOpOrder()
+                    xform_op = xformable.AddTransformOp()
+                    xform_op.Set(transform_matrix)
+
+            # Update object data from simulation to refresh internal state
+            obj_inst.update(dt=0.0)
+
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.scene.articulations[obj_name].joint_names)
@@ -998,3 +1121,60 @@ class IsaacsimHandler(BaseSimHandler):
         for sensor in self.scene.sensors.values():
             sensor.update(dt=0)
         self.sim.render()
+
+    def _get_camera_params(self, camera, camera_inst):
+        """Get camera intrinsics and extrinsics for GS rendering.
+
+        Compare IsaacSim camera pose vs look-at construction to find the correct transformation.
+
+        Args:
+            camera: PinholeCameraCfg object
+            camera_inst: IsaacSim camera instance
+
+        Returns:
+            Ks_t: (3, 3) intrinsic matrix as torch tensor on device
+            c2w_t: (4, 4) camera-to-world transformation matrix as torch tensor on device
+        """
+        # Get intrinsics
+
+        Ks = np.array(camera.intrinsics, dtype=np.float32)
+        Ks_t = torch.from_numpy(Ks).to(self.device)
+
+        # # Method 1: Read from IsaacSim camera instance
+        # p_isaac = camera_inst.data.pos_w[0].detach()  # Keep as tensor
+        # q_wxyz = camera_inst.data.quat_w_world[0].detach()  # (w, x, y, z)
+
+        # # Convert quaternion to rotation matrix using torch
+        # # quaternion [w, x, y, z] -> rotation matrix
+        # w, x, y, z = q_wxyz[0], q_wxyz[1], q_wxyz[2], q_wxyz[3]
+        # R_isaac = torch.stack([
+        #     torch.stack([1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)]),
+        #     torch.stack([2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)]),
+        #     torch.stack([2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)])
+        # ]).to(self.device)
+
+        # c2w_isaac = torch.eye(4, dtype=torch.float32, device=self.device)
+        # c2w_isaac[:3, :3] = R_isaac
+        # c2w_isaac[:3, 3] = p_isaac
+
+        # Method 2: Build from look-at with -Z forward (OpenGL/MUJOCO convention)
+        pos = torch.tensor(camera.pos, dtype=torch.float32, device=self.device)
+        look = torch.tensor(camera.look_at, dtype=torch.float32, device=self.device)
+        forward = look - pos
+        forward = forward / torch.norm(forward)
+        up_world = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32, device=self.device)
+        right = torch.cross(forward, up_world)
+        right = right / torch.norm(right)
+        up = torch.cross(right, forward)
+
+        R_lookat = torch.stack([right, up, forward], dim=1)
+        # Negate Z for -Z forward convention
+        R_lookat[:, 2] = -R_lookat[:, 2]
+
+        c2w_lookat = torch.eye(4, dtype=torch.float32, device=self.device)
+        c2w_lookat[:3, :3] = R_lookat
+        c2w_lookat[:3, 3] = pos
+
+        # IsaacSim camera poses may not be reliable until after full scene updates.
+        # Using look-at construction directly is more stable.
+        return Ks_t, c2w_lookat

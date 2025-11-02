@@ -20,7 +20,6 @@ Calling `bind_handler` connects the randomizer to the active simulator handler. 
 > **Backend support**  
 > The shipped randomizers call into Omni/Isaac USD APIs during `bind_handler`, so the Isaac Sim backend is currently the only configuration where they execute. Other simulators listed in CLI flags will still load the task, but each randomizer raises `Unsupported handler` until equivalent bindings are implemented.
 
-
 ## Architecture
 Custom randomizers inherit from `metasim.randomization.base.BaseRandomizerType`. The base class exposes four key touch points:
 

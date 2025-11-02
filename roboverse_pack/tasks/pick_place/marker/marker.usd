@@ -1,0 +1,26 @@
+#usda 1.0
+(
+    defaultPrim = "Sphere"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Sphere" (
+    kind = "component"
+)
+{
+    def Sphere "visual_sphere"
+    {
+        double radius = 0.05
+        color3f[] primvars:displayColor = [(1.0, 0.0, 0.0)]
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "Physics"
+    {
+        float physics:mass = 0.01
+        float3 physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.00001, 0.00001, 0.00001)
+    }
+}

@@ -1,10 +1,67 @@
 # RoboVerse VLA Training Pipeline
 
-A brief workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data and OpenVLA framework.
+A comprehensive workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data.
+
+## Quick Start (Automated)
+
+### One-time Setup
+```bash
+# Install both RLDS and OpenVLA environments automatically
+cd roboverse_learn/vla/OpenVLA
+bash setup_env.sh
+```
+
+### Collect Demonstration Data
+```bash
+# Collect demos first (run from RoboVerse root)
+python scripts/advanced/collect_demo.py --sim=mujoco --task=pick_butter --headless --run_all
+```
+
+### Train Model
+```bash
+cd roboverse_learn/vla/OpenVLA
+
+# Convert to RLDS and fine-tune
+bash run_pipeline.sh
+
+# Skip RLDS conversion if dataset already exists
+bash run_pipeline.sh --skip-convert
+```
+
+### Evaluate Trained Model
+```bash
+cd roboverse_learn/vla/OpenVLA
+conda activate openvla
+python eval.py --model_path runs/<checkpoint> --task pick_butter
+```
+
+## Supported VLA Models
+
+This folder contains implementations for multiple VLA architectures:
+
+- **OpenVLA** - Full-size VLA model using RLDS data format (see main sections below)
+- **SmolVLA** - Lightweight VLA from Hugging Face/LeRobot (see `SmolVLA/README.md`)
+- **π0 family** - Physical Intelligence's π models (see `pi0/README.md`)
+
+Each model has its own subdirectory with specific training and evaluation scripts.
 
 
 
-## Workflow
+## OpenVLA Scripts
+
+All OpenVLA automation scripts are in the `OpenVLA/` directory. See [`OpenVLA/README.md`](OpenVLA/README.md) for details.
+
+**OpenVLA/setup_env.sh** - Sets up `rlds_env` (data conversion) and `openvla` (training/eval) environments
+
+**OpenVLA/run_pipeline.sh** - RLDS conversion + fine-tuning for `pick_butter` task
+  - Prerequisite: Collect demos first with `collect_demo.py`
+  - Args: `--skip-convert`
+
+**OpenVLA/finetune.sh** - LoRA fine-tuning with configurable hyperparameters
+
+**OpenVLA/eval.py** - Model evaluation script
+
+## Workflow (Manual Steps)
 
 ### Step 1: Collect Demonstration Trajectories
 
@@ -119,4 +176,43 @@ Raw Trajectories → Standardized Format → Trained Model → Performance Metri
 
 - Adjust simulation parameters in `collect_demo.py` based on your specific tasks
 - Modify dataset paths in `finetune_roboverse.sh` to match your environment
+
+## Quick Start for Different Models
+
+### OpenVLA (this workflow)
+```bash
+cd OpenVLA
+bash run_pipeline.sh
+python eval.py --model_path runs/<checkpoint> --task pick_butter
+```
+
+### SmolVLA (lightweight alternative)
+```bash
+# See SmolVLA/README.md for details
+cd SmolVLA
+bash finetune_smolvla.sh
+python smolvla_eval.py --model_path <checkpoint> --task pick_butter
+```
+
+### π0 Models (Physical Intelligence)
+```bash
+# See pi0/README.md for details
+cd pi0
+python convert_roboverse_to_lerobot.py --input-root <demos> --repo-id <dataset>
+# Then follow pi0/README.md for training
+```
+
+## Choosing a Model
+
+| Model | Size | Data Format | Best For |
+|-------|------|-------------|----------|
+| **OpenVLA** | ~7B params | RLDS | High accuracy, research |
+| **SmolVLA** | <1B params | LeRobot | Fast training/inference, resource-constrained |
+| **π0** | Various | LeRobot | Production deployment, multi-task |
+
+## References
+
+- [OpenVLA Repository](https://github.com/openvla/openvla)
+- [LeRobot & SmolVLA](https://github.com/huggingface/lerobot)
+- [Physical Intelligence π0](https://github.com/physical-intelligence/openpi)
 

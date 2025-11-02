@@ -142,6 +142,25 @@ class MyExampleTask(BaseTaskEnv):
     def reset(self,states,env_ids): ...
 ```
 
+### 4.3 Using the Task Template
+
+For quickly creating a new task, we provide a **task template** at `roboverse_pack/tasks/task_template.py`.
+
+The template includes:
+
+* Complete task structure with all necessary methods
+* Example implementations for `_observation`, `_reward`, `_terminated`
+* Scenario configuration with common objects and robots
+* Detailed comments explaining each component
+
+**Usage:**
+
+1. Copy `task_template.py` to your desired location under `roboverse_pack/tasks/`
+2. Rename the file and class to match your task name
+3. Update the `@register_task()` decorator with your task ID
+4. Modify the scenario, reward, observation logic as needed
+5. The task will be auto-imported and registered
+
 ---
 
 ## 5. Migration New Task

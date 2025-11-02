@@ -39,13 +39,13 @@ from metasim.utils.kinematics import get_ee_state
 class Args:
     """Replay trajectory for a given task."""
 
-    task: str = "pick_cube"
+    task: str = "close_box"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "isaacgym"
+        "isaacsim"
     )
     renderer: (
         Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None

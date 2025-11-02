@@ -29,6 +29,24 @@ For more control over visualization settings:
 env = TaskViserWrapper(env, port=8080, update_freq=30)
 ```
 
+## Accessing the Visualization
+
+Once your environment is wrapped with `TaskViserWrapper`, the Viser server will automatically start. Access the interactive 3D visualization interface by opening your web browser and navigating to:
+
+```
+http://localhost:8080/
+```
+
+If you specified a custom port (e.g., `port=8888`), use that port instead:
+
+```
+http://localhost:8888/
+```
+
+The visualization interface will load in your browser, providing real-time 3D rendering and interactive controls for your robot simulation.
+
+> **Note**: The Viser server must be running (i.e., your Python script with the wrapped environment must be active) for the browser interface to work.
+
 
 ## Advance : Interactive Features
 

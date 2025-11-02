@@ -31,7 +31,7 @@ class PutMugTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.GEOM,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
                 fix_base_link=True,
             ),
             RigidObjCfg(
@@ -40,7 +40,7 @@ class PutMugTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.xml",
             ),
             # Target location - using vase as a visual marker
             RigidObjCfg(
@@ -49,7 +49,7 @@ class PutMugTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.XFORM,  # Non-physical, just visual
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/usd/vase.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/result/vase.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.mjcf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.xml",
             ),
         ],
         robots=["franka"],

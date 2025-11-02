@@ -89,11 +89,16 @@ class BaseObjCfg:
     default_orientation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
     """Default orientation of the object, default is (1.0, 0.0, 0.0, 0.0)"""
 
-    fix_base_link: bool = False
-    """Whether to fix the base link of the object, default is False"""
+    fix_base_link: bool | None = None
+    """Whether to fix the base link of the object. If None, will be inferred from physics parameter. Default is None."""
 
     enabled_gravity: bool = True
     """Whether to enable gravity. Default to True. If False, the robot will not be affected by gravity."""
+
+    def __post_init__(self):
+        # Set default value for fix_base_link if not explicitly set
+        if self.fix_base_link is None:
+            self.fix_base_link = False
 
 
 ##################################################
@@ -112,21 +117,26 @@ class BaseRigidObjCfg(BaseObjCfg):
     """IsaacSim's convention for collision and gravity state. Default to None. If specified, it will be translated to :attr:`collision_enabled` and :attr:`fix_base_link`."""
 
     def __post_init__(self):
-        super().__post_init__()
-
-        ## Parse physics to collision_enabled and fix_base_link.
+        # Parse physics parameter first (if provided)
         if self.physics is not None:
             if self.physics == PhysicStateType.XFORM:
                 self.collision_enabled = False
-                self.fix_base_link = True
+                # Only set fix_base_link from physics if not explicitly set by user
+                if self.fix_base_link is None:
+                    self.fix_base_link = True
             elif self.physics == PhysicStateType.GEOM:
                 self.collision_enabled = True
-                self.fix_base_link = True
+                if self.fix_base_link is None:
+                    self.fix_base_link = True
             elif self.physics == PhysicStateType.RIGIDBODY:
                 self.collision_enabled = True
-                self.fix_base_link = False
+                if self.fix_base_link is None:
+                    self.fix_base_link = False
             else:
                 raise ValueError(f"Invalid physics type: {self.physics}")
+
+        # Call parent __post_init__ to set default value if still None
+        super().__post_init__()
 
 
 @configclass

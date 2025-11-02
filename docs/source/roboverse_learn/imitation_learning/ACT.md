@@ -105,3 +105,35 @@ pip install pandas wandb
 
 
 **Outputs**: Training result is stored in `~/RoboVerse/info/outputs/ACT`. Evaluation result is stored in `~/RoboVerse/tmp/act`
+
+
+## Initial test results
+### Task: close_box
+**Setup:** `temporal_agg=True, num_episodes=100, num_epochs=100`
+| Chunking size | 成功率 |
+| ------------- | ------ |
+| 1             | 0.17   |
+| 10            | 0.17   |
+| 20            | 0.76   |
+| 40            | 0.55   |
+| 60            | 0.51   |
+| 80            | 0.56   |
+| 100           | 0.09   |
+| 120           | 0.66   |
+| 140           | 0.53   |
+| 160           | 0.54   |
+
+### Task: pick_butter
+**Setup:** `temporal_agg=True, num_episodes=100, num_epochs=100`
+| Chunking size | 成功率 |
+| ------------- | ------ |
+| 1             | 0      |
+| 10            | 0.5    |
+| 20            | 0      |
+| 40            | 1      |
+| 60            | 1      |
+| 80            | 0      |
+| 100           | 0      |
+| 120           | 0      |
+| 140           | 0.5    |
+| 160           | 0      |

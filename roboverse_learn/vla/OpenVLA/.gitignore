@@ -1,0 +1,12 @@
+# Training outputs
+runs/
+adapters/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+*.log

@@ -8,11 +8,21 @@ import torch
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
 
+from loguru import logger as log
+
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
 from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
 # from metasim.utils.hf_util import FileDownloader
+try:
+    from robo_splatter.models.basic import RenderConfig
+    from robo_splatter.models.gaussians import VanillaGaussians
+    from robo_splatter.render.scenes import Scene
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
 
 
 class BaseSimHandler(ABC):
@@ -29,6 +39,8 @@ class BaseSimHandler(ABC):
         self.cameras = scenario.cameras
         self.objects = scenario.objects
         self.lights = scenario.lights if hasattr(scenario, "lights") else []
+        self.gs_background = None
+
         self._num_envs = scenario.num_envs
         self.decimation = scenario.decimation
         self.headless = scenario.headless
@@ -249,6 +261,54 @@ class BaseSimHandler(ABC):
             self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
 
         return self._body_reindex_cache[obj_name]
+
+    ############################################################
+    ## GS Renderer
+    ############################################################
+    def _get_camera_params(self, camera):
+        """Get the camera parameters for GS rendering.
+        For a new simulator, you should implement this method.
+        Args:
+            camera: PinholeCameraCfg object
+
+        Returns:
+            Ks: (3, 3) intrinsic matrix
+            c2w: (4, 4) camera-to-world transformation matrix
+        """
+        raise NotImplementedError
+
+    def _build_gs_background(self):
+        """Initialize GS background renderer if enabled in scenario config."""
+        if self.scenario.gs_scene is None or not self.scenario.gs_scene.with_gs_background:
+            return
+
+        if not ROBO_SPLATTER_AVAILABLE:
+            log.error("GS background enabled but RoboSplatter not available.")
+            return
+
+        try:
+            from metasim.utils.gs_util import quaternion_multiply
+        except ImportError:
+            log.error("quaternion_multiply not available from gs_util")
+            return
+
+        # Parse pose transformation
+        if self.scenario.gs_scene.gs_background_pose_tum is not None:
+            x, y, z, qx, qy, qz, qw = self.scenario.gs_scene.gs_background_pose_tum
+        else:
+            x, y, z, qx, qy, qz, qw = 0, 0, 0, 0, 0, 0, 1
+
+        # Apply coordinate transform
+        qx, qy, qz, qw = quaternion_multiply([qx, qy, qz, qw], [0.7071, 0, 0, 0.7071])
+        init_pose = torch.tensor([x, y, z, qx, qy, qz, qw])
+
+        # Load GS model
+        gs_model = VanillaGaussians(
+            model_path=self.scenario.gs_scene.gs_background_path, device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+        gs_model.apply_global_transform(global_pose=init_pose)
+
+        self.gs_background = Scene(render_config=RenderConfig(), background_models=gs_model)
 
     @property
     def num_envs(self) -> int:

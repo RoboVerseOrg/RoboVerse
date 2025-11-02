@@ -39,6 +39,16 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 
 from .sapien2 import _load_init_pose
 
+# Optional: RoboSplatter imports for GS background rendering
+try:
+    from robo_splatter.models.camera import Camera as SplatCamera
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
+    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
+
+
 __all__ = [
     "Sapien3Handler",
     "load_actor_from_urdf",
@@ -467,6 +477,8 @@ class Sapien3Handler(BaseSimHandler):
     def launch(self) -> None:
         super().launch()
         self._build_sapien()
+        if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+            self._build_gs_background()
 
     def close(self):
         if not self.headless:
@@ -558,13 +570,55 @@ class Sapien3Handler(BaseSimHandler):
         camera_states = {}
         for camera in self.cameras:
             cam_inst = self.camera_ids[camera.name]
-            rgb = cam_inst.get_picture("Color")[..., :3]
-            rgb = (rgb * 255).clip(0, 255).astype("uint8")
-            rgb = torch.from_numpy(rgb.copy())
-            depth = -cam_inst.get_picture("Position")[..., 2]
-            depth = torch.from_numpy(depth.copy())
+
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                from metasim.utils.gs_util import alpha_blend_rgba
+
+                # Build RoboSplatter camera from SAPIEN pose and scenario intrinsics, then render GS
+                gs_cam = SplatCamera.init_from_pose_list(
+                    pose_list=cam_inst.get_model_matrix(),
+                    camera_intrinsic=cam_inst.get_intrinsic_matrix(),
+                    image_height=cam_inst.height,
+                    image_width=cam_inst.width,
+                    device="cuda" if torch.cuda.is_available() else "cpu",
+                )
+
+                gs_result = self.gs_background.render(gs_cam)
+                gs_result.to_numpy()
+
+                seg_labels = cam_inst.get_picture("Segmentation")
+                label0 = seg_labels[..., 0]
+                mask = np.where((label0 > 1), 255, 0).astype(
+                    np.uint8
+                )  # exclude background and ground plane (typically ID 0 = ground, ID 1 = first object)
+
+                # depth compose: use sim depth where foreground exists, otherwise GS depth
+                sim_depth = -cam_inst.get_picture("Position")[..., 2]
+                bg_depth = gs_result.depth.squeeze(0)
+                if bg_depth.ndim == 3 and bg_depth.shape[-1] == 1:
+                    bg_depth = bg_depth[..., 0]
+
+                # foreground mask: label0 > 1 means non-background objects
+                depth_comp = np.where(label0 > 1, sim_depth, bg_depth)
+                depth = torch.from_numpy(depth_comp.copy())
+
+                # rgb blend
+                sim_color = cam_inst.get_picture("Color")
+                sim_color = (np.clip(sim_color[..., :3], 0, 1) * 255).astype(np.uint8)
+                foreground = np.concatenate([sim_color, mask[..., None]], axis=-1)
+
+                background = gs_result.rgb.squeeze(0)
+                blended_rgb = alpha_blend_rgba(foreground, background)
+                rgb = torch.from_numpy(np.array(blended_rgb.copy()))
+
+            else:
+                rgb = torch.from_numpy(np.array(cam_inst.get_picture("Color").copy()))
+                depth = -cam_inst.get_picture("Position")[..., 2]
+                depth = torch.from_numpy(depth.copy())
+
             state = CameraState(rgb=rgb.unsqueeze(0), depth=depth.unsqueeze(0))
             camera_states[camera.name] = state
+
         extras = self.get_extra()  # extra observations
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 

@@ -17,7 +17,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 def get_config():
     """Get configuration with command line argument support."""
     parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='mjx_walk.yaml',
+    parser.add_argument('--config', type=str, default='pick_place.yaml',
                        help='YAML configuration file name (will be loaded from configs/ directory)')
     args = parser.parse_args()
 

@@ -78,6 +78,11 @@ def parse_args():
         type=int,
         default=10,
     )
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        default=400,
+    )
 
     args = parser.parse_args()
     return args
@@ -157,7 +162,7 @@ def main():
         nheads = 8
         camera_names = ["front"]
         kl_weight = 10
-        chunk_size = 100
+        # chunk_size = args.chunk_size
         hidden_dim = 512
         batch_size = 8
         dim_feedforward = 3200
@@ -165,7 +170,7 @@ def main():
         act_ckpt_name = "policy_best.ckpt"
         policy_config = {
             "lr": lr,
-            "num_queries": chunk_size,
+            "num_queries": args.chunk_size,
             "kl_weight": kl_weight,
             "hidden_dim": hidden_dim,
             "dim_feedforward": dim_feedforward,
@@ -286,37 +291,54 @@ def main():
                 raw_action = raw_action.squeeze(0).cpu().numpy()
                 action = post_process(raw_action)
                 action = action[:franka_state_dim]
-                # log.debug(f"Action: {action}")
+
 
                 action = torch.tensor(action, dtype=torch.float32, device="cuda")
 
-                inner_actions = {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), action))}
+                # IK solver expects original joint order, but state uses alphabetical order
+                reorder_idx = env.handler.get_joint_reindex(args.robot)
+                inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
+                actions = action[inverse_reorder_idx]
+                inner_actions = {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), actions))}
                 actions = {"franka": inner_actions}
                 #actions = [{"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), action))}]
                 #log.debug(f"Actions: {actions}")
+                # log.debug(f"Action: {actions}")
                 obs, reward, success, time_out, extras = env.step(actions)
                 env.handler.refresh_render()
                 # print(reward, success, time_out)
 
                 # eval
-                if success[0]:
+                # if success[0]:
+                #     TotalSuccess += 1
+                #     print(f"Env {i} Success")
+                if success[0] and not SuccessOnce[0]:
                     TotalSuccess += 1
+                    SuccessOnce[0] = True
                     print(f"Env {i} Success")
 
+                log.debug(f"TotalSuccess: {TotalSuccess}")
                 SuccessOnce = [SuccessOnce[i] or success[i] for i in range(num_envs)]
                 TimeOut = [TimeOut[i] or time_out[i] for i in range(num_envs)]
                 for TimeOutIndex in range(num_envs):
                     if TimeOut[TimeOutIndex]:
                         SuccessEnd[TimeOutIndex] = False
                 if all(TimeOut):
-                    # print("All time out")
+                    print("All time out")
                     break
 
                 step += 1
 
             images_to_video(image_list, f"tmp/{args.algo}/{args.task}/{ckpt_name}/{i}.mp4")
 
-    print("Success Rate: ", TotalSuccess / num_eval)
+    success_rate = TotalSuccess / num_eval
+    print("Success Rate: ", success_rate)
+
+    result_dir = f"tmp/{args.algo}/{args.task}/{ckpt_name}"
+    result_file = os.path.join(result_dir, "success_rate.txt")
+    with open(result_file, "w") as f:
+        f.write(f"Success Rate: {success_rate:.4f}\n")
+
     env.close()
 
 
