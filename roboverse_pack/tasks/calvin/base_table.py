@@ -72,40 +72,6 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 # mjx_mjcf_path=None,
             )
         ],
-        # objects=[
-        #     ArticulationObjCfg(
-        #         name="table",
-        #         scale=0.8,
-        #         default_position=[0, 0, 0],
-        #         default_orientation=[1, 0, 0, 0],
-        #         fix_base_link=True,
-        #         urdf_path="roboverse_data/assets/calvin/calvin_table_D/urdf/calvin_table_D.urdf",
-        #     ),
-        #     RigidObjCfg(
-        #         name="pink_cube",
-        #         scale=0.8,
-        #         default_position=[1.28661989e-01, -3.77756105e-02, 4.59989266e-01 + 0.01],
-        #         default_orientation=quat_from_euler_np(1.10200730e-04, 3.19760378e-05, -3.94522179e-01),
-        #         fix_base_link=False,
-        #         urdf_path="roboverse_data/assets/calvin/block_pink_big.urdf",
-        #     ),
-        #     RigidObjCfg(
-        #         name="blue_cube",
-        #         scale=0.8,
-        #         default_position=[-2.83642665e-01, 8.05351014e-02, 4.60989238e-01 + 0.01],
-        #         default_orientation=quat_from_euler_np(-1.10251078e-05, -5.25663348e-05, -9.06438129e-01),
-        #         fix_base_link=False,
-        #         urdf_path="roboverse_data/assets/calvin/block_blue_small.urdf",
-        #     ),
-        #     RigidObjCfg(
-        #         name="red_cube",
-        #         scale=0.8,
-        #         default_position=[2.32403619e-01, -4.04295856e-02, 4.59990009e-01 + 0.01],
-        #         default_orientation=quat_from_euler_np(4.12287744e-08, -8.05700103e-09, -2.17741510e00),
-        #         fix_base_link=False,
-        #         urdf_path="roboverse_data/assets/calvin/block_red_middle.urdf",
-        #     ),
-        # ],
         decimation=8,
     )
 
@@ -194,44 +160,5 @@ class BaseCalvinTableTask(BaseTaskEnv):
             return gym.spaces.Box(low=-1.0, high=1.0, shape=(9,), dtype=float)
         elif self.scenario.robots[0].control_type == "ee_pose":
             return gym.spaces.Box(low=-1.0, high=1.0, shape=(8,), dtype=float)
-        else:
-            raise NotImplementedError
-
-    def step(self, action):
-        try:
-            if isinstance(action, list) and action and isinstance(action[0], dict):
-                robot_name = self.scenario.robots[0].name
-
-            # Check if the robot's name is a key in the dictionary.
-            if robot_name in action[0]:
-                action = action[0][robot_name]
-        except:
-            pass
-
-        if self.scenario.robots[0].control_type == "joint_position":
-            assert action.shape[-1] == 9, f"Expected action shape (9,), got {action.shape}"
-            return super().step(action)
-
-        elif self.scenario.robots[0].control_type == "ee_pose":
-            action = array_to_tensor(action, device=self.device).float()
-
-            curr_state = self.handler.get_states(mode="tensor")
-            curr_robot_q = curr_state.robots["franka"].joint_pos
-
-            eff_pos = action[:, :3]
-            eff_orn = action[:, 3:7]
-            gripper_width = action[:, 7]
-
-            q_solution, ik_succ = self.ik_solver.solve_ik_batch(eff_pos, eff_orn, curr_robot_q)
-
-            actions = self.ik_solver.compose_joint_action(
-                q_solution=q_solution,
-                gripper_widths=gripper_width,
-                current_q=curr_robot_q,
-                return_dict=False,
-            )
-
-            return super().step(actions)
-
         else:
             raise NotImplementedError
