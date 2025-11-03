@@ -9,7 +9,7 @@ The LayoutGen module in [EmbodiedGen](https://github.com/HorizonRobotics/Embodie
 
 The generated assets are exported in a universal format that supports multiple simulators (e.g., SAPIEN, Isaac Sim, MuJoCo, PyBullet, Genesis, Isaac Gym).
 
-Below is an example showing how to load a LayoutGen generated scene in RoboVerse. You can download more scenes from example_layouts folder under https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData or use [EmbodiedGen](https://github.com/HorizonRobotics/EmbodiedGen) to generate by yourself.
+Below is an example showing how to load a LayoutGen generated scene in RoboVerse. You can download more scenes from example_layouts folder under [hf datasets](https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData) or use [EmbodiedGen](https://github.com/HorizonRobotics/EmbodiedGen) to generate by yourself.
 
 For more information on generating layout scenes, please refer to the [EmbodiedGen-LayoutGen documentation](https://github.com/HorizonRobotics/EmbodiedGen#%EF%B8%8F-layoutinteractive-3d-worlds-generation).
 
