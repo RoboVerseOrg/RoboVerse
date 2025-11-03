@@ -62,7 +62,7 @@ class RealAssetCfg:
         "pybullet",
         "sapien3",
         "mujoco",
-    ] = "mujoco"
+    ] = "isaacsim"
     num_envs: int = 1  # only support single env for now
     assert num_envs == 1, "Only support single env for now"
 

@@ -540,7 +540,7 @@ class IsaacsimHandler(BaseSimHandler):
         )
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
         cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
-        cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
+        cfg.spawn.rigid_props.disable_gravity = True
         cfg.spawn.articulation_props.enabled_self_collisions = robot.enabled_self_collisions
         init_state = ArticulationCfg.InitialStateCfg(
             pos=[0.0, 0.0, 0.0],

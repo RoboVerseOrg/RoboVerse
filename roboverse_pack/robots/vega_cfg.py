@@ -24,8 +24,8 @@ class VegaCfg(RobotCfg):
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
-    urdf_path: str = "roboverse_data/robots/dexmate-urdf/robots/humanoid/vega_1/vega.urdf"
-    usd_path: str = "roboverse_data/robots/dexmate-urdf/robots/humanoid/vega_1/vega/vega.usd"
+    urdf_path: str = "roboverse_pack/dexmate-urdf/robots/humanoid/vega_1/vega.urdf"
+    usd_path: str = "roboverse_pack/dexmate-urdf/robots/humanoid/vega_1/vega/vega.usd"
 
     # Physical properties
     enabled_gravity: bool = False
@@ -44,7 +44,7 @@ class VegaCfg(RobotCfg):
         "torso_j1": BaseActuatorCfg(velocity_limit=0.9, torque_limit=700.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
         "torso_j2": BaseActuatorCfg(velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
         "torso_j3": BaseActuatorCfg(velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
-        
+
         # # Head - lighter joints 
         #  #TODO ADD HEAD!
         # "head_j1": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping

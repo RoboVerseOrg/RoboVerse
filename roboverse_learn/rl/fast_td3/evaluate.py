@@ -423,13 +423,13 @@ def evaluate(
 
 def main():
     parser = argparse.ArgumentParser(description='FastTD3 Evaluation')
-    parser.add_argument('--checkpoint', type=str, default='roboverse_data/models/walk_1400.pt',
+    parser.add_argument('--checkpoint', type=str, default='/home/balen/murphy/murphy_rv/RoboVerse/models/pick_place_obstacle_135000.pt',
                        help='Path to checkpoint file')
     parser.add_argument('--num_episodes', type=int, default=1,
                        help='Number of episodes per environment (default: 1, each env saves one episode)')
 
     # Rendering arguments
-    parser.add_argument('--render', type=int, default=1,
+    parser.add_argument('--render', type=int, default=0,
                        help='Render mode: 0=no render, 1=render each episode separately (default), 2=single combined video')
     parser.add_argument('--video_path', type=str, default='output/eval_rollout.mp4',
                        help='Path to save video (base name for multiple videos)')

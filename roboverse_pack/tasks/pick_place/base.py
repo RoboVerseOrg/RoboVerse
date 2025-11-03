@@ -1,4 +1,4 @@
-"""Pick up a box with the robot gripper."""
+"""Base class for pick and place tasks with trajectory tracking."""
 
 from __future__ import annotations
 
@@ -12,40 +12,46 @@ from metasim.task.registry import register_task
 from metasim.task.rl_task import RLTaskEnv
 from metasim.utils.math import matrix_from_quat
 
-# Default configuration as a global dictionary
-DEFAULT_CONFIG = {
-    "action_scale": 0.04,
-    "reward_config": {
-        "scales": {
-            "gripper_approach": 2.0,
-            "gripper_close": 0.4,
-            "robot_target_qpos": 0.1,
-            "tracking_approach": 4.0,
-            "tracking_progress": 150.0,
-        }
-    },
-    # Trajectory tracking settings
-    "trajectory_tracking": {
-        "num_waypoints": 5,
-        "reach_threshold": 0.10,
-        "grasp_check_distance": 0.02,
-    },
-    # Randomization settings
-    "randomization": {
-        "box_pos_range": 0.1,
-        "robot_pos_noise": 0.0,
-        "joint_noise_range": 0.05,
-    },
-}
 
-
-@register_task("pick_place.base", "pick_place_base")
-class PickPlaceBase(RLTaskEnv):
-    """Pick up a box with the robot gripper.
+class TrajectoryTrackingTaskBase(RLTaskEnv):
+    """Base class for pick and place tasks with trajectory tracking.
 
     Reward shaping and task design adapted from DeepMind's Mujoco Playground
     (Apache 2.0 License), re-implemented for RoboVerse.
+    
+    Subclasses should override:
+    - DEFAULT_CONFIG: Task-specific configuration
+    - scenario: ScenarioCfg with objects and robots
+    - _get_initial_states(): Initial state positions
+    - obstacle_name: Name of the static obstacle object (e.g., "wall", "table", "window")
     """
+
+    # Default configuration - subclasses should override
+    DEFAULT_CONFIG = {
+        "action_scale": 0.04,
+        "reward_config": {
+            "scales": {
+                "gripper_approach": 2.0,
+                "gripper_close": 0.4,
+                "robot_target_qpos": 0.1,
+                "tracking_approach": 4.0,
+                "tracking_progress": 150.0,
+            }
+        },
+        "trajectory_tracking": {
+            "num_waypoints": 5,
+            "reach_threshold": 0.10,
+            "grasp_check_distance": 0.02,
+        },
+        "randomization": {
+            "box_pos_range": 0.3,
+            "robot_pos_noise": 0.0,
+            "joint_noise_range": 0.05,
+        },
+    }
+
+    # Name of the static obstacle object - subclasses should override
+    obstacle_name = "table"
 
     scenario = ScenarioCfg(
         objects=[
@@ -69,7 +75,7 @@ class PickPlaceBase(RLTaskEnv):
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -80,7 +86,7 @@ class PickPlaceBase(RLTaskEnv):
                 name="traj_marker_1",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -91,7 +97,7 @@ class PickPlaceBase(RLTaskEnv):
                 name="traj_marker_2",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -102,7 +108,7 @@ class PickPlaceBase(RLTaskEnv):
                 name="traj_marker_3",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -113,7 +119,7 @@ class PickPlaceBase(RLTaskEnv):
                 name="traj_marker_4",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -132,7 +138,7 @@ class PickPlaceBase(RLTaskEnv):
     def __init__(self, scenario, device=None):
         self.robot_name = self.scenario.robots[0].name
         self._last_action = None
-        self._action_scale = DEFAULT_CONFIG.get("action_scale", 0.04)
+        self._action_scale = self.DEFAULT_CONFIG.get("action_scale", 0.04)
         self.num_envs = scenario.num_envs
 
         self._pre_init_trajectory_tracking(scenario, device)
@@ -146,15 +152,15 @@ class PickPlaceBase(RLTaskEnv):
             self._reward_trajectory_tracking,
         ]
         self.reward_weights = [
-            DEFAULT_CONFIG["reward_config"]["scales"]["gripper_approach"],
-            DEFAULT_CONFIG["reward_config"]["scales"]["gripper_close"],
-            DEFAULT_CONFIG["reward_config"]["scales"]["robot_target_qpos"],
+            self.DEFAULT_CONFIG["reward_config"]["scales"]["gripper_approach"],
+            self.DEFAULT_CONFIG["reward_config"]["scales"]["gripper_close"],
+            self.DEFAULT_CONFIG["reward_config"]["scales"]["robot_target_qpos"],
             1.0,
         ]
 
     def _pre_init_trajectory_tracking(self, scenario, device):
         """Pre-initialize trajectory tracking (before super().__init__())."""
-        traj_config = DEFAULT_CONFIG["trajectory_tracking"]
+        traj_config = self.DEFAULT_CONFIG["trajectory_tracking"]
 
         if device is None:
             device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -173,8 +179,8 @@ class PickPlaceBase(RLTaskEnv):
 
         self.object_grasped = torch.zeros(self._traj_num_envs, dtype=torch.bool, device=self._traj_device)
 
-        self.w_tracking_approach = DEFAULT_CONFIG["reward_config"]["scales"]["tracking_approach"]
-        self.w_tracking_progress = DEFAULT_CONFIG["reward_config"]["scales"]["tracking_progress"]
+        self.w_tracking_approach = self.DEFAULT_CONFIG["reward_config"]["scales"]["tracking_approach"]
+        self.w_tracking_progress = self.DEFAULT_CONFIG["reward_config"]["scales"]["tracking_progress"]
 
     def _complete_trajectory_tracking_init(self, device):
         """Complete trajectory tracking initialization (after super().__init__())."""
@@ -201,7 +207,7 @@ class PickPlaceBase(RLTaskEnv):
 
         states = deepcopy(states)
 
-        rand_config = DEFAULT_CONFIG["randomization"]
+        rand_config = self.DEFAULT_CONFIG["randomization"]
 
         initial_states_list = self._get_initial_states()
         box_center = initial_states_list[0]["objects"]["object"]["pos"]
@@ -227,10 +233,10 @@ class PickPlaceBase(RLTaskEnv):
         zero_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         states.objects["object"].root_state = torch.cat([box_pos, box_quat, zero_vel, zero_ang_vel], dim=-1)
 
-        # Keep table in place (no randomization)
-        table_pos = states.objects["table"].root_state[:, 0:3].clone()
-        table_quat = states.objects["table"].root_state[:, 3:7].clone()
-        states.objects["table"].root_state = torch.cat([table_pos, table_quat, zero_vel, zero_ang_vel], dim=-1)
+        # Keep obstacle in place (no randomization)
+        obstacle_pos = states.objects[self.obstacle_name].root_state[:, 0:3].clone()
+        obstacle_quat = states.objects[self.obstacle_name].root_state[:, 3:7].clone()
+        states.objects[self.obstacle_name].root_state = torch.cat([obstacle_pos, obstacle_quat, zero_vel, zero_ang_vel], dim=-1)
 
         marker_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).expand(self.num_envs, -1)
 
@@ -588,3 +594,69 @@ class PickPlaceBase(RLTaskEnv):
         ee_quat_world = hand_quat  # (B, 4) wxyz
 
         return ee_pos_world, ee_quat_world
+
+
+@register_task("pick_place.base", "pick_place_base")
+class PickPlaceBase(TrajectoryTrackingTaskBase):
+    """Pick up a box with the robot gripper over a table.
+
+    This is a concrete implementation of the base task for demonstration purposes.
+    """
+
+    def _get_initial_states(self) -> list[dict] | None:
+        """Get initial states for all environments."""
+        init = [
+            {
+                "objects": {
+                    "object": {
+                        "pos": torch.tensor([0.654277, -0.345737, 0.020000]),
+                        "rot": torch.tensor([0.706448, -0.031607, 0.706347, 0.031698]),
+                    },
+                    "table": {
+                        "pos": torch.tensor([0.499529, 0.253941, 0.200000]),
+                        "rot": torch.tensor([0.999067, -0.000006, 0.000009, 0.043198]),
+                    },
+                    # Trajectory waypoints (world coordinates)
+                    "traj_marker_0": {
+                        "pos": torch.tensor([0.610000, -0.280000, 0.150000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "traj_marker_1": {
+                        "pos": torch.tensor([0.600000, -0.190000, 0.220000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "traj_marker_2": {
+                        "pos": torch.tensor([0.560000, -0.110000, 0.360000]),
+                        "rot": torch.tensor([0.998750, 0.000000, 0.049979, -0.000000]),
+                    },
+                    "traj_marker_3": {
+                        "pos": torch.tensor([0.530000, 0.010000, 0.470000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "traj_marker_4": {
+                        "pos": torch.tensor([0.510000, 0.130000, 0.460000]),
+                        "rot": torch.tensor([0.984726, 0.000000, 0.174108, -0.000000]),
+                    },
+                },
+                "robots": {
+                    "franka": {
+                        "pos": torch.tensor([-0.025, -0.160, 0.018054]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        "dof_pos": {
+                            "panda_finger_joint1": 0.04,
+                            "panda_finger_joint2": 0.04,
+                            "panda_joint1": 0.0,
+                            "panda_joint2": -0.785398,
+                            "panda_joint3": 0.0,
+                            "panda_joint4": -2.356194,
+                            "panda_joint5": 0.0,
+                            "panda_joint6": 1.570796,
+                            "panda_joint7": 0.785398,
+                        },
+                    },
+                },
+            }
+            for _ in range(self.num_envs)
+        ]
+
+        return init
