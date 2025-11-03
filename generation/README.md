@@ -1,4 +1,4 @@
-# Generation
+# EmbodiedGen for 3D Asset and Scene Generation
 
 [![GitHub](https://img.shields.io/badge/-GitHub-black?logo=github)](https://github.com/HorizonRobotics/EmbodiedGen)
 [![🤗 Hugging Face](https://img.shields.io/badge/🤗-Image_to_3D_Demo-blue)](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Image-to-3D)
