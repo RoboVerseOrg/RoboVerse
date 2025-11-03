@@ -7,6 +7,10 @@ import time
 from datetime import datetime
 from typing import Literal
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
 import cv2
 import pygame
 import rootutils
@@ -397,7 +401,7 @@ class Args:
     render: RenderCfg = RenderCfg()
 
     ## Simulator
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     num_envs: int = 1

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<mujoco model="visual_only_sphere">
+  <asset>
+    <material name="red" rgba="1.0 0.0 0.0 1.0"/>
+    <material name="orange" rgba="1.0 0.5 0.0 1.0"/>
+    <material name="yellow" rgba="1.0 1.0 0.0 1.0"/>
+    <material name="light_green" rgba="0.5 1.0 0.0 1.0"/>
+    <material name="green" rgba="0.0 1.0 0.0 1.0"/>
+  </asset>
+
+  <worldbody>
+    <body name="base_link">
+      <geom name="visual_sphere" type="sphere" size="0.05"
+            material="red" contype="0" conaffinity="0" group="0"/>
+      <inertial pos="0 0 0" mass="0.01" diaginertia="0.00001 0.00001 0.00001"/>
+    </body>
+  </worldbody>
+</mujoco>

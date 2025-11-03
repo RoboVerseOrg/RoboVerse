@@ -2,6 +2,39 @@
 
 A comprehensive workflow for training Vision-Language-Action (VLA) models using RoboVerse robotic manipulation data.
 
+## Quick Start (Automated)
+
+### One-time Setup
+```bash
+# Install both RLDS and OpenVLA environments automatically
+cd roboverse_learn/vla/OpenVLA
+bash setup_env.sh
+```
+
+### Collect Demonstration Data
+```bash
+# Collect demos first (run from RoboVerse root)
+python scripts/advanced/collect_demo.py --sim=mujoco --task=pick_butter --headless --run_all
+```
+
+### Train Model
+```bash
+cd roboverse_learn/vla/OpenVLA
+
+# Convert to RLDS and fine-tune
+bash run_pipeline.sh
+
+# Skip RLDS conversion if dataset already exists
+bash run_pipeline.sh --skip-convert
+```
+
+### Evaluate Trained Model
+```bash
+cd roboverse_learn/vla/OpenVLA
+conda activate openvla
+python eval.py --model_path runs/<checkpoint> --task pick_butter
+```
+
 ## Supported VLA Models
 
 This folder contains implementations for multiple VLA architectures:
@@ -14,7 +47,21 @@ Each model has its own subdirectory with specific training and evaluation script
 
 
 
-## Workflow
+## OpenVLA Scripts
+
+All OpenVLA automation scripts are in the `OpenVLA/` directory. See [`OpenVLA/README.md`](OpenVLA/README.md) for details.
+
+**OpenVLA/setup_env.sh** - Sets up `rlds_env` (data conversion) and `openvla` (training/eval) environments
+
+**OpenVLA/run_pipeline.sh** - RLDS conversion + fine-tuning for `pick_butter` task
+  - Prerequisite: Collect demos first with `collect_demo.py`
+  - Args: `--skip-convert`
+
+**OpenVLA/finetune.sh** - LoRA fine-tuning with configurable hyperparameters
+
+**OpenVLA/eval.py** - Model evaluation script
+
+## Workflow (Manual Steps)
 
 ### Step 1: Collect Demonstration Trajectories
 
@@ -134,9 +181,9 @@ Raw Trajectories → Standardized Format → Trained Model → Performance Metri
 
 ### OpenVLA (this workflow)
 ```bash
-# See sections above for full workflow
-bash finetune_roboverse.sh
-python vla_eval.py --model_path <checkpoint> --task pick_butter
+cd OpenVLA
+bash run_pipeline.sh
+python eval.py --model_path runs/<checkpoint> --task pick_butter
 ```
 
 ### SmolVLA (lightweight alternative)

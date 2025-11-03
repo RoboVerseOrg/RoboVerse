@@ -1,12 +1,74 @@
 # OpenVLA
 
-OpenVLA is the first open-source 7B Vision-Language-Action model, which was built upon Prismatic VLM. RLDS is the mainstream data format for VLAs. To finetune RoboVerse data on OpenVLA, you need to convert the RoboVerse data to RLDS format. The following steps will guide you through the whole finetuning process.
+OpenVLA is the first open-source 7B Vision-Language-Action model, which was built upon Prismatic VLM. RLDS is the mainstream data format for VLAs. To finetune RoboVerse data on OpenVLA, you need to convert the RoboVerse data to RLDS format. 
 
-## RoboVerse VLA Training Pipeline
+We provide automated scripts to streamline the entire training pipeline. This guide covers both the **Quick Start** approach using automated scripts and detailed **Manual Steps** for advanced users.
 
-This README describes how to train Vision-Language-Action (VLA) models on RoboVerse robotic manipulation data using the OpenVLA framework.
+## Quick Start (Automated Pipeline)
 
-The pipeline consists of four stages:
+### 1. Setup (one-time)
+
+```bash
+cd roboverse_learn/vla/OpenVLA
+bash setup_env.sh
+```
+
+This creates `rlds_env` and `openvla` conda environments with all dependencies.
+
+### 2. Collect Demos
+
+```bash
+cd ../../../../  # Go to RoboVerse root
+python scripts/advanced/collect_demo.py --sim=mujoco --task=pick_butter --headless --run_all
+```
+
+**Output:** `roboverse_demo/demo_mujoco/pick_butter-/`
+
+### 3. Train
+
+```bash
+cd roboverse_learn/vla/OpenVLA
+
+# Convert to RLDS + fine-tune
+bash run_pipeline.sh
+
+# Skip conversion if dataset already exists
+bash run_pipeline.sh --skip-convert
+```
+
+**Output:** 
+- `runs/` - Model checkpoints
+- `adapters/` - LoRA adapter weights
+
+### 4. Evaluate
+
+```bash
+conda activate openvla
+python eval.py --model_path runs/<checkpoint> --task pick_butter
+```
+
+### Configuration
+
+Edit `finetune.sh` to customize training parameters:
+
+```bash
+LORA_RANK=32
+BATCH_SIZE=8
+LEARNING_RATE=5e-4
+MAX_STEPS=5000
+CUDA_VISIBLE_DEVICES=0
+```
+
+**Notes:**
+- Set `HF_TOKEN` if downloading OpenVLA weights: `export HF_TOKEN=your_token`
+- Change `TASK_NAME` in `run_pipeline.sh` for different tasks
+- **WandB**: Login with `wandb login` to enable logging, or set `USE_WANDB=false` in `finetune.sh` to disable
+
+---
+
+## Manual Pipeline (Detailed Steps)
+
+For users who need fine-grained control or want to understand each step, the pipeline consists of four stages:
 
 **Demo Collection → RLDS Conversion → VLA Fine-tuning → Evaluation**
 

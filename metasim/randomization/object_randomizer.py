@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 from typing import Any, Literal
 
 import torch
@@ -104,18 +103,12 @@ class ObjectRandomizer(BaseRandomizerType):
     """
 
     def __init__(self, cfg: ObjectRandomCfg, seed: int | None = None):
-        super().__init__()
         self.cfg = cfg
+        super().__init__(seed=seed)
 
-        # Set up reproducible random state
-        if seed is not None:
-            # Use provided seed + simple string-to-number conversion for uniqueness
-            name_sum = sum(ord(c) for c in cfg.obj_name)
-            self._seed = seed + name_sum
-        else:
-            self._seed = random.randint(0, 2**32 - 1)
-
-        self._rng = random.Random(self._seed)
+    def set_seed(self, seed: int | None) -> None:
+        """Set or update RNG seed."""
+        super().set_seed(seed)
 
     def _generate_random_tensor(
         self, shape: tuple[int, ...], distribution: str, range_vals: tuple[float, float]

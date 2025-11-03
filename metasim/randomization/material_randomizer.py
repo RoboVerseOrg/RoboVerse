@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import os
-import random
 from typing import Any, Literal
 
 import torch
@@ -212,20 +211,16 @@ class MaterialRandomizer(BaseRandomizerType):
     """
 
     def __init__(self, cfg: MaterialRandomCfg, seed: int | None = None):
-        super().__init__()
         self.cfg = cfg
         self._mdl_selection_state = {"sequential_index": 0}
+        super().__init__(seed=seed)
 
-        # Set up reproducible random state - simple and direct
-        if seed is not None:
-            # Use provided seed + simple string-to-number conversion for uniqueness
-            name_sum = sum(ord(c) for c in cfg.obj_name)
-            self._seed = seed + name_sum
-        else:
-            self._seed = random.randint(0, 2**32 - 1)
-
-        self._rng = random.Random(self._seed)
         logger.debug(f"MaterialRandomizer for '{cfg.obj_name}' using seed {self._seed}")
+
+    def set_seed(self, seed: int | None) -> None:
+        """Set or update RNG seed."""
+        super().set_seed(seed)
+        self._mdl_selection_state["sequential_index"] = 0
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""

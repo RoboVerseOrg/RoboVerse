@@ -117,20 +117,6 @@ class SceneRandomizer(BaseRandomizerType):
             cfg: Scene randomization configuration
             seed: Random seed for reproducibility
         """
-        super().__init__()
-        self.cfg = cfg
-        self._seed = seed
-
-        # Initialize random number generator
-        if seed is not None:
-            import random
-
-            self._rng = random.Random(seed)
-        else:
-            import random
-
-            self._rng = random.Random()
-
         # Initialize material selection state for sequential selection
         self._material_selection_state = {
             "floor_index": 0,
@@ -142,7 +128,17 @@ class SceneRandomizer(BaseRandomizerType):
         # Track created prims to avoid recreating
         self._created_prims = set()
 
+        self.cfg = cfg
+        super().__init__(seed=seed)
+
         logger.debug(f"SceneRandomizer initialized with seed {self._seed}")
+
+    def set_seed(self, seed: int | None) -> None:
+        """Set seed and reset sequential selection state."""
+        super().set_seed(seed)
+        # Reset sequential indices so repeated seeding reproduces selections
+        for key in self._material_selection_state:
+            self._material_selection_state[key] = 0
 
     def bind_handler(self, handler):
         """Bind the scene randomizer to a simulation handler.
@@ -168,7 +164,8 @@ class SceneRandomizer(BaseRandomizerType):
                 logger.info("Predefined scene detected, SceneRandomizer will skip geometry creation")
                 return True
             else:
-                logger.error("Predefined scene is None")
+                logger.debug("No predefined scene provided; SceneRandomizer will create geometry")
+
                 return False
         return False
 
@@ -621,6 +618,7 @@ class SceneRandomizer(BaseRandomizerType):
             dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
             logger.debug(f"Applied material to mesh {mesh_path}")
 
+        self._sync_material_application()
         logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
 
         # except Exception as e:
@@ -645,6 +643,34 @@ class SceneRandomizer(BaseRandomizerType):
         # This would require detecting existing scene elements
         # For now, we skip this in favor of explicit material randomization
         pass
+
+    def _sync_material_application(self):
+        """Flush material compilation to ensure deterministic appearance."""
+        try:
+            import omni.kit.material.library as matlib
+
+            wait_fn = getattr(matlib, "wait_for_pending_refreshes", None)
+            if callable(wait_fn):
+                wait_fn()
+            else:
+                get_instance = getattr(matlib, "get_instance", None)
+                if callable(get_instance):
+                    get_instance().wait_for_pending_refreshes()
+                else:
+                    logger.debug("Material library has no wait_for_pending_refreshes API")
+        except ImportError:
+            logger.debug("Omniverse material library not available; skipping wait_for_pending_refreshes")
+        except Exception as err:
+            logger.warning(f"Failed to wait for material refreshes: {err}")
+
+        try:
+            from omni.kit.async_engine import get_async_engine
+
+            get_async_engine().wait_for_tasks()
+        except ImportError:
+            logger.debug("Omniverse async engine not available; skipping wait_for_tasks")
+        except Exception as err:
+            logger.warning(f"Failed to wait for async tasks: {err}")
 
     def get_scene_properties(self) -> dict:
         """Get current scene properties.

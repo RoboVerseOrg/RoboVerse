@@ -11,7 +11,7 @@ tfds.core.utils.gcs_utils._is_gcs_disabled = True
 os.environ["NO_GCE_CHECK"] = "true"
 
 
-class BridgeOrigDataset(tfds.core.GeneratorBasedBuilder):
+class BridgeOrig(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder for Bridge V2 format demos (mp4 + metadata)."""
 
     VERSION = tfds.core.Version("1.0.0")
@@ -36,6 +36,9 @@ class BridgeOrigDataset(tfds.core.GeneratorBasedBuilder):
                                     ),
                                     "image_1": tfds.features.Image(
                                         shape=(256, 256, 3), dtype=np.uint8, doc="Secondary RGB image (H,W,3)."
+                                    ),
+                                    "state": tfds.features.Tensor(
+                                        shape=(7,), dtype=np.float32, doc="Full state (6 dims EEF + 1 dim gripper)."
                                     ),
                                     "EEF_state": tfds.features.Tensor(
                                         shape=(6,), dtype=np.float32, doc="End-effector state (6 dims: xyz + rpy)."
@@ -207,6 +210,7 @@ class BridgeOrigDataset(tfds.core.GeneratorBasedBuilder):
                     "observation": {
                         "image_0": rgb,  # Primary camera
                         "image_1": rgb,  # Secondary camera (same as primary)
+                        "state": state_t,  # Full state (7 dims: EEF + gripper) for bridge_orig_dataset_transform
                         "EEF_state": eef_state_t,
                         "gripper_state": gripper_state_t,
                     },
