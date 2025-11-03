@@ -109,7 +109,7 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
                 default_position=[0, 0, 0],
                 default_orientation=[1, 0, 0, 0],
                 fix_base_link=True,
-                urdf_path="roboverse_data/assets/calvin/calvin_table_C/urdf/calvin_table_D.urdf",
+                urdf_path="roboverse_data/assets/calvin/calvin_table_D/urdf/calvin_table_D.urdf",
                 extra_resources=[
                     # dark_wood__black_handle.png
                     # dark_wood__gray_handle.png
