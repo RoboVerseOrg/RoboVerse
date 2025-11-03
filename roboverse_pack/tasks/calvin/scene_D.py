@@ -168,6 +168,4 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
         ]
         super().__init__(*args, **kwargs)
 
-    traj_filepath = (
-        "roboverse_data/trajs/calvin/env_D_out/episode_chunk_15_358482_361252/trajectory_env_D_2205_v2.pkl"
-    )
+    traj_filepath = "roboverse_data/trajs/calvin/env_D_out/episode_chunk_15_358482_361252/trajectory_env_D_2205_v2.pkl"
