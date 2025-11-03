@@ -40,7 +40,7 @@ if __name__ == "__main__":
     class Args:
         """Arguments for the static scene."""
 
-        robot: str = "franka"
+        robot: str = "vega"
 
         ## Handlers
         sim: Literal[
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             "sapien2",
             "sapien3",
             "mujoco",
-        ] = "mujoco"
+        ] = "isaacsim"
 
         ## Others
         num_envs: int = 1
@@ -96,13 +96,6 @@ if __name__ == "__main__":
             urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
             mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        ArticulationObjCfg(
-            name="box_base",
-            fix_base_link=True,
-            usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
-            urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
-            mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
-        ),
     ]
 
     log.info(f"Using simulator: {args.sim}")
@@ -112,37 +105,79 @@ if __name__ == "__main__":
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.3, -0.2, 0.05]),
+                    "pos": torch.tensor([0.6, -0.2, 0.05]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 "sphere": {
-                    "pos": torch.tensor([0.4, -0.6, 0.05]),
+                    "pos": torch.tensor([0.4, -0.2, 0.05]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 "bbq_sauce": {
                     "pos": torch.tensor([0.7, -0.3, 0.14]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
-                "box_base": {
-                    "pos": torch.tensor([0.5, 0.2, 0.1]),
-                    "rot": torch.tensor([0.0, 0.7071, 0.0, 0.7071]),
-                    "dof_pos": {"box_joint": 0.0},
-                },
+
             },
             "robots": {
-                "franka": {
+                "vega": {
                     "pos": torch.tensor([0.0, 0.0, 0.0]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "panda_joint1": 0.0,
-                        "panda_joint2": -0.785398,
-                        "panda_joint3": 0.0,
-                        "panda_joint4": -2.356194,
-                        "panda_joint5": 0.0,
-                        "panda_joint6": 1.570796,
-                        "panda_joint7": 0.785398,
-                        "panda_finger_joint1": 0.04,
-                        "panda_finger_joint2": 0.04,
+                        # Base wheels - neutral
+                        "B_wheel_j1": 0.0,
+                        "B_wheel_j2": 0.0,
+                        "R_wheel_j1": 0.0,
+                        "R_wheel_j2": 0.0,
+                        "L_wheel_j1": 0.0,
+                        "L_wheel_j2": 0.0,
+                        # Torso - upright
+                        "torso_j1": 0.0,
+                        "torso_j2": 0.0,
+                        "torso_j3": 0.0,
+                        # # Head - forward looking
+                        # "head_j1": 0.0,
+                        # "head_j2": 0.0,
+                        # "head_j3": 0.0,
+                        # Left arm - neutral pose
+                        "L_arm_j1": 0.0,
+                        "L_arm_j2": 0.0,
+                        "L_arm_j3": 0.0,
+                        "L_arm_j4": 0.0,
+                        "L_arm_j5": 0.0,
+                        "L_arm_j6": 0.0,
+                        "L_arm_j7": 0.0,
+                        # Right arm - neutral pose
+                        "R_arm_j1": 0.0,
+                        "R_arm_j2": 0.0,
+                        "R_arm_j3": 0.0,
+                        "R_arm_j4": 0.0,
+                        "R_arm_j5": 0.0,
+                        "R_arm_j6": 0.0,
+                        "R_arm_j7": 0.0,
+                        # Left hand - open
+                        "L_th_j0": 0.0,
+                        "L_th_j1": 0.0,
+                        "L_th_j2": 0.0,
+                        "L_ff_j1": 0.0,
+                        "L_ff_j2": 0.0,
+                        "L_mf_j1": 0.0,
+                        "L_mf_j2": 0.0,
+                        "L_rf_j1": 0.0,
+                        "L_rf_j2": 0.0,
+                        "L_lf_j1": 0.0,
+                        "L_lf_j2": 0.0,
+                        # Right hand - open
+                        "R_th_j0": 0.0,
+                        "R_th_j1": 0.0,
+                        "R_th_j2": 0.0,
+                        "R_ff_j1": 0.0,
+                        "R_ff_j2": 0.0,
+                        "R_mf_j1": 0.0,
+                        "R_mf_j2": 0.0,
+                        "R_rf_j1": 0.0,
+                        "R_rf_j2": 0.0,
+                        "R_lf_j1": 0.0,
+                        "R_lf_j2": 0.0,
                     },
                 },
             },
@@ -165,9 +200,9 @@ if __name__ == "__main__":
                 robot.name: {
                     "dof_pos_target": {
                         joint_name: (
-                            torch.rand(1).item()
+                            torch.rand(1).item()*0.5
                             * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
-                            + robot.joint_limits[joint_name][0]
+                            + robot.joint_limits[joint_name][0]*0.5
                         )
                         for joint_name in robot.joint_limits.keys()
                     }
