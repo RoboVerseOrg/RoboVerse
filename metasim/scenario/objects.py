@@ -38,6 +38,9 @@ class _FileBasedMixin:
     isaacgym_read_mjcf: bool = False
     """By default, Isaac Gym will read from URDF files. If this is set to True, Isaac Gym will read from MJCF files."""
 
+    extra_resources: list[str] = []
+    """Extra resources to load for the object. This is used to load additional resources for the object, such as textures, materials, etc."""
+
     def __post_init__(self):
         super().__post_init__()
 

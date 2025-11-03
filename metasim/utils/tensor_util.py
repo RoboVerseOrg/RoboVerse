@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import torch
 
 
@@ -24,3 +25,18 @@ def tensor_to_cpu(data: dict | list) -> dict | list:
         for i, v in enumerate(data):
             data[i] = v.cpu() if isinstance(v, torch.Tensor) else tensor_to_cpu(v)
     return data
+
+
+def array_to_tensor(data, device: torch.device | str | None = None) -> torch.Tensor:
+    """Convert a NumPy array or list to a PyTorch tensor on the specified device."""
+    if isinstance(data, torch.Tensor):
+        tensor = data
+    elif isinstance(data, list):
+        tensor = torch.tensor(data, dtype=torch.float32)
+    elif isinstance(data, np.ndarray):
+        tensor = torch.from_numpy(data)
+    else:
+        raise ValueError("Input data must be a list, NumPy array, or PyTorch tensor.")
+    if device is not None:
+        tensor = tensor.to(device)
+    return tensor

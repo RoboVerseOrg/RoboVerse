@@ -48,6 +48,7 @@ def get_traj_v2(traj_filepath, robot: RobotCfg):
         raise ValueError("No init_state found in the trajectory data")
     for demo_idx, init_state in enumerate(init_states):
         for obj_name in init_state:
+            # import ipdb; ipdb.set_trace()
             init_states[demo_idx][obj_name]["pos"] = torch.tensor(init_states[demo_idx][obj_name]["pos"])
             init_states[demo_idx][obj_name]["rot"] = torch.tensor(init_states[demo_idx][obj_name]["rot"])
 

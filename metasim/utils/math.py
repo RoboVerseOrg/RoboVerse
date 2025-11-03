@@ -12,6 +12,7 @@ import math
 from typing import Literal
 
 import numpy as np
+import quaternion
 import torch
 import torch.nn.functional
 
@@ -1580,3 +1581,12 @@ def sample_int_from_float(x):
     if int(x) == x:
         return int(x)
     return int(x) if np.random.rand() < (x - int(x)) else int(x) + 1
+
+
+def angle_between_quaternions(q1, q2):
+    """Returns the minimum rotation angle between to orientations expressed as quaternions quaternions use W,X,Y,Z convention."""
+    q1 = quaternion.from_float_array(q1)
+    q2 = quaternion.from_float_array(q2)
+
+    theta = 2 * np.arcsin(np.linalg.norm((q1 * q2.conjugate()).vec))
+    return theta
