@@ -162,6 +162,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_sensors()
         self._load_cameras()
         self._load_terrain()
+        self._load_scene()
         self._load_objects()
         self._load_lights()
         self._load_render_settings()
@@ -691,6 +692,95 @@ class IsaacsimHandler(BaseSimHandler):
 
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
+
+    def _load_scene(self) -> None:
+        """Load scene from SceneCfg configuration.
+
+        Loads USD scene files into each environment if scene configuration is provided.
+        Supports position, rotation, and scale transformations.
+        """
+        if self.scenario.scene is None:
+            return
+
+        scene_cfg = self.scenario.scene
+
+        # Only support USD path for now
+        if scene_cfg.usd_path is None:
+            log.warning("Scene USD path is None, skipping scene loading")
+            return
+
+        try:
+            import omni.isaac.core.utils.prims as prim_utils
+        except ModuleNotFoundError:
+            import isaacsim.core.utils.prims as prim_utils
+
+        from pxr import Gf, UsdGeom
+
+        # Get current stage
+        stage = prim_utils.get_current_stage()
+        if not stage:
+            log.error("Failed to get current stage")
+            return
+
+        # Get scene name, default to "scene"
+        scene_name = scene_cfg.name if scene_cfg.name else "scene"
+
+        # Determine scene path pattern for all environments
+        scene_prim_path = f"/World/envs/env_.*/{scene_name}"
+
+        # Get absolute path
+        usd_path = os.path.abspath(scene_cfg.usd_path)
+        if not os.path.exists(usd_path):
+            log.error(f"Scene USD file not found: {usd_path}")
+            return
+
+        # Load scene for source environment (env_0)
+        source_scene_path = f"/World/envs/env_0/{scene_name}"
+
+        # Add USD reference to stage
+        try:
+            from omni.isaac.core.utils.stage import add_reference_to_stage
+
+            add_reference_to_stage(usd_path, source_scene_path)
+        except ImportError:
+            # Fallback: use USD API directly
+            ref_prim = stage.DefinePrim(source_scene_path, "Xform")
+            if not ref_prim:
+                log.error(f"Failed to create prim at {source_scene_path}")
+                return
+            ref_prim.GetReferences().AddReference(usd_path)
+
+        # Apply transformations if specified
+        scene_prim = stage.GetPrimAtPath(source_scene_path)
+        if scene_prim.IsValid():
+            xformable = UsdGeom.Xformable(scene_prim)
+
+            # Clear existing transform operations
+            xformable.ClearXformOpOrder()
+
+            # Apply scale if specified
+            if scene_cfg.scale is not None:
+                scale_op = xformable.AddScaleOp()
+                scale_op.Set(Gf.Vec3d(*scene_cfg.scale))
+
+            # Apply rotation if specified (using quaternion directly)
+            if scene_cfg.quat is not None:
+                # SceneCfg quat format is (w, x, y, z)
+                qw, qx, qy, qz = scene_cfg.quat
+                # USD quaternion format is (real, imag_i, imag_j, imag_k) = (w, x, y, z)
+                # Use Quatf (float) instead of Quatd (double) as USD expects float precision
+                quat_gf = Gf.Quatf(float(qw), float(qx), float(qy), float(qz))
+                # Use orient op to set quaternion rotation directly
+                orient_op = xformable.AddOrientOp()
+                orient_op.Set(quat_gf)
+
+            # Apply fixed position offset if specified
+            if scene_cfg.default_position is not None:
+                translate_op = xformable.AddTranslateOp()
+                translate_op.Set(Gf.Vec3d(*scene_cfg.default_position))
+                log.debug(f"Set scene position offset: {scene_cfg.default_position}")
+
+            log.info(f"Loaded scene from {usd_path} at {source_scene_path}")
 
     def _load_render_settings(self) -> None:
         import carb
