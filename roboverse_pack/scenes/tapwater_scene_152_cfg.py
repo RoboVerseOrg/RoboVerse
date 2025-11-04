@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from metasim.utils.configclass import configclass
 
-from .scene import SceneCfg
+from .base_scene_cfg import SceneCfg
 
 
 @configclass
