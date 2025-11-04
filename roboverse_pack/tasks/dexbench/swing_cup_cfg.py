@@ -22,6 +22,7 @@ from roboverse_pack.robots.franka_allegro_left_cfg import FrankaAllegroHandLeftC
 from roboverse_pack.robots.franka_allegro_right_cfg import FrankaAllegroHandRightCfg
 from roboverse_pack.robots.franka_shadow_left_cfg import FrankaShadowHandLeftCfg
 from roboverse_pack.robots.franka_shadow_right_cfg import FrankaShadowHandRightCfg
+from metasim.randomization.presets.scene_presets import SceneMaterialCollections
 
 from .base_cfg import BaseRLTaskCfg, SimParamCfg
 
@@ -100,16 +101,11 @@ class SwingCupCfg(BaseRLTaskCfg):
     randomization_cfg = {
         "enable_floor": False,
         "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
-        "enable_table": True,
-        "table_cfg" : {
-            "x_pos": 0.0,
-            "y_pos": 0.0,
-            "height": 0.602,
-            "width": 0.602,
-            "depth": 0.602,
-            "thickness": 0.602,
-        },
-        "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+        "material_cfg": {
+            "table": {
+                "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+            },
+        }
     }
 
 

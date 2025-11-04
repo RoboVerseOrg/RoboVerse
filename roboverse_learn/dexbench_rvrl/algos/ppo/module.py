@@ -51,16 +51,25 @@ class ActorCritic(nn.Module):
                 del self.visual_encoder.fc
                 self.visual_encoder.fc = nn.Identity()
                 if self.fix_img_encoder:
+                    self.visual_encoder.eval()
                     for param in self.visual_encoder.parameters():
                         param.requires_grad = False
                 self.transform = make_transform()
             elif self.encoder_type == "dinov3":
+                try:
+                    torch.backends.cuda.sdp_kernel(
+                        enable_flash=True,
+                        enable_mem_efficient=True,
+                        enable_math=True
+                    )
+                except Exception as e:
+                    print("Warning: SDPA kernel setup failed:", e)
                 dino_cfg = model_cfg.get("dinov3", {})
                 model_type = dino_cfg.get("model_type", "vits16")
                 dir_path = dino_cfg.get("dir_path", "roboverse_learn/dexbench_rvrl/pretrained_ckpts/dinov3")
                 ckpt_path = os.path.join(dir_path, f"dinov3_{model_type}_pretrain.pth")
                 self.use_patch_features = dino_cfg.get("use_patch_features", True)
-                REPO_DIR = "/home/ghr/yizhuo/RoboVerse/third_party/dinov3"
+                REPO_DIR = "third_party/dinov3"
                 self.visual_encoder = torch.hub.load(
                     REPO_DIR,
                     f'dinov3_{model_type}',
@@ -69,6 +78,7 @@ class ActorCritic(nn.Module):
                 )
                 self.transform = make_transform
                 if self.fix_img_encoder:
+                    self.visual_encoder.eval()
                     for param in self.visual_encoder.parameters():
                         param.requires_grad = False
                 dummy = torch.randn(1, 3, 224, 224)

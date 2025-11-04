@@ -127,9 +127,10 @@ class LightRandomizer(BaseRandomizerType):
     Supports multiple randomization modes and distributions with reproducible seeding.
     """
 
-    def __init__(self, cfg: LightRandomCfg, seed: int | None = None):
+    def __init__(self, cfg: LightRandomCfg, seed: int | None = None, device: torch.device | str = "cpu"):
         super().__init__()
         self.cfg = cfg
+        self.device = device
 
         # Set up reproducible random state - simple and direct
         if seed is not None:

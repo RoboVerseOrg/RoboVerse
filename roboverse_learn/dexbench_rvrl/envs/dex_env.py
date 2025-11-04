@@ -126,6 +126,7 @@ class DexEnv(BaseVecEnv):
         if randomization_cfg is not None and (args.use_dr or args.use_materials):
             self.domain_randomization_helper = DomainRandomizationHelper(
                 cfg=randomization_cfg,
+                num_envs=self._num_envs,
                 lights=scenario.lights,
                 objects=self.objects,
                 robots=self.robots,
@@ -133,7 +134,9 @@ class DexEnv(BaseVecEnv):
                 handler=self.handler,
                 env_spacing=scenario.env_spacing,
                 seed=args.seed,
+                device=self.sim_device,
             )
+        self.global_step_count = 0
             
 
         self.init_states = [copy.deepcopy(self.task.init_states) for _ in range(self.num_envs)]
@@ -203,9 +206,9 @@ class DexEnv(BaseVecEnv):
     def reset(self):
         """Reset the environment."""
         env_ids = list(range(self.num_envs))
-        if self.domain_randomization_helper is not None and (self.use_dr or self.use_materials):
-            self.domain_randomization_helper.randomiation(env_ids=env_ids)
         self.handler.set_states(self.init_states_tensor, env_ids=env_ids)
+        if self.domain_randomization_helper is not None and (self.use_dr or self.use_materials):
+            self.domain_randomization_helper.randomization(env_ids=env_ids, step_count=self.global_step_count)
         self.handler.refresh_render()
         obs = self.handler.get_states()
         self.task.update_state(obs)
@@ -327,6 +330,8 @@ class DexEnv(BaseVecEnv):
 
         info["success_rate"] = torch.tensor([success_rate], dtype=torch.float32, device=self.sim_device)
         info["total_succ_rate"] = torch.tensor([self.mean_success_rate], dtype=torch.float32, device=self.sim_device)
+        
+        self.global_step_count += 1
 
         return observations, rewards, dones, dones, info
 
@@ -338,9 +343,9 @@ class DexEnv(BaseVecEnv):
         self.episode_reset[env_ids] = 0
         reset_states = self.task.reset_init_pose_fn(self.init_states_tensor, env_ids=env_ids)
         self.reset_goal_pose(env_ids)
-        if self.domain_randomization_helper is not None and self.use_dr:
-            self.domain_randomization_helper.randomiation(env_ids=env_ids.tolist())
         self.handler.set_states(reset_states, env_ids=env_ids.tolist())
+        if self.domain_randomization_helper is not None and self.use_dr:
+            self.domain_randomization_helper.randomization(env_ids=env_ids.tolist(), step_count=self.global_step_count)
         self.handler.refresh_render()
         env_states = self.handler.get_states()
         return env_states

@@ -22,6 +22,8 @@ from roboverse_pack.robots.franka_allegro_left_cfg import FrankaAllegroHandLeftC
 from roboverse_pack.robots.franka_allegro_right_cfg import FrankaAllegroHandRightCfg
 from roboverse_pack.robots.franka_shadow_left_cfg import FrankaShadowHandLeftCfg
 from roboverse_pack.robots.franka_shadow_right_cfg import FrankaShadowHandRightCfg
+from metasim.randomization.presets.scene_presets import SceneMaterialCollections
+from metasim.randomization.presets.material_presets import MDLCollections
 
 from .base_cfg import BaseRLTaskCfg, SimParamCfg
 
@@ -98,21 +100,34 @@ class TurnButtonCfg(BaseRLTaskCfg):
     randomization_cfg = {
         "enable_floor": True,
         # "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
-        "enable_table": True,
-        "table_cfg" : {
-            "x_pos": 0.0,
-            "y_pos": 0.0,
-            "height": 0.552,
-            "width": 0.52,
-            "depth": 1.02,
-            "thickness": 0.552,
+        "light_randomize_freq": 125,
+        "randomize_cfg": {
+            "dome_light": {
+                "intensity_range": (0.625, 1.6),  
+            },
+            "camera_0": {
+                "randomization_mode": "combined",
+                "position_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
+                "look_at_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
+            }
         },
-        # "table_materials": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
-        # "randomize_cfg": {
-        #     "dome_light": {
-        #     "intensity_range": (0.5, 1.5),  
-        #     },
-        # },
+        "material_cfg": {
+            "table": {
+                "material_path": SceneMaterialCollections.table_materials(),
+            },
+            "button_1": {
+                "metallic_range": (0.0, 1.0),
+                "roughness_range": (0.2, 0.8),
+                "diffuse_color_range": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
+                # "material_path": MDLCollections.metal_materials(),
+            },
+            "button_2": {
+                "metallic_range": (0.0, 1.0),
+                "roughness_range": (0.2, 0.8),
+                "diffuse_color_range": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
+                # "material_path": MDLCollections.metal_materials(),
+            },
+        }
     }
 
     def set_sim_params(self, sim_type=None) -> None:

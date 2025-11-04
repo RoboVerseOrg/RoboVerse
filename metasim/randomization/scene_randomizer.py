@@ -110,7 +110,7 @@ class SceneRandomizer(BaseRandomizerType):
         >>> randomizer()  # Apply randomization
     """
 
-    def __init__(self, cfg: SceneRandomCfg, seed: int | None = None):
+    def __init__(self, cfg: SceneRandomCfg, seed: int | None = None, device: torch.device | str = "cpu"):
         """Initialize scene randomizer.
 
         Args:
@@ -120,6 +120,7 @@ class SceneRandomizer(BaseRandomizerType):
         super().__init__()
         self.cfg = cfg
         self._seed = seed
+        self.device = device
 
         # Initialize random number generator
         if seed is not None:

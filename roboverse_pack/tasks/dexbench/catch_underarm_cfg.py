@@ -131,7 +131,6 @@ class CatchUnderarmCfg(BaseRLTaskCfg):
                     isaacgym_read_mjcf=True,
                     name="right_hand",
                     shadow_hand_wrist_stiffness=8.0 if self.sim == "isaacsim" else 5.0,
-                    arm_orientation_scale=0.15,
                     hand_translation_scale=0.02,
                     hand_orientation_scale=0.25 * torch.pi,
                     arm_controller="ik",
@@ -142,7 +141,6 @@ class CatchUnderarmCfg(BaseRLTaskCfg):
                     isaacgym_read_mjcf=True,
                     name="left_hand",
                     shadow_hand_wrist_stiffness=8.0 if self.sim == "isaacsim" else 5.0,
-                    arm_orientation_scale=0.15,
                     hand_translation_scale=0.02,
                     hand_orientation_scale=0.25 * torch.pi,
                     arm_controller="ik",
@@ -331,7 +329,7 @@ class CatchUnderarmCfg(BaseRLTaskCfg):
             assert hasattr(self, "img_h") and hasattr(self, "img_w"), "Image height and width must be set."
             self.cameras = [
                 PinholeCameraCfg(
-                    name="camera_0", width=self.img_w, height=self.img_h, pos=(0.8, -0.24, 1.4), look_at=(0.0, -0.54, 0.6)
+                    name="camera_0", width=self.img_w, height=self.img_h, pos=(0.8, -0.24, 1.4), look_at=(0.0, -0.54, 0.8)
                 )
             ]
             self.obs_shape["rgb"] = (

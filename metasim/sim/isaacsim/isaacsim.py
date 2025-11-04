@@ -325,6 +325,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
+        
+        self._update_camera_pose()
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
@@ -1195,6 +1197,5 @@ class IsaacsimHandler(BaseSimHandler):
 
     def refresh_render(self) -> None:
         self.scene.update(dt=0)
-        self._update_camera_pose()
         if self.sim.has_gui() or self.sim.has_rtx_sensors():
             self.sim.render()

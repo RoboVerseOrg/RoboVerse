@@ -133,6 +133,8 @@ class CameraRandomCfg:
     env_ids: list[int] | None = None
     position: CameraPositionRandomCfg | None = None
     orientation: CameraOrientationRandomCfg | None = None
+    init_position: torch.Tensor | None = None
+    init_look_at: torch.Tensor | None = None
     look_at: CameraLookAtRandomCfg | None = None
     intrinsics: CameraIntrinsicsRandomCfg | None = None
     image: CameraImageRandomCfg | None = None
@@ -148,7 +150,7 @@ class CameraRandomizer(BaseRandomizerType):
     to provide visual domain randomization for training robust vision models.
     """
 
-    def __init__(self, cfg: CameraRandomCfg, seed: int | None = None):
+    def __init__(self, cfg: CameraRandomCfg, seed: int | None = None, device: torch.device | str = "cpu"):
         """Initialize camera randomizer.
 
         Args:
@@ -157,6 +159,7 @@ class CameraRandomizer(BaseRandomizerType):
         """
         super().__init__()
         self.cfg = cfg
+        self.device = device
 
         # Setup deterministic random number generator
         if seed is not None:
@@ -168,6 +171,8 @@ class CameraRandomizer(BaseRandomizerType):
             self._rng = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu")
 
         self.handler = None
+        self.current_pos = self.cfg.init_position
+        self.current_look_at = self.cfg.init_look_at
 
     def bind_handler(self, handler):
         """Bind simulation handler."""
@@ -215,7 +220,7 @@ class CameraRandomizer(BaseRandomizerType):
     def _get_camera_prim(self):
         """Get camera prim from scene."""
         try:
-            camera_inst = self.handler.scene.sensors[camera.name]
+            camera_inst = self.handler.scene.sensors[self.cfg.camera_name]
             return camera_inst.cfg.prim_path
 
             return None
@@ -249,39 +254,40 @@ class CameraRandomizer(BaseRandomizerType):
 
         try:
             camera_inst = self.handler.scene.sensors[self.cfg.camera_name]
-            current_pos = camera_inst.data.posw[env_ids]
+            original_pos = self.cfg.init_position
 
             if self.cfg.position.use_delta and self.cfg.position.delta_range:
                 # Delta-based micro-adjustment mode (默认)
                 delta_range = self.cfg.position.delta_range
-                dx = self._sample_value(delta_range[0], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
-                dy = self._sample_value(delta_range[1], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
-                dz = self._sample_value(delta_range[2], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
+                dx = self._sample_value(delta_range[0], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
+                dy = self._sample_value(delta_range[1], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
+                dz = self._sample_value(delta_range[2], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
 
                 # Apply delta to current position
-                new_pos = current_pos.clone()
-                new_pos[:, 0] += dx
-                new_pos[:, 1] += dy
-                new_pos[:, 2] += dz
+                new_pos = original_pos.clone()
+                new_pos[env_ids, 0] += dx
+                new_pos[env_ids, 1] += dy
+                new_pos[env_ids, 2] += dz
 
             elif self.cfg.position.position_range:
                 # Absolute positioning mode
                 position_range = self.cfg.position.position_range
-                new_x = self._sample_value(position_range[0], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
-                new_y = self._sample_value(position_range[1], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
-                new_z = self._sample_value(position_range[2], self.cfg.position.distribution, size=len(env_ids)).to(current_pos.device)
+                new_x = self._sample_value(position_range[0], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
+                new_y = self._sample_value(position_range[1], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
+                new_z = self._sample_value(position_range[2], self.cfg.position.distribution, size=len(env_ids)).to(original_pos.device)
                 
-                new_pos = current_pos
-                new_pos[:, 0] = new_x
-                new_pos[:, 1] = new_y
-                new_pos[:, 2] = new_z
+                new_pos = original_pos
+                new_pos[env_ids, 0] = new_x
+                new_pos[env_ids, 1] = new_y
+                new_pos[env_ids, 2] = new_z
 
             else:
                 logger.warning(f"No position range configured for camera '{self.cfg.camera_name}'")
                 return
 
             # Apply new position only, preserving existing rotation
-            camera_inst.set_world_poses(positions=new_pos, env_ids=env_ids, convention='world')
+            camera_inst.set_world_poses(positions=new_pos[env_ids], env_ids=env_ids, convention='world')
+            self.current_pos = new_pos
 
         except Exception as e:
             logger.error(f"Failed to randomize camera position: {e}")
@@ -316,10 +322,8 @@ class CameraRandomizer(BaseRandomizerType):
 
         try:
             camera_inst = self.handler.scene.sensors[self.cfg.camera_name]
-            current_pos = camera_inst.data.posw[env_ids]
-            camera_cfg = self.handler.cameras[self.cfg.camera_name]
-            original_look_at =torch.tensor(camera.look_at, device=self.handler.device).unsqueeze(0)
-            original_look_at = original_look_at.repeat(len(env_ids), 1)
+            current_pos = self.current_pos[env_ids]
+            original_look_at = self.cfg.init_look_at[env_ids]
             
             if self.cfg.look_at.use_spherical and self.cfg.look_at.spherical_range:
                 assert False, "Spherical look-at randomization not implemented yet"

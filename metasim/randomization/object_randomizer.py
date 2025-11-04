@@ -103,9 +103,10 @@ class ObjectRandomizer(BaseRandomizerType):
     - Both can be used together: ObjectRandomizer for mass/pose, MaterialRandomizer for materials
     """
 
-    def __init__(self, cfg: ObjectRandomCfg, seed: int | None = None):
+    def __init__(self, cfg: ObjectRandomCfg, seed: int | None = None, device: torch.device | str = "cpu"):
         super().__init__()
         self.cfg = cfg
+        self.device = device
 
         # Set up reproducible random state
         if seed is not None:

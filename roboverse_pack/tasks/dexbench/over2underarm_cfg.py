@@ -22,6 +22,7 @@ from roboverse_pack.robots.franka_allegro_left_cfg import FrankaAllegroHandLeftC
 from roboverse_pack.robots.franka_allegro_right_cfg import FrankaAllegroHandRightCfg
 from roboverse_pack.robots.franka_shadow_left_cfg import FrankaShadowHandLeftCfg
 from roboverse_pack.robots.franka_shadow_right_cfg import FrankaShadowHandRightCfg
+from metasim.randomization.presets.scene_presets import SceneMaterialCollections
 
 from .base_cfg import BaseRLTaskCfg, SimParamCfg
 

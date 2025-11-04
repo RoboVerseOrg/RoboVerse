@@ -41,7 +41,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 class DomainRandomizationHelper:
     """Helper class for domain randomization tasks."""
-    def __init__(self, cfg, lights, robots, objects, cameras, handler, env_spacing, seed):
+    def __init__(self, cfg, num_envs, lights, robots, objects, cameras, handler, env_spacing, seed, device):
         self.cfg = cfg
         self.lights = lights
         self.robots = robots
@@ -56,6 +56,9 @@ class DomainRandomizationHelper:
         self.randomizer = {}
         self.randomize_cfg = cfg.get("randomize_cfg", {})
         self.material_cfg = cfg.get("material_cfg", {})
+        self.light_randomize_freq = cfg.get("light_randomize_freq", 200)
+        self.env_setting_randomize_freq = cfg.get("env_setting_randomize_freq", 1)
+        self.env_reset_num = np.zeros(num_envs, dtype=np.int32)
         for robot in robots:
             robot_randomize_cfg = self.randomize_cfg.get(robot.name, None)
             if robot_randomize_cfg:
@@ -70,8 +73,40 @@ class DomainRandomizationHelper:
                         rotation_axes=robot_randomize_cfg.get("rotation_axes", (False, False, False)),
                     ),
                     seed=seed,
+                    device=device,
                 )
                 self.randomizer[robot.name].bind_handler(handler)
+            robot_material_cfg = self.material_cfg.get(robot.name, None)
+            if robot_material_cfg:
+                mdl_cfg = None
+                pbr_cfg = None
+                if robot_material_cfg.get("material_path", None):
+                    mdl_cfg = MDLMaterialCfg(mdl_paths=robot_material_cfg["material_path"], enabled=True)
+                else:
+                    pbr_cfg = PBRMaterialCfg(
+                        roughness_range=robot_material_cfg.get("roughness_range", None),
+                        metallic_range=robot_material_cfg.get("metallic_range", None),
+                        diffuse_color_range=robot_material_cfg.get("diffuse_color_range", None),
+                        enabled=True,
+                    )
+                config = MaterialRandomCfg(
+                    obj_name=robot.name,
+                    physical=PhysicalMaterialCfg(
+                        friction_range=robot_material_cfg.get("friction_range", None),
+                        restitution_range=robot_material_cfg.get("restitution_range", None),
+                        enabled=robot_material_cfg.get("randomize_physical", False),
+                    ),
+                    mdl=mdl_cfg if mdl_cfg else None,
+                    pbr=pbr_cfg if pbr_cfg else None,
+                    randomization_mode="combined",
+                )
+                material_randomizer = MaterialRandomizer(
+                    config,
+                    seed=seed,
+                    device=device,
+                )
+                material_randomizer.bind_handler(handler)
+                self.randomizer[f"material_{robot.name}"] = material_randomizer
         for obj in objects:
             obj_randomize_cfg = self.randomize_cfg.get(obj.name, None)
             if obj_randomize_cfg:
@@ -86,6 +121,7 @@ class DomainRandomizationHelper:
                         rotation_axes=obj_randomize_cfg.get("rotation_axes", (False, False, False)),
                     ),
                     seed=seed,
+                    device=device,
                 )
                 self.randomizer[obj.name].bind_handler(handler)
             obj_material_cfg = self.material_cfg.get(obj.name, None)
@@ -115,6 +151,7 @@ class DomainRandomizationHelper:
                 material_randomizer = MaterialRandomizer(
                     config,
                     seed=seed,
+                    device=device,
                 )
                 material_randomizer.bind_handler(handler)
                 self.randomizer[f"material_{obj.name}"] = material_randomizer
@@ -143,6 +180,7 @@ class DomainRandomizationHelper:
                         ),
                     ),
                     seed=seed,
+                    device=device,
                 )
                 light_randomizer.bind_handler(handler)
                 self.randomizer[light.name] = light_randomizer
@@ -159,16 +197,13 @@ class DomainRandomizationHelper:
                             use_delta=True,
                             enabled=camera_randomize_cfg.get("randomize_position", True),
                         ),
-                        orientation=CameraOrientationRandomCfg(
-                            rotation_delta=camera_randomize_cfg.get("orientation_rotation_delta", ((-5, 5), (-5, 5), (-2, 2))),
-                            distribution="uniform",
-                            enabled=camera_randomize_cfg.get("randomize_orientation", True),
-                        ),
+                        init_position=torch.tensor(camera.pos, device=device).unsqueeze(0).repeat(num_envs, 1) + self.handler.scene.env_origins,
                         look_at=CameraLookAtRandomCfg(
                             look_at_delta=camera_randomize_cfg.get("look_at_delta_range", ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05))),
                             use_delta=True,
-                            enabled=camera_randomize_cfg.get("randomize_look_at", False),
+                            enabled=camera_randomize_cfg.get("randomize_look_at", True),
                         ),
+                        init_look_at=torch.tensor(camera.look_at, device=device).unsqueeze(0).repeat(num_envs, 1) + self.handler.scene.env_origins,
                         intrinsics=CameraIntrinsicsRandomCfg(
                             focal_length_range=camera_randomize_cfg.get("focal_length_range", None),
                             horizontal_aperture_range=camera_randomize_cfg.get("horizontal_aperture_range", None),
@@ -180,6 +215,7 @@ class DomainRandomizationHelper:
                         randomization_mode=randomization_mode,
                     ),
                     seed=seed,
+                    device=device,
                 )
                 camera_randomizer.bind_handler(handler)
                 self.randomizer[camera.name] = camera_randomizer
@@ -274,7 +310,7 @@ class DomainRandomizationHelper:
                 only_if_no_scene=True,
             )
 
-            self.scene_randomizer = SceneRandomizer(scene_cfg, seed=self.seed)
+            self.scene_randomizer = SceneRandomizer(scene_cfg, seed=self.seed, device=device)
             self.scene_randomizer.bind_handler(handler)
             log.info("Scene randomizer initialized successfully")
     
@@ -288,20 +324,30 @@ class DomainRandomizationHelper:
             except Exception as e:
                 log.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")
         
-    def randomiation(self, env_ids):
-        for obj in self.objects:
-            if obj.name in self.randomizer:
-                self.randomizer[obj.name](env_ids)
-            if f"material_{obj.name}" in self.randomizer:
-                self.randomizer[f"material_{obj.name}"](env_ids)
-        for robot in self.robots:
-            if robot.name in self.randomizer:
-                self.randomizer[robot.name](env_ids)
-        for light in self.lights:
-            if light.name in self.randomizer:
-                self.randomizer[light.name](env_ids)
-        for camera in self.cameras:
-            if camera.name in self.randomizer:
-                self.randomizer[camera.name](env_ids)(env_ids)
-        if self.scene_randomizer:
-            self.scene_randomizer(env_ids)
+    def randomization(self, env_ids, step_count=0):
+        self.env_reset_num[env_ids] += 1
+        self.env_reset_num[env_ids] = self.env_reset_num[env_ids] % self.env_setting_randomize_freq
+        if np.any(self.env_reset_num[env_ids] == 0):
+            mask = self.env_reset_num[env_ids] == 0
+            env_ids_to_randomize = np.array(env_ids)[mask].tolist()
+            
+            # randomize_envs -> [0, 2]
+            for obj in self.objects:
+                if obj.name in self.randomizer:
+                    self.randomizer[obj.name](env_ids_to_randomize)
+                if f"material_{obj.name}" in self.randomizer:
+                    self.randomizer[f"material_{obj.name}"](env_ids_to_randomize)
+            for robot in self.robots:
+                if robot.name in self.randomizer:
+                    self.randomizer[robot.name](env_ids_to_randomize)
+                if f"material_{robot.name}" in self.randomizer:
+                    self.randomizer[f"material_{robot.name}"](env_ids_to_randomize)
+            for camera in self.cameras:
+                if camera.name in self.randomizer:
+                    self.randomizer[camera.name](env_ids_to_randomize)
+            if self.scene_randomizer:
+                self.scene_randomizer(env_ids_to_randomize)
+        if step_count % self.light_randomize_freq == 0:
+            for light in self.lights:
+                if light.name in self.randomizer:
+                    self.randomizer[light.name]()
