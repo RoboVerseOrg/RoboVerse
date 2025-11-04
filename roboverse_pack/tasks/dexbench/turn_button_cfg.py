@@ -369,14 +369,14 @@ class TurnButtonCfg(BaseRLTaskCfg):
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 f"{self.current_object_type}_1": {
-                    "pos": torch.tensor([0.0, 0.2, 0.655]),
+                    "pos": torch.tensor([0.0, 0.2, 0.6]),
                     "rot": torch.tensor([0, -0.7071, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.5585,  # Initial position of the switch
                     },
                 },
                 f"{self.current_object_type}_2": {
-                    "pos": torch.tensor([0.0, -0.2, 0.655]),
+                    "pos": torch.tensor([0.0, -0.2, 0.6]),
                     "rot": torch.tensor([0, -0.7071, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.5585,  # Initial position of the switch
@@ -815,14 +815,14 @@ def compute_task_reward(
     action_penalty = torch.sum(actions**2, dim=-1)
 
     up_rew = torch.zeros_like(right_hand_reward)
-    up_rew = (1.41 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 50
+    up_rew = (1.3 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 50
 
     reward = right_hand_reward + left_hand_reward + up_rew - action_penalty * action_penalty_scale
 
     # No goal reset
     goal_resets = torch.zeros_like(reset_buf, dtype=torch.float32)
-    success_right = right_object_pos[:, 2] <= 0.698
-    success_left = left_object_pos[:, 2] <= 0.698
+    success_right = right_object_pos[:, 2] <= 0.643
+    success_left = left_object_pos[:, 2] <= 0.643
     
     # reward = torch.where(success_right, reward + reach_goal_bonus // 2, reward)
     # reward = torch.where(success_left, reward + reach_goal_bonus // 2, reward)
