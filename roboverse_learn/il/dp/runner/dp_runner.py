@@ -110,8 +110,8 @@ class DomainRandomizationManager:
             # )
             ## Box
             box_mat_rand = MaterialRandomizer(
-                MaterialPresets.metal_object("box_base", use_mdl=True, randomization_mode="combined"),
-                seed=self.cfg.seed
+                MaterialPresets.mdl_family_object("box_base", family="metal", randomization_mode="combined"),
+                seed=self.cfg.seed,
             )
 
             # for rand in [cube_mat_rand, sphere_mat_rand, box_mat_rand]:
