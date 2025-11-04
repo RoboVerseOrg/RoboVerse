@@ -64,12 +64,12 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
-Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
+Install IsaacSim v5.0.0 (IsaacLab v2.2.0, Recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab221]"
+    uv pip install -e ".[isaacsim]"
     cd third_party
     git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
@@ -82,7 +82,7 @@ Install Isaacsim v4.5.0 (IsaacLab v2.1.1)
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaaclab211]"
+    uv pip install -e ".[isaacsim211]"
     cd third_party
     git clone --depth 1 --branch v2.1.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab211 && cd IsaacLab211
     ./isaaclab.sh -i none
