@@ -135,17 +135,32 @@ class ObsSaver:
 def main():
     task_cls = get_task_class(args.task)
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
-    scenario = task_cls.scenario.update(
-        robots=[args.robot],
-        scene=args.scene,
-        cameras=[camera],
-        # random=args.random,
-        render=args.render,
-        simulator=args.sim,
-        renderer=args.renderer,
-        num_envs=args.num_envs,
-        headless=args.headless,
-    )
+
+    if args.robot == "None":
+        scenario = task_cls.scenario.update(
+            # robots=[args.robot],
+            scene=args.scene,
+            cameras=[camera],
+            # random=args.random,
+            render=args.render,
+            simulator=args.sim,
+            renderer=args.renderer,
+            num_envs=args.num_envs,
+            headless=args.headless,
+        )
+
+    else:
+        scenario = task_cls.scenario.update(
+            robots=[args.robot],
+            scene=args.scene,
+            cameras=[camera],
+            # random=args.random,
+            render=args.render,
+            simulator=args.sim,
+            renderer=args.renderer,
+            num_envs=args.num_envs,
+            headless=args.headless,
+        )
 
     num_envs: int = scenario.num_envs
 

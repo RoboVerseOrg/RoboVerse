@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import torch
 
+from metasim.constants import PhysicStateType
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
-from metasim.types import PhysicStateType
 
 
 @register_task("template.minimal")

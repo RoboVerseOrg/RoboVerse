@@ -257,6 +257,9 @@ class FileDownloader:
         elif self.scenario.simulator in ["mjx"]:
             self._add(obj.mjx_mjcf_path)
 
+        for extra_resource in obj.extra_resources:
+            self._add(extra_resource)
+
     def _add(self, filepath: str):
         self.files_to_download.append(filepath)
 

@@ -38,6 +38,9 @@ class _FileBasedMixin:
     isaacgym_read_mjcf: bool = False
     """By default, Isaac Gym will read from URDF files. If this is set to True, Isaac Gym will read from MJCF files."""
 
+    extra_resources: list[str] = []
+    """Extra resources to load for the object. This is used to load additional resources for the object, such as textures, materials, etc."""
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -152,6 +155,9 @@ class BaseArticulationObjCfg(BaseObjCfg):
 @configclass
 class RigidObjCfg(_FileBasedMixin, BaseRigidObjCfg):
     """Rigid object cfg."""
+
+    collapse_fixed_joints: bool = False
+    """Whether to collapse fixed joints when loading the object. Default is False."""
 
 
 @configclass

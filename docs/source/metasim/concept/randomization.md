@@ -75,7 +75,6 @@ Most examples reference MDL files under `roboverse_data/materials` (a mirror of 
 
 Because bindings happen inside the task, you can hot‑swap randomizers without modifying the low‑level simulator integration.
 
-
 ## Quick Start Demo
 The easiest way to see the system in action is `get_started/12_domain_randomization.py`. Run the script with different levels to watch the progressive randomization pipeline:
 

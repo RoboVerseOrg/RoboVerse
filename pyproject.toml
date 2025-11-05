@@ -16,6 +16,7 @@ dependencies = [
     "tqdm",
     "tyro",
     "portalocker",
+    "numpy-quaternion"
 ]
 
 [project.optional-dependencies]
