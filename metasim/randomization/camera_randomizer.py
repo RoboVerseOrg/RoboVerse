@@ -324,31 +324,41 @@ class CameraRandomizer(BaseRandomizerType):
             logger.warning("Camera randomizer not bound to handler, skipping randomization")
             return
 
+        did_update = False
         try:
             camera_prim = self._get_camera_prim()
             if camera_prim is None:
                 logger.warning(f"Camera '{self.cfg.camera_name}' not found in scene")
                 return
 
-            # Apply randomization based on mode - clean dispatch table
-            mode_dispatch = {
-                "combined": self._randomize_all,
-                "position_only": self._randomize_position,
-                "orientation_only": self._randomize_orientation,
-                "look_at_only": self._randomize_look_at,
-                "intrinsics_only": self._randomize_intrinsics,
-                "image_only": self._randomize_image_properties,
-            }
-
-            randomize_func = mode_dispatch.get(self.cfg.randomization_mode)
-            if randomize_func:
-                randomize_func(camera_prim)
+            mode = self.cfg.randomization_mode
+            if mode == "combined":
+                did_update = self._randomize_all(camera_prim)
+            elif mode == "position_only" and self.cfg.position and self.cfg.position.enabled:
+                self._randomize_position(camera_prim)
+                did_update = True
+            elif mode == "orientation_only" and self.cfg.orientation and self.cfg.orientation.enabled:
+                self._randomize_orientation(camera_prim)
+                did_update = True
+            elif mode == "look_at_only" and self.cfg.look_at and self.cfg.look_at.enabled:
+                self._randomize_look_at(camera_prim)
+                did_update = True
+            elif mode == "intrinsics_only" and self.cfg.intrinsics and self.cfg.intrinsics.enabled:
+                self._randomize_intrinsics(camera_prim)
+                did_update = True
+            elif mode == "image_only" and self.cfg.image and self.cfg.image.enabled:
+                self._randomize_image_properties(camera_prim)
+                did_update = True
             else:
-                logger.warning(f"Unknown randomization mode: {self.cfg.randomization_mode}, using combined")
-                self._randomize_all(camera_prim)
+                if mode != "combined":
+                    logger.warning(f"Unknown or disabled randomization mode '{mode}', applying combined")
+                did_update = self._randomize_all(camera_prim)
 
         except Exception as e:
             logger.error(f"Camera randomization failed for '{self.cfg.camera_name}': {e}")
+        else:
+            if did_update:
+                self._sync_visual_updates()
 
     def _get_camera_prim(self):
         """Get camera prim from scene."""
@@ -373,24 +383,29 @@ class CameraRandomizer(BaseRandomizerType):
             logger.error(f"Error finding camera '{self.cfg.camera_name}': {e}")
             return None
 
-    def _randomize_all(self, camera_prim):
+    def _randomize_all(self, camera_prim) -> bool:
         """Apply all enabled randomization types in proper order to avoid conflicts."""
-        # Apply position first (if enabled)
+        updated = False
+
         if self.cfg.position and self.cfg.position.enabled:
             self._randomize_position(camera_prim)
+            updated = True
 
-        # Apply rotation randomization - choose ONE rotation method to avoid conflicts:
-        # Priority: look_at > orientation (look_at overrides orientation for more predictable behavior)
         if self.cfg.look_at and self.cfg.look_at.enabled:
             self._randomize_look_at(camera_prim)
+            updated = True
         elif self.cfg.orientation and self.cfg.orientation.enabled:
             self._randomize_orientation(camera_prim)
+            updated = True
 
-        # Apply camera properties (independent of transform)
         if self.cfg.intrinsics and self.cfg.intrinsics.enabled:
             self._randomize_intrinsics(camera_prim)
+            updated = True
         if self.cfg.image and self.cfg.image.enabled:
             self._randomize_image_properties(camera_prim)
+            updated = True
+
+        return updated
 
     def _randomize_position(self, camera_prim):
         """Randomize camera position ONLY (independent of orientation)."""

@@ -618,8 +618,18 @@ class ObjectRandomizer(BaseRandomizerType):
 
     def __call__(self) -> None:
         """Execute object randomization based on configuration."""
-        self.randomize_physics()
-        self.randomize_pose()
+        did_update = False
+
+        if self.cfg.physics.enabled:
+            self.randomize_physics()
+            did_update = True
+
+        if self.cfg.pose.enabled:
+            self.randomize_pose()
+            did_update = True
+
+        if did_update:
+            self._sync_visual_updates()
 
     # Getter methods for backward compatibility and debugging
     def get_properties(self) -> dict[str, Any]:

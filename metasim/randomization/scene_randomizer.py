@@ -645,32 +645,8 @@ class SceneRandomizer(BaseRandomizerType):
         pass
 
     def _sync_material_application(self):
-        """Flush material compilation to ensure deterministic appearance."""
-        try:
-            import omni.kit.material.library as matlib
-
-            wait_fn = getattr(matlib, "wait_for_pending_refreshes", None)
-            if callable(wait_fn):
-                wait_fn()
-            else:
-                get_instance = getattr(matlib, "get_instance", None)
-                if callable(get_instance):
-                    get_instance().wait_for_pending_refreshes()
-                else:
-                    logger.debug("Material library has no wait_for_pending_refreshes API")
-        except ImportError:
-            logger.debug("Omniverse material library not available; skipping wait_for_pending_refreshes")
-        except Exception as err:
-            logger.warning(f"Failed to wait for material refreshes: {err}")
-
-        try:
-            from omni.kit.async_engine import get_async_engine
-
-            get_async_engine().wait_for_tasks()
-        except ImportError:
-            logger.debug("Omniverse async engine not available; skipping wait_for_tasks")
-        except Exception as err:
-            logger.warning(f"Failed to wait for async tasks: {err}")
+        """Flush material compilation & rendering so sensors capture the final state."""
+        self._sync_visual_updates(wait_for_materials=True)
 
     def get_scene_properties(self) -> dict:
         """Get current scene properties.
