@@ -66,9 +66,9 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     Returns:
         dict: Dictionary containing the pyroki robot model and solve_ik function.
     """
-    import pyroki as pk
     from yourdfpy import URDF
 
+    import pyroki as pk
     from metasim.utils.hf_util import check_and_download_single
 
     urdf_path = robot_cfg.urdf_path
