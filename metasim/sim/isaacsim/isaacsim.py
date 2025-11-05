@@ -1093,47 +1093,7 @@ class IsaacsimHandler(BaseSimHandler):
         )  # ! critical
         obj_inst.write_data_to_sim()
 
-        # For fix_base_link objects, force sync visual pose to match collision pose
-        # This is necessary because kinematic objects (fix_base_link=True) only update
-        # their physics/collision layer with write_root_pose_to_sim, but not the visual layer
         if object.fix_base_link:
-            try:
-                import omni.isaac.core.utils.prims as prim_utils
-            except ModuleNotFoundError:
-                import isaacsim.core.utils.prims as prim_utils
-
-            from pxr import Gf, UsdGeom
-
-            # Get USD stage
-            stage = prim_utils.get_current_stage()
-
-            # Update visual pose for each environment
-            for i, env_id in enumerate(env_ids):
-                prim_path = f"/World/envs/env_{env_id}/{object.name}"
-                prim = stage.GetPrimAtPath(prim_path)
-
-                if prim.IsValid():
-                    xformable = UsdGeom.Xformable(prim)
-
-                    # Convert torch tensors to numpy
-                    pos_np = pose[i, :3].cpu().numpy()
-                    quat_np = pose[i, 3:7].cpu().numpy()  # w, x, y, z
-
-                    # Create transform matrix from position and quaternion
-                    # Note: pxr quaternion is (real, i, j, k) = (w, x, y, z)
-                    quat_gf = Gf.Quatd(float(quat_np[0]), float(quat_np[1]), float(quat_np[2]), float(quat_np[3]))
-                    rotation_matrix = Gf.Matrix3d(quat_gf)
-                    translation = Gf.Vec3d(float(pos_np[0]), float(pos_np[1]), float(pos_np[2]))
-
-                    # Set transform
-                    transform_matrix = Gf.Matrix4d().SetTranslate(translation) * Gf.Matrix4d().SetRotate(
-                        rotation_matrix
-                    )
-                    xformable.ClearXformOpOrder()
-                    xform_op = xformable.AddTransformOp()
-                    xform_op.Set(transform_matrix)
-
-            # Update object data from simulation to refresh internal state
             obj_inst.update(dt=0.0)
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
