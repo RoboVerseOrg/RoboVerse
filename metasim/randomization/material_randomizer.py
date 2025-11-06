@@ -213,7 +213,9 @@ class MaterialRandomizer(BaseRandomizerType):
     def __init__(self, cfg: MaterialRandomCfg, seed: int | None = None):
         self.cfg = cfg
         self._mdl_selection_state = {"sequential_index": 0}
+        self._torch_generator: torch.Generator | None = None
         super().__init__(seed=seed)
+        self._sync_torch_generator()
 
         logger.debug(f"MaterialRandomizer for '{cfg.obj_name}' using seed {self._seed}")
 
@@ -221,6 +223,7 @@ class MaterialRandomizer(BaseRandomizerType):
         """Set or update RNG seed."""
         super().set_seed(seed)
         self._mdl_selection_state["sequential_index"] = 0
+        self._sync_torch_generator()
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
@@ -277,23 +280,41 @@ class MaterialRandomizer(BaseRandomizerType):
         else:
             raise ValueError(f"Unsupported distribution: {distribution}")
 
+    def _ensure_torch_generator(self) -> torch.Generator:
+        if self._torch_generator is None:
+            self._torch_generator = torch.Generator()
+            if self._seed is not None:
+                self._torch_generator.manual_seed(self._seed)
+            else:
+                self._torch_generator.seed()
+        return self._torch_generator
+
     def _generate_random_tensor(
         self, value_range: tuple[float, float], shape: tuple, distribution: str = "uniform"
     ) -> torch.Tensor:
         """Generate random tensor with specified shape."""
+        generator = self._ensure_torch_generator()
         if distribution == "uniform":
-            return torch.rand(shape) * (value_range[1] - value_range[0]) + value_range[0]
+            return torch.rand(shape, generator=generator) * (value_range[1] - value_range[0]) + value_range[0]
         elif distribution == "log_uniform":
             log_min = torch.log(torch.tensor(value_range[0]))
             log_max = torch.log(torch.tensor(value_range[1]))
-            return torch.exp(torch.rand(shape) * (log_max - log_min) + log_min)
+            return torch.exp(torch.rand(shape, generator=generator) * (log_max - log_min) + log_min)
         elif distribution == "gaussian":
             mean = (value_range[0] + value_range[1]) / 2
             std = (value_range[1] - value_range[0]) / 6
-            values = torch.normal(mean, std, size=shape)
+            values = torch.normal(mean, std, size=shape, generator=generator)
             return torch.clamp(values, value_range[0], value_range[1])
         else:
             raise ValueError(f"Unsupported distribution: {distribution}")
+
+    def _sync_torch_generator(self) -> None:
+        if self._torch_generator is None:
+            self._torch_generator = torch.Generator()
+        if self._seed is not None:
+            self._torch_generator.manual_seed(self._seed)
+        else:
+            self._torch_generator.seed()
 
     def randomize_physical_properties(self) -> None:
         """Randomize physical material properties (friction, restitution)."""
@@ -521,6 +542,9 @@ class MaterialRandomizer(BaseRandomizerType):
             raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
 
         logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+
+        # Ensure downstream sensors observe the updated material deterministically.
+        self._sync_visual_updates(wait_for_materials=True)
 
     def _ensure_uv_for_hierarchy(self, prim, tile_scale: float = 1.0) -> None:
         """Ensure UV coordinates for all meshes in the prim hierarchy.

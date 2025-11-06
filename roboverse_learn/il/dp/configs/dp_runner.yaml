@@ -1,7 +1,7 @@
 defaults:
   - _self_
   - dataset_config: robot_image_dataset
-  - model_config:  ${oc.env:algo_model,DDPM_model}      # diffusion_policy_model/fm_model/DDIM_model
+  - model_config:  ${oc.env:algo_model,ddpm_model}      # diffusion_policy_model/fm_model/DDIM_model
   - eval_config: diffusion_policy_eval
   - train_config: diffusion_policy_train
 

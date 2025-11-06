@@ -38,13 +38,42 @@ Most users never touch the base class directly. Instead, you configure higher le
 
 Each randomizer takes a config dataclass (e.g., `ObjectRandomCfg`) and optional seed. Configs support different distributions (`uniform`, `gaussian`, etc.) and let you scope updates to a subset of environments via `env_ids`.
 
+## Preparing Material Assets
+Most examples reference MDL files under `roboverse_data/materials` (a mirror of NVIDIA Arnold + vMaterials). Download them once before running any scene or material randomizer. The assets live on Hugging Face, so you need a token with at least read access:
+
+1. Install the client and login (one‑time):
+
+   ```bash
+   pip install huggingface_hub
+   huggingface-cli login  # paste your token from https://huggingface.co/settings/tokens
+   ```
+
+2. Pull just the materials subtree into your workspace:
+
+   ```bash
+   python - <<'PY'
+   from huggingface_hub import snapshot_download
+
+   snapshot_download(
+       repo_id="RoboVerseOrg/roboverse_data",
+       repo_type="dataset",
+       local_dir="roboverse_data",
+       allow_patterns=["materials/**"],
+       local_dir_use_symlinks=False,
+   )
+   PY
+   ```
+
+   The command populates `roboverse_data/materials/...` with the MDL + texture files required by `SceneRandomizer` and `MaterialRandomizer`. Expect ~15 GB download.
+
+> **Tip:** If you already keep the full `roboverse_data` dataset synced elsewhere, you can symlink or copy the `materials` folder instead of downloading again.
+
 ### Binding Flow in Tasks
 1. Task instantiates the simulator handler.
 2. Randomizers are created and bound with `randomizer.bind_handler(handler)`.
 3. Randomizers are triggered during reset or at runtime (see `apply_randomization` in the demo).
 
 Because bindings happen inside the task, you can hot‑swap randomizers without modifying the low‑level simulator integration.
-
 
 ## Quick Start Demo
 The easiest way to see the system in action is `get_started/12_domain_randomization.py`. Run the script with different levels to watch the progressive randomization pipeline:
@@ -96,9 +125,9 @@ cube_rand()  # Apply once, repeat as needed
 ```python
 from metasim.randomization import MaterialRandomizer, MaterialPresets
 
-# Swap materials from the MDL wood collection and sync friction
+# Swap materials from the MDL wood collections (Arnold + vMaterials) and sync friction
 cube_mat_rand = MaterialRandomizer(
-    MaterialPresets.wood_object("cube", use_mdl=True, randomization_mode="combined"),
+    MaterialPresets.mdl_family_object("cube", family="wood", randomization_mode="combined"),
     seed=123,
 )
 cube_mat_rand.bind_handler(handler)

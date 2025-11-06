@@ -16,37 +16,41 @@ eval_ckpt_name=100          # Checkpoint epoch to evaluate
 
 ## Seperate training and evaluation
 train_enable=True
-eval_enable=False
+eval_enable=True
 
 ## Choose training or inference algorithm
-algo_choose=0  # 0: DDPM, 1: DDIM, 2: FM  3: Score-based
+algo_choose=0  # 0: DDPM, 1: DDIM, 2: FM UNet 3: FM DiT  4: Score-based 5: VITA
 
 algo_model=""
-eval_path=""
+eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
 case $algo_choose in
     0)
         # DDPM settings
         export algo_model="DDPM_model"
-        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     1)
         # DDIM settings
         export algo_model="DDIM_model"
-        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     2)
         # FM settings
         export algo_model="fm_model"
-        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
         ;;
     3)
+        # FM DiT Settings
+        export algo_model="fm_dit_model"
+        ;;
+    4)
         # Score-based settings
-        export algo_model="Score_model"
-        eval_path="./info/outputs/DP/${task_name}/checkpoints/${eval_ckpt_name}.ckpt"
+        export algo_model="score_model"
+        ;;
+    5)
+        # VITA Settings
+        export algo_model="vita_model"
         ;;
     *)
         echo "Invalid algorithm choice: $algo_choose"
-        echo "Available options: 0 (DDPM), 1 (DDIM), 2 (FM), 3 (Score)"
+        echo "Available options: 0 (DDPM), 1 (DDIM), 2 (FM UNet), 3 (FM DiT), 4 (Score-based), 5 (VITA)"
         exit 1
         ;;
 esac

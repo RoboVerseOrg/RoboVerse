@@ -19,6 +19,7 @@ dependencies = [
     "dataclasses-json",
     "trimesh",
     "scipy",
+    "numpy-quaternion"
 ]
 
 [project.optional-dependencies]

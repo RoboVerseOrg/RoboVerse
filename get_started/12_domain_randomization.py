@@ -261,7 +261,7 @@ def initialize_randomizers(handler, args):
     log.info("-" * 70)
 
     box_mat = MaterialRandomizer(
-        MaterialPresets.wood_object("box_base", use_mdl=True),
+        MaterialPresets.mdl_family_object("box_base", family=("plastic", "paper")),
         seed=args.seed,
     )
     box_mat.bind_handler(handler)

@@ -23,6 +23,7 @@ Guidelines for modifications:
 * Bangjun Wang
 * Chaoyi Xu
 * Chengyang Zhao
+* Dechen Gao
 * Di Fan
 * Dylan Goetting
 * Haoran Lu

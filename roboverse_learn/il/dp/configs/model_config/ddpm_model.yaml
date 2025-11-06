@@ -1,4 +1,4 @@
-_target_: dp.models.Score_unet_image_policy.ScoreMatchingUnetImagePolicy
+_target_: dp.models.ddpm_unet_image_policy.DiffusionUnetImagePolicy
 
 shape_meta: ${shape_meta}
 

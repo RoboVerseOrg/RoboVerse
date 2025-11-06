@@ -110,8 +110,8 @@ class DomainRandomizationManager:
             # )
             ## Box
             box_mat_rand = MaterialRandomizer(
-                MaterialPresets.metal_object("box_base", use_mdl=True, randomization_mode="combined"),
-                seed=self.cfg.seed
+                MaterialPresets.mdl_family_object("box_base", family="metal", randomization_mode="combined"),
+                seed=self.cfg.seed,
             )
 
             # for rand in [cube_mat_rand, sphere_mat_rand, box_mat_rand]:
@@ -542,7 +542,7 @@ class DPRunner(BaseRunner):
                 "No checkpoint found, please provide a valid checkpoint path."
             )
         args.checkpoint_path = checkpoint
-        ckpt_name = args.checkpoint_path.split("/")[-1] + "_" + time_str
+        ckpt_name = args.checkpoint_path.name + "_" + time_str
         ckpt_name = f"{args.task}/{args.algo}/{args.robot}/{ckpt_name}"
         runnerCls = get_runner(args.algo)
         policyRunner: BaseEvalRunner = runnerCls(

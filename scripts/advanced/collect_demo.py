@@ -42,6 +42,8 @@ class Args:
     """Split to collect"""
     cust_name: str | None = None
     """Custom name for the dataset"""
+    custom_save_dir: str | None = None
+    """Custom base path for saving demos. If None, use default structure."""
     scene: str | None = None
     """Scene name"""
     run_all: bool = True
@@ -294,11 +296,11 @@ class DomainRandomizationManager:
         """Get appropriate material configuration based on object type."""
         obj_lower = obj_name.lower()
         if "cube" in obj_lower:
-            return MaterialPresets.metal_object(obj_name, use_mdl=True, randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="metal", randomization_mode="combined")
         elif "sphere" in obj_lower:
             return MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
         else:
-            return MaterialPresets.wood_object(obj_name, use_mdl=True, randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="wood", randomization_mode="combined")
 
     def _setup_physics_randomizers(self, seed: int | None):
         """Setup unified ObjectRandomizers for robots and objects."""
@@ -562,11 +564,11 @@ class DemoCollector:
         self.save_proc.start()
 
         TaskName = args.task
-        if args.cust_name is not None:
-            additional_str = "-" + str(args.cust_name)
+        if args.custom_save_dir:
+            self.base_save_dir = args.custom_save_dir
         else:
-            additional_str = ""
-        self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}-{additional_str}/robot-{args.robot}"
+            additional_str = f"-{args.cust_name}" if args.cust_name else ""
+            self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
 
     def create(self, demo_idx: int, data_dict: dict):
         assert demo_idx not in self.cache
@@ -579,10 +581,11 @@ class DemoCollector:
         assert demo_idx in self.cache
         self.cache[demo_idx].append(deepcopy(tensor_to_cpu(data_dict)))
 
-    def save(self, demo_idx: int):
+    def save(self, demo_idx: int, status: str):
         assert demo_idx in self.cache
+        assert status in ["success", "failed"], f"Invalid status: {status}"
 
-        save_dir = os.path.join(self.base_save_dir, f"demo_{demo_idx:04d}")
+        save_dir = os.path.join(self.base_save_dir, status, f"demo_{demo_idx:04d}")
         if os.path.exists(os.path.join(save_dir, "status.txt")):
             os.remove(os.path.join(save_dir, "status.txt"))
 
@@ -595,15 +598,12 @@ class DemoCollector:
 
         save_demo(save_dir, self.cache[demo_idx], self.robot_cfg, self.task_desc)
 
+        if status == "failed":
+            with open(os.path.join(save_dir, "status.txt"), "w") as f:
+                f.write(status)
+
         ## Option 2: Save in a separate process, non-blocking, not friendly to KeyboardInterrupt
         # self.save_request_queue.put({"demo": self.cache[demo_idx], "save_dir": save_dir})
-
-    def mark_fail(self, demo_idx: int):
-        assert demo_idx in self.cache
-        save_dir = os.path.join(self.base_save_dir, f"demo_{demo_idx:04d}")
-        os.makedirs(save_dir, exist_ok=True)
-        with open(os.path.join(save_dir, "status.txt"), "w+") as f:
-            f.write("failed")
 
     def delete(self, demo_idx: int):
         assert demo_idx in self.cache
@@ -615,24 +615,34 @@ class DemoCollector:
         assert self.cache == {}
 
 
-def should_skip(log_dir):
+def should_skip(log_dir: str, demo_idx: int):
+    demo_name = f"demo_{demo_idx:04d}"
+    success_path = os.path.join(log_dir, "success", demo_name, "status.txt")
+    failed_path = os.path.join(log_dir, "failed", demo_name, "status.txt")
+
     if args.run_all:
         return False
-    if args.run_unfinished and not os.path.exists(os.path.join(log_dir, "status.txt")):
+
+    if args.run_unfinished:
+        if not os.path.exists(success_path) and not os.path.exists(failed_path):
+            return False
+        return True
+
+    if args.run_failed:
+        if os.path.exists(success_path):
+            return is_status_success(log_dir, demo_idx)
         return False
-    if args.run_failed and (
-        not os.path.exists(os.path.join(log_dir, "status.txt"))
-        or open(os.path.join(log_dir, "status.txt")).read() != "success"
-    ):
-        return False
+
     return True
 
 
-def is_status_success(log_dir: str) -> bool:
-    return (
-        os.path.exists(os.path.join(log_dir, "status.txt"))
-        and open(os.path.join(log_dir, "status.txt")).read() == "success"
-    )
+def is_status_success(log_dir: str, demo_idx: int) -> bool:
+    demo_name = f"demo_{demo_idx:04d}"
+    status_path = os.path.join(log_dir, "success", demo_name, "status.txt")
+
+    if os.path.exists(status_path):
+        return open(status_path).read().strip() == "success"
+    return False
 
 
 class DemoIndexer:
@@ -648,9 +658,9 @@ class DemoIndexer:
         return self._next_idx
 
     def _skip_if_should(self):
-        while should_skip(f"{self.save_root_dir}/demo_{self._next_idx:04d}"):
+        while should_skip(self.save_root_dir, self._next_idx):
             global global_step, tot_success, tot_give_up
-            if is_status_success(f"{self.save_root_dir}/demo_{self._next_idx:04d}"):
+            if is_status_success(self.save_root_dir, self._next_idx):
                 tot_success += 1
             else:
                 tot_give_up += 1
@@ -728,11 +738,17 @@ def main():
     TaskName = args.task
 
     if args.cust_name is not None:
-        additional_str = "-" + str(args.cust_name)
+        additional_str = f"-{args.cust_name}"
     else:
         additional_str = ""
+
+    if args.custom_save_dir:
+        save_root_dir = args.custom_save_dir
+    else:
+        save_root_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
+
     demo_indexer = DemoIndexer(
-        save_root_dir=f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}",
+        save_root_dir=save_root_dir,
         start_idx=0,
         end_idx=max_demo,
         pbar=pbar,
@@ -796,7 +812,7 @@ def main():
                 steps_after_success[env_id] += 1
             else:
                 steps_after_success[env_id] = 0
-                collector.save(demo_idx)
+                collector.save(demo_idx, status="success")
                 collector.delete(demo_idx)
 
                 if demo_indexer.next_idx < max_demo:
@@ -821,7 +837,7 @@ def main():
 
             demo_idx = demo_idxs[env_id]
             log.info(f"Demo {demo_idx} in Env {env_id} timed out!")
-            collector.mark_fail(demo_idx)
+            collector.save(demo_idx, status="failed")
             collector.delete(demo_idx)
             failure_count[env_id] += 1
 

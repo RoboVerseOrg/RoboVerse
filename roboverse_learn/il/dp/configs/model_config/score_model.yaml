@@ -1,4 +1,4 @@
-_target_: dp.models.DDIM_unet_image_policy.DiffusionUnetImagePolicy
+_target_: dp.models.score_unet_image_policy.ScoreMatchingUnetImagePolicy
 
 shape_meta: ${shape_meta}
 
@@ -30,7 +30,7 @@ obs_encoder:
 horizon: ${horizon}
 n_action_steps: ${eval:'${n_action_steps}+${n_latency_steps}'}
 n_obs_steps: ${n_obs_steps}
-num_inference_steps: 60
+num_inference_steps: 100
 obs_as_global_cond: ${obs_as_global_cond}
 # crop_shape: null
 diffusion_step_embed_dim: 128

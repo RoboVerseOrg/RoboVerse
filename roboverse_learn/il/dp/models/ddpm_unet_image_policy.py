@@ -1,38 +1,16 @@
 from typing import Dict
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from einops import rearrange, reduce
+from einops import reduce
 
-from roboverse_learn.il.utils.common.module_attr_mixin import ModuleAttrMixin
 from roboverse_learn.il.utils.common.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.common.pytorch_util import dict_apply
-
-
-class BaseImagePolicy(ModuleAttrMixin):
-    # init accepts keyword argument shape_meta, see config/task/*_image.yaml
-
-    def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        obs_dict:
-            str: B,To,*
-        return: B,Ta,Da
-        """
-        raise NotImplementedError()
-
-    # reset state for stateful policies
-    def reset(self):
-        pass
-
-    # ========== training ===========
-    # no standard training interface except setting normalizer
-    def set_normalizer(self, normalizer: LinearNormalizer):
-        raise NotImplementedError()
+from diffusion_policy.policy.base_image_policy import BaseImagePolicy
 
 
 class DiffusionUnetImagePolicy(BaseImagePolicy):

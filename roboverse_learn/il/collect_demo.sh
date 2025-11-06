@@ -34,6 +34,6 @@ python ./scripts/advanced/collect_demo.py \
 python ./roboverse_learn/il/data2zarr_dp.py \
 --task_name ${task_name_set}FrankaL${random_level}_${extra} \
 --expert_data_num 100 \
---metadata_dir ./roboverse_demo/demo_${sim_set}/${task_name_set}--${cust_name}/robot-franka \
+--metadata_dir ./roboverse_demo/demo_${sim_set}/${task_name_set}-${cust_name}/robot-franka \
 --action_space ${act_space} \
 --observation_space ${obs_space}
