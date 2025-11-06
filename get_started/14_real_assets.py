@@ -59,7 +59,6 @@ if __name__ == "__main__":
         repo_type="dataset",
         local_dir=data_dir,
         allow_patterns="demo_assets/*",
-        local_dir_use_symlinks=False,
     )
 
     # initialize scenario
@@ -99,8 +98,7 @@ if __name__ == "__main__":
         RigidObjCfg(
             name="banana",
             scale=(1, 1, 1),
-            fix_base_link=True,
-            physics=PhysicStateType.GEOM,
+            physics=PhysicStateType.RIGIDBODY,
             usd_path=f"{data_dir}/demo_assets/banana/usd/banana.usd",
             urdf_path=f"{data_dir}/demo_assets/banana/result/banana.urdf",
             mjcf_path=f"{data_dir}/demo_assets/banana/mjcf/banana.xml",

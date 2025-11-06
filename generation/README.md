@@ -21,7 +21,7 @@ You can seamlessly import generated assets into any RoboVerse simulator followin
 - [Import 3D Scene](https://roboverse.wiki/metasim/get_started/quick_start/16_embodiedgen_layout)
 - [Import 3DGS Background](https://roboverse.wiki/metasim/get_started/quick_start/15_gs_background)
 
-Explore the [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer) to browse and use generated sim-ready assets and follow [Any Simulators Tutorial](#any-simulators). To generate diverse sim-ready 3D assets and interactive 3D scenes by yourself, please [install EmbodiedGen](https://horizonrobotics.github.io/EmbodiedGen/install).
+Explore the [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer) to browse and use generated sim-ready assets and follow [Any Simulators Tutorial](#download-assets). To generate diverse sim-ready 3D assets and interactive 3D scenes by yourself, please [install EmbodiedGen](https://horizonrobotics.github.io/EmbodiedGen/install).
 
 
 ## 🧭 Overview
@@ -102,6 +102,23 @@ Use EmbodiedGen-generated assets with correct physical collisions and consistent
 | [isaacsim](https://github.com/isaac-sim/IsaacSim) | MeshtoUSDConverter |
 | [mujoco](https://github.com/google-deepmind/mujoco) / [genesis](https://github.com/Genesis-Embodied-AI/Genesis) | MeshtoMJCFConverter |
 | [sapien](https://github.com/haosulab/SAPIEN) / [isaacgym](https://github.com/isaac-sim/IsaacGymEnvs) / [pybullet](https://github.com/bulletphysics/bullet3) | EmbodiedGen generated .urdf can be used directly |
+
+
+<h3 id="download-assets">Download Sim-ready Assets</h3>
+
+Select your favorite sim-ready assets from the [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer), and automatically convert to `.urdf`, `.usd`, `.mjcf` for use in any simulator.
+
+```sh
+python generation/download_asset.py \
+    --target_type "dataset/basic_furniture/table" \
+    --uuid "*" \
+    --download_num 5
+```
+
+Arguments:
+- `--target_type`: Specify the asset category. See `Primary Category` and `Secondary Category` in [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer).
+- `--uuid`: Set `uuid="*"` to download all assets in the `target_type`, or specify uuid in `Asset Details` in [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer), e.g. `710fc1c383f5542d8f52822fc08ee66c`, `16b602cfd8285027af606f20aaadc739`.
+- `--download_num`: Number of assets to download. Default is None to download all assets in `target_type`.
 
 ## 📚 Citation
 

@@ -59,7 +59,6 @@ snapshot_download(
     repo_type="dataset",
     local_dir=data_dir,
     allow_patterns="demo_assets/*",
-    local_dir_use_symlinks=False,
 )
 
 target_asset_type = AssetType.MJCF # or AssetType.USD

@@ -62,7 +62,6 @@ if __name__ == "__main__":
         repo_type="dataset",
         local_dir=data_dir,
         allow_patterns="example_layouts/task_0002/*",
-        local_dir_use_symlinks=False,
     )
 
     layout_file = "roboverse_data/assets/EmbodiedGenData/demo_layouts/task_0002/layout.json"
