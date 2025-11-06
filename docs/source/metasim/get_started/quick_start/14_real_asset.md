@@ -1,5 +1,8 @@
 #  14. Real Asset
 
+[![GitHub](https://img.shields.io/badge/GitHub-EmbodiedGen-black?logo=github)](https://github.com/HorizonRobotics/EmbodiedGen)
+[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-blue)](https://horizonrobotics.github.io/EmbodiedGen/)
+
 In this tutorial, we will show you how to use real asset generated from [EmbodiedGen](https://github.com/HorizonRobotics/EmbodiedGen) in MetaSim.
 
 You can visited more all-simulator-ready assets in [here](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer).

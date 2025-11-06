@@ -240,7 +240,8 @@ class MeshtoUSDConverter(AssetConverterBase):
 
     DEFAULT_BIND_APIS = [
         "MaterialBindingAPI",
-        "PhysicsMeshCollisionAPI",
+        # "PhysicsMeshCollisionAPI",
+        "PhysxDecompositionCollisionAPI",
         "PhysicsCollisionAPI",
         "PhysxCollisionAPI",
         "PhysicsMassAPI",
