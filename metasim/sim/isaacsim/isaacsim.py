@@ -29,6 +29,7 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.gs_util import alpha_blend_rgba_torch
 
 # Optional: RoboSplatter imports for GS background rendering
 try:
@@ -284,7 +285,7 @@ class IsaacsimHandler(BaseSimHandler):
                 if obj.fix_base_link:
                     obj_inst.update(dt=0.0)
 
-            for _, robot in enumerate[RobotCfg](self.robots):
+            for robot in self.robots:
                 robot_inst = self.scene.articulations[robot.name]
                 root_state = states.robots[robot.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
@@ -449,7 +450,7 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_data = instance_seg_data.squeeze(-1)
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
-
+            
             # GS background blending
             if self.gs_background is not None and rgb_data is not None:
                 # Create object mask: exclude terrain/ground from foreground
@@ -473,6 +474,7 @@ class IsaacsimHandler(BaseSimHandler):
                 )
 
                 gs_result = self.gs_background.render(gs_cam)
+                
                 # Use object mask for GS background blending (exclude terrain from foreground)
                 if foreground_mask is not None:
                     # Ensure foreground_mask has correct shape: (envs, H, W)
@@ -775,9 +777,9 @@ class IsaacsimHandler(BaseSimHandler):
             ),
             debug_vis=False,
         )
+        
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
-
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
 

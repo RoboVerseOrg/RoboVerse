@@ -61,6 +61,8 @@ except (ImportError, AttributeError):
     log.warning("Mujoco Viewer not available. Please check your OPENGL environment.")
     pass
 
+from metasim.utils.gs_util import alpha_blend_rgba
+
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
@@ -606,9 +608,7 @@ class MujocoHandler(BaseSimHandler):
 
             depth = None
 
-            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
-                from metasim.utils.gs_util import alpha_blend_rgba
-
+            if self.gs_background is not None:
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
 

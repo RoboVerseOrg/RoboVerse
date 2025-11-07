@@ -9,6 +9,7 @@ import torch
 from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
 from genesis.vis.camera import Camera
 from loguru import logger as log
+from metasim.utils.gs_util import alpha_blend_rgba
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import (
@@ -277,12 +278,7 @@ class GenesisHandler(BaseSimHandler):
                 depth_t = torch.as_tensor(depth)
 
             # GS background blending
-            if (
-                self.scenario.gs_scene is not None
-                and self.scenario.gs_scene.with_gs_background
-                and ROBO_SPLATTER_AVAILABLE
-            ):
-                from metasim.utils.gs_util import alpha_blend_rgba
+            if self.gs_background is not None:
 
                 # Get camera parameters
                 Ks, c2w = self._get_camera_params(camera)
