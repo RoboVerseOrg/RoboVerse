@@ -617,9 +617,7 @@ class MujocoHandler(BaseSimHandler):
                             camera.width,
                             camera.height,
                         ):
-                            self.renderer = mujoco.Renderer(
-                                self._mj_model, width=camera.width, height=camera.height
-                            )
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
                         # mirror state and render
                         self._mirror_state_to_native()
                         self.renderer.update_scene(self._mj_data, camera=camera_id)
@@ -644,9 +642,7 @@ class MujocoHandler(BaseSimHandler):
                             camera.width,
                             camera.height,
                         ):
-                            self.renderer = mujoco.Renderer(
-                                self._mj_model, width=camera.width, height=camera.height
-                            )
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
 
                         # Keep native model/data in sync with dm_control physics
                         self._mirror_state_to_native()
