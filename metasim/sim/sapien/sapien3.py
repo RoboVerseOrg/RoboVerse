@@ -34,11 +34,11 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
+from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
 from .sapien2 import _load_init_pose
-from metasim.utils.gs_util import alpha_blend_rgba
 
 # Optional: RoboSplatter imports for GS background rendering
 try:
@@ -573,7 +573,6 @@ class Sapien3Handler(BaseSimHandler):
             cam_inst = self.camera_ids[camera.name]
 
             if self.gs_background is not None:
-                
                 # Build RoboSplatter camera from SAPIEN pose and scenario intrinsics, then render GS
                 gs_cam = SplatCamera.init_from_pose_list(
                     pose_list=cam_inst.get_model_matrix(),

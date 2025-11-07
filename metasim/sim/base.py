@@ -12,8 +12,9 @@ from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
 from metasim.types import Action, DictEnvState, TensorState
-from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 from metasim.utils.gs_util import quaternion_multiply
+from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
+
 # from metasim.utils.hf_util import FileDownloader
 try:
     from robo_splatter.models.basic import RenderConfig
