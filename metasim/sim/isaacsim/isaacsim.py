@@ -487,15 +487,6 @@ class IsaacsimHandler(BaseSimHandler):
                 if isinstance(bg_depth, np.ndarray):
                     bg_depth = torch.from_numpy(bg_depth)
                 bg_depth = bg_depth.to(self.device)
-<<<<<<< HEAD
-=======
-
-                # Ensure foreground_mask shape matches depth
-                if foreground_mask.shape != sim_depth.shape:
-                    if foreground_mask.numel() == sim_depth.numel():
-                        foreground_mask = foreground_mask.view(sim_depth.shape)
-
->>>>>>> 67a96accb80767d83772b98e1ea97349097d9194
                 # Use torch.where for depth composition
                 depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
                 depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)

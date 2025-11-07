@@ -609,7 +609,6 @@ class MujocoHandler(BaseSimHandler):
             rgb = None
             depth = None
 
-            # Get simulation rendering (same logic for both normal and GS background cases)
             if "rgb" in camera.data_types:
                 if sys.platform == "darwin":
                     with self._mj_lock:  # optional but safer
@@ -637,7 +636,6 @@ class MujocoHandler(BaseSimHandler):
                         width=camera.width, height=camera.height, camera_id=camera_id, depth=False
                     )
                     rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
-
             if "depth" in camera.data_types:
                 if sys.platform == "darwin":
                     with self._mj_lock:
@@ -665,7 +663,7 @@ class MujocoHandler(BaseSimHandler):
                             depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
                         else:
                             # Very old fallback: some builds returned (rgb, depth) as a tuple.
-                            # If this still fails in your env, we'll need a dedicated mjr_readPixels path.
+                            # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
                             maybe = self.renderer.render()
                             if isinstance(maybe, tuple) and len(maybe) == 2:
                                 _, depth_np = maybe
@@ -727,7 +725,7 @@ class MujocoHandler(BaseSimHandler):
                     else:
                         depth = torch.from_numpy(np.ascontiguousarray(depth_comp.copy())).unsqueeze(0)
 
-            state = CameraState(rgb=rgb, depth=depth)
+            state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
             camera_states[camera.name] = state
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
