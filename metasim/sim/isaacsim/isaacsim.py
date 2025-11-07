@@ -473,11 +473,6 @@ class IsaacsimHandler(BaseSimHandler):
 
                 gs_result = self.gs_background.render(gs_cam)
 
-                # Ensure foreground_mask has correct shape: (envs, H, W)
-                # rgb_data shape: (envs, H, W, 3) or (1, envs, H, W, 3)
-                if rgb_data.dim() == 5:
-                    rgb_data = rgb_data.squeeze(0)  # Remove batch dimension if present
-
                 # Get RGB Blending with GS background
                 sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
                 gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
@@ -485,35 +480,18 @@ class IsaacsimHandler(BaseSimHandler):
                 if isinstance(gs_rgb, np.ndarray):
                     gs_rgb = torch.from_numpy(gs_rgb)
                 gs_rgb = gs_rgb.to(self.device)
-
-                # Ensure foreground_mask shape matches: (envs, H, W)
-                if foreground_mask.shape != sim_rgb.shape[:3]:
-                    if foreground_mask.numel() == sim_rgb.shape[0] * sim_rgb.shape[1] * sim_rgb.shape[2]:
-                        foreground_mask = foreground_mask.view(sim_rgb.shape[0], sim_rgb.shape[1], sim_rgb.shape[2])
-
                 blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
-                rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8)
+                rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8).unsqueeze(0)
 
                 # Get Depth Blending with GS background
-                # Handle depth_data shape: could be (envs, H, W) or (envs, H, W, 1)
-                if depth_data.dim() == 4:
-                    sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                else:
-                    sim_depth = depth_data  # Already (envs, H, W)
-
+                sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
                 bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
                 if isinstance(bg_depth, np.ndarray):
                     bg_depth = torch.from_numpy(bg_depth)
                 bg_depth = bg_depth.to(self.device)
-                
-                # Ensure foreground_mask shape matches depth
-                if foreground_mask.shape != sim_depth.shape:
-                    if foreground_mask.numel() == sim_depth.numel():
-                        foreground_mask = foreground_mask.view(sim_depth.shape)
-
                 # Use torch.where for depth composition
                 depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
-                depth_data = depth_comp.unsqueeze(-1)  # Add channel dimension: (envs, H, W) -> (envs, H, W, 1)
+                depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)
 
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
@@ -760,9 +738,22 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainImporterCfg
 
+        # terrain_config = TerrainImporterCfg(
+        #     prim_path="/World/ground",
+        #     terrain_type="plane",
+        #     collision_group=-1,
+        #     physics_material=sim_utils.RigidBodyMaterialCfg(
+        #         friction_combine_mode="multiply",
+        #         restitution_combine_mode="multiply",
+        #         static_friction=1.0,
+        #         dynamic_friction=1.0,
+        #         restitution=0.0,
+        #     ),
+        #     debug_vis=False,
+        # )
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
-            terrain_type="plane",
+            terrain_type="usd",
             collision_group=-1,
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
@@ -772,6 +763,7 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
+            usd_path="roboverse_data/terrains/default_environment.usd",
         )
 
         terrain_config.num_envs = self.scene.cfg.num_envs
