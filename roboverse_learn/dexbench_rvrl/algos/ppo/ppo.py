@@ -104,7 +104,7 @@ class PPO:
             img_w=self.img_w,
         )
 
-        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=self.step_size, eps=1e-5)
+        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=self.step_size)
 
         self.buffer = RolloutStorage(
             self.num_envs, self.nsteps, self.obs_shape, self.action_dim, device=self.device, sampler=self.sampler
@@ -195,7 +195,7 @@ class PPO:
 
                 compute_start_time = time.time()
                 self.buffer.compute_returns(last_values.view(-1), self.gamma, self.lam)
-                mean_value_loss, mean_surrogate_loss = self.update()
+                mean_value_loss, mean_surrogate_loss, mean_kl = self.update()
                 self.buffer.clear()
                 learn_time = time.time() - compute_start_time
                 self.tot_time += learn_time
@@ -211,6 +211,9 @@ class PPO:
         ## log
         mean_value_loss = 0
         mean_surrogate_loss = 0
+        mean_kl = 0
+        num_updates = 0
+        kl_over_limit = False
 
         ## flatten and shuffle
         batch = self.buffer.mini_batch_generator(self.num_mini_batches)
@@ -246,12 +249,16 @@ class PPO:
                         axis=-1,
                     )
                     kl_mean = kl.mean()
-                    if kl_mean > self.desired_kl * 2.0:
-                        self.step_size = max(1e-5, self.step_size / 1.5)
-                    elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                        self.step_size = min(1e-3, self.step_size * 1.5)
-                    for param_group in self.optimizer.param_groups:
-                        param_group["lr"] = self.step_size
+                    if kl_mean > self.desired_kl * 1.5:
+                        kl_over_limit = True
+                        break
+                    # if kl_mean > self.desired_kl * 2.0:
+                    #     self.step_size = max(1e-5, self.step_size / 1.5)
+                    # elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
+                    #     self.step_size = min(1e-3, self.step_size * 1.5)
+                    # for param_group in self.optimizer.param_groups:
+                    #     param_group["lr"] = self.step_size
+                    mean_kl += kl_mean.item()
 
                 # surrogate loss
                 ratio = torch.exp(new_log_probs_batch - old_log_probs_batch)
@@ -273,12 +280,15 @@ class PPO:
 
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surr_loss.item()
+                num_updates += 1
+            if kl_over_limit:
+                break
 
-        num_updates = self.num_mini_batches * self.num_learning_epochs
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        mean_kl /= num_updates
 
-        return mean_value_loss, mean_surrogate_loss
+        return mean_value_loss, mean_surrogate_loss, mean_kl
 
     def log(self, locs, width=80, pad=35):
         iteration_time = locs["collection_time"] + locs["learn_time"]
@@ -302,7 +312,8 @@ class PPO:
                 f"""{"#" * width}\n"""
                 f"""{str.center(width, " ")}\n\n"""
                 f"""{"Computation:":>{pad}} {fps:.0f} steps/s (collection: {locs["collection_time"]:.3f}s, learning {locs["learn_time"]:.3f}s)\n"""
-                # f"""{"Value function loss:":>{pad}} {locs["mean_value_loss"]:.4f}\n"""
+                f"""{"Value function loss:":>{pad}} {locs["mean_value_loss"]:.4f}\n"""
+                f"""{"KL":>{pad}} {locs["mean_kl"]:.6f}\n"""
                 f"""{"Surrogate loss:":>{pad}} {locs["mean_surrogate_loss"]:.4f}\n"""
                 f"""{"Mean action noise std:":>{pad}} {mean_std.item():.2f}\n"""
                 f"""{"Mean reward:":>{pad}} {locs["mean_episode_reward"]:.2f}\n"""
@@ -314,7 +325,8 @@ class PPO:
                 f"""{"#" * width}\n"""
                 f"""{str.center(width, " ")}\n\n"""
                 f"""{"Computation:":>{pad}} {fps:.0f} steps/s (collection: {locs["collection_time"]:.3f}s, learning {locs["learn_time"]:.3f}s)\n"""
-                # f"""{"Value function loss:":>{pad}} {locs["mean_value_loss"]:.4f}\n"""
+                f"""{"Value function loss:":>{pad}} {locs["mean_value_loss"]:.4f}\n"""
+                f"""{"KL":>{pad}} {locs["mean_kl"]:.6f}\n"""
                 f"""{"Surrogate loss:":>{pad}} {locs["mean_surrogate_loss"]:.4f}\n"""
                 f"""{"Mean action noise std:":>{pad}} {mean_std.item():.2f}\n"""
                 f"""{"Mean reward/step:":>{pad}} {locs["mean_reward"]:.2f}\n"""
@@ -332,6 +344,7 @@ class PPO:
         if self.wandb_run is not None:
             log_data = {
                 "Loss/surrogate": locs["mean_surrogate_loss"],
+                "Loss/value_function": locs["mean_value_loss"],
                 "Policy/noise_std": mean_std.item(),
                 "Train/mean_reward_per_step": locs["mean_reward"],
                 "Train/mean_succ_rate": locs["mean_succ_rate"],
@@ -341,6 +354,7 @@ class PPO:
                 "iteration": locs["iteration"],
                 "Train/mean_reward": locs["mean_episode_reward"],
                 "Train/mean_episode_length": locs["mean_episode_length"],
+                "Train/kl": locs["mean_kl"],
             }
 
             self.wandb_run.log(log_data)

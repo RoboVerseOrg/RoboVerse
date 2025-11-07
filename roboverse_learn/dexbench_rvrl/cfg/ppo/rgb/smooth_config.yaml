@@ -18,14 +18,14 @@ policy: # only works for MlpPolicy right now
   dinov3:
     model_type: "vits16"
     dir_path: "roboverse_learn/dexbench_rvrl/pretrained_ckpts/dinov3"
-    use_patch_features: True
+    use_patch_features: False
   fix_img_encoder: False # if True, the image encoder will not be trained, useful for transfer learning
   fix_actor_img_encoder: True # if True, the image encoder in the actor will not be trained
 learn:
   agent_name: shadow_hand
   test: False
   resume: 0
-  log_interval: 500 # check for potential saves every this many iterations
+  log_interval: 1000 # check for potential saves every this many iterations
   print_log: True
 
   # rollout params
@@ -38,7 +38,7 @@ learn:
   num_learning_epochs: 5
   num_minibatches: 4 # this is per agent
   max_grad_norm: 1
-  optim_stepsize: 3.e-5 # 3e-4 is default for single agent training with constant schedule
+  optim_stepsize: 5.e-5 # 3e-4 is default for single agent training with constant schedule
   schedule: adaptive # could be adaptive or linear or fixed
   desired_kl: 0.016
   gamma: 0.95

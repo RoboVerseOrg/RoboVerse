@@ -76,7 +76,7 @@ class ActorCritic(nn.Module):
                     source='local',
                     weights=ckpt_path,
                 )
-                self.transform = make_transform
+                self.transform = make_transform()
                 if self.fix_img_encoder:
                     self.visual_encoder.eval()
                     for param in self.visual_encoder.parameters():
