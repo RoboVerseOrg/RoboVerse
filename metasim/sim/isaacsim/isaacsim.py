@@ -23,6 +23,7 @@ from metasim.scenario.objects import (
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
@@ -30,10 +31,8 @@ from metasim.utils.dict import deep_get
 from metasim.utils.gs_util import alpha_blend_rgba_torch
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
-# Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
-
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
     ROBO_SPLATTER_AVAILABLE = False
@@ -303,75 +302,7 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
-    def _create_foreground_mask(
-        self,
-        instance_seg_data: torch.Tensor | None,
-        instance_seg_id2label: dict[int, str] | None,
-        instance_id_seg_data: torch.Tensor | None,
-        instance_id_seg_id2label: dict[int, str] | None,
-    ) -> torch.Tensor | None:
-        """
-        Create foreground mask by excluding terrain/ground from instance segmentation data.
-        
-        Args:
-            instance_seg_data: Instance segmentation data (semantic level).
-            instance_seg_id2label: Mapping from instance IDs to labels for instance_seg_data.
-            instance_id_seg_data: Instance ID segmentation data (instance level, more precise).
-            instance_id_seg_id2label: Mapping from instance IDs to labels for instance_id_seg_data.
-            
-        Returns:
-            Foreground mask tensor: 1 for objects (not terrain), 0 for terrain/background.
-            Returns None if no instance segmentation data is available.
-        """
-        foreground_mask = None
-        
-        # Use instance_id_seg_data if available (more precise), otherwise use instance_seg_data
-        if instance_id_seg_data is not None and instance_id_seg_id2label is not None:
-            # Find terrain IDs from labels
-            terrain_ids = {
-                id for id, label in instance_id_seg_id2label.items()
-                if any(kw in label.lower() for kw in ["ground", "terrain", "floor", "world/ground"])
-            }
-            unique_ids = torch.unique(instance_id_seg_data)
-            
-            if terrain_ids:
-                # Object mask: 1 for objects (not terrain), 0 for terrain/background
-                foreground_mask = torch.ones_like(instance_id_seg_data, dtype=torch.float32)
-                for terrain_id in terrain_ids:
-                    if terrain_id in unique_ids:
-                        foreground_mask[instance_id_seg_data == terrain_id] = 0.0
-                # Exclude background (id == 0) if it exists
-                if 0 in unique_ids:
-                    foreground_mask[instance_id_seg_data == 0] = 0.0
-        elif instance_seg_data is not None and instance_seg_id2label is not None:
-            # Fallback to instance_seg_data
-            terrain_ids = {
-                id for id, label in instance_seg_id2label.items()
-                if any(kw in label.lower() for kw in ["ground", "terrain", "floor", "world/ground"])
-            }
-            unique_ids = torch.unique(instance_seg_data)
-            
-            if terrain_ids:
-                foreground_mask = torch.ones_like(instance_seg_data, dtype=torch.float32)
-                for terrain_id in terrain_ids:
-                    if terrain_id in unique_ids:
-                        foreground_mask[instance_seg_data == terrain_id] = 0.0
-                # Exclude background (id == 0) if it exists
-                if 0 in unique_ids:
-                    foreground_mask[instance_seg_data == 0] = 0.0
-        
-        # Fallback: if no terrain IDs found or mask is all zeros, use simple foreground mask
-        if foreground_mask is None or (foreground_mask is not None and foreground_mask.sum() == 0):
-            if instance_id_seg_data is not None:
-                foreground_mask = (instance_id_seg_data > 0).float()
-            elif instance_seg_data is not None:
-                foreground_mask = (instance_seg_data > 0).float()
-            else:
-                log.warning("No instance segmentation data available for foreground mask")
-        
-        return foreground_mask
-
-    def _create_foreground_mask(
+    def _get_foreground_mask(
         self,
         instance_seg_data: torch.Tensor | None,
         instance_seg_id2label: dict[int, str] | None,
@@ -520,31 +451,14 @@ class IsaacsimHandler(BaseSimHandler):
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
 
-            # GS background blending
             if self.gs_background is not None and rgb_data is not None:
-                # Create object mask: exclude terrain/ground from foreground
-                foreground_mask = self._create_foreground_mask(
+                foreground_mask = self._get_foreground_mask(
                     instance_seg_data, 
                     instance_seg_id2label, 
                     instance_id_seg_data, 
                     instance_id_seg_id2label
                 )
-                
-            if self.gs_background is not None and rgb_data is not None:
-                # Create object mask: exclude terrain/ground from foreground
-                foreground_mask = self._create_foreground_mask(
-                    instance_seg_data, 
-                    instance_seg_id2label, 
-                    instance_id_seg_data, 
-                    instance_id_seg_id2label
-                )
-                
-            if self.gs_background is not None and rgb_data is not None:
-                # Create object mask: exclude terrain/ground from foreground
-                foreground_mask = self._create_foreground_mask(
-                    instance_seg_data, instance_seg_id2label, instance_id_seg_data, instance_id_seg_id2label
-                )
-
+                assert foreground_mask is not None, "Foreground mask is None"
                 # Get camera parameters (already as torch tensors on device)
                 Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
 
@@ -558,76 +472,48 @@ class IsaacsimHandler(BaseSimHandler):
                 )
 
                 gs_result = self.gs_background.render(gs_cam)
-                # Use object mask for GS background blending (exclude terrain from foreground)
-                if foreground_mask is not None:
-                    # Ensure foreground_mask has correct shape: (envs, H, W)
-                    # rgb_data shape: (envs, H, W, 3) or (1, envs, H, W, 3)
-                    if rgb_data.dim() == 5:
-                        rgb_data = rgb_data.squeeze(0)  # Remove batch dimension if present
-                    
 
-                # Use object mask for GS background blending (exclude terrain from foreground)
-                if foreground_mask is not None:
-                    # Ensure foreground_mask has correct shape: (envs, H, W)
-                    # rgb_data shape: (envs, H, W, 3) or (1, envs, H, W, 3)
-                    if rgb_data.dim() == 5:
-                        rgb_data = rgb_data.squeeze(0)  # Remove batch dimension if present
+                # Ensure foreground_mask has correct shape: (envs, H, W)
+                # rgb_data shape: (envs, H, W, 3) or (1, envs, H, W, 3)
+                if rgb_data.dim() == 5:
+                    rgb_data = rgb_data.squeeze(0)  # Remove batch dimension if present
 
-                    # Get RGB Blending with GS background
-                    sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
-                    gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
+                # Get RGB Blending with GS background
+                sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
+                gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
 
-                    if isinstance(gs_rgb, np.ndarray):
-                        gs_rgb = torch.from_numpy(gs_rgb)
-                    gs_rgb = gs_rgb.to(self.device)
+                if isinstance(gs_rgb, np.ndarray):
+                    gs_rgb = torch.from_numpy(gs_rgb)
+                gs_rgb = gs_rgb.to(self.device)
 
-                    # Ensure foreground_mask shape matches: (envs, H, W)
-                    if foreground_mask.shape != sim_rgb.shape[:3]:
-                        if foreground_mask.numel() == sim_rgb.shape[0] * sim_rgb.shape[1] * sim_rgb.shape[2]:
-                            foreground_mask = foreground_mask.view(sim_rgb.shape[0], sim_rgb.shape[1], sim_rgb.shape[2])
+                # Ensure foreground_mask shape matches: (envs, H, W)
+                if foreground_mask.shape != sim_rgb.shape[:3]:
+                    if foreground_mask.numel() == sim_rgb.shape[0] * sim_rgb.shape[1] * sim_rgb.shape[2]:
+                        foreground_mask = foreground_mask.view(sim_rgb.shape[0], sim_rgb.shape[1], sim_rgb.shape[2])
 
-                    blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
-                    rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8)
-                    rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8)
+                blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
+                rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8)
 
-                    # Get Depth Blending with GS background
-                    # Handle depth_data shape: could be (envs, H, W) or (envs, H, W, 1)
-                    if depth_data.dim() == 4:
-                        sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    else:
-                        sim_depth = depth_data  # Already (envs, H, W)
-                    
-                    # Handle depth_data shape: could be (envs, H, W) or (envs, H, W, 1)
-                    if depth_data.dim() == 4:
-                        sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    else:
-                        sim_depth = depth_data  # Already (envs, H, W)
-                    
-                    # Handle depth_data shape: could be (envs, H, W) or (envs, H, W, 1)
-                    if depth_data.dim() == 4:
-                        sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    else:
-                        sim_depth = depth_data  # Already (envs, H, W)
+                # Get Depth Blending with GS background
+                # Handle depth_data shape: could be (envs, H, W) or (envs, H, W, 1)
+                if depth_data.dim() == 4:
+                    sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                else:
+                    sim_depth = depth_data  # Already (envs, H, W)
 
-                    bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    if isinstance(bg_depth, np.ndarray):
-                        bg_depth = torch.from_numpy(bg_depth)
-                    bg_depth = bg_depth.to(self.device)
-                    
-                    # Ensure foreground_mask shape matches depth
-                    if foreground_mask.shape != sim_depth.shape:
-                        if foreground_mask.numel() == sim_depth.numel():
-                            foreground_mask = foreground_mask.view(sim_depth.shape)
-                    
-                    
-                    # Ensure foreground_mask shape matches depth
-                    if foreground_mask.shape != sim_depth.shape:
-                        if foreground_mask.numel() == sim_depth.numel():
-                            foreground_mask = foreground_mask.view(sim_depth.shape)
+                bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                if isinstance(bg_depth, np.ndarray):
+                    bg_depth = torch.from_numpy(bg_depth)
+                bg_depth = bg_depth.to(self.device)
+                
+                # Ensure foreground_mask shape matches depth
+                if foreground_mask.shape != sim_depth.shape:
+                    if foreground_mask.numel() == sim_depth.numel():
+                        foreground_mask = foreground_mask.view(sim_depth.shape)
 
-                    # Use torch.where for depth composition
-                    depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
-                    depth_data = depth_comp.unsqueeze(-1)  # Add channel dimension: (envs, H, W) -> (envs, H, W, 1)
+                # Use torch.where for depth composition
+                depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
+                depth_data = depth_comp.unsqueeze(-1)  # Add channel dimension: (envs, H, W) -> (envs, H, W, 1)
 
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
