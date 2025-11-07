@@ -736,22 +736,9 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainImporterCfg
 
-        # terrain_config = TerrainImporterCfg(
-        #     prim_path="/World/ground",
-        #     terrain_type="plane",
-        #     collision_group=-1,
-        #     physics_material=sim_utils.RigidBodyMaterialCfg(
-        #         friction_combine_mode="multiply",
-        #         restitution_combine_mode="multiply",
-        #         static_friction=1.0,
-        #         dynamic_friction=1.0,
-        #         restitution=0.0,
-        #     ),
-        #     debug_vis=False,
-        # )
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
-            terrain_type="usd",
+            terrain_type="plane",
             collision_group=-1,
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
@@ -761,7 +748,6 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
-            usd_path="roboverse_data/terrains/default_environment.usd",
         )
 
         terrain_config.num_envs = self.scene.cfg.num_envs
