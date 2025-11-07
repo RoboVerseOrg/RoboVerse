@@ -33,6 +33,7 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
     ROBO_SPLATTER_AVAILABLE = False
@@ -453,10 +454,7 @@ class IsaacsimHandler(BaseSimHandler):
 
             if self.gs_background is not None and rgb_data is not None:
                 foreground_mask = self._get_foreground_mask(
-                    instance_seg_data, 
-                    instance_seg_id2label, 
-                    instance_id_seg_data, 
-                    instance_id_seg_id2label
+                    instance_seg_data, instance_seg_id2label, instance_id_seg_data, instance_id_seg_id2label
                 )
                 assert foreground_mask is not None, "Foreground mask is None"
                 # Get camera parameters (already as torch tensors on device)
@@ -505,7 +503,7 @@ class IsaacsimHandler(BaseSimHandler):
                 if isinstance(bg_depth, np.ndarray):
                     bg_depth = torch.from_numpy(bg_depth)
                 bg_depth = bg_depth.to(self.device)
-                
+
                 # Ensure foreground_mask shape matches depth
                 if foreground_mask.shape != sim_depth.shape:
                     if foreground_mask.numel() == sim_depth.numel():
