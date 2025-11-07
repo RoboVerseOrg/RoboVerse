@@ -9,7 +9,6 @@ import torch
 from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
 from genesis.vis.camera import Camera
 from loguru import logger as log
-from metasim.utils.gs_util import alpha_blend_rgba
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import (
@@ -23,6 +22,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
+from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 # Apply IGL compatibility patch
@@ -279,7 +279,6 @@ class GenesisHandler(BaseSimHandler):
 
             # GS background blending
             if self.gs_background is not None:
-
                 # Get camera parameters
                 Ks, c2w = self._get_camera_params(camera)
 

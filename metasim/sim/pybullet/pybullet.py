@@ -22,11 +22,12 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
-from metasim.utils.math import convert_quat
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
 # Optional: RoboSplatter imports for GS background rendering
 from metasim.utils.gs_util import alpha_blend_rgba
+from metasim.utils.math import convert_quat
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
+
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
 
@@ -458,7 +459,6 @@ class SinglePybulletHandler(BaseSimHandler):
             segmentation_mask = np.reshape(img_arr[4], (height, width))
 
             if self.gs_background is not None:
-                
                 # Extract camera parameters from PyBullet
                 Ks, c2w = self._get_camera_params(view_matrix, projection_matrix, width, height)
 

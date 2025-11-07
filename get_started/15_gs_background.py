@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
+
 import numpy as np
 import rootutils
 import torch
@@ -114,7 +115,12 @@ if __name__ == "__main__":
             height=1024,
             pos=(2, -1, 1.5),
             look_at=(0.0, 0.0, 0.0),
-            data_types=["rgb", "depth", "instance_seg", "instance_id_seg"],  # Enable instance segmentation for GS blending
+            data_types=[
+                "rgb",
+                "depth",
+                "instance_seg",
+                "instance_id_seg",
+            ],  # Enable instance segmentation for GS blending
         )
     ]
 
