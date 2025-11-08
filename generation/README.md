@@ -26,7 +26,7 @@ Explore the [EmbodiedGen Asset Gallery](https://huggingface.co/spaces/HorizonRob
 
 ## 🧭 Overview
 
-<img src="assets/overall.jpg" alt="Overall Framework" width="700"/>
+<img src="https://github.com/HorizonRobotics/EmbodiedGen/raw/master/docs/assets/overall.jpg" alt="Overall Framework" style="width:700px;">
 
 
 <h2 id="image-to-3d">🖼️ Image-to-3D</h2>
