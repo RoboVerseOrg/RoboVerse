@@ -686,7 +686,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
-            terrain_type="usd",
+            terrain_type="plane",
             collision_group=-1,
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
@@ -696,7 +696,6 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
-            usd_path="roboverse_data/terrains/default_environment.usd",
         )
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
