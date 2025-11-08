@@ -667,7 +667,13 @@ class IsaacsimHandler(BaseSimHandler):
             )
             if isinstance(obj, RigidObjCfg):
                 self.scene.rigid_objects[obj.name] = RigidObject(
-                    RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg)
+                    RigidObjectCfg(
+                        prim_path=prim_path,
+                        spawn=usd_file_cfg,
+                        init_state=RigidObjectCfg.InitialStateCfg(
+                            pos=obj.default_position, rot=obj.default_orientation
+                        ),
+                    )
                 )
                 return
 
@@ -680,7 +686,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
-            terrain_type="plane",
+            terrain_type="usd",
             collision_group=-1,
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
@@ -690,6 +696,7 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
+            usd_path="roboverse_data/terrains/default_environment.usd",
         )
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing

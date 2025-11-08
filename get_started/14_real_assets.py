@@ -89,11 +89,13 @@ if __name__ == "__main__":
             name="table",
             scale=(1, 1, 1),
             physics=PhysicStateType.RIGIDBODY,
-            # fix_base_link=True,
+            fix_base_link=True,
             usd_path=f"{data_dir}/demo_assets/table/usd/table.usd",
             urdf_path=f"{data_dir}/demo_assets/table/result/table.urdf",
             mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.xml",
             genesis_read_mjcf=True,
+            default_position=(0.4, -0.2, 0.4),
+            default_orientation=(1.0, 0.0, 0.0, 0.0),
         ),
         RigidObjCfg(
             name="banana",
@@ -165,10 +167,10 @@ if __name__ == "__main__":
     init_states = [
         {
             "objects": {
-                "table": {
-                    "pos": torch.tensor([0.4, -0.2, 0.4]),
-                    "rot": torch.tensor([1, 0, 0, 0]),
-                },
+                # "table": {
+                #     "pos": torch.tensor([0.4, -0.2, 0.4]),
+                #     "rot": torch.tensor([1, 0, 0, 0]),
+                # },
                 "banana": {
                     "pos": torch.tensor([0.28, -0.58, 0.825 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
