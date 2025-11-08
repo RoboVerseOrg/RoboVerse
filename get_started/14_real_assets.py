@@ -94,6 +94,7 @@ if __name__ == "__main__":
             urdf_path=f"{data_dir}/demo_assets/table/result/table.urdf",
             mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.xml",
             genesis_read_mjcf=True,
+            # You need set pose for fix_base_link object to update usd stage for isaac 5.0.
             default_position=(0.4, -0.2, 0.4),
             default_orientation=(1.0, 0.0, 0.0, 0.0),
         ),
@@ -167,10 +168,10 @@ if __name__ == "__main__":
     init_states = [
         {
             "objects": {
-                # "table": {
-                #     "pos": torch.tensor([0.4, -0.2, 0.4]),
-                #     "rot": torch.tensor([1, 0, 0, 0]),
-                # },
+                "table": {
+                    "pos": torch.tensor([0.4, -0.2, 0.4]),
+                    "rot": torch.tensor([1, 0, 0, 0]),
+                },
                 "banana": {
                     "pos": torch.tensor([0.28, -0.58, 0.825 + z_offset]),
                     "rot": torch.tensor([1, 0, 0, 0]),
