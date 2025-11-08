@@ -360,6 +360,7 @@ class MaterialRandomizer(BaseRandomizerType):
 
         # Get prim paths for each environment
         root_path = obj_inst.cfg.prim_path
+        applied_any = False
 
         for env_id in env_ids:
             env_prim_path = root_path.replace("env_.*", f"env_{env_id}")
@@ -431,12 +432,16 @@ class MaterialRandomizer(BaseRandomizerType):
             return
 
         root_path = obj_inst.cfg.prim_path
+        assignments: list[tuple[str, str]] = []
+        prepared_mdls: set[str] = set()
+        applied_any = False
 
         for env_id in env_ids:
             env_prim_path = root_path.replace("env_.*", f"env_{env_id}")
 
             # Select MDL path from all configured paths
             mdl_path = self._select_mdl_path(self.cfg.mdl.mdl_paths)
+            mdl_path = os.path.abspath(mdl_path)
 
             # Download the selected MDL file if it doesn't exist
             if not os.path.exists(mdl_path) and self.cfg.mdl.auto_download:
@@ -447,8 +452,8 @@ class MaterialRandomizer(BaseRandomizerType):
                     logger.warning(f"Failed to download MDL {mdl_path}: {e}")
                     continue  # Skip this environment if download fails
 
-            # Download textures for the selected MDL file
-            if os.path.exists(mdl_path):
+            # Download textures for the selected MDL file (once per unique MDL)
+            if os.path.exists(mdl_path) and mdl_path not in prepared_mdls:
                 try:
                     texture_paths = extract_texture_paths_from_mdl(mdl_path)
                     missing_textures = [p for p in texture_paths if not os.path.exists(p)]
@@ -461,12 +466,22 @@ class MaterialRandomizer(BaseRandomizerType):
                                 logger.warning(f"Failed to download texture {texture_path}: {e}")
                 except Exception as e:
                     logger.warning(f"Failed to process textures for {mdl_path}: {e}")
+                prepared_mdls.add(mdl_path)
 
-            # Apply the material
+            assignments.append((mdl_path, env_prim_path))
+
+        touched_prims: list[str] = []
+        for mdl_path, env_prim_path in assignments:
             try:
                 self._apply_mdl_to_prim(mdl_path, env_prim_path)
+                applied_any = True
+                touched_prims.append(env_prim_path)
             except Exception as e:
                 logger.warning(f"Failed to apply MDL {mdl_path} to {env_prim_path}: {e}")
+
+        if applied_any:
+            self._mark_visual_dirty()
+            self._force_pose_nudge(touched_prims)
 
     def _select_mdl_path(self, available_paths: list[str]) -> str:
         """Select MDL path based on selection strategy using reproducible RNG."""
@@ -503,21 +518,81 @@ class MaterialRandomizer(BaseRandomizerType):
         if not prim:
             raise ValueError(f"Prim not found at path {prim_path}")
 
+        prim = self._make_prim_editable(prim)
+
         # Ensure UV coordinates first
         self._ensure_uv_for_hierarchy(prim)
 
-        # Material name should match the MDL file basename (without .mdl extension)
-        # Don't add _mat or timestamp - let IsaacSim use the exported material name from MDL
         mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+        mtl_prim_path = self._get_or_create_material_prim(mdl_path, mtl_name)
+
+        geometry_prims = list(self._iter_geometry_prims(prim))
+        if not geometry_prims:
+            geometry_prims = [prim]
+
+        logger.debug(f"Applying MDL {mtl_name} to {len(geometry_prims)} prim(s) under {prim_path}")
+
+        applied_any = False
+        for geom_prim in geometry_prims:
+            if not geom_prim or not geom_prim.IsValid():
+                continue
+            double_sided = self._ensure_double_sided(geom_prim)
+            if self._bind_material_to_prim(geom_prim, mtl_prim_path, mtl_name, double_sided):
+                applied_any = True
+
+        if not applied_any:
+            raise RuntimeError(f"Failed to apply MDL material {mtl_name} anywhere under {prim_path}")
+
+        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+
+        # Ensure downstream sensors observe the updated material deterministically.
+
+    def _bind_material_to_prim(self, prim, material_path: str, mdl_name: str, double_sided: bool) -> bool:
+        """Bind the prepared material prim to a specific geometry prim."""
+        import omni.kit.commands
+        from pxr import UsdShade
+
+        logger.debug(f"Binding MDL {mdl_name} to {prim.GetPath()} (double_sided={'Y' if double_sided else 'N'})")
+        success, _ = omni.kit.commands.execute(
+            "BindMaterial",
+            prim_path=prim.GetPath(),
+            material_path=material_path,
+            strength=UsdShade.Tokens.strongerThanDescendants,
+        )
+        if not success:
+            logger.warning(f"Failed to bind material {material_path} to {prim.GetPath()}")
+            return False
+        return True
+
+    def _get_or_create_material_prim(self, mdl_path: str, mtl_name: str) -> str:
+        """Reuse previously created material prims whenever possible."""
+        cache = self._get_material_cache()
+        mdl_path = os.path.abspath(mdl_path)
+        cached_prim = cache.get(mdl_path)
+
+        stage = None
+        try:
+            import omni.usd
+
+            stage = omni.usd.get_context().get_stage()
+        except Exception as err:
+            logger.debug(f"Unable to access USD stage when resolving material prim: {err}")
+
+        if cached_prim and stage is not None:
+            prim = stage.GetPrimAtPath(cached_prim)
+            if prim and prim.IsValid():
+                logger.debug(f"Reusing cached MDL material {mtl_name} at {cached_prim}")
+                return cached_prim
+            cache.pop(mdl_path, None)
+
         import omni.kit.commands
         from omni.kit.material.library import get_material_prim_path
-        from pxr import UsdShade
 
         _, mtl_prim_path = get_material_prim_path(mtl_name)
 
         logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
 
-        success, result = omni.kit.commands.execute(
+        success, _ = omni.kit.commands.execute(
             "CreateMdlMaterialPrim",
             mtl_url=mdl_path,
             mtl_name=mtl_name,
@@ -528,23 +603,42 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
             raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
 
-        logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
+        cache[mdl_path] = mtl_prim_path
+        return mtl_prim_path
 
-        success, result = omni.kit.commands.execute(
-            "BindMaterial",
-            prim_path=prim.GetPath(),
-            material_path=mtl_prim_path,
-            strength=UsdShade.Tokens.strongerThanDescendants,
-        )
+    def _get_material_cache(self) -> dict[str, str]:
+        """Fetch or initialize the shared material cache."""
+        handler = getattr(self, "handler", None)
+        if handler is not None:
+            cache = getattr(handler, "_mdl_material_cache", None)
+            if cache is None:
+                cache = {}
+                handler._mdl_material_cache = cache
+            return cache
 
-        if not success:
-            logger.error(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
-            raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
+        if not hasattr(self, "_mdl_material_cache"):
+            self._mdl_material_cache = {}
+        return self._mdl_material_cache
 
-        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+    def _make_prim_editable(self, prim):
+        """Ensure the prim (or its prototype) is writable."""
+        if prim is None or not prim.IsValid():
+            return prim
 
-        # Ensure downstream sensors observe the updated material deterministically.
-        self._sync_visual_updates(wait_for_materials=True)
+        # Instance proxies can't be authored directly; map to their prototype prim.
+        if prim.IsInstanceProxy():
+            proto_prim = prim.GetPrimInPrototype()
+            if proto_prim and proto_prim.IsValid():
+                prim = proto_prim
+            else:
+                prototype = prim.GetPrototype()
+                if prototype and prototype.IsValid():
+                    prim = prototype
+
+        if prim.IsInstanceable():
+            prim.SetInstanceable(False)
+
+        return prim
 
     def _ensure_uv_for_hierarchy(self, prim, tile_scale: float = 1.0) -> None:
         """Ensure UV coordinates for all meshes in the prim hierarchy.
@@ -553,22 +647,174 @@ class MaterialRandomizer(BaseRandomizerType):
             prim: USD prim to process
             tile_scale: Scale factor for UV tiling (passed to UV generation functions)
         """
-        from pxr import Usd, UsdGeom
+        from pxr import UsdGeom
 
-        # Process all meshes in the hierarchy
-        for p in Usd.PrimRange(prim):
-            if p.IsA(UsdGeom.Mesh):
+        for editable_prim in self._iter_geometry_prims(prim):
+            if editable_prim.IsA(UsdGeom.Mesh):
                 try:
                     self._ensure_uv_coordinates_improved(
-                        UsdGeom.Mesh(p), tile=1.0 / tile_scale if tile_scale > 0 else 0.2
+                        UsdGeom.Mesh(editable_prim), tile=1.0 / tile_scale if tile_scale > 0 else 0.2
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to generate UV for mesh {p.GetPath()}: {e}")
-            elif p.IsA(UsdGeom.Gprim) and not p.IsA(UsdGeom.Mesh):
+                    logger.warning(f"Failed to generate UV for mesh {editable_prim.GetPath()}: {e}")
+            elif editable_prim.IsA(UsdGeom.Gprim) and not editable_prim.IsA(UsdGeom.Mesh):
                 try:
-                    self._ensure_basic_uv_for_gprim(p, tile_scale=tile_scale)
+                    self._ensure_basic_uv_for_gprim(editable_prim, tile_scale=tile_scale)
                 except Exception as e:
-                    logger.warning(f"Failed to generate UV for gprim {p.GetPath()}: {e}")
+                    logger.warning(f"Failed to generate UV for gprim {editable_prim.GetPath()}: {e}")
+
+    def _iter_geometry_prims(self, prim):
+        """Yield editable mesh/gprim prims under the provided root."""
+        from pxr import Usd, UsdGeom
+
+        predicate = getattr(Usd, "PrimDefaultPredicate", None)
+        if predicate is None:
+            predicate = Usd.PrimIsActive & Usd.PrimIsDefined & ~Usd.PrimIsAbstract
+        predicate = Usd.TraverseInstanceProxies(predicate)
+
+        for child in Usd.PrimRange(prim, predicate=predicate):
+            editable_prim = self._make_prim_editable(child)
+            if not editable_prim or not editable_prim.IsValid():
+                continue
+            if editable_prim.IsA(UsdGeom.Mesh) or (
+                editable_prim.IsA(UsdGeom.Gprim) and not editable_prim.IsA(UsdGeom.Mesh)
+            ):
+                yield editable_prim
+
+    def _ensure_double_sided(self, prim) -> bool:
+        """Force double-sided shading so single-sided MDLs don't disappear."""
+        from pxr import UsdGeom
+
+        if not prim or not prim.IsValid():
+            return False
+
+        if prim.IsA(UsdGeom.Mesh):
+            mesh = UsdGeom.Mesh(prim)
+            attr = mesh.GetDoubleSidedAttr()
+            needs_update = not attr.HasAuthoredValue() or attr.Get() is False
+            if needs_update:
+                mesh.CreateDoubleSidedAttr(True)
+                return True
+            return attr.Get()
+        return False
+
+    def _force_pose_nudge(self, prim_paths: list[str]) -> None:
+        """Apply a tiny temporary translation to prims to force RTX BLAS updates."""
+        if not prim_paths:
+            return
+
+        handler = getattr(self, "handler", None)
+        if handler is None:
+            return
+
+        try:
+            import omni.usd
+            from pxr import Gf, Usd, UsdGeom, UsdPhysics
+        except ImportError:
+            return
+
+        stage = omni.usd.get_context().get_stage()
+        if stage is None:
+            return
+
+        nudged_ops: list[tuple[UsdGeom.XformOp, Gf.Vec3d]] = []
+        for prim_path in prim_paths:
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim or not prim.IsValid():
+                continue
+
+            # For articulated objects, apply to child visual meshes only
+            if UsdPhysics.ArticulationRootAPI(prim):
+                predicate = getattr(Usd, "PrimDefaultPredicate", None)
+                if predicate is None:
+                    predicate = Usd.PrimIsActive & Usd.PrimIsDefined & ~Usd.PrimIsAbstract
+                predicate = Usd.TraverseInstanceProxies(predicate)
+
+                for child in Usd.PrimRange(prim, predicate=predicate):
+                    if child.GetPath() == prim.GetPath():
+                        continue
+
+                    # Skip collision geometry to avoid breaking physics
+                    if child.HasAPI(UsdPhysics.CollisionAPI):
+                        continue
+
+                    child_path_str = str(child.GetPath())
+                    if "collision" in child_path_str.lower():
+                        continue
+
+                    if child.IsA(UsdGeom.Mesh) or child.IsA(UsdGeom.Gprim):
+                        xformable = UsdGeom.Xformable(child)
+                        if not xformable:
+                            continue
+
+                        op = self._get_or_create_nudge_op(xformable)
+                        if op is None:
+                            continue
+
+                        base_val = op.Get()
+                        if base_val is None:
+                            base_val = Gf.Vec3d(0.0, 0.0, 0.0)
+
+                        op.Set(base_val + Gf.Vec3d(1e-4, 0.0, 0.0))
+                        nudged_ops.append((op, base_val))
+                continue
+
+            # For non-articulated prims, apply directly
+            xformable = UsdGeom.Xformable(prim)
+            if not xformable:
+                continue
+
+            op = self._get_or_create_nudge_op(xformable)
+            if op is None:
+                continue
+
+            base_val = op.Get()
+            if base_val is None:
+                base_val = Gf.Vec3d(0.0, 0.0, 0.0)
+
+            op.Set(base_val + Gf.Vec3d(1e-4, 0.0, 0.0))
+            nudged_ops.append((op, base_val))
+
+        if not nudged_ops:
+            return
+
+        flush_fn = getattr(handler, "flush_visual_updates", None)
+        if callable(flush_fn):
+            try:
+                flush_fn(wait_for_materials=True, settle_passes=1)
+            except Exception as err:
+                logger.debug(f"flush_visual_updates during pose nudge failed: {err}")
+
+        for op, base_val in nudged_ops:
+            try:
+                op.Set(base_val)
+            except Exception as err:
+                logger.debug(f"Failed to restore translate op {op.GetName()}: {err}")
+
+        if callable(flush_fn):
+            try:
+                flush_fn(wait_for_materials=True, settle_passes=1)
+            except Exception as err:
+                logger.debug(f"flush_visual_updates during pose restore failed: {err}")
+
+    def _get_or_create_nudge_op(self, xformable):
+        """Return a reusable translate op for pose nudging."""
+        from pxr import UsdGeom
+
+        nudge_op = None
+        for op in xformable.GetOrderedXformOps():
+            if op.GetOpType() == UsdGeom.XformOp.TypeTranslate and op.GetName().endswith("dr_refresh"):
+                nudge_op = op
+                break
+
+        if nudge_op is None:
+            try:
+                nudge_op = xformable.AddTranslateOp(opSuffix="dr_refresh", precision=UsdGeom.XformOp.PrecisionDouble)
+            except Exception as err:
+                logger.debug(f"Failed to create nudge translate op for {xformable.GetPrim().GetPath()}: {err}")
+                return None
+
+        return nudge_op
 
     def _ensure_uv_coordinates_improved(self, mesh, tile: float = 0.2) -> None:
         """Improved UV coordinate generation based on bounding box projection."""

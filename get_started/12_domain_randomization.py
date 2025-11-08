@@ -261,7 +261,7 @@ def initialize_randomizers(handler, args):
     log.info("-" * 70)
 
     box_mat = MaterialRandomizer(
-        MaterialPresets.mdl_family_object("box_base", family=("plastic", "paper")),
+        MaterialPresets.mdl_family_object("box_base", family=("paper", "wood")),
         seed=args.seed,
     )
     box_mat.bind_handler(handler)
@@ -300,13 +300,13 @@ def initialize_randomizers(handler, args):
             enabled=True,
         ),
         position=LightPositionRandomCfg(
-            position_range=((-2.0, 2.0), (-2.0, 2.0), (-0.5, 0.5)),
+            position_range=((-1.0, 1.0), (-1.0, 1.0), (-0.2, 0.2)),
             relative_to_origin=True,
             distribution="uniform",
             enabled=True,
         ),
         orientation=LightOrientationRandomCfg(
-            angle_range=((-30.0, 30.0), (-30.0, 30.0), (-180.0, 180.0)),
+            angle_range=((-20.0, 20.0), (-20.0, 20.0), (-180.0, 180.0)),
             relative_to_origin=True,
             distribution="uniform",
             enabled=True,
@@ -332,7 +332,7 @@ def initialize_randomizers(handler, args):
                 enabled=True,
             ),
             position=LightPositionRandomCfg(
-                position_range=((-1.5, 1.5), (-1.5, 1.5), (-0.5, 0.5)),
+                position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.2, 0.2)),
                 relative_to_origin=True,
                 distribution="uniform",
                 enabled=True,
@@ -363,8 +363,9 @@ def initialize_randomizers(handler, args):
     return randomizers
 
 
-def apply_randomization(randomizers, level):
-    """Apply all active randomizers."""
+def apply_randomization(randomizers, level, handler) -> None:
+    """Apply all active randomizers (auto-flushes visual updates internally)."""
+
     if randomizers["scene"]:
         randomizers["scene"]()
 
@@ -412,7 +413,7 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
 
     randomization_enabled = not args.object_states
     if randomization_enabled:
-        apply_randomization(randomizers, args.level)
+        apply_randomization(randomizers, args.level, env.handler)
 
     obs, extras = env.reset(states=[init_state] * args.num_envs)
 
@@ -422,7 +423,7 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
     while True:
         if randomization_enabled and step % args.randomize_interval == 0 and step > 0:
             log.info(f"Step {step}: Applying randomizations")
-            apply_randomization(randomizers, args.level)
+            apply_randomization(randomizers, args.level, env.handler)
 
         if args.object_states:
             if all_states is None:
