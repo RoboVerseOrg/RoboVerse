@@ -667,7 +667,13 @@ class IsaacsimHandler(BaseSimHandler):
             )
             if isinstance(obj, RigidObjCfg):
                 self.scene.rigid_objects[obj.name] = RigidObject(
-                    RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg)
+                    RigidObjectCfg(
+                        prim_path=prim_path,
+                        spawn=usd_file_cfg,
+                        init_state=RigidObjectCfg.InitialStateCfg(
+                            pos=obj.default_position, rot=obj.default_orientation
+                        ),
+                    )
                 )
                 return
 
