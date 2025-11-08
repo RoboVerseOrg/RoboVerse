@@ -70,19 +70,23 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             self._render_viewport = True
 
-    def _init_scene(self) -> None:
+    def _init_scene(self, simulation_app=None, args=None) -> None:
         """
         Initializes the isaacsim simulation environment.
         """
-        from isaaclab.app import AppLauncher
+        if simulation_app is None:
+            from isaaclab.app import AppLauncher
 
-        parser = argparse.ArgumentParser()
-        AppLauncher.add_app_launcher_args(parser)
-        args = parser.parse_args([])
-        args.enable_cameras = True
-        args.headless = self.headless
-        app_launcher = AppLauncher(args)
-        self.simulation_app = app_launcher.app
+            parser = argparse.ArgumentParser()
+            AppLauncher.add_app_launcher_args(parser)
+            args = parser.parse_args([])
+            args.enable_cameras = True
+            args.headless = self.headless
+            app_launcher = AppLauncher(args)
+            self.simulation_app = app_launcher.app
+        else:
+            assert args is not None, "args must be provided when simulation_app is given."
+            self.simulation_app = simulation_app
 
         # physics context
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
@@ -156,8 +160,8 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
-    def launch(self) -> None:
-        self._init_scene()
+    def launch(self, simulation_app=None, simulation_args=None) -> None:
+        self._init_scene(simulation_app, simulation_args)
         self._load_robots()
         self._load_sensors()
         self._load_cameras()

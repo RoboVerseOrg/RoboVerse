@@ -16,6 +16,9 @@ dependencies = [
     "tqdm",
     "tyro",
     "portalocker",
+    "dataclasses-json",
+    "trimesh",
+    "scipy",
     "numpy-quaternion"
 ]
 

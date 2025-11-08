@@ -243,15 +243,18 @@ class FileDownloader:
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return
-
         if self.scenario.simulator in ["isaaclab", "isaacsim"]:
             self._add(obj.usd_path)
-        elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
-            self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
+        elif (
+            self.scenario.simulator in ["pybullet", "sapien2", "sapien3"]
+            or (self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf)
+            or (self.scenario.simulator == "genesis" and not obj.genesis_read_mjcf)
         ):
             self._add(obj.urdf_path)
-        elif self.scenario.simulator in ["mujoco"] or (
-            self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf
+        elif (
+            self.scenario.simulator in ["mujoco"]
+            or (self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf)
+            or (self.scenario.simulator == "genesis" and obj.genesis_read_mjcf)
         ):
             self._add(obj.mjcf_path)
         elif self.scenario.simulator in ["mjx"]:

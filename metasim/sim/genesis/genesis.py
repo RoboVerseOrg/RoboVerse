@@ -154,14 +154,19 @@ class GenesisHandler(BaseSimHandler):
                     gs.morphs.Sphere(radius=obj.radius), surface=gs.surfaces.Default(color=obj.color)
                 )
             elif isinstance(obj, RigidObjCfg):
-                urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
-                obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
-                )
-                # # Use convex decomposition mjcf file for more accurate physical collision.
-                # obj_inst = self.scene_inst.add_entity(
-                #     gs.morphs.MJCF(file=obj.mjcf_path, scale=obj.scale, convexify=False, decimate=False),
-                # )
+                if hasattr(obj, "urdf_path") and not obj.genesis_read_mjcf:
+                    urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
+                    obj_inst = self.scene_inst.add_entity(
+                        gs.morphs.URDF(file=urdf_path, fixed=obj.fix_base_link, scale=obj.scale),
+                    )
+                # Use convex decomposition mjcf file for more accurate physical collision.
+                elif hasattr(obj, "mjcf_path") and obj.genesis_read_mjcf:
+                    obj_inst = self.scene_inst.add_entity(
+                        gs.morphs.MJCF(file=obj.mjcf_path, scale=obj.scale, convexify=False, decimate=False),
+                    )
+                else:
+                    raise NotImplementedError(f"RigidObjCfg {obj.name} must have either urdf_path or mjcf_path set.")
+
             elif isinstance(obj, ArticulationObjCfg):
                 urdf_path = self._sanitize_urdf(obj.urdf_path) if obj.urdf_path else None
                 obj_inst = self.scene_inst.add_entity(
