@@ -618,11 +618,8 @@ class SceneRandomizer(BaseRandomizerType):
             dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
             logger.debug(f"Applied material to mesh {mesh_path}")
 
-        self._sync_material_application()
+        self._mark_visual_dirty()
         logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
-
-        # except Exception as e:
-        #     logger.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")
 
     def _randomize_materials_only(self, env_ids: list[int] | None = None):
         """Apply material randomization to existing scene elements only.
@@ -643,10 +640,6 @@ class SceneRandomizer(BaseRandomizerType):
         # This would require detecting existing scene elements
         # For now, we skip this in favor of explicit material randomization
         pass
-
-    def _sync_material_application(self):
-        """Flush material compilation & rendering so sensors capture the final state."""
-        self._sync_visual_updates(wait_for_materials=True)
 
     def get_scene_properties(self) -> dict:
         """Get current scene properties.

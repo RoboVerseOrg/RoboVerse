@@ -358,7 +358,7 @@ class CameraRandomizer(BaseRandomizerType):
             logger.error(f"Camera randomization failed for '{self.cfg.camera_name}': {e}")
         else:
             if did_update:
-                self._sync_visual_updates()
+                self._mark_visual_dirty()
 
     def _get_camera_prim(self):
         """Get camera prim from scene."""

@@ -528,7 +528,7 @@ class LightRandomizer(BaseRandomizerType):
             raise
         else:
             if did_update:
-                self._sync_visual_updates()
+                self._mark_visual_dirty()
 
     def _get_enabled_light_types(self) -> list[str]:
         """Get list of enabled light randomization types."""
