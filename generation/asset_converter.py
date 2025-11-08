@@ -240,8 +240,8 @@ class MeshtoUSDConverter(AssetConverterBase):
 
     DEFAULT_BIND_APIS = [
         "MaterialBindingAPI",
-        # "PhysicsMeshCollisionAPI",
-        "PhysxDecompositionCollisionAPI",
+        "PhysicsMeshCollisionAPI",
+        "PhysxConvexDecompositionCollisionAPI",
         "PhysicsCollisionAPI",
         "PhysxCollisionAPI",
         "PhysicsMassAPI",
@@ -289,12 +289,13 @@ class MeshtoUSDConverter(AssetConverterBase):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit, closes simulation app if created."""
         # Close the simulation app if it was created here
-        if hasattr(self, "app_launcher") and self.exit_close:
-            self.simulation_app.close()
-
         if exc_val is not None:
             logger.error(f"Exception occurred: {exc_val}.")
+
+        if hasattr(self, "app_launcher") and self.exit_close:
+            self.simulation_app.close()
 
         return False
 
@@ -336,12 +337,14 @@ class MeshtoUSDConverter(AssetConverterBase):
 
                 # Add convex decomposition collision and set ShrinkWrap.
                 elif prim.GetName() == "mesh":
-                    approx_attr = prim.GetAttribute("physics:approximation")
-                    if not approx_attr:
-                        approx_attr = prim.CreateAttribute("physics:approximation", Sdf.ValueTypeNames.Token)
+                    approx_attr = prim.CreateAttribute("physics:approximation", Sdf.ValueTypeNames.Token)
                     approx_attr.Set("convexDecomposition")
 
                     physx_conv_api = PhysxSchema.PhysxConvexDecompositionCollisionAPI.Apply(prim)
+
+                    physx_conv_api.GetMaxConvexHullsAttr().Set(32)
+                    physx_conv_api.GetHullVertexLimitAttr().Set(16)
+                    physx_conv_api.GetVoxelResolutionAttr().Set(10000)
                     physx_conv_api.GetShrinkWrapAttr().Set(True)
 
                     api_schemas = prim.GetMetadata("apiSchemas")
@@ -416,12 +419,13 @@ class URDFtoUSDConverter(MeshtoUSDConverter):
         with Usd.EditContext(stage, layer):
             for prim in stage.Traverse():
                 if prim.GetName() == "collisions":
-                    approx_attr = prim.GetAttribute("physics:approximation")
-                    if not approx_attr:
-                        approx_attr = prim.CreateAttribute("physics:approximation", Sdf.ValueTypeNames.Token)
+                    approx_attr = prim.CreateAttribute("physics:approximation", Sdf.ValueTypeNames.Token)
                     approx_attr.Set("convexDecomposition")
 
                     physx_conv_api = PhysxSchema.PhysxConvexDecompositionCollisionAPI.Apply(prim)
+                    physx_conv_api.GetMaxConvexHullsAttr().Set(32)
+                    physx_conv_api.GetHullVertexLimitAttr().Set(16)
+                    physx_conv_api.GetVoxelResolutionAttr().Set(10000)
                     physx_conv_api.GetShrinkWrapAttr().Set(True)
 
                     api_schemas = prim.GetMetadata("apiSchemas")

@@ -200,7 +200,7 @@ if __name__ == "__main__":
             },
             "robots": {
                 "franka": {
-                    "pos": torch.tensor([0.8, -0.9, 0.82]),
+                    "pos": torch.tensor([0.9, -0.9, 0.85]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "panda_joint1": 0.0,
