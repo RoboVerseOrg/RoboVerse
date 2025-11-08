@@ -68,6 +68,7 @@ class SceneRandomCfg:
         table_materials: Material pool for table/desktop
         only_if_no_scene: Only create scene elements if no predefined scene exists
         env_ids: List of environment IDs to apply randomization to (None = all)
+        auto_flush_visuals: Automatically flush visual updates after material changes
     """
 
     floor: SceneGeometryCfg | None = None
@@ -82,6 +83,7 @@ class SceneRandomCfg:
 
     only_if_no_scene: bool = True
     env_ids: list[int] | None = None
+    auto_flush_visuals: bool = True
 
     def __post_init__(self):
         """Validate scene randomization configuration."""
@@ -192,6 +194,16 @@ class SceneRandomizer(BaseRandomizerType):
         # Create and randomize scene elements for each environment
         for env_id in target_env_ids:
             self._randomize_scene_for_env(env_id)
+
+        # Auto-flush visual updates after material changes (if enabled)
+        if self.cfg.auto_flush_visuals:
+            self._mark_visual_dirty()
+            flush_fn = getattr(self.handler, "flush_visual_updates", None)
+            if callable(flush_fn):
+                try:
+                    flush_fn(wait_for_materials=True, settle_passes=2)
+                except Exception as e:
+                    logger.debug(f"Failed to auto-flush visual updates: {e}")
 
     def _randomize_scene_for_env(self, env_id: int):
         """Randomize scene for a specific environment.

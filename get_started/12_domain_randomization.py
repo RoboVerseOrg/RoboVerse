@@ -300,13 +300,13 @@ def initialize_randomizers(handler, args):
             enabled=True,
         ),
         position=LightPositionRandomCfg(
-            position_range=((-2.0, 2.0), (-2.0, 2.0), (-0.5, 0.5)),
+            position_range=((-1.0, 1.0), (-1.0, 1.0), (-0.2, 0.2)),
             relative_to_origin=True,
             distribution="uniform",
             enabled=True,
         ),
         orientation=LightOrientationRandomCfg(
-            angle_range=((-30.0, 30.0), (-30.0, 30.0), (-180.0, 180.0)),
+            angle_range=((-20.0, 20.0), (-20.0, 20.0), (-180.0, 180.0)),
             relative_to_origin=True,
             distribution="uniform",
             enabled=True,
@@ -332,7 +332,7 @@ def initialize_randomizers(handler, args):
                 enabled=True,
             ),
             position=LightPositionRandomCfg(
-                position_range=((-1.5, 1.5), (-1.5, 1.5), (-0.5, 0.5)),
+                position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.2, 0.2)),
                 relative_to_origin=True,
                 distribution="uniform",
                 enabled=True,
@@ -363,40 +363,27 @@ def initialize_randomizers(handler, args):
     return randomizers
 
 
-def apply_randomization(randomizers, level, handler) -> bool:
-    """Apply all active randomizers and signal whether visuals changed."""
-
-    def _consume_dirty(r):
-        consume = getattr(r, "consume_visual_dirty", None)
-        return bool(consume()) if callable(consume) else False
-
-    visual_dirty = False
+def apply_randomization(randomizers, level, handler) -> None:
+    """Apply all active randomizers (auto-flushes visual updates internally)."""
 
     if randomizers["scene"]:
         randomizers["scene"]()
-        visual_dirty |= _consume_dirty(randomizers["scene"])
 
     if level >= 0:
         for rand in randomizers["object"]:
             rand()
-            visual_dirty |= _consume_dirty(rand)
 
     if level >= 1:
         for rand in randomizers["material"]:
             rand()
-            visual_dirty |= _consume_dirty(rand)
 
     if level >= 2:
         for rand in randomizers["light"]:
             rand()
-            visual_dirty |= _consume_dirty(rand)
 
     if level >= 3:
         for rand in randomizers["camera"]:
             rand()
-            visual_dirty |= _consume_dirty(rand)
-
-    return visual_dirty
 
 
 def get_states(all_states, action_idx: int, num_envs: int):
@@ -425,25 +412,18 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
     log.info(f"Trajectory length: {traj_length} steps")
 
     randomization_enabled = not args.object_states
-    pending_visual_flush = False
     if randomization_enabled:
-        pending_visual_flush = apply_randomization(randomizers, args.level, env.handler)
+        apply_randomization(randomizers, args.level, env.handler)
 
     obs, extras = env.reset(states=[init_state] * args.num_envs)
 
     step = 0
     num_envs = env.scenario.num_envs
 
-    if pending_visual_flush:
-        flush_fn = getattr(env.handler, "flush_visual_updates", None)
-        if callable(flush_fn):
-            flush_fn(wait_for_materials=True, settle_passes=args.visual_flush_passes)
-        pending_visual_flush = False
-
     while True:
         if randomization_enabled and step % args.randomize_interval == 0 and step > 0:
             log.info(f"Step {step}: Applying randomizations")
-            pending_visual_flush = apply_randomization(randomizers, args.level, env.handler)
+            apply_randomization(randomizers, args.level, env.handler)
 
         if args.object_states:
             if all_states is None:
@@ -463,12 +443,6 @@ def run_replay_with_randomization(env, randomizers, init_state, all_actions, all
         else:
             actions = get_actions(all_actions, step, num_envs)
             obs, reward, success, time_out, extras = env.step(actions)
-
-        if pending_visual_flush:
-            flush_fn = getattr(env.handler, "flush_visual_updates", None)
-            if callable(flush_fn):
-                flush_fn(wait_for_materials=True, settle_passes=args.visual_flush_passes)
-            pending_visual_flush = False
 
         if success.any():
             log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded")
@@ -526,9 +500,6 @@ def main():
         - raytracing: Fast with shadows
         - pathtracing: Highest quality (slower)
         """
-
-        visual_flush_passes: int = 2
-        """Number of settle passes when flushing visual updates after randomization."""
 
     args = tyro.cli(Args)
 

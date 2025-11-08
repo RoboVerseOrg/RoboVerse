@@ -549,6 +549,9 @@ class MaterialRandomizer(BaseRandomizerType):
 
     def _bind_material_to_prim(self, prim, material_path: str, mdl_name: str, double_sided: bool) -> bool:
         """Bind the prepared material prim to a specific geometry prim."""
+        import omni.kit.commands
+        from pxr import UsdShade
+
         logger.debug(f"Binding MDL {mdl_name} to {prim.GetPath()} (double_sided={'Y' if double_sided else 'N'})")
         success, _ = omni.kit.commands.execute(
             "BindMaterial",
