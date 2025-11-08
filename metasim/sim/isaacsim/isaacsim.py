@@ -1178,9 +1178,102 @@ class IsaacsimHandler(BaseSimHandler):
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
 
     def refresh_render(self) -> None:
-        for sensor in self.scene.sensors.values():
-            sensor.update(dt=0)
-        self.sim.render()
+        self.flush_visual_updates(settle_passes=1)
+
+    def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
+        """Drive SimulationApp/scene/sensors for a few frames to settle visual state."""
+        passes = max(1, settle_passes)
+        sim_app = getattr(self, "simulation_app", None)
+        reason = "material refresh" if wait_for_materials else "visual flush"
+
+        for _ in range(passes):
+            if sim_app is not None:
+                try:
+                    sim_app.update()
+                except Exception as err:
+                    log.debug(f"SimulationApp update failed during {reason}: {err}")
+
+            if self.scene is not None:
+                try:
+                    self.scene.update(dt=0)
+                except Exception as err:
+                    log.debug(f"Scene update failed during {reason}: {err}")
+
+            if self.sim is not None:
+                try:
+                    if self.sim.has_gui() or self.sim.has_rtx_sensors():
+                        self.sim.render()
+                except Exception as err:
+                    log.debug(f"Sim render failed during {reason}: {err}")
+
+            sensors = getattr(self.scene, "sensors", {}) if self.scene is not None else {}
+            for name, sensor in sensors.items():
+                try:
+                    sensor.update(dt=0)
+                except Exception as err:
+                    log.debug(f"Sensor {name} update failed during {reason}: {err}")
+
+        if wait_for_materials:
+            self._refresh_raytracing_acceleration()
+
+    def _refresh_raytracing_acceleration(self) -> None:
+        """Work around Isaac Sim 4.5 RTX BVH getting stale after material edits."""
+        render_cfg = getattr(self.scenario, "render", None)
+        if render_cfg is None or getattr(render_cfg, "mode", None) != "raytracing":
+            return
+
+        try:
+            import carb
+            import omni.kit.app
+        except ImportError:
+            return
+
+        settings = carb.settings.get_settings()
+        app = omni.kit.app.get_app()
+        if settings is None or app is None:
+            return
+
+        enabled_path = "/rtx/raytracing/enabled"
+        try:
+            current_state = settings.get(enabled_path)
+        except Exception as err:
+            log.debug(f"Unable to read RTX setting {enabled_path}: {err}")
+            current_state = None
+
+        if current_state is None:
+            current_state = True
+            try:
+                settings.set(enabled_path, current_state)
+                app.update()
+            except Exception as err:
+                log.debug(f"Failed to initialize RTX setting {enabled_path}: {err}")
+                return
+
+        log.debug("Refreshing RTX acceleration structure after material update")
+        try:
+            settings.set(enabled_path, False)
+            app.update()
+            settings.set(enabled_path, current_state)
+            app.update()
+
+            gc_path = "/rtx/hydra/triggerGarbageCollection"
+            settings.set(gc_path, True)
+            app.update()
+            settings.set(gc_path, False)
+            app.update()
+
+            if self.sim is not None:
+                try:
+                    self.sim.render()
+                except Exception as err:
+                    log.debug(f"Sim render during RTX refresh failed: {err}")
+            if self.scene is not None:
+                try:
+                    self.scene.update(dt=0)
+                except Exception as err:
+                    log.debug(f"Scene update during RTX refresh failed: {err}")
+        except Exception as err:
+            log.debug(f"Failed to refresh RTX acceleration structure: {err}")
 
     def _get_camera_params(self, camera, camera_inst):
         """Get camera intrinsics and extrinsics for GS rendering.
