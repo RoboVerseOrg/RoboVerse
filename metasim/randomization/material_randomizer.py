@@ -181,22 +181,25 @@ class MaterialRandomizer(BaseRandomizerType):
     Supports multiple randomization modes and distributions with reproducible seeding.
     """
 
-    def __init__(self, cfg: MaterialRandomCfg, seed: int | None = None, device: torch.device | str = "cpu"):
+    def __init__(self, cfg: MaterialRandomCfg | None, seed: int | None = None, device: torch.device | str = "cpu"):
         super().__init__()
         self.cfg = cfg
+        self.pbr_material_cache = {}
+        self.mdl_material_cache = {}
         self._mdl_selection_state = {"sequential_index": 0}
         self.device = device
 
-        # Set up reproducible random state - simple and direct
-        if seed is not None:
-            # Use provided seed + simple string-to-number conversion for uniqueness
-            name_sum = sum(ord(c) for c in cfg.obj_name)
-            self._seed = seed + name_sum
-        else:
-            self._seed = random.randint(0, 2**32 - 1)
+        if self.cfg is not None:
+            # Set up reproducible random state - simple and direct
+            if seed is not None:
+                # Use provided seed + simple string-to-number conversion for uniqueness
+                name_sum = sum(ord(c) for c in cfg.obj_name)
+                self._seed = seed + name_sum
+            else:
+                self._seed = random.randint(0, 2**32 - 1)
 
-        self._rng = random.Random(self._seed)
-        logger.debug(f"MaterialRandomizer for '{cfg.obj_name}' using seed {self._seed}")
+            self._rng = random.Random(self._seed)
+            logger.debug(f"MaterialRandomizer for '{cfg.obj_name}' using seed {self._seed}")
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
@@ -319,11 +322,11 @@ class MaterialRandomizer(BaseRandomizerType):
         for env_id in env_ids:
             env_prim_path = root_path.replace("env_.*", f"env_{env_id}")
             try:
-                self._randomize_prim_pbr(env_prim_path)
+                self._randomize_prim_pbr(env_prim_path, env_id)
             except Exception as e:
                 logger.warning(f"Failed to randomize PBR for {env_prim_path}: {e}")
 
-    def _randomize_prim_pbr(self, prim_path: str) -> None:
+    def _randomize_prim_pbr(self, prim_path: str, env_id: int) -> None:
         """Randomize PBR properties for a specific prim."""
         try:
             import omni.isaac.core.utils.prims as prim_utils
@@ -335,22 +338,37 @@ class MaterialRandomizer(BaseRandomizerType):
         prim = prim_utils.get_prim_at_path(prim_path)
         if not prim:
             return
+        
+        use_cache = False
+        # Try to fetch material from cache
+        mtl_name = f"pbr_material_{env_id}"
+        if mtl_name in self.pbr_material_cache:
+            material = self.pbr_material_cache[mtl_name]
+            use_cache = True
+        else:
+            _, mtl_prim_path = get_material_prim_path(mtl_name)
+            # material = UsdShade.Material.Define(self.stage, mtl_prim_path)
+            MDL = "OmniPBR.mdl"
+            pbr_name, _ = os.path.splitext(MDL)
+            omni.kit.commands.execute(
+                "CreateMdlMaterialPrim",
+                mtl_url=MDL, 
+                mtl_name=pbr_name, 
+                mtl_path=mtl_prim_path,
+            )
+            material = self.stage.GetPrimAtPath(mtl_prim_path)
+            self.pbr_material_cache[mtl_name] = material
 
-        # Always create a new material to ensure it overrides any existing material
-        mtl_name = f"pbr_material_{self._rng.randint(0, 1000000)}"
-        _, mtl_prim_path = get_material_prim_path(mtl_name)
-        material = UsdShade.Material.Define(self.stage, mtl_prim_path)
-
-        # Bind with stronger priority to override existing materials
-        success = omni.kit.commands.execute(
-            "BindMaterial",
-            prim_path=prim.GetPath(),
-            material_path=mtl_prim_path,
-            strength=UsdShade.Tokens.strongerThanDescendants,
-        )
-        if not success:
-            logger.warning(f"Failed to bind PBR material to {prim.GetPath()}")
-            return
+            # Bind with stronger priority to override existing materials
+            success = omni.kit.commands.execute(
+                "BindMaterial",
+                prim_path=prim.GetPath(),
+                material_path=mtl_prim_path,
+                strength=UsdShade.Tokens.strongerThanDescendants,
+            )
+            if not success:
+                logger.warning(f"Failed to bind PBR material to {prim.GetPath()}")
+                return
 
         # Get or create shader
         shader = UsdShade.Shader(omni.usd.get_shader_from_material(material, get_prim=True))
@@ -363,21 +381,33 @@ class MaterialRandomizer(BaseRandomizerType):
         # Randomize properties
         if self.cfg.pbr.roughness_range:
             val = self._generate_random_value(self.cfg.pbr.roughness_range, self.cfg.pbr.distribution)
-            shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(val)
+            if use_cache:
+                shader.GetInput("reflection_roughness_constant").Set(val)
+            else:
+                shader.CreateInput("reflection_roughness_constant", Sdf.ValueTypeNames.Float).Set(val)
 
         if self.cfg.pbr.metallic_range:
             val = self._generate_random_value(self.cfg.pbr.metallic_range, self.cfg.pbr.distribution)
-            shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(val)
+            if use_cache:
+                shader.GetInput("metallic_constant").Set(val)
+            else:
+                shader.CreateInput("metallic_constant", Sdf.ValueTypeNames.Float).Set(val)
 
         if self.cfg.pbr.specular_range:
             val = self._generate_random_value(self.cfg.pbr.specular_range, self.cfg.pbr.distribution)
-            shader.CreateInput("specular", Sdf.ValueTypeNames.Float).Set(val)
+            if use_cache:
+                shader.GetInput("specular").Set(val)
+            else:
+                shader.CreateInput("specular", Sdf.ValueTypeNames.Float).Set(val)
 
         if self.cfg.pbr.diffuse_color_range:
             r = self._generate_random_value(self.cfg.pbr.diffuse_color_range[0], self.cfg.pbr.distribution)
             g = self._generate_random_value(self.cfg.pbr.diffuse_color_range[1], self.cfg.pbr.distribution)
             b = self._generate_random_value(self.cfg.pbr.diffuse_color_range[2], self.cfg.pbr.distribution)
-            shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(r, g, b))
+            if use_cache:
+                shader.GetInput("diffuse_color_constant").Set(Gf.Vec3f(r, g, b))
+            else:
+                shader.CreateInput("diffuse_color_constant", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(r, g, b))
 
     def randomize_mdl_material(self, env_ids=None) -> None:
         """Apply MDL material based on selection strategy."""
@@ -477,23 +507,27 @@ class MaterialRandomizer(BaseRandomizerType):
         # Material name should match the MDL file basename (without .mdl extension)
         # Don't add _mat or timestamp - let IsaacSim use the exported material name from MDL
         mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
-        _, mtl_prim_path = get_material_prim_path(mtl_name)
+        cache_key = f"mdl_material_{mtl_name}"
+        if cache_key in self.mdl_material_cache:
+            mtl_prim_path = self.mdl_material_cache[cache_key]
+        else:
+            _, mtl_prim_path = get_material_prim_path(mtl_name)
 
-        # logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
+            success, result = omni.kit.commands.execute(
+                "CreateMdlMaterialPrim",
+                mtl_url=mdl_path,
+                mtl_name=mtl_name,
+                mtl_path=mtl_prim_path,
+                select_new_prim=False,
+            )
+            if not success:
+                logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
+                raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
+            
+            self.mdl_material_cache[cache_key] = mtl_prim_path
 
-        success, result = omni.kit.commands.execute(
-            "CreateMdlMaterialPrim",
-            mtl_url=mdl_path,
-            mtl_name=mtl_name,
-            mtl_path=mtl_prim_path,
-            select_new_prim=False,
-        )
-        if not success:
-            logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
-            raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
-
-        # logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
-        # from ipdb import set_trace; set_trace()
+            # logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
+            # from ipdb import set_trace; set_trace()
         
         success, result = omni.kit.commands.execute(
             "BindMaterial",
@@ -506,6 +540,8 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
             raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
 
+
+            
         # logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
 
     def _ensure_uv_for_hierarchy(self, prim) -> None:

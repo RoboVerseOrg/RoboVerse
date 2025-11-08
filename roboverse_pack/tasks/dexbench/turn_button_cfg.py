@@ -60,7 +60,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
         ),
         "table": PrimitiveCubeCfg(
             name="table",
-            size=(0.5, 1.0, 0.55),
+            size=(0.5, 1.0, 0.605),
             disable_gravity=True,
             fix_base_link=True,
             flip_visual_attachments=True,
@@ -92,19 +92,30 @@ class TurnButtonCfg(BaseRLTaskCfg):
     sim: Literal["isaaclab", "isaacgym", "genesis", "pyrep", "pybullet", "sapien", "sapien3", "mujoco", "blender"] = (
         "isaacgym"
     )
-    action_penalty_scale = 0
+    action_penalty_scale = 0.0002
     reach_goal_bonus = 40.0
     reset_position_noise = 0.0
     reset_dof_pos_noise = 0.0
     use_high_randomness = True
+    material_train_cfg = {
+        "metallic_range": (0.0, 0.7),
+        "roughness_range": (0.2, 0.6),
+        "diffuse_color_range": ((0.0, 0.7), (0.0, 0.7), (0.0, 0.7)),
+    }
+
+    materia_test_cfg = {
+        "metallic_range": (0.7, 1.0),
+        "roughness_range": (0.6, 0.8),
+        "diffuse_color_range": ((0.7, 1.0), (0.7, 1.0), (0.7, 1.0)),
+    }
     randomization_cfg = {
         "enable_floor": True,
-        # "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        "floor_materials": SceneMaterialCollections.floor_train_materials(),
         "light_randomize_freq": 125,
         "randomize_cfg": {
-            "dome_light": {
-                "intensity_range": (0.625, 1.6),  
-            },
+            # "dome_light": {
+            #     "intensity_range": (0.625, 1.6),  
+            # },
             "camera_0": {
                 "randomization_mode": "combined",
                 "position_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
@@ -113,20 +124,10 @@ class TurnButtonCfg(BaseRLTaskCfg):
         },
         "material_cfg": {
             "table": {
-                "material_path": SceneMaterialCollections.table_materials(),
+                "material_path": SceneMaterialCollections.table_train_materials(),
             },
-            "button_1": {
-                "metallic_range": (0.0, 1.0),
-                "roughness_range": (0.2, 0.8),
-                "diffuse_color_range": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
-                # "material_path": MDLCollections.metal_materials(),
-            },
-            "button_2": {
-                "metallic_range": (0.0, 1.0),
-                "roughness_range": (0.2, 0.8),
-                "diffuse_color_range": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
-                # "material_path": MDLCollections.metal_materials(),
-            },
+            "button_1": material_train_cfg,
+            "button_2": material_train_cfg,
         }
     }
 
@@ -144,7 +145,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
             self.sim_params.substeps = 2
             self.sim_params.num_threads = 4
             self.decimation = 2
-            self.env_spacing = 10.0
+            self.env_spacing = 15.0
         else:
             raise ValueError(f"Unknown simulator type: {self.sim}")
         self.dt = self.sim_params.dt
@@ -358,25 +359,25 @@ class TurnButtonCfg(BaseRLTaskCfg):
             assert hasattr(self, "img_h") and hasattr(self, "img_w"), "Image height and width must be set."
             self.cameras = [
                 PinholeCameraCfg(
-                    name="camera_0", width=self.img_w, height=self.img_h, pos=(-0.8, 0.0, 1.4), look_at=(0.0, 0.0, 0.5)
+                    name="camera_0", width=self.img_w, height=self.img_h, pos=(-0.9, -0.4, 1.4), look_at=(0.0, 0.0, 0.7)
                 )
             ]  # TODO
             self.obs_shape["rgb"] = (3, self.img_h, self.img_w)
         self.init_states = {
             "objects": {
                 "table": {
-                    "pos": torch.tensor([0.0, 0.0, 0.275]),
+                    "pos": torch.tensor([0.0, 0.0, 0.3025]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 f"{self.current_object_type}_1": {
-                    "pos": torch.tensor([0.0, 0.2, 0.6]),
+                    "pos": torch.tensor([0.0, 0.2, 0.655]),
                     "rot": torch.tensor([0, -0.7071, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.5585,  # Initial position of the switch
                     },
                 },
                 f"{self.current_object_type}_2": {
-                    "pos": torch.tensor([0.0, -0.2, 0.6]),
+                    "pos": torch.tensor([0.0, -0.2, 0.655]),
                     "rot": torch.tensor([0, -0.7071, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.5585,  # Initial position of the switch
@@ -815,14 +816,24 @@ def compute_task_reward(
     action_penalty = torch.sum(actions**2, dim=-1)
 
     up_rew = torch.zeros_like(right_hand_reward)
-    up_rew = (1.3 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 50
+    # up_rew = (1.41 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 30
+    up_rew = torch.where(
+        right_hand_dist <= 0.1,
+        (0.705 - right_object_pos[:, 2]) * 30,
+        up_rew,
+    )
+    up_rew = torch.where(
+        left_hand_dist <= 0.1,
+        up_rew + (0.705 - left_object_pos[:, 2]) * 30,
+        up_rew,
+    )
 
     reward = right_hand_reward + left_hand_reward + up_rew - action_penalty * action_penalty_scale
 
     # No goal reset
     goal_resets = torch.zeros_like(reset_buf, dtype=torch.float32)
-    success_right = right_object_pos[:, 2] <= 0.643
-    success_left = left_object_pos[:, 2] <= 0.643
+    success_right = right_object_pos[:, 2] <= 0.698
+    success_left = left_object_pos[:, 2] <= 0.698
     
     # reward = torch.where(success_right, reward + reach_goal_bonus // 2, reward)
     # reward = torch.where(success_left, reward + reach_goal_bonus // 2, reward)

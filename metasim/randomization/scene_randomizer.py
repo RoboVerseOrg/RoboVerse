@@ -535,8 +535,11 @@ class SceneRandomizer(BaseRandomizerType):
             # Use MaterialRandomizer's proven method to apply material to each mesh
             from metasim.randomization.material_randomizer import MaterialRandomizer
 
-            dummy_randomizer = MaterialRandomizer.__new__(MaterialRandomizer)
-            dummy_randomizer.handler = self.handler
+            # dummy_randomizer = MaterialRandomizer.__new__(MaterialRandomizer)
+            # dummy_randomizer.handler = self.handler
+            if not hasattr(self, "material_randomizer"):
+                self.material_randomizer = MaterialRandomizer(cfg=None)
+                self.material_randomizer.bind_handler(self.handler)
 
             for mesh_path in mesh_prims_paths:
                 # For terrain, explicitly ensure UV coordinates with larger tile size
@@ -544,12 +547,12 @@ class SceneRandomizer(BaseRandomizerType):
                 if mesh_prim and ("ground" in mesh_path.lower() or "terrain" in mesh_path.lower()):
                     logger.info(f"Ensuring UV coordinates for terrain mesh {mesh_path}")
                     try:
-                        dummy_randomizer._ensure_uv_for_hierarchy(mesh_prim)
+                        self.material_randomizer._ensure_uv_for_hierarchy(mesh_prim)
                         logger.info("Successfully ensured UV for terrain mesh")
                     except Exception as e:
                         logger.warning(f"Failed to ensure UV for terrain: {e}")
 
-                dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
+                self.material_randomizer._apply_mdl_to_prim(material_path, mesh_path)
                 # logger.debug(f"Applied material to mesh {mesh_path}")
 
             # logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")

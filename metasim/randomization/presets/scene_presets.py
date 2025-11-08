@@ -114,6 +114,134 @@ class SceneMaterialCollections:
         materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
 
         return materials
+    
+    @staticmethod
+    def table_train_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated table/desktop material paths (~300 materials).
+
+        Combines wood, stone, and other suitable materials for tabletops.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Wood materials (suitable for tables)
+        arnold_wood = [
+            "Wood/Ash.mdl",
+            "Wood/Ash_Planks.mdl",
+            "Wood/Bamboo.mdl",
+            "Wood/Beadboard.mdl",
+            "Wood/Birch.mdl",
+            "Wood/Cherry.mdl",
+            "Wood/Cherry_Planks.mdl",
+            "Wood/Mahogany.mdl",
+            "Wood/Mahogany_Planks.mdl",
+            "Wood/Oak.mdl",
+            "Wood/Parquet_Floor.mdl",
+            "Wood/Plywood.mdl",
+            "Wood/Timber.mdl",
+            "Wood/Timber_Cladding.mdl",
+            "Wood/Walnut.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood])
+
+        # vMaterials Wood
+        vmaterials_wood = [
+            "Wood/OSB_Wood.mdl",
+            "Wood/OSB_Wood_Splattered.mdl",
+            "Wood/Wood_Cork.mdl",
+            "Wood/Wood_Tiles_Ash.mdl",
+            "Wood/Wood_Tiles_Ash_Multicolor.mdl",
+            "Wood/Wood_Tiles_Beech.mdl",
+            "Wood/Wood_Tiles_Fineline.mdl",
+            "Wood/Wood_Tiles_Fineline_Multicolor.mdl",
+            "Wood/Wood_Tiles_Oak_Mountain.mdl",
+            "Wood/Wood_Tiles_Oak_Mountain_Multicolor.mdl",
+            "Wood/Wood_Tiles_Pine_Multicolor.mdl",
+            "Wood/Wood_Tiles_Poplar.mdl",
+            "Wood/Wood_Tiles_Poplar_Multicolor.mdl",
+            "Wood/Wood_Tiles_Walnut_Multicolor.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood])
+
+        # ARNOLD Stone/Masonry (suitable for tables)
+        arnold_stone = [
+            "Masonry/Brick_Pavers.mdl",
+            "Masonry/Brick_Wall_Brown.mdl",
+            "Masonry/Brick_Wall_Red.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_stone])
+
+        # vMaterials Stone
+        vmaterials_stone = [
+            "Stone/Granite_Polished.mdl",
+            "Stone/Rosa_Beta.mdl",
+            "Stone/Stone_Natural_Black.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
+
+        return materials
+    
+    @staticmethod
+    def table_test_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated table/desktop material paths (~300 materials).
+
+        Combines wood, stone, and other suitable materials for tabletops.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Wood materials (suitable for tables)
+        arnold_wood = [
+            "Wood/Bamboo_Planks.mdl",
+            "Wood/Birch_Planks.mdl",
+            "Wood/Cork.mdl",
+            "Wood/Oak_Planks.mdl",
+            "Wood/Walnut_Planks.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood])
+
+        # vMaterials Wood
+        vmaterials_wood = [
+            "Wood/Laminate_Oak.mdl",
+            "Wood/Wood_Bark.mdl",
+            "Wood/Wood_Tiles_Beech_Multicolor.mdl",
+            "Wood/Wood_Tiles_Pine.mdl",
+            "Wood/Wood_Tiles_Walnut.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood])
+
+        # ARNOLD Stone/Masonry (suitable for tables)
+        arnold_stone = [
+            "Masonry/Adobe_Brick.mdl",
+            "Masonry/Concrete_Block.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_stone])
+
+        # vMaterials Stone
+        vmaterials_stone = [
+            "Stone/Terrazzo.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
+
+        return materials
 
     @staticmethod
     def floor_materials(
@@ -186,6 +314,128 @@ class SceneMaterialCollections:
         vmaterials_stone = [
             "Stone/Granite_Polished.mdl",
             "Stone/Terrazzo.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
+
+        return materials
+    
+    @staticmethod
+    def floor_train_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated floor material paths (~150 materials).
+
+        Combines carpet, wood, stone, and tile materials suitable for floors.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Carpet materials
+        arnold_carpet = [
+            "Carpet/Carpet_Beige.mdl",
+            "Carpet/Carpet_Berber_Multi.mdl",
+            "Carpet/Carpet_Charcoal.mdl",
+            "Carpet/Carpet_Cream.mdl",
+            "Carpet/Carpet_Forest.mdl",
+            "Carpet/Carpet_Gray.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_carpet])
+
+        # ARNOLD Wood flooring
+        arnold_wood_floor = [
+            "Wood/Ash_Planks.mdl",
+            "Wood/Bamboo_Planks.mdl",
+            "Wood/Cherry_Planks.mdl",
+            "Wood/Oak_Planks.mdl",
+            "Wood/Mahogany_Planks.mdl",
+            "Wood/Beadboard.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_floor])
+
+        # vMaterials Wood flooring
+        vmaterials_wood_floor = [
+            "Wood/Laminate_Oak.mdl",
+            "Wood/Wood_Tiles_Ash.mdl",
+            "Wood/Wood_Tiles_Beech.mdl",
+            "Wood/Wood_Tiles_Oak_Mountain.mdl",
+            "Wood/Wood_Tiles_Pine.mdl",
+            "Wood/Wood_Tiles_Walnut.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood_floor])
+
+        # ARNOLD Masonry for floors
+        arnold_masonry = [
+            "Masonry/Brick_Pavers.mdl",
+
+            "Masonry/Brick_Wall_Brown.mdl",
+            "Masonry/Brick_Wall_Red.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
+
+        # vMaterials Stone for floors
+        vmaterials_stone = [
+            "Stone/Terrazzo.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
+
+        return materials
+    
+    @staticmethod
+    def floor_test_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated floor material paths (~150 materials).
+
+        Combines carpet, wood, stone, and tile materials suitable for floors.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Carpet materials
+        arnold_carpet = [
+            # "Carpet/Carpet_Berber_Gray.mdl",
+            # "Carpet/Carpet_Diamond_Yellow.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_carpet])
+
+        # ARNOLD Wood flooring
+        arnold_wood_floor = [
+            "Wood/Parquet_Floor.mdl",
+            "Wood/Birch_Planks.mdl",
+            "Wood/Walnut_Planks.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_floor])
+
+        # vMaterials Wood flooring
+        vmaterials_wood_floor = [
+            "Wood/Wood_Tiles_Fineline.mdl",
+            "Wood/Wood_Tiles_Poplar.mdl",
+        ]
+        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood_floor])
+
+        # ARNOLD Masonry for floors
+        arnold_masonry = [
+            "Masonry/Concrete_Block.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
+
+        # vMaterials Stone for floors
+        vmaterials_stone = [
+            "Stone/Granite_Polished.mdl",
         ]
         materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
 

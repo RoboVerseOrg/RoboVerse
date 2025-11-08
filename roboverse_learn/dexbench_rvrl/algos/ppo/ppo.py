@@ -239,7 +239,7 @@ class PPO:
                 )
 
                 # KL
-                if self.desired_kl is not None and self.schedule == "adaptive":
+                if self.desired_kl is not None and (self.schedule == "adaptive" or self.schedule == "clip"):
                     kl = torch.sum(
                         new_sigma_batch
                         - old_sigma_batch
@@ -249,15 +249,16 @@ class PPO:
                         axis=-1,
                     )
                     kl_mean = kl.mean()
-                    if kl_mean > self.desired_kl * 1.5:
+                    if kl_mean > self.desired_kl * 1.5 and self.schedule == "clip":
                         kl_over_limit = True
                         break
-                    # if kl_mean > self.desired_kl * 2.0:
-                    #     self.step_size = max(1e-5, self.step_size / 1.5)
-                    # elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                    #     self.step_size = min(1e-3, self.step_size * 1.5)
-                    # for param_group in self.optimizer.param_groups:
-                    #     param_group["lr"] = self.step_size
+                    elif self.schedule == "adaptive":
+                        if kl_mean > self.desired_kl * 2.0:
+                            self.step_size = max(1e-5, self.step_size / 1.5)
+                        elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
+                            self.step_size = min(1e-3, self.step_size * 1.5)
+                        for param_group in self.optimizer.param_groups:
+                            param_group["lr"] = self.step_size
                     mean_kl += kl_mean.item()
 
                 # surrogate loss
@@ -284,9 +285,9 @@ class PPO:
             if kl_over_limit:
                 break
 
-        mean_value_loss /= num_updates
-        mean_surrogate_loss /= num_updates
-        mean_kl /= num_updates
+        mean_value_loss = mean_value_loss / num_updates if num_updates > 0 else 0
+        mean_surrogate_loss = mean_surrogate_loss / num_updates if num_updates > 0 else 0
+        mean_kl = mean_kl / num_updates if num_updates > 0 else 0
 
         return mean_value_loss, mean_surrogate_loss, mean_kl
 
