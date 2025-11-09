@@ -49,7 +49,7 @@ class Args:
     headless: bool = False
 
     ## IK Solver
-    ik_solver: Literal["curobo", "pyroki"] = "pyroki"
+    ik_solver: Literal["curobo", "pyroki", "builtin"] = "pyroki"
     no_gnd: bool = False
 
     ## Phone Server

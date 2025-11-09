@@ -1,4 +1,4 @@
-"""Unified IK solver supporting both curobo and pyroki backends."""
+"""Unified IK solver supporting curobo, pyroki, and builtin backends."""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ from metasim.scenario.robot import RobotCfg
 
 
 class IKSolver:
-    """Unified IK solver with curobo/pyroki backends."""
+    """Unified IK solver with curobo/pyroki/builtin backends."""
 
     def __init__(
         self,
         robot_cfg: RobotCfg,
-        solver: Literal["curobo", "pyroki"] = "pyroki",
+        solver: Literal["curobo", "pyroki", "builtin"] = "pyroki",
         no_gnd: bool = False,
         use_seed: bool = True,
     ):
@@ -41,6 +41,10 @@ class IKSolver:
             from metasim.utils.kinematics import get_pyroki_model
 
             self.backend_solver = get_pyroki_model(self.robot_cfg)
+        elif self.solver == "builtin":
+            from metasim.utils.ik_builtin import BuiltinIKSolver
+
+            self.backend_solver = BuiltinIKSolver(self.robot_cfg)
         else:
             raise ValueError(f"Unknown solver: {self.solver}")
 
@@ -68,7 +72,7 @@ class IKSolver:
             q_solution[ik_succ] = result.solution[ik_succ, 0].clone()
             return q_solution, ik_succ
 
-        else:  # pyroki
+        elif self.solver == "pyroki":
             q_list = []
             for i in range(num_envs):
                 if self.use_seed:
@@ -82,6 +86,12 @@ class IKSolver:
             q_solution = torch.stack(q_list, dim=0)[:, : self.n_dof_ik]
             ik_succ = torch.ones(num_envs, dtype=torch.bool, device=ee_pos_target.device)
             return q_solution, ik_succ
+        elif self.solver == "builtin":
+            seed = seed_q[:, : self.n_dof_ik] if seed_q is not None else None
+            q_solution, ik_succ = self.backend_solver.solve_batch(ee_pos_target, ee_quat_target, seed)
+            return q_solution, ik_succ
+        else:
+            raise ValueError(f"Unknown solver: {self.solver}")
 
     def compose_joint_action(
         self,
@@ -135,15 +145,18 @@ class IKSolver:
 
 
 def setup_ik_solver(
-    robot_cfg: RobotCfg, solver: Literal["curobo", "pyroki"] = "pyroki", no_gnd: bool = False, use_seed: bool = True
+    robot_cfg: RobotCfg,
+    solver: Literal["curobo", "pyroki", "builtin"] = "pyroki",
+    no_gnd: bool = False,
+    use_seed: bool = True,
 ) -> IKSolver:
     """Setup IK solver.
 
     Args:
         robot_cfg: Robot configuration
-        solver: Backend solver ("curobo" or "pyroki")
+        solver: Backend solver ("curobo", "pyroki", or "builtin")
         no_gnd: Whether to exclude ground collision objects
-        use_seed: Whether to use seed for IK (only applies to pyroki, curobo always uses seed)
+        use_seed: Whether to use seed for IK (only applies to pyroki; other backends always use seed internally)
     """
     return IKSolver(robot_cfg, solver, no_gnd, use_seed)
 

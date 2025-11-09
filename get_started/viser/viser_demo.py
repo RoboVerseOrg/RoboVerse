@@ -90,7 +90,7 @@ class Args:
     """Path to trajectory file to load (e.g., .pkl.gz file). If None, no trajectory is loaded."""
 
     ## IK solver (only used if dynamic=True)
-    solver: Literal["curobo", "pyroki"] = "pyroki"
+    solver: Literal["curobo", "pyroki", "builtin"] = "pyroki"
     """IK solver to use for dynamic motion."""
 
     ## Recording (only used if dynamic=True)

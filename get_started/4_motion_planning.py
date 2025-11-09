@@ -56,7 +56,7 @@ class Args:
     ## Others
     num_envs: int = 1
     headless: bool = True
-    solver: Literal["curobo", "pyroki"] = "pyroki"
+    solver: Literal["curobo", "pyroki", "builtin"] = "pyroki"
 
     def __post_init__(self):
         """Post-initialization configuration."""

@@ -23,7 +23,7 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
-from metasim.utils.demo_util import save_traj_file
+from metasim.utils.demo_util import save_traj_file, load_traj_file
 from metasim.utils.ik_solver import IKSolver, process_gripper_command
 from metasim.utils.math import matrix_from_euler, quat_apply, quat_from_matrix, quat_inv, quat_mul
 from metasim.utils.obs_utils import display_obs
@@ -48,7 +48,7 @@ class Args:
     headless: bool = False
 
     ## IK Solver
-    ik_solver: Literal["curobo", "pyroki"] = "pyroki"
+    ik_solver: Literal["curobo", "pyroki", "builtin"] = "pyroki"
     no_gnd: bool = False
 
     ## Viser Visualization
@@ -63,6 +63,14 @@ class Args:
     ## Trajectory saving
     save_traj: bool = True  # Whether to save trajectory
     traj_dir: str = "teleop_trajs"  # Directory to save trajectories
+    # If provided, save to this exact file path instead of auto timestamp naming.
+    # Can be absolute or relative. Parent directory will be created if missing.
+    traj_path: str | None = None
+    # When traj_path exists: if True, append new episodes into existing file (v2 format);
+    # if False and overwrite is False, a new timestamped file will be created next to it.
+    append_traj: bool = False
+    # When traj_path exists and overwrite is True, overwrite the file instead of appending.
+    overwrite: bool = False
     save_states: bool = True  # Whether to save full states (not just actions)
     save_every_n_steps: int = 5  # Save every N steps (1=save all, 2=save every other step, etc.)
 
@@ -282,27 +290,74 @@ def main():
         episode_count += 1
 
     def save_all_episodes_to_file():
-        """Save all collected episodes to file"""
+        """Save all collected episodes to file (supports append/overwrite when traj_path is provided)"""
         if len(all_episodes) == 0:
             log.warning("No episodes to save")
             return
 
         # Organize in v2 format
-        trajs = {scenario.robots[0].name: all_episodes}
+        robot_name = scenario.robots[0].name
+        trajs = {robot_name: all_episodes}
 
-        # Create output directory
-        os.makedirs(args.traj_dir, exist_ok=True)
+        # Determine output path
+        if args.traj_path is not None and len(str(args.traj_path).strip()) > 0:
+            filepath = os.path.expanduser(args.traj_path)
+            out_dir = os.path.dirname(filepath) or "."
+        else:
+            # Fallback to timestamped file in traj_dir
+            out_dir = args.traj_dir
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{args.task}_{robot_name}_{timestamp}_v2.pkl"
+            filepath = os.path.join(out_dir, filename)
 
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{args.task}_{scenario.robots[0].name}_{timestamp}_v2.pkl"
-        filepath = os.path.join(args.traj_dir, filename)
+        # Ensure directory exists
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Handle append/overwrite logic when explicit path provided
+        append_used = False
+        overwrite_used = False
+        if args.traj_path is not None and os.path.exists(filepath):
+            if args.overwrite and args.append_traj:
+                log.warning("Both overwrite and append_traj are True; proceeding with overwrite.")
+            if args.overwrite:
+                overwrite_used = True
+                log.info(f"Overwriting existing trajectory file: {filepath}")
+            elif args.append_traj:
+                append_used = True
+                try:
+                    existing = load_traj_file(filepath)
+                    if robot_name in existing and isinstance(existing[robot_name], list):
+                        log.info(
+                            f"Appending {len(all_episodes)} episodes to existing file with {len(existing[robot_name])} episodes"
+                        )
+                        existing[robot_name].extend(all_episodes)
+                    else:
+                        log.info("Existing file had no episodes for this robot, initializing list")
+                        existing[robot_name] = all_episodes
+                    trajs = existing
+                except Exception as e:
+                    log.error(f"Failed to load existing trajectory for append; will write new. Error: {e}")
+            else:
+                # Neither overwrite nor append requested; create a new timestamped file next to existing
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                stem, ext = os.path.splitext(os.path.basename(filepath))
+                filename = f"{stem}_{timestamp}{ext or '.pkl'}"
+                filepath = os.path.join(out_dir, filename)
+                log.info(f"Existing file found. Saving to a new file instead: {filepath}")
 
         # Save trajectory
         save_traj_file(trajs, filepath)
         log.info(f"All episodes saved to {filepath}")
-        log.info(f"  - Total episodes: {len(all_episodes)}")
-        log.info(f"  - Total steps: {sum(len(ep['actions']) for ep in all_episodes)}")
+        log.info(f"  - Save mode: {'append' if append_used else ('overwrite' if overwrite_used else 'new')}" )
+        # If appended, report new total if available
+        try:
+            total_eps = (
+                len(trajs[robot_name]) if append_used else len(all_episodes)
+            )
+            log.info(f"  - Total episodes now: {total_eps}")
+        except Exception:
+            log.info(f"  - Total episodes added: {len(all_episodes)}")
+        log.info(f"  - Total steps added: {sum(len(ep['actions']) for ep in all_episodes)}")
 
     # Setup keyboard listener
     keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
