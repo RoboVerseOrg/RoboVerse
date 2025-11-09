@@ -26,7 +26,7 @@ class Gen3Cfg(RobotCfg):
     # Physical properties
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
-    isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym, MJCF available as alternative
+    # isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym, MJCF available as alternative
 
     # Actuator configuration - Based on Gen3 joint specifications
     # Large actuators for main arm joints, small actuators for wrist joints
