@@ -25,8 +25,8 @@ from generation.enums import AssetType, SimAssetMapper
 from generation.load_asset import load_embodiedgen_asset, load_embodiedgen_layout_pose
 from metasim.constants import SimType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.robot import RobotCfg
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
