@@ -109,7 +109,7 @@ if __name__ == "__main__":
     if args.sim == "genesis":
         for obj_cfg in scenario.objects:
             # obj_cfg.genesis_read_mjcf = True
-            obj_cfg.file_type: dict[str, str] = {**RobotCfg.file_type, "isaacgym": "mjcf"},
+            obj_cfg.file_type: dict[str, str] = ({**RobotCfg.file_type, "isaacgym": "mjcf"},)
 
     scenario.init_states = load_embodiedgen_layout_pose(layout_file, z_offset=0.1)
     scenario.init_states[0]["robots"]["franka"] = scenario.init_states[0]["robots"].pop("default")
