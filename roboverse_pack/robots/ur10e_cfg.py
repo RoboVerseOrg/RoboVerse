@@ -26,7 +26,7 @@ class Ur10ECfg(RobotCfg):
     # Physical properties
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
-    isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym
+    # isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym
 
     # Actuator configuration - Based on UR10e joint specifications
     # UR10e has higher torque capacity than UR5e due to larger payload

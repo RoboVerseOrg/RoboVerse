@@ -14,7 +14,8 @@ class ShadowHandCfg(RobotCfg):
     num_joints: int = 24
     fix_base_link: bool = True
     mjcf_path: str = "roboverse_data/robots/shadow_hand/mjcf/shadow_hand_right.xml"
-    isaacgym_read_mjcf: bool = True
+    file_type: dict[str, str] = {**RobotCfg.file_type, "isaacgym": "mjcf"}
+    # isaacgym_read_mjcf: bool = True
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
     actuators: dict[str, BaseActuatorCfg] = {

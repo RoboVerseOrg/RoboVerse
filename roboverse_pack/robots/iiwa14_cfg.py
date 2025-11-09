@@ -26,7 +26,7 @@ class Iiwa14Cfg(RobotCfg):
     # Physical properties
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
-    isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym, MJCF available as alternative
+    # isaacgym_read_mjcf: bool = False  # Use URDF for IsaacLab/IsaacGym, MJCF available as alternative
 
     # Actuator configuration - Based on IIWA14 joint specifications
     # Using the gainprm and bias settings from MJCF default classes
