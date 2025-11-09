@@ -18,7 +18,6 @@ class AnymalCfg(RobotCfg):
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = True
-    isaacgym_read_mjcf: bool = False
     collapse_fixed_joints: bool = True
 
     # Define actuators for each joint
