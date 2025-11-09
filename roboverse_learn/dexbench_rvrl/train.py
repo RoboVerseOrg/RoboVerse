@@ -78,6 +78,7 @@ class Args:
     experiment: str = "Base"
     algo: str = "ppo"
     seed: int = 0
+    eval_episodes: int = 5
     model_dir: str = None
     use_wandb: bool = False
     wandb_project: str = "roboverse_dexbench_rl"
@@ -148,6 +149,8 @@ def load_cfg(args, train_cfg_path, logdir):
     # Override seed if passed on the command line
     if args.seed is not None:
         train_cfg["seed"] = args.seed
+    if args.eval_episodes is not None:
+        train_cfg["eval_episodes"] = args.eval_episodes
 
     logdir = os.path.realpath(logdir)
 

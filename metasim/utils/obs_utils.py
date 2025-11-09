@@ -17,10 +17,11 @@ from metasim.utils.state import TensorState
 class ObsSaver:
     """Save the observations to images or videos."""
 
-    def __init__(self, image_dir: str | None = None, video_path: str | None = None):
+    def __init__(self, image_dir: str | None = None, video_path: str | None = None, visualize_key: str | None = None):
         """Initialize the ObsSaver."""
         self.image_dir = image_dir
         self.video_path = video_path
+        self.visualize_key = visualize_key
         self.images: list[NDArray] = []
 
         self.image_idx = 0
@@ -32,10 +33,16 @@ class ObsSaver:
 
         try:
             if not single_env:
-                rgb_data = next(iter(state.cameras.values())).rgb
+                if self.visualize_key is not None:
+                    rgb_data = state.cameras[self.visualize_key].rgb
+                else:
+                    rgb_data = next(iter(state.cameras.values())).rgb
                 image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
             else:
-                rgb_data = next(iter(state.cameras.values())).rgb[0].unsqueeze(0)  # (1, C, H, W)
+                if self.visualize_key is not None:
+                    rgb_data = state.cameras[self.visualize_key].rgb[0].unsqueeze(0)
+                else:
+                    rgb_data = next(iter(state.cameras.values())).rgb[0].unsqueeze(0)  # (1, C, H, W)
                 image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
         except Exception as e:
             log.error(f"Error adding observation: {e}")

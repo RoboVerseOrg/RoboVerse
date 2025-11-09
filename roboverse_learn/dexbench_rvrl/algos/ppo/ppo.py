@@ -24,6 +24,7 @@ import torch.optim as optim
 
 from roboverse_learn.dexbench_rvrl.algos.ppo.module import ActorCritic
 from roboverse_learn.dexbench_rvrl.algos.ppo.storage import RolloutStorage
+from metasim.utils.obs_utils import ObsSaver
 
 
 ########################################################
@@ -87,6 +88,7 @@ class PPO:
         self.num_learning_epochs = learn_cfg.get("num_learning_epochs", 8)
         self.max_iterations = learn_cfg.get("max_iterations", 100000)
         self.log_interval = learn_cfg.get("log_interval", 1)
+        self.eval_episodes = self.train_cfg.get("eval_episodes", 5)
 
         ## model cfg
         self.model_cfg = self.train_cfg["policy"]
@@ -205,7 +207,42 @@ class PPO:
                     self.save(os.path.join(self.log_dir, f"model_{iteration + 1}.pt"))
                 ep_infos.clear()
         else:
-            raise NotImplementedError
+            print("Testing mode")
+            obs_saver = ObsSaver(video_path=os.path.join(self.log_dir, "eval_video.mp4"))
+            obs_state = self.env.tensor_states
+            obs_saver.add(obs_state, single_env=True)
+            episodes_done = 0
+            success_rates = []
+            rewards = []
+            while True:
+                action = self.actor_critic.act_inference(obs)
+                next_obs, reward, terminated, truncated, infos = self.env.step(action)
+                rewards.append(reward.mean().item())
+                obs_state = self.env.tensor_states
+                dones = torch.logical_or(terminated, truncated)
+                
+                obs_saver.add(obs_state, single_env=True)
+
+                for k in obs.keys():
+                    obs[k].copy_(next_obs[k])
+
+                if dones.any():
+                    success = infos["total_succ_rate"].item()
+                    success_rates.append(success)
+                    print(
+                        f"✅ Episode done. "
+                        f"Current mean reward: \033[1;33m{np.mean(rewards):.4f}\033[0m, "
+                        f"Current mean success rate: \033[1;32m{success:.4f}\033[0m ⭐"
+                    )
+
+                if dones[0]:
+                    episodes_done += 1
+                    if episodes_done >= self.eval_episodes:
+                        break
+            obs_saver.save()
+            log.info(f"Mean success rate over {self.eval_episodes} episodes: {np.mean(success_rates):.4f}")
+            log.info(f"Evaluation Episodes: {self.eval_episodes} completed. Video saved to {obs_saver.video_path}")
+            
 
     def update(self):
         ## log

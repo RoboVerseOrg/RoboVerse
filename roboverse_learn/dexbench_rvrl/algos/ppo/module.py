@@ -296,7 +296,7 @@ class ActorCritic(nn.Module):
         feature = torch.cat(feature, dim=-1)
 
         actions_mean = self.actor(feature)
-        return actions_mean
+        return actions_mean.detach()
 
     def evaluate(self, observations, actions):
         feature = []
