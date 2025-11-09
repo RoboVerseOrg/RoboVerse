@@ -218,6 +218,10 @@ def initialize_randomizers(handler, args):
         wall_height=5.0,
         table_size=(1.8, 1.8, 0.1),
         table_height=0.7,
+        floor_families=("carpet", "wood", "stone", "concrete", "architecture"),
+        wall_families=("architecture", "wall_board", "masonry", "paint", "composite"),
+        ceiling_families=("architecture", "wall_board", "wood"),
+        table_families=("wood", "stone", "plastic", "ceramic", "metal"),
     )
 
     if level < 1:
@@ -364,26 +368,51 @@ def initialize_randomizers(handler, args):
 
 
 def apply_randomization(randomizers, level, handler) -> None:
-    """Apply all active randomizers (auto-flushes visual updates internally)."""
+    """Apply all randomizers simultaneously with deferred visual flush.
 
-    if randomizers["scene"]:
-        randomizers["scene"]()
+    Ensures all randomizations (scene, object, material, light, camera) are
+    applied atomically before flushing visuals, preventing intermediate states
+    from being captured in video recordings.
+    """
+    # Temporarily disable auto-flush in scene randomizer
+    scene_rand = randomizers["scene"]
+    if scene_rand:
+        original_auto_flush = scene_rand.cfg.auto_flush_visuals
+        scene_rand.cfg.auto_flush_visuals = False
+        scene_rand()
+        scene_rand.cfg.auto_flush_visuals = original_auto_flush
 
+    # Apply object randomization
     if level >= 0:
         for rand in randomizers["object"]:
             rand()
 
+    # Apply material randomization with deferred flush
     if level >= 1:
         for rand in randomizers["material"]:
+            if hasattr(rand, "_defer_visual_flush"):
+                rand._defer_visual_flush = True
             rand()
+            if hasattr(rand, "_defer_visual_flush"):
+                rand._defer_visual_flush = False
 
+    # Apply light randomization
     if level >= 2:
         for rand in randomizers["light"]:
             rand()
 
+    # Apply camera randomization
     if level >= 3:
         for rand in randomizers["camera"]:
             rand()
+
+    # Single comprehensive flush after all randomizations complete
+    flush_fn = getattr(handler, "flush_visual_updates", None)
+    if callable(flush_fn):
+        try:
+            flush_fn(wait_for_materials=True, settle_passes=3)
+        except Exception as e:
+            log.debug(f"Failed to flush visual updates: {e}")
 
 
 def get_states(all_states, action_idx: int, num_envs: int):
