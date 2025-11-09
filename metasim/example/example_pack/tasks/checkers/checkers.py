@@ -70,7 +70,7 @@ class DetectedChecker:
 
 
 @configclass
-class JointPosChecker:
+class yyJointPosChecker:
     """Check if the joint with ``joint_name`` of the object with ``obj_name`` has position ``radian_threshold`` units.
 
     - ``mode`` should be one of "ge", "le". "ge" for greater than or equal to, "le" for less than or equal to.
