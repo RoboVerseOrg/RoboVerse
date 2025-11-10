@@ -200,7 +200,8 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
         extra_states = {}
         if isinstance(tensor_state.extras, dict):
             for extra_key, extra_val in tensor_state.extras.items():
-                extra_states[extra_key] = extra_val[env_id].cpu()
+                if isinstance(extra_val, torch.Tensor):
+                    extra_states[extra_key] = extra_val[env_id].cpu()
 
         env_state = {
             "objects": object_states,

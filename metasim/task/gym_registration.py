@@ -52,6 +52,7 @@ class GymEnvWrapper(gym.Env):
         self.metadata["autoreset_mode"] = (
             AutoresetMode.SAME_STEP if AutoresetMode is not None else "same-step"
         )  # If enum missing, string fallback (may still warn on older Gymnasium)
+        self.device = self.task_env.device
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""

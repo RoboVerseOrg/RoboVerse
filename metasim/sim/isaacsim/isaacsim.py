@@ -64,6 +64,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._step_counter = 0
         self._is_closed = False
         self.render_interval = 4  # TODO: fix hardcode
+        self._manual_pd_on = []
 
         if self.headless:
             self._render_viewport = False
@@ -101,6 +102,7 @@ class IsaacsimHandler(BaseSimHandler):
                 max_position_iteration_count=self.scenario.sim_params.num_position_iterations,
                 max_velocity_iteration_count=self.scenario.sim_params.num_velocity_iterations,
                 friction_correlation_distance=self.scenario.sim_params.friction_correlation_distance,
+                friction_offset_threshold=self.scenario.sim_params.friction_offset_threshold,
             ),
         )
         if self.scenario.sim_params.dt is not None:
@@ -192,6 +194,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Initialize GS background if enabled
         self._build_gs_background()
+
+        return super().launch()
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -444,8 +448,8 @@ class IsaacsimHandler(BaseSimHandler):
                 quat_world=camera_inst.data.quat_w_world,
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
-
-        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states)
+        extras = self.get_extra()
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
     def _on_keyboard_event(self, event, *args, **kwargs):
         import carb
@@ -464,7 +468,6 @@ class IsaacsimHandler(BaseSimHandler):
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
-        # TODO: support set torque
         if isinstance(actions, torch.Tensor):
             reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
             action_tensor_all = actions[:, reverse_reindex]
@@ -484,15 +487,23 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Apply actions to all robots
         start_idx = 0
-        for robot in self.robots:
+        for i, robot in enumerate(self.robots):
             robot_inst = self.scene.articulations[robot.name]
             actionable_joint_ids = [
-                robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
+                robot_inst.joint_names.index(jn)
+                for jn in self._get_joint_names(robot.name, sort=False)
+                if robot.actuators[jn].fully_actuated
             ]
-            robot_inst.set_joint_position_target(
-                action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                joint_ids=actionable_joint_ids,
-            )
+            if self._manual_pd_on[i]:
+                robot_inst.set_joint_effort_target(
+                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
+                    joint_ids=actionable_joint_ids,
+                )
+            else:
+                robot_inst.set_joint_position_target(
+                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
+                    joint_ids=actionable_joint_ids,
+                )
             start_idx += len(actionable_joint_ids)
 
     def _simulate(self):
@@ -527,18 +538,29 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
 
+        manual_pd = any(mode == "effort" for mode in robot.control_type.values())
+        self._manual_pd_on.append(manual_pd)
         cfg = ArticulationCfg(
             spawn=sim_utils.UsdFileCfg(
                 usd_path=robot.usd_path,
                 activate_contact_sensors=True,
-                rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                    max_depenetration_velocity=getattr(
+                        robot, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
+                    )
+                ),
                 articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=robot.fix_base_link),
+                collision_props=sim_utils.CollisionPropertiesCfg(
+                    contact_offset=getattr(robot, "contact_offset", self.scenario.sim_params.contact_offset),
+                    rest_offset=getattr(robot, "rest_offset", self.scenario.sim_params.rest_offset),
+                ),
             ),
             actuators={
                 jn: ImplicitActuatorCfg(
                     joint_names_expr=[jn],
-                    stiffness=actuator.stiffness,
-                    damping=actuator.damping,
+                    stiffness=actuator.stiffness if not manual_pd else 0.0,
+                    damping=actuator.damping if not manual_pd else 0.0,
+                    armature=getattr(robot, "armature", 0.01),
                 )
                 for jn, actuator in robot.actuators.items()
             },
@@ -582,11 +604,21 @@ class IsaacsimHandler(BaseSimHandler):
             return
 
         if obj.fix_base_link:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=True,
+                kinematic_enabled=True,
+                max_depenetration_velocity=getattr(
+                    obj, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
+                ),
+            )
         else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity)
         if obj.collision_enabled:
-            collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+            collision_props = sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+                contact_offset=getattr(obj, "contact_offset", self.scenario.sim_params.contact_offset),
+                rest_offset=getattr(obj, "rest_offset", self.scenario.sim_params.rest_offset),
+            )
         else:
             collision_props = None
 

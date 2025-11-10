@@ -30,6 +30,8 @@ from metasim.scenario.objects import (
 
 # FIXME: fix this
 # from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg
+# NOTE domain randomization for robots
+# please refer to roboverse_learn.rl.unitree_rl.config.cfg_randomizer for material and mass randomization for isaacgym and isaacsim
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
@@ -53,7 +55,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._num_envs: int = scenario.num_envs
-        self._episode_length_buf = [0 for _ in range(self.num_envs)]
+        # self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         # asset related
         self._asset_dict_dict: dict = {}  # dict of object link index dict
@@ -97,6 +99,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
         self._effort: torch.Tensor | None = None  # output of pd controller, used for effort control
+        self._dof_force: torch.Tensor | None = None  # measured DOF forces from simulator
         self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
         self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
 
@@ -113,6 +116,8 @@ class IsaacgymHandler(BaseSimHandler):
         self._root_states = gymtorch.wrap_tensor(self.gym.acquire_actor_root_state_tensor(self.sim))
         self._dof_states = gymtorch.wrap_tensor(self.gym.acquire_dof_state_tensor(self.sim))
         self._rigid_body_states = gymtorch.wrap_tensor(self.gym.acquire_rigid_body_state_tensor(self.sim))
+        # measured per-DOF forces/torques from simulator
+        self._dof_force = gymtorch.wrap_tensor(self.gym.acquire_dof_force_tensor(self.sim))
         self._robot_dof_state = self._dof_states.view(self._num_envs, -1, 2)[:, self._obj_num_dof :]
         self._contact_forces = gymtorch.wrap_tensor(self.gym.acquire_net_contact_force_tensor(self.sim))
 
@@ -124,11 +129,14 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_mass_matrix_tensors(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
+        # refresh measured dof forces if available
+        self.gym.refresh_dof_force_tensor(self.sim)
 
-        if self.optional_queries is None:
-            self.optional_queries = {}
-        for query_name, query_type in self.optional_queries.items():
-            query_type.bind_handler(self)
+        # if self.optional_queries is None:
+        #     self.optional_queries = {}
+        # for query_name, query_type in self.optional_queries.items():
+        #     query_type.bind_handler(self)
+        return super().launch()
 
     def _init_gym(self) -> None:
         physics_engine = gymapi.SIM_PHYSX
@@ -158,6 +166,8 @@ class IsaacgymHandler(BaseSimHandler):
 
         compute_device_id = 0
         graphics_device_id = 0
+        if self.headless and len(self.cameras) == 0:
+            graphics_device_id = -1
         self.sim = self.gym.create_sim(compute_device_id, graphics_device_id, physics_engine, sim_params)
         if self.sim is None:
             raise Exception("Failed to create sim")
@@ -404,7 +414,7 @@ class IsaacgymHandler(BaseSimHandler):
         assert len(self.robots) == 1, "Only support one robot for now"
         robot_asset_file = self.robots[0].mjcf_path if self.robots[0].isaacgym_read_mjcf else self.robots[0].urdf_path
         asset_options = gymapi.AssetOptions()
-        asset_options.armature = 0.01
+        asset_options.armature = getattr(self.robots[0], "armature", 0.01)
         asset_options.fix_base_link = self.robots[0].fix_base_link
         asset_options.disable_gravity = not self.robots[0].enabled_gravity
         asset_options.flip_visual_attachments = self.robots[0].isaacgym_flip_visual_attachments
@@ -460,8 +470,11 @@ class IsaacgymHandler(BaseSimHandler):
                 # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
 
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
-                robot_dof_props["damping"][i] = i_actuator_cfg.damping
+                # robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
+                # robot_dof_props["damping"][i] = i_actuator_cfg.damping
+                robot_dof_props["stiffness"][i] = 0.0
+                robot_dof_props["damping"][i] = 0.0
+                robot_dof_props["armature"][i] = getattr(self.robots[0], "armature", 0.01)
 
             # built-in position mode
             elif i_control_mode == "position":
@@ -518,7 +531,7 @@ class IsaacgymHandler(BaseSimHandler):
         # get object and robot asset
         obj_assets_list = [self._load_object_asset(obj) for obj in self.objects]
         robot_asset, robot_dof_props = self._load_robot_assets()
-        robot_rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
+        # robot_rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
 
         #### Joint Info ####
         for art_obj_name, art_obj_joint_dict in self._articulated_joint_dict_dict.items():
@@ -654,7 +667,10 @@ class IsaacgymHandler(BaseSimHandler):
 
             # # carefully add robot
             robot_segmentation_id = len(self.objects) + 1
-            robot_handle = self.gym.create_actor(env, robot_asset, robot_pose, "robot", i, 2, robot_segmentation_id)
+            _enabled_self_collisions = 0 if self.robots[0].enabled_self_collisions else 2
+            robot_handle = self.gym.create_actor(
+                env, robot_asset, robot_pose, "robot", i, _enabled_self_collisions, robot_segmentation_id
+            )
             assert self.robots[0].scale[0] == 1.0 and self.robots[0].scale[1] == 1.0 and self.robots[0].scale[2] == 1.0
             self._robot_handles.append(robot_handle)
             # set dof properties
@@ -738,7 +754,9 @@ class IsaacgymHandler(BaseSimHandler):
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
                 joint_pos_target=None,  # TODO
                 joint_vel_target=None,  # TODO
-                joint_effort_target=self._effort if self._manual_pd_on else None,
+                # joint_effort_target=self._effort if self._manual_pd_on else None,
+                # prefer measured forces from simulator over internal PD effort
+                joint_effort_target=self._dof_force.view(self.num_envs, -1)[:, joint_ids_reindex],
             )
             # FIXME a temporary solution for accessing net contact forces of robots, it will be moved to
             extra = {
@@ -771,10 +789,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         extras = self.get_extra()  # extra observations
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
-
-    @property
-    def episode_length_buf(self) -> list[int]:
-        return self._episode_length_buf
 
     ############################################################
     ## Gymnasium main methods
@@ -880,6 +894,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_mass_matrix_tensors(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
+        self.gym.refresh_dof_force_tensor(self.sim)
         # Refresh cameras and viewer
         self._render()
 
