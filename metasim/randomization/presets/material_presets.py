@@ -9,8 +9,14 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
+
+try:
+    from huggingface_hub import HfApi
+except ImportError:  # pragma: no cover - optional dependency in some builds
+    HfApi = None
 
 from ..material_randomizer import MaterialRandomCfg, MDLMaterialCfg, PBRMaterialCfg, PhysicalMaterialCfg
 
@@ -64,6 +70,10 @@ class MDLCollections:
 
     HUGGINGFACE_MATERIALS_URL = "https://huggingface.co/datasets/RoboVerseOrg/roboverse_data/tree/main/materials"
     DEFAULT_ROOT = Path("roboverse_data/materials")
+    HF_REPO_ID = "RoboVerseOrg/roboverse_data"
+    HF_REPO_TYPE = "dataset"
+    HF_REMOTE_ROOT = Path("materials")
+    _HF_API: HfApi | None = None
 
     ARNOLD_COLLECTIONS = {
         "architecture": (Path("arnold/Architecture"),),
@@ -228,19 +238,24 @@ class MDLCollections:
         """Expose supported Hugging Face groupings for discoverability."""
         return {dataset: tuple(sorted(categories.keys())) for dataset, categories in cls._DATASET_MAP.items()}
 
-    @staticmethod
-    def _collect_from_paths(paths: Iterable[Path], *, warn_missing: bool = True) -> list[str]:
+    @classmethod
+    def _collect_from_paths(cls, paths: Iterable[Path], *, warn_missing: bool = True) -> list[str]:
         """Collect ``.mdl`` files under the provided directories."""
         mdl_paths: list[str] = []
         missing: list[str] = []
 
         for target in paths:
             if target.is_dir():
-                mdl_paths.extend(p.as_posix() for p in target.rglob("*.mdl"))
+                # Sort to ensure deterministic order for reproducibility
+                mdl_paths.extend(sorted(p.as_posix() for p in target.rglob("*.mdl")))
             elif target.is_file() and target.suffix.lower() == ".mdl":
                 mdl_paths.append(target.as_posix())
             else:
-                missing.append(target.as_posix())
+                remote_paths = cls._collect_remote_mdl_paths(target)
+                if remote_paths:
+                    mdl_paths.extend(remote_paths)
+                else:
+                    missing.append(target.as_posix())
 
         if missing and warn_missing:
             warning_msg = (
@@ -253,6 +268,73 @@ class MDLCollections:
         # Remove duplicates before returning a deterministic, sorted list.
         unique = list(dict.fromkeys(mdl_paths))
         return sorted(unique)
+
+    @classmethod
+    def _collect_remote_mdl_paths(cls, target: Path) -> list[str]:
+        """Return remote ``.mdl`` paths that should exist under ``target``.
+
+        Converts remote HuggingFace paths back into the expected local layout so
+        downstream code can keep using ``roboverse_data/...`` style strings.
+        """
+        manifest = cls._remote_manifest()
+        if not manifest:
+            return []
+
+        try:
+            rel = target.relative_to(cls.DEFAULT_ROOT)
+        except ValueError:
+            # Custom roots can't rely on the shared HuggingFace dataset layout.
+            return []
+
+        remote_prefix = (cls.HF_REMOTE_ROOT / rel).as_posix()
+        normalized_prefix = remote_prefix.rstrip("/")
+
+        if normalized_prefix.endswith(".mdl"):
+            candidates = [remote_prefix] if remote_prefix in manifest else []
+        else:
+            prefix = normalized_prefix + "/"
+            candidates = [path for path in manifest if path.startswith(prefix) and path.endswith(".mdl")]
+            # Sort candidates to ensure deterministic order for reproducibility
+            candidates = sorted(candidates)
+
+        collected: list[str] = []
+        for remote_path in candidates:
+            try:
+                relative_remote = Path(remote_path).relative_to(cls.HF_REMOTE_ROOT)
+            except ValueError:
+                continue
+            collected.append((cls.DEFAULT_ROOT / relative_remote).as_posix())
+
+        return collected
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _remote_manifest(cls) -> tuple[str, ...]:
+        """Fetch the list of files hosted on HuggingFace (cached)."""
+        api = cls._get_hf_api()
+        if api is None:
+            return ()
+
+        try:
+            files = api.list_repo_files(repo_id=cls.HF_REPO_ID, repo_type=cls.HF_REPO_TYPE)
+            # Sort files to ensure deterministic order for reproducibility
+            files = sorted(files)
+        except Exception as exc:  # pragma: no cover - network/SDK issues
+            warnings.warn(
+                f"Failed to query HuggingFace repo '{cls.HF_REPO_ID}': {exc}",
+                stacklevel=2,
+            )
+            return ()
+
+        return tuple(files)
+
+    @classmethod
+    def _get_hf_api(cls) -> HfApi | None:
+        if HfApi is None:
+            return None
+        if cls._HF_API is None:
+            cls._HF_API = HfApi()
+        return cls._HF_API
 
     @classmethod
     def _normalize_dataset(cls, dataset: str) -> str:

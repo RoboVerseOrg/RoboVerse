@@ -106,13 +106,24 @@ class ScenePresets:
     """Pre-configured scene setups for common scenarios."""
 
     @staticmethod
-    def empty_room(room_size: float = 5.0, wall_height: float = 3.0, wall_thickness: float = 0.1) -> SceneRandomCfg:
+    def empty_room(
+        room_size: float = 5.0,
+        wall_height: float = 3.0,
+        wall_thickness: float = 0.1,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+    ) -> SceneRandomCfg:
         """Create an empty room with floor, walls, and ceiling.
 
         Args:
             room_size: Size of the room (square)
             wall_height: Height of walls
             wall_thickness: Thickness of walls
+            floor_families: Optional override for floor material families
+            wall_families: Optional override for wall material families
+            ceiling_families: Optional override for ceiling material families
 
         Returns:
             Scene randomization configuration
@@ -137,15 +148,15 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             wall_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.wall_materials(),
+                material_paths=SceneMaterialCollections.wall_materials(families=wall_families),
                 selection_strategy="random",
             ),
             ceiling_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.ceiling_materials(),
+                material_paths=SceneMaterialCollections.ceiling_materials(families=ceiling_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
@@ -157,6 +168,11 @@ class ScenePresets:
         wall_height: float = 3.0,
         table_size: tuple[float, float, float] = (1.5, 1.0, 0.05),
         table_height: float = 0.75,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+        table_families: tuple[str, ...] | None = None,
     ) -> SceneRandomCfg:
         """Create a tabletop manipulation workspace.
 
@@ -165,6 +181,10 @@ class ScenePresets:
             wall_height: Height of walls
             table_size: Size of the table (x, y, z)
             table_height: Height of table surface from ground
+            floor_families: Optional override for floor material families
+            wall_families: Optional override for wall material families
+            ceiling_families: Optional override for ceiling material families
+            table_families: Optional override for table material families
 
         Returns:
             Scene randomization configuration
@@ -197,31 +217,37 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             wall_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.wall_materials(),
+                material_paths=SceneMaterialCollections.wall_materials(families=wall_families),
                 selection_strategy="random",
             ),
             ceiling_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.ceiling_materials(),
+                material_paths=SceneMaterialCollections.ceiling_materials(families=ceiling_families),
                 selection_strategy="random",
             ),
             table_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.table_materials(),
+                material_paths=SceneMaterialCollections.table_materials(families=table_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
         )
 
     @staticmethod
-    def floor_only(floor_size: float = 10.0, floor_thickness: float = 0.1) -> SceneRandomCfg:
+    def floor_only(
+        floor_size: float = 10.0,
+        floor_thickness: float = 0.1,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+    ) -> SceneRandomCfg:
         """Create only a floor (minimal scene).
 
         Args:
             floor_size: Size of the floor (square)
             floor_thickness: Thickness of floor
+            floor_families: Optional override for floor material families
 
         Returns:
             Scene randomization configuration
@@ -234,7 +260,7 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
@@ -250,6 +276,11 @@ class ScenePresets:
         wall_materials: list[str] | None = None,
         ceiling_materials: list[str] | None = None,
         table_materials: list[str] | None = None,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+        table_families: tuple[str, ...] | None = None,
         only_if_no_scene: bool = True,
     ) -> SceneRandomCfg:
         """Create a fully customizable scene configuration.
@@ -263,6 +294,10 @@ class ScenePresets:
             wall_materials: Custom wall materials (if None, uses defaults)
             ceiling_materials: Custom ceiling materials (if None, uses defaults)
             table_materials: Custom table materials (if None, uses defaults)
+            floor_families: Optional floor material family overrides when floor_materials is None
+            wall_families: Optional wall material family overrides when wall_materials is None
+            ceiling_families: Optional ceiling material family overrides when ceiling_materials is None
+            table_families: Optional table material family overrides when table_materials is None
             only_if_no_scene: Only create if no predefined scene exists
 
         Returns:
@@ -270,13 +305,13 @@ class ScenePresets:
         """
         # Use default materials if not provided
         if floor_materials is None:
-            floor_materials = SceneMaterialCollections.floor_materials()
+            floor_materials = SceneMaterialCollections.floor_materials(families=floor_families)
         if wall_materials is None:
-            wall_materials = SceneMaterialCollections.wall_materials()
+            wall_materials = SceneMaterialCollections.wall_materials(families=wall_families)
         if ceiling_materials is None:
-            ceiling_materials = SceneMaterialCollections.ceiling_materials()
+            ceiling_materials = SceneMaterialCollections.ceiling_materials(families=ceiling_families)
         if table_materials is None:
-            table_materials = SceneMaterialCollections.table_materials()
+            table_materials = SceneMaterialCollections.table_materials(families=table_families)
 
         return SceneRandomCfg(
             floor=floor_cfg,
