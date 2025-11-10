@@ -19,6 +19,7 @@ import tyro
 from loguru import logger as log
 from numpy.typing import NDArray
 from rich.logging import RichHandler
+from roboverse_pack.tasks.embodiedgen.tables import table785_config
 from torchvision.utils import make_grid, save_image
 
 from metasim.randomization import (
@@ -36,7 +37,6 @@ from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.state import TensorState
-from roboverse_pack.tasks.embodiedgen.tables import table785_config
 
 rootutils.setup_root(__file__, pythonpath=True)
 
