@@ -114,6 +114,10 @@ extend-exclude = [
     "roboverse_data",
     "assets",
     "docker"
+    "roboverse_pack/asset/**",
+    "*.usd",
+    "*.usda",
+    "*.usdc"
 ]
 
 [tool.setuptools]
