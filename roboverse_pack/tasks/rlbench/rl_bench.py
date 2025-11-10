@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 
+from metasim.example.example_pack.tasks.checkers import EmptyChecker
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.utils.demo_util import get_traj
@@ -19,7 +20,7 @@ class RLBenchTask(BaseTaskEnv):
 
     traj_filepath = None
 
-    checker = None
+    checker = EmptyChecker()
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)
