@@ -64,7 +64,7 @@ if __name__ == "__main__":
         allow_patterns="example_layouts/task_0002/*",
     )
 
-    layout_file = "roboverse_data/assets/EmbodiedGenData/demo_layouts/task_0002/layout.json"
+    layout_file = "roboverse_data/assets/EmbodiedGenData/example_layouts/task_0002/layout.json"
 
     # initialize scenario
     scenario = ScenarioCfg(
