@@ -64,18 +64,18 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
-Install IsaacSim v5.0.0 (IsaacLab v2.2.0, Recommended)
+Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
     uv pip install -e ".[isaacsim]"
     cd third_party
-    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab220 && cd IsaacLab220
+    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
 
 .. note::
-   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_. We no longer support IsaacSim v4.2.0 (IsaacLab v1.4.x). 
+   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.
 
 .. note::
    If you encounter an error such as 'GLIBCXX_3.4.30' not found when running Isaac Sim in a conda environment, try installing GCC 12.1.0 with ``conda install -c conda-forge gcc=12.1.0``. See `Stack Overflow thread <https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin>`_ for more details.

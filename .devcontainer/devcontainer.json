@@ -8,7 +8,8 @@
         "vscode": {
             "extensions": [
                 "ms-python.python",
-                "ms-python.vscode-pylance",
+                "ms-python.vscode-pylance",  // for vscode user
+                "anysphere.cursorpyright",   // for cursor user
                 "charliermarsh.ruff"
             ],
             "settings": {
