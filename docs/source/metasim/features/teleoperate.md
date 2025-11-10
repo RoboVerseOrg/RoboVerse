@@ -25,6 +25,8 @@ pip install -e .
 
 For more details, see the [PyRoki Installation Guide](../get_started/advanced_installation/pyroki.md).
 
+
+
 #### Option 2: cuRobo (Advanced, GPU-Accelerated)
 cuRobo is NVIDIA's GPU-accelerated motion planning library. It requires **CUDA 11.8** and provides faster IK solving for complex scenarios.
 
@@ -308,3 +310,14 @@ Simulation Control:
 - Connect robot PC and Pico 4 Ultra under the same network
 - On robot PC, double click app icon of `XRoboToolkit-PC-Service` or run service `/opt/apps/roboticsservice/runService.sh`
 - Open app `XRoboToolkit` on the Pico headset. Details of the Unity app can be found in the [Unity source repo](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client).
+
+
+### Known Issues
+If you encounter a NumPy version mismatch between IsaacSim 5.0.0 and PyRoki, for example, an error   
+`TypeError: asarray() got an unexpected keyword argument 'copy'`, try running the following commands:
+```
+pip install numpy==1.26.0
+pip install jax==0.4.30 jaxlib==0.4.30
+pip install sentry-sdk==1.43.0 typing-extensions==4.12.2 websockets==12.0
+pip install --upgrade websockets
+```
