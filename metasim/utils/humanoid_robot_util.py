@@ -112,7 +112,7 @@ def robot_velocity(envstate, robot_name: str):
 
 
 def robot_root_state_tensor(envstate, robot_name: str):
-    """Returns the velocity of the robot."""
+    """Returns the root state of the robot."""
     return envstate.robots[robot_name].root_state
 
 
@@ -182,11 +182,6 @@ def default_dof_pos_tensor(envstates, robot_name: str):
     return envstates.robots[robot_name].extra["default_pos"]
 
 
-def ref_dof_pos_tensor(envstates, robot_name: str):
-    """Return the default ref dof pos."""
-    return envstates.robots[robot_name].extra["ref_dof_pos"]
-
-
 def get_euler_xyz_tensor(quat):
     """Convert quaternion to Euler angles (roll, pitch, yaw) in radians for a batch of quaternions.
 
@@ -251,7 +246,7 @@ def last_dof_vel_tensor(envstate, robot_name: str):
     return envstate.robots[robot_name].extra["last_dof_vel"]
 
 
-def ref_dof_pos_tenosr(envstate, robot_name: str):
+def ref_dof_pos_tensor(envstate, robot_name: str):
     """Returns the dof pos."""
     return envstate.robots[robot_name].extra["ref_dof_pos"]
 

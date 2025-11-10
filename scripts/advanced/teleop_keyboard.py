@@ -45,7 +45,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     ## IK Solver
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"

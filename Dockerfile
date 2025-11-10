@@ -14,9 +14,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 ENV NVIDIA_VISIBLE_DEVICES=all
 
-## Uncomment this command to change apt source if you encouter connection issues in China mainland
-# RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
-#     sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
+# Uncomment this command to change apt source if you encouter connection issues in China mainland
+RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
+    sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
 
 ########################################################
 ## Install dependencies
@@ -80,7 +80,6 @@ WORKDIR ${HOME}/RoboVerse
 ########################################################
 ## Install isaaclab, mujoco, sapien3, pybullet
 ########################################################
-
 ## Create conda environment
 RUN mamba create -n metasim python=3.11 -y \
     && mamba clean -a -y

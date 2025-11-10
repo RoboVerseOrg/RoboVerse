@@ -31,19 +31,21 @@ Guidelines for modifications:
 * Haozhe Lou
 * Jiangran Lyu
 * Krishnan Srinivasan
+* Liu Liu
+* Mingyuan Sun
 * Peihao Li
 * Ran Gong
 * Siheng Zhao
 * Songlin Wei
+* Xinjie Wang
 * Xinying Guo
 * Yikai Tang
+* Yongce Liu
 * Yuchen Huang
 * Yuran Wang
 * Yutong Liang
 * Yuyang Li
 * Zhigen Zhao
-* Xinjie Wang
-* Liu Liu
 
 ## Acknowledgements
 

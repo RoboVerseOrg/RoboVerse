@@ -2,6 +2,106 @@
 
 This guide walks through the end-to-end workflow for training / fine-tuning the openpi π-family models (π₀, π₀.₅, π₀-FAST) on RoboVerse demonstrations.
 
+
+## Quick Start (One-Click Training)
+
+### Run Training
+
+For a streamlined training experience, use the provided automated script:
+
+```bash
+# Basic usage
+./roboverse_learn/vla/pi0/train_pi0.sh \
+  -i ./roboverse_demo \
+  -r your_hf_name/your_repo_name
+
+# With custom configuration
+./roboverse_learn/vla/pi0/train_pi0.sh \
+  -i ./your_demos \
+  -r your_hf_name/your_repo_name \
+  -c pi05_roboverse_lora \
+  -e your_experiment_name
+
+# Skip data conversion if already done
+./roboverse_learn/vla/pi0/train_pi0.sh \
+  --skip-data-conversion \
+  -c pi05_roboverse_lora
+```
+
+**Options:**
+- `-i, --input DIR`: Input RoboVerse demo directory
+- `-r, --repo-id ID`: HuggingFace repo ID
+- `-c, --config NAME`: Training config name (default: `pi05_roboverse_lora`)
+- `-e, --exp-name NAME`: Experiment name
+- `--overwrite-data`: Overwrite existing LeRobot dataset
+- `--overwrite-training`: Overwrite existing training checkpoint
+- `--skip-data-conversion`: Skip data conversion if already completed
+- `--skip-norm-stats`: Skip normalization statistics computation
+- `-h, --help`: Show help message
+
+The script automates:
+1. Data conversion from RoboVerse to LeRobot format
+2. Normalization statistics computation
+3. Model training with proper environment setup
+
+**What the script does:**
+1. **Automatic registration**: Copies `roboverse_policy.py` to OpenPI and injects data/training configs into `config.py`
+2. **Data conversion**: Converts RoboVerse demos to LeRobot format
+3. **Normalization stats**: Computes statistics needed for training
+4. **Training launch**: Starts the training process with proper environment setup
+
+**Prerequisites:**
+- OpenPI must be installed (see section 1 below)
+- The script will automatically handle policy and config registration
+
+### Complete Example Workflow
+
+Here's a complete example showing how to train π₀.₅ on your demonstrations:
+
+```bash
+# 1. First-time setup: Install OpenPI (one-time only)
+cd third_party
+git clone https://github.com/physical-intelligence/openpi.git
+cd openpi
+GIT_LFS_SKIP_SMUDGE=1 uv sync
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
+cd ../..
+
+# 2. Collect or prepare your demonstrations
+# (Your demos should be in RoboVerse format with metadata.json and rgb.mp4)
+
+# 3. Run the complete training pipeline
+./roboverse_learn/vla/pi0/train_pi0.sh \
+  -i ./my_robot_demos \
+  -r your_hf_username/robot_task_demos \
+  -c pi05_roboverse_lora \
+  -e my_first_experiment
+
+# 4. Monitor training progress
+# Training logs and checkpoints will be saved in the OpenPI directory
+
+# 5. Evaluate your trained model (in a separate terminal)
+# Terminal 1: Start policy server
+cd third_party/openpi
+uv run scripts/serve_policy.py policy:checkpoint \
+  --policy.config=pi05_roboverse_lora \
+  --policy.dir=<path_to_checkpoint>
+
+# Terminal 2: Run evaluation
+python roboverse_learn/vla/pi0/pi_eval.py \
+  --task PickCube \
+  --robot franka \
+  --sim mujoco \
+  --policy-host localhost \
+  --policy-port 8000
+```
+
+---
+
+## Manual Setup (Step-by-Step)
+
+If you prefer more control or need to customize the training configuration beyond what the automated script provides, follow these detailed steps:
+
 ## 1. Clone and install openpi
 
 1. Clone openpi under `third_party/`:
@@ -126,13 +226,14 @@ TrainConfig(
 Start training:
 ```bash
 cd ~/codes/RoboVerse/third_party/openpi
+uv run scripts/compute_norm_stats.py --config-name pi05_roboverse_lora 
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 \
 uv run scripts/train.py pi05_roboverse_lora --exp-name=roboverse_pi05_lora --overwrite
 ```
 
 To fine-tune π₀ or π₀-FAST, switch the `model` field to `Pi0Config`/`Pi0FASTConfig` variants and adapt the LoRA settings accordingly.
 
-### 5. Evaluate the trained checkpoint
+## 5. Evaluate the trained checkpoint
 
   1. Start the policy server from *inside* the openpi repo (pointing to whatever checkpoint you want to
   test; here we use iteration 6000):
@@ -158,3 +259,49 @@ To fine-tune π₀ or π₀-FAST, switch the `model` field to `Pi0Config`/`Pi0FA
   3. After each run, a metrics JSON and an episode video will appear in pi_eval_output/ (for example
   pi_eval_output/episode_001.mp4). Review the MP4 to check the rollout qualitatively.
 
+## 6. Troubleshooting
+
+### Feature Type 'List' Not Found Error
+
+If you encounter the following error:
+```
+ValueError: Feature type 'List' not found. Available feature types: ['Value', 'ClassLabel', 'Translation', 'TranslationVariableLanguages', 'LargeList', 'Sequence', 'Array2D', 'Array3D', 'Array4D', 'Array5D', 'Audio', 'Image', 'Video', 'Pdf', 'VideoFrame']
+```
+
+**Solution:** Add the following monkey-patch to `openpi/training/dataloader.py`:
+```python
+# Monkey-patch to fix 'List' feature type error in old datasets
+try:
+    import datasets.features.features as features
+
+    _OLD_GENERATE_FROM_DICT = features.generate_from_dict
+
+    def _new_generate_from_dict(obj):
+        if isinstance(obj, dict) and obj.get("_type") == "List":
+            obj["_type"] = "Sequence"
+        return _OLD_GENERATE_FROM_DICT(obj)
+
+    features.generate_from_dict = _new_generate_from_dict
+except (ImportError, AttributeError):
+    # If datasets or the function doesn't exist, do nothing.
+    pass
+# End of monkey-patch
+```
+
+See: https://github.com/Physical-Intelligence/openpi/issues/561
+
+### UV Environment Issues
+
+If you encounter errors or version incompatibilities with the `uv` environment, you can use a `conda` environment instead and run commands with `python` directly rather than `uv run`.
+
+### Environment Setup Recommendations
+
+**Separate Environments:** Use Python 3.11 to create a dedicated π environment. We recommend maintaining two separate environments:
+
+- **RoboVerse environment**: For collecting demonstrations and running evaluations
+- **π environment**: For training and inference with π models
+
+**During evaluation:**
+1. Install `openpi_client` in your RoboVerse environment: `pip install openpi_client`
+2. Use the π environment to serve the policy and generate action chunks
+3. Use the RoboVerse environment to execute actions and evaluate performance

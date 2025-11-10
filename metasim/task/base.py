@@ -71,7 +71,7 @@ class BaseTaskEnv:
             check_and_download_single(self.traj_filepath)
 
         self._initial_states = self._get_initial_states()
-        self.device = device
+        self.device = self.handler.device
         self._prepare_callbacks()
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 

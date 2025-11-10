@@ -1,0 +1,74 @@
+control_dt: 0.02
+
+msg_type: "hg"     # "hg" or "go"
+imu_type: "pelvis"    # "torso" or "pelvis"
+
+lowcmd_topic: "rt/lowcmd"
+lowstate_topic: "rt/lowstate"
+
+enable_actions_reindex: True
+
+policy_path: "outputs/unitree_rl/g1_dex3_humanoid_walking/2025_0819_015311/exported/model_exported_jit.pt"
+
+# should be aligned to the joint order in `joint_names`
+kps: [200, 150, 150, 200, 20, 20, 200, 150, 150, 200, 20, 20, 200, 200, 200, 40, 40, 40, 40, 20, 20, 20, 40, 40, 40, 40, 20, 20, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+kds: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 4, 4, 5, 5, 5, 10, 10, 10, 10, 4, 4, 4, 10, 10, 10, 10, 4, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+# Default joint positions in actuator definition order (43 joints)
+default_angles: [-0.4, 0.0, 0.0, 0.8, -0.4, 0.0, -0.4, 0.0, 0.0, 0.8, -0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+joint_names: [
+  "left_hip_pitch_joint",
+  "left_hip_roll_joint",
+  "left_hip_yaw_joint",
+  "left_knee_joint",
+  "left_ankle_pitch_joint",
+  "left_ankle_roll_joint",
+  "right_hip_pitch_joint",
+  "right_hip_roll_joint",
+  "right_hip_yaw_joint",
+  "right_knee_joint",
+  "right_ankle_pitch_joint",
+  "right_ankle_roll_joint",
+  "waist_yaw_joint",
+  "waist_roll_joint",
+  "waist_pitch_joint",
+  "left_shoulder_pitch_joint",
+  "left_shoulder_roll_joint",
+  "left_shoulder_yaw_joint",
+  "left_elbow_joint",
+  "left_wrist_roll_joint",
+  "left_wrist_pitch_joint",
+  "left_wrist_yaw_joint",
+  "right_shoulder_pitch_joint",
+  "right_shoulder_roll_joint",
+  "right_shoulder_yaw_joint",
+  "right_elbow_joint",
+  "right_wrist_roll_joint",
+  "right_wrist_pitch_joint",
+  "right_wrist_yaw_joint",
+  "left_hand_thumb_0_joint",
+  "left_hand_thumb_1_joint",
+  "left_hand_thumb_2_joint",
+  "left_hand_middle_0_joint",
+  "left_hand_middle_1_joint",
+  "left_hand_index_0_joint",
+  "left_hand_index_1_joint",
+  "right_hand_thumb_0_joint",
+  "right_hand_thumb_1_joint",
+  "right_hand_thumb_2_joint",
+  "right_hand_middle_0_joint",
+  "right_hand_middle_1_joint",
+  "right_hand_index_0_joint",
+  "right_hand_index_1_joint",
+]
+
+ang_vel_scale: 0.25
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+cmd_scale: [2.0, 2.0, 0.25]
+num_actions: 43
+num_obs: 143
+
+max_cmd: [1.0, 1.0, 0.8]

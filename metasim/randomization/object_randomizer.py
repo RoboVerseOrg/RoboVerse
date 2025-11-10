@@ -172,7 +172,7 @@ class ObjectRandomizer(BaseRandomizerType):
     def _get_body_names(self, obj_name: str) -> list[str]:
         """Get body names for an object."""
         if hasattr(self.handler, "_get_body_names"):
-            return self._get_body_names(obj_name)
+            return self.handler._get_body_names(obj_name)
         else:
             # Fallback implementation
             if obj_name in self.handler.scene.articulations:

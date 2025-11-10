@@ -22,4 +22,5 @@ reinforcement_learning/fast_td3.md
 reinforcement_learning/sac.md
 reinforcement_learning/td3.md
 reinforcement_learning/skillblender_rl.md
+reinforcement_learning/unitree_rl.md
 ```
