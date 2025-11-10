@@ -13,6 +13,20 @@ from metasim.utils import configclass
 ##################################################
 
 
+# Default file_type dictionary that can be accessed at class level
+_DEFAULT_FILE_TYPE = {
+    "isaaclab": "usd",
+    "isaacsim": "usd",
+    "pybullet": "urdf",
+    "sapien2": "urdf",
+    "sapien3": "urdf",
+    "genesis": "urdf",
+    "isaacgym": "urdf",
+    "mujoco": "mjcf",
+    "mjx": "mjx_mjcf",
+}
+
+
 @configclass
 class _FileBasedMixin:
     """File-based mixin."""
@@ -32,14 +46,15 @@ class _FileBasedMixin:
     mjx_mjcf_path: str | None = None
     """Path to the MJCF file only used for MJX. If not specified, it will be the same as mjcf_path."""
 
-    scale: float | tuple[float, float, float] = 1.0
-    """Object scaling (in scalar) for the object, default is 1.0"""
+    # Instance variable for file_type (will be initialized from class variable if not provided)
+    file_type: dict[str, str] = _DEFAULT_FILE_TYPE.copy()
+    """Instance variable for file_type mapping. Defaults to class variable value."""
 
-    isaacgym_read_mjcf: bool = False
-    """By default, Isaac Gym will read from URDF files. If this is set to True, Isaac Gym will read from MJCF files."""
+    # isaacgym_read_mjcf: bool = False
+    # """By default, Isaac Gym will read from URDF files. If this is set to True, Isaac Gym will read from MJCF files."""
 
-    genesis_read_mjcf: bool = False
-    """By default, Genesis will read from URDF files. If this is set to True, Genesis will read from MJCF files."""
+    # genesis_read_mjcf: bool = False
+    # """By default, Genesis will read from URDF files. If this is set to True, Genesis will read from MJCF files."""
 
     extra_resources: list[str] = []
     """Extra resources to load for the object. This is used to load additional resources for the object, such as textures, materials, etc."""
@@ -47,13 +62,22 @@ class _FileBasedMixin:
     def __post_init__(self):
         super().__post_init__()
 
-        ## Transform the 1d scale to a tuple of (x-scale, y-scale, z-scale).
-        if isinstance(self.scale, float):
-            self.scale = (self.scale, self.scale, self.scale)
-
         ## Set the mjx_mjcf_path if it is not specified.
         if self.mjx_mjcf_path is None:
             self.mjx_mjcf_path = self.mjcf_path
+
+    def file_name(self, sim_name):
+        file_type = self.file_type[sim_name]
+        if file_type == "usd":
+            return self.usd_path
+        elif file_type == "urdf":
+            return self.urdf_path
+        elif file_type == "mjcf":
+            return self.mjcf_path
+        elif file_type == "mjx_mjcf":
+            return self.mjx_mjcf_path
+        else:
+            raise ValueError(f"Invalid file type: {file_type}")
 
 
 @configclass
@@ -65,6 +89,9 @@ class _PrimitiveMixin:
 
     color: list[float] = MISSING
     """Color of the object in RGB"""
+
+    def __post_init__(self):
+        super().__post_init__()
 
     @property
     def volume(self) -> float:
@@ -101,10 +128,16 @@ class BaseObjCfg:
     enabled_gravity: bool = True
     """Whether to enable gravity. Default to True. If False, the robot will not be affected by gravity."""
 
+    scale: float | tuple[float, float, float] = 1.0
+    """Object scaling (in scalar) for the object, default is 1.0"""
+
     def __post_init__(self):
         # Set default value for fix_base_link if not explicitly set
         if self.fix_base_link is None:
             self.fix_base_link = False
+
+        if isinstance(self.scale, float):
+            self.scale = (self.scale, self.scale, self.scale)
 
 
 ##################################################
@@ -149,6 +182,9 @@ class BaseRigidObjCfg(BaseObjCfg):
 class BaseArticulationObjCfg(BaseObjCfg):
     """Base articulation object cfg."""
 
+    def __post_init__(self):
+        super().__post_init__()
+
 
 ##################################################
 # Level 2: Concrete object
@@ -166,6 +202,12 @@ class RigidObjCfg(_FileBasedMixin, BaseRigidObjCfg):
 @configclass
 class ArticulationObjCfg(_FileBasedMixin, BaseArticulationObjCfg):
     """Articulation object cfg."""
+
+
+# Set file_type as a class variable for ArticulationObjCfg and its subclasses
+# This allows accessing it as RobotCfg.file_type
+_FileBasedMixin.file_type = _DEFAULT_FILE_TYPE.copy()
+ArticulationObjCfg.file_type = _DEFAULT_FILE_TYPE.copy()
 
 
 @configclass

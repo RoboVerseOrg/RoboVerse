@@ -11,6 +11,7 @@ from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
 from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.scene import SceneCfg
 
 from .parse_util import extract_mesh_paths_from_urdf, extract_paths_from_mjcf
 
@@ -220,7 +221,7 @@ class FileDownloader:
         for robot in self.scenario.robots:
             self._add_from_object(robot)
         if self.scenario.scene is not None:
-            self._add_from_object(self.scenario.scene)
+            self._add_from_scene(self.scenario.scene)
         # if self.scenario.task is not None:
         #     traj_filepath = self.scenario.task.traj_filepath
         #     if traj_filepath is None:
@@ -236,6 +237,21 @@ class FileDownloader:
         #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
         #     self._add(traj_filepath)
 
+    def _add_from_scene(self, scene: SceneCfg):
+        assert isinstance(scene, SceneCfg)
+
+        self._add(scene.file_name(self.scenario.simulator))
+
+    def _add_from_scene(self, scene: SceneCfg):
+        assert isinstance(scene, SceneCfg)
+
+        self._add(scene.file_name(self.scenario.simulator))
+
+    def _add_from_scene(self, scene: SceneCfg):
+        assert isinstance(scene, SceneCfg)
+
+        self._add(scene.file_name(self.scenario.simulator))
+
     def _add_from_object(self, obj: BaseObjCfg):
         ## TODO: add a primitive base object class?
         if (
@@ -244,22 +260,7 @@ class FileDownloader:
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return
-        if self.scenario.simulator in ["isaaclab", "isaacsim"]:
-            self._add(obj.usd_path)
-        elif (
-            self.scenario.simulator in ["pybullet", "sapien2", "sapien3"]
-            or (self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf)
-            or (self.scenario.simulator == "genesis" and not obj.genesis_read_mjcf)
-        ):
-            self._add(obj.urdf_path)
-        elif (
-            self.scenario.simulator in ["mujoco"]
-            or (self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf)
-            or (self.scenario.simulator == "genesis" and obj.genesis_read_mjcf)
-        ):
-            self._add(obj.mjcf_path)
-        elif self.scenario.simulator in ["mjx"]:
-            self._add(obj.mjx_mjcf_path)
+        self._add(obj.file_name(self.scenario.simulator))
 
         for extra_resource in obj.extra_resources:
             self._add(extra_resource)

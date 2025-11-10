@@ -48,26 +48,31 @@ class RobotCfg(ArticulationObjCfg):
     num_joints: int | None = None
     """Number of robot joints, including all movable joints"""
 
-    # ==================== Asset File Paths ====================
-    # Do not need to fill in all the paths, only fill in the paths that are required for the specific robot and simulation use case
-    usd_path: str | None = None
-    """USD format robot model file path (for IsaacLab, etc.)"""
+    # # ==================== Asset File Paths ====================
+    # # Do not need to fill in all the paths, only fill in the paths that are required for the specific robot and simulation use case
+    # usd_path: str | None = None
+    # """USD format robot model file path (for IsaacLab, etc.)"""
 
-    mjcf_path: str | None = None
-    """MJCF format robot model file path (for MuJoCo, etc.)"""
+    # # ==================== Asset File Paths ====================
+    # # Do not need to fill in all the paths, only fill in the paths that are required for the specific robot and simulation use case
+    # usd_path: str | None = None
+    # """USD format robot model file path (for IsaacLab, etc.)"""
 
-    mjx_mjcf_path: str | None = None
-    """MJX format robot model file path (for MJX, etc.)"""
+    # mjcf_path: str | None = None
+    # """MJCF format robot model file path (for MuJoCo, etc.)"""
 
-    urdf_path: str | None = None
-    """URDF format robot model file path (for PyBullet, Sapien, etc.)"""
+    # mjx_mjcf_path: str | None = None
+    # """MJX format robot model file path (for MJX, etc.)"""
+
+    # urdf_path: str | None = None
+    # """URDF format robot model file path (for PyBullet, Sapien, etc.)"""
 
     # ==================== Physical Properties ====================
-    fix_base_link: bool = True
-    """Whether to fix the robot base."""
+    # fix_base_link: bool = True
+    # """Whether to fix the robot base."""
 
-    enabled_gravity: bool = True
-    """Whether to enable gravity effects"""
+    # enabled_gravity: bool = True
+    # """Whether to enable gravity effects"""
 
     # ==================== Joint configuration ====================
     joint_limits: dict[str, tuple[float, float]] | None = None

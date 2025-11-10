@@ -381,7 +381,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
         elif isinstance(object, ArticulationObjCfg):
-            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
+            asset_path = object.file_name("isaacgym")
             asset_options = gymapi.AssetOptions()
             asset_options.armature = 0.01
             asset_options.fix_base_link = object.fix_base_link
@@ -391,7 +391,7 @@ class IsaacgymHandler(BaseSimHandler):
             self._articulated_asset_dict_dict[object.name] = self.gym.get_asset_rigid_body_dict(asset)
             self._articulated_joint_dict_dict[object.name] = self.gym.get_asset_dof_dict(asset)
         elif isinstance(object, RigidObjCfg):
-            asset_path = object.mjcf_path if object.isaacgym_read_mjcf else object.urdf_path
+            asset_path = object.file_name("isaacgym")
             asset_options = gymapi.AssetOptions()
             # Only set fix_base_link if it's True (non-default)
             if object.fix_base_link:
@@ -412,7 +412,7 @@ class IsaacgymHandler(BaseSimHandler):
         asset_root = "."
         # FIXME: hard code for only one robot
         assert len(self.robots) == 1, "Only support one robot for now"
-        robot_asset_file = self.robots[0].mjcf_path if self.robots[0].isaacgym_read_mjcf else self.robots[0].urdf_path
+        robot_asset_file = self.robots[0].file_name("isaacgym")
         asset_options = gymapi.AssetOptions()
         asset_options.armature = getattr(self.robots[0], "armature", 0.01)
         asset_options.fix_base_link = self.robots[0].fix_base_link
