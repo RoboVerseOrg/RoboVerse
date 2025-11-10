@@ -1,0 +1,3791 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary cameraSettings = {
+            dictionary Front = {
+                double3 position = (500, 0, 0)
+                double radius = 5
+            }
+            dictionary Perspective = {
+                double3 position = (-0.7365887761650869, 6.500947834362104, 1.8414986840383074)
+                double3 target = (-0.7538328854949294, 6.183871190441385, 1.7008609165555288)
+            }
+            dictionary Right = {
+                double3 position = (0, -500, 0)
+                double radius = 5
+            }
+            dictionary Top = {
+                double3 position = (0, 0, 500)
+                double radius = 5
+            }
+            string boundCamera = "/OmniverseKit_Persp"
+        }
+        dictionary omni_layer = {
+            string authoring_layer = "./kujiale_0033.usda"
+            dictionary locked = {
+            }
+            dictionary muteness = {
+            }
+        }
+        dictionary renderSettings = {
+            double "rtx:directLighting:sampledLighting:maxRayUnexposedIntensity" = 20408.16015625
+            double "rtx:indirectDiffuse:maxRayUnexposedIntensity" = 20408.16015625
+            double "rtx:pathtracing:fireflyFilter:maxPerEmissiveUnexposedIntensity" = 10204.080078125
+            double "rtx:pathtracing:fireflyFilter:maxUnexposedIntensityPerSample" = 10204.080078125
+            double "rtx:pathtracing:fireflyFilter:maxUnexposedIntensityPerSampleDiffuse" = 10204.080078125
+            double "rtx:post:tonemap:cm2Factor" = 1.9999999552965164
+            double "rtx:post:tonemap:exposureTime" = 0.000016666666851961054
+            double "rtx:post:tonemap:fNumber" = 2.799999952316284
+            double "rtx:post:tonemap:filmIso" = 60000
+            double "rtx:raytracing:inscattering:maxRTSampleUnexposedIntensity" = 653061.125
+            double "rtx:reflections:maxRoughness" = 1
+            double "rtx:reflections:sampledLighting:maxRayUnexposedIntensity" = 61224.484375
+            double "rtx:translucency:maxRayUnexposedIntensity" = 61224.484375
+        }
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Root"
+{
+    def Scope "Meshes"
+    {
+        def Scope "kitchen_2407"
+        {
+            def Xform "kitchenware_0000" (
+                prepend references = @./Meshes/kitchenware_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.137819919585819, 3.4928192596428915, 0.8572044903832723)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "kitchenware_0001" (
+                prepend references = @./Meshes/kitchenware_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.192041023254431, 3.4341186437557334, 0.8535925604970385)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "kitchenware_0002" (
+                prepend references = @./Meshes/kitchenware_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.270334657332308, 1.4885671744144215, 0.9547962626260943)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tray_0000" (
+                prepend references = @./Meshes/tray_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.21122802734375, 3.6587773590087966, 0.8612770050734382)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bathroom_product_0000" (
+                prepend references = @./Meshes/bathroom_product_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.2677963695513537, 1.540921188883266, 1.008863250640404)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "basin_0000" (
+                prepend references = @./Meshes/basin_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.3049257659681315, 1.6269336470881144, 0.740231559672822)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0000" (
+                prepend references = @./Meshes/shelf_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.0649224472005967, 1.6278479537975152, 0.8103465232827725)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0001" (
+                prepend references = @./Meshes/shelf_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.351146306890104, 2.0099839401110327, 0.9310166157811263)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tea_set_0000" (
+                prepend references = @./Meshes/tea_set_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.079533048651034, 4.116697973250451, 0.8864545027955014)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tea_set_0001" (
+                prepend references = @./Meshes/tea_set_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.023637052557284, 4.276815629958222, 0.8864544951661067)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tea_set_0002" (
+                prepend references = @./Meshes/tea_set_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.235666496296755, 4.265953415039684, 0.9659962811648883)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cup_0000" (
+                prepend references = @./Meshes/cup_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.379145528793336, 4.146997110366822, 0.9210753860471714)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0000" (
+                prepend references = @./Meshes/plate_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.071237983703616, 4.120568508152081, 0.8561775932218786)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0001" (
+                prepend references = @./Meshes/plate_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.015341388702386, 4.28068694686349, 0.856204862184472)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "other_cooker_0000" (
+                prepend references = @./Meshes/other_cooker_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.180905647278753, 2.8785756378173004, 0.8462850704191521)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0005" (
+                prepend references = @./Meshes/knife_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.297424680716977, 1.513567301401858, 1.0102029694653536)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0006" (
+                prepend references = @./Meshes/knife_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.36143736837391, 1.4885435775794005, 1.014972722285421)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0007" (
+                prepend references = @./Meshes/knife_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.306072595612293, 1.4885669231153957, 1.0164926576082924)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0008" (
+                prepend references = @./Meshes/knife_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.285460725792533, 1.4635671034018143, 0.9977526292381984)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0009" (
+                prepend references = @./Meshes/knife_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.34440309715179, 1.5135674565020787, 0.9901014070037669)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0010" (
+                prepend references = @./Meshes/knife_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.364988462452191, 1.4635669035135357, 1.0179045915086309)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "range_hood_0000" (
+                prepend references = @./Meshes/range_hood_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.19095490639517, 2.876539215012234, 1.8209133870157759)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_light_0002" (
+                prepend references = @./Meshes/ceiling_light_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710677, -0, 0, 0.70710677)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.4226066856746193, 3.120693365903099, 2.3233373955128664)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0011" (
+                prepend references = @./Meshes/cabinet_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.2633517, 2.91193334, 1.9499995384999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0012" (
+                prepend references = @./Meshes/cabinet_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.57992592, 2.9119335, 0.42499949999997627)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "bathroom_2548"
+        {
+            def Xform "bathroom_product_0001" (
+                prepend references = @./Meshes/bathroom_product_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.35402611237059, 1.8403488178048255, 1.5939454225312897)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bathroom_product_0003" (
+                prepend references = @./Meshes/bathroom_product_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.525734819024006, 3.3671623027261104, 0.5701257516002719)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bathroom_product_0004" (
+                prepend references = @./Meshes/bathroom_product_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (0.9991001, 1, 1)
+                double3 xformOp:translate = (1.780012139459659, 2.380306105550436, 1.1999996220692097)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0003" (
+                prepend references = @./Meshes/shelf_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.486691961715006, 2.6939817937066772, 1.671084666930775)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0004" (
+                prepend references = @./Meshes/shelf_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.5189793167375765, 3.244068183892198, 1.6287046086431882)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0005" (
+                prepend references = @./Meshes/shelf_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (0.9991001, 1, 1)
+                double3 xformOp:translate = (1.4499020435126795, 2.3309171018594514, 1.0617759735221695)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "closestool_0000" (
+                prepend references = @./Meshes/closestool_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.2370955568591486, 2.9611398132731215, 0.38261983883345474)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0000" (
+                prepend references = @./Meshes/daily_equipment_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.48864424132727, 3.352706245430303, 0.4844003560173701)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0003" (
+                prepend references = @./Meshes/daily_equipment_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.476166061036799, 2.6813535848777854, 1.803896991989052)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0004" (
+                prepend references = @./Meshes/daily_equipment_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.479868930700082, 2.682176872916932, 1.758695756166198)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0005" (
+                prepend references = @./Meshes/daily_equipment_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.5203168268453306, 3.1241296167345167, 1.7227832963102754)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0006" (
+                prepend references = @./Meshes/daily_equipment_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.522207071325933, 3.209827974315651, 1.7222657124632292)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0007" (
+                prepend references = @./Meshes/daily_equipment_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.526471332572268, 3.2910879878963573, 1.7224122655026721)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0008" (
+                prepend references = @./Meshes/daily_equipment_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.5115433445103155, 3.3697771548886157, 1.7040041958925694)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0009" (
+                prepend references = @./Meshes/daily_equipment_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (0.9991001, 1, 1)
+                double3 xformOp:translate = (1.4453031073633151, 2.304793939538489, 0.8857840306434588)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "mirror_0001" (
+                prepend references = @./Meshes/mirror_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (2.36043212890625, 4.165654296875, 1.3344221780218355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0009" (
+                prepend references = @./Meshes/cabinet_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (2.4661229445503254, 4.020142709887372, 1.3164754476394098)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0010" (
+                prepend references = @./Meshes/cabinet_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (2.3584626790932677, 4.021934454576647, 0.3353022140785341)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "storage_0000" (
+                prepend references = @./Meshes/storage_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.526882234718862, 3.3390601025804827, 1.433049998964517)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "storage_0001" (
+                prepend references = @./Meshes/storage_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.52215721342466, 3.2421284902303324, 1.4212565610088055)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "electric_appliance_0000" (
+                prepend references = @./Meshes/electric_appliance_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.7188422927807807, 2.9716308593750003, 2.348567733285406)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "bathroom_6316"
+        {
+            def Xform "bathroom_product_0002" (
+                prepend references = @./Meshes/bathroom_product_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.15027076262941, 6.070185243586076, 1.5939454225312897)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "shelf_0002" (
+                prepend references = @./Meshes/shelf_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.389177108839261, 6.2746802442985, 1.6710846669307748)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "closestool_0001" (
+                prepend references = @./Meshes/closestool_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.478636084417229, 5.902085218117504, 0.38261983883345463)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_light_0004" (
+                prepend references = @./Meshes/ceiling_light_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.820938438284655, 5.347836997923355, 2.7199361476240456)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0001" (
+                prepend references = @./Meshes/daily_equipment_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.376546455405471, 6.26415190127679, 1.8038969919890517)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "daily_equipment_0002" (
+                prepend references = @./Meshes/daily_equipment_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.377372184761992, 6.267854770697046, 1.7586957561661976)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "mirror_0000" (
+                prepend references = @./Meshes/mirror_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (-5.6221240234375, 4.958212890625, 1.3324629495062101)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0000" (
+                prepend references = @./Meshes/cabinet_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (-5.727814839103918, 5.103722034187469, 1.31451743982691)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0001" (
+                prepend references = @./Meshes/cabinet_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.85880005, 0.85880005, 0.85880005)
+                double3 xformOp:translate = (-5.62015701773103, 5.10193272660416, 0.38560914462052626)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "livingroom_943"
+        {
+            def Xform "plate_0002" (
+                prepend references = @./Meshes/plate_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5528669052227975, 6.813769024055314, 0.7570351488053929)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0003" (
+                prepend references = @./Meshes/plate_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5528668708904325, 6.813768058884071, 0.753342746246884)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0004" (
+                prepend references = @./Meshes/plate_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5528668136703363, 6.813768127508801, 0.7466345686855066)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0005" (
+                prepend references = @./Meshes/plate_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5338800888165474, 7.294408672492814, 0.7570351488053929)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0006" (
+                prepend references = @./Meshes/plate_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5338800544841824, 7.294407707321572, 0.753342746246884)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0007" (
+                prepend references = @./Meshes/plate_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.533879997264086, 7.2944077759463015, 0.7466345686855066)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0008" (
+                prepend references = @./Meshes/plate_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.8965959854065093, 7.355571796737578, 0.7570351488053929)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0009" (
+                prepend references = @./Meshes/plate_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.896596019747447, 7.355567878938298, 0.753342746246884)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0010" (
+                prepend references = @./Meshes/plate_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.896596076975291, 7.355567810194539, 0.7466345686855064)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0011" (
+                prepend references = @./Meshes/plate_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.909015419000259, 6.820576679550078, 0.7570351488053929)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0012" (
+                prepend references = @./Meshes/plate_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.909015453341197, 6.820577644563298, 0.753342746246884)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "plate_0013" (
+                prepend references = @./Meshes/plate_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9090155105690414, 6.820577575819539, 0.7466345686855064)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0006" (
+                prepend references = @./Meshes/fork_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5482645264686212, 6.927183166500937, 0.741036440369794)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0007" (
+                prepend references = @./Meshes/fork_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.54880316552805, 6.900699011799975, 0.7407805361736086)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0008" (
+                prepend references = @./Meshes/fork_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.529277710062371, 7.407822814938437, 0.741036440369794)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0009" (
+                prepend references = @./Meshes/fork_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5298163491217998, 7.381338660237475, 0.7407805361736086)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0010" (
+                prepend references = @./Meshes/fork_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9011983644602273, 7.242152771007158, 0.7410364403697941)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0011" (
+                prepend references = @./Meshes/fork_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9006597253733144, 7.2686418085198925, 0.7407805361736084)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0012" (
+                prepend references = @./Meshes/fork_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.913617798053977, 6.707162536632158, 0.7410364403697941)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "fork_0013" (
+                prepend references = @./Meshes/fork_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9130791589670646, 6.733651574144893, 0.7407805361736084)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0011" (
+                prepend references = @./Meshes/knife_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5543269424443835, 6.723868907469416, 0.7392217743688339)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0012" (
+                prepend references = @./Meshes/knife_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5353425674443835, 7.204508555906915, 0.7392217743688339)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0013" (
+                prepend references = @./Meshes/knife_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.8951359481792425, 7.445471912896366, 0.7392217743688339)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "knife_0014" (
+                prepend references = @./Meshes/knife_0014.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.907552940366742, 6.910476795708866, 0.7392217743688339)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0000" (
+                prepend references = @./Meshes/chair_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (0.80810004, 0.80810004, 0.80810004)
+                double3 xformOp:translate = (4.133394569526904, 7.350870438181978, 0.47509817731556714)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0001" (
+                prepend references = @./Meshes/chair_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (0.80810004, 0.80810004, 0.80810004)
+                double3 xformOp:translate = (4.141365760933153, 6.787144852244478, 0.47509817731556714)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0002" (
+                prepend references = @./Meshes/chair_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.80810004, 0.80810004, 0.80810004)
+                double3 xformOp:translate = (3.256668904455923, 6.787147140097929, 0.4750981773155672)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0003" (
+                prepend references = @./Meshes/chair_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.80810004, 0.80810004, 0.80810004)
+                double3 xformOp:translate = (3.256668904455923, 7.316317061972929, 0.4750981773155672)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_light_0000" (
+                prepend references = @./Meshes/wall_light_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.9013, 1, 0.96150005)
+                double3 xformOp:translate = (-2.3521334380684293, 6.168375392858403, 1.6215456472389647)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_light_0001" (
+                prepend references = @./Meshes/wall_light_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.9013, 1, 0.96150005)
+                double3 xformOp:translate = (-2.3521344260473844, 9.561190123273349, 1.6193556468295962)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "painting_0000" (
+                prepend references = @./Meshes/painting_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.9013, 1, 0.96150005)
+                double3 xformOp:translate = (-2.4877511818972704, 8.262438835119953, 1.486652924299021)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "painting_0001" (
+                prepend references = @./Meshes/painting_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.9013, 1, 0.96150005)
+                double3 xformOp:translate = (-2.4877519772315555, 7.454789470323663, 1.475160437621395)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "painting_0002" (
+                prepend references = @./Meshes/painting_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.9817569088947158, 7.034423858602748, 1.7619534794930969)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "painting_0003" (
+                prepend references = @./Meshes/painting_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (0.5491, 0.5491, 0.5491)
+                double3 xformOp:translate = (-0.019262324194337453, 4.6094189453125, 1.589418788062901)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chandelier_0003" (
+                prepend references = @./Meshes/chandelier_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.39607501, 6.808139290000001, 2.238239583818315)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "television_0000" (
+                prepend references = @./Meshes/television_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.657318533406319, 8.08508828794012, 1.2027696492246198)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0004" (
+                prepend references = @./Meshes/cabinet_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1.2764, 1, 1)
+                double3 xformOp:translate = (1.3429164126358808, 7.963154318980584, 0.23691579791124004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0006" (
+                prepend references = @./Meshes/cabinet_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (0.7733, 0.8663, 1)
+                double3 xformOp:translate = (2.236581285853495, 4.842236494040625, 0.5515721127346888)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0007" (
+                prepend references = @./Meshes/cabinet_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.3119541780843025, 7.06635262954301, 0.5441018676727981)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0002" (
+                prepend references = @./Meshes/ornament_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.9135149269072431, 9.300337873430427, 0.5629208280231066)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0003" (
+                prepend references = @./Meshes/ornament_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.8932803974157486, 9.679467612424423, 0.8035173343383559)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0004" (
+                prepend references = @./Meshes/ornament_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.8920374145507821, 9.55623232189005, 0.8488537413198574)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0005" (
+                prepend references = @./Meshes/ornament_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.8531157569853682, 6.018736310930428, 0.5629208280231066)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0006" (
+                prepend references = @./Meshes/ornament_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.935394523151496, 6.397861157431073, 0.8036191974053031)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0007" (
+                prepend references = @./Meshes/ornament_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.8316382446289075, 6.296470266303933, 0.8332336514411486)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0008" (
+                prepend references = @./Meshes/ornament_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (6.123234e-17, -0, 0, -1)
+                float3 xformOp:scale = (0.7733, 0.8663, 1)
+                double3 xformOp:translate = (2.221325385607406, 4.7966062361288655, 1.2539230118514864)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0009" (
+                prepend references = @./Meshes/ornament_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.26389451999999997, 8.12289709, 0.384206070600196)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "ornament_0009"
+                    {
+                        over "mesh_0001"
+                        {
+                            over "SM_Clutter_0014_Part_0001" (
+                                active = false
+                            )
+                            {
+                            }
+                        }
+
+                        over "mesh_0000"
+                        {
+                            over "SM_Clutter_0013_Part_0002" (
+                                active = false
+                            )
+                            {
+                            }
+                        }
+                    }
+                }
+            }
+
+            def Xform "table_lamp_0000" (
+                prepend references = @./Meshes/table_lamp_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-2.139254280086969, 9.477777497447983, 1.0085675192049837)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spoon_0000" (
+                prepend references = @./Meshes/spoon_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5522123718195275, 6.703434543139799, 0.739246242056625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spoon_0001" (
+                prepend references = @./Meshes/spoon_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5332255554132774, 7.184074191577298, 0.739246242056625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spoon_0002" (
+                prepend references = @./Meshes/spoon_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.897250518784428, 7.465906277192573, 0.7392462420566248)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spoon_0003" (
+                prepend references = @./Meshes/spoon_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.909669952378178, 6.930911160005073, 0.7392462420566248)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tablecloth_0000" (
+                prepend references = @./Meshes/tablecloth_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.517868058278939, 6.806302701829784, 0.7616877066907631)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tablecloth_0001" (
+                prepend references = @./Meshes/tablecloth_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.556005859375, 6.8105419921875, 0.7312317998046565)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_5d64a7f944c5ba00017d889d"
+                    {
+                        over "MI_55caf569e4b087b12ca7ea3d"
+                        {
+                            float inputs:IsMetallicTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "tablecloth_0002" (
+                prepend references = @./Meshes/tablecloth_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.498881241872689, 7.286942350267284, 0.7616877066907631)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tablecloth_0003" (
+                prepend references = @./Meshes/tablecloth_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.5370190429687502, 7.291181640625, 0.7312317998046565)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_5d64a7f944c5ba00017d889d"
+                    {
+                        over "MI_55caf569e4b087b12ca7ea3d"
+                        {
+                            float inputs:IsMetallicTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "tablecloth_0004" (
+                prepend references = @./Meshes/tablecloth_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9315948354404515, 7.3630381182949876, 0.7616877066907631)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tablecloth_0005" (
+                prepend references = @./Meshes/tablecloth_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.89345703125, 7.3587939453125, 0.7312317998046564)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_5d64a7f944c5ba00017d889d"
+                    {
+                        over "MI_55caf569e4b087b12ca7ea3d"
+                        {
+                            float inputs:IsMetallicTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "tablecloth_0006" (
+                prepend references = @./Meshes/tablecloth_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9440142690342017, 6.8280430011074875, 0.7616877066907631)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tablecloth_0007" (
+                prepend references = @./Meshes/tablecloth_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9058764648437503, 6.8238037109375, 0.7312317998046564)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_5d64a7f944c5ba00017d889d"
+                    {
+                        over "MI_55caf569e4b087b12ca7ea3d"
+                        {
+                            float inputs:IsMetallicTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "wine_set_0000" (
+                prepend references = @./Meshes/wine_set_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.655774315834037, 6.788613335609541, 0.8155655438551785)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wine_set_0001" (
+                prepend references = @./Meshes/wine_set_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.6367874994277867, 7.269252984047041, 0.8155655438551785)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wine_set_0002" (
+                prepend references = @./Meshes/wine_set_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.7936885747909197, 7.380727484703271, 0.8155655438551784)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wine_set_0003" (
+                prepend references = @./Meshes/wine_set_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.8061080083846694, 6.845737250328271, 0.8155655438551784)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "curtain_0000" (
+                prepend references = @./Meshes/curtain_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1.0563, 1, 1.1227)
+                double3 xformOp:translate = (-0.444349577860512, 10.034407920813884, 1.4261890215949102)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "dining_table_0000" (
+                prepend references = @./Meshes/dining_table_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.6667, 0.7203, 1)
+                double3 xformOp:translate = (3.7186940281004057, 7.098294198690661, 0.36421760558779737)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spot_light_0000" (
+                prepend references = @./Meshes/spot_light_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-3.118730052093677, 5.191267830162064, 2.682925959748707)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0001" (
+                prepend references = @./Meshes/table_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-2.013659, 6.27234099, 0.34711809295993723)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0002" (
+                prepend references = @./Meshes/table_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-2.013659, 9.50497564, 0.3471180429599372)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0003" (
+                prepend references = @./Meshes/table_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.27158256000000003, 7.6816576, 0.20068263099851144)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "table_0003" (
+                        active = false
+                    )
+                    {
+                    }
+                }
+            }
+        }
+
+        def Scope "ceiling"
+        {
+            def Xform "ceiling_0000" (
+                prepend references = @./Meshes/ceiling_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1.1185, 1.1496, 0.5)
+                double3 xformOp:translate = (3.3681952708740392, 6.361436126765675, 2.6970686663064676)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0001" (
+                prepend references = @./Meshes/ceiling_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1.0704, 1.5506, 0.5)
+                double3 xformOp:translate = (-0.4060547313476491, 7.351932794749391, 2.612738588199526)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0002" (
+                prepend references = @./Meshes/ceiling_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1.041, 1.1696, 0.5013)
+                double3 xformOp:translate = (-4.30605522277825, 8.30193248105863, 2.7000005939772307)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0003" (
+                prepend references = @./Meshes/ceiling_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1.2111, 1.2795, 0.6266)
+                double3 xformOp:translate = (-4.056054911315924, 2.4319336222512176, 2.6749995652722025)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0004" (
+                prepend references = @./Meshes/ceiling_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.02605475, 2.4619336300000003, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0005" (
+                prepend references = @./Meshes/ceiling_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.40605469, 10.98193376, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0006" (
+                prepend references = @./Meshes/ceiling_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.8782032, 5.48193368, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0007" (
+                prepend references = @./Meshes/ceiling_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.34394536, 9.23193373, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0008" (
+                prepend references = @./Meshes/ceiling_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.6560547, 0.4819336, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0009" (
+                prepend references = @./Meshes/ceiling_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.30605475, 7.94998059, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0010" (
+                prepend references = @./Meshes/ceiling_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.6860547, 2.91193364, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0011" (
+                prepend references = @./Meshes/ceiling_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (0.46179688, 7.3519337, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0012" (
+                prepend references = @./Meshes/ceiling_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (2.8439453500000003, 0.4819336, 2.80000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0013" (
+                prepend references = @./Meshes/ceiling_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.5799260800000003, 2.91193364, 2.35000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0014" (
+                prepend references = @./Meshes/ceiling_0014.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.77394534, 2.91193364, 2.35000004)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ceiling_0015" (
+                prepend references = @./Meshes/ceiling_0015.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.5560499600000001, 5.73186728, 2.85)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "bedroom_1942"
+        {
+            def Xform "ceiling_light_0000" (
+                prepend references = @./Meshes/ceiling_light_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.8526458740234375, 2.946171325683404, 2.7709282902297647)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0015" (
+                prepend references = @./Meshes/pillow_0015.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.18916493, 2.7456085000000003, 0.31170428099802333)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0016" (
+                prepend references = @./Meshes/pillow_0016.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.25220714, 2.40435189, 0.2909947462206795)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0017" (
+                prepend references = @./Meshes/pillow_0017.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.06482043, 2.5005881, 0.3470987235820076)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0018" (
+                prepend references = @./Meshes/pillow_0018.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.03617316, 2.4110478300000002, 0.340791250068336)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0019" (
+                prepend references = @./Meshes/pillow_0019.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.40494030000000003, 2.6118032899999997, 0.20998873834763268)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0007" (
+                prepend references = @./Meshes/chair_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.22695801, 3.8757762000000002, 0.3791779741784431)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0008" (
+                prepend references = @./Meshes/chair_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.15263951, 2.51968708, 0.31557872950974203)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0053" (
+                prepend references = @./Meshes/book_0053.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.5939639600000001, 3.7310787199999997, 0.8772889547206795)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0054" (
+                prepend references = @./Meshes/book_0054.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.5976449300000001, 3.7528050200000003, 0.8755419607021249)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0055" (
+                prepend references = @./Meshes/book_0055.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.62514594, 3.8193020100000004, 0.9232744505536872)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0056" (
+                prepend references = @./Meshes/book_0056.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.63929044, 3.78227407, 0.9364744542089607)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0057" (
+                prepend references = @./Meshes/book_0057.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.61562293, 3.74231772, 0.8805019590702889)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "toy_0000" (
+                prepend references = @./Meshes/toy_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.9659258, -0, 0, 0.25881916)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.3951275938129748, 3.240918891822521, 0.17224016815495405)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "toy_0001" (
+                prepend references = @./Meshes/toy_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.57472892, 4.21077272, 0.9349259550702888)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "toy_0002" (
+                prepend references = @./Meshes/toy_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.05889791, 2.07144314, 0.7124072389247811)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0005" (
+                prepend references = @./Meshes/table_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.43808559, 3.91862669, 0.3901654573051522)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "flower_0001" (
+                prepend references = @./Meshes/flower_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.5857129400000001, 4.35407971, 1.021700445431617)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "bedroom_1831"
+        {
+            def Xform "ceiling_light_0001" (
+                prepend references = @./Meshes/ceiling_light_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-3.9722265634536456, 2.3951329199746634, 2.705295255846976)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0004" (
+                prepend references = @./Meshes/pillow_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.187136949105744, 2.4362655334747845, 0.7530028127761561)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0005" (
+                prepend references = @./Meshes/pillow_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.187136467753049, 2.0046410370145713, 0.7551729780708877)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0006" (
+                prepend references = @./Meshes/pillow_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.36807239230064, 2.4758029858848976, 0.7542009213685408)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0007" (
+                prepend references = @./Meshes/pillow_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.369181315822007, 1.93586201932611, 0.7515631713701801)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0008" (
+                prepend references = @./Meshes/pillow_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.585502652816587, 1.7216824531697117, 0.8235831405185958)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0009" (
+                prepend references = @./Meshes/pillow_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.585700591657075, 2.231905499945086, 0.8067285159955341)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0010" (
+                prepend references = @./Meshes/pillow_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.5854963756715055, 2.715459996900595, 0.8230439909080032)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bedding_0000" (
+                prepend references = @./Meshes/bedding_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.383101592991496, 2.2295793440125853, 0.3309786682206618)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bedding_0001" (
+                prepend references = @./Meshes/bedding_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-3.915003691111587, 2.4789171073267293, 0.3142507199589289)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bedding_0002" (
+                prepend references = @./Meshes/bedding_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.40719895324143, 2.1935627118531524, 0.5046380500984213)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bed_0000" (
+                prepend references = @./Meshes/bed_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.785649701423181, 2.2203263857024944, 0.8820131847775426)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chandelier_0000" (
+                prepend references = @./Meshes/chandelier_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.679550682071217, 3.521710227967637, 1.739217687108999)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chandelier_0001" (
+                prepend references = @./Meshes/chandelier_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6552733383212175, 0.8022967758191993, 1.737726870966847)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0002" (
+                prepend references = @./Meshes/cabinet_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.602719649007781, 3.4755515724804473, 0.3131432342519781)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0003" (
+                prepend references = @./Meshes/cabinet_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.465815352132782, 1.0388743263866973, 0.3131432342519781)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "cabinet_0005" (
+                prepend references = @./Meshes/cabinet_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1.2451, 1, 1.1501)
+                double3 xformOp:translate = (-2.533831698508872, 1.7070755682401892, 1.2009554468418224)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0000" (
+                prepend references = @./Meshes/ornament_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.61892861561835, 3.548923338980849, 0.7005947036983762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_decoration_0000" (
+                prepend references = @./Meshes/wall_decoration_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.817128956802751, 2.2170263522148193, 2.116530883792284)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "balcony_182"
+        {
+            def Xform "ceiling_light_0003" (
+                prepend references = @./Meshes/ceiling_light_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-1.0000000000000009, 10.900000001287173, 2.7199078115741604)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "studyroom_2167"
+        {
+            def Xform "ceiling_light_0005" (
+                prepend references = @./Meshes/ceiling_light_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.195595243302618, 8.291908073076328, 2.6763045871198226)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0000" (
+                prepend references = @./Meshes/pillow_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.497273029525738, 9.246640757981085, 0.5653277522087696)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0001" (
+                prepend references = @./Meshes/pillow_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.698336178333096, 9.258438335560989, 0.664819838977854)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0002" (
+                prepend references = @./Meshes/pillow_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.476027912338238, 9.829150235127699, 0.5653277503015439)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "pillow_0003" (
+                prepend references = @./Meshes/pillow_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.677095944028692, 9.876348491810989, 0.6746450579126946)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0004" (
+                prepend references = @./Meshes/chair_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.817394886343274, 7.3704360474902035, 0.4049383640093362)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "bed_0001" (
+                prepend references = @./Meshes/bed_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.3116, 0.4919, 1.1489)
+                double3 xformOp:translate = (-4.306752770043891, 9.445644607325436, 0.23152036765887238)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_5f0435d2c6ff5a0001d329a6"
+                    {
+                        over "MI_55caf569e4b087b12ca7ea3d"
+                        {
+                            asset inputs:BaseColor_Tex = @./Materials/Textures/Wood02.jpeg@
+                            float inputs:IsBaseColorTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "cabinet_0008" (
+                prepend references = @./Meshes/cabinet_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.635835365071666, 7.932376174524596, 1.0015177001138091)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "ornament_0001" (
+                prepend references = @./Meshes/ornament_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.70324357796285, 8.101663637153521, 1.8141187550799018)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0000" (
+                prepend references = @./Meshes/book_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6977294921875, 8.0890087890625, 1.739711415016143)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0001" (
+                prepend references = @./Meshes/book_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6977294921875, 8.0890087890625, 1.6979609591598204)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0002" (
+                prepend references = @./Meshes/book_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.717553901672366, 8.13898393249511, 1.1286000837917034)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0003" (
+                prepend references = @./Meshes/book_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7164453125, 8.1391064453125, 1.115294301712005)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0004" (
+                prepend references = @./Meshes/book_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7179638671875, 8.150458984375, 1.101073100530593)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0005" (
+                prepend references = @./Meshes/book_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7179638671875, 8.150458984375, 1.0868433720702813)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0006" (
+                prepend references = @./Meshes/book_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.719228515625, 8.1405419921875, 1.076321526491134)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0007" (
+                prepend references = @./Meshes/book_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.719130859375, 8.1389794921875, 1.0690821692580867)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0008" (
+                prepend references = @./Meshes/book_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7171728515625, 8.1389794921875, 1.0605799343223257)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0009" (
+                prepend references = @./Meshes/book_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7171728515625, 8.1389794921875, 1.0513404597873377)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0010" (
+                prepend references = @./Meshes/book_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7171728515625, 8.1389794921875, 1.0412989384765312)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0011" (
+                prepend references = @./Meshes/book_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.704799419403144, 7.720941772460273, 1.2349129724128962)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0012" (
+                prepend references = @./Meshes/book_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6991947555544975, 7.7345257034323485, 1.2265379068502817)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0013" (
+                prepend references = @./Meshes/book_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7011775398254505, 7.719061080932451, 1.0544167766223276)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0014" (
+                prepend references = @./Meshes/book_0014.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.714524349212617, 7.724481452941006, 1.2168987826985227)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0015" (
+                prepend references = @./Meshes/book_0015.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.721816555023414, 7.7156702651977005, 1.2123014051556913)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0016" (
+                prepend references = @./Meshes/book_0016.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.695634784698268, 7.725144393922687, 1.2043597221089275)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0017" (
+                prepend references = @./Meshes/book_0017.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7008642578125, 7.7209228515625, 1.1965241670245814)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0018" (
+                prepend references = @./Meshes/book_0018.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.7018239402772855, 7.742843276979235, 1.1856090447593328)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0019" (
+                prepend references = @./Meshes/book_0019.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.702899547576965, 7.723300865173851, 1.1745684249029809)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0020" (
+                prepend references = @./Meshes/book_0020.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.704819072723458, 7.720963012694601, 1.169256640398039)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0021" (
+                prepend references = @./Meshes/book_0021.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6979572792054425, 7.721260261537034, 1.1609275874799292)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0022" (
+                prepend references = @./Meshes/book_0022.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.712643600463897, 7.7131951751713625, 1.1524324645629944)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0023" (
+                prepend references = @./Meshes/book_0023.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.69846486282353, 7.712425971984487, 1.1455698024895207)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0024" (
+                prepend references = @./Meshes/book_0024.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.705846179962107, 7.714035903929831, 1.1359913649238065)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0025" (
+                prepend references = @./Meshes/book_0025.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.69880859375, 7.712470703125001, 1.1236115305061023)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0026" (
+                prepend references = @./Meshes/book_0026.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.701526069641079, 7.712465896606738, 1.1144334530491193)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0027" (
+                prepend references = @./Meshes/book_0027.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.702529296875, 7.712470703125001, 1.1090607393617313)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0028" (
+                prepend references = @./Meshes/book_0028.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.702472064971944, 7.712501144409124, 1.1011137265797672)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0029" (
+                prepend references = @./Meshes/book_0029.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.702601978301994, 7.712449050903362, 1.0932033949732998)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0030" (
+                prepend references = @./Meshes/book_0030.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.709181846618685, 7.7105671310425645, 1.0878106269471695)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0031" (
+                prepend references = @./Meshes/book_0031.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.702303417205792, 7.712413398742695, 1.082460452640449)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0032" (
+                prepend references = @./Meshes/book_0032.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.695176841735856, 7.71238579559287, 1.070804291928121)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0034" (
+                prepend references = @./Meshes/book_0034.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.660626667022191, 8.328496833796967, 1.440600482940272)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0035" (
+                prepend references = @./Meshes/book_0035.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.67007491683836, 8.297843896861567, 1.4527058219901776)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0036" (
+                prepend references = @./Meshes/book_0036.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.657351886749047, 8.270810916899773, 1.4324149398779573)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0037" (
+                prepend references = @./Meshes/book_0037.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.671106266021718, 8.245029256819542, 1.4467233161900026)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0038" (
+                prepend references = @./Meshes/book_0038.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6727720375065065, 8.218680980684217, 1.4549667164911977)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0039" (
+                prepend references = @./Meshes/book_0039.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.613538055414274, 8.082778350628766, 1.3442313356402686)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0040" (
+                prepend references = @./Meshes/book_0040.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.606237098693615, 8.073841892217342, 1.3650004482271358)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0041" (
+                prepend references = @./Meshes/book_0041.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.612476177206808, 8.081951434743502, 1.3863441162110302)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0042" (
+                prepend references = @./Meshes/book_0042.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6305035743707945, 8.06813078307881, 1.4120350920794145)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0043" (
+                prepend references = @./Meshes/book_0043.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.609985332488211, 7.583277736661228, 1.784381237030122)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0044" (
+                prepend references = @./Meshes/book_0044.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.609903564452293, 7.61673485851095, 1.7837096519469655)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0045" (
+                prepend references = @./Meshes/book_0045.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.606586784362931, 7.640204678055949, 1.7923921813964783)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0046" (
+                prepend references = @./Meshes/book_0046.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.6168543205243875, 7.662122230526619, 1.7983762547607698)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0047" (
+                prepend references = @./Meshes/book_0047.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.612297695150946, 7.683542030807834, 1.796993289672826)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0048" (
+                prepend references = @./Meshes/book_0048.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.614565429687506, 7.707084950923919, 1.7973725468749686)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0049" (
+                prepend references = @./Meshes/book_0049.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.615714935300477, 7.735497323988418, 1.789086780548257)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0050" (
+                prepend references = @./Meshes/book_0050.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.615776237487711, 7.759951322078638, 1.7966097793578868)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "book_0051" (
+                prepend references = @./Meshes/book_0051.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.615776237487498, 7.77820367527002, 1.7966098477477568)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "spot_light_0001" (
+                prepend references = @./Meshes/spot_light_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-3.268136171535667, 6.168342100383097, 2.744852802550123)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0000" (
+                prepend references = @./Meshes/table_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.88814374, 6.8351954600000004, 0.37299393999997627)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "picture_frame_0000" (
+                prepend references = @./Meshes/picture_frame_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (0.7, 0.7, 0.7)
+                double3 xformOp:translate = (-5.802231819999999, 9.420632170000001, 1.5410554499999833)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "balcony_507"
+        {
+            def Xform "chair_0005" (
+                prepend references = @./Meshes/chair_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.97303056, 9.263369350000001, 0.35499479209177315)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "chair_0006" (
+                prepend references = @./Meshes/chair_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.7268936000000004, 9.24631935, 0.35499479209177315)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "table_0004" (
+                prepend references = @./Meshes/table_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.34001109, 9.708779849999999, 0.2613862735702889)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "vase_0000" (
+                prepend references = @./Meshes/vase_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.37335584, 9.58742036, 0.5788552758075936)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "blanket_0000" (
+                prepend references = @./Meshes/blanket_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.9051475900000003, 9.09834234, 0.2389262744858162)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "blanket_0001" (
+                prepend references = @./Meshes/blanket_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.72359007, 9.44953036, 0.2389262744858162)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "wall"
+        {
+            def Xform "wall_0000" (
+                prepend references = @./Meshes/wall_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.70710695, -0, 0, 0.7071066)
+                float3 xformOp:scale = (0.9013, 1, 0.96150005)
+                double3 xformOp:translate = (-2.4573516351113875, 7.875032773289749, 1.2499990733879998)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0001" (
+                prepend references = @./Meshes/wall_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1.0735, 1, 1)
+                double3 xformOp:translate = (1.6915141192057204, 8.07258117423597, 1.2499997441435262)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0002" (
+                prepend references = @./Meshes/wall_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.32928986000000005, 4.53193008, 1.4000879629142582)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0003" (
+                prepend references = @./Meshes/wall_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.83794998, 8.16191467, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0004" (
+                prepend references = @./Meshes/wall_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-5.95005005, 5.281916700000001, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0005" (
+                prepend references = @./Meshes/wall_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.34394997, -0.26806651, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0006" (
+                prepend references = @./Meshes/wall_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.35240005, 5.3179299900000006, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0007" (
+                prepend references = @./Meshes/wall_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-2.6560499600000003, 8.75396484, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0008" (
+                prepend references = @./Meshes/wall_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.5560499600000001, 10.22589966, 1.3999910335685126)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0009" (
+                prepend references = @./Meshes/wall_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.40394997, 1.2319299700000002, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0010" (
+                prepend references = @./Meshes/wall_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.5951701400000005, 6.03792999, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0011" (
+                prepend references = @./Meshes/wall_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.57591003, 2.91192997, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0012" (
+                prepend references = @./Meshes/wall_0012.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (0.8439450100000001, 2.13193247, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0013" (
+                prepend references = @./Meshes/wall_0013.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-2.16204994, 0.82881201, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0014" (
+                prepend references = @./Meshes/wall_0014.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (2.64394989, 2.88199497, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0015" (
+                prepend references = @./Meshes/wall_0015.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.84395004, 8.93591461, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0016" (
+                prepend references = @./Meshes/wall_0016.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-3.19220505, 5.72803009, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0017" (
+                prepend references = @./Meshes/wall_0017.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.84394989, 0.48193146, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0018" (
+                prepend references = @./Meshes/wall_0018.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.11604988, 0.33793349, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0019" (
+                prepend references = @./Meshes/wall_0019.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.87214005, 6.437929990000001, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0020" (
+                prepend references = @./Meshes/wall_0020.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-5.64927002, 4.5259300200000006, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0021" (
+                prepend references = @./Meshes/wall_0021.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.40605003000000006, 11.73189941, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0022" (
+                prepend references = @./Meshes/wall_0022.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-2.16204994, 3.28280998, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0023" (
+                prepend references = @./Meshes/wall_0023.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-3.8543499800000003, 5.51792999, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "wall_0024" (
+                prepend references = @./Meshes/wall_0024.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.3439450799999997, 8.22592987, 1.3999949999997625)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        def Scope "other"
+        {
+            def Xform "door_handle_0000" (
+                prepend references = @./Meshes/door_handle_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (0.7071069, -0, 0, -0.7071067)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.864908163498098, 9.202933676005953, 0.9289363553010348)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_handle_0000"
+                    {
+                        over "mesh_0000"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "mesh_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "doorsill_0000" (
+                prepend references = @./Meshes/doorsill_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.6360544800000001, 1.23193331, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0001" (
+                prepend references = @./Meshes/doorsill_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-3.3205540000000004, 5.728027180000001, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0002" (
+                prepend references = @./Meshes/doorsill_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-1.55155398, 4.53193342, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0003" (
+                prepend references = @./Meshes/doorsill_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-2.76055448, 4.53193342, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0004" (
+                prepend references = @./Meshes/doorsill_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.343945, 8.23193347, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0005" (
+                prepend references = @./Meshes/doorsill_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.293898, 4.53193342, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0006" (
+                prepend references = @./Meshes/doorsill_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.40605451000000004, 10.23193375, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0007" (
+                prepend references = @./Meshes/doorsill_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.44394448, 4.53193342, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0008" (
+                prepend references = @./Meshes/doorsill_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.63949226, 4.53193342, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "doorsill_0009" (
+                prepend references = @./Meshes/doorsill_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (4.35839826, 5.37193319, 0.004994999999762513)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0000" (
+                prepend references = @./Meshes/window_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.912209460000001, 10.4544336, 1.5219995299999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0001" (
+                prepend references = @./Meshes/window_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-2.6043559099999998, 10.98193359, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0002" (
+                prepend references = @./Meshes/window_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (2.7639452999999996, -0.32201228, 1.7414995299999767)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0003" (
+                prepend references = @./Meshes/window_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.53605471, 0.10943333000000001, 1.5219995299999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0004" (
+                prepend references = @./Meshes/window_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.35605471, 11.67798775, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0005" (
+                prepend references = @./Meshes/window_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-5.9043559100000005, 5.97193359, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0006" (
+                prepend references = @./Meshes/window_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.79218215, 10.9819336, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0007" (
+                prepend references = @./Meshes/window_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.78394532, 1.28144981, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0008" (
+                prepend references = @./Meshes/window_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.6560546700000001, -0.21855016, 1.7414995299999767)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0009" (
+                prepend references = @./Meshes/window_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.3039453200000004, 1.28144981, 1.4999995299999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0010" (
+                prepend references = @./Meshes/window_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.31394533, 10.28144975, 1.7414995299999767)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "window_0011" (
+                prepend references = @./Meshes/window_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.93184529, 9.25943373, 1.2414995099999762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "door_0000" (
+                prepend references = @./Meshes/door_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.40605460000000004, 10.23193408, 1.0559995009999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0000"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0003"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0004"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0003"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0004"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0001" (
+                prepend references = @./Meshes/door_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-4.63949195, 4.5541969799999995, 1.0704995009999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0001"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0002" (
+                prepend references = @./Meshes/door_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-2.76055493, 4.51443287, 1.0679994929999768)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0002"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0003" (
+                prepend references = @./Meshes/door_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (4.34710327, 5.37193359, 1.0554995009999764)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0003"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0004" (
+                prepend references = @./Meshes/door_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.34394591, 8.23193384, 1.0559995009999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0004"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0003"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0003"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0005" (
+                prepend references = @./Meshes/door_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.6360546699999999, 1.2319335900000001, 1.199738879882789)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0005"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "physics_constraint_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0002"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0006" (
+                prepend references = @./Meshes/door_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-1.5515546800000002, 4.51471024, 1.0679994929999768)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0006"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0007" (
+                prepend references = @./Meshes/door_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (3.29389838, 4.50939066, 1.0704995009999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0007"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0008" (
+                prepend references = @./Meshes/door_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (1.44394532, 4.50939066, 1.0704995009999765)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0008"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+
+            def Xform "door_0009" (
+                prepend references = @./Meshes/door_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-3.3205546900000003, 5.74497139, 1.0679994929999768)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Meshes"
+                {
+                    over "door_0009"
+                    {
+                        over "physics_constraint_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+
+                        over "group_0001"
+                        {
+                            token visibility = "invisible"
+                        }
+                    }
+                }
+            }
+        }
+
+        def Scope "floor"
+        {
+            def Xform "floor_0000" (
+                prepend references = @./Meshes/floor_0000.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (0.46179688, 7.3519337, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_Stripbond_Walnut_Parquet_thspbeac_2K"
+                    {
+                        over "MI_Furniture_Fabric_sjfvbjpc_2K1"
+                        {
+                            asset inputs:BaseColor_Tex = @./Materials/Textures/Wood02.jpeg@ (
+                                colorSpace = "sRGB"
+                            )
+                            float4 inputs:BaseColor_UVA = (1, 1, 1.5, 0)
+                            float inputs:IsBaseColorTex = 1
+                        }
+                    }
+                }
+            }
+
+            def Xform "floor_0001" (
+                prepend references = @./Meshes/floor_0001.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.02605426, 2.4619331399999997, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_Stripbond_Walnut_Parquet_thspbeac_2K"
+                    {
+                        over "MI_Furniture_Fabric_sjfvbjpc_2K1"
+                        {
+                            asset inputs:BaseColor_Tex = @./Materials/Textures/Wood02.jpeg@ (
+                                colorSpace = "sRGB"
+                            )
+                            float4 inputs:BaseColor_UVA = (1, 1, 1.5, 0)
+                            float4 inputs:Gloss_Color = (0.5, 0.5, 0.5, 1)
+                            float inputs:IsBaseColorTex = 1
+                            float inputs:IsNormalTex = 0
+                        }
+                    }
+                }
+            }
+
+            def Xform "floor_0002" (
+                prepend references = @./Meshes/floor_0002.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.40605469, 10.98193376, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0003" (
+                prepend references = @./Meshes/floor_0003.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.87820271, 5.4819331899999995, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0004" (
+                prepend references = @./Meshes/floor_0004.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.3439448700000005, 9.23193373, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0005" (
+                prepend references = @./Meshes/floor_0005.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.6560547, 0.4819336, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0006" (
+                prepend references = @./Meshes/floor_0006.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (3.5799277899999997, 2.9119316800000004, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0007" (
+                prepend references = @./Meshes/floor_0007.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-4.306054260000001, 7.94998059, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "Looks"
+                {
+                    over "MI_Stripbond_Walnut_Parquet_thspbeac_2K"
+                    {
+                        over "MI_Furniture_Fabric_sjfvbjpc_2K1"
+                        {
+                            asset inputs:BaseColor_Tex = @./Materials/Textures/Wood02.jpeg@ (
+                                colorSpace = "sRGB"
+                            )
+                            float4 inputs:BaseColor_UVA = (1, 1, 1.5, 0)
+                            float inputs:IsBaseColorTex = 1
+                        }
+                    }
+                }
+            }
+
+            def Xform "floor_0008" (
+                prepend references = @./Meshes/floor_0008.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.6860547, 2.91193315, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0009" (
+                prepend references = @./Meshes/floor_0009.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (1.7739472900000002, 2.9119316800000004, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0010" (
+                prepend references = @./Meshes/floor_0010.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (2.8439448700000005, 0.4819336, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "floor_0011" (
+                prepend references = @./Meshes/floor_0011.usd@
+            )
+            {
+                quatf xformOp:orient = (1, -0, 0, -0)
+                float3 xformOp:scale = (10, 10, 10)
+                double3 xformOp:translate = (-0.5560499600000001, 5.73186728, -0.30000500000023755)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+    }
+
+    def "Rendering"
+    {
+        def "Lights"
+        {
+            def DistantLight "DirectionalLight"
+            {
+                float angle = 0.5357
+                uniform opaque collection:lightLink
+                uniform token collection:lightLink:expansionRule = "expandPrims"
+                uniform bool collection:lightLink:includeRoot = 1
+                uniform pathExpression collection:lightLink:membershipExpression
+                uniform opaque collection:shadowLink
+                uniform token collection:shadowLink:expansionRule = "expandPrims"
+                uniform bool collection:shadowLink:includeRoot = 1
+                uniform pathExpression collection:shadowLink:membershipExpression
+                color3f color = (1, 1, 1)
+                float colorTemperature = 6500
+                bool enableColorTemperature = 0
+                float inputs:angle = 0.5357
+                color3f inputs:color = (1, 1, 1)
+                float inputs:colorTemperature = 6500
+                float inputs:diffuse = 1
+                bool inputs:enableColorTemperature = 0
+                float inputs:exposure = 1
+                float inputs:intensity = 1989.4366
+                bool inputs:normalize = 0
+                float inputs:specular = 1
+                float intensity = 1989.4366
+                uniform token light:materialSyncMode = "noMaterialResponse"
+                uniform token light:shaderId = "DistantLight"
+                uniform token purpose = "default"
+                token visibility = "inherited"
+                quatd xformOp:orient = (0.07901283969716108, 0.04752670732932395, 0.556419141487008, 0.8257698966663077)
+                double3 xformOp:scale = (2.5, 2.5, 2.5)
+                double3 xformOp:translate = (1.451540364046475e-14, 7.360171943324444, 1.817234937429486)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def DomeLight "DomeLight"
+            {
+                uniform opaque collection:lightLink
+                uniform token collection:lightLink:expansionRule = "expandPrims"
+                uniform bool collection:lightLink:includeRoot = 1
+                uniform pathExpression collection:lightLink:membershipExpression
+                uniform opaque collection:shadowLink
+                uniform token collection:shadowLink:expansionRule = "expandPrims"
+                uniform bool collection:shadowLink:includeRoot = 1
+                uniform pathExpression collection:shadowLink:membershipExpression
+                float guideRadius = 100000
+                color3f inputs:color = (1, 1, 1)
+                float inputs:colorTemperature = 6500
+                float inputs:diffuse = 1
+                bool inputs:enableColorTemperature = 0
+                float inputs:exposure = 0
+                float inputs:intensity = 1000
+                bool inputs:normalize = 0
+                float inputs:shaping:cone:angle = 180
+                float inputs:shaping:cone:softness = 0
+                float inputs:shaping:focus = 0
+                color3f inputs:shaping:focusTint = (0, 0, 0)
+                float inputs:shaping:ies:angleScale = 0
+                asset inputs:shaping:ies:file
+                bool inputs:shaping:ies:normalize = 0
+                float inputs:specular = 1
+                asset inputs:texture:file = @./limpopo_golf_course_4k.hdr@
+                token inputs:texture:format = "latlong"
+                uniform token light:materialSyncMode = "noMaterialResponse"
+                uniform token light:shaderId = "DomeLight"
+                uniform token purpose = "default"
+                token visibility = "inherited"
+                quatd xformOp:orient = (1, 0, 0, 0)
+                double3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+    }
+}
+
+def "Render" (
+    hide_in_stage_window = true
+    no_delete = true
+)
+{
+    def "OmniverseKit"
+    {
+        def "HydraTextures" (
+            hide_in_stage_window = true
+            no_delete = true
+        )
+        {
+            def RenderProduct "omni_kit_widget_viewport_ViewportTexture_0" (
+                prepend apiSchemas = ["OmniRtxSettingsCommonAdvancedAPI_1", "OmniRtxSettingsRtAdvancedAPI_1", "OmniRtxSettingsPtAdvancedAPI_1", "OmniRtxPostColorGradingAPI_1", "OmniRtxPostChromaticAberrationAPI_1", "OmniRtxPostBloomPhysicalAPI_1", "OmniRtxPostMatteObjectAPI_1", "OmniRtxPostCompositingAPI_1", "OmniRtxPostDofAPI_1", "OmniRtxPostMotionBlurAPI_1", "OmniRtxPostTvNoiseAPI_1", "OmniRtxPostTonemapIrayReinhardAPI_1", "OmniRtxPostDebugSettingsAPI_1", "OmniRtxDebugSettingsAPI_1"]
+                hide_in_stage_window = true
+                no_delete = true
+            )
+            {
+                rel camera = </OmniverseKit_Persp>
+                token omni:rtx:background:source:texture:textureMode = "repeatMirrored"
+                token omni:rtx:background:source:type = "domeLight"
+                bool omni:rtx:dlss:frameGeneration = 0
+                string omni:rtx:material:db:rtSensorNameToIdMap = "DefaultMaterial:0;AsphaltStandardMaterial:1;AsphaltWeatheredMaterial:2;VegetationGrassMaterial:3;WaterStandardMaterial:4;GlassStandardMaterial:5;FiberGlassMaterial:6;MetalAlloyMaterial:7;MetalAluminumMaterial:8;MetalAluminumOxidizedMaterial:9;PlasticStandardMaterial:10;RetroMarkingsMaterial:11;RetroSignMaterial:12;RubberStandardMaterial:13;SoilClayMaterial:14;ConcreteRoughMaterial:15;ConcreteSmoothMaterial:16;OakTreeBarkMaterial:17;FabricStandardMaterial:18;PlexiGlassStandardMaterial:19;MetalSilverMaterial:20"
+                bool omni:rtx:material:db:syncLoads = 1
+                bool omni:rtx:post:registeredCompositing:invertColorCorrection = 1
+                bool omni:rtx:post:registeredCompositing:invertToneMap = 1
+                float omni:rtx:pt:fireflyFilter:maxPerEmissiveUnexposedIntensity = 10204.08
+                float omni:rtx:pt:fireflyFilter:maxUnexposedIntensityPerSample = 10204.08
+                float omni:rtx:pt:fireflyFilter:maxUnexposedIntensityPerSampleDiffuse = 10204.08
+                bool omni:rtx:pt:lightcache:cached:dontResolveConflicts = 1
+                int omni:rtx:pt:maxSamplesPerLaunch = 2073600
+                int omni:rtx:pt:mgpu:maxPixelsPerRegionExponent = 12
+                color3f omni:rtx:rt:ambientLight:color = (0.1, 0.1, 0.1)
+                bool omni:rtx:rt:demoire = 0
+                float omni:rtx:rt:directLighting:maxRayUnexposedIntensity = 20408.16
+                float omni:rtx:rt:indirectdiffuse:maxRayUnexposedIntensity = 20408.16
+                float omni:rtx:rt:inscattering:maxRTSampleUnexposedIntensity = 653061.1
+                bool omni:rtx:rt:lightcache:spatialCache:dontResolveConflicts = 1
+                float omni:rtx:rt:reflections:maxRayUnexposedIntensity = 61224.484
+                float omni:rtx:rt:reflections:roughnessCacheThreshold = 1
+                float omni:rtx:rt:refractions:maxRayUnexposedIntensity = 61224.484
+                bool omni:rtx:scene:hydra:materialSyncLoads = 1
+                bool omni:rtx:scene:hydra:mdlMaterialWarmup = 1
+                uint omni:rtx:viewTile:limit = 4294967295
+                rel orderedVars = </Render/Vars/LdrColor>
+                custom bool overrideClipRange = 0
+                uniform int2 resolution = (1280, 720)
+            }
+        }
+    }
+
+    def RenderSettings "OmniverseGlobalRenderSettings" (
+        prepend apiSchemas = ["OmniRtxSettingsGlobalRtAdvancedAPI_1", "OmniRtxSettingsGlobalPtAdvancedAPI_1"]
+        no_delete = true
+    )
+    {
+        rel products = </Render/OmniverseKit/HydraTextures/omni_kit_widget_viewport_ViewportTexture_0>
+    }
+
+    def "Vars"
+    {
+        def RenderVar "LdrColor" (
+            hide_in_stage_window = true
+            no_delete = true
+        )
+        {
+            uniform string sourceName = "LdrColor"
+        }
+    }
+}
+
