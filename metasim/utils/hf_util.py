@@ -235,11 +235,10 @@ class FileDownloader:
         #     ):
         #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
         #     self._add(traj_filepath)
-        
+
     def _add_from_scene(self, scene: SceneCfg):
-        
-        assert(isinstance(scene, SceneCfg))
-        
+        assert isinstance(scene, SceneCfg)
+
         self._add(scene.file_name(self.scenario.simulator))
 
     def _add_from_scene(self, scene: SceneCfg):

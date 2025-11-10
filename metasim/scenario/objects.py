@@ -67,7 +67,6 @@ class _FileBasedMixin:
             self.mjx_mjcf_path = self.mjcf_path
 
     def file_name(self, sim_name):
-        
         file_type = self.file_type[sim_name]
         if file_type == "usd":
             return self.usd_path
@@ -79,6 +78,7 @@ class _FileBasedMixin:
             return self.mjx_mjcf_path
         else:
             raise ValueError(f"Invalid file type: {file_type}")
+
 
 @configclass
 class _PrimitiveMixin:
@@ -132,7 +132,6 @@ class BaseObjCfg:
     """Object scaling (in scalar) for the object, default is 1.0"""
 
     def __post_init__(self):
-
         # Set default value for fix_base_link if not explicitly set
         if self.fix_base_link is None:
             self.fix_base_link = False
@@ -209,6 +208,7 @@ class ArticulationObjCfg(_FileBasedMixin, BaseArticulationObjCfg):
 # This allows accessing it as RobotCfg.file_type
 _FileBasedMixin.file_type = _DEFAULT_FILE_TYPE.copy()
 ArticulationObjCfg.file_type = _DEFAULT_FILE_TYPE.copy()
+
 
 @configclass
 class PrimitiveCubeCfg(_PrimitiveMixin, BaseRigidObjCfg):
