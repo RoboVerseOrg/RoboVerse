@@ -139,7 +139,7 @@ class PenCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="right_hand",
-                    arm_translation_scale=0.05,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -148,7 +148,7 @@ class PenCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="left_hand",
-                    arm_translation_scale=0.05,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -360,6 +360,7 @@ class PenCfg(BaseRLTaskCfg):
             },
             "robots": self.robot_init_state,
         }
+        self.init_pen_pos = self.init_states["objects"][self.current_object_type]["pos"].unsqueeze(0).repeat(self.num_envs, 1).to(self.device)
         self.robot_dof_default_pos = {}
         self.robot_dof_default_pos_cpu = {}
         for robot in self.robots:
@@ -457,7 +458,7 @@ class PenCfg(BaseRLTaskCfg):
         }
         state_obs = obs["state"]
         t = 0
-        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation()
+        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation(use_palm=True)
         t += self.robots[0].observation_shape
         for name in self.robots[0].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -468,7 +469,7 @@ class PenCfg(BaseRLTaskCfg):
             t += 6
         state_obs[:, t : t + self.action_shape // 2] = actions[:, : self.action_shape // 2]  # actions for right hand
         t += self.action_shape // 2
-        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation()
+        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation(use_palm=True)
         t += self.robots[1].observation_shape
         for name in self.robots[1].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -540,6 +541,8 @@ class PenCfg(BaseRLTaskCfg):
         pen_left_handle_rot = envstates.objects[self.current_object_type].body_state[:, self.l_handle_idx, 3:7]
         pen_left_handle_pos = pen_left_handle_pos + math.quat_apply(pen_left_handle_rot, self.z_unit_tensor * 0.1)
 
+        pen_pos = envstates.objects[self.current_object_type].root_state[:, :3]
+
         right_hand_reward, right_hand_dist = self.robots[0].reward(pen_right_handle_pos)
         left_hand_reward, left_hand_dist = self.robots[1].reward(pen_left_handle_pos)
 
@@ -551,6 +554,8 @@ class PenCfg(BaseRLTaskCfg):
             max_episode_length=self.episode_length,
             pen_right_handle_pos=pen_right_handle_pos,
             pen_left_handle_pos=pen_left_handle_pos,
+            pen_pos=pen_pos,
+            pen_init_pos=self.init_pen_pos,
             right_hand_reward=right_hand_reward,
             left_hand_reward=left_hand_reward,
             right_hand_dist=right_hand_dist,
@@ -605,9 +610,12 @@ class PenCfg(BaseRLTaskCfg):
             start_idx = 5
             for i, env_id in enumerate(env_ids):
                 for obj_name in reset_state[env_id]["objects"].keys():
+                    if obj_name == "table":
+                        continue
                     reset_state[env_id]["objects"][obj_name]["pos"][:2] += (
                         self.reset_position_noise * rand_floats[i, :2]
                     )
+                    self.init_pen_pos[env_id, :2] = reset_state[env_id]["objects"][obj_name]["pos"][:2]
                     reset_state[env_id]["objects"][obj_name]["rot"] = new_object_rot[i]
 
                 # reset hand
@@ -637,8 +645,11 @@ class PenCfg(BaseRLTaskCfg):
 
             new_object_rot = randomize_rotation(rand_floats[:, 3], rand_floats[:, 4], x_unit_tensor, y_unit_tensor)
             for obj_id, obj in enumerate(self.objects):
+                if obj.name == "table":
+                    continue
                 root_state = reset_state.objects[obj.name].root_state
                 root_state[env_ids, :2] += self.reset_position_noise * rand_floats[:, :2]
+                self.init_pen_pos[env_ids, :2] = root_state[env_ids, :2]
                 root_state[env_ids, 3:7] = new_object_rot
                 obj_state = ObjectState(
                     root_state=root_state,
@@ -694,6 +705,8 @@ def compute_task_reward(
     max_episode_length: float,
     pen_right_handle_pos,
     pen_left_handle_pos,
+    pen_pos,
+    pen_init_pos,
     right_hand_reward,
     left_hand_reward,
     right_hand_dist,
@@ -719,6 +732,10 @@ def compute_task_reward(
 
         pen_left_handle_pos (tensor): The position of the left handle of the object
 
+        pen_pos (tensor): The position of the object
+
+        pen_init_pos (tensor): The initial position of the object
+
         right_hand_reward (tensor): The reward from the right hand
 
         left_hand_reward (tensor): The reward from the left hand
@@ -735,6 +752,8 @@ def compute_task_reward(
 
     """
     action_penalty = torch.sum(actions**2, dim=-1)
+
+    dist_from_init = torch.norm(pen_pos - pen_init_pos, p=2, dim=-1)
 
     up_rew = torch.zeros_like(right_hand_reward)
     up_rew = torch.where(

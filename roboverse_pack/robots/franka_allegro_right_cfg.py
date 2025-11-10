@@ -300,7 +300,7 @@ class FrankaAllegroHandRightCfg(BaseDexCfg):
         action[:, self.hand_acutuated_idx] = hand_dof[:, self.hand_acutuated_idx]
         return action
 
-    def reward(self, target_pos):
+    def reward(self, target_pos, use_palm: bool = False):
         """Reward based on the distance between the fingertips and the target position.
 
         Args:
@@ -308,9 +308,14 @@ class FrankaAllegroHandRightCfg(BaseDexCfg):
         Returns:
             reward: (num_envs,) reward
         """
-        dists = self.ft_pos - target_pos.unsqueeze(1)  # (num_envs, num_fingertips, 3)
-        dists = torch.norm(dists, p=2, dim=-1)  # (num_envs, num_fingertips)
-        mean_dists = torch.mean(dists, dim=-1)  # (num_envs,)
-        sum_dists = torch.sum(dists, dim=-1)  # (num_envs,)
-        reward = 1.2 - sum_dists  # (num_envs,)
-        return reward, mean_dists
+        if not use_palm:
+            dists = self.ft_pos - target_pos.unsqueeze(1)  # (num_envs, num_fingertips, 3)
+            dists = torch.norm(dists, p=2, dim=-1)  # (num_envs, num_fingertips)
+            mean_dists = torch.mean(dists, dim=-1)  # (num_envs,)
+            sum_dists = torch.sum(dists, dim=-1)  # (num_envs,)
+            reward = 1.2 - sum_dists
+            return reward, mean_dists
+        else:
+            palm_dist = torch.norm(self.palm_state[:, :3] - target_pos, p=2, dim=-1)
+            reward = 0.1 - palm_dist
+            return reward, palm_dist

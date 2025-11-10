@@ -102,7 +102,6 @@ def get_config_path(args):
         "Over2Underarm",
         "PushBlock",
         "CatchAbreast",
-        "SwingCup",
         "DoorCloseInward",
         "DoorCloseOutward",
         "TwoCatchUnderarm",
@@ -133,7 +132,7 @@ def get_config_path(args):
             os.path.join(args.logdir, f"{args.task}/{args.algo}"),
             f"roboverse_learn/dexbench_rvrl/cfg/{args.algo}/{args.obs_type}/re_orientation_config.yaml",
         )
-    elif args.task in ["TurnButton", "Scissor", "Pen"]:
+    elif args.task in ["TurnButton", "Scissor", "Pen", "SwingCup"]:
         return (
             os.path.join(args.logdir, f"{args.task}/{args.algo}"),
             f"roboverse_learn/dexbench_rvrl/cfg/{args.algo}/{args.obs_type}/smooth_config.yaml",

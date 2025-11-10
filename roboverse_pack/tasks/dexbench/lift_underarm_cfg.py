@@ -94,7 +94,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
     action_penalty_scale = 0
     reach_goal_bonus = 250.0
     fall_penalty = 0.0
-    reset_position_noise = 0.1
+    reset_position_noise = 0.0
     reset_dof_pos_noise = 0.0
     randomization_cfg = {
         "enable_floor": False,
@@ -102,6 +102,9 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         "material_cfg": {
             "table": {
                 "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+            },
+            "pot": {
+                "material_path": ["roboverse_data/materials/arnold/Wood/Birch_Planks.mdl"],
             },
         }
     }
@@ -136,7 +139,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="right_hand",
-                    arm_translation_scale=0.05,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -145,14 +148,14 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="left_hand",
-                    arm_translation_scale=0.05,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
             ]
             self.robot_init_state = {
                 "right_hand": {
-                    "pos": torch.tensor([0.0, 0.382, 0.0]),
+                    "pos": torch.tensor([0.0, 0.36, 0.0]),
                     "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
                     "dof_pos": {
                         "FFJ1": 0.0,
@@ -189,7 +192,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.0, -1.586, 0.0]),
+                    "pos": torch.tensor([0.0, -1.56, 0.0]),
                     "rot": torch.tensor([0.7071, 0, 0, 0.7071]),
                     "dof_pos": {
                         "FFJ1": 0.0,
@@ -233,7 +236,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
             ]
             self.robot_init_state = {
                 "right_hand": {
-                    "pos": torch.tensor([0.0, 0.102, 0.0]),
+                    "pos": torch.tensor([0.0, 0.08, 0.0]),
                     "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -262,7 +265,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.0, -1.306, 0.0]),
+                    "pos": torch.tensor([0.0, -1.28, 0.0]),
                     "rot": torch.tensor([0.7071, 0, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -466,7 +469,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         }
         state_obs = obs["state"]
         t = 0
-        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation()
+        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation(use_palm=True)
         t += self.robots[0].observation_shape
         for name in self.robots[0].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -477,7 +480,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
             t += 6
         state_obs[:, t : t + self.action_shape // 2] = actions[:, : self.action_shape // 2]  # actions for right hand
         t += self.action_shape // 2
-        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation()
+        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation(use_palm=True)
         t += self.robots[1].observation_shape
         for name in self.robots[1].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -544,8 +547,8 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
         pot_left_handle_pos = pot_pos + math.quat_apply(pot_rot, self.y_unit_tensor * -0.15)
         pot_left_handle_pos = pot_left_handle_pos + math.quat_apply(pot_rot, self.z_unit_tensor * 0.06)
 
-        right_hand_reward, right_hand_dist = self.robots[0].reward(pot_right_handle_pos)
-        left_hand_reward, left_hand_dist = self.robots[1].reward(pot_left_handle_pos)
+        right_hand_reward, right_hand_dist = self.robots[0].reward(pot_right_handle_pos, use_palm=True)
+        left_hand_reward, left_hand_dist = self.robots[1].reward(pot_left_handle_pos, use_palm=True)
 
         (reward, reset_buf, reset_goal_buf, success_buf) = compute_task_reward(
             reset_buf=reset_buf,
@@ -761,10 +764,10 @@ def compute_task_reward(
 
     up_rew = torch.zeros_like(right_hand_reward)
     up_rew = torch.where(
-        right_hand_dist <= 0.1, torch.where(left_hand_dist <= 0.1, 5 * (0.25 - goal_dist), up_rew), up_rew
+        right_hand_dist <= 0.13, torch.where(left_hand_dist <= 0.13, 5 * (0.25 - goal_dist), up_rew), up_rew
     )
 
-    reward = right_hand_reward + left_hand_reward + up_rew
+    reward = 0.1 + right_hand_reward + left_hand_reward + up_rew
 
     success = goal_dist < 0.05
 
@@ -787,8 +790,8 @@ def compute_task_reward(
 
     # Check env termination conditions, including maximum success number
     resets = torch.where(object_pos[:, 2] <= 0.3, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(right_hand_dist >= 0.4, torch.ones_like(resets), resets)
-    resets = torch.where(left_hand_dist >= 0.4, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_dist >= 0.3, torch.ones_like(resets), resets)
+    resets = torch.where(left_hand_dist >= 0.3, torch.ones_like(resets), resets)
 
     # Reset because of terminate or fall or success
     resets = torch.where(episode_length_buf >= max_episode_length, torch.ones_like(resets), resets)

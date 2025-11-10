@@ -4,17 +4,23 @@ clip_observations: 5.0
 clip_actions: 1.0
 
 policy: # only works for MlpPolicy right now
-  pi_hid_sizes: [1024, 512, 512]
-  vf_hid_sizes: [1024, 512, 512]
+  pi_hid_sizes: [1024, 1024, 512]
+  vf_hid_sizes: [1024, 1024, 512]
   visual_feature_dim: 1024
   activation: elu # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
-  encoder_type: "cnn"
-  stages: 5
-  kernel_size: 4
-  stride: 2
-  depth: [32, 64, 128, 256, 512]
+  encoder_type: "cnn" # can be cnn or dinov3 or resnet
+  use_transform: False
+  cnn:
+    stages: 5
+    kernel_size: 4
+    stride: 2
+    depth: [32, 64, 128, 256, 512]
+  dinov3:
+    model_type: "vits16"
+    dir_path: "roboverse_learn/dexbench_rvrl/pretrained_ckpts/dinov3"
+    use_patch_features: True
   fix_img_encoder: False # if True, the image encoder will not be trained, useful for transfer learning
-  fix_actor_img_encoder: True # if True, the image encoder in the actor will not be trained, useful for transfer learning
+  fix_actor_img_encoder: True # if True, the image encoder in the actor will not be trained
 learn:
   agent_name: shadow_hand
   test: False
@@ -28,12 +34,12 @@ learn:
   # training params
   clip_param: 0.2
   entropy_coef: 0
-  nsteps: 20
-  num_learning_epochs: 10
+  nsteps: 16
+  num_learning_epochs: 5
   num_minibatches: 4 # this is per agent
   max_grad_norm: 1
-  optim_stepsize: 5.e-5 # 3e-4 is default for single agent training with constant schedule
-  schedule: adaptive # could be adaptive or linear or fixed
+  optim_stepsize: 5.e-5
+  schedule: adaptive # could be adaptive or clip
   desired_kl: 0.016
   gamma: 0.99
   lam: 0.95
@@ -42,3 +48,7 @@ learn:
 env:
   img_h: 128
   img_w: 128
+  light:
+    type: "dome"
+    intensity: 1500.0
+    color: [1.0, 1.0, 1.0]

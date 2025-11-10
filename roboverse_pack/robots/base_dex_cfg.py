@@ -37,13 +37,13 @@ class BaseDexCfg(RobotCfg):
     wrist: str | None = None
     """Name of the wrist link."""
 
-    wrist_offset: float | None = None
+    wrist_offset: list[float, float, float] | None = None
     """Offset for the wrist link."""
 
     palm: str | None = None
     """Name of the palm link."""
 
-    palm_offset: float | None = None
+    palm_offset: list[float, float, float] | None = None
     """Offset for the palm link."""
 
     root_link: str | None = None
@@ -86,6 +86,18 @@ class BaseDexCfg(RobotCfg):
                 .unsqueeze(0)
                 .repeat(self.ft_states.shape[0], self.num_fingertips, 1)
             )
+        if isinstance(self.wrist_offset, list):
+            self.wrist_offset = (
+                torch.tensor(self.wrist_offset, device=self.ft_states.device)
+                .unsqueeze(0)
+                .repeat(self.ft_states.shape[0], 1)
+            )
+        if isinstance(self.palm_offset, list):
+            self.palm_offset = (
+                torch.tensor(self.palm_offset, device=self.ft_states.device)
+                .unsqueeze(0)
+                .repeat(self.ft_states.shape[0], 1)
+            )   
         if isinstance(self.hand_dof_idx, list):
             self.hand_dof_idx = torch.tensor(self.hand_dof_idx, device=self.ft_states.device)
             self.arm_dof_idx = torch.tensor(self.arm_dof_idx, device=self.ft_states.device)
@@ -93,20 +105,31 @@ class BaseDexCfg(RobotCfg):
         self.wrist_state = envstates.robots[self.name].body_state[:, self.wrist_index, :]
         self.ft_pos = self.ft_states[:, :, :3]
         self.ft_rot = self.ft_states[:, :, 3:7]
-        self.ft_pos = self.ft_pos + math.quat_apply(
-            self.ft_rot, self.fingertips_offset
-        )  # (num_envs, num_fingertips, 3)
+        if self.fingertips_offset is not None:
+            self.ft_pos = self.ft_pos + math.quat_apply(
+                self.ft_rot, self.fingertips_offset
+            )  # (num_envs, num_fingertips, 3)
         self.wrist_pos = self.wrist_state[:, :3]
         self.wrist_rot = self.wrist_state[:, 3:7]
+        if self.wrist_offset is not None:
+            self.wrist_pos = self.wrist_pos + math.quat_apply(
+                self.wrist_rot, self.palm_offset
+            )
         self.ft_relative_rot = math.quat_mul(
             math.quat_inv(self.wrist_rot).unsqueeze(1).repeat(1, self.num_fingertips, 1),
             self.ft_rot,
         )
         self.palm_state = envstates.robots[self.name].body_state[:, self.palm_index, :]
+        self.palm_pos = self.palm_state[:, :3]
+        self.palm_rot = self.palm_state[:, 3:7]
+        if self.palm_offset is not None:
+            self.palm_pos = self.palm_pos + math.quat_apply(
+                self.palm_rot, self.palm_offset
+            )
         self.dof_pos = envstates.robots[self.name].joint_pos
         self.dof_vel = envstates.robots[self.name].joint_vel
 
-    def observation(self):
+    def observation(self, use_palm: bool = False):
         """
         Return the proceptive observation of the robot. The observation includes:
             - Arm joint positions and velocities
@@ -117,13 +140,17 @@ class BaseDexCfg(RobotCfg):
         obs = torch.zeros((self.ft_states.shape[0], self.observation_shape), device=self.ft_states.device)
         obs[:, : self.num_joints] = math.scale_transform(self.dof_pos, self.joint_limits_lower, self.joint_limits_upper)
         obs[:, self.num_joints : 2 * self.num_joints] = self.dof_vel * self.vel_obs_scale
-        obs[:, 2 * self.num_joints : 2 * self.num_joints + 3] = self.wrist_pos
-        obs[:, 2 * self.num_joints + 3 : 2 * self.num_joints + 7] = self.wrist_rot
+        if use_palm:
+            obs[:, 2 * self.num_joints : 2 * self.num_joints + 3] = self.palm_pos
+            obs[:, 2 * self.num_joints + 3 : 2 * self.num_joints + 7] = self.palm_rot
+        else:
+            obs[:, 2 * self.num_joints : 2 * self.num_joints + 3] = self.wrist_pos
+            obs[:, 2 * self.num_joints + 3 : 2 * self.num_joints + 7] = self.wrist_rot
         ft_state = torch.cat([self.ft_pos, self.ft_rot], dim=-1).view(self.ft_states.shape[0], -1)
         obs[:, 2 * self.num_joints + 7 :] = ft_state
         return obs
 
-    def reward(self, target_pos):
+    def reward(self, target_pos, use_palm):
         """Reward based on the distance between the fingertips and the target position.
 
         Args:

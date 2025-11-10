@@ -114,7 +114,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
         "light_randomize_freq": 125,
         "randomize_cfg": {
             # "dome_light": {
-            #     "intensity_range": (0.625, 1.6),  
+            #     "intensity_range": (0.25, 2.0),  
             # },
             "camera_0": {
                 "randomization_mode": "combined",

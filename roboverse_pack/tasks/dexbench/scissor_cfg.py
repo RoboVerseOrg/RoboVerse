@@ -140,7 +140,7 @@ class ScissorCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="right_hand",
-                    arm_translation_scale=0.04,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -149,7 +149,7 @@ class ScissorCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="left_hand",
-                    arm_translation_scale=0.04,
+                    arm_translation_scale=0.06,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -458,7 +458,7 @@ class ScissorCfg(BaseRLTaskCfg):
         }
         state_obs = obs["state"]
         t = 0
-        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation()
+        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation(use_palm=True)
         t += self.robots[0].observation_shape
         for name in self.robots[0].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -469,7 +469,7 @@ class ScissorCfg(BaseRLTaskCfg):
             t += 6
         state_obs[:, t : t + self.action_shape // 2] = actions[:, : self.action_shape // 2]  # actions for right hand
         t += self.action_shape // 2
-        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation()
+        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation(use_palm=True)
         t += self.robots[1].observation_shape
         for name in self.robots[1].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)

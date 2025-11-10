@@ -60,7 +60,7 @@ class SwingCupCfg(BaseRLTaskCfg):
         ),
         "table": PrimitiveCubeCfg(
             name="table",
-            size=(0.6, 0.6, 0.6),
+            size=(0.6, 0.6, 0.65),
             disable_gravity=True,
             fix_base_link=True,
             flip_visual_attachments=True,
@@ -139,7 +139,7 @@ class SwingCupCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="right_hand",
-                    arm_translation_scale=0.03,
+                    arm_translation_scale=0.02,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -148,7 +148,7 @@ class SwingCupCfg(BaseRLTaskCfg):
                     hand_controller="dof_pos",
                     isaacgym_read_mjcf=True,
                     name="left_hand",
-                    arm_translation_scale=0.03,
+                    arm_translation_scale=0.02,
                     arm_orientation_scale=0.1,
                     arm_controller="ik",
                 ),
@@ -350,11 +350,11 @@ class SwingCupCfg(BaseRLTaskCfg):
         self.init_states = {
             "objects": {
                 "table": {
-                    "pos": torch.tensor([0, 0.0, 0.3]),
+                    "pos": torch.tensor([0, 0.0, 0.325]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 self.current_object_type: {
-                    "pos": torch.tensor([0, 0.0, 0.685]),
+                    "pos": torch.tensor([0, 0.0, 0.735]),
                     "rot": torch.tensor([0.707, 0.0, 0.0, 0.707]),
                     "dof_pos": {
                         "joint_0": 0.0,  # Initial position of the switch
@@ -466,7 +466,7 @@ class SwingCupCfg(BaseRLTaskCfg):
         }
         state_obs = obs["state"]
         t = 0
-        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation()
+        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation(use_palm=True)
         t += self.robots[0].observation_shape
         for name in self.robots[0].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -477,7 +477,7 @@ class SwingCupCfg(BaseRLTaskCfg):
             t += 6
         state_obs[:, t : t + self.action_shape // 2] = actions[:, : self.action_shape // 2]  # actions for right hand
         t += self.action_shape // 2
-        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation()
+        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation(use_palm=True)
         t += self.robots[1].observation_shape
         for name in self.robots[1].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -770,7 +770,7 @@ def compute_task_reward(
 
     reward = right_hand_reward + left_hand_reward + up_rew
 
-    success = rot_dist < 0.785
+    success = (rot_dist < 0.785) & (object_pos[:, 2] > 0.73)
 
     # Find out which envs hit the goal and update successes count
     success_buf = torch.where(
@@ -790,7 +790,7 @@ def compute_task_reward(
     reward = torch.where(object_pos[:, 2] <= 0.3, reward - fall_penalty, reward)
 
     # Check env termination conditions, including maximum success number
-    resets = torch.where(object_pos[:, 2] <= 0.3, torch.ones_like(reset_buf), reset_buf)
+    resets = torch.where(object_pos[:, 2] <= 0.7, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(right_hand_dist >= 0.25, torch.ones_like(resets), resets)
     resets = torch.where(left_hand_dist >= 0.25, torch.ones_like(resets), resets)
 
