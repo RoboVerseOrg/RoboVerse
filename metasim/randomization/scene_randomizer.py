@@ -7,6 +7,7 @@ including walls, floors, ceilings, and tabletops when no predefined scene exists
 from __future__ import annotations
 
 import dataclasses
+import os
 from typing import Literal
 
 from loguru import logger
@@ -37,14 +38,20 @@ class SceneMaterialPoolCfg:
     """Configuration for scene material pools.
 
     Args:
-        material_paths: List of paths to material files (MDL)
+        material_paths: List of paths to material files (MDL). Can use "path/to/file.mdl::MaterialName"
+                       to specify a particular material variant within a file
         selection_strategy: How to select from available materials
         weights: Optional weights for weighted selection
+        randomize_material_variant: If True, randomly select from all material variants in each MDL file.
+                                   This expands diversity significantly (e.g., floor materials can use
+                                   all 4 variants from Rug_Carpet.mdl instead of just the first one).
+                                   **Default: True** to maximize diversity. Fully reproducible with seed.
     """
 
     material_paths: list[str] = dataclasses.field(default_factory=list)
     selection_strategy: Literal["random", "sequential", "weighted"] = "random"
     weights: list[float] | None = None
+    randomize_material_variant: bool = True  # Default True for maximum diversity
 
     def __post_init__(self):
         """Validate material pool configuration."""
@@ -257,7 +264,7 @@ class SceneRandomizer(BaseRandomizerType):
             if material_path:
                 material_name = material_path.split("/")[-1].replace(".mdl", "")
                 logger.info(f"Applying floor material: {material_name} to {floor_path}")
-                self._apply_material_to_prim(material_path, floor_path)
+                self._apply_scene_material(material_path, floor_path, self.cfg.floor_materials)
 
     def _create_or_update_walls(self, env_prim_path: str, env_id: int):
         """Create or update wall geometry and materials (4 walls).
@@ -291,7 +298,7 @@ class SceneRandomizer(BaseRandomizerType):
 
             # Apply the selected material to this wall
             if material_path:
-                self._apply_material_to_prim(material_path, wall_path)
+                self._apply_scene_material(material_path, wall_path, self.cfg.wall_materials)
 
     def _create_or_update_ceiling(self, env_prim_path: str, env_id: int):
         """Create or update ceiling geometry and material.
@@ -311,7 +318,7 @@ class SceneRandomizer(BaseRandomizerType):
         if self.cfg.ceiling.material_randomization and self.cfg.ceiling_materials is not None:
             material_path = self._select_material(self.cfg.ceiling_materials, "ceiling_index")
             if material_path:
-                self._apply_material_to_prim(material_path, ceiling_path)
+                self._apply_scene_material(material_path, ceiling_path, self.cfg.ceiling_materials)
 
     def _create_or_update_table(self, env_prim_path: str, env_id: int):
         """Create or update table/desktop geometry and material.
@@ -331,7 +338,7 @@ class SceneRandomizer(BaseRandomizerType):
         if self.cfg.table.material_randomization and self.cfg.table_materials is not None:
             material_path = self._select_material(self.cfg.table_materials, "table_index")
             if material_path:
-                self._apply_material_to_prim(material_path, table_path)
+                self._apply_scene_material(material_path, table_path, self.cfg.table_materials)
 
     def _generate_wall_configs(
         self, base_size: tuple[float, float, float], base_position: tuple[float, float, float]
@@ -476,6 +483,42 @@ class SceneRandomizer(BaseRandomizerType):
 
         return None
 
+    def _apply_scene_material(self, material_path: str, prim_path: str, pool_cfg: SceneMaterialPoolCfg):
+        """Apply MDL material to a prim with optional material variant randomization.
+
+        Args:
+            material_path: Path to MDL file
+            prim_path: USD prim path
+            pool_cfg: Material pool configuration (for randomize_material_variant setting)
+        """
+        from metasim.randomization.material_randomizer import MaterialRandomizer, list_materials_in_mdl
+
+        # Convert to absolute path
+        material_path = os.path.abspath(material_path)
+
+        # Download MDL file and textures using MaterialRandomizer's shared method
+        dummy_randomizer = MaterialRandomizer.__new__(MaterialRandomizer)
+        dummy_randomizer.handler = self.handler
+
+        prepared_mdls = set()
+        if not dummy_randomizer._ensure_mdl_downloaded(material_path, prepared_mdls, auto_download=True):
+            logger.warning(f"Failed to download MDL or textures for {material_path}")
+            return
+
+        # Select material variant if enabled
+        material_name = None
+        if pool_cfg.randomize_material_variant and "::" not in material_path:
+            available_materials = list_materials_in_mdl(material_path)
+            if len(available_materials) > 1:
+                material_name = self._rng.choice(available_materials)
+                logger.debug(
+                    f"Randomly selected material '{material_name}' from "
+                    f"{len(available_materials)} variants in {os.path.basename(material_path)}"
+                )
+
+        # Apply material
+        dummy_randomizer._apply_mdl_to_prim(material_path, prim_path, material_name)
+
     def _calculate_uv_tile_scale(self, prim, prim_path: str) -> float:
         """Calculate appropriate UV tile scale based on geometry size.
 
@@ -537,101 +580,6 @@ class SceneRandomizer(BaseRandomizerType):
         except Exception as e:
             logger.warning(f"Failed to calculate tile scale for {prim_path}: {e}")
             return 1.0  # Default fallback
-
-    def _apply_material_to_prim(self, material_path: str, prim_path: str):
-        """Apply MDL material to a primitive using MaterialRandomizer's proven method.
-
-        Args:
-            material_path: Path to MDL material file
-            prim_path: USD prim path
-        """
-        # try:
-        # First, check and download the material file if needed
-        from metasim.utils.hf_util import check_and_download_recursive
-
-        logger.debug(f"Checking and downloading material: {material_path}")
-        check_and_download_recursive([material_path])
-
-        # Get absolute path to MDL file
-        import os
-
-        abs_material_path = os.path.abspath(material_path)
-        if not os.path.exists(abs_material_path):
-            logger.warning(f"Material file not found: {abs_material_path}")
-            return
-
-        # Lazy import IsaacSim modules
-        try:
-            import omni.isaac.core.utils.prims as prim_utils
-        except ModuleNotFoundError:
-            import isaacsim.core.utils.prims as prim_utils
-
-        from pxr import UsdGeom
-
-        # Find all mesh prims under the target path
-        target_prim = prim_utils.get_prim_at_path(prim_path)
-        if not target_prim or not target_prim.IsValid():
-            logger.warning(f"Target prim not found: {prim_path}")
-            return
-
-        mesh_prims_paths = []
-
-        # Check if target is a geometric primitive (Mesh, Cube, Sphere, etc.) or Xform
-        prim_type = target_prim.GetTypeName()
-
-        if target_prim.IsA(UsdGeom.Mesh):
-            mesh_prims_paths.append(prim_path)
-            logger.debug(f"Target prim {prim_path} is a Mesh")
-        elif prim_type in ["Cube", "Sphere", "Cylinder", "Cone", "Capsule"]:
-            # USD geometric primitives can accept materials directly
-            mesh_prims_paths.append(prim_path)
-            logger.debug(f"Target prim {prim_path} is a {prim_type} primitive")
-        else:
-            logger.debug(f"Target prim {prim_path} is {prim_type}, searching for Mesh/Primitive children...")
-
-            # Recursively find all mesh/primitive children
-            def find_renderables(prim):
-                prim_type = prim.GetTypeName()
-                if prim.IsA(UsdGeom.Mesh) or prim_type in ["Cube", "Sphere", "Cylinder", "Cone", "Capsule"]:
-                    mesh_path = str(prim.GetPath())
-                    mesh_prims_paths.append(mesh_path)
-                    logger.debug(f"  Found {prim_type}: {mesh_path}")
-                for child in prim.GetChildren():
-                    find_renderables(child)
-
-            find_renderables(target_prim)
-
-        if not mesh_prims_paths:
-            logger.warning(f"No renderable prims found under {prim_path}, applying to prim itself...")
-            mesh_prims_paths = [prim_path]
-
-        # Use MaterialRandomizer's proven method to apply material to each mesh
-        from metasim.randomization.material_randomizer import MaterialRandomizer
-
-        dummy_randomizer = MaterialRandomizer.__new__(MaterialRandomizer)
-        dummy_randomizer.handler = self.handler
-
-        for mesh_path in mesh_prims_paths:
-            # Ensure UV coordinates for all scene geometry (floor, walls, ceiling, table)
-            mesh_prim = prim_utils.get_prim_at_path(mesh_path)
-            if mesh_prim and any(
-                keyword in mesh_path.lower()
-                for keyword in ["ground", "terrain", "floor", "wall", "ceiling", "table", "scene_"]
-            ):
-                logger.debug(f"Ensuring UV coordinates for scene geometry {mesh_path}")
-                try:
-                    # Calculate appropriate tile_scale based on geometry size
-                    tile_scale = self._calculate_uv_tile_scale(mesh_prim, mesh_path)
-                    dummy_randomizer._ensure_uv_for_hierarchy(mesh_prim, tile_scale=tile_scale)
-                    logger.debug(f"Successfully ensured UV coordinates with tile_scale={tile_scale}")
-                except Exception as e:
-                    logger.warning(f"Failed to ensure UV coordinates: {e}")
-
-            dummy_randomizer._apply_mdl_to_prim(material_path, mesh_path)
-            logger.debug(f"Applied material to mesh {mesh_path}")
-
-        self._mark_visual_dirty()
-        logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
 
     def _randomize_materials_only(self, env_ids: list[int] | None = None):
         """Apply material randomization to existing scene elements only.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from metasim.scenario.objects import _FileBasedMixin
 from metasim.utils.configclass import configclass
-
+from metasim.scenario.objects import _FileBasedMixin
 
 @configclass
 class SceneCfg(_FileBasedMixin):

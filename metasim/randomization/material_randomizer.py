@@ -9,61 +9,62 @@ from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
-from metasim.utils.hf_util import check_and_download_single
+from metasim.utils.hf_util import check_and_download_single, extract_texture_paths_from_mdl
 
 
-def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
-    """Extract texture file paths referenced in an MDL file by parsing its content.
+def list_materials_in_mdl(mdl_file_path: str) -> list[str]:
+    """List all material names available in an MDL file.
 
     Args:
         mdl_file_path: Path to the MDL file
 
     Returns:
-        List of absolute texture file paths referenced in the MDL file
+        List of material names found in the file (export materials first, then others)
     """
-    texture_paths = []
-
     if not os.path.exists(mdl_file_path):
-        return texture_paths
-
-    mdl_dir = os.path.dirname(mdl_file_path)
+        return []
 
     try:
         with open(mdl_file_path, encoding="utf-8") as f:
             content = f.read()
 
-        # Parse texture_2d declarations in MDL files
-        # Pattern: texture_2d("./path/to/texture.png", optional_args)
         import re
 
-        texture_pattern = r'texture_2d\("([^"]+)"[^)]*\)'
-        matches = re.findall(texture_pattern, content)
+        # Find all export materials (preferred)
+        export_pattern = r"export\s+material\s+(\w+)\s*\("
+        export_matches = re.findall(export_pattern, content)
 
-        for match in matches:
-            if match.strip():  # Skip empty texture declarations
-                # Convert relative paths to absolute paths
-                if match.startswith("./"):
-                    texture_path = os.path.join(mdl_dir, match[2:])  # Remove './'
-                elif match.startswith("../"):
-                    texture_path = os.path.abspath(os.path.join(mdl_dir, match))
-                elif not os.path.isabs(match):
-                    texture_path = os.path.join(mdl_dir, match)
-                else:
-                    texture_path = match
+        # Find all materials (including non-exported)
+        all_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+        all_matches = re.findall(all_pattern, content)
 
-                texture_paths.append(os.path.normpath(texture_path))
+        # Return unique materials, with export materials first
+        seen = set()
+        result = []
+        for mat in export_matches + all_matches:
+            if mat not in seen:
+                seen.add(mat)
+                result.append(mat)
+
+        return result
 
     except Exception as e:
-        logger.warning(f"Failed to parse MDL file {mdl_file_path}: {e}")
+        logger.warning(f"Failed to list materials from MDL file {mdl_file_path}: {e}")
+        return []
 
-    return texture_paths
 
+def extract_material_name_from_mdl(mdl_file_path: str, material_name: str | None = None) -> str | None:
+    """Extract or verify a material name from an MDL file.
 
-def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
-    """Extract the actual material name from an MDL file.
+    Many MDL files contain multiple material definitions. This function:
+    1. If material_name is provided, verifies it exists in the file
+    2. Otherwise, tries to find an 'export material' matching the filename (most reliable)
+    3. Falls back to the first 'export material' found
+    4. If no 'export material', uses the first material definition
 
     Args:
         mdl_file_path: Path to the MDL file
+        material_name: Optional specific material name to verify/extract
 
     Returns:
         The material name found in the MDL file, or None if not found
@@ -77,11 +78,43 @@ def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
 
         import re
 
-        material_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("  # Cork_mat --> Cork_mat
-        match = re.search(material_pattern, content)
+        # Get filename without extension (e.g., "Diamond" from "Diamond.mdl")
+        filename_base = os.path.basename(mdl_file_path).removesuffix(".mdl")
 
-        if match:
-            return match.group(1)
+        # Find all export materials first (preferred)
+        export_pattern = r"export\s+material\s+(\w+)\s*\("
+        export_matches = re.findall(export_pattern, content)
+
+        # If a specific material name was requested, verify it exists
+        if material_name is not None:
+            # Check if it's in export materials (preferred) or any materials
+            all_materials_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+            all_matches = re.findall(all_materials_pattern, content)
+
+            if material_name in export_matches or material_name in all_matches:
+                return material_name
+            else:
+                logger.warning(
+                    f"Material '{material_name}' not found in {mdl_file_path}. "
+                    f"Available materials: {export_matches if export_matches else all_matches}"
+                )
+                return None
+
+        # Strategy 1: If there's an export material matching the filename, use it
+        # This handles cases like Diamond.mdl where there's gem_definition + Diamond
+        if filename_base in export_matches:
+            return filename_base
+
+        # Strategy 2: Use first export material if available
+        if export_matches:
+            return export_matches[0]
+
+        # Strategy 3: Fall back to any material definition (including non-exported)
+        all_materials_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+        all_matches = re.findall(all_materials_pattern, content)
+
+        if all_matches:
+            return all_matches[0]
 
     except Exception as e:
         logger.warning(f"Failed to extract material name from MDL file {mdl_file_path}: {e}")
@@ -132,8 +165,15 @@ class MDLMaterialCfg:
     """Configuration for MDL (Material Definition Language) files.
 
     Args:
-        mdl_paths: List of paths to MDL material files (can be empty, will be populated by presets)
+        mdl_paths: List of paths to MDL material files. Can use "path/to/file.mdl::MaterialName"
+                   to specify a particular material variant within a file
         selection_strategy: How to select from available MDL files
+        randomize_material_variant: If True, randomly select from all material variants in each MDL file.
+                                   This expands diversity significantly (e.g., Rug_Carpet.mdl has 4 variants,
+                                   Caoutchouc.mdl has 93 variants!). vMaterials_2 has 2605 total variants
+                                   across 315 files. Ignored if mdl_path already specifies a material (via ::).
+                                   **Default: True** to maximize diversity for domain randomization.
+                                   Fully reproducible with seed control.
         enabled: Whether to apply MDL material randomization
         auto_download: Whether to automatically download missing MDL files
         validate_paths: Whether to validate file existence at initialization
@@ -142,6 +182,7 @@ class MDLMaterialCfg:
     mdl_paths: list[str] = dataclasses.field(default_factory=list)
     selection_strategy: Literal["random", "sequential", "weighted"] = "random"
     weights: list[float] | None = None
+    randomize_material_variant: bool = True  # Changed default from False to True
     enabled: bool = True
     auto_download: bool = True
     validate_paths: bool = True
@@ -214,6 +255,7 @@ class MaterialRandomizer(BaseRandomizerType):
         self.cfg = cfg
         self._mdl_selection_state = {"sequential_index": 0}
         self._torch_generator: torch.Generator | None = None
+        self._defer_visual_flush = False  # Defer visual flush for batched updates
         super().__init__(seed=seed)
         self._sync_torch_generator()
 
@@ -432,7 +474,7 @@ class MaterialRandomizer(BaseRandomizerType):
             return
 
         root_path = obj_inst.cfg.prim_path
-        assignments: list[tuple[str, str]] = []
+        assignments: list[tuple[str, str, str | None]] = []
         prepared_mdls: set[str] = set()
         applied_any = False
 
@@ -443,37 +485,27 @@ class MaterialRandomizer(BaseRandomizerType):
             mdl_path = self._select_mdl_path(self.cfg.mdl.mdl_paths)
             mdl_path = os.path.abspath(mdl_path)
 
-            # Download the selected MDL file if it doesn't exist
-            if not os.path.exists(mdl_path) and self.cfg.mdl.auto_download:
-                try:
-                    logger.info(f"Downloading MDL file: {os.path.basename(mdl_path)}")
-                    check_and_download_single(mdl_path)
-                except Exception as e:
-                    logger.warning(f"Failed to download MDL {mdl_path}: {e}")
-                    continue  # Skip this environment if download fails
+            # Download MDL and textures
+            if not self._ensure_mdl_downloaded(mdl_path, prepared_mdls, self.cfg.mdl.auto_download):
+                continue
 
-            # Download textures for the selected MDL file (once per unique MDL)
-            if os.path.exists(mdl_path) and mdl_path not in prepared_mdls:
-                try:
-                    texture_paths = extract_texture_paths_from_mdl(mdl_path)
-                    missing_textures = [p for p in texture_paths if not os.path.exists(p)]
-                    if missing_textures and self.cfg.mdl.auto_download:
-                        logger.info(f"Downloading {len(missing_textures)} missing texture files...")
-                        for texture_path in missing_textures:
-                            try:
-                                check_and_download_single(texture_path)
-                            except Exception as e:
-                                logger.warning(f"Failed to download texture {texture_path}: {e}")
-                except Exception as e:
-                    logger.warning(f"Failed to process textures for {mdl_path}: {e}")
-                prepared_mdls.add(mdl_path)
+            # Select material variant if enabled
+            material_name = None
+            if self.cfg.mdl.randomize_material_variant and "::" not in mdl_path:
+                available_materials = list_materials_in_mdl(mdl_path)
+                if len(available_materials) > 1:
+                    material_name = self._rng.choice(available_materials)
+                    logger.debug(
+                        f"Randomly selected material '{material_name}' from "
+                        f"{len(available_materials)} variants in {os.path.basename(mdl_path)}"
+                    )
 
-            assignments.append((mdl_path, env_prim_path))
+            assignments.append((mdl_path, env_prim_path, material_name))
 
         touched_prims: list[str] = []
-        for mdl_path, env_prim_path in assignments:
+        for mdl_path, env_prim_path, material_name in assignments:
             try:
-                self._apply_mdl_to_prim(mdl_path, env_prim_path)
+                self._apply_mdl_to_prim(mdl_path, env_prim_path, material_name)
                 applied_any = True
                 touched_prims.append(env_prim_path)
             except Exception as e:
@@ -482,6 +514,53 @@ class MaterialRandomizer(BaseRandomizerType):
         if applied_any:
             self._mark_visual_dirty()
             self._force_pose_nudge(touched_prims)
+
+    def _ensure_mdl_downloaded(self, mdl_path: str, prepared_mdls: set[str], auto_download: bool) -> bool:
+        """Download MDL file and its textures if missing.
+
+        Args:
+            mdl_path: Absolute path to MDL file
+            prepared_mdls: Set of already prepared MDL paths (for caching)
+            auto_download: Whether to auto-download missing files
+
+        Returns:
+            True if MDL and textures are available, False if download failed
+        """
+        # Download the MDL file if it doesn't exist
+        if not os.path.exists(mdl_path):
+            if auto_download:
+                try:
+                    logger.info(f"Downloading MDL file: {os.path.basename(mdl_path)}")
+                    check_and_download_single(mdl_path)
+                except Exception as e:
+                    logger.warning(f"Failed to download MDL {mdl_path}: {e}")
+                    return False
+            else:
+                logger.warning(f"MDL file not found and auto_download is disabled: {mdl_path}")
+                return False
+
+        # Download textures for the MDL file (once per unique MDL)
+        if os.path.exists(mdl_path) and mdl_path not in prepared_mdls:
+            try:
+                texture_paths = extract_texture_paths_from_mdl(mdl_path)
+                missing_textures = [p for p in texture_paths if not os.path.exists(p)]
+                if missing_textures:
+                    if auto_download:
+                        logger.info(
+                            f"Downloading {len(missing_textures)} texture file(s) for {os.path.basename(mdl_path)}"
+                        )
+                        for texture_path in missing_textures:
+                            try:
+                                check_and_download_single(texture_path)
+                            except Exception as e:
+                                logger.warning(f"Failed to download texture {texture_path}: {e}")
+                    else:
+                        logger.warning(f"{len(missing_textures)} texture(s) missing and auto_download is disabled")
+            except Exception as e:
+                logger.warning(f"Failed to process textures for {mdl_path}: {e}")
+            prepared_mdls.add(mdl_path)
+
+        return True
 
     def _select_mdl_path(self, available_paths: list[str]) -> str:
         """Select MDL path based on selection strategy using reproducible RNG."""
@@ -499,11 +578,22 @@ class MaterialRandomizer(BaseRandomizerType):
         else:
             raise ValueError(f"Unknown selection strategy: {self.cfg.mdl.selection_strategy}")
 
-    def _apply_mdl_to_prim(self, mdl_path: str, prim_path: str) -> None:
+    def _apply_mdl_to_prim(self, mdl_path: str, prim_path: str, material_name: str | None = None) -> None:
         """Apply MDL material to a specific prim.
 
-        This is the internal implementation that was originally in material_util.py
+        This is the internal implementation that was originally in material_util.py.
+
+        Args:
+            mdl_path: Path to MDL file (can include "::MaterialName" suffix to specify material)
+            prim_path: USD prim path to apply material to
+            material_name: Optional material name to use. If None, will be extracted from mdl_path
         """
+        # Parse mdl_path to extract material name if specified (format: "path/to/file.mdl::MaterialName")
+        if "::" in mdl_path:
+            mdl_path, specified_material = mdl_path.rsplit("::", 1)
+            if material_name is None:
+                material_name = specified_material
+
         # Convert to absolute path for IsaacSim
         mdl_path = os.path.abspath(mdl_path)
 
@@ -523,7 +613,21 @@ class MaterialRandomizer(BaseRandomizerType):
         # Ensure UV coordinates first
         self._ensure_uv_for_hierarchy(prim)
 
-        mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+        # Extract actual material name from MDL file (handles files with multiple materials)
+        # Many MDL files contain multiple material definitions (e.g., Rug_Carpet.mdl has
+        # Rug_Carpet_Base, Rug_Carpet_Lines, etc.), so we must parse the file to get
+        # the correct material name instead of just using the filename
+        mtl_name = extract_material_name_from_mdl(mdl_path, material_name)
+        if mtl_name is None:
+            # Fallback to filename if extraction fails
+            mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+            logger.warning(f"Could not extract material name from {mdl_path}, using filename: {mtl_name}")
+        else:
+            if material_name:
+                logger.debug(f"Using specified material '{mtl_name}' from {mdl_path}")
+            else:
+                logger.debug(f"Auto-extracted material name '{mtl_name}' from {mdl_path}")
+
         mtl_prim_path = self._get_or_create_material_prim(mdl_path, mtl_name)
 
         geometry_prims = list(self._iter_geometry_prims(prim))
@@ -699,7 +803,11 @@ class MaterialRandomizer(BaseRandomizerType):
         return False
 
     def _force_pose_nudge(self, prim_paths: list[str]) -> None:
-        """Apply a tiny temporary translation to prims to force RTX BLAS updates."""
+        """Apply tiny temporary translation to force RTX BLAS updates.
+
+        When _defer_visual_flush is True, skips intermediate flush calls to
+        enable batched visual updates across multiple randomizers.
+        """
         if not prim_paths:
             return
 
@@ -778,8 +886,9 @@ class MaterialRandomizer(BaseRandomizerType):
         if not nudged_ops:
             return
 
+        # Flush only if not deferring (enables batched updates)
         flush_fn = getattr(handler, "flush_visual_updates", None)
-        if callable(flush_fn):
+        if callable(flush_fn) and not self._defer_visual_flush:
             try:
                 flush_fn(wait_for_materials=True, settle_passes=1)
             except Exception as err:
@@ -791,7 +900,7 @@ class MaterialRandomizer(BaseRandomizerType):
             except Exception as err:
                 logger.debug(f"Failed to restore translate op {op.GetName()}: {err}")
 
-        if callable(flush_fn):
+        if callable(flush_fn) and not self._defer_visual_flush:
             try:
                 flush_fn(wait_for_materials=True, settle_passes=1)
             except Exception as err:

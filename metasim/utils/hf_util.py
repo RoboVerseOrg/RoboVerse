@@ -27,7 +27,7 @@ LOCAL_DIR = "roboverse_data"
 hf_api = HfApi()
 
 
-def _extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
+def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
     """Extract texture file paths referenced in an MDL file by parsing its content.
 
     Args:
@@ -48,8 +48,9 @@ def _extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
             content = f.read()
 
         # Parse texture_2d declarations in MDL files
-        # Pattern: texture_2d("./path/to/texture.png", optional_args)
-        texture_pattern = r'texture_2d\("([^"]+)"[^)]*\)'
+        # Pattern: texture_2d("./path/to/texture.png", optional_args) or texture_2d ( "./path", optional_args)
+        # Note: Allow optional whitespace before and after opening parenthesis
+        texture_pattern = r'texture_2d\s*\(\s*"([^"]+)"[^)]*\)'
         matches = re.findall(texture_pattern, content)
 
         for match in matches:
@@ -185,7 +186,7 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
             if os.path.exists(filepath):
                 try:
                     # Parse MDL file and extract texture paths
-                    texture_paths = _extract_texture_paths_from_mdl(filepath)
+                    texture_paths = extract_texture_paths_from_mdl(filepath)
                     # Add textures that don't exist locally to the download list
                     for texture_path in texture_paths:
                         if not os.path.exists(texture_path):
@@ -235,6 +236,12 @@ class FileDownloader:
         #     ):
         #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
         #     self._add(traj_filepath)
+        
+    def _add_from_scene(self, scene: SceneCfg):
+        
+        assert(isinstance(scene, SceneCfg))
+        
+        self._add(scene.file_name(self.scenario.simulator))
 
     def _add_from_scene(self, scene: SceneCfg):
         assert isinstance(scene, SceneCfg)

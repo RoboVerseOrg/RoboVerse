@@ -47,6 +47,11 @@ class RobotCfg(ArticulationObjCfg):
 
     num_joints: int | None = None
     """Number of robot joints, including all movable joints"""
+    
+    # # ==================== Asset File Paths ====================
+    # # Do not need to fill in all the paths, only fill in the paths that are required for the specific robot and simulation use case
+    # usd_path: str | None = None
+    # """USD format robot model file path (for IsaacLab, etc.)"""
 
     # # ==================== Asset File Paths ====================
     # # Do not need to fill in all the paths, only fill in the paths that are required for the specific robot and simulation use case
