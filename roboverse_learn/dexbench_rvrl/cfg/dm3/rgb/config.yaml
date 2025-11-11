@@ -20,7 +20,7 @@ learn:
   agent_name: shadow_hand
   test: False
   resume: 0
-  log_interval: 5000
+  log_interval: 10000
   print_log: True
 
   # rollout params

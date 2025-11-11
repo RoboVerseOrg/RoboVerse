@@ -48,7 +48,7 @@ learn:
   prefill: 3200
   buffer_size: 500000
   nstep: 1
-  nupdate: 5
+  nupdate: 2
   reward_coef: 0.1
   value_coef: 0.1
   termination_coef: 1.0

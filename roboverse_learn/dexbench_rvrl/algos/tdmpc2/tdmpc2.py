@@ -24,6 +24,7 @@ import roboverse_learn.dexbench_rvrl.algos.tdmpc2.math as math
 from roboverse_learn.dexbench_rvrl.algos.tdmpc2.module import WorldModel, api_model_conversion
 from roboverse_learn.dexbench_rvrl.algos.tdmpc2.scale import RunningScale
 from roboverse_learn.dexbench_rvrl.algos.tdmpc2.storage import Buffer
+from roboverse_learn.dexbench_rvrl.algos.tdmpc2.env_wrapper import Tdmpc2DexEnv
 from roboverse_learn.dexbench_rvrl.utils.metrics import MetricAggregator
 from roboverse_learn.dexbench_rvrl.utils.reproducibility import enable_deterministic_run
 from roboverse_learn.dexbench_rvrl.utils.timer import timer
@@ -80,11 +81,10 @@ class TDMPC2:
         self.cast_device = self.device.type
 
         self.action_dim = np.prod(env.single_action_space.shape)
-        self.obs_shape = {k: v.shape for k, v in env.single_observation_space.spaces.items()}
+        ori_obs_shape = {k: v.shape for k, v in env.single_observation_space.spaces.items()}
         self.obs_type = getattr(env, "obs_type", "state")
         self.img_h = getattr(env, "img_h", None)
         self.img_w = getattr(env, "img_w", None)
-        self.env = env
         self.num_envs = env.num_envs
         self.max_episode_length = env.max_episode_steps
 
@@ -93,6 +93,13 @@ class TDMPC2:
         if train_cfg.get("deterministic", False):
             enable_deterministic_run()
         learn_cfg = self.train_cfg["learn"]
+        self.env = Tdmpc2DexEnv(
+            obs_shape=ori_obs_shape,
+            num_frames=learn_cfg.get("num_frames", 3),
+            env=env,
+            device=self.device,
+        )
+        self.obs_shape = {k: v.shape for k, v in self.env.single_observation_space.spaces.items()}
 
         # params
         self.lr = learn_cfg.get("lr", 3e-4)
@@ -288,7 +295,7 @@ class TDMPC2:
                             action = self.act(obs, t0=is_first)
                         next_obs, reward, terminated, truncated, info = self.env.step(action)
                         done = torch.logical_or(terminated, truncated)
-                        env_step = self.env.episode_lengths
+                        env_step = self.env.env.episode_lengths
                         is_first = (env_step == 0)
                         self.buffer.add(obs, self.env.tensor_obs, action, reward, done, terminated, None)
                         for key in obs.keys():
@@ -306,15 +313,6 @@ class TDMPC2:
                             cur_rewards_sum[done] = 0
                             cur_episode_length[done] = 0
                             action[done] = 0
-                        # import cv2
-                        # import numpy as np
-
-                        # img = obs["rgb"][0]  # Get the first environment's camera image
-                        # img0 = img.permute(1, 2, 0).cpu().detach().numpy()  # Get the first environment's camera image
-                        # img0_uint8 = (img0 * 255).astype(np.uint8)
-                        # img0_bgr = cv2.cvtColor(img0_uint8, cv2.COLOR_RGB2BGR)
-                        # cv2.imwrite("tdmpc2_img.png", img0_bgr)
-                        # exit(0)
 
                 mean_reward = self.episode_rewards_step.mean
                 ## Update the model

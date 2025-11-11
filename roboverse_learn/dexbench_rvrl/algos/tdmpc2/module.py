@@ -112,7 +112,7 @@ class PixelPreprocess(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        return x.sub(0.5)
+        return x - 0.5
 
 
 class SimNorm(nn.Module):
@@ -225,7 +225,7 @@ def rgb_enc(in_shape, model_cfg, img_h=None, img_w=None, act=True):
                 assert len(depth) == stages, "depth should be an int or list of length stages"
 
         visual_encoder = []
-        # visual_encoder.append(ShiftAug())
+        visual_encoder.append(ShiftAug(pad=6))
         visual_encoder.append(PixelPreprocess())
         for i in range(stages):
             padding = (kernel_size[i] - 1) // stride[i]
@@ -248,8 +248,8 @@ def rgb_enc(in_shape, model_cfg, img_h=None, img_w=None, act=True):
         with torch.no_grad():
             test_data = torch.zeros(1, *in_shape)
             visual_feature_dim = visual_encoder(test_data).shape[1]
-            # out_dim = visual_encoder(test_data).shape[1]
-            # visual_encoder.add_module("out", NormedLinear(out_dim, visual_feature_dim))
+            out_dim = visual_encoder(test_data).shape[1]
+            visual_encoder.add_module("out", NormedLinear(out_dim, visual_feature_dim))
             if act:
                 visual_encoder.add_module("act", nn.Mish(inplace=False))
         print("=> using custom cnn as visual encoder")

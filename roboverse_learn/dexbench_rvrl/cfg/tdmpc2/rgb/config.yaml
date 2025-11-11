@@ -22,9 +22,11 @@ model:
 
   latent_dim: 512
   num_q: 5
-  num_bins: 101
-  vmin: -20
-  vmax: +20
+  num_bins: 255
+  vmin: -20.0
+  vmax: 20.0
+  reward_vmin: -10.0
+  reward_vmax: 10.0
   log_std_min: -10
   log_std_max: 2
   task_dim: 0
@@ -33,24 +35,22 @@ learn:
   agent_name: shadow_hand
   test: False
   resume: 0
-  log_interval: 5000
+  log_interval: 125000
   print_log: True
   window_size: 100
-  print_interval: 10
+  print_interval: 1
 
   # rollout params
-  max_iterations: 100000
+  max_iterations: 500000
 
   # training params
-  batch_size: 256
+  batch_size: 128
   episodic: True
   multitask: False
-  horizon: 15
-  prefill: 400
-  buffer_size: 5000
+  prefill: 3200
+  buffer_size: 500000
   nstep: 1
-  nupdate: 1
-  batch_size: 256
+  nupdate: 2
   reward_coef: 0.1
   value_coef: 0.1
   termination_coef: 1.0
@@ -62,18 +62,18 @@ learn:
   grad_clip_norm: 20
   tau: 0.01
   discount_denom: 5
-  discount_min: 0.95
+  discount_min: 0.99
   discount_max: 0.995
 
   # planning params
   mpc: true
-  mpc_iterations: 6
+  mpc_iterations: 8
   num_samples: 512
   num_elites: 64
   num_pi_trajs: 24
   horizon: 3
-  min_std: 0.05
-  max_std: 2
+  min_std: 0.01
+  max_std: 1.0
   temperature: 0.5
   entropy_coef: 1.e-4
 
