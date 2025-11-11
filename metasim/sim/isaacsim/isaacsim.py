@@ -61,9 +61,9 @@ class IsaacsimHandler(BaseSimHandler):
 
         self.scenario_cfg = scenario_cfg
         self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
-        self._step_counter = 0
+        self._physics_step_counter = 0
         self._is_closed = False
-        self.render_interval = 4  # TODO: fix hardcode
+        self.render_interval = self.scenario.decimation  # TODO: fix hardcode
         self._manual_pd_on = []
 
         if self.headless:
@@ -316,7 +316,7 @@ class IsaacsimHandler(BaseSimHandler):
             env_ids = list(range(self.num_envs))
 
         # Special handling for the first frame to ensure camera is properly positioned
-        if self._step_counter == 0:
+        if self._physics_step_counter == 0:
             self._update_camera_pose()
             # Force render and sensor update for first frame
             if self.sim.has_gui() or self.sim.has_rtx_sensors():
@@ -512,11 +512,11 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Decimation: run physics multiple times per control step for better stability
         for _ in range(self.decimation):
+            self._physics_step_counter += 1
             self.sim.step(render=False)
-
-        if self._step_counter % self.render_interval == 0 and is_rendering:
-            self.sim.render()
-        self.scene.update(dt=self.dt)
+            self.scene.update(dt=self.dt)
+            if self._physics_step_counter % self.render_interval == 0 and is_rendering:
+                self.sim.render()
 
         # Force update kinematic objects to ensure visual mesh stays in sync
         for obj in self.objects:
@@ -528,10 +528,10 @@ class IsaacsimHandler(BaseSimHandler):
                 obj_inst.update(dt=0.0)
 
         # Ensure camera pose is correct, especially for the first few frames
-        if self._step_counter < 5:
+        if self._physics_step_counter < 5:
             self._update_camera_pose()
 
-        self._step_counter += 1
+        self._physics_step_counter += 1
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
