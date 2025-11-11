@@ -59,6 +59,9 @@ view_mjcf.py
 /tools_libero
 /tools_libero/
 logdir/
+/libero_util
+/libero_traj_output
+libero_dataset
 
 # Old Repos
 UniRobo
