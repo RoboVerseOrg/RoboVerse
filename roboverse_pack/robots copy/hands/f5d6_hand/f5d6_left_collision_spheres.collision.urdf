@@ -1,0 +1,325 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<robot name="f5d6_left">
+  <link name="L_wrist" />
+  <joint name="L_wirst_joint" type="fixed">
+    <origin xyz="-0.00385 0 0" rpy="0 1.57079 3.14159" />
+    <parent link="L_wrist" />
+    <child link="L_hand_base" />
+  </joint>
+  <link name="L_hand_base">
+    <inertial>
+      <origin xyz="-0.04878 0.00248 -0.00378" rpy="0 0 0" />
+      <mass value="0.05182" />
+      <inertia ixx="1.90439E-05" ixy="9.03565E-07" ixz="1.72176E-06" iyy="2.43366E-05" iyz="4.70654E-07" izz="3.58010E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/L_hand_base.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.061000000685453415 -0.003000000026077032 -0.004999999888241291" rpy="0 0 0" /><geometry><sphere radius="0.05000000074505806" /></geometry></collision>
+    <collision><origin xyz="-0.024000000208616257 -0.0010000000474974513 -0.004000000189989805" rpy="0 0 0" /><geometry><sphere radius="0.0430000014603138" /></geometry></collision>
+    <collision><origin xyz="-0.09399999678134918 0.03099999949336052 -0.0010000000474974513" rpy="0 0 0" /><geometry><sphere radius="0.019999999552965164" /></geometry></collision>
+    <collision><origin xyz="-0.10899999737739563 0.02500000037252903 0.006000000052154064" rpy="0 0 0" /><geometry><sphere radius="0.019999999552965164" /></geometry></collision>
+    <collision><origin xyz="-0.11 0.001 0.007" rpy="0 0 0" /><geometry><sphere radius="0.02" /></geometry></collision>
+    <collision><origin xyz="-0.102 -0.03 0.002" rpy="0 0 0" /><geometry><sphere radius="0.02" /></geometry></collision>
+  </link>
+  <link name="L_th_l0">
+    <inertial>
+      <origin xyz="0.00118 0.00613 -0.00211" rpy="0 0 0" />
+      <mass value="0.00232" />
+      <inertia ixx="1.75839E-07" ixy="5.95523E-08" ixz="-4.97756E-09" iyy="1.47406E-07" iyz="1.16060E-08" izz="1.75736E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.00580" rpy="3.14159 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/th_l0.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.005 0.008 -0.004" rpy="0 0 0" /><geometry><sphere radius="0.014" /></geometry></collision>
+    <collision><origin xyz="0.003 0.005 -0.005" rpy="0 0 0" /><geometry><sphere radius="0.014" /></geometry></collision>
+    <collision><origin xyz="-0.012 0.017 -0.004" rpy="0 0 0" /><geometry><sphere radius="0.014" /></geometry></collision>
+  </link>
+  <joint name="L_th_j0" type="revolute">
+    <origin xyz="-0.04608 0.01984 -0.02684" rpy="0 -0.21841 -0.01325" />
+    <parent link="L_hand_base" />
+    <child link="L_th_l0" />
+    <axis xyz="-1 0 0" />
+    <limit lower="-0.0158" upper="1.605" effort="1.0" velocity="6.28" />
+  </joint>
+  <link name="L_th_l1">
+    <inertial>
+      <origin xyz="-0.01803 0.00796 -0.00016" rpy="0 0 0" />
+      <mass value="0.00666" />
+      <inertia ixx="4.79346E-07" ixy="4.90524E-07" ixz="-1.17783E-11" iyy="1.88643E-06" iyz="-5.33955E-11" izz="2.21298E-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.14" />
+      <geometry>
+        <mesh filename="meshes/visual/th_l1.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.036 0.013 -0.002" rpy="0 0 0" /><geometry><sphere radius="0.019" /></geometry></collision>
+    <collision><origin xyz="0.01 -0.009 -0.001" rpy="0 0 0" /><geometry><sphere radius="0.019" /></geometry></collision>
+    <collision><origin xyz="-0.011 0.003 0.0" rpy="0 0 0" /><geometry><sphere radius="0.019" /></geometry></collision>
+  </link>
+  <joint name="L_th_j1" type="revolute">
+    <origin xyz="-0.00675 0.02098 -0.00270" rpy="0 0 0.01293" />
+    <parent link="L_th_l0" />
+    <child link="L_th_l1" />
+    <axis xyz="0 0 -1" />
+    <limit lower="-0.3468" upper="0.1834" effort="1.0" velocity="6.28" />
+  </joint>
+  <link name="L_th_l2">
+    <inertial>
+      <origin xyz="-0.00825 0.00781 0.00190" rpy="0 0 0" />
+      <mass value="0.00503" />
+      <inertia ixx="1.99364E-07" ixy="5.81205E-08" ixz="-5.87916E-12" iyy="2.67949E-07" iyz="1.69508E-12" izz="2.35219E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.00380" rpy="0 0 3.14159" />
+      <geometry>
+        <mesh filename="meshes/visual/th_l2.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.007 0.01 0.003" rpy="0 0 0" /><geometry><sphere radius="0.01845" /></geometry></collision>
+  </link>
+  <joint name="L_th_j2" type="revolute">
+    <origin xyz="-0.05088 0.01301 -0.00202" rpy="0 0 0" />
+    <parent link="L_th_l1" />
+    <child link="L_th_l2" />
+    <axis xyz="0 0 -1" />
+    <limit lower="-0.4298" upper="0.2731" effort="0.5" velocity="6.28" />
+    <mimic joint="L_th_j1" multiplier="1.35316" offset="0.00765" />
+  </joint>
+  <link name="L_ff_l1">
+    <inertial>
+      <origin xyz="-0.01602 -9.85142E-05 -0.00754" rpy="0 0 0" />
+      <mass value="0.00155" />
+      <inertia ixx="6.86607E-08" ixy="6.40093E-13" ixz="-2.71260E-08" iyy="1.54822E-07" iyz="2.47486E-12" izz="1.62362E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/ff_l1.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.001 0.0 -0.005" rpy="0 0 0" /><geometry><sphere radius="0.01" /></geometry></collision>
+    <collision><origin xyz="-0.008 0.0 -0.007" rpy="0 0 0" /><geometry><sphere radius="0.01" /></geometry></collision>
+    <collision><origin xyz="-0.018 0.0 -0.01" rpy="0 0 0" /><geometry><sphere radius="0.01" /></geometry></collision>
+    <collision><origin xyz="-0.03 0.0 -0.011" rpy="0 0 0" /><geometry><sphere radius="0.01" /></geometry></collision>
+  </link>
+  <joint name="L_ff_j1" type="revolute">
+    <origin xyz="-0.11269 0.03067 -0.00116" rpy="-0.08731 -0.00723 -0.08240" />
+    <parent link="L_hand_base" />
+    <child link="L_ff_l1" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.0946" upper="0.2891" effort="0.5" velocity="6.28" />
+  </joint>
+  <link name="L_ff_l2">
+    <inertial>
+      <origin xyz="-0.01405 -9.47216E-05 -0.01877" rpy="0 0 0" />
+      <mass value="0.00416" />
+      <inertia ixx="3.83569E-07" ixy="3.63725E-12" ixz="-2.50539E-07" iyy="5.74333E-07" iyz="5.30246E-12" izz="2.66485E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/ff_l2.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.002 -0.003 -0.007" rpy="0 0 0" /><geometry><sphere radius="0.01274" /></geometry></collision>
+    <collision><origin xyz="-0.026 0.001 -0.03" rpy="0 0 0" /><geometry><sphere radius="0.01187" /></geometry></collision>
+    <collision><origin xyz="-0.013 -0.001 -0.017" rpy="0 0 0" /><geometry><sphere radius="0.01187" /></geometry></collision>
+  </link>
+  <joint name="L_ff_j2" type="revolute">
+    <origin xyz="-0.03406 0 -0.01141" rpy="0 0 -0.00010" />
+    <parent link="L_ff_l1" />
+    <child link="L_ff_l2" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.2101" upper="0.3681" effort="0.5" velocity="6.28" />
+    <mimic joint="L_ff_j1" multiplier="1.13028" offset="-0.00053" />
+  </joint>
+  <link name="L_mf_l1">
+    <inertial>
+      <origin xyz="0.03832 -0.00051 -0.01587" rpy="0 0 0" />
+      <mass value="0.10211" />
+      <inertia ixx="9.82031E-05" ixy="4.89564E-06" ixz="-3.61758E-05" iyy="2.71614E-04" iyz="2.12856E-05" izz="3.10529E-04" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/mf_l1.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.035 0.0 -0.009" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.009 -0.001 -0.014" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.018 -0.001 -0.013" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.006 -0.001 -0.002" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.016 -0.001 -0.002" rpy="0 0 0" /><geometry><sphere radius="0.009" /></geometry></collision>
+    <collision><origin xyz="-0.027 0.0 -0.009" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+  </link>
+  <joint name="L_mf_j1" type="revolute">
+    <origin xyz="-0.11597 0.01047 0.00314" rpy="0 0 -0.01325" />
+    <parent link="L_hand_base" />
+    <child link="L_mf_l1" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.0844" upper="0.2801" effort="0.5" velocity="6.28" />
+  </joint>
+  <link name="L_mf_l2">
+    <inertial>
+      <origin xyz="-0.01427 9.50657E-05 -0.01861" rpy="0 0 0" />
+      <mass value="0.00416" />
+      <inertia ixx="3.77813E-07" ixy="2.94200E-12" ixz="-2.51812E-07" iyy="5.74328E-07" iyz="4.24957E-12" izz="2.72236E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/mf_l2.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.004 -0.001 -0.004" rpy="0 0 0" /><geometry><sphere radius="0.01074" /></geometry></collision>
+    <collision><origin xyz="-0.01 -0.002 -0.015" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+    <collision><origin xyz="-0.024 0.0 -0.033" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+    <collision><origin xyz="-0.016 -0.001 -0.023" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+  </link>
+  <joint name="L_mf_j2" type="revolute">
+    <origin xyz="-0.03829 0 -0.01467" rpy="0 0 0" />
+    <parent link="L_mf_l1" />
+    <child link="L_mf_l2" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.2026" upper="0.3533" effort="0.5" velocity="6.28" />
+    <mimic joint="L_mf_j1" multiplier="1.13311" offset="-0.00079" />
+  </joint>
+  <link name="L_rf_l1">
+    <inertial>
+      <origin xyz="-0.01575 -9.85177E-05 -0.00809" rpy="0 0 0" />
+      <mass value="0.00155" />
+      <inertia ixx="7.06600E-08" ixy="9.80912E-13" ixz="-3.03177E-08" iyy="1.54825E-07" iyz="2.70998E-12" izz="1.60367E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/rf_l1.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.029 0.0 -0.01" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.008 0.0 -0.007" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.003 0.0 -0.003" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+    <collision><origin xyz="-0.018 0.0 -0.01" rpy="0 0 0" /><geometry><sphere radius="0.011" /></geometry></collision>
+  </link>
+  <joint name="L_rf_j1" type="revolute">
+    <origin xyz="-0.11324 -0.00937 0.00239" rpy="0 0 0.05660" />
+    <parent link="L_hand_base" />
+    <child link="L_rf_l1" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.0154" upper="0.2840" effort="0.5" velocity="6.28" />
+  </joint>
+  <link name="L_rf_l2">
+    <inertial>
+      <origin xyz="-0.01273 -9.38053E-05 -0.01968" rpy="0 0 0" />
+      <mass value="0.00416" />
+      <inertia ixx="4.17201E-07" ixy="-1.25235E-12" ixz="-2.40009E-07" iyy="5.74059E-07" iyz="-5.32327E-12" izz="2.32587E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/rf_l2.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.003 0.0 -0.004" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+    <collision><origin xyz="-0.009 0.0 -0.014" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+    <collision><origin xyz="-0.018 0.001 -0.024" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+    <collision><origin xyz="-0.024 0.0 -0.036" rpy="0 0 0" /><geometry><sphere radius="0.00987" /></geometry></collision>
+  </link>
+  <joint name="L_rf_j2" type="revolute">
+    <origin xyz="-0.03364 0 -0.01258" rpy="0 0 -0.00010" />
+    <parent link="L_rf_l1" />
+    <child link="L_rf_l2" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.1156" upper="0.3599" effort="0.5" velocity="6.28" />
+    <mimic joint="L_rf_j1" multiplier="1.12935" offset="0.00065" />
+  </joint>
+  <link name="L_lf_l1">
+    <inertial>
+      <origin xyz="-0.01409 0.00010 -0.00740" rpy="0 0 0" />
+      <mass value="0.00137" />
+      <inertia ixx="6.23124E-08" ixy="-5.30007E-13" ixz="-2.07729E-08" iyy="1.12813E-07" iyz="-3.85122E-13" izz="1.20866E-07" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/lf_l1.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.003 0.0 -0.001" rpy="0 0 0" /><geometry><sphere radius="0.00964" /></geometry></collision>
+    <collision><origin xyz="-0.009 0.0 -0.008" rpy="0 0 0" /><geometry><sphere radius="0.00964" /></geometry></collision>
+    <collision><origin xyz="-0.018 0.0 -0.01" rpy="0 0 0" /><geometry><sphere radius="0.009" /></geometry></collision>
+    <collision><origin xyz="-0.026 0.0 -0.01" rpy="0 0 0" /><geometry><sphere radius="0.009" /></geometry></collision>
+  </link>
+  <joint name="L_lf_j1" type="revolute">
+    <origin xyz="-0.10947 -0.02964 -0.00017" rpy="0.08722 -0.01033 0.11755" />
+    <parent link="L_hand_base" />
+    <child link="L_lf_l1" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.0118" upper="0.2811" effort="0.5" velocity="6.28" />
+  </joint>
+  <link name="L_lf_l2">
+    <inertial>
+      <origin xyz="-0.00835 -0.00012 -0.01408" rpy="0 0 0" />
+      <mass value="0.00263" />
+      <inertia ixx="1.24027E-07" ixy="-6.08327E-10" ixz="-5.50957E-08" iyy="1.53210E-07" iyz="-1.07170E-09" izz="7.25224E-08" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/visual/lf_l2.glb" />
+      </geometry>
+    </visual>
+    <collision><origin xyz="-0.009 0.0 -0.016" rpy="0 0 0" /><geometry><sphere radius="0.01224" /></geometry></collision>
+    <collision><origin xyz="-0.013 0.0 -0.022" rpy="0 0 0" /><geometry><sphere radius="0.0116" /></geometry></collision>
+    <collision><origin xyz="0.0 -0.001 -0.004" rpy="0 0 0" /><geometry><sphere radius="0.01095" /></geometry></collision>
+    <collision><origin xyz="-0.015 -0.001 -0.028" rpy="0 0 0" /><geometry><sphere radius="0.01095" /></geometry></collision>
+  </link>
+  <joint name="L_lf_j2" type="revolute">
+    <origin xyz="-0.02974 5.03150E-05 -0.01163" rpy="2.10550E-05 0 0" />
+    <parent link="L_lf_l1" />
+    <child link="L_lf_l2" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.1073" upper="0.4014" effort="0.5" velocity="6.28" />
+    <mimic joint="L_lf_j1" multiplier="1.15037" offset="0.00186" />
+  </joint>
+
+  
+  <link name="L_th_tip" />
+  <joint name="L_th_tip_j0" type="fixed">
+    <origin xyz="-0.0230 0.0151 0.0018" rpy="0 0 0" />
+    <parent link="L_th_l2" />
+    <child link="L_th_tip" />
+  </joint>
+  <link name="L_ff_tip" />
+  <joint name="L_ff_tip_j0" type="fixed">
+    <origin xyz="-0.0300 0.0 -0.0400" rpy="0 0 0" />
+    <parent link="L_ff_l2" />
+    <child link="L_ff_tip" />
+  </joint>
+  <link name="L_mf_tip" />
+  <joint name="L_mf_tip_j0" type="fixed">
+    <origin xyz="-0.0304 0.0 -0.0397" rpy="0 0 0" />
+    <parent link="L_mf_l2" />
+    <child link="L_mf_tip" />
+  </joint>
+  <link name="L_rf_tip" />
+  <joint name="L_rf_tip_j0" type="fixed">
+    <origin xyz="-0.0272 0 -0.0420" rpy="0 0 0" />
+    <parent link="L_rf_l2" />
+    <child link="L_rf_tip" />
+  </joint>
+  <link name="L_lf_tip" />
+  <joint name="L_lf_tip_j0" type="fixed">
+    <origin xyz="-0.0182 0 -0.0306" rpy="0 0 0" />
+    <parent link="L_lf_l2" />
+    <child link="L_lf_tip" />
+  </joint>
+</robot>

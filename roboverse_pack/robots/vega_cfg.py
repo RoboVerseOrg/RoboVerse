@@ -47,9 +47,9 @@ class VegaCfg(RobotCfg):
 
         # # Head - lighter joints 
         #  #TODO ADD HEAD!
-        # "head_j1": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
-        # "head_j2": BaseActuatorCfg(velocity_limit=3.2, torque_limit=2.5, stiffness=5e3, damping=500),  # Increased stiffness to prevent drooping
-        # "head_j3": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
+        "head_j1": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
+        "head_j2": BaseActuatorCfg(velocity_limit=3.2, torque_limit=2.5, stiffness=5e3, damping=500),  # Increased stiffness to prevent drooping
+        "head_j3": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
         # # Left arm - progressive stiffness from base to tip
         "L_arm_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
         "L_arm_j2": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
@@ -118,9 +118,9 @@ class VegaCfg(RobotCfg):
         # "torso_j2": (0.0, 0.5),
         # "torso_j3": (-0.5, 0.5),
         # Head
-        # "head_j1": (-1.483, 1.483),
-        # "head_j2": (-2.792, 2.792),
-        # "head_j3": (-1.378, 1.483),
+        "head_j1": (-1.483, 1.483),
+        "head_j2": (-2.792, 2.792),
+        "head_j3": (-1.378, 1.483),
         # "head_j1": (0.0, 0.0),  # Fixed at 0 to keep head level (not drooping)
         # "head_j2": (0.0, 0.0),
         # "head_j3": (0.0, 0.0),

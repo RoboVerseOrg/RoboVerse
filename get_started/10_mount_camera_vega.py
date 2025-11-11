@@ -97,8 +97,8 @@ if __name__ == "__main__":
             name="camera_third_person",
             width=1920,
             height=1080,
-            pos=(3, -3, 2),
-            look_at=(0.0, 0.0, 0.0),
+            pos=(3, -3, 3),
+            look_at=(0.0, 0.0, 1.0),
         ),
         PinholeCameraCfg(
             name="camera_first_person",
@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
     # Set initial states - all objects translated to x=0.6 area
     z_offset = 0.0
-    x_offset = 1.0  # Shift all objects to x=0.6 area (original was around x=0.4)
+    x_offset = 0.5  # Shift all objects to x=0.6 area (original was around x=0.4)
     init_states = [
         {
             "objects": {
@@ -472,9 +472,9 @@ if __name__ == "__main__":
                 robot.name: {
                     "dof_pos_target": {
                         joint_name: (
-                            torch.rand(1).item() *0.8
+                            torch.rand(1).item() *1.0
                             * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
-                            + robot.joint_limits[joint_name][0] * 0.8
+                            + robot.joint_limits[joint_name][0] * 1.0
                         )
                         for joint_name in robot.joint_limits.keys()
                     }

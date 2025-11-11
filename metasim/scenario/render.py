@@ -11,4 +11,4 @@ from metasim.utils.configclass import configclass
 class RenderCfg:
     """Render configuration."""
 
-    mode: Literal["rasterization", "raytracing", "pathtracing"] = "pathtracing"
+    mode: Literal["rasterization", "raytracing", "pathtracing"] = "raytracing"
