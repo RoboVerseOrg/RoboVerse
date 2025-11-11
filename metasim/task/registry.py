@@ -55,6 +55,10 @@ def _discover_task_modules() -> None:
         "metasim.example.example_pack.tasks",
         "roboverse_pack.tasks",
     ]
+    if os.environ.get("METASIM_TASK_PACKAGES", None):
+        packages = os.environ["METASIM_TASK_PACKAGES"].split(":")
+        log.info(f"Scanning additional task packages: {packages}")
+        packages_to_scan.extend(packages)
 
     cwd = os.getcwd()
     if cwd not in sys.path:
