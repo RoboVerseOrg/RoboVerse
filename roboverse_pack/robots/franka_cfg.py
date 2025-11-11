@@ -32,13 +32,8 @@ class FrankaCfg(RobotCfg):
         "panda_joint5": BaseActuatorCfg(stiffness=400, damping=50, velocity_limit=2.61),
         "panda_joint6": BaseActuatorCfg(stiffness=250, damping=50, velocity_limit=2.61),
         "panda_joint7": BaseActuatorCfg(stiffness=800, damping=50, velocity_limit=2.61),
-        "panda_finger_joint1": BaseActuatorCfg(
-            stiffness=50,
-            damping=15,
-            velocity_limit=0.2,
-            is_ee=True,
-        ),
-        "panda_finger_joint2": BaseActuatorCfg(stiffness=50, damping=15, velocity_limit=0.2, is_ee=True),
+        "panda_finger_joint1": BaseActuatorCfg(stiffness=1000, damping=100, velocity_limit=0.2, is_ee=True),
+        "panda_finger_joint2": BaseActuatorCfg(stiffness=1000, damping=100, velocity_limit=0.2, is_ee=True),
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "panda_joint1": (-2.8973, 2.8973),
