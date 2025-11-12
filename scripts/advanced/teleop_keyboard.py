@@ -34,7 +34,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
-    task: str = "put_banana"
+    task: str = "pick_cube"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
@@ -45,14 +45,14 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     ## IK Solver
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
     no_gnd: bool = False
 
     ## Viser Visualization
-    enable_viser: bool = False  # Enable real-time Viser 3D visualization
+    enable_viser: bool = True  # Enable real-time Viser 3D visualization
     viser_port: int = 8080  # Port for Viser server
 
     ## Display

@@ -168,14 +168,22 @@ def parse_args() -> argparse.Namespace:
         help="碰撞体模式：convex 使用 CoACD 凸分解；triangle 使用原网格",
     )
 
-    # CoACD 参数
-    parser.add_argument("--threshold", type=float, default=0.05, help="CoACD 终止误差阈值 [0.01, 1]")
-    parser.add_argument("--max-convex-hulls", type=int, default=10, help="最大凸包数量 (-1 表示不限制)")
-    parser.add_argument("--resolution", type=int, default=2000, help="CoACD 表面采样分辨率")
-    parser.add_argument("--preprocess-resolution", type=int, default=50, help="预处理分辨率")
+    # CoACD 参数 - 精细模式默认值
+    parser.add_argument(
+        "--threshold", type=float, default=0.01, help="CoACD 终止误差阈值 [0.01, 1]，越小越精细（默认 0.01）"
+    )
+    parser.add_argument(
+        "--max-convex-hulls", type=int, default=32, help="最大凸包数量，越多越精细（默认 32，-1 表示不限制）"
+    )
+    parser.add_argument("--resolution", type=int, default=4000, help="CoACD 表面采样分辨率，越高越精细（默认 8000）")
+    parser.add_argument("--preprocess-resolution", type=int, default=200, help="预处理分辨率，越高越精细（默认 200）")
     parser.add_argument("--no-merge", action="store_true", help="禁用 CoACD 的凸包合并")
-    parser.add_argument("--decimate", action="store_true", help="启用凸包顶点简化")
-    parser.add_argument("--max-ch-vertex", type=int, default=256, help="每个凸包最大顶点数 (decimate 有效)")
+    parser.add_argument(
+        "--no-decimate", action="store_false", dest="decimate", default=True, help="禁用凸包顶点简化（默认启用）"
+    )
+    parser.add_argument(
+        "--max-ch-vertex", type=int, default=512, help="每个凸包最大顶点数，越多越精细（默认 512，decimate 有效）"
+    )
     parser.add_argument("--seed", type=int, default=0, help="随机种子")
 
     return parser.parse_args()
@@ -234,6 +242,12 @@ def main():
     print(f"URDF 已生成：{urdf_path}")
     if args.mode == "convex":
         print("凸包碰撞体输出目录：", (urdf_dir / "collision_meshes"))
+        print(
+            f"精细参数：threshold={args.threshold}, max_convex_hulls={args.max_convex_hulls}, resolution={args.resolution}"
+        )
+        print(
+            f"预处理分辨率：{args.preprocess_resolution}, decimate={args.decimate}, max_ch_vertex={args.max_ch_vertex}"
+        )
 
 
 if __name__ == "__main__":

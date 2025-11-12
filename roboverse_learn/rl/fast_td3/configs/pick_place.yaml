@@ -4,12 +4,12 @@
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
-sim: "isaacgym"
-robots: ["franka"]
+sim: "isaacsim"
+robots: ["vega"]
 task: "pick_place_base"
 decimation: 4
 train_or_eval: "train"
-headless: false
+headless: true
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -22,8 +22,8 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 800
-num_eval_envs: 800
+num_envs: 300
+num_eval_envs: 300
 total_timesteps: 2000000
 learning_starts: 10
 num_steps: 1

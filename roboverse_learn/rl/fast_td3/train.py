@@ -298,7 +298,9 @@ def main() -> None:
             robots=robots, simulator=simulator, num_envs=num_envs, headless=headless, cameras=cameras
         )
         env = task_cls(scenario_render, device=device)
+        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
+        env = TaskViserWrapper(env)
         obs_normalizer.eval()
         obs, info = env.reset()
         frames = [env.render()]

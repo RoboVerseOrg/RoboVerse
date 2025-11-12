@@ -377,20 +377,26 @@ if __name__ == "__main__":
         simulator=args.sim,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         objects=[
-            RigidObjCfg(
+            PrimitiveCubeCfg(
                 name="object",
-                usd_path="roboverse_pack/whale_doll/whale_doll.usd",
-                urdf_path="roboverse_pack/whale_doll.urdf",
+                size=(0.04, 0.04, 0.04),
+                mass=0.02,
                 physics=PhysicStateType.RIGIDBODY,
-                enabled_gravity=True,
-                fix_base_link=False,
+                color=(0.3, 0.3, 0.7),
+            ),
+            PrimitiveCubeCfg(
+                name="wall",
+                size=(0.8, 0.1, 0.3),
+                mass=1000.0,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(0.7, 0.7, 0.7),
             ),
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=True,
-                fix_base_link=False,
+                fix_base_link=True,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
@@ -461,38 +467,42 @@ if __name__ == "__main__":
         {
             "objects": {
                 "object": {
-                    "pos": torch.tensor([0.654277, -0.345737, 0.9020000]),
-                    "rot": torch.tensor([0.706448, -0.031607, 0.706347, 0.031698]),
+                    "pos": torch.tensor([0.5, -0.1, 0.9]),
+                    "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 "table": {
-                    "pos": torch.tensor([1.0, -0.2, 0.4]),
+                    "pos": torch.tensor([0.7, -0.2, 0.4]),
                     "rot": torch.tensor([1, 0, 0, 0]),
                 },
                 # Trajectory waypoints (world coordinates)
+                "wall": {
+                    "pos": torch.tensor([0.710000, -0.200000, 0.760000]),
+                    "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                },
                 "traj_marker_0": {
-                    "pos": torch.tensor([0.610000, -0.280000, 0.150000]),
+                    "pos": torch.tensor([0.610000, -0.280000, 1.150000]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_1": {
-                    "pos": torch.tensor([0.600000, -0.190000, 0.220000]),
+                    "pos": torch.tensor([0.600000, -0.190000, 1.220000]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_2": {
-                    "pos": torch.tensor([0.560000, -0.110000, 0.360000]),
+                    "pos": torch.tensor([0.560000, -0.110000, 1.360000]),
                     "rot": torch.tensor([0.998750, 0.000000, 0.049979, -0.000000]),
                 },
                 "traj_marker_3": {
-                    "pos": torch.tensor([0.530000, 0.010000, 0.470000]),
+                    "pos": torch.tensor([0.530000, 0.010000, 1.470000]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_4": {
-                    "pos": torch.tensor([0.510000, 0.130000, 0.460000]),
+                    "pos": torch.tensor([0.510000, 0.130000, 1.460000]),
                     "rot": torch.tensor([0.984726, 0.000000, 0.174108, -0.000000]),
                 },
             },
             "robots": {
                 "vega": {
-                    "pos": torch.tensor([0.0, 0.0, 0.0]),
+                    "pos": torch.tensor([-0.2, 0.0, 0.0]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         # Base wheels - neutral

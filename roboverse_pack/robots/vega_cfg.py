@@ -13,23 +13,22 @@ class VegaCfg(RobotCfg):
     The Vega is a full-body humanoid robot with:
     - Mobile base with wheels
     - Torso with 3 DOF
-    - Head with 3 DOF
+    - Head (fixed)
     - Two 7-DOF arms (left and right)
     - Two 5-finger dexterous hands (left and right)
     - Various sensors (cameras, lidar, IMU, ultrasonic)
     """
 
     name: str = "vega"
-    num_joints: int = 48  # Total movable joints (excluding fixed joints)
+    num_joints: int = 45  # Total movable joints (excluding fixed joints)
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
     urdf_path: str = "roboverse_pack/dexmate-urdf/robots/humanoid/vega_1/vega.urdf"
-    usd_path: str = "roboverse_pack/dexmate-urdf/robots/humanoid/vega_1/vega/vega.usd"
+    usd_path: str = "/home/priosin/murphy/demos/RoboVerse/roboverse_pack/robots_vega/humanoid/vega_1/vega/vega.usd"
 
     # Physical properties
-    enabled_gravity: bool = False
-    collapse_fixed_joints: bool = False  # Keep fixed joints so head_l3 link exists for camera mounting
+    enabled_gravity: bool = False  # Disable gravity for default setup
 
     # ==================== Actuator Configuration ====================
     actuators: dict[str, BaseActuatorCfg] = {
@@ -50,17 +49,6 @@ class VegaCfg(RobotCfg):
         "torso_j3": BaseActuatorCfg(
             velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5
         ),  # Increased stiffness for stability
-        # # Head - lighter joints
-        #  #TODO ADD HEAD!
-        "head_j1": BaseActuatorCfg(
-            velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3
-        ),  # Increased stiffness to prevent drooping
-        "head_j2": BaseActuatorCfg(
-            velocity_limit=3.2, torque_limit=2.5, stiffness=5e3, damping=500
-        ),  # Increased stiffness to prevent drooping
-        "head_j3": BaseActuatorCfg(
-            velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3
-        ),  # Increased stiffness to prevent drooping
         # # Left arm - progressive stiffness from base to tip
         "L_arm_j1": BaseActuatorCfg(
             velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3
@@ -116,13 +104,7 @@ class VegaCfg(RobotCfg):
     # ==================== Joint Limits ====================
     # Joint angle limits from URDF (in radians)
     joint_limits: dict[str, tuple[float, float]] = {
-        # Base wheels - continuous joints from URDF (no limits, allow unlimited rotation)
-        # "B_wheel_j1": (-0.3, 0.3),  # Continuous joint (no limit in URDF)
-        # "B_wheel_j2": (-0.3, 0.3),  # Continuous joint (no limit in URDF)
-        # "R_wheel_j1": (-0.0, 0.0),  # Revolute joint with limits from URDF
-        # "R_wheel_j2": (-0.3, 0.3),  # Continuous joint (no limit in URDF)
-        # "L_wheel_j1": (-0.0, 0.0),  # Revolute joint with limits from URDF
-        # "L_wheel_j2": (-0.3, 0.3),  # Continuous joint (no limit in URDF)
+        # Base wheels - locked at 0.0
         "B_wheel_j1": (0.0, 0.0),
         "B_wheel_j2": (0.0, 0.0),
         "R_wheel_j1": (0.0, 0.0),
@@ -133,16 +115,6 @@ class VegaCfg(RobotCfg):
         "torso_j1": (0.0, 1.570),
         "torso_j2": (0.0, 3.141),
         "torso_j3": (-1.570, 1.570),
-        # "torso_j1": (0.0, 0.5),
-        # "torso_j2": (0.0, 0.5),
-        # "torso_j3": (-0.5, 0.5),
-        # Head
-        "head_j1": (-1.483, 1.483),
-        "head_j2": (-2.792, 2.792),
-        "head_j3": (-1.378, 1.483),
-        # "head_j1": (0.0, 0.0),  # Fixed at 0 to keep head level (not drooping)
-        # "head_j2": (0.0, 0.0),
-        # "head_j3": (0.0, 0.0),
         # Left arm
         "L_arm_j1": (-3.071, 3.071),
         "L_arm_j2": (-0.453, 1.553),
@@ -172,19 +144,19 @@ class VegaCfg(RobotCfg):
         "L_rf_j2": (-1.1156, 0.3599),
         "L_lf_j1": (-1.0118, 0.2811),
         "L_lf_j2": (-1.1073, 0.4014),
-        # Right hand - Thumb
-        "R_th_j0": (-0.0158, 1.605),
-        "R_th_j1": (-0.3468, 0.1834),
-        "R_th_j2": (-0.4298, 0.2731),
-        # Right hand - Fingers
-        "R_ff_j1": (-1.0946, 0.2891),
-        "R_ff_j2": (-1.2101, 0.3681),
-        "R_mf_j1": (-1.0844, 0.2801),
-        "R_mf_j2": (-1.2026, 0.3533),
-        "R_rf_j1": (-1.0154, 0.2840),
-        "R_rf_j2": (-1.1156, 0.3599),
-        "R_lf_j1": (-1.0118, 0.2811),
-        "R_lf_j2": (-1.1073, 0.4014),
+        # Right hand - locked at 0.0
+        "R_th_j0": (0.0, 0.0),
+        "R_th_j1": (0.0, 0.0),
+        "R_th_j2": (0.0, 0.0),
+        # Right hand - Fingers (locked at 0.0)
+        "R_ff_j1": (0.0, 0.0),
+        "R_ff_j2": (0.0, 0.0),
+        "R_mf_j1": (0.0, 0.0),
+        "R_mf_j2": (0.0, 0.0),
+        "R_rf_j1": (0.0, 0.0),
+        "R_rf_j2": (0.0, 0.0),
+        "R_lf_j1": (0.0, 0.0),
+        "R_lf_j2": (0.0, 0.0),
     }
 
     # ==================== Control Types ====================

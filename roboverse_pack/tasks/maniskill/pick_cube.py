@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
-from metasim.scenario.objects import PrimitiveCubeCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 
@@ -15,12 +15,14 @@ class PickCubeTask(ManiskillBaseTask):
 
     scenario = ScenarioCfg(
         objects=[
-            PrimitiveCubeCfg(
+            RigidObjCfg(
                 name="cube",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                usd_path="roboverse_pack/whale_doll/whale_doll.usd",
+                urdf_path="roboverse_pack/whale_doll.urdf",
                 physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
+                enabled_gravity=True,
+                fix_base_link=False,
+                scale=(0.3, 0.3, 0.3),
             )
         ],
         robots=["franka"],
