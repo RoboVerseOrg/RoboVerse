@@ -28,7 +28,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
     # Default configuration - subclasses should override
     DEFAULT_CONFIG = {
-        "action_scale": 0.04,
+        "action_scale": 0.1,
         "reward_config": {
             "scales": {
                 "gripper_approach": 2.0,
@@ -44,7 +44,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             "grasp_check_distance": 0.02,
         },
         "randomization": {
-            "box_pos_range": 0.3,
+            "box_pos_range": 0.1,
             "robot_pos_noise": 0.0,
             "joint_noise_range": 0.05,
         },
@@ -656,19 +656,19 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                     },
                     # Trajectory waypoints (world coordinates)
                     "traj_marker_0": {
-                        "pos": torch.tensor([0.460000, -0.460000, 1.020000]),
+                        "pos": torch.tensor([0.460000, -0.00000, 1.020000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_1": {
-                        "pos": torch.tensor([0.400000, -0.320000, 1.220000]),
+                        "pos": torch.tensor([0.400000, -0.00000, 1.220000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_2": {
-                        "pos": torch.tensor([0.340000, -0.190000, 1.360000]),
+                        "pos": torch.tensor([0.340000, -0.00000, 1.360000]),
                         "rot": torch.tensor([0.998750, 0.000000, 0.049979, 0.000000]),
                     },
                     "traj_marker_3": {
-                        "pos": torch.tensor([0.430000, -0.070000, 1.220000]),
+                        "pos": torch.tensor([0.430000, -0.00000, 1.220000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_4": {
