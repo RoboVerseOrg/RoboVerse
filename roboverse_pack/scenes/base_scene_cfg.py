@@ -17,3 +17,5 @@ class SceneCfg:
     quat: tuple[float, float, float, float] | None = None
 
     scale: tuple[float, float, float] | None = None
+
+

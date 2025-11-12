@@ -41,26 +41,45 @@ class VegaCfg(RobotCfg):
         "L_wheel_j1": BaseActuatorCfg(velocity_limit=3.0, torque_limit=6.0, stiffness=5e3, damping=500),
         "L_wheel_j2": BaseActuatorCfg(velocity_limit=12.0, torque_limit=16.0, stiffness=1e4, damping=1e3),
         # Torso - high torque joints need high stiffness
-        "torso_j1": BaseActuatorCfg(velocity_limit=0.9, torque_limit=700.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
-        "torso_j2": BaseActuatorCfg(velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
-        "torso_j3": BaseActuatorCfg(velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5),  # Increased stiffness for stability
-
-        # # Head - lighter joints 
+        "torso_j1": BaseActuatorCfg(
+            velocity_limit=0.9, torque_limit=700.0, stiffness=1e6, damping=1e5
+        ),  # Increased stiffness for stability
+        "torso_j2": BaseActuatorCfg(
+            velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5
+        ),  # Increased stiffness for stability
+        "torso_j3": BaseActuatorCfg(
+            velocity_limit=0.9, torque_limit=380.0, stiffness=1e6, damping=1e5
+        ),  # Increased stiffness for stability
+        # # Head - lighter joints
         #  #TODO ADD HEAD!
-        "head_j1": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
-        "head_j2": BaseActuatorCfg(velocity_limit=3.2, torque_limit=2.5, stiffness=5e3, damping=500),  # Increased stiffness to prevent drooping
-        "head_j3": BaseActuatorCfg(velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3),  # Increased stiffness to prevent drooping
+        "head_j1": BaseActuatorCfg(
+            velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3
+        ),  # Increased stiffness to prevent drooping
+        "head_j2": BaseActuatorCfg(
+            velocity_limit=3.2, torque_limit=2.5, stiffness=5e3, damping=500
+        ),  # Increased stiffness to prevent drooping
+        "head_j3": BaseActuatorCfg(
+            velocity_limit=3.2, torque_limit=6.0, stiffness=1e4, damping=1e3
+        ),  # Increased stiffness to prevent drooping
         # # Left arm - progressive stiffness from base to tip
-        "L_arm_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
-        "L_arm_j2": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
+        "L_arm_j1": BaseActuatorCfg(
+            velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3
+        ),  # Increased for stability
+        "L_arm_j2": BaseActuatorCfg(
+            velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3
+        ),  # Increased for stability
         "L_arm_j3": BaseActuatorCfg(velocity_limit=2.7, torque_limit=80.0, stiffness=2e4, damping=2e3),
         "L_arm_j4": BaseActuatorCfg(velocity_limit=2.7, torque_limit=80.0, stiffness=1e4, damping=1e3),
         "L_arm_j5": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         "L_arm_j6": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         "L_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Right arm - progressive stiffness from base to tip
-        "R_arm_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
-        "R_arm_j2": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3),  # Increased for stability
+        "R_arm_j1": BaseActuatorCfg(
+            velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3
+        ),  # Increased for stability
+        "R_arm_j2": BaseActuatorCfg(
+            velocity_limit=2.4, torque_limit=150.0, stiffness=5e4, damping=5e3
+        ),  # Increased for stability
         "R_arm_j3": BaseActuatorCfg(velocity_limit=2.7, torque_limit=80.0, stiffness=2e4, damping=2e3),
         "R_arm_j4": BaseActuatorCfg(velocity_limit=2.7, torque_limit=80.0, stiffness=1e4, damping=1e3),
         "R_arm_j5": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
@@ -230,10 +249,38 @@ class VegaCfg(RobotCfg):
 
     # ==================== End Effector Configuration ====================
     # End effector link names from URDF
-    ee_body_name: str = "L_ee"  # Default to left end effector
-    # Alternative: could define both if needed
-    # left_ee_body_name: str = "L_ee"
-    # right_ee_body_name: str = "R_ee"
+    # URDF structure: L_arm_l7 (last movable) -> L_arm_l8 (fixed, with geometry) -> L_ee (fixed, marker) -> L_hand_base (fixed, hand)
+    # Since collapse_fixed_joints=False, all fixed links are preserved in body_names
+    # L_arm_l8 is the best choice as it:
+    #   - Is the last arm link with actual geometry (visual/collision meshes)
+    #   - Represents the natural end of the arm structure
+    #   - Should reliably exist in body_names
+    #   - Is the boundary between arm and hand
+    ee_body_name: str = (
+        "L_arm_l7"  # Last arm link with geometry (fixed joint, but preserved when collapse_fixed_joints=False)
+    )
+    # Alternative options:
+    # - "L_arm_l7": Last movable arm link (revolute joint), but less ideal as it's before the arm tip geometry
+    # - "L_ee": End effector marker link (fixed, lightweight marker only, same position as L_arm_l8)
+    # - "L_hand_base": Hand base link (fixed, part of hand structure, not arm)
+
+    # ==================== Gripper Configuration ====================
+    # Left hand gripper open/close positions (all left hand finger joints)
+    # Order: L_th_j0, L_th_j1, L_th_j2, L_ff_j1, L_ff_j2, L_mf_j1, L_mf_j2, L_rf_j1, L_rf_j2, L_lf_j1, L_lf_j2
+    gripper_open_q: list[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Open hand
+    gripper_close_q: list[float] = [
+        1.605,  # L_th_j0: thumb abduction
+        0.1834,  # L_th_j1: thumb flexion
+        0.2731,  # L_th_j2: thumb tip
+        0.2891,  # L_ff_j1: index finger proximal
+        0.3681,  # L_ff_j2: index finger distal
+        0.2801,  # L_mf_j1: middle finger proximal
+        0.3533,  # L_mf_j2: middle finger distal
+        0.2840,  # L_rf_j1: ring finger proximal
+        0.3599,  # L_rf_j2: ring finger distal
+        0.2811,  # L_lf_j1: little finger proximal
+        0.4014,  # L_lf_j2: little finger distal
+    ]  # Closed hand (using upper limits)
 
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)

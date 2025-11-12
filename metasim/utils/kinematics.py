@@ -173,11 +173,18 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         cfg = _solve_ik_jax_without_seed(pk_robot, jnp.array(target_link_index), jnp.array(quat_np), jnp.array(pos_np))
         return torch.from_numpy(np.array(cfg)).to(pos_target.device)
 
+    actuator_names = set(robot_cfg.actuators.keys()) if getattr(robot_cfg, "actuators", None) else None
+    if actuator_names:
+        joint_names = [name for name in pk_robot.joints.names if name in actuator_names]
+    else:
+        joint_names = list(pk_robot.joints.names)
+
     return {
         "robot": pk_robot,
         "solve_ik_with_seed": solve_ik_with_seed,
         "solve_ik_without_seed": solve_ik_without_seed,
         "ee_link_name": ee_link_name,
+        "joint_names": joint_names,
     }
 
 

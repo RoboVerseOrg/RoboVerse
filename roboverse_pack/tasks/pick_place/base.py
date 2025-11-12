@@ -18,7 +18,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
     Reward shaping and task design adapted from DeepMind's Mujoco Playground
     (Apache 2.0 License), re-implemented for RoboVerse.
-    
+
     Subclasses should override:
     - DEFAULT_CONFIG: Task-specific configuration
     - scenario: ScenarioCfg with objects and robots
@@ -62,13 +62,15 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 physics=PhysicStateType.RIGIDBODY,
                 color=(1.0, 0.0, 0.0),
             ),
-            PrimitiveCubeCfg(
+            RigidObjCfg(
                 name="table",
-                size=(0.2, 0.3, 0.4),
-                mass=10.0,
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                color=(0.8, 0.6, 0.4),
+                enabled_gravity=False,
                 fix_base_link=True,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
             ),
             # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
             RigidObjCfg(
@@ -127,7 +129,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 fix_base_link=True,
             ),
         ],
-        robots=["franka"],
+        robots=["vega"],
         sim_params=SimParamCfg(
             dt=0.005,
         ),
@@ -236,7 +238,9 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # Keep obstacle in place (no randomization)
         obstacle_pos = states.objects[self.obstacle_name].root_state[:, 0:3].clone()
         obstacle_quat = states.objects[self.obstacle_name].root_state[:, 3:7].clone()
-        states.objects[self.obstacle_name].root_state = torch.cat([obstacle_pos, obstacle_quat, zero_vel, zero_ang_vel], dim=-1)
+        states.objects[self.obstacle_name].root_state = torch.cat(
+            [obstacle_pos, obstacle_quat, zero_vel, zero_ang_vel], dim=-1
+        )
 
         marker_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).unsqueeze(0).expand(self.num_envs, -1)
 
@@ -340,13 +344,15 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         newly_released = (~is_grasping) & old_grasped
 
         if newly_grasped.any() and newly_grasped[0]:
-            log.info(f"[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
-                     f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}")
-        
+            log.info(
+                f"[Env 0] Object grasped! Gripper distance: {gripper_box_dist[0].item():.4f}m, "
+                f"Gripper joint: {gripper_joint_pos[0].mean().item():.4f}"
+            )
+
         if newly_released.any() and newly_released[0]:
             log.info(f"[Env 0] Object released! Gripper distance: {gripper_box_dist[0].item():.4f}m")
-        
-        step_count = getattr(self, '_debug_step_count', 0)
+
+        step_count = getattr(self, "_debug_step_count", 0)
         self._debug_step_count = step_count + 1
 
         if (step_count % 100 == 0) or terminated[0] or time_out[0]:
@@ -357,14 +363,16 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             grasped = self.object_grasped[0].item()
 
             status = "Episode End" if (terminated[0] or time_out[0]) else f"Step {step_count}"
-            log.info(f"[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
-                     f"Current: #{current_idx} | Grasped: {grasped} | "
-                     f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)")
-            
+            log.info(
+                f"[{status} - Env 0] Progress: {num_reached}/{self.num_waypoints} waypoints | "
+                f"Current: #{current_idx} | Grasped: {grasped} | "
+                f"Distance to target: {distance:.4f}m (threshold: {self.reach_threshold}m)"
+            )
+
             if step_count % 100 == 0:
                 log.debug(f"  Target pos: {target_pos_final.cpu().numpy()}")
                 log.debug(f"  EE pos: {updated_gripper_pos[0].cpu().numpy()}")
-        
+
         return obs, reward, terminated, time_out, info
 
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
@@ -416,20 +424,19 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             if newly_reached.any():
                 if newly_reached[0]:
                     wp_idx = self.current_waypoint_idx[0].item()
-                    log.info(f"[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m")
-                
-                self.waypoints_reached[
-                    newly_reached,
-                    self.current_waypoint_idx[newly_reached]
-                ] = True
-                
+                    log.info(
+                        f"[Env 0] Reached waypoint #{wp_idx}! Distance: {distance[0].item():.4f}m < {self.reach_threshold}m"
+                    )
+
+                self.waypoints_reached[newly_reached, self.current_waypoint_idx[newly_reached]] = True
+
                 can_advance = newly_reached & (self.current_waypoint_idx < self.num_waypoints - 1)
 
                 if can_advance.any() and can_advance[0]:
                     old_idx = self.current_waypoint_idx[0].item()
                     new_idx = old_idx + 1
                     log.info(f"   -> Advancing to waypoint #{new_idx}")
-                
+
                 self.current_waypoint_idx[can_advance] += 1
 
                 if can_advance.any():
@@ -514,8 +521,8 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                         "rot": torch.tensor([0.706448, -0.031607, 0.706347, 0.031698]),
                     },
                     "table": {
-                        "pos": torch.tensor([0.499529, 0.253941, 0.200000]),
-                        "rot": torch.tensor([0.999067, -0.000006, 0.000009, 0.043198]),
+                        "pos": torch.tensor([0.9, -0.2, 0.4]),
+                        "rot": torch.tensor([1, 0, 0, 0]),
                     },
                     # Trajectory waypoints (world coordinates)
                     "traj_marker_0": {
@@ -540,19 +547,65 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                     },
                 },
                 "robots": {
-                    "franka": {
-                        "pos": torch.tensor([-0.025, -0.160, 0.018054]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    "vega": {
+                        "pos": torch.tensor([0.0, 0.0, 0.0]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                         "dof_pos": {
-                            "panda_finger_joint1": 0.04,
-                            "panda_finger_joint2": 0.04,
-                            "panda_joint1": 0.0,
-                            "panda_joint2": -0.785398,
-                            "panda_joint3": 0.0,
-                            "panda_joint4": -2.356194,
-                            "panda_joint5": 0.0,
-                            "panda_joint6": 1.570796,
-                            "panda_joint7": 0.785398,
+                            # Base wheels - neutral
+                            "B_wheel_j1": 0.0,
+                            "B_wheel_j2": 0.0,
+                            "R_wheel_j1": 0.0,
+                            "R_wheel_j2": 0.0,
+                            "L_wheel_j1": 0.0,
+                            "L_wheel_j2": 0.0,
+                            # Torso - upright
+                            "torso_j1": 0.0,
+                            "torso_j2": 0.0,
+                            "torso_j3": 0.0,
+                            # Head - forward looking
+                            # "head_j1": 0.0,
+                            # "head_j2": 0.0,
+                            # "head_j3": 0.0,
+                            # Left arm - neutral pose
+                            "L_arm_j1": 0.0,
+                            "L_arm_j2": 0.0,
+                            "L_arm_j3": 0.0,
+                            "L_arm_j4": 0.0,
+                            "L_arm_j5": 0.0,
+                            "L_arm_j6": 0.0,
+                            "L_arm_j7": 0.0,
+                            # Right arm - neutral pose
+                            "R_arm_j1": 0.0,
+                            "R_arm_j2": 0.0,
+                            "R_arm_j3": 0.0,
+                            "R_arm_j4": 0.0,
+                            "R_arm_j5": 0.0,
+                            "R_arm_j6": 0.0,
+                            "R_arm_j7": 0.0,
+                            # Left hand - open
+                            "L_th_j0": 0.0,
+                            "L_th_j1": 0.0,
+                            "L_th_j2": 0.0,
+                            "L_ff_j1": 0.0,
+                            "L_ff_j2": 0.0,
+                            "L_mf_j1": 0.0,
+                            "L_mf_j2": 0.0,
+                            "L_rf_j1": 0.0,
+                            "L_rf_j2": 0.0,
+                            "L_lf_j1": 0.0,
+                            "L_lf_j2": 0.0,
+                            # Right hand - open
+                            "R_th_j0": 0.0,
+                            "R_th_j1": 0.0,
+                            "R_th_j2": 0.0,
+                            "R_ff_j1": 0.0,
+                            "R_ff_j2": 0.0,
+                            "R_mf_j1": 0.0,
+                            "R_mf_j2": 0.0,
+                            "R_rf_j1": 0.0,
+                            "R_rf_j2": 0.0,
+                            "R_lf_j1": 0.0,
+                            "R_lf_j2": 0.0,
                         },
                     },
                 },
@@ -613,8 +666,8 @@ class PickPlaceBase(TrajectoryTrackingTaskBase):
                         "rot": torch.tensor([0.706448, -0.031607, 0.706347, 0.031698]),
                     },
                     "table": {
-                        "pos": torch.tensor([0.499529, 0.253941, 0.200000]),
-                        "rot": torch.tensor([0.999067, -0.000006, 0.000009, 0.043198]),
+                        "pos": torch.tensor([0.9, -0.2, 0.4]),
+                        "rot": torch.tensor([1, 0, 0, 0]),
                     },
                     # Trajectory waypoints (world coordinates)
                     "traj_marker_0": {
@@ -639,19 +692,65 @@ class PickPlaceBase(TrajectoryTrackingTaskBase):
                     },
                 },
                 "robots": {
-                    "franka": {
-                        "pos": torch.tensor([-0.025, -0.160, 0.018054]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    "vega": {
+                        "pos": torch.tensor([0.0, 0.0, 0.0]),
+                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                         "dof_pos": {
-                            "panda_finger_joint1": 0.04,
-                            "panda_finger_joint2": 0.04,
-                            "panda_joint1": 0.0,
-                            "panda_joint2": -0.785398,
-                            "panda_joint3": 0.0,
-                            "panda_joint4": -2.356194,
-                            "panda_joint5": 0.0,
-                            "panda_joint6": 1.570796,
-                            "panda_joint7": 0.785398,
+                            # Base wheels - neutral
+                            "B_wheel_j1": 0.0,
+                            "B_wheel_j2": 0.0,
+                            "R_wheel_j1": 0.0,
+                            "R_wheel_j2": 0.0,
+                            "L_wheel_j1": 0.0,
+                            "L_wheel_j2": 0.0,
+                            # Torso - upright
+                            "torso_j1": 0.0,
+                            "torso_j2": 0.0,
+                            "torso_j3": 0.0,
+                            # Head - forward looking
+                            # "head_j1": 0.0,
+                            # "head_j2": 0.0,
+                            # "head_j3": 0.0,
+                            # Left arm - neutral pose
+                            "L_arm_j1": 0.0,
+                            "L_arm_j2": 0.0,
+                            "L_arm_j3": 0.0,
+                            "L_arm_j4": 0.0,
+                            "L_arm_j5": 0.0,
+                            "L_arm_j6": 0.0,
+                            "L_arm_j7": 0.0,
+                            # Right arm - neutral pose
+                            "R_arm_j1": 0.0,
+                            "R_arm_j2": 0.0,
+                            "R_arm_j3": 0.0,
+                            "R_arm_j4": 0.0,
+                            "R_arm_j5": 0.0,
+                            "R_arm_j6": 0.0,
+                            "R_arm_j7": 0.0,
+                            # Left hand - open
+                            "L_th_j0": 0.0,
+                            "L_th_j1": 0.0,
+                            "L_th_j2": 0.0,
+                            "L_ff_j1": 0.0,
+                            "L_ff_j2": 0.0,
+                            "L_mf_j1": 0.0,
+                            "L_mf_j2": 0.0,
+                            "L_rf_j1": 0.0,
+                            "L_rf_j2": 0.0,
+                            "L_lf_j1": 0.0,
+                            "L_lf_j2": 0.0,
+                            # Right hand - open
+                            "R_th_j0": 0.0,
+                            "R_th_j1": 0.0,
+                            "R_th_j2": 0.0,
+                            "R_ff_j1": 0.0,
+                            "R_ff_j2": 0.0,
+                            "R_mf_j1": 0.0,
+                            "R_mf_j2": 0.0,
+                            "R_rf_j1": 0.0,
+                            "R_rf_j2": 0.0,
+                            "R_lf_j1": 0.0,
+                            "R_lf_j2": 0.0,
                         },
                     },
                 },

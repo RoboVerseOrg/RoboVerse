@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from metasim.scenario.render import RenderCfg
+
 try:
     import isaacgym  # noqa: F401
 except ImportError:
@@ -20,6 +22,11 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
+import imageio.v2 as iio
+import numpy as np
+from huggingface_hub import snapshot_download
+from numpy.typing import NDArray
+
 from metasim.constants import PhysicStateType
 from metasim.randomization import SceneRandomizer
 from metasim.randomization.presets.scene_presets import ScenePresets
@@ -30,10 +37,6 @@ from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg, Rigid
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.setup_util import get_handler
-from huggingface_hub import snapshot_download
-import imageio.v2 as iio
-import numpy as np
-from numpy.typing import NDArray
 from metasim.utils.state import TensorState
 
 if __name__ == "__main__":
@@ -81,6 +84,7 @@ if __name__ == "__main__":
         simulator=args.sim,
         headless=args.headless,
         num_envs=args.num_envs,
+        render = RenderCfg(mode="raytracing"),
     )
 
     from scipy.spatial.transform import Rotation as R

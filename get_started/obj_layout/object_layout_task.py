@@ -395,8 +395,8 @@ def obs_to_state_dict(obs, scenario):
 
 @configclass
 class Args:
-    task: str = "put_banana"
-    robot: str = "franka"
+    task: str = "pick_place_base"
+    robot: str = "vega"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
@@ -405,7 +405,7 @@ class Args:
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
 
     ## Control parameters
     step_size: float = 0.01
