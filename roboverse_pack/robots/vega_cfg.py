@@ -123,14 +123,14 @@ class VegaCfg(RobotCfg):
         "L_arm_j5": (-3.071, 3.071),
         "L_arm_j6": (-1.396, 1.396),
         "L_arm_j7": (-1.378, 1.117),
-        # Right arm
-        "R_arm_j1": (-3.071, 3.071),
-        "R_arm_j2": (-1.553, 0.453),
-        "R_arm_j3": (-3.071, 3.071),
-        "R_arm_j4": (-3.071, 0.244),
-        "R_arm_j5": (-3.071, 3.071),
-        "R_arm_j6": (-1.396, 1.396),
-        "R_arm_j7": (-1.117, 1.378),
+        # Right arm - locked at 0.0
+        "R_arm_j1": (0.0, 0.0),
+        "R_arm_j2": (0.0, 0.0),
+        "R_arm_j3": (0.0, 0.0),
+        "R_arm_j4": (0.0, 0.0),
+        "R_arm_j5": (0.0, 0.0),
+        "R_arm_j6": (0.0, 0.0),
+        "R_arm_j7": (0.0, 0.0),
         # Left hand - Thumb
         "L_th_j0": (-0.0158, 1.605),
         "L_th_j1": (-0.3468, 0.1834),
@@ -239,7 +239,6 @@ class VegaCfg(RobotCfg):
     # ==================== Gripper Configuration ====================
     # Left hand gripper open/close positions (all left hand finger joints)
     # Order: L_th_j0, L_th_j1, L_th_j2, L_ff_j1, L_ff_j2, L_mf_j1, L_mf_j2, L_rf_j1, L_rf_j2, L_lf_j1, L_lf_j2
-    gripper_open_q: list[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Open hand
     gripper_close_q: list[float] = [
         1.605,  # L_th_j0: thumb abduction
         0.1834,  # L_th_j1: thumb flexion
@@ -253,6 +252,19 @@ class VegaCfg(RobotCfg):
         0.2811,  # L_lf_j1: little finger proximal
         0.4014,  # L_lf_j2: little finger distal
     ]  # Closed hand (using upper limits)
+    gripper_open_q: list[float] = [
+        0.535,  # L_th_j0: thumb abduction (1.605 / 3)
+        0.0611,  # L_th_j1: thumb flexion (0.1834 / 3)
+        0.0910,  # L_th_j2: thumb tip (0.2731 / 3)
+        0.0964,  # L_ff_j1: index finger proximal (0.2891 / 3)
+        0.1227,  # L_ff_j2: index finger distal (0.3681 / 3)
+        0.0934,  # L_mf_j1: middle finger proximal (0.2801 / 3)
+        0.1178,  # L_mf_j2: middle finger distal (0.3533 / 3)
+        0.0947,  # L_rf_j1: ring finger proximal (0.2840 / 3)
+        0.1200,  # L_rf_j2: ring finger distal (0.3599 / 3)
+        0.0937,  # L_lf_j1: little finger proximal (0.2811 / 3)
+        0.1338,  # L_lf_j2: little finger distal (0.4014 / 3)
+    ]  # Open hand (1/3 of close positions)
 
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)
