@@ -32,8 +32,8 @@ Register for a Weights & Biases (wandb) account to obtain an API key.
 | ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | `task_name_set`     | Name of the task                                             | `close_box`                                                  |
 | `sim_set`           | Name of the selected simulator                               | `isaacsim`                                                   |
-| `max_demo_idx`      | Maximum index of demos to collect                            | `100`                                                        |
-| `expert_data_num`   | Number of expert demonstrations to process                   | `100`                                                        |
+| `num_demo_success`  | Number of successful demos to collect                        | `100`                                                        |
+| `expert_data_num`   | Number of expert demos to evaluate                           | `100`                                                        |
 | `metadata_dir`      | Path to the directory containing demonstration metadata saved by collect_demo | `~/RoboVerse/roboverse_demo/demo_isaacsim/close_box-/robot-franka` |
 | `action_space`      | Type of action space to use (options: 'joint_pos' or 'ee')   | `joint_pos`                                                  |
 | `observation_space` | Type of observation space to use (options: 'joint_pos' or 'ee') | `joint_pos`                                                  |
