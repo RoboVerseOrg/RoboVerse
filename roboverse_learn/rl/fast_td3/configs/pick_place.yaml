@@ -22,8 +22,8 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 300
-num_eval_envs: 300
+num_envs: 600
+num_eval_envs: 600
 total_timesteps: 2000000
 learning_starts: 10
 num_steps: 1
@@ -40,15 +40,15 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 6
+num_updates: 5
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
 critic_learning_rate: 0.0003
 actor_learning_rate: 0.0003
 weight_decay: 0.1
-critic_hidden_dim: 512
-actor_hidden_dim: 256
+critic_hidden_dim: 256
+actor_hidden_dim: 128
 init_scale: 0.01
 num_atoms: 101
 

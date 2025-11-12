@@ -24,8 +24,8 @@ class VegaCfg(RobotCfg):
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
-    urdf_path: str = "roboverse_pack/dexmate-urdf/robots/humanoid/vega_1/vega.urdf"
-    usd_path: str = "/home/priosin/murphy/demos/RoboVerse/roboverse_pack/robots_vega/humanoid/vega_1/vega/vega.usd"
+    urdf_path: str = "/home/balen/murphy/isaaclab_rv/1/RoboVerse/roboverse_pack/robots_vega/humanoid/vega_1/vega.urdf"
+    usd_path: str = "roboverse_pack/robots_vega/humanoid/vega_1/vega/vega.usd"
 
     # Physical properties
     enabled_gravity: bool = False  # Disable gravity for default setup
@@ -74,31 +74,31 @@ class VegaCfg(RobotCfg):
         "R_arm_j6": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         "R_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Left hand - Thumb
-        "L_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=500, damping=50),
-        "L_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=500, damping=50),
-        "L_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
+        "L_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.5, stiffness=800, damping=60),
+        "L_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.5, stiffness=800, damping=60),
+        "L_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.2, stiffness=600, damping=40),
         # Left hand - Fingers
-        "L_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "L_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
+        "L_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "L_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
         # Right hand - Thumb
-        "R_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=500, damping=50),
-        "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=500, damping=50),
-        "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
+        "R_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.5, stiffness=800, damping=60),
+        "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.5, stiffness=800, damping=60),
+        "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.2, stiffness=600, damping=40),
         # Right hand - Fingers
-        "R_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
-        "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.5, stiffness=300, damping=30),
+        "R_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
+        "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.0, stiffness=600, damping=40),
     }
 
     # ==================== Joint Limits ====================
@@ -112,9 +112,9 @@ class VegaCfg(RobotCfg):
         "L_wheel_j1": (0.0, 0.0),
         "L_wheel_j2": (0.0, 0.0),
         # Torso
-        "torso_j1": (0.0, 1.570),
-        "torso_j2": (0.0, 3.141),
-        "torso_j3": (-1.570, 1.570),
+        "torso_j1": (0.2, 0.2),
+        "torso_j2": (0.5, 1.0),
+        "torso_j3": (0.0, 0.0),
         # Left arm
         "L_arm_j1": (-3.071, 3.071),
         "L_arm_j2": (-0.453, 1.553),
@@ -278,7 +278,7 @@ class VegaCfg(RobotCfg):
         "L_wheel_j2": 0.0,
         # Torso - upright
         "torso_j1": 0.0,
-        "torso_j2": 0.0,
+        "torso_j2": 0.5,
         "torso_j3": 0.0,
         # Head - forward looking
         # "head_j1": 0.0,

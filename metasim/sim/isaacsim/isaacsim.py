@@ -461,8 +461,28 @@ class IsaacsimHandler(BaseSimHandler):
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
         if isinstance(actions, torch.Tensor):
-            reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
-            action_tensor_all = actions[:, reverse_reindex]
+            # Print original action for env 0
+            # The input actions are ordered alphabetically (from rl_task.py)
+            # We need to map them to robot.actuators order (which is used later)
+            # Get alphabetically sorted joint names (this is what actions are ordered by)
+            sorted_joint_names = self.get_joint_names(self.robots[0].name, sort=True)
+
+            # Get actionable joint names in robot.actuators order (this is what we'll use)
+            actionable_joint_names = [
+                jn for jn in self.robots[0].actuators if self.robots[0].actuators[jn].fully_actuated
+            ]
+
+            # Create mapping from alphabetical order to robot.actuators order
+            # Map: action index (alphabetical) -> actuator index (robot.actuators order)
+            action_to_actuator_map = []
+            for actuator_name in actionable_joint_names:
+                if actuator_name in sorted_joint_names:
+                    action_to_actuator_map.append(sorted_joint_names.index(actuator_name))
+                else:
+                    log.warning(f"Joint {actuator_name} not found in sorted joint names")
+
+            # Reorder actions from alphabetical order to robot.actuators order
+            action_tensor_all = actions[:, action_to_actuator_map]
         else:
             # Process dictionary-based actions
             action_tensors = []
@@ -477,17 +497,38 @@ class IsaacsimHandler(BaseSimHandler):
                 action_tensors.append(action_tensor)
             action_tensor_all = torch.cat(action_tensors, dim=-1)
 
-        # Apply actions to all robots
+        # Apply actions to all robots and print joint info for env 0
         start_idx = 0
         for robot in self.robots:
             robot_inst = self.scene.articulations[robot.name]
-            actionable_joint_ids = [
-                robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
-            ]
+            actionable_joint_names = [jn for jn in robot.actuators if robot.actuators[jn].fully_actuated]
+            actionable_joint_ids = [robot_inst.joint_names.index(jn) for jn in actionable_joint_names]
+
+            # Get action values for env 0 (before setting)
+            env0_actions = action_tensor_all[0, start_idx : start_idx + len(actionable_joint_ids)]
+
             robot_inst.set_joint_position_target(
                 action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
                 joint_ids=actionable_joint_ids,
             )
+
+            # Write to sim to update data
+            robot_inst.write_data_to_sim()
+
+            # Read back the actual joint position targets from isaacsim (after setting)
+            actual_joint_pos_targets = robot_inst.data.joint_pos_target[0]  # (num_joints,)
+
+            # Print joint names and position targets for env 0 (from isaacsim)
+            # log.info(f"[set_dof_targets] Robot: {robot.name} (env 0) - Reading from isaacsim:")
+            for i, joint_id in enumerate(actionable_joint_ids):
+                joint_name = robot_inst.joint_names[joint_id]
+                input_value = env0_actions[i].item()
+                actual_value = actual_joint_pos_targets[joint_id].item()
+                # log.info(
+                #     f"  Joint[{i}] name: {joint_name:20s} | joint_id: {joint_id:3d} | "
+                #     f"input: {input_value:8.6f} | actual: {actual_value:8.6f}"
+                # )
+
             start_idx += len(actionable_joint_ids)
 
     def _simulate(self):

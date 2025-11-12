@@ -1471,13 +1471,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_th_j0" type="revolute">
+  <joint name="R_th_j0" type="fixed">
     <origin xyz="-0.04608 -0.01984 -0.02687" rpy="-0.00287 -0.21841 0.01325" />
     <parent link="R_hand_base" />
     <child link="R_th_l0" />
-    <axis xyz="1 0 0" />
-    <limit lower="-0.0158" upper="1.605" effort="1.0" velocity="6.28" />
-    <dynamics damping="3.0" friction="0.1" />
   </joint>
   <link name="R_th_l1">
     <inertial>
@@ -1499,13 +1496,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_th_j1" type="revolute">
+  <joint name="R_th_j1" type="fixed">
     <origin xyz="-0.00675 -0.02097 -0.00276" rpy="3.13870 -0.00004 3.12870" />
     <parent link="R_th_l0" />
     <child link="R_th_l1" />
-    <axis xyz="0 0 -1" />
-    <limit lower="-0.3468" upper="0.1834" effort="1.0" velocity="6.28" />
-    <dynamics damping="1.8" friction="0.06" />
   </joint>
   <link name="R_th_l2">
     <inertial>
@@ -1527,14 +1521,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_th_j2" type="revolute">
+  <joint name="R_th_j2" type="fixed">
     <origin xyz="0.05088 -0.01301 0.00202" rpy="0 0 0" />
     <parent link="R_th_l1" />
     <child link="R_th_l2" />
-    <axis xyz="0 0 -1" />
-    <limit lower="-0.4298" upper="0.2731" effort="0.5" velocity="6.28" />
-    <mimic joint="R_th_j1" multiplier="1.35316" offset="0.00765" />
-    <dynamics damping="1.5" friction="0.05" />
   </joint>
   <link name="R_ff_l1">
     <inertial>
@@ -1556,13 +1546,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_ff_j1" type="revolute">
+  <joint name="R_ff_j1" type="fixed">
     <origin xyz="-0.11269 -0.03066 -0.00119" rpy="0.08731 -0.00723 0.08240" />
     <parent link="R_hand_base" />
     <child link="R_ff_l1" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.0946" upper="0.2891" effort="0.5" velocity="6.28" />
-    <dynamics damping="2.0" friction="0.07" />
   </joint>
   <link name="R_ff_l2">
     <inertial>
@@ -1584,14 +1571,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_ff_j2" type="revolute">
+  <joint name="R_ff_j2" type="fixed">
     <origin xyz="-0.03406 0 -0.01141" rpy="-0.00003 0 0.00010" />
     <parent link="R_ff_l1" />
     <child link="R_ff_l2" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.2101" upper="0.3681" effort="0.5" velocity="6.28" />
-    <mimic joint="R_ff_j1" multiplier="1.13028" offset="-0.00053" />
-    <dynamics damping="1.5" friction="0.05" />
   </joint>
   <link name="R_mf_l1">
     <inertial>
@@ -1613,13 +1596,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_mf_j1" type="revolute">
+  <joint name="R_mf_j1" type="fixed">
     <origin xyz="-0.11597 -0.01047 0.00312" rpy="0 0 0.01325" />
     <parent link="R_hand_base" />
     <child link="R_mf_l1" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.0844" upper="0.2801" effort="0.5" velocity="6.28" />
-    <dynamics damping="2.0" friction="0.07" />
   </joint>
   <link name="R_mf_l2">
     <inertial>
@@ -1641,14 +1621,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_mf_j2" type="revolute">
+  <joint name="R_mf_j2" type="fixed">
     <origin xyz="-0.03829 0 -0.01467" rpy="0 0 0" />
     <parent link="R_mf_l1" />
     <child link="R_mf_l2" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.2026" upper="0.3533" effort="0.5" velocity="6.28" />
-    <mimic joint="R_mf_j1" multiplier="1.13311" offset="-0.00079" />
-    <dynamics damping="1.5" friction="0.05" />
   </joint>
   <link name="R_rf_l1">
     <inertial>
@@ -1670,13 +1646,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_rf_j1" type="revolute">
+  <joint name="R_rf_j1" type="fixed">
     <origin xyz="-0.11324 0.00937 0.00237" rpy="0 0 -0.05660" />
     <parent link="R_hand_base" />
     <child link="R_rf_l1" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.0154" upper="0.2840" effort="0.5" velocity="6.28" />
-    <dynamics damping="2.0" friction="0.07" />
   </joint>
   <link name="R_rf_l2">
     <inertial>
@@ -1698,14 +1671,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_rf_j2" type="revolute">
+  <joint name="R_rf_j2" type="fixed">
     <origin xyz="-0.03364 0 -0.01258" rpy="-0.00003 0 0.00010" />
     <parent link="R_rf_l1" />
     <child link="R_rf_l2" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.1156" upper="0.3599" effort="0.5" velocity="6.28" />
-    <mimic joint="R_rf_j1" multiplier="1.12935" offset="0.00065" />
-    <dynamics damping="1.5" friction="0.05" />
   </joint>
   <link name="R_lf_l1">
     <inertial>
@@ -1727,13 +1696,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_lf_j1" type="revolute">
+  <joint name="R_lf_j1" type="fixed">
     <origin xyz="-0.10947 0.02964 -0.00019" rpy="-0.08722 -0.01033 -0.11755" />
     <parent link="R_hand_base" />
     <child link="R_lf_l1" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.0118" upper="0.2811" effort="0.5" velocity="6.28" />
-    <dynamics damping="2.0" friction="0.07" />
   </joint>
   <link name="R_lf_l2">
     <inertial>
@@ -1755,14 +1721,10 @@
       </geometry>
     </collision>
   </link>
-  <joint name="R_lf_j2" type="revolute">
+  <joint name="R_lf_j2" type="fixed">
     <origin xyz="-0.02974 -0.00005 -0.01163" rpy="-0.00002 0 0" />
     <parent link="R_lf_l1" />
     <child link="R_lf_l2" />
-    <axis xyz="0 1 0" />
-    <limit lower="-1.1073" upper="0.4014" effort="0.5" velocity="6.28" />
-    <mimic joint="R_lf_j1" multiplier="1.15037" offset="0.00186" />
-    <dynamics damping="1.5" friction="0.05" />
   </joint>
 
   <link name="R_th_tip">

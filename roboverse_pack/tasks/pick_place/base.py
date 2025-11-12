@@ -28,7 +28,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
     # Default configuration - subclasses should override
     DEFAULT_CONFIG = {
-        "action_scale": 0.1,
+        "action_scale": 0.03,
         "reward_config": {
             "scales": {
                 "gripper_approach": 2.0,
@@ -41,10 +41,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         "trajectory_tracking": {
             "num_waypoints": 5,
             "reach_threshold": 0.10,
-            "grasp_check_distance": 0.02,
+            "grasp_check_distance": 0.06,
         },
         "randomization": {
-            "box_pos_range": 0.1,
+            "box_pos_range": 0.05,
             "robot_pos_noise": 0.0,
             "joint_noise_range": 0.05,
         },
@@ -57,10 +57,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         objects=[
             PrimitiveCubeCfg(
                 name="object",
-                size=(0.04, 0.04, 0.04),
+                size=(0.04, 0.04, 0.06),
                 mass=0.02,
                 physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
+                color=(0.2, 0.2, 0.7),
             ),
             PrimitiveCubeCfg(
                 name="wall",
@@ -142,7 +142,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         ),
         decimation=4,
     )
-    max_episode_steps = 200
+    max_episode_steps = 300
 
     def __init__(self, scenario, device=None):
         self.robot_name = self.scenario.robots[0].name
@@ -357,7 +357,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # Auto-control finger joints based on distance to object
         # If far from object: open hand (finger open positions)
         # If close to object: close hand (finger close positions)
-        distance_threshold = 0.02
+        distance_threshold = 0.06
         finger_targets_open = self.gripper_open_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
         finger_targets_close = self.gripper_close_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
 
@@ -383,10 +383,6 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         updated_hand_pos = self._get_hand_position(updated_states)  # (B, 3)
         updated_hand_box_dist = torch.norm(updated_hand_pos - updated_box_pos, dim=-1)  # (B,)
 
-        # Also get finger tips for grasping detection
-        updated_finger_tips_pos = self._get_finger_tips_positions(updated_states)  # (B, 5, 3)
-        updated_finger_box_dists = torch.norm(updated_finger_tips_pos - updated_box_pos.unsqueeze(1), dim=-1)  # (B, 5)
-
         # Check if fingers are closed (check finger joint positions)
         finger_joint_pos = updated_states.robots[self.robot_name].joint_pos[
             :, self.left_hand_finger_joint_indices
@@ -397,13 +393,13 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # When current = close: ratio = 1 (fully closed)
         denom = self.gripper_close_q.unsqueeze(0) - self.gripper_open_q.unsqueeze(0) + 1e-6
         finger_close_ratios = ((finger_joint_pos - self.gripper_open_q.unsqueeze(0)) / denom).clamp(0.0, 1.0)  # (B, 11)
-        hand_closed = finger_close_ratios.mean(dim=-1) > 0.7  # Hand is considered closed if average ratio > 0.7
+        hand_closed = finger_close_ratios.mean(dim=-1) > 0.5  # Hand is considered closed if average ratio > 0.7
 
-        # Check if multiple fingers are close to object (at least 3 out of 5 fingers)
-        fingers_close_to_object = (updated_finger_box_dists < self.grasp_check_distance).sum(dim=-1) >= 3  # (B,)
+        # Check if hand is close to object (using hand position instead of finger tips)        
+        hand_close_to_object = updated_hand_box_dist < self.grasp_check_distance  # (B,)
 
-        # Object is grasped if hand is closed AND multiple fingers are close to object
-        is_grasping = hand_closed & fingers_close_to_object
+        # Object is grasped if hand is closed AND hand is close to object
+        is_grasping = hand_closed & hand_close_to_object
 
         old_grasped = self.object_grasped.clone()
         self.object_grasped = is_grasping
@@ -412,10 +408,9 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         newly_released = (~is_grasping) & old_grasped
 
         if newly_grasped.any() and newly_grasped[0]:
-            num_close_fingers = (updated_finger_box_dists[0] < self.grasp_check_distance).sum().item()
             log.info(
                 f"[Env 0] Object grasped! Hand-box distance: {updated_hand_box_dist[0].item():.4f}m, "
-                f"Close fingers: {num_close_fingers}/5, Hand closed ratio: {finger_close_ratios[0].mean().item():.4f}"
+                f"Hand closed ratio: {finger_close_ratios[0].mean().item():.4f}"
             )
 
         if newly_released.any() and newly_released[0]:
@@ -443,17 +438,33 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             if step_count % 100 == 0:
                 log.debug(f"  Target pos: {target_pos_final.cpu().numpy()}")
                 log.debug(f"  Hand pos: {hand_pos_single.cpu().numpy()}")
+                
+                # Calculate object to waypoint relative displacement (env0)
+                box_pos_env0 = updated_box_pos[0]  # (3,)
+                object_to_waypoint = box_pos_env0 - target_pos_final  # (3,)
+                object_to_waypoint_dist = torch.norm(object_to_waypoint, dim=-1).item()
+                
+                # Print the information
+                log.info(
+                    f"[Step {step_count} - Env 0] Object to waypoint displacement: "
+                    f"({object_to_waypoint[0].item():.4f}, {object_to_waypoint[1].item():.4f}, {object_to_waypoint[2].item():.4f}) m, "
+                    f"distance: {object_to_waypoint_dist:.4f}m"
+                )
 
         return obs, reward, terminated, time_out, info
 
     def _get_hand_position(self, states):
-        """Get position of hand base (L_hand_base).
+        """Get position of the palm center using fingertip offsets.
+
+        The hand position is approximated as the midpoint between the thumb tip and
+        the little finger tip. Since some tip links are removed during URDF import,
+        we reconstruct their world positions from the last articulated segment using
+        fixed offsets derived from the URDF (`L_th_l2` and `L_lf_l2`).
 
         Returns:
             hand_pos: (B, 3) tensor with position of hand base
         """
-        robot_config = self.robot
-        rs = states.robots[robot_config.name]
+        rs = states.robots[self.robot.name]
         device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
 
         body_state = (
@@ -462,19 +473,31 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             else torch.tensor(rs.body_state, device=device).float()
         )
 
-        try:
-            hand_base_index = rs.body_names.index("L_hand_base")
-            hand_pos = body_state[:, hand_base_index, 0:3]  # (B, 3)
-        except ValueError:
-            # Fallback: use L_arm_l7 (last arm link) if hand base not found
-            try:
-                arm_end_index = rs.body_names.index("L_arm_l7")
-                hand_pos = body_state[:, arm_end_index, 0:3]  # (B, 3)
-            except ValueError:
-                # Final fallback: use root position
-                hand_pos = rs.root_state[:, 0:3]  # (B, 3)
+        name_to_index = {name: idx for idx, name in enumerate(rs.body_names)}
+        required_links = ["L_th_l2", "L_lf_l2"]
+        missing_links = [link for link in required_links if link not in name_to_index]
+        if missing_links:
+            raise ValueError(f"Required finger links missing in body_names: {missing_links}")
 
-        return hand_pos
+        thumb_link_index = name_to_index["L_th_l2"]
+        pinky_link_index = name_to_index["L_lf_l2"]
+
+        thumb_link_pos = body_state[:, thumb_link_index, 0:3]  # (B, 3)
+        thumb_link_quat = body_state[:, thumb_link_index, 3:7]  # (B, 4)
+        pinky_link_pos = body_state[:, pinky_link_index, 0:3]  # (B, 3)
+        pinky_link_quat = body_state[:, pinky_link_index, 3:7]  # (B, 4)
+
+        # Offsets from URDF (expressed in local link frames)
+        thumb_tip_offset = torch.tensor([-0.0230, 0.0151, 0.0018], device=device).unsqueeze(0)  # (1, 3)
+        pinky_tip_offset = torch.tensor([-0.0182, 0.0, -0.0306], device=device).unsqueeze(0)  # (1, 3)
+
+        thumb_rot = matrix_from_quat(thumb_link_quat)  # (B, 3, 3)
+        pinky_rot = matrix_from_quat(pinky_link_quat)  # (B, 3, 3)
+
+        thumb_tip_world = thumb_link_pos + torch.bmm(thumb_rot, thumb_tip_offset.expand(thumb_link_pos.shape[0], -1).unsqueeze(-1)).squeeze(-1)
+        pinky_tip_world = pinky_link_pos + torch.bmm(pinky_rot, pinky_tip_offset.expand(pinky_link_pos.shape[0], -1).unsqueeze(-1)).squeeze(-1)
+
+        return 0.5 * (thumb_tip_world + pinky_tip_world)
 
     def _get_finger_tips_positions(self, states):
         """Get positions of all five finger tips.
@@ -529,7 +552,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         # Calculate reward based on distance
         approach_reward_far = 1 - torch.tanh(hand_box_dist)  # (B,)
-        approach_reward_near = 1 - torch.tanh(hand_box_dist * 10)  # (B,)
+        approach_reward_near = 1 - 2*torch.tanh(hand_box_dist * 10)  # (B,)
 
         return approach_reward_far + approach_reward_near  # (B,)
 
@@ -542,7 +565,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
 
         # Check if hand is close to box (within threshold)
-        close_threshold = 0.02
+        close_threshold = 0.08
         hand_close_bonus = (hand_box_dist < close_threshold).float()  # (B,)
 
         return hand_close_bonus  # (B,)
@@ -671,7 +694,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             {
                 "objects": {
                     "object": {
-                        "pos": torch.tensor([0.534350, 0.036057, 0.816744]),
+                        "pos": torch.tensor([0.434350, 0.036057, 0.816744]),
                         "rot": torch.tensor([0.999990, -0.000028, 0.001505, -0.004311]),
                     },
                     "wall": {
@@ -706,7 +729,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 },
                 "robots": {
                     "vega": {
-                        "pos": torch.tensor([-0.430727, -0.190042, 0.000081]),
+                        "pos": torch.tensor([-0.230727, -0.190042, 0.000081]),
                         "rot": torch.tensor([1.000101, 0.000000, -0.000000, -0.000000]),
                         "dof_pos": {
                             # Base wheels
@@ -784,7 +807,7 @@ class PickPlaceBase(TrajectoryTrackingTaskBase):
             {
                 "objects": {
                     "object": {
-                        "pos": torch.tensor([0.534350, 0.036057, 0.816744]),
+                        "pos": torch.tensor([0.434350, 0.016057, 0.816744]),
                         "rot": torch.tensor([0.999990, -0.000028, 0.001505, -0.004311]),
                     },
                     "wall": {
@@ -797,7 +820,7 @@ class PickPlaceBase(TrajectoryTrackingTaskBase):
                     },
                     # Trajectory waypoints (world coordinates)
                     "traj_marker_0": {
-                        "pos": torch.tensor([0.460000, -0.460000, 1.020000]),
+                        "pos": torch.tensor([0.40000, -0.460000, 1.020000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_1": {
@@ -805,63 +828,67 @@ class PickPlaceBase(TrajectoryTrackingTaskBase):
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_2": {
-                        "pos": torch.tensor([0.340000, -0.190000, 1.360000]),
+                        "pos": torch.tensor([0.40000, -0.190000, 1.360000]),
                         "rot": torch.tensor([0.998750, 0.000000, 0.049979, 0.000000]),
                     },
                     "traj_marker_3": {
-                        "pos": torch.tensor([0.430000, -0.070000, 1.220000]),
+                        "pos": torch.tensor([0.40000, -0.070000, 1.220000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_4": {
-                        "pos": torch.tensor([0.030000, 0.000000, 1.080000]),
+                        "pos": torch.tensor([0.40000, 0.000000, 1.080000]),
                         "rot": torch.tensor([0.984726, 0.000000, 0.174108, 0.000000]),
                     },
                 },
                 "robots": {
                     "vega": {
-                        "pos": torch.tensor([-0.430727, -0.190042, 0.000081]),
+                        "pos": torch.tensor([-0.230727, -0.190042, 0.000081]),
                         "rot": torch.tensor([1.000101, 0.000000, -0.000000, -0.000000]),
                         "dof_pos": {
                             # Base wheels
-                            "B_wheel_j1": -16.534304,
-                            "B_wheel_j2": 0.882773,
-                            "R_wheel_j1": 40.744644,
-                            "R_wheel_j2": 4.372887,
-                            "L_wheel_j1": 2.951701,
-                            "L_wheel_j2": 9.724807,
-                            # Torso
-                            "torso_j1": 0.165709,
-                            "torso_j2": -0.000001,
-                            "torso_j3": -0.083552,
-                            # Left arm
-                            "L_arm_j1": 0.014374,
-                            "L_arm_j2": 0.047725,
-                            "L_arm_j3": 0.599123,
-                            "L_arm_j4": -0.369980,
-                            "L_arm_j5": -2.883693,
-                            "L_arm_j6": -1.396676,
-                            "L_arm_j7": -1.380400,
-                            # Right arm
-                            "R_arm_j1": 0.120635,
-                            "R_arm_j2": -0.000509,
-                            "R_arm_j3": -0.031708,
-                            "R_arm_j4": 0.168648,
-                            "R_arm_j5": 0.008231,
-                            "R_arm_j6": 0.209306,
-                            "R_arm_j7": -0.144059,
-                            # Left hand
-                            "L_th_j0": -0.018750,
-                            "L_th_j1": 0.140380,
-                            "L_th_j2": 0.391281,
-                            "L_ff_j1": 0.289102,
-                            "L_ff_j2": 0.054875,
-                            "L_mf_j1": -0.111047,
-                            "L_mf_j2": -0.116898,
-                            "L_rf_j1": 0.284011,
-                            "L_rf_j2": 0.067212,
-                            "L_lf_j1": -0.110856,
-                            "L_lf_j2": -0.184257,
-                            # Right hand - locked at 0.0 (joint limits set to 0.0)
+                            "B_wheel_j1": 0.0,
+                            "B_wheel_j2": 0.0,
+                            "R_wheel_j1": 0.0,
+                            "R_wheel_j2": 0.0,
+                            "L_wheel_j1": 0.0,
+                            "L_wheel_j2": 0.0,
+                            # Torso - upright
+                            "torso_j1": 0.2,
+                            "torso_j2": 0.2,
+                            "torso_j3": 0.0,
+                            # Head - forward looking
+                            # "head_j1": 0.0,
+                            # "head_j2": 0.0,
+                            # "head_j3": 0.0,
+                            # Left arm - neutral pose
+                            "L_arm_j1": 0.0,
+                            "L_arm_j2": 0.0,
+                            "L_arm_j3": 0.0,
+                            "L_arm_j4": 0.0,
+                            "L_arm_j5": 0.0,
+                            "L_arm_j6": 0.0,
+                            "L_arm_j7": 0.0,
+                            # Right arm - neutral pose
+                            "R_arm_j1": 0.0,
+                            "R_arm_j2": 0.0,
+                            "R_arm_j3": 0.0,
+                            "R_arm_j4": 0.0,
+                            "R_arm_j5": 0.0,
+                            "R_arm_j6": 0.0,
+                            "R_arm_j7": 0.0,
+                            # Left hand - open
+                            "L_th_j0": 0.0,
+                            "L_th_j1": 0.0,
+                            "L_th_j2": 0.0,
+                            "L_ff_j1": 0.0,
+                            "L_ff_j2": 0.0,
+                            "L_mf_j1": 0.0,
+                            "L_mf_j2": 0.0,
+                            "L_rf_j1": 0.0,
+                            "L_rf_j2": 0.0,
+                            "L_lf_j1": 0.0,
+                            "L_lf_j2": 0.0,
+                            # Right hand - open
                             "R_th_j0": 0.0,
                             "R_th_j1": 0.0,
                             "R_th_j2": 0.0,
