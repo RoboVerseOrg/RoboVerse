@@ -335,6 +335,14 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         # Use hand base position for distance calculation
         hand_pos = self._get_hand_position(states)  # (B, 3)
+        box_pos = states.objects["object"].root_state[:, 0:3]
+        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)
+        if env_ids_list:
+            env0 = env_ids_list[0]
+            log.debug(
+                f"[Reset - Env {env0}] Hand-box distance: {hand_box_dist[env0].item():.4f}m "
+                f"(auto-close threshold: {self._auto_close_threshold():.4f}m)"
+            )
         target_pos = self.waypoint_positions[0].unsqueeze(0).expand(len(env_ids_list), -1)
         self.prev_distance_to_waypoint[env_ids_list] = torch.norm(hand_pos[env_ids_list] - target_pos, dim=-1)
 
@@ -357,7 +365,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # Auto-control finger joints based on distance to object
         # If far from object: open hand (finger open positions)
         # If close to object: close hand (finger close positions)
-        distance_threshold = 0.06
+        distance_threshold = self._auto_close_distance()
         finger_targets_open = self.gripper_open_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
         finger_targets_close = self.gripper_close_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
 
@@ -498,6 +506,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         pinky_tip_world = pinky_link_pos + torch.bmm(pinky_rot, pinky_tip_offset.expand(pinky_link_pos.shape[0], -1).unsqueeze(-1)).squeeze(-1)
 
         return 0.5 * (thumb_tip_world + pinky_tip_world)
+
+    def _auto_close_distance(self) -> float:
+        """Threshold (in meters) to trigger automatic finger closing."""
+        return 0.06
 
     def _get_finger_tips_positions(self, states):
         """Get positions of all five finger tips.
