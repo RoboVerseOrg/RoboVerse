@@ -193,16 +193,16 @@ if __name__ == "__main__":
 
     step = 0
     robot = scenario.robots[0]
-    for _ in range(100):
+    for _ in range(10000):
         log.debug(f"Step {step}")
         actions = [
             {
                 robot.name: {
                     "dof_pos_target": {
                         joint_name: (
-                            torch.rand(1).item()*0.5
+                            torch.rand(1).item()*1.0
                             * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
-                            + robot.joint_limits[joint_name][0]*0.5
+                            + robot.joint_limits[joint_name][0]*1.0
                         )
                         for joint_name in robot.joint_limits.keys()
                     }
