@@ -39,4 +39,3 @@ python ./roboverse_learn/il/data2zarr_dp.py \
 --metadata_dir ./roboverse_demo/demo_${sim_set}/${task_name_set}-${cust_name}/robot-franka/success \
 --action_space ${act_space} \
 --observation_space ${obs_space}
-
