@@ -110,4 +110,3 @@ case "$algo_choose" in
 esac
 
 echo "=== Completed all data collection, training, and evaluation ==="
-

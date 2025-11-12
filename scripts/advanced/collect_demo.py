@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
@@ -764,7 +763,7 @@ def main():
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
     collector = DemoCollector(env.handler, robot, task_desc)
-    #pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
+    # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
     pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
     ## State variables
@@ -820,7 +819,6 @@ def main():
 
     ## Main Loop
     while not all(finished):
-        
         if tot_success >= args.num_demo_success:
             log.info(f"Reached target number of successful demos ({args.num_demo_success}). Stopping collection.")
             break
