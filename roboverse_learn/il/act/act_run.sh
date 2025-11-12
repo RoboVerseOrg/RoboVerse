@@ -62,4 +62,3 @@ if [ "${eval_enable}" = "true" ]; then
   --temporal_agg True \
   --chunk_size ${chunk_size}
 fi
-

@@ -7,13 +7,13 @@ pip install -e .
 
 # Install act
 echo "Install act..."
-cd ../../../../ 
+cd ../../../../
 cd roboverse_learn/il/utils/act/detr || { echo "detr do not exit"; exit 1; }
 pip install -e .
 
 # Install additional dependencies
 echo "Install additional dependencies..."
-cd ../../../../../ 
+cd ../../../../../
 pip install pandas wandb
 
 # Fix .zarr issue
