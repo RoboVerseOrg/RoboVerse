@@ -7,67 +7,67 @@
       <inertia ixx="0.03125082" ixy="0.01174242" ixz="0.00027555" iyy="0.03405591" iyz="0.00033750" izz="0.04478578" />
     </inertial>
     <visual>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="whale_doll.glb" />
       </geometry>
     </visual>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_00.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_01.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_02.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_03.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_04.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_05.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_06.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_07.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_08.obj" />
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.066435 0.002958 0.002026" rpy="0 0 0" />
+      <origin xyz="0.14467 -0.04838 -0.08847" rpy="1.5708 -0.0698 0" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_09.obj" />
       </geometry>

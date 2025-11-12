@@ -377,12 +377,13 @@ if __name__ == "__main__":
         simulator=args.sim,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         objects=[
-            PrimitiveCubeCfg(
+            RigidObjCfg(
                 name="object",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                usd_path="roboverse_pack/whale_doll/whale_doll.usd",
+                urdf_path="roboverse_pack/whale_doll.urdf",
                 physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
+                enabled_gravity=True,
+                fix_base_link=False,
             ),
             RigidObjCfg(
                 name="table",

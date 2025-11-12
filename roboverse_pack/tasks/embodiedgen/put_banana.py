@@ -37,7 +37,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 name="banana",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                usd_path="/home/priosin/murphy/demos/RoboVerse/roboverse_pack/whale_doll/whale_doll.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.mjcf",
             ),
@@ -117,7 +117,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "banana": {
-                        "pos": torch.tensor([0.28, -0.58, 0.825]),  # Starting position on table (left)
+                        "pos": torch.tensor([0.28, -0.58, 1.0]),  # Starting position on table (left)
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "mug": {
