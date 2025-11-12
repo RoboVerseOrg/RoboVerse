@@ -333,11 +333,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         else:
             env_ids_list = env_ids if isinstance(env_ids, list) else list(env_ids)
 
-        # Use average finger tip position instead of EE position
-        finger_tips_pos = self._get_finger_tips_positions(states)  # (B, 5, 3)
-        avg_finger_tip_pos = finger_tips_pos.mean(dim=1)  # (B, 3)
+        # Use hand base position for distance calculation
+        hand_pos = self._get_hand_position(states)  # (B, 3)
         target_pos = self.waypoint_positions[0].unsqueeze(0).expand(len(env_ids_list), -1)
-        self.prev_distance_to_waypoint[env_ids_list] = torch.norm(avg_finger_tip_pos[env_ids_list] - target_pos, dim=-1)
+        self.prev_distance_to_waypoint[env_ids_list] = torch.norm(hand_pos[env_ids_list] - target_pos, dim=-1)
 
         return obs, info
 
@@ -346,11 +345,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         current_states = self.handler.get_states(mode="tensor")
         box_pos = current_states.objects["object"].root_state[:, 0:3]  # (B, 3)
 
-        # Get finger tips positions instead of gripper position
-        finger_tips_pos = self._get_finger_tips_positions(current_states)  # (B, 5, 3)
-        # Calculate average distance from all finger tips to box
-        finger_box_dists = torch.norm(finger_tips_pos - box_pos.unsqueeze(1), dim=-1)  # (B, 5)
-        avg_finger_box_dist = finger_box_dists.mean(dim=-1)  # (B,)
+        # Get hand base position for distance calculation
+        hand_pos = self._get_hand_position(current_states)  # (B, 3)
+        # Calculate distance from hand to box
+        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
 
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
@@ -365,7 +363,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         # Determine target finger positions based on distance
         finger_targets = torch.where(
-            avg_finger_box_dist.unsqueeze(-1) > distance_threshold,
+            hand_box_dist.unsqueeze(-1) > distance_threshold,
             finger_targets_open,
             finger_targets_close,
         )  # (B, 11)
@@ -381,10 +379,13 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         updated_states = self.handler.get_states(mode="tensor")
         updated_box_pos = updated_states.objects["object"].root_state[:, 0:3]  # (B, 3)
 
-        # Get updated finger tips positions
+        # Get updated hand position
+        updated_hand_pos = self._get_hand_position(updated_states)  # (B, 3)
+        updated_hand_box_dist = torch.norm(updated_hand_pos - updated_box_pos, dim=-1)  # (B,)
+
+        # Also get finger tips for grasping detection
         updated_finger_tips_pos = self._get_finger_tips_positions(updated_states)  # (B, 5, 3)
         updated_finger_box_dists = torch.norm(updated_finger_tips_pos - updated_box_pos.unsqueeze(1), dim=-1)  # (B, 5)
-        avg_updated_finger_box_dist = updated_finger_box_dists.mean(dim=-1)  # (B,)
 
         # Check if fingers are closed (check finger joint positions)
         finger_joint_pos = updated_states.robots[self.robot_name].joint_pos[
@@ -413,12 +414,12 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         if newly_grasped.any() and newly_grasped[0]:
             num_close_fingers = (updated_finger_box_dists[0] < self.grasp_check_distance).sum().item()
             log.info(
-                f"[Env 0] Object grasped! Avg finger distance: {avg_updated_finger_box_dist[0].item():.4f}m, "
+                f"[Env 0] Object grasped! Hand-box distance: {updated_hand_box_dist[0].item():.4f}m, "
                 f"Close fingers: {num_close_fingers}/5, Hand closed ratio: {finger_close_ratios[0].mean().item():.4f}"
             )
 
         if newly_released.any() and newly_released[0]:
-            log.info(f"[Env 0] Object released! Avg finger distance: {avg_updated_finger_box_dist[0].item():.4f}m")
+            log.info(f"[Env 0] Object released! Hand-box distance: {updated_hand_box_dist[0].item():.4f}m")
 
         step_count = getattr(self, "_debug_step_count", 0)
         self._debug_step_count = step_count + 1
@@ -427,9 +428,9 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             num_reached = self.waypoints_reached[0].sum().item()
             current_idx = self.current_waypoint_idx[0].item()
             target_pos_final = self.waypoint_positions[current_idx]
-            # Use average finger tip position for distance calculation
-            avg_finger_tip_pos = updated_finger_tips_pos[0].mean(dim=0)  # (3,)
-            distance = torch.norm(avg_finger_tip_pos - target_pos_final, dim=-1).item()
+            # Use hand position for distance calculation
+            hand_pos_single = updated_hand_pos[0]  # (3,)
+            distance = torch.norm(hand_pos_single - target_pos_final, dim=-1).item()
             grasped = self.object_grasped[0].item()
 
             status = "Episode End" if (terminated[0] or time_out[0]) else f"Step {step_count}"
@@ -441,9 +442,39 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
             if step_count % 100 == 0:
                 log.debug(f"  Target pos: {target_pos_final.cpu().numpy()}")
-                log.debug(f"  Avg finger tip pos: {avg_finger_tip_pos.cpu().numpy()}")
+                log.debug(f"  Hand pos: {hand_pos_single.cpu().numpy()}")
 
         return obs, reward, terminated, time_out, info
+
+    def _get_hand_position(self, states):
+        """Get position of hand base (L_hand_base).
+
+        Returns:
+            hand_pos: (B, 3) tensor with position of hand base
+        """
+        robot_config = self.robot
+        rs = states.robots[robot_config.name]
+        device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
+
+        body_state = (
+            rs.body_state
+            if isinstance(rs.body_state, torch.Tensor)
+            else torch.tensor(rs.body_state, device=device).float()
+        )
+
+        try:
+            hand_base_index = rs.body_names.index("L_hand_base")
+            hand_pos = body_state[:, hand_base_index, 0:3]  # (B, 3)
+        except ValueError:
+            # Fallback: use L_arm_l7 (last arm link) if hand base not found
+            try:
+                arm_end_index = rs.body_names.index("L_arm_l7")
+                hand_pos = body_state[:, arm_end_index, 0:3]  # (B, 3)
+            except ValueError:
+                # Final fallback: use root position
+                hand_pos = rs.root_state[:, 0:3]  # (B, 3)
+
+        return hand_pos
 
     def _get_finger_tips_positions(self, states):
         """Get positions of all five finger tips.
@@ -489,35 +520,32 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         return finger_tips_pos
 
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
-        """Reward for fingers approaching the box (calculated for each finger separately)."""
+        """Reward for hand approaching the box."""
         box_pos = env_states.objects["object"].root_state[:, 0:3]  # (B, 3)
-        finger_tips_pos = self._get_finger_tips_positions(env_states)  # (B, 5, 3)
+        hand_pos = self._get_hand_position(env_states)  # (B, 3)
 
-        # Calculate distance from each finger tip to box: (B, 5, 3) -> (B, 5)
-        finger_box_dists = torch.norm(finger_tips_pos - box_pos.unsqueeze(1), dim=-1)  # (B, 5)
+        # Calculate distance from hand to box
+        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
 
-        # Calculate reward for each finger separately
-        approach_reward_far = 1 - torch.tanh(finger_box_dists)  # (B, 5)
-        approach_reward_near = 1 - torch.tanh(finger_box_dists * 10)  # (B, 5)
+        # Calculate reward based on distance
+        approach_reward_far = 1 - torch.tanh(hand_box_dist)  # (B,)
+        approach_reward_near = 1 - torch.tanh(hand_box_dist * 10)  # (B,)
 
-        # Average reward across all fingers
-        finger_rewards = approach_reward_far + approach_reward_near  # (B, 5)
-        return finger_rewards.mean(dim=-1)  # (B,)
+        return approach_reward_far + approach_reward_near  # (B,)
 
     def _reward_gripper_close(self, env_states) -> torch.Tensor:
-        """Reward for fingers being close to box (calculated for each finger separately)."""
+        """Reward for hand being close to box."""
         box_pos = env_states.objects["object"].root_state[:, 0:3]  # (B, 3)
-        finger_tips_pos = self._get_finger_tips_positions(env_states)  # (B, 5, 3)
+        hand_pos = self._get_hand_position(env_states)  # (B, 3)
 
-        # Calculate distance from each finger tip to box: (B, 5, 3) -> (B, 5)
-        finger_box_dists = torch.norm(finger_tips_pos - box_pos.unsqueeze(1), dim=-1)  # (B, 5)
+        # Calculate distance from hand to box
+        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
 
-        # Check if each finger is close to box (within threshold)
+        # Check if hand is close to box (within threshold)
         close_threshold = 0.02
-        finger_close_bonus = (finger_box_dists < close_threshold).float()  # (B, 5)
+        hand_close_bonus = (hand_box_dist < close_threshold).float()  # (B,)
 
-        # Average bonus across all fingers
-        return finger_close_bonus.mean(dim=-1)  # (B,)
+        return hand_close_bonus  # (B,)
 
     def _reward_robot_target_qpos(self, env_states) -> torch.Tensor:
         """Reward for robot staying close to target joint positions."""
@@ -529,15 +557,14 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
     def _reward_trajectory_tracking(self, env_states) -> torch.Tensor:
         """Reward for tracking waypoints (only when object is grasped)."""
-        # Use average finger tip position instead of EE position
-        finger_tips_pos = self._get_finger_tips_positions(env_states)  # (B, 5, 3)
-        avg_finger_tip_pos = finger_tips_pos.mean(dim=1)  # (B, 3)
+        # Use hand base position for distance calculation
+        hand_pos = self._get_hand_position(env_states)  # (B, 3)
         grasped_mask = self.object_grasped
         tracking_reward = torch.zeros(self.num_envs, device=self.device)
 
         if grasped_mask.any():
             target_pos = self.waypoint_positions[self.current_waypoint_idx]
-            distance = torch.norm(avg_finger_tip_pos - target_pos, dim=-1)
+            distance = torch.norm(hand_pos - target_pos, dim=-1)
 
             approach_reward = (1 - torch.tanh(1.0 * distance)) * self.w_tracking_approach
             approach_reward = approach_reward * grasped_mask.float()
@@ -569,7 +596,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 if can_advance.any():
                     new_target_pos = self.waypoint_positions[self.current_waypoint_idx[can_advance]]
                     self.prev_distance_to_waypoint[can_advance] = torch.norm(
-                        avg_finger_tip_pos[can_advance] - new_target_pos, dim=-1
+                        hand_pos[can_advance] - new_target_pos, dim=-1
                     )
 
             maintain_reward = torch.zeros(self.num_envs, device=self.device)
@@ -578,7 +605,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
             if completed_mask.any():
                 last_target_pos = self.waypoint_positions[-1].unsqueeze(0).expand(self.num_envs, -1)
-                distance_to_last = torch.norm(avg_finger_tip_pos - last_target_pos, dim=-1)
+                distance_to_last = torch.norm(hand_pos - last_target_pos, dim=-1)
 
                 maintain_reward[completed_mask] = torch.where(
                     distance_to_last[completed_mask] < self.reach_threshold,
@@ -595,9 +622,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         box_pos = env_states.objects["object"].root_state[:, 0:3]  # [num_envs, 3]
         box_quat = env_states.objects["object"].root_state[:, 3:7]  # [num_envs, 4]
 
-        # Use average finger tip position instead of EE position
+        # Use hand base position for distance calculations
+        hand_pos = self._get_hand_position(env_states)  # (B, 3)
+        # Also get finger tips for observation (but not for distance calculations)
         finger_tips_pos = self._get_finger_tips_positions(env_states)  # (B, 5, 3)
-        avg_finger_tip_pos = finger_tips_pos.mean(dim=1)  # (B, 3)
 
         robot_joint_pos = env_states.robots[self.robot_name].joint_pos  # [num_envs, num_joints]
         robot_joint_vel = env_states.robots[self.robot_name].joint_vel  # [num_envs, num_joints]
@@ -606,11 +634,11 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         box_mat = matrix_from_quat(box_quat)  # [num_envs, 3, 3]
         box_mat_flat = box_mat.view(self.num_envs, -1)  # [num_envs, 9]
 
-        box_to_fingers = box_pos - avg_finger_tip_pos  # [num_envs, 3]
+        box_to_hand = box_pos - hand_pos  # [num_envs, 3]
 
         target_pos = self.waypoint_positions[self.current_waypoint_idx]
-        target_to_fingers = target_pos - avg_finger_tip_pos
-        distance_to_target = torch.norm(target_to_fingers, dim=-1, keepdim=True)
+        target_to_hand = target_pos - hand_pos
+        distance_to_target = torch.norm(target_to_hand, dim=-1, keepdim=True)
 
         waypoint_onehot = torch.nn.functional.one_hot(self.current_waypoint_idx, num_classes=self.num_waypoints).float()
 
@@ -620,12 +648,12 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         obs_list = [
             robot_joint_pos,
             robot_joint_vel,
-            avg_finger_tip_pos,  # Average finger tip position instead of gripper_pos
+            hand_pos,  # Hand base position
             finger_tips_pos.view(self.num_envs, -1),  # All finger tips flattened (B, 15)
             box_mat_flat[:, 3:],
-            box_to_fingers,
+            box_to_hand,
             target_pos,
-            target_to_fingers,
+            target_to_hand,
             distance_to_target,
             waypoint_onehot,
             num_reached,
