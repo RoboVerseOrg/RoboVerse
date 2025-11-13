@@ -33,7 +33,7 @@ def camera_position_randomization(handler, distribution="uniform"):
 
     # Create camera randomizer with position delta
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         position=CameraPositionRandomCfg(
             delta_range=((-1, 1), (-1, 1), (-1, 1)),
             use_delta=True,
@@ -64,7 +64,7 @@ def camera_orientation_randomization(handler, distribution="uniform"):
 
     # Create camera randomizer with orientation delta
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         orientation=CameraOrientationRandomCfg(
             rotation_delta=((-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)),
             distribution=distribution,
@@ -92,7 +92,7 @@ def camera_look_at_randomization(handler, distribution="uniform"):
     from metasim.randomization.camera_randomizer import CameraLookAtRandomCfg
 
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         look_at=CameraLookAtRandomCfg(
             look_at_delta=((-0.2, 0.2), (-0.2, 0.2), (-0.2, 0.2)),
             use_delta=True,
@@ -123,7 +123,7 @@ def camera_intrinsics_randomization(handler, distribution="uniform"):
 
     # Create camera randomizer with intrinsics
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         intrinsics=CameraIntrinsicsRandomCfg(
             focal_length_range=(18.0, 35.0),
             horizontal_aperture_range=(15.0, 25.0),
@@ -162,7 +162,7 @@ def camera_image_randomization(handler, distribution="uniform"):
     from metasim.randomization.camera_randomizer import CameraImageRandomCfg
 
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         image=CameraImageRandomCfg(
             width_range=(640, 1280),
             height_range=(480, 960),
@@ -183,7 +183,7 @@ def camera_image_randomization(handler, distribution="uniform"):
     )
 
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         image=CameraImageRandomCfg(
             aspect_ratio_range=(1, 1000),
             distribution=distribution,
@@ -209,7 +209,7 @@ def camera_seed_reproducibility(handler):
 
     # Create camera randomizer
     cfg = CameraRandomCfg(
-        camera_name="default_camera",
+        camera_name="test_camera",
         position=CameraPositionRandomCfg(
             delta_range=((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)),
             use_delta=True,
