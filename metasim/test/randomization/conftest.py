@@ -178,7 +178,7 @@ class HandlerProxy:
         try:
             res = self._result_queue.get(timeout=timeout)
         except Exception as e:
-            raise RuntimeError(f"Timeout waiting for result of {func_name}: {e}")  # noqa: B904
+            raise RuntimeError(f"Timeout waiting for result of {func_name}: {e}") from e
 
         if res.get("status") == "error":
             raise RuntimeError(f"Child error running {res.get('func')}: {res.get('error')}\n{res.get('traceback', '')}")
@@ -224,7 +224,7 @@ def shared_handler(request):
             ready = result_q.get(timeout=120)
         except Exception as e:
             proc.terminate()
-            raise RuntimeError(f"Handler process for {key} failed to start: {e}")  # noqa: B904
+            raise RuntimeError(f"Handler process failed to start: {e}") from e
 
         if ready.get("status") != "ready":
             proc.terminate()
