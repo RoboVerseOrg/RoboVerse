@@ -133,7 +133,7 @@ def light_position_randomization(handler, distribution="uniform"):
     cfg = LightRandomCfg(
         light_name="test_light",
         position=LightPositionRandomCfg(
-            position_range=((-0.5, 0.5), (-0.5, 0.5), (0.0, 2.0)),
+            position_range=((0.1, 2.0), (0.1, 2.0), (0.1, 2.0)),
             relative_to_origin=True,
             distribution=distribution,
             enabled=True,
@@ -164,7 +164,7 @@ def light_position_randomization(handler, distribution="uniform"):
     assert current_pos != new_pos, "Light position should have changed after randomization"
     # Check position changes are within delta range
     delta = torch.tensor([abs(new_pos[i] - current_pos[i]) for i in range(3)])
-    assert torch.all(delta <= torch.tensor([0.5, 0.5, 2.0])), "Position delta should be within specified range"
+    assert torch.all(delta <= torch.tensor([1.9, 1.9, 1.9])), "Position delta should be within specified range"
 
     log.info(f"Light position randomization (Type: {distribution}) test passed")
 
@@ -177,7 +177,7 @@ def light_orientation_randomization(handler, distribution="uniform"):
     cfg = LightRandomCfg(
         light_name="test_light",
         orientation=LightOrientationRandomCfg(
-            angle_range=((-30.0, 30.0), (-30.0, 30.0), (-30.0, 30.0)),
+            angle_range=((0.1, 5.0), (0.1, 5.0), (0.1, 5.0)),
             relative_to_origin=True,
             distribution=distribution,
             enabled=True,
@@ -199,6 +199,8 @@ def light_orientation_randomization(handler, distribution="uniform"):
         rotate_attr = light_prim.CreateAttribute("xformOp:rotateXYZ", Sdf.ValueTypeNames.Double3)
 
     current_rot = rotate_attr.Get()
+    if current_rot is None:
+        current_rot = (0.0, 0.0, 0.0)
 
     # Apply randomization
     randomizer()
@@ -207,7 +209,7 @@ def light_orientation_randomization(handler, distribution="uniform"):
     assert current_rot != new_rot, "Light orientation should have changed after randomization"
     # Check rotation changes are within delta range
     delta = torch.tensor([abs(new_rot[i] - current_rot[i]) for i in range(3)])
-    assert torch.all(delta <= 30.0), "Rotation delta should be within specified range"
+    assert torch.all(delta <= 4.9), "Rotation delta should be within specified range"
 
     log.info(f"Light orientation randomization (Type: {distribution}) test passed")
 
@@ -252,7 +254,7 @@ def _process_run_handler(scenario):
         light_color_randomization(handler, distribution=dist)
         light_color_temperature_randomization(handler, distribution=dist)
         light_position_randomization(handler, distribution=dist)
-        # light_orientation_randomization(handler, distribution=dist)
+        light_orientation_randomization(handler, distribution=dist)
     handler.close()
 
 

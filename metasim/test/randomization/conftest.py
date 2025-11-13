@@ -59,7 +59,7 @@ def get_shared_scenario(sim: str, num_envs: int) -> ScenarioCfg:
                 color=(1.0, 1.0, 1.0),
                 radius=1.2,
                 pos=(0.0, 0.0, 4.5),
-                rot=(0.7071, 0.0, 0.0, 0.7071),
+                rot=(1.0, 0.0, 0.0, 0.0),
             )
         ],
         robots=[FrankaCfg()],
