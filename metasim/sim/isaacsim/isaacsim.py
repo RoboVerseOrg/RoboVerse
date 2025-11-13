@@ -468,44 +468,49 @@ class IsaacsimHandler(BaseSimHandler):
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
+        # TODO: support set torque
         if isinstance(actions, torch.Tensor):
-            reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
-            action_tensor_all = actions[:, reverse_reindex]
+            actions_tensor = actions
         else:
-            # Process dictionary-based actions
-            action_tensors = []
+            per_robot_tensors = []
             for robot in self.robots:
-                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
-                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
+                sorted_joint_names = self.get_joint_names(robot.name, sort=True)
+                robot_tensor = torch.zeros((self.num_envs, len(sorted_joint_names)), device=self.device)
                 for env_id in range(self.num_envs):
-                    for i, actuator_name in enumerate(actuator_names):
-                        action_tensor[env_id, i] = torch.tensor(
-                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
-                        )
-                action_tensors.append(action_tensor)
-            action_tensor_all = torch.cat(action_tensors, dim=-1)
+                    joint_targets = actions[env_id][robot.name]["dof_pos_target"]
+                    for j, joint_name in enumerate(sorted_joint_names):
+                        robot_tensor[env_id, j] = torch.tensor(joint_targets[joint_name], device=self.device)
+                per_robot_tensors.append(robot_tensor)
+            actions_tensor = torch.cat(per_robot_tensors, dim=-1)
 
-        # Apply actions to all robots
-        start_idx = 0
-        for i, robot in enumerate(self.robots):
+        offset = 0
+        for robot in self.robots:
             robot_inst = self.scene.articulations[robot.name]
-            actionable_joint_ids = [
-                robot_inst.joint_names.index(jn)
-                for jn in self._get_joint_names(robot.name, sort=False)
-                if robot.actuators[jn].fully_actuated
-            ]
-            if self._manual_pd_on[i]:
-                robot_inst.set_joint_effort_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                    joint_ids=actionable_joint_ids,
-                )
-            else:
-                robot_inst.set_joint_position_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                    joint_ids=actionable_joint_ids,
-                )
-            start_idx += len(actionable_joint_ids)
+            sorted_joint_names = self.get_joint_names(robot.name, sort=True)
+            joint_count = len(sorted_joint_names)
 
+            if offset + joint_count > actions_tensor.shape[1]:
+                raise ValueError("Mismatch between provided actions and expected joint count.")
+
+            robot_actions_sorted = actions_tensor[:, offset : offset + joint_count]
+            offset += joint_count
+
+            name_to_sorted_idx = {name: idx for idx, name in enumerate(sorted_joint_names)}
+
+            joint_ids = []
+            action_indices = []
+            for joint_id, joint_name in enumerate(robot_inst.joint_names):
+                if joint_name in name_to_sorted_idx:
+                    joint_ids.append(joint_id)
+                    action_indices.append(name_to_sorted_idx[joint_name])
+
+            if not joint_ids:
+                continue
+
+            joint_targets = robot_actions_sorted[:, action_indices]
+            robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+            robot_inst.write_data_to_sim()
+            
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         self.scene.write_data_to_sim()
