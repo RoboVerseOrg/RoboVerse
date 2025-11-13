@@ -9,61 +9,62 @@ from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
 from metasim.utils.configclass import configclass
-from metasim.utils.hf_util import check_and_download_single
+from metasim.utils.hf_util import check_and_download_single, extract_texture_paths_from_mdl
 
 
-def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
-    """Extract texture file paths referenced in an MDL file by parsing its content.
+def list_materials_in_mdl(mdl_file_path: str) -> list[str]:
+    """List all material names available in an MDL file.
 
     Args:
         mdl_file_path: Path to the MDL file
 
     Returns:
-        List of absolute texture file paths referenced in the MDL file
+        List of material names found in the file (export materials first, then others)
     """
-    texture_paths = []
-
     if not os.path.exists(mdl_file_path):
-        return texture_paths
-
-    mdl_dir = os.path.dirname(mdl_file_path)
+        return []
 
     try:
         with open(mdl_file_path, encoding="utf-8") as f:
             content = f.read()
 
-        # Parse texture_2d declarations in MDL files
-        # Pattern: texture_2d("./path/to/texture.png", optional_args)
         import re
 
-        texture_pattern = r'texture_2d\("([^"]+)"[^)]*\)'
-        matches = re.findall(texture_pattern, content)
+        # Find all export materials (preferred)
+        export_pattern = r"export\s+material\s+(\w+)\s*\("
+        export_matches = re.findall(export_pattern, content)
 
-        for match in matches:
-            if match.strip():  # Skip empty texture declarations
-                # Convert relative paths to absolute paths
-                if match.startswith("./"):
-                    texture_path = os.path.join(mdl_dir, match[2:])  # Remove './'
-                elif match.startswith("../"):
-                    texture_path = os.path.abspath(os.path.join(mdl_dir, match))
-                elif not os.path.isabs(match):
-                    texture_path = os.path.join(mdl_dir, match)
-                else:
-                    texture_path = match
+        # Find all materials (including non-exported)
+        all_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+        all_matches = re.findall(all_pattern, content)
 
-                texture_paths.append(os.path.normpath(texture_path))
+        # Return unique materials, with export materials first
+        seen = set()
+        result = []
+        for mat in export_matches + all_matches:
+            if mat not in seen:
+                seen.add(mat)
+                result.append(mat)
+
+        return result
 
     except Exception as e:
-        logger.warning(f"Failed to parse MDL file {mdl_file_path}: {e}")
+        logger.warning(f"Failed to list materials from MDL file {mdl_file_path}: {e}")
+        return []
 
-    return texture_paths
 
+def extract_material_name_from_mdl(mdl_file_path: str, material_name: str | None = None) -> str | None:
+    """Extract or verify a material name from an MDL file.
 
-def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
-    """Extract the actual material name from an MDL file.
+    Many MDL files contain multiple material definitions. This function:
+    1. If material_name is provided, verifies it exists in the file
+    2. Otherwise, tries to find an 'export material' matching the filename (most reliable)
+    3. Falls back to the first 'export material' found
+    4. If no 'export material', uses the first material definition
 
     Args:
         mdl_file_path: Path to the MDL file
+        material_name: Optional specific material name to verify/extract
 
     Returns:
         The material name found in the MDL file, or None if not found
@@ -77,11 +78,43 @@ def extract_material_name_from_mdl(mdl_file_path: str) -> str | None:
 
         import re
 
-        material_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("  # Cork_mat --> Cork_mat
-        match = re.search(material_pattern, content)
+        # Get filename without extension (e.g., "Diamond" from "Diamond.mdl")
+        filename_base = os.path.basename(mdl_file_path).removesuffix(".mdl")
 
-        if match:
-            return match.group(1)
+        # Find all export materials first (preferred)
+        export_pattern = r"export\s+material\s+(\w+)\s*\("
+        export_matches = re.findall(export_pattern, content)
+
+        # If a specific material name was requested, verify it exists
+        if material_name is not None:
+            # Check if it's in export materials (preferred) or any materials
+            all_materials_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+            all_matches = re.findall(all_materials_pattern, content)
+
+            if material_name in export_matches or material_name in all_matches:
+                return material_name
+            else:
+                logger.warning(
+                    f"Material '{material_name}' not found in {mdl_file_path}. "
+                    f"Available materials: {export_matches if export_matches else all_matches}"
+                )
+                return None
+
+        # Strategy 1: If there's an export material matching the filename, use it
+        # This handles cases like Diamond.mdl where there's gem_definition + Diamond
+        if filename_base in export_matches:
+            return filename_base
+
+        # Strategy 2: Use first export material if available
+        if export_matches:
+            return export_matches[0]
+
+        # Strategy 3: Fall back to any material definition (including non-exported)
+        all_materials_pattern = r"(?:export\s+)?material\s+(\w+)\s*\("
+        all_matches = re.findall(all_materials_pattern, content)
+
+        if all_matches:
+            return all_matches[0]
 
     except Exception as e:
         logger.warning(f"Failed to extract material name from MDL file {mdl_file_path}: {e}")
@@ -132,8 +165,15 @@ class MDLMaterialCfg:
     """Configuration for MDL (Material Definition Language) files.
 
     Args:
-        mdl_paths: List of paths to MDL material files (can be empty, will be populated by presets)
+        mdl_paths: List of paths to MDL material files. Can use "path/to/file.mdl::MaterialName"
+                   to specify a particular material variant within a file
         selection_strategy: How to select from available MDL files
+        randomize_material_variant: If True, randomly select from all material variants in each MDL file.
+                                   This expands diversity significantly (e.g., Rug_Carpet.mdl has 4 variants,
+                                   Caoutchouc.mdl has 93 variants!). vMaterials_2 has 2605 total variants
+                                   across 315 files. Ignored if mdl_path already specifies a material (via ::).
+                                   **Default: True** to maximize diversity for domain randomization.
+                                   Fully reproducible with seed control.
         enabled: Whether to apply MDL material randomization
         auto_download: Whether to automatically download missing MDL files
         validate_paths: Whether to validate file existence at initialization
@@ -142,6 +182,7 @@ class MDLMaterialCfg:
     mdl_paths: list[str] = dataclasses.field(default_factory=list)
     selection_strategy: Literal["random", "sequential", "weighted"] = "random"
     weights: list[float] | None = None
+    randomize_material_variant: bool = True  # Changed default from False to True
     enabled: bool = True
     auto_download: bool = True
     validate_paths: bool = True
@@ -213,7 +254,10 @@ class MaterialRandomizer(BaseRandomizerType):
     def __init__(self, cfg: MaterialRandomCfg, seed: int | None = None):
         self.cfg = cfg
         self._mdl_selection_state = {"sequential_index": 0}
+        self._torch_generator: torch.Generator | None = None
+        self._defer_visual_flush = False  # Defer visual flush for batched updates
         super().__init__(seed=seed)
+        self._sync_torch_generator()
 
         logger.debug(f"MaterialRandomizer for '{cfg.obj_name}' using seed {self._seed}")
 
@@ -221,6 +265,7 @@ class MaterialRandomizer(BaseRandomizerType):
         """Set or update RNG seed."""
         super().set_seed(seed)
         self._mdl_selection_state["sequential_index"] = 0
+        self._sync_torch_generator()
 
     def bind_handler(self, handler, *args: Any, **kwargs):
         """Bind the handler to the randomizer."""
@@ -277,23 +322,41 @@ class MaterialRandomizer(BaseRandomizerType):
         else:
             raise ValueError(f"Unsupported distribution: {distribution}")
 
+    def _ensure_torch_generator(self) -> torch.Generator:
+        if self._torch_generator is None:
+            self._torch_generator = torch.Generator()
+            if self._seed is not None:
+                self._torch_generator.manual_seed(self._seed)
+            else:
+                self._torch_generator.seed()
+        return self._torch_generator
+
     def _generate_random_tensor(
         self, value_range: tuple[float, float], shape: tuple, distribution: str = "uniform"
     ) -> torch.Tensor:
         """Generate random tensor with specified shape."""
+        generator = self._ensure_torch_generator()
         if distribution == "uniform":
-            return torch.rand(shape) * (value_range[1] - value_range[0]) + value_range[0]
+            return torch.rand(shape, generator=generator) * (value_range[1] - value_range[0]) + value_range[0]
         elif distribution == "log_uniform":
             log_min = torch.log(torch.tensor(value_range[0]))
             log_max = torch.log(torch.tensor(value_range[1]))
-            return torch.exp(torch.rand(shape) * (log_max - log_min) + log_min)
+            return torch.exp(torch.rand(shape, generator=generator) * (log_max - log_min) + log_min)
         elif distribution == "gaussian":
             mean = (value_range[0] + value_range[1]) / 2
             std = (value_range[1] - value_range[0]) / 6
-            values = torch.normal(mean, std, size=shape)
+            values = torch.normal(mean, std, size=shape, generator=generator)
             return torch.clamp(values, value_range[0], value_range[1])
         else:
             raise ValueError(f"Unsupported distribution: {distribution}")
+
+    def _sync_torch_generator(self) -> None:
+        if self._torch_generator is None:
+            self._torch_generator = torch.Generator()
+        if self._seed is not None:
+            self._torch_generator.manual_seed(self._seed)
+        else:
+            self._torch_generator.seed()
 
     def randomize_physical_properties(self) -> None:
         """Randomize physical material properties (friction, restitution)."""
@@ -339,6 +402,7 @@ class MaterialRandomizer(BaseRandomizerType):
 
         # Get prim paths for each environment
         root_path = obj_inst.cfg.prim_path
+        applied_any = False
 
         for env_id in env_ids:
             env_prim_path = root_path.replace("env_.*", f"env_{env_id}")
@@ -410,42 +474,93 @@ class MaterialRandomizer(BaseRandomizerType):
             return
 
         root_path = obj_inst.cfg.prim_path
+        assignments: list[tuple[str, str, str | None]] = []
+        prepared_mdls: set[str] = set()
+        applied_any = False
 
         for env_id in env_ids:
             env_prim_path = root_path.replace("env_.*", f"env_{env_id}")
 
             # Select MDL path from all configured paths
             mdl_path = self._select_mdl_path(self.cfg.mdl.mdl_paths)
+            mdl_path = os.path.abspath(mdl_path)
 
-            # Download the selected MDL file if it doesn't exist
-            if not os.path.exists(mdl_path) and self.cfg.mdl.auto_download:
+            # Download MDL and textures
+            if not self._ensure_mdl_downloaded(mdl_path, prepared_mdls, self.cfg.mdl.auto_download):
+                continue
+
+            # Select material variant if enabled
+            material_name = None
+            if self.cfg.mdl.randomize_material_variant and "::" not in mdl_path:
+                available_materials = list_materials_in_mdl(mdl_path)
+                if len(available_materials) > 1:
+                    material_name = self._rng.choice(available_materials)
+                    logger.debug(
+                        f"Randomly selected material '{material_name}' from "
+                        f"{len(available_materials)} variants in {os.path.basename(mdl_path)}"
+                    )
+
+            assignments.append((mdl_path, env_prim_path, material_name))
+
+        touched_prims: list[str] = []
+        for mdl_path, env_prim_path, material_name in assignments:
+            try:
+                self._apply_mdl_to_prim(mdl_path, env_prim_path, material_name)
+                applied_any = True
+                touched_prims.append(env_prim_path)
+            except Exception as e:
+                logger.warning(f"Failed to apply MDL {mdl_path} to {env_prim_path}: {e}")
+
+        if applied_any:
+            self._mark_visual_dirty()
+            self._force_pose_nudge(touched_prims)
+
+    def _ensure_mdl_downloaded(self, mdl_path: str, prepared_mdls: set[str], auto_download: bool) -> bool:
+        """Download MDL file and its textures if missing.
+
+        Args:
+            mdl_path: Absolute path to MDL file
+            prepared_mdls: Set of already prepared MDL paths (for caching)
+            auto_download: Whether to auto-download missing files
+
+        Returns:
+            True if MDL and textures are available, False if download failed
+        """
+        # Download the MDL file if it doesn't exist
+        if not os.path.exists(mdl_path):
+            if auto_download:
                 try:
                     logger.info(f"Downloading MDL file: {os.path.basename(mdl_path)}")
                     check_and_download_single(mdl_path)
                 except Exception as e:
                     logger.warning(f"Failed to download MDL {mdl_path}: {e}")
-                    continue  # Skip this environment if download fails
+                    return False
+            else:
+                logger.warning(f"MDL file not found and auto_download is disabled: {mdl_path}")
+                return False
 
-            # Download textures for the selected MDL file
-            if os.path.exists(mdl_path):
-                try:
-                    texture_paths = extract_texture_paths_from_mdl(mdl_path)
-                    missing_textures = [p for p in texture_paths if not os.path.exists(p)]
-                    if missing_textures and self.cfg.mdl.auto_download:
-                        logger.info(f"Downloading {len(missing_textures)} missing texture files...")
+        # Download textures for the MDL file (once per unique MDL)
+        if os.path.exists(mdl_path) and mdl_path not in prepared_mdls:
+            try:
+                texture_paths = extract_texture_paths_from_mdl(mdl_path)
+                missing_textures = [p for p in texture_paths if not os.path.exists(p)]
+                if missing_textures:
+                    if auto_download:
+                        logger.info(
+                            f"Downloading {len(missing_textures)} texture file(s) for {os.path.basename(mdl_path)}"
+                        )
                         for texture_path in missing_textures:
                             try:
                                 check_and_download_single(texture_path)
                             except Exception as e:
                                 logger.warning(f"Failed to download texture {texture_path}: {e}")
-                except Exception as e:
-                    logger.warning(f"Failed to process textures for {mdl_path}: {e}")
-
-            # Apply the material
-            try:
-                self._apply_mdl_to_prim(mdl_path, env_prim_path)
+                    else:
+                        logger.warning(f"{len(missing_textures)} texture(s) missing and auto_download is disabled")
             except Exception as e:
-                logger.warning(f"Failed to apply MDL {mdl_path} to {env_prim_path}: {e}")
+                logger.warning(f"Failed to process textures for {mdl_path}: {e}")
+            prepared_mdls.add(mdl_path)
+
+        return True
 
     def _select_mdl_path(self, available_paths: list[str]) -> str:
         """Select MDL path based on selection strategy using reproducible RNG."""
@@ -463,11 +578,22 @@ class MaterialRandomizer(BaseRandomizerType):
         else:
             raise ValueError(f"Unknown selection strategy: {self.cfg.mdl.selection_strategy}")
 
-    def _apply_mdl_to_prim(self, mdl_path: str, prim_path: str) -> None:
+    def _apply_mdl_to_prim(self, mdl_path: str, prim_path: str, material_name: str | None = None) -> None:
         """Apply MDL material to a specific prim.
 
-        This is the internal implementation that was originally in material_util.py
+        This is the internal implementation that was originally in material_util.py.
+
+        Args:
+            mdl_path: Path to MDL file (can include "::MaterialName" suffix to specify material)
+            prim_path: USD prim path to apply material to
+            material_name: Optional material name to use. If None, will be extracted from mdl_path
         """
+        # Parse mdl_path to extract material name if specified (format: "path/to/file.mdl::MaterialName")
+        if "::" in mdl_path:
+            mdl_path, specified_material = mdl_path.rsplit("::", 1)
+            if material_name is None:
+                material_name = specified_material
+
         # Convert to absolute path for IsaacSim
         mdl_path = os.path.abspath(mdl_path)
 
@@ -482,21 +608,95 @@ class MaterialRandomizer(BaseRandomizerType):
         if not prim:
             raise ValueError(f"Prim not found at path {prim_path}")
 
+        prim = self._make_prim_editable(prim)
+
         # Ensure UV coordinates first
         self._ensure_uv_for_hierarchy(prim)
 
-        # Material name should match the MDL file basename (without .mdl extension)
-        # Don't add _mat or timestamp - let IsaacSim use the exported material name from MDL
-        mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+        # Extract actual material name from MDL file (handles files with multiple materials)
+        # Many MDL files contain multiple material definitions (e.g., Rug_Carpet.mdl has
+        # Rug_Carpet_Base, Rug_Carpet_Lines, etc.), so we must parse the file to get
+        # the correct material name instead of just using the filename
+        mtl_name = extract_material_name_from_mdl(mdl_path, material_name)
+        if mtl_name is None:
+            # Fallback to filename if extraction fails
+            mtl_name = os.path.basename(mdl_path).removesuffix(".mdl")
+            logger.warning(f"Could not extract material name from {mdl_path}, using filename: {mtl_name}")
+        else:
+            if material_name:
+                logger.debug(f"Using specified material '{mtl_name}' from {mdl_path}")
+            else:
+                logger.debug(f"Auto-extracted material name '{mtl_name}' from {mdl_path}")
+
+        mtl_prim_path = self._get_or_create_material_prim(mdl_path, mtl_name)
+
+        geometry_prims = list(self._iter_geometry_prims(prim))
+        if not geometry_prims:
+            geometry_prims = [prim]
+
+        logger.debug(f"Applying MDL {mtl_name} to {len(geometry_prims)} prim(s) under {prim_path}")
+
+        applied_any = False
+        for geom_prim in geometry_prims:
+            if not geom_prim or not geom_prim.IsValid():
+                continue
+            double_sided = self._ensure_double_sided(geom_prim)
+            if self._bind_material_to_prim(geom_prim, mtl_prim_path, mtl_name, double_sided):
+                applied_any = True
+
+        if not applied_any:
+            raise RuntimeError(f"Failed to apply MDL material {mtl_name} anywhere under {prim_path}")
+
+        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+
+        # Ensure downstream sensors observe the updated material deterministically.
+
+    def _bind_material_to_prim(self, prim, material_path: str, mdl_name: str, double_sided: bool) -> bool:
+        """Bind the prepared material prim to a specific geometry prim."""
+        import omni.kit.commands
+        from pxr import UsdShade
+
+        logger.debug(f"Binding MDL {mdl_name} to {prim.GetPath()} (double_sided={'Y' if double_sided else 'N'})")
+        success, _ = omni.kit.commands.execute(
+            "BindMaterial",
+            prim_path=prim.GetPath(),
+            material_path=material_path,
+            strength=UsdShade.Tokens.strongerThanDescendants,
+        )
+        if not success:
+            logger.warning(f"Failed to bind material {material_path} to {prim.GetPath()}")
+            return False
+        return True
+
+    def _get_or_create_material_prim(self, mdl_path: str, mtl_name: str) -> str:
+        """Reuse previously created material prims whenever possible."""
+        cache = self._get_material_cache()
+        mdl_path = os.path.abspath(mdl_path)
+        cached_prim = cache.get(mdl_path)
+
+        stage = None
+        try:
+            import omni.usd
+
+            stage = omni.usd.get_context().get_stage()
+        except Exception as err:
+            logger.debug(f"Unable to access USD stage when resolving material prim: {err}")
+
+        if cached_prim and stage is not None:
+            prim = stage.GetPrimAtPath(cached_prim)
+            if prim and prim.IsValid():
+                logger.debug(f"Reusing cached MDL material {mtl_name} at {cached_prim}")
+                return cached_prim
+            cache.pop(mdl_path, None)
+
         import omni.kit.commands
         from omni.kit.material.library import get_material_prim_path
-        from pxr import UsdShade
 
         _, mtl_prim_path = get_material_prim_path(mtl_name)
 
         logger.debug(f"Creating MDL material: {mtl_name} from {mdl_path}")
 
-        success, result = omni.kit.commands.execute(
+        success, _ = omni.kit.commands.execute(
             "CreateMdlMaterialPrim",
             mtl_url=mdl_path,
             mtl_name=mtl_name,
@@ -507,20 +707,42 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"Failed to create material {mtl_name} at {mtl_prim_path}")
             raise RuntimeError(f"Failed to create material {mtl_name} at {mtl_prim_path}")
 
-        logger.debug(f"Binding material {mtl_prim_path} to {prim.GetPath()}")
+        cache[mdl_path] = mtl_prim_path
+        return mtl_prim_path
 
-        success, result = omni.kit.commands.execute(
-            "BindMaterial",
-            prim_path=prim.GetPath(),
-            material_path=mtl_prim_path,
-            strength=UsdShade.Tokens.strongerThanDescendants,
-        )
+    def _get_material_cache(self) -> dict[str, str]:
+        """Fetch or initialize the shared material cache."""
+        handler = getattr(self, "handler", None)
+        if handler is not None:
+            cache = getattr(handler, "_mdl_material_cache", None)
+            if cache is None:
+                cache = {}
+                handler._mdl_material_cache = cache
+            return cache
 
-        if not success:
-            logger.error(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
-            raise RuntimeError(f"Failed to bind material at {mtl_prim_path} to {prim.GetPath()}")
+        if not hasattr(self, "_mdl_material_cache"):
+            self._mdl_material_cache = {}
+        return self._mdl_material_cache
 
-        logger.debug(f"Successfully applied MDL material {mtl_name} to {prim_path}")
+    def _make_prim_editable(self, prim):
+        """Ensure the prim (or its prototype) is writable."""
+        if prim is None or not prim.IsValid():
+            return prim
+
+        # Instance proxies can't be authored directly; map to their prototype prim.
+        if prim.IsInstanceProxy():
+            proto_prim = prim.GetPrimInPrototype()
+            if proto_prim and proto_prim.IsValid():
+                prim = proto_prim
+            else:
+                prototype = prim.GetPrototype()
+                if prototype and prototype.IsValid():
+                    prim = prototype
+
+        if prim.IsInstanceable():
+            prim.SetInstanceable(False)
+
+        return prim
 
     def _ensure_uv_for_hierarchy(self, prim, tile_scale: float = 1.0) -> None:
         """Ensure UV coordinates for all meshes in the prim hierarchy.
@@ -529,22 +751,179 @@ class MaterialRandomizer(BaseRandomizerType):
             prim: USD prim to process
             tile_scale: Scale factor for UV tiling (passed to UV generation functions)
         """
-        from pxr import Usd, UsdGeom
+        from pxr import UsdGeom
 
-        # Process all meshes in the hierarchy
-        for p in Usd.PrimRange(prim):
-            if p.IsA(UsdGeom.Mesh):
+        for editable_prim in self._iter_geometry_prims(prim):
+            if editable_prim.IsA(UsdGeom.Mesh):
                 try:
                     self._ensure_uv_coordinates_improved(
-                        UsdGeom.Mesh(p), tile=1.0 / tile_scale if tile_scale > 0 else 0.2
+                        UsdGeom.Mesh(editable_prim), tile=1.0 / tile_scale if tile_scale > 0 else 0.2
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to generate UV for mesh {p.GetPath()}: {e}")
-            elif p.IsA(UsdGeom.Gprim) and not p.IsA(UsdGeom.Mesh):
+                    logger.warning(f"Failed to generate UV for mesh {editable_prim.GetPath()}: {e}")
+            elif editable_prim.IsA(UsdGeom.Gprim) and not editable_prim.IsA(UsdGeom.Mesh):
                 try:
-                    self._ensure_basic_uv_for_gprim(p, tile_scale=tile_scale)
+                    self._ensure_basic_uv_for_gprim(editable_prim, tile_scale=tile_scale)
                 except Exception as e:
-                    logger.warning(f"Failed to generate UV for gprim {p.GetPath()}: {e}")
+                    logger.warning(f"Failed to generate UV for gprim {editable_prim.GetPath()}: {e}")
+
+    def _iter_geometry_prims(self, prim):
+        """Yield editable mesh/gprim prims under the provided root."""
+        from pxr import Usd, UsdGeom
+
+        predicate = getattr(Usd, "PrimDefaultPredicate", None)
+        if predicate is None:
+            predicate = Usd.PrimIsActive & Usd.PrimIsDefined & ~Usd.PrimIsAbstract
+        predicate = Usd.TraverseInstanceProxies(predicate)
+
+        for child in Usd.PrimRange(prim, predicate=predicate):
+            editable_prim = self._make_prim_editable(child)
+            if not editable_prim or not editable_prim.IsValid():
+                continue
+            if editable_prim.IsA(UsdGeom.Mesh) or (
+                editable_prim.IsA(UsdGeom.Gprim) and not editable_prim.IsA(UsdGeom.Mesh)
+            ):
+                yield editable_prim
+
+    def _ensure_double_sided(self, prim) -> bool:
+        """Force double-sided shading so single-sided MDLs don't disappear."""
+        from pxr import UsdGeom
+
+        if not prim or not prim.IsValid():
+            return False
+
+        if prim.IsA(UsdGeom.Mesh):
+            mesh = UsdGeom.Mesh(prim)
+            attr = mesh.GetDoubleSidedAttr()
+            needs_update = not attr.HasAuthoredValue() or attr.Get() is False
+            if needs_update:
+                mesh.CreateDoubleSidedAttr(True)
+                return True
+            return attr.Get()
+        return False
+
+    def _force_pose_nudge(self, prim_paths: list[str]) -> None:
+        """Apply tiny temporary translation to force RTX BLAS updates.
+
+        When _defer_visual_flush is True, skips intermediate flush calls to
+        enable batched visual updates across multiple randomizers.
+        """
+        if not prim_paths:
+            return
+
+        handler = getattr(self, "handler", None)
+        if handler is None:
+            return
+
+        try:
+            import omni.usd
+            from pxr import Gf, Usd, UsdGeom, UsdPhysics
+        except ImportError:
+            return
+
+        stage = omni.usd.get_context().get_stage()
+        if stage is None:
+            return
+
+        nudged_ops: list[tuple[UsdGeom.XformOp, Gf.Vec3d]] = []
+        for prim_path in prim_paths:
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim or not prim.IsValid():
+                continue
+
+            # For articulated objects, apply to child visual meshes only
+            if UsdPhysics.ArticulationRootAPI(prim):
+                predicate = getattr(Usd, "PrimDefaultPredicate", None)
+                if predicate is None:
+                    predicate = Usd.PrimIsActive & Usd.PrimIsDefined & ~Usd.PrimIsAbstract
+                predicate = Usd.TraverseInstanceProxies(predicate)
+
+                for child in Usd.PrimRange(prim, predicate=predicate):
+                    if child.GetPath() == prim.GetPath():
+                        continue
+
+                    # Skip collision geometry to avoid breaking physics
+                    if child.HasAPI(UsdPhysics.CollisionAPI):
+                        continue
+
+                    child_path_str = str(child.GetPath())
+                    if "collision" in child_path_str.lower():
+                        continue
+
+                    if child.IsA(UsdGeom.Mesh) or child.IsA(UsdGeom.Gprim):
+                        xformable = UsdGeom.Xformable(child)
+                        if not xformable:
+                            continue
+
+                        op = self._get_or_create_nudge_op(xformable)
+                        if op is None:
+                            continue
+
+                        base_val = op.Get()
+                        if base_val is None:
+                            base_val = Gf.Vec3d(0.0, 0.0, 0.0)
+
+                        op.Set(base_val + Gf.Vec3d(1e-4, 0.0, 0.0))
+                        nudged_ops.append((op, base_val))
+                continue
+
+            # For non-articulated prims, apply directly
+            xformable = UsdGeom.Xformable(prim)
+            if not xformable:
+                continue
+
+            op = self._get_or_create_nudge_op(xformable)
+            if op is None:
+                continue
+
+            base_val = op.Get()
+            if base_val is None:
+                base_val = Gf.Vec3d(0.0, 0.0, 0.0)
+
+            op.Set(base_val + Gf.Vec3d(1e-4, 0.0, 0.0))
+            nudged_ops.append((op, base_val))
+
+        if not nudged_ops:
+            return
+
+        # Flush only if not deferring (enables batched updates)
+        flush_fn = getattr(handler, "flush_visual_updates", None)
+        if callable(flush_fn) and not self._defer_visual_flush:
+            try:
+                flush_fn(wait_for_materials=True, settle_passes=1)
+            except Exception as err:
+                logger.debug(f"flush_visual_updates during pose nudge failed: {err}")
+
+        for op, base_val in nudged_ops:
+            try:
+                op.Set(base_val)
+            except Exception as err:
+                logger.debug(f"Failed to restore translate op {op.GetName()}: {err}")
+
+        if callable(flush_fn) and not self._defer_visual_flush:
+            try:
+                flush_fn(wait_for_materials=True, settle_passes=1)
+            except Exception as err:
+                logger.debug(f"flush_visual_updates during pose restore failed: {err}")
+
+    def _get_or_create_nudge_op(self, xformable):
+        """Return a reusable translate op for pose nudging."""
+        from pxr import UsdGeom
+
+        nudge_op = None
+        for op in xformable.GetOrderedXformOps():
+            if op.GetOpType() == UsdGeom.XformOp.TypeTranslate and op.GetName().endswith("dr_refresh"):
+                nudge_op = op
+                break
+
+        if nudge_op is None:
+            try:
+                nudge_op = xformable.AddTranslateOp(opSuffix="dr_refresh", precision=UsdGeom.XformOp.PrecisionDouble)
+            except Exception as err:
+                logger.debug(f"Failed to create nudge translate op for {xformable.GetPrim().GetPath()}: {err}")
+                return None
+
+        return nudge_op
 
     def _ensure_uv_coordinates_improved(self, mesh, tile: float = 0.2) -> None:
         """Improved UV coordinate generation based on bounding box projection."""

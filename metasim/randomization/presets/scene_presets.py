@@ -6,11 +6,9 @@ for domain randomization, following the paper's methodology.
 
 from __future__ import annotations
 
-from metasim.randomization.scene_randomizer import (
-    SceneGeometryCfg,
-    SceneMaterialPoolCfg,
-    SceneRandomCfg,
-)
+from metasim.randomization.scene_randomizer import SceneGeometryCfg, SceneMaterialPoolCfg, SceneRandomCfg
+
+from .material_presets import MDLCollections
 
 # =============================================================================
 # Scene Material Collections (from ARNOLD and vMaterials)
@@ -18,256 +16,85 @@ from metasim.randomization.scene_randomizer import (
 
 
 class SceneMaterialCollections:
-    """Curated material collections for scene elements.
+    """Curated material collections built from MDL families."""
 
-    Following the paper's methodology:
-    - Table/Desktop: ~300 materials
-    - Walls: ~150 materials
-    - Floors: ~150 materials
-    - Ceiling: subset of wall materials
-    """
+    TABLE_FAMILIES = ("wood", "stone", "plastic", "ceramic", "metal")
+    FLOOR_FAMILIES = ("carpet", "wood", "stone", "concrete", "plastic")
+    WALL_FAMILIES = ("architecture", "wall_board", "masonry", "paint", "composite")
+    CEILING_FAMILIES = ("architecture", "wall_board", "wood")
 
     @staticmethod
     def table_materials(
-        base_path_arnold: str = "roboverse_data/materials/arnold",
-        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+        *,
+        families: tuple[str, ...] | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = False,
     ) -> list[str]:
-        """Get curated table/desktop material paths (~300 materials).
-
-        Combines wood, stone, and other suitable materials for tabletops.
-
-        Args:
-            base_path_arnold: Base path to ARNOLD materials
-            base_path_vmaterials: Base path to vMaterials
-
-        Returns:
-            List of material file paths
-        """
-        materials = []
-
-        # ARNOLD Wood materials (suitable for tables)
-        arnold_wood = [
-            "Wood/Ash.mdl",
-            "Wood/Ash_Planks.mdl",
-            "Wood/Bamboo.mdl",
-            "Wood/Bamboo_Planks.mdl",
-            "Wood/Beadboard.mdl",
-            "Wood/Birch.mdl",
-            "Wood/Birch_Planks.mdl",
-            "Wood/Cherry.mdl",
-            "Wood/Cherry_Planks.mdl",
-            "Wood/Cork.mdl",
-            "Wood/Mahogany.mdl",
-            "Wood/Mahogany_Planks.mdl",
-            "Wood/Oak.mdl",
-            "Wood/Oak_Planks.mdl",
-            "Wood/Parquet_Floor.mdl",
-            "Wood/Plywood.mdl",
-            "Wood/Timber.mdl",
-            "Wood/Timber_Cladding.mdl",
-            "Wood/Walnut.mdl",
-            "Wood/Walnut_Planks.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood])
-
-        # vMaterials Wood
-        vmaterials_wood = [
-            "Wood/Laminate_Oak.mdl",
-            "Wood/OSB_Wood.mdl",
-            "Wood/OSB_Wood_Splattered.mdl",
-            "Wood/Wood_Bark.mdl",
-            "Wood/Wood_Cork.mdl",
-            "Wood/Wood_Tiles_Ash.mdl",
-            "Wood/Wood_Tiles_Ash_Multicolor.mdl",
-            "Wood/Wood_Tiles_Beech.mdl",
-            "Wood/Wood_Tiles_Beech_Multicolor.mdl",
-            "Wood/Wood_Tiles_Fineline.mdl",
-            "Wood/Wood_Tiles_Fineline_Multicolor.mdl",
-            "Wood/Wood_Tiles_Oak_Mountain.mdl",
-            "Wood/Wood_Tiles_Oak_Mountain_Multicolor.mdl",
-            "Wood/Wood_Tiles_Pine.mdl",
-            "Wood/Wood_Tiles_Pine_Multicolor.mdl",
-            "Wood/Wood_Tiles_Poplar.mdl",
-            "Wood/Wood_Tiles_Poplar_Multicolor.mdl",
-            "Wood/Wood_Tiles_Walnut.mdl",
-            "Wood/Wood_Tiles_Walnut_Multicolor.mdl",
-        ]
-        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood])
-
-        # ARNOLD Stone/Masonry (suitable for tables)
-        arnold_stone = [
-            "Masonry/Adobe_Brick.mdl",
-            "Masonry/Brick_Pavers.mdl",
-            "Masonry/Concrete_Block.mdl",
-            "Masonry/Brick_Wall_Brown.mdl",
-            "Masonry/Brick_Wall_Red.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_stone])
-
-        # vMaterials Stone
-        vmaterials_stone = [
-            "Stone/Granite_Polished.mdl",
-            # "Stone/Marble_Polished.mdl",
-            "Stone/Rosa_Beta.mdl",
-            "Stone/Stone_Natural_Black.mdl",
-            "Stone/Terrazzo.mdl",
-        ]
-        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
-
-        return materials
+        """Return table/desktop materials sourced from the MDL family registry."""
+        return _collect_family_materials(
+            families or SceneMaterialCollections.TABLE_FAMILIES,
+            max_materials=max_materials,
+            warn_missing=warn_missing,
+        )
 
     @staticmethod
     def floor_materials(
-        base_path_arnold: str = "roboverse_data/materials/arnold",
-        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+        *,
+        families: tuple[str, ...] | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = False,
     ) -> list[str]:
-        """Get curated floor material paths (~150 materials).
-
-        Combines carpet, wood, stone, and tile materials suitable for floors.
-
-        Args:
-            base_path_arnold: Base path to ARNOLD materials
-            base_path_vmaterials: Base path to vMaterials
-
-        Returns:
-            List of material file paths
-        """
-        materials = []
-
-        # ARNOLD Carpet materials
-        arnold_carpet = [
-            "Carpet/Carpet_Beige.mdl",
-            "Carpet/Carpet_Berber_Gray.mdl",
-            "Carpet/Carpet_Berber_Multi.mdl",
-            "Carpet/Carpet_Charcoal.mdl",
-            "Carpet/Carpet_Cream.mdl",
-            "Carpet/Carpet_Diamond_Yellow.mdl",
-            "Carpet/Carpet_Forest.mdl",
-            "Carpet/Carpet_Gray.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_carpet])
-
-        # ARNOLD Wood flooring
-        arnold_wood_floor = [
-            "Wood/Parquet_Floor.mdl",
-            "Wood/Ash_Planks.mdl",
-            "Wood/Bamboo_Planks.mdl",
-            "Wood/Birch_Planks.mdl",
-            "Wood/Cherry_Planks.mdl",
-            "Wood/Oak_Planks.mdl",
-            "Wood/Mahogany_Planks.mdl",
-            "Wood/Walnut_Planks.mdl",
-            "Wood/Beadboard.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_floor])
-
-        # vMaterials Wood flooring
-        vmaterials_wood_floor = [
-            "Wood/Laminate_Oak.mdl",
-            "Wood/Wood_Tiles_Ash.mdl",
-            "Wood/Wood_Tiles_Beech.mdl",
-            "Wood/Wood_Tiles_Fineline.mdl",
-            "Wood/Wood_Tiles_Oak_Mountain.mdl",
-            "Wood/Wood_Tiles_Pine.mdl",
-            "Wood/Wood_Tiles_Poplar.mdl",
-            "Wood/Wood_Tiles_Walnut.mdl",
-        ]
-        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_wood_floor])
-
-        # ARNOLD Masonry for floors
-        arnold_masonry = [
-            "Masonry/Brick_Pavers.mdl",
-            "Masonry/Concrete_Block.mdl",
-            "Masonry/Brick_Wall_Brown.mdl",
-            "Masonry/Brick_Wall_Red.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
-
-        # vMaterials Stone for floors
-        vmaterials_stone = [
-            "Stone/Terrazzo.mdl",
-        ]
-        materials.extend([f"{base_path_vmaterials}/{m}" for m in vmaterials_stone])
-
-        return materials
+        """Return floor materials (carpet/wood/stone/concrete/plastic by default)."""
+        return _collect_family_materials(
+            families or SceneMaterialCollections.FLOOR_FAMILIES,
+            max_materials=max_materials,
+            warn_missing=warn_missing,
+        )
 
     @staticmethod
     def wall_materials(
-        base_path_arnold: str = "roboverse_data/materials/arnold",
-        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+        *,
+        families: tuple[str, ...] | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = False,
     ) -> list[str]:
-        """Get curated wall material paths (~150 materials).
-
-        Combines architecture materials, painted surfaces, and suitable textures.
-
-        Args:
-            base_path_arnold: Base path to ARNOLD materials
-            base_path_vmaterials: Base path to vMaterials
-
-        Returns:
-            List of material file paths
-        """
-        materials = []
-
-        # ARNOLD Architecture materials
-        arnold_architecture = [
-            "Architecture/Ceiling_Tiles.mdl",
-            "Architecture/Roof_Tiles.mdl",
-            "Architecture/Shingles_01.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_architecture])
-
-        # ARNOLD Masonry for walls
-        arnold_masonry = [
-            "Masonry/Adobe_Brick.mdl",
-            "Masonry/Brick_Wall_Brown.mdl",
-            "Masonry/Brick_Wall_Red.mdl",
-            "Masonry/Concrete_Block.mdl",
-            "Masonry/Brick_Pavers.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
-
-        # ARNOLD Wood paneling for walls
-        arnold_wood_wall = [
-            "Wood/Beadboard.mdl",
-            "Wood/Timber_Cladding.mdl",
-            "Wood/Plywood.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_wall])
-
-        return materials
+        """Return wall materials (architecture/wall_board/masonry/paint/composite by default)."""
+        return _collect_family_materials(
+            families or SceneMaterialCollections.WALL_FAMILIES,
+            max_materials=max_materials,
+            warn_missing=warn_missing,
+        )
 
     @staticmethod
-    def ceiling_materials(base_path_arnold: str = "roboverse_data/materials/arnold") -> list[str]:
-        """Get curated ceiling material paths (subset of wall materials).
+    def ceiling_materials(
+        *,
+        families: tuple[str, ...] | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = False,
+    ) -> list[str]:
+        """Return ceiling materials (architecture/wall_board/wood by default)."""
+        return _collect_family_materials(
+            families or SceneMaterialCollections.CEILING_FAMILIES,
+            max_materials=max_materials,
+            warn_missing=warn_missing,
+        )
 
-        Args:
-            base_path_arnold: Base path to ARNOLD materials
 
-        Returns:
-            List of material file paths
-        """
-        materials = []
+def _collect_family_materials(
+    families: tuple[str, ...],
+    *,
+    max_materials: int | None,
+    warn_missing: bool,
+) -> list[str]:
+    """Aggregate unique material paths from the given MDL families."""
+    paths: list[str] = []
+    for family in families:
+        paths.extend(MDLCollections.family(family, warn_missing=warn_missing))
 
-        # ARNOLD Architecture materials for ceilings
-        arnold_ceiling = [
-            "Architecture/Ceiling_Tiles.mdl",
-            "Architecture/Shingles_01.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_ceiling])
-
-        # Some wood paneling
-        arnold_wood = [
-            "Wood/Beadboard.mdl",
-            "Wood/Plywood.mdl",
-        ]
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood])
-
-        # Simple masonry
-        arnold_masonry = []
-        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
-
-        return materials
+    unique = sorted(dict.fromkeys(paths))
+    if max_materials is not None and max_materials > 0 and len(unique) > max_materials:
+        unique = unique[:max_materials]
+    return unique
 
 
 # =============================================================================
@@ -279,13 +106,24 @@ class ScenePresets:
     """Pre-configured scene setups for common scenarios."""
 
     @staticmethod
-    def empty_room(room_size: float = 5.0, wall_height: float = 3.0, wall_thickness: float = 0.1) -> SceneRandomCfg:
+    def empty_room(
+        room_size: float = 5.0,
+        wall_height: float = 3.0,
+        wall_thickness: float = 0.1,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+    ) -> SceneRandomCfg:
         """Create an empty room with floor, walls, and ceiling.
 
         Args:
             room_size: Size of the room (square)
             wall_height: Height of walls
             wall_thickness: Thickness of walls
+            floor_families: Optional override for floor material families
+            wall_families: Optional override for wall material families
+            ceiling_families: Optional override for ceiling material families
 
         Returns:
             Scene randomization configuration
@@ -310,15 +148,15 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             wall_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.wall_materials(),
+                material_paths=SceneMaterialCollections.wall_materials(families=wall_families),
                 selection_strategy="random",
             ),
             ceiling_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.ceiling_materials(),
+                material_paths=SceneMaterialCollections.ceiling_materials(families=ceiling_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
@@ -330,6 +168,11 @@ class ScenePresets:
         wall_height: float = 3.0,
         table_size: tuple[float, float, float] = (1.5, 1.0, 0.05),
         table_height: float = 0.75,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+        table_families: tuple[str, ...] | None = None,
     ) -> SceneRandomCfg:
         """Create a tabletop manipulation workspace.
 
@@ -338,6 +181,10 @@ class ScenePresets:
             wall_height: Height of walls
             table_size: Size of the table (x, y, z)
             table_height: Height of table surface from ground
+            floor_families: Optional override for floor material families
+            wall_families: Optional override for wall material families
+            ceiling_families: Optional override for ceiling material families
+            table_families: Optional override for table material families
 
         Returns:
             Scene randomization configuration
@@ -370,31 +217,37 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             wall_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.wall_materials(),
+                material_paths=SceneMaterialCollections.wall_materials(families=wall_families),
                 selection_strategy="random",
             ),
             ceiling_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.ceiling_materials(),
+                material_paths=SceneMaterialCollections.ceiling_materials(families=ceiling_families),
                 selection_strategy="random",
             ),
             table_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.table_materials(),
+                material_paths=SceneMaterialCollections.table_materials(families=table_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
         )
 
     @staticmethod
-    def floor_only(floor_size: float = 10.0, floor_thickness: float = 0.1) -> SceneRandomCfg:
+    def floor_only(
+        floor_size: float = 10.0,
+        floor_thickness: float = 0.1,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+    ) -> SceneRandomCfg:
         """Create only a floor (minimal scene).
 
         Args:
             floor_size: Size of the floor (square)
             floor_thickness: Thickness of floor
+            floor_families: Optional override for floor material families
 
         Returns:
             Scene randomization configuration
@@ -407,7 +260,7 @@ class ScenePresets:
                 material_randomization=True,
             ),
             floor_materials=SceneMaterialPoolCfg(
-                material_paths=SceneMaterialCollections.floor_materials(),
+                material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
                 selection_strategy="random",
             ),
             only_if_no_scene=True,
@@ -423,6 +276,11 @@ class ScenePresets:
         wall_materials: list[str] | None = None,
         ceiling_materials: list[str] | None = None,
         table_materials: list[str] | None = None,
+        *,
+        floor_families: tuple[str, ...] | None = None,
+        wall_families: tuple[str, ...] | None = None,
+        ceiling_families: tuple[str, ...] | None = None,
+        table_families: tuple[str, ...] | None = None,
         only_if_no_scene: bool = True,
     ) -> SceneRandomCfg:
         """Create a fully customizable scene configuration.
@@ -436,6 +294,10 @@ class ScenePresets:
             wall_materials: Custom wall materials (if None, uses defaults)
             ceiling_materials: Custom ceiling materials (if None, uses defaults)
             table_materials: Custom table materials (if None, uses defaults)
+            floor_families: Optional floor material family overrides when floor_materials is None
+            wall_families: Optional wall material family overrides when wall_materials is None
+            ceiling_families: Optional ceiling material family overrides when ceiling_materials is None
+            table_families: Optional table material family overrides when table_materials is None
             only_if_no_scene: Only create if no predefined scene exists
 
         Returns:
@@ -443,13 +305,13 @@ class ScenePresets:
         """
         # Use default materials if not provided
         if floor_materials is None:
-            floor_materials = SceneMaterialCollections.floor_materials()
+            floor_materials = SceneMaterialCollections.floor_materials(families=floor_families)
         if wall_materials is None:
-            wall_materials = SceneMaterialCollections.wall_materials()
+            wall_materials = SceneMaterialCollections.wall_materials(families=wall_families)
         if ceiling_materials is None:
-            ceiling_materials = SceneMaterialCollections.ceiling_materials()
+            ceiling_materials = SceneMaterialCollections.ceiling_materials(families=ceiling_families)
         if table_materials is None:
-            table_materials = SceneMaterialCollections.table_materials()
+            table_materials = SceneMaterialCollections.table_materials(families=table_families)
 
         return SceneRandomCfg(
             floor=floor_cfg,

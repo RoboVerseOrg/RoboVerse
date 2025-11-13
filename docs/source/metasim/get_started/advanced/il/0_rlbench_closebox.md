@@ -1,4 +1,4 @@
-# 0. CloseBox
+# 1. CloseBox
 
 Imitation Learning is a powerful tool for training agents to perform tasks by leveraging expert demonstrations, especially when reward signals are sparse or hard to specify.
 
@@ -14,10 +14,10 @@ To train the policy, we first need to collect demonstration for it to learn from
 python collect_demo.py \
   --task CloseBox \
   --robot franka \
-  --sim isaaclab \
+  --sim mujoco \
   --num_envs 1 \
   --headless True \
-  --random.level 2 \
+  --random.level 0 \
   --run_unfinished
 ```
 

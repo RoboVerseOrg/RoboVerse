@@ -2,44 +2,20 @@ from typing import Dict
 
 import torch
 import torch.nn.functional as F
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from einops import reduce
-from loguru import logger as log
 
-from roboverse_learn.il.utils.common.module_attr_mixin import ModuleAttrMixin
 from roboverse_learn.il.utils.common.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.common.pytorch_util import dict_apply
-
-
-class BaseImagePolicy(ModuleAttrMixin):
-    # init accepts keyword argument shape_meta, see config/dp_runner.yaml
-
-    def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        obs_dict:
-            str: B,To,*
-        return: B,Ta,Da
-        """
-        raise NotImplementedError()
-
-    # reset state for stateful policies
-    def reset(self):
-        pass
-
-    # ========== training ===========
-    # no standard training interface except setting normalizer
-    def set_normalizer(self, normalizer: LinearNormalizer):
-        raise NotImplementedError()
+from diffusion_policy.policy.base_image_policy import BaseImagePolicy
 
 
 class FlowMatchingUnetImagePolicy(BaseImagePolicy):
     def __init__(
         self,
         shape_meta: dict,
-        noise_scheduler: DDPMScheduler,
         obs_encoder: MultiImageObsEncoder,
         horizon,
         n_action_steps,
@@ -84,7 +60,6 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
 
         self.obs_encoder = obs_encoder
         self.model = model
-        self.noise_scheduler = noise_scheduler
         self.mask_generator = LowdimMaskGenerator(
             action_dim=action_dim,
             obs_dim=0 if obs_as_global_cond else obs_feature_dim,
@@ -101,8 +76,6 @@ class FlowMatchingUnetImagePolicy(BaseImagePolicy):
         self.obs_as_global_cond = obs_as_global_cond
         self.kwargs = kwargs
 
-        if num_inference_steps is None:
-            num_inference_steps = noise_scheduler.config.num_train_timesteps
         self.num_inference_steps = num_inference_steps  # number of inference steps for sampling
 
     # ========= inference  ============

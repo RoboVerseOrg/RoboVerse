@@ -107,7 +107,7 @@ def main():
         # current_ep += 1
 
         if not os.path.isdir(demo_dir):
-            print(f"Skipping episode {current_ep} as it does not exist.")
+            print(f"Skipping episode {current_ep} as directory {demo_dir} does not exist.")
             continue
         else:
             demo_id = str(current_ep).zfill(4)

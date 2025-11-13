@@ -172,7 +172,7 @@ class ObjectRandomizer(BaseRandomizerType):
     def _get_body_names(self, obj_name: str) -> list[str]:
         """Get body names for an object."""
         if hasattr(self.handler, "_get_body_names"):
-            return self._get_body_names(obj_name)
+            return self.handler._get_body_names(obj_name)
         else:
             # Fallback implementation
             if obj_name in self.handler.scene.articulations:
@@ -618,8 +618,17 @@ class ObjectRandomizer(BaseRandomizerType):
 
     def __call__(self) -> None:
         """Execute object randomization based on configuration."""
-        self.randomize_physics()
-        self.randomize_pose()
+        pose_updated = False
+
+        if self.cfg.physics.enabled:
+            self.randomize_physics()
+
+        if self.cfg.pose.enabled:
+            self.randomize_pose()
+            pose_updated = True
+
+        if pose_updated:
+            self._mark_visual_dirty()
 
     # Getter methods for backward compatibility and debugging
     def get_properties(self) -> dict[str, Any]:

@@ -18,7 +18,8 @@ class AntCfg(RobotCfg):
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
     isaacgym_flip_visual_attachments: bool = False
-    isaacgym_read_mjcf: bool = True
+    file_type: dict[str, str] = {**RobotCfg.file_type, "isaacgym": "mjcf"}
+    # isaacgym_read_mjcf: bool = True
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = None

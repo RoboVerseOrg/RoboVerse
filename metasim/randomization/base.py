@@ -19,6 +19,7 @@ class BaseRandomizerType:
         self.randomizer_options = kwargs
         self._seed: int | None = None
         self._rng: random.Random | None = None
+        self._visual_dirty = False
         if seed is not None:
             self.set_seed(seed)
 
@@ -59,3 +60,16 @@ class BaseRandomizerType:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
+
+    # ---------------------------------------------------------------------
+    # Visual dirty flag for tracking when visual updates are needed
+    # ---------------------------------------------------------------------
+    def _mark_visual_dirty(self) -> None:
+        """Mark that visual updates have been made (for external tracking)."""
+        self._visual_dirty = True
+
+    def consume_visual_dirty(self) -> bool:
+        """Check and reset the visual dirty flag."""
+        dirty = self._visual_dirty
+        self._visual_dirty = False
+        return dirty

@@ -14,8 +14,9 @@ from .franka_slide_urdf_sapien_cfg import FrankaSlideUrdfSapienCfg
 from .franka_urdf_cfg import FrankaUrdfCfg
 from .franka_urdf_sapien_cfg import FrankaUrdfSapienCfg
 from .franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
-from .g1_cfg import G1Cfg
+from .g1_cfg import G1Dof12Cfg, G1Dof23Cfg, G1Dof27Cfg, G1Dof29Cfg, G1Dof29Dex3Cfg
 from .gen3_cfg import Gen3Cfg
+from .go2_cfg import Go2Cfg
 from .google_robot_static_cfg import GoogleRobotStaticCfg
 from .h1_2_without_hand_cfg import H12WithoutHandCfg
 from .h1_body_collision import H1BodyCollisionCfg

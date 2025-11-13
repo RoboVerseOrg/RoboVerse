@@ -45,7 +45,7 @@ class Args:
 
     ## Others
     num_envs: int = 1
-    headless: bool = False
+    headless: bool = True
 
     ## IK Solver
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
@@ -153,7 +153,19 @@ def main():
         headless=args.headless,
     )
 
-    num_envs: int = scenario.num_envs
+    # HACK specific to isaacsim
+    if args.sim == "isaacsim":
+        scenario.update(decimation=2)
+        if scenario.robots[0].name == "franka":
+            # use smaller stiffness and damping for fingers for fine-grained control
+            from metasim.scenario.robot import BaseActuatorCfg
+
+            scenario.robots[0].actuators["panda_finger_joint1"] = BaseActuatorCfg(
+                stiffness=50, damping=15, velocity_limit=0.2, is_ee=True
+            )
+            scenario.robots[0].actuators["panda_finger_joint2"] = BaseActuatorCfg(
+                stiffness=50, damping=15, velocity_limit=0.2, is_ee=True
+            )
 
     tic = time.time()
     device = torch.device("cpu")

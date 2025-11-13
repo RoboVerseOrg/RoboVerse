@@ -19,7 +19,6 @@ def data_dir(tmp_path_factory):
         repo_type="dataset",
         local_dir=str(data_dir),
         allow_patterns="demo_assets/remote_control/*",
-        local_dir_use_symlinks=False,
     )
     return data_dir
 

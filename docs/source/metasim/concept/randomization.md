@@ -38,13 +38,41 @@ Most users never touch the base class directly. Instead, you configure higher le
 
 Each randomizer takes a config dataclass (e.g., `ObjectRandomCfg`) and optional seed. Configs support different distributions (`uniform`, `gaussian`, etc.) and let you scope updates to a subset of environments via `env_ids`.
 
+## Preparing Material Assets
+Scene and material randomizers read MDL files under `roboverse_data/materials`, which mirrors the Hugging Face dataset [`RoboVerseOrg/roboverse_data`](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data/tree/main/materials). You no longer need to pre-download the entire subtree: whenever an `.mdl` or referenced texture is missing locally, `metasim.utils.hf_util.check_and_download_single()` fetches it automatically and stores it in the same relative path.
+
+- **Cold start:** Make sure `huggingface_hub` is installed (it is part of the default dependencies). The dataset is public, so no token is required unless you enabled private mirrors.
+- **Cached runs:** Existing files are reused—downloads only happen the first time a specific asset or texture is requested.
+- **Offline clusters:** If your environment lacks outbound internet access, run a manual sync once and ship the resulting `roboverse_data/materials` directory with your job. You can still use `snapshot_download(..., allow_patterns=["materials/**"])` to mirror the dataset ahead of time.
+
+### Material variant randomization
+Many MDL files contain multiple material definitions. For example:
+- `Rug_Carpet.mdl` contains 4 variants: Rug_Carpet_Base, Rug_Carpet_Lines, Rug_Carpet_Hexagonal, Rug_Carpet_Honeycomb
+- `Caoutchouc.mdl` (rubber) contains 93 variants with different colors and finishes
+- Overall, vMaterials_2 has 315 files containing 2,605 material variants
+
+By default, `randomize_material_variant=True` in `MDLMaterialCfg` and `SceneMaterialPoolCfg`, enabling two-stage randomization:
+1. Select a random MDL file from the pool
+2. Select a random material variant within that file
+
+This behavior is fully reproducible through seed control. All material name extraction uses deterministic parsing of MDL file contents, and variant selection uses the randomizer's seeded RNG (`self._rng`).
+
+To specify a particular variant explicitly, use the `::` syntax:
+```python
+mdl_paths=["path/to/Rug_Carpet.mdl::Rug_Carpet_Hexagonal"]
+```
+
+To disable variant randomization and always use the first material in each file:
+```python
+MDLMaterialCfg(mdl_paths=[...], randomize_material_variant=False)
+```
+
 ### Binding Flow in Tasks
 1. Task instantiates the simulator handler.
 2. Randomizers are created and bound with `randomizer.bind_handler(handler)`.
 3. Randomizers are triggered during reset or at runtime (see `apply_randomization` in the demo).
 
 Because bindings happen inside the task, you can hot‑swap randomizers without modifying the low‑level simulator integration.
-
 
 ## Quick Start Demo
 The easiest way to see the system in action is `get_started/12_domain_randomization.py`. Run the script with different levels to watch the progressive randomization pipeline:
@@ -96,13 +124,34 @@ cube_rand()  # Apply once, repeat as needed
 ```python
 from metasim.randomization import MaterialRandomizer, MaterialPresets
 
-# Swap materials from the MDL wood collection and sync friction
+# Swap materials from the MDL wood collections (Arnold + vMaterials) and sync friction
 cube_mat_rand = MaterialRandomizer(
-    MaterialPresets.wood_object("cube", use_mdl=True, randomization_mode="combined"),
+    MaterialPresets.mdl_family_object("cube", family="wood", randomization_mode="combined"),
     seed=123,
 )
 cube_mat_rand.bind_handler(handler)
 cube_mat_rand()
+```
+
+The randomizer implements two-stage selection:
+1. Randomly select an MDL file from the configured pool
+2. Randomly select a material variant within that file (controlled by `randomize_material_variant`, default `True`)
+
+For fine-grained control:
+```python
+from metasim.randomization import MaterialRandomCfg, MDLMaterialCfg
+
+# Explicit variant specification
+mat_cfg = MaterialRandomCfg(
+    obj_name="cube",
+    mdl=MDLMaterialCfg(
+        mdl_paths=[
+            "roboverse_data/materials/vMaterials_2/Carpet/Rug_Carpet.mdl::Rug_Carpet_Lines",
+            "roboverse_data/materials/vMaterials_2/Metal/Aluminum.mdl",  # Random variant
+        ],
+        randomize_material_variant=True,
+    )
+)
 ```
 
 ### Light Randomizer
@@ -143,17 +192,23 @@ camera_rand()
 ```python
 from metasim.randomization import ScenePresets, SceneRandomizer
 
-# Tabletop workspace with randomized material pools
+# Tabletop workspace with explicit material families
 scene_cfg = ScenePresets.tabletop_workspace(
     room_size=10.0,
     wall_height=5.0,
     table_size=(1.8, 1.8, 0.1),
     table_height=0.7,
+    floor_families=("concrete", "carpet"),
+    wall_families=("wall_board", "paint"),
+    ceiling_families=("architecture",),
+    table_families=("wood", "plastic"),
 )
 scene_rand = SceneRandomizer(scene_cfg, seed=42)
 scene_rand.bind_handler(handler)
 scene_rand()
 ```
+
+Scene material pools also support variant randomization via `SceneMaterialPoolCfg.randomize_material_variant` (default `True`).
 
 
 ## Progressive Randomization Levels
@@ -179,8 +234,9 @@ Use state replay for baseline inspection or regression tests, and action replay 
 
 
 ## Best Practices
-- **Seed everything** during debugging. All randomizers accept a seed; set `torch.manual_seed` and `numpy.random.seed` too for reproducibility.
+- **Seed everything** during debugging. All randomizers accept a seed; set `torch.manual_seed` and `numpy.random.seed` too for reproducibility. Material variant selection is fully deterministic given a seed.
 - **Scope randomization** to specific environments via config `env_ids` when running vectorized simulations.
 - **Combine wisely**: Use `ObjectRandomizer` for pose/mass adjustments and `MaterialRandomizer` for visual appearance. Avoid duplicating friction edits unless intentional.
 - **Profile renderers**: Path tracing benefits from larger light intensity ranges; the demo automatically widens ranges in that mode.
 - **Record outputs** often. Visual inspection helps validate that randomization stays within reasonable bounds.
+- **Leverage variant diversity**: The default `randomize_material_variant=True` significantly expands material pools. Disable it only if you need strict control over which specific variants are used.

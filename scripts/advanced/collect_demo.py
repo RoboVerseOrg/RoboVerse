@@ -296,11 +296,11 @@ class DomainRandomizationManager:
         """Get appropriate material configuration based on object type."""
         obj_lower = obj_name.lower()
         if "cube" in obj_lower:
-            return MaterialPresets.metal_object(obj_name, use_mdl=True, randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="metal", randomization_mode="combined")
         elif "sphere" in obj_lower:
             return MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
         else:
-            return MaterialPresets.wood_object(obj_name, use_mdl=True, randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="wood", randomization_mode="combined")
 
     def _setup_physics_randomizers(self, seed: int | None):
         """Setup unified ObjectRandomizers for robots and objects."""
