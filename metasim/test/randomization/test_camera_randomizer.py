@@ -5,27 +5,11 @@ from __future__ import annotations
 import pytest
 import rootutils
 import torch
-
-rootutils.setup_root(__file__, pythonpath=True)
-import multiprocessing as mp
-
 from loguru import logger as log
 
-from metasim.constants import PhysicStateType
-from metasim.randomization.camera_randomizer import (
-    CameraImageRandomCfg,
-    CameraIntrinsicsRandomCfg,
-    CameraLookAtRandomCfg,
-    CameraOrientationRandomCfg,
-    CameraPositionRandomCfg,
-    CameraRandomCfg,
-    CameraRandomizer,
-)
-from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import PrimitiveSphereCfg
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.test.test_utils import get_test_parameters
-from roboverse_pack.robots.franka_cfg import FrankaCfg
+rootutils.setup_root(__file__, pythonpath=True)
+from metasim.randomization.camera_randomizer import CameraRandomCfg, CameraRandomizer
+from metasim.test.randomization.conftest import get_shared_scenario
 
 
 def get_camera_xformable_from_randomizer(randomizer):
@@ -43,6 +27,8 @@ def get_camera_xformable_from_randomizer(randomizer):
 
 def camera_position_randomization(handler, distribution="uniform"):
     """Test camera position randomization with reproducible seed."""
+    from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
+
     # Skip for simulators that don't support camera randomization well
 
     # Create camera randomizer with position delta
@@ -74,6 +60,8 @@ def camera_position_randomization(handler, distribution="uniform"):
 
 def camera_orientation_randomization(handler, distribution="uniform"):
     """Test camera orientation randomization."""
+    from metasim.randomization.camera_randomizer import CameraOrientationRandomCfg
+
     # Create camera randomizer with orientation delta
     cfg = CameraRandomCfg(
         camera_name="default_camera",
@@ -101,6 +89,8 @@ def camera_orientation_randomization(handler, distribution="uniform"):
 def camera_look_at_randomization(handler, distribution="uniform"):
     """Test camera look-at target randomization."""
     # Create camera randomizer with look-at delta
+    from metasim.randomization.camera_randomizer import CameraLookAtRandomCfg
+
     cfg = CameraRandomCfg(
         camera_name="default_camera",
         look_at=CameraLookAtRandomCfg(
@@ -129,6 +119,8 @@ def camera_look_at_randomization(handler, distribution="uniform"):
 
 def camera_intrinsics_randomization(handler, distribution="uniform"):
     """Test camera intrinsics randomization."""
+    from metasim.randomization.camera_randomizer import CameraIntrinsicsRandomCfg
+
     # Create camera randomizer with intrinsics
     cfg = CameraRandomCfg(
         camera_name="default_camera",
@@ -166,6 +158,9 @@ def camera_intrinsics_randomization(handler, distribution="uniform"):
 
 
 def camera_image_randomization(handler, distribution="uniform"):
+    """Test camera image randomization."""
+    from metasim.randomization.camera_randomizer import CameraImageRandomCfg
+
     cfg = CameraRandomCfg(
         camera_name="default_camera",
         image=CameraImageRandomCfg(
@@ -210,6 +205,8 @@ def camera_image_randomization(handler, distribution="uniform"):
 
 def camera_seed_reproducibility(handler):
     """Test that camera randomization is reproducible with same seed."""
+    from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
+
     # Create camera randomizer
     cfg = CameraRandomCfg(
         camera_name="default_camera",
@@ -235,7 +232,8 @@ def camera_seed_reproducibility(handler):
     log.info("Camera seed reproducibility test passed")
 
 
-def run_handler_process(scenario):
+def _process_run_handler(scenario):
+    """Process function for standalone mode - creates its own handler."""
     from metasim.utils.setup_util import get_handler
 
     handler = get_handler(scenario)
@@ -250,40 +248,27 @@ def run_handler_process(scenario):
     handler.close()
 
 
-@pytest.mark.parametrize("sim,num_envs", get_test_parameters())
-def test_main(sim, num_envs):
-    log.info(f"Running camera randomizer test with {sim} and {num_envs}")
+def run_test(sim="isaacsim", num_envs=2):
+    """Standalone test function for direct execution.
+
+    This function is used when running the test file directly (not via pytest).
+    It creates its own handler and runs all tests.
+
+    Args:
+        sim: Simulator type
+        num_envs: Number of environments
+    """
+    import multiprocessing as mp
+
+    log.info(f"Running camera randomizer test in standalone mode with {sim} and {num_envs}")
 
     if sim not in ["isaacsim"]:
-        pytest.skip("Only testing IsaacSim here")
+        log.warning(f"Skipping: Only testing IsaacSim here, got {sim}")
+        return
 
-    scenario = ScenarioCfg(
-        simulator=sim,
-        num_envs=num_envs,
-        headless=True,
-        objects=[
-            PrimitiveSphereCfg(
-                name="sphere",
-                radius=0.1,
-                color=[0.0, 0.0, 1.0],
-                physics=PhysicStateType.RIGIDBODY,
-                default_position=[0.4, -0.6, 0.05],
-            ),
-        ],
-        robots=[FrankaCfg()],
-        cameras=[
-            PinholeCameraCfg(
-                name="default_camera",
-                width=1024,
-                height=1024,
-                pos=(2.0, -2.0, 2.0),
-                look_at=(0.0, 0.0, 0.05),
-            )
-        ],
-    )
-
+    scenario = get_shared_scenario(sim, num_envs)
     ctx = mp.get_context("spawn")
-    p = ctx.Process(target=run_handler_process, args=(scenario,))
+    p = ctx.Process(target=_process_run_handler, args=(scenario,))
     p.start()
     p.join(timeout=60)
 
@@ -291,10 +276,54 @@ def test_main(sim, num_envs):
     log.info("IsaacSim headless test finished successfully.")
 
 
+@pytest.mark.usefixtures("shared_handler")
+def test_camera_randomizer_with_shared_handler(shared_handler):
+    """Run camera randomizer tests using the child-process handler via proxy."""
+    log.info("Running camera randomizer tests with shared handler (proxy)")
+
+    proxy = shared_handler  # HandlerProxy
+
+    # Call a single test function in the child process
+    proxy.run_test(
+        "camera_seed_reproducibility",
+        module="metasim.test.randomization.test_camera_randomizer",
+    )
+
+    distributions = ["uniform", "log_uniform", "gaussian"]
+    for dist in distributions:
+        proxy.run_test(
+            "camera_position_randomization",
+            module="metasim.test.randomization.test_camera_randomizer",
+            distribution=dist,
+        )
+        proxy.run_test(
+            "camera_orientation_randomization",
+            module="metasim.test.randomization.test_camera_randomizer",
+            distribution=dist,
+        )
+        proxy.run_test(
+            "camera_look_at_randomization",
+            module="metasim.test.randomization.test_camera_randomizer",
+            distribution=dist,
+        )
+        proxy.run_test(
+            "camera_intrinsics_randomization",
+            module="metasim.test.randomization.test_camera_randomizer",
+            distribution=dist,
+        )
+        proxy.run_test(
+            "camera_image_randomization",
+            module="metasim.test.randomization.test_camera_randomizer",
+            distribution=dist,
+        )
+
+    log.info("All camera randomizer tests completed with shared handler (proxy)")
+
+
 if __name__ == "__main__":
-    # Direct execution for quick testing
+    # Direct execution for quick testing - uses standalone mode
     import sys
 
     sim = "isaacsim" if len(sys.argv) < 2 else sys.argv[1]
     num_envs = 2 if len(sys.argv) < 3 else int(sys.argv[2])
-    test_main(sim, num_envs)
+    run_test(sim, num_envs)
