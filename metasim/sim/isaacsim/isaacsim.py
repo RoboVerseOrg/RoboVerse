@@ -510,7 +510,7 @@ class IsaacsimHandler(BaseSimHandler):
             joint_targets = robot_actions_sorted[:, action_indices]
             robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
             robot_inst.write_data_to_sim()
-            
+
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         self.scene.write_data_to_sim()
