@@ -28,13 +28,14 @@ def get_shared_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Create a standard scenario configuration for randomization tests."""
     from metasim.constants import PhysicStateType
     from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.lights import DiskLightCfg
     from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
     from roboverse_pack.robots.franka_cfg import FrankaCfg
 
     return ScenarioCfg(
         simulator=sim,
         num_envs=num_envs,
-        headless=False,
+        headless=True,
         objects=[
             PrimitiveSphereCfg(
                 name="sphere",
@@ -51,10 +52,20 @@ def get_shared_scenario(sim: str, num_envs: int) -> ScenarioCfg:
                 default_position=[0.5, 0.0, 0.5],
             ),
         ],
+        lights=[
+            DiskLightCfg(
+                name="test_light",  # Changed from "light" to avoid naming conflict
+                intensity=20000.0,
+                color=(1.0, 1.0, 1.0),
+                radius=1.2,
+                pos=(0.0, 0.0, 4.5),
+                rot=(0.7071, 0.0, 0.0, 0.7071),
+            )
+        ],
         robots=[FrankaCfg()],
         cameras=[
             PinholeCameraCfg(
-                name="default_camera",
+                name="test_camera",
                 width=1024,
                 height=1024,
                 pos=(2.0, -2.0, 2.0),
