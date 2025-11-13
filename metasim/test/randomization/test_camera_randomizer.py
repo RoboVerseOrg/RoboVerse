@@ -279,43 +279,29 @@ def run_test(sim="isaacsim", num_envs=2):
 @pytest.mark.usefixtures("shared_handler")
 def test_camera_randomizer_with_shared_handler(shared_handler):
     """Run camera randomizer tests using the child-process handler via proxy."""
+    import inspect
+    import sys
+
     log.info("Running camera randomizer tests with shared handler (proxy)")
 
     proxy = shared_handler  # HandlerProxy
 
+    distributions = ["uniform", "log_uniform", "gaussian"]
+    module = "metasim.test.randomization.test_camera_randomizer"
+    # Dynamically get all functions that start with 'camera_' and accept distribution parameter
+    camera_test_functions = [
+        name
+        for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+        if name.startswith("camera_") and name != "camera_seed_reproducibility"
+    ]
     # Call a single test function in the child process
     proxy.run_test(
         "camera_seed_reproducibility",
         module="metasim.test.randomization.test_camera_randomizer",
     )
-
-    distributions = ["uniform", "log_uniform", "gaussian"]
     for dist in distributions:
-        proxy.run_test(
-            "camera_position_randomization",
-            module="metasim.test.randomization.test_camera_randomizer",
-            distribution=dist,
-        )
-        proxy.run_test(
-            "camera_orientation_randomization",
-            module="metasim.test.randomization.test_camera_randomizer",
-            distribution=dist,
-        )
-        proxy.run_test(
-            "camera_look_at_randomization",
-            module="metasim.test.randomization.test_camera_randomizer",
-            distribution=dist,
-        )
-        proxy.run_test(
-            "camera_intrinsics_randomization",
-            module="metasim.test.randomization.test_camera_randomizer",
-            distribution=dist,
-        )
-        proxy.run_test(
-            "camera_image_randomization",
-            module="metasim.test.randomization.test_camera_randomizer",
-            distribution=dist,
-        )
+        for func_name in camera_test_functions:
+            proxy.run_test(func_name, module=module, distribution=dist)
 
     log.info("All camera randomizer tests completed with shared handler (proxy)")
 
