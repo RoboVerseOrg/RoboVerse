@@ -66,9 +66,9 @@ def get_pyroki_model(robot_cfg: RobotCfg):
     Returns:
         dict: Dictionary containing the pyroki robot model and solve_ik function.
     """
-    import pyroki as pk
     from yourdfpy import URDF
 
+    import pyroki as pk
     from metasim.utils.hf_util import check_and_download_single
 
     urdf_path = robot_cfg.urdf_path
@@ -309,6 +309,11 @@ def get_ee_state_from_list(env_states, robot_config, tensorize: bool = False, us
     ee_states = []
     for env_state in env_states:
         robot_state = env_state["robots"][robot_name]
+
+        # Skip if "body" field is not present in the state
+        if "body" not in robot_state:
+            continue
+
         body_state = robot_state["body"][ee_body_name]
 
         ee_pos_world = torch.as_tensor(body_state["pos"], dtype=torch.float32).view(3)  # (3,)
