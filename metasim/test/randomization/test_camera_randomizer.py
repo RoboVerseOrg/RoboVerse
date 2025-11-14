@@ -233,10 +233,6 @@ def camera_seed(handler, distribution="uniform"):
     log.info("Camera seed reproducibility test passed")
 
 
-def camera_envid(handler, distribution="uniform"):
-    pass
-
-
 TEST_FUNCTIONS = [
     camera_seed,
     camera_position,
@@ -244,7 +240,6 @@ TEST_FUNCTIONS = [
     camera_look_at,
     camera_intrinsics,
     camera_image,
-    camera_envid,
 ]
 
 
