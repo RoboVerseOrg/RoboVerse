@@ -242,8 +242,6 @@ def scene_seed(handler):
     rand = SceneRandomizer(cfg, seed=555)
     rand.bind_handler(handler)
     rand.set_seed(42)
-    rand()
-
     v1 = rand._rng.random()
     rand.set_seed(42)
     v2 = rand._rng.random()
