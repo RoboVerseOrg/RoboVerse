@@ -169,26 +169,3 @@ class RobotCfg(ArticulationObjCfg):
 
     curobo_tcp_rel_rot: tuple[float, float, float] | None = None
     """Relative rotation of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
-
-    ############################################################
-    ## Single Dexterous Hand specific configuration
-    ############################################################
-
-    finger_tips_link_names: list[str] | None = None
-    """Names of the finger tips links."""
-
-    finger_tips_offset: list[tuple[float, float, float]] | None = None
-    """Offsets of the finger tips links. From the root of the finger links to the actual finger tip position."""
-
-    palm_link_name: str | None = None
-    """Name of the palm link."""
-
-    palm_offset: tuple[float, float, float] | None = None
-    """Offset of the palm link. From the root of the palm link to the actual palm position."""
-
-    wrist_link_name: str | None = None
-    """Name of the wrist link."""
-
-    ############################################################
-    ## Humanoid specific configuration
-    ############################################################
