@@ -60,7 +60,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         self.scenario_cfg = scenario_cfg
-        self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
+        self.physics_dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._physics_step_counter = 0
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
@@ -104,9 +104,8 @@ class IsaacsimHandler(BaseSimHandler):
                 friction_correlation_distance=self.scenario.sim_params.friction_correlation_distance,
                 friction_offset_threshold=self.scenario.sim_params.friction_offset_threshold,
             ),
+            dt=self.physics_dt,
         )
-        if self.scenario.sim_params.dt is not None:
-            sim_config.dt = self.scenario.sim_params.dt
 
         self.sim: SimulationContext = SimulationContext(sim_config)
         scene_config: InteractiveSceneCfg = InteractiveSceneCfg(
@@ -183,7 +182,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Force another simulation step and camera update to ensure proper initialization
         self.sim.step(render=False)
-        self.scene.update(dt=self.dt)
+        self.scene.update(dt=self.physics_dt)
         self._update_camera_pose()
 
         # Force a render to update camera data after position is set
@@ -200,19 +199,18 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            del self.scene
-            self.sim.clear_all_callbacks()
-            self.sim.clear_instance()
-            self.sim.stop()
-            self.sim.clear()
+            self.simulation_app.close()
+            if self.scene is not None:
+                del self.scene
+            if self.sim is not None:
+                del self.sim
+            if self.simulation_app is not None:
+                del self.simulation_app
             self._is_closed = True
 
     def __del__(self):
         """Cleanup for the environment."""
         self.close()
-        self.simulation_app.close()
-        self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
-        self._keyboard_sub = None
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -519,7 +517,7 @@ class IsaacsimHandler(BaseSimHandler):
         for _ in range(self.decimation):
             self._physics_step_counter += 1
             self.sim.step(render=False)
-            self.scene.update(dt=self.dt)
+            self.scene.update(dt=self.physics_dt)
             if self._physics_step_counter % self.render_interval == 0 and is_rendering:
                 self.sim.render()
 
