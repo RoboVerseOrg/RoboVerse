@@ -613,6 +613,7 @@ class Sapien3Handler(BaseSimHandler):
 
             else:
                 rgb = torch.from_numpy(np.array(cam_inst.get_picture("Color").copy()))
+                rgb = np.clip(rgb[..., :3] * 255, 0, 255).to(torch.uint8)
                 depth = -cam_inst.get_picture("Position")[..., 2]
                 depth = torch.from_numpy(depth.copy())
 
