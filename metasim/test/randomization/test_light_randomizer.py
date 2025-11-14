@@ -235,10 +235,6 @@ def light_seed(handler, distribution="uniform"):
     log.info("Light seed reproducibility test passed")
 
 
-def light_envid(handler, distribution="uniform"):
-    pass
-
-
 TEST_FUNCTIONS = [
     light_intensity,
     light_color,
@@ -246,7 +242,6 @@ TEST_FUNCTIONS = [
     light_position,
     light_orientation,
     light_seed,
-    light_envid,
 ]
 
 
