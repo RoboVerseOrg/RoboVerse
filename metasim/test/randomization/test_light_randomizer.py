@@ -21,7 +21,7 @@ def get_light_prim_from_randomizer(randomizer: LightRandomizer):
     return light_prim, light_path, light_type
 
 
-def light_intensity_randomization(handler, distribution="uniform"):
+def light_intensity(handler, distribution="uniform"):
     """Test light intensity randomization with reproducible seed."""
     from metasim.randomization.light_randomizer import LightIntensityRandomCfg
 
@@ -54,7 +54,7 @@ def light_intensity_randomization(handler, distribution="uniform"):
     log.info(f"Light intensity randomization (Type: {distribution}) test passed")
 
 
-def light_color_randomization(handler, distribution="uniform"):
+def light_color(handler, distribution="uniform"):
     """Test light color randomization."""
     from metasim.randomization.light_randomizer import LightColorRandomCfg
 
@@ -89,7 +89,7 @@ def light_color_randomization(handler, distribution="uniform"):
     log.info(f"Light color randomization (Type: {distribution}) test passed")
 
 
-def light_color_temperature_randomization(handler, distribution="uniform"):
+def light_color_temperature(handler, distribution="uniform"):
     """Test light color temperature randomization."""
     from metasim.randomization.light_randomizer import LightColorRandomCfg
 
@@ -122,7 +122,7 @@ def light_color_temperature_randomization(handler, distribution="uniform"):
     log.info(f"Light color temperature randomization (Type: {distribution}) test passed")
 
 
-def light_position_randomization(handler, distribution="uniform"):
+def light_position(handler, distribution="uniform"):
     """Test light position randomization."""
     # Create light randomizer with position randomization
     from metasim.randomization.light_randomizer import LightPositionRandomCfg
@@ -165,7 +165,7 @@ def light_position_randomization(handler, distribution="uniform"):
     log.info(f"Light position randomization (Type: {distribution}) test passed")
 
 
-def light_orientation_randomization(handler, distribution="uniform"):
+def light_orientation(handler, distribution="uniform"):
     """Test light orientation randomization."""
     from metasim.randomization.light_randomizer import LightOrientationRandomCfg
 
@@ -209,7 +209,7 @@ def light_orientation_randomization(handler, distribution="uniform"):
     log.info(f"Light orientation randomization (Type: {distribution}) test passed")
 
 
-def light_seed_reproducibility(handler, distribution="uniform"):
+def light_seed(handler, distribution="uniform"):
     """Test that light randomization is reproducible with same seed."""
     from metasim.randomization.light_randomizer import LightIntensityRandomCfg
 
@@ -235,13 +235,18 @@ def light_seed_reproducibility(handler, distribution="uniform"):
     log.info("Light seed reproducibility test passed")
 
 
+def light_envid(handler, distribution="uniform"):
+    pass
+
+
 TEST_FUNCTIONS = [
-    light_intensity_randomization,
-    light_color_randomization,
-    light_color_temperature_randomization,
-    light_position_randomization,
-    light_orientation_randomization,
-    light_seed_reproducibility,
+    light_intensity,
+    light_color,
+    light_color_temperature,
+    light_position,
+    light_orientation,
+    light_seed,
+    light_envid,
 ]
 
 
