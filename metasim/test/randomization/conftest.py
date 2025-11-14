@@ -8,8 +8,8 @@ to request the child process to run named functions (module + function name).
 from __future__ import annotations
 
 import multiprocessing as mp
-import multiprocessing.queues
 from multiprocessing import get_context
+from typing import Callable
 
 import pytest
 from loguru import logger as log
@@ -87,7 +87,6 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
         or on exception returns {"status": "error", "func": name, "error": str(e), "traceback": ...}.
     """
     # Import inside child process
-    import importlib
     import traceback
 
     from metasim.utils.setup_util import get_handler
@@ -112,33 +111,26 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
                 log.info("[handler-process] Received close command")
                 break
 
-            # Expect module + func_name (or global func name)
-            func_name = task.get("func_name")
-            module_path = task.get("module")
+            # Expect func (or global func name)
+            func = task.get("func")
             args = task.get("args", []) or []
             kwargs = task.get("kwargs", {}) or {}
 
             try:
-                if module_path:
-                    mod = importlib.import_module(module_path)
-                    func = getattr(mod, func_name)
-                else:
-                    # fallback: maybe function is defined in this child module (unlikely), or we can error
-                    func = globals().get(func_name)
                 if func is None:
-                    raise RuntimeError(f"Function {func_name} not found in module {module_path}")
+                    raise RuntimeError(f"Function {func.__name__} not found")
 
                 # Call the function with handler as first positional arg
                 ret = func(handler, *args, **kwargs)
 
                 # If return value is not picklable, it's ok — we won't require it.
-                result_queue.put({"status": "success", "func": func_name, "result": ret})
+                result_queue.put({"status": "success", "func": func.__name__, "result": ret})
             except Exception as e:
                 tb = traceback.format_exc()
-                log.exception(f"[handler-process] Exception running {func_name}")
+                log.exception(f"[handler-process] Exception running {func.__name__}")
                 result_queue.put({
                     "status": "error",
-                    "func": func_name,
+                    "func": func.__name__,
                     "error": str(e),
                     "traceback": tb,
                 })
@@ -164,10 +156,9 @@ class HandlerProxy:
 
     def run_test(
         self,
-        func_name: str,
-        module: str | None = None,
-        *args,
+        func: Callable,
         timeout: float | None = None,
+        *args,
         **kwargs,
     ):
         """Request the handler process to run `module.func_name(handler, *args, **kwargs)`.
@@ -179,8 +170,7 @@ class HandlerProxy:
             timeout = self._timeout
 
         task = {
-            "func_name": func_name,
-            "module": module,
+            "func": func,
             "args": args,
             "kwargs": kwargs,
         }
@@ -189,7 +179,7 @@ class HandlerProxy:
         try:
             res = self._result_queue.get(timeout=timeout)
         except Exception as e:
-            raise RuntimeError(f"Timeout waiting for result of {func_name}: {e}") from e
+            raise RuntimeError(f"Timeout waiting for result of {func.__name__}: {e}") from e
 
         if res.get("status") == "error":
             raise RuntimeError(f"Child error running {res.get('func')}: {res.get('error')}\n{res.get('traceback', '')}")

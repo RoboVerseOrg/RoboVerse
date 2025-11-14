@@ -203,7 +203,7 @@ def camera_image_randomization(handler, distribution="uniform"):
     log.info(f"Camera image randomization (Type: {distribution}) test passed")
 
 
-def camera_seed_reproducibility(handler):
+def camera_seed_reproducibility(handler, distribution="uniform"):
     """Test that camera randomization is reproducible with same seed."""
     from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
 
@@ -211,8 +211,9 @@ def camera_seed_reproducibility(handler):
     cfg = CameraRandomCfg(
         camera_name="test_camera",
         position=CameraPositionRandomCfg(
-            delta_range=((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)),
-            use_delta=True,
+            position_range=((-10, 10), (-10, 10), (-10, 10)),
+            use_delta=False,
+            distribution=distribution,
             enabled=True,
         ),
     )
@@ -220,16 +221,26 @@ def camera_seed_reproducibility(handler):
     # Test reproducibility
     randomizer = CameraRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
+    _, xformable = get_camera_xformable_from_randomizer(randomizer)
+    # Apply randomization twice with same seed - should give same results
+    randomizer()
+    pos_val1, _, _ = randomizer._get_current_transform(xformable)
+    randomizer.set_seed(789)
+    randomizer()
+    pos_val2, _, _ = randomizer._get_current_transform(xformable)
 
-    # Store RNG internal state by generating some values
-    randomizer.set_seed(42)
-    val1 = randomizer._rng.random()
-
-    randomizer.set_seed(42)
-    val2 = randomizer._rng.random()
-
-    assert val1 == val2, "Same seed should produce same random values"
+    assert pos_val1 == pos_val2, "Same seed should produce same random values"
     log.info("Camera seed reproducibility test passed")
+
+
+TEST_FUNCTIONS = [
+    camera_seed_reproducibility,
+    camera_position_randomization,
+    camera_orientation_randomization,
+    camera_look_at_randomization,
+    camera_intrinsics_randomization,
+    camera_image_randomization,
+]
 
 
 def _process_run_handler(scenario):
@@ -237,14 +248,10 @@ def _process_run_handler(scenario):
     from metasim.utils.setup_util import get_handler
 
     handler = get_handler(scenario)
-    camera_seed_reproducibility(handler)
     distributions = ["uniform", "log_uniform", "gaussian"]
     for dist in distributions:
-        camera_position_randomization(handler, distribution=dist)
-        camera_orientation_randomization(handler, distribution=dist)
-        camera_look_at_randomization(handler, distribution=dist)
-        camera_intrinsics_randomization(handler, distribution=dist)
-        camera_image_randomization(handler, distribution=dist)
+        for test_func in TEST_FUNCTIONS:
+            test_func(handler, distribution=dist)
     handler.close()
 
 
@@ -279,29 +286,16 @@ def run_test(sim="isaacsim", num_envs=2):
 @pytest.mark.usefixtures("shared_handler")
 def test_camera_randomizer_with_shared_handler(shared_handler):
     """Run camera randomizer tests using the child-process handler via proxy."""
-    import inspect
-    import sys
-
     log.info("Running camera randomizer tests with shared handler (proxy)")
 
     proxy = shared_handler  # HandlerProxy
 
     distributions = ["uniform", "log_uniform", "gaussian"]
-    module = "metasim.test.randomization.test_camera_randomizer"
-    # Dynamically get all functions that start with 'camera_' and accept distribution parameter
-    camera_test_functions = [
-        name
-        for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isfunction)
-        if name.startswith("camera_") and name != "camera_seed_reproducibility"
-    ]
-    # Call a single test function in the child process
-    proxy.run_test(
-        "camera_seed_reproducibility",
-        module="metasim.test.randomization.test_camera_randomizer",
-    )
+
+    # Run all camera test functions with different distributions
     for dist in distributions:
-        for func_name in camera_test_functions:
-            proxy.run_test(func_name, module=module, distribution=dist)
+        for test_func in TEST_FUNCTIONS:
+            proxy.run_test(func=test_func, distribution=dist)
 
     log.info("All camera randomizer tests completed with shared handler (proxy)")
 

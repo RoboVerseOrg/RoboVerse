@@ -33,7 +33,6 @@ def light_intensity_randomization(handler, distribution="uniform"):
             distribution=distribution,
             enabled=True,
         ),
-        randomization_mode="intensity_only",
     )
 
     randomizer = LightRandomizer(cfg, seed=789)
@@ -68,7 +67,6 @@ def light_color_randomization(handler, distribution="uniform"):
             distribution=distribution,
             enabled=True,
         ),
-        randomization_mode="color_only",
     )
 
     randomizer = LightRandomizer(cfg, seed=789)
@@ -104,7 +102,6 @@ def light_color_temperature_randomization(handler, distribution="uniform"):
             distribution=distribution,
             enabled=True,
         ),
-        randomization_mode="color_only",
     )
 
     randomizer = LightRandomizer(cfg, seed=789)
@@ -138,7 +135,6 @@ def light_position_randomization(handler, distribution="uniform"):
             distribution=distribution,
             enabled=True,
         ),
-        randomization_mode="position_only",
     )
 
     randomizer = LightRandomizer(cfg, seed=789)
@@ -182,7 +178,6 @@ def light_orientation_randomization(handler, distribution="uniform"):
             distribution=distribution,
             enabled=True,
         ),
-        randomization_mode="orientation_only",
     )
 
     randomizer = LightRandomizer(cfg, seed=789)
@@ -214,32 +209,40 @@ def light_orientation_randomization(handler, distribution="uniform"):
     log.info(f"Light orientation randomization (Type: {distribution}) test passed")
 
 
-def light_seed_reproducibility(handler):
+def light_seed_reproducibility(handler, distribution="uniform"):
     """Test that light randomization is reproducible with same seed."""
     from metasim.randomization.light_randomizer import LightIntensityRandomCfg
 
     # Create light randomizer
     cfg = LightRandomCfg(
         light_name="test_light",
-        intensity=LightIntensityRandomCfg(
-            intensity_range=(100.0, 1000.0),
-            enabled=True,
-        ),
+        intensity=LightIntensityRandomCfg(intensity_range=(100.0, 1000.0), enabled=True, distribution=distribution),
     )
 
     # Test reproducibility
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
+    light_prim, _, _ = get_light_prim_from_randomizer(randomizer)
+    intensity_attr = light_prim.GetAttribute("inputs:intensity")
+    # Apply randomization twice with same seed - should give same results
+    randomizer()
+    intensity_val1 = intensity_attr.Get()
+    randomizer.set_seed(789)
+    randomizer()
+    intensity_val2 = intensity_attr.Get()
 
-    # Store RNG internal state by generating some values
-    randomizer.set_seed(42)
-    val1 = randomizer._rng.random()
-
-    randomizer.set_seed(42)
-    val2 = randomizer._rng.random()
-
-    assert val1 == val2, "Same seed should produce same random values"
+    assert intensity_val1 == intensity_val2, "Same seed should produce same random values"
     log.info("Light seed reproducibility test passed")
+
+
+TEST_FUNCTIONS = [
+    light_intensity_randomization,
+    light_color_randomization,
+    light_color_temperature_randomization,
+    light_position_randomization,
+    light_orientation_randomization,
+    light_seed_reproducibility,
+]
 
 
 def _process_run_handler(scenario):
@@ -247,14 +250,10 @@ def _process_run_handler(scenario):
     from metasim.utils.setup_util import get_handler
 
     handler = get_handler(scenario)
-    light_seed_reproducibility(handler)
     distributions = ["uniform", "log_uniform", "gaussian"]
     for dist in distributions:
-        light_intensity_randomization(handler, distribution=dist)
-        light_color_randomization(handler, distribution=dist)
-        light_color_temperature_randomization(handler, distribution=dist)
-        light_position_randomization(handler, distribution=dist)
-        light_orientation_randomization(handler, distribution=dist)
+        for test_func in TEST_FUNCTIONS:
+            test_func(handler, distribution=dist)
     handler.close()
 
 
@@ -282,33 +281,16 @@ def run_test(sim="isaacsim", num_envs=2):
 @pytest.mark.usefixtures("shared_handler")
 def test_light_randomizer_with_shared_handler(shared_handler):
     """Run light randomizer tests using the child-process handler via proxy."""
-    import inspect
-    import sys
-
     log.info("Running light randomizer tests with shared handler (proxy)")
 
     proxy = shared_handler  # HandlerProxy
 
     distributions = ["uniform", "log_uniform", "gaussian"]
-    module = "metasim.test.randomization.test_light_randomizer"
-
-    # Dynamically get all functions that start with 'light_' and accept distribution parameter
-    light_test_functions = [
-        name
-        for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isfunction)
-        if name.startswith("light_") and name != "light_seed_reproducibility"
-    ]
-
-    # Call seed reproducibility test first
-    proxy.run_test(
-        "light_seed_reproducibility",
-        module=module,
-    )
 
     # Run all light test functions with different distributions
     for dist in distributions:
-        for func_name in light_test_functions:
-            proxy.run_test(func_name, module=module, distribution=dist)
+        for test_func in TEST_FUNCTIONS:
+            proxy.run_test(func=test_func, distribution=dist)
 
     log.info("All light randomizer tests completed with shared handler (proxy)")
 
