@@ -36,7 +36,7 @@ done
 echo "=== Running collect_demo.sh ==="
 sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/collect_demo.sh
 sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/collect_demo.sh
-sed -i "s/^max_demo_idx=.*/max_demo_idx=$demo_num/" ./roboverse_learn/il/collect_demo.sh
+sed -i "s/^num_demo_success=.*/num_demo_success=$demo_num/" ./roboverse_learn/il/collect_demo.sh
 sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/collect_demo.sh
 bash ./roboverse_learn/il/collect_demo.sh
 

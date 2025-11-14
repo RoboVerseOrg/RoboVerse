@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
@@ -28,8 +27,10 @@ class Args:
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
-    max_demo_idx: int | None = None
-    """Maximum number of demos to collect, None for all demos"""
+    # max_demo_idx: int | None = None
+    # """Maximum number of demos to collect, None for all demos"""
+    num_demo_success: int | None = None
+    """Target number of successful demos to collect"""
     retry_num: int = 0
     """Number of retries for a failed demo"""
     headless: bool = True
@@ -74,9 +75,10 @@ class Args:
         assert self.run_all or self.run_unfinished or self.run_failed, (
             "At least one of run_all, run_unfinished, or run_failed must be True"
         )
-        if self.max_demo_idx is None:
-            self.max_demo_idx = math.inf
-
+        # if self.max_demo_idx is None:
+        #     self.max_demo_idx = math.inf
+        if self.num_demo_success is None:
+            self.num_demo_success = 100
         if self.demo_start_idx is None:
             self.demo_start_idx = 0
 
@@ -610,9 +612,40 @@ class DemoCollector:
         del self.cache[demo_idx]
 
     def final(self):
-        self.save_request_queue.put(None)  # signal to save_demo_mp to exit
-        self.save_proc.join()
-        assert self.cache == {}
+        """
+        Finalize collector:
+        - Save any remaining cached demos (mark them as 'failed' so they are persisted)
+        - Clear the cache
+        - Signal the save process to exit and join it
+        """
+        # If there are any remaining demos in cache, save them as 'failed' to persist data
+        if self.cache:
+            log.warning(f"Finalizing: {len(self.cache)} unfinished demo(s) found in cache. Saving them as 'failed'.")
+        for demo_idx in list(self.cache.keys()):
+            try:
+                log.info(f"Finalizing: saving unfinished demo {demo_idx} as failed")
+                # save will create directories and write status.txt for failed demos
+                self.save(demo_idx, status="failed")
+            except Exception as e:
+                log.error(f"Failed to save unfinished demo {demo_idx} during finalization: {e}")
+            try:
+                # ensure we remove it from cache even if save failed
+                self.delete(demo_idx)
+            except Exception as e:
+                log.error(f"Failed to delete demo {demo_idx} from cache during finalization: {e}")
+
+        # signal the background save process to exit and join
+        try:
+            self.save_request_queue.put(None)  # signal to save_demo_mp to exit
+            self.save_proc.join()
+        except Exception as e:
+            log.error(f"Error while shutting down save process: {e}")
+
+        # ensure cache is empty (no assert, just log if something remains)
+        if self.cache:
+            log.error("Collector finalization completed but cache is not empty.")
+        else:
+            log.info("Collector finalization completed and cache is empty.")
 
 
 def should_skip(log_dir: str, demo_idx: int):
@@ -714,11 +747,12 @@ def main():
     ########################################################
     ## Main
     ########################################################
-    if args.max_demo_idx > n_demo:
-        log.warning(
-            f"Max demo {args.max_demo_idx} is greater than the number of demos in the dataset {n_demo}, using {n_demo}"
-        )
-    max_demo = min(args.max_demo_idx, n_demo)
+    # if args.max_demo_idx > n_demo:
+    #     log.warning(
+    #         f"Max demo {args.max_demo_idx} is greater than the number of demos in the dataset {n_demo}, using {n_demo}"
+    #     )
+    # max_demo = min(args.max_demo_idx, n_demo)
+    max_demo = n_demo
     try_num = args.retry_num + 1
 
     ## Demo collection state machine:
@@ -729,7 +763,8 @@ def main():
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
     collector = DemoCollector(env.handler, robot, task_desc)
-    pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
+    # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
+    pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
     ## State variables
     failure_count = [0] * env.handler.num_envs
@@ -749,7 +784,7 @@ def main():
 
     demo_indexer = DemoIndexer(
         save_root_dir=save_root_dir,
-        start_idx=0,
+        start_idx=args.demo_start_idx,
         end_idx=max_demo,
         pbar=pbar,
     )
@@ -784,6 +819,14 @@ def main():
 
     ## Main Loop
     while not all(finished):
+        if tot_success >= args.num_demo_success:
+            log.info(f"Reached target number of successful demos ({args.num_demo_success}). Stopping collection.")
+            break
+
+        if demo_indexer.next_idx >= max_demo:
+            log.warning(f"Reached maximum demo index ({max_demo}). Stopping collection.")
+            break
+
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)
         obs, reward, success, time_out, extras = env.step(actions)
@@ -853,7 +896,7 @@ def main():
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
                 failure_count[env_id] = 0
                 tot_give_up += 1
-                pbar.update(1)
+                # pbar.update(1)
                 pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
 
                 if demo_indexer.next_idx < max_demo:
