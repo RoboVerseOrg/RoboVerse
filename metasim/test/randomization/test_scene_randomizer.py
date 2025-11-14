@@ -14,7 +14,7 @@
 #     return randomizer.get_scene_properties()
 
 
-# def scene_floor_creation(handler, material_randomization=False):
+# def scene_floor_creation(handler, material=False):
 #     """Test scene floor creation and randomization."""
 #     from metasim.randomization.scene_randomizer import (
 #         SceneGeometryCfg,
@@ -29,7 +29,7 @@
 #             enabled=True,
 #             size=(10.0, 10.0, 0.1),
 #             position=(0.0, 0.0, -0.05),
-#             material_randomization=material_randomization,
+#             material=material,
 #         ),
 #         floor_materials=(
 #             SceneMaterialPoolCfg(
@@ -37,7 +37,7 @@
 #                 selection_strategy="random",
 #                 randomize_material_variant=True,
 #             )
-#             if material_randomization
+#             if material
 #             else None
 #         ),
 #         only_if_no_scene=True,
@@ -53,11 +53,11 @@
 #     properties = get_scene_properties_from_randomizer(randomizer)
 
 #     log.info(
-#         f"Scene floor creation test passed (material_randomization={material_randomization})"
+#         f"Scene floor creation test passed (material={material})"
 #     )
 
 
-# def scene_walls_creation(handler, material_randomization=False):
+# def scene_walls_creation(handler, material=False):
 #     """Test scene walls creation."""
 #     # Create scene randomizer with walls
 #     cfg = SceneRandomCfg(
@@ -65,14 +65,14 @@
 #             enabled=True,
 #             size=(10.0, 0.2, 3.0),
 #             position=(0.0, 0.0, 0.0),
-#             material_randomization=material_randomization,
+#             material=material,
 #         ),
 #         wall_materials=(
 #             SceneMaterialPoolCfg(
 #                 material_paths=[],
 #                 selection_strategy="random",
 #             )
-#             if material_randomization
+#             if material
 #             else None
 #         ),
 #         only_if_no_scene=True,
@@ -88,11 +88,11 @@
 #     properties = get_scene_properties_from_randomizer(randomizer)
 
 #     log.info(
-#         f"Scene walls creation test passed (material_randomization={material_randomization})"
+#         f"Scene walls creation test passed (material={material})"
 #     )
 
 
-# def scene_ceiling_creation(handler, material_randomization=False):
+# def scene_ceiling_creation(handler, material=False):
 #     """Test scene ceiling creation."""
 #     # Create scene randomizer with ceiling
 #     cfg = SceneRandomCfg(
@@ -100,14 +100,14 @@
 #             enabled=True,
 #             size=(10.0, 10.0, 0.1),
 #             position=(0.0, 0.0, 3.0),
-#             material_randomization=material_randomization,
+#             material=material,
 #         ),
 #         ceiling_materials=(
 #             SceneMaterialPoolCfg(
 #                 material_paths=[],
 #                 selection_strategy="random",
 #             )
-#             if material_randomization
+#             if material
 #             else None
 #         ),
 #         only_if_no_scene=True,
@@ -123,11 +123,11 @@
 #     properties = get_scene_properties_from_randomizer(randomizer)
 
 #     log.info(
-#         f"Scene ceiling creation test passed (material_randomization={material_randomization})"
+#         f"Scene ceiling creation test passed (material={material})"
 #     )
 
 
-# def scene_table_creation(handler, material_randomization=False):
+# def scene_table_creation(handler, material=False):
 #     """Test scene table creation."""
 #     # Create scene randomizer with table
 #     cfg = SceneRandomCfg(
@@ -135,14 +135,14 @@
 #             enabled=True,
 #             size=(1.5, 1.0, 0.05),
 #             position=(0.5, 0.0, 0.4),
-#             material_randomization=material_randomization,
+#             material=material,
 #         ),
 #         table_materials=(
 #             SceneMaterialPoolCfg(
 #                 material_paths=[],
 #                 selection_strategy="random",
 #             )
-#             if material_randomization
+#             if material
 #             else None
 #         ),
 #         only_if_no_scene=True,
@@ -158,7 +158,7 @@
 #     properties = get_scene_properties_from_randomizer(randomizer)
 
 #     log.info(
-#         f"Scene table creation test passed (material_randomization={material_randomization})"
+#         f"Scene table creation test passed (material={material})"
 #     )
 
 
@@ -170,19 +170,19 @@
 #             enabled=True,
 #             size=(10.0, 10.0, 0.1),
 #             position=(0.0, 0.0, -0.05),
-#             material_randomization=False,
+#             material=False,
 #         ),
 #         walls=SceneGeometryCfg(
 #             enabled=True,
 #             size=(10.0, 0.2, 3.0),
 #             position=(0.0, 0.0, 0.0),
-#             material_randomization=False,
+#             material=False,
 #         ),
 #         table=SceneGeometryCfg(
 #             enabled=True,
 #             size=(1.5, 1.0, 0.05),
 #             position=(0.5, 0.0, 0.4),
-#             material_randomization=False,
+#             material=False,
 #         ),
 #         only_if_no_scene=True,
 #     )
@@ -207,7 +207,7 @@
 #             enabled=True,
 #             size=(10.0, 10.0, 0.1),
 #             position=(0.0, 0.0, -0.05),
-#             material_randomization=True,
+#             material=True,
 #         ),
 #         floor_materials=SceneMaterialPoolCfg(
 #             material_paths=[],
@@ -223,7 +223,7 @@
 #     log.info(f"Scene material selection strategies test passed (strategy={strategy})")
 
 
-# def scene_seed_reproducibility(handler):
+# def scene_seed(handler):
 #     """Test that scene randomization is reproducible with same seed."""
 #     # Create scene randomizer
 #     cfg = SceneRandomCfg(
@@ -231,7 +231,7 @@
 #             enabled=True,
 #             size=(10.0, 10.0, 0.1),
 #             position=(0.0, 0.0, -0.05),
-#             material_randomization=False,
+#             material=False,
 #         ),
 #     )
 
@@ -255,19 +255,19 @@
 #     from metasim.utils.setup_util import get_handler
 
 #     handler = get_handler(scenario)
-#     scene_seed_reproducibility(handler)
+#     scene_seed(handler)
 
 #     # Test creation without material randomization
-#     scene_floor_creation(handler, material_randomization=False)
-#     scene_walls_creation(handler, material_randomization=False)
-#     scene_ceiling_creation(handler, material_randomization=False)
-#     scene_table_creation(handler, material_randomization=False)
+#     scene_floor_creation(handler, material=False)
+#     scene_walls_creation(handler, material=False)
+#     scene_ceiling_creation(handler, material=False)
+#     scene_table_creation(handler, material=False)
 
 #     # Test creation with material randomization
-#     scene_floor_creation(handler, material_randomization=True)
-#     scene_walls_creation(handler, material_randomization=True)
-#     scene_ceiling_creation(handler, material_randomization=True)
-#     scene_table_creation(handler, material_randomization=True)
+#     scene_floor_creation(handler, material=True)
+#     scene_walls_creation(handler, material=True)
+#     scene_ceiling_creation(handler, material=True)
+#     scene_table_creation(handler, material=True)
 
 #     # Test combined elements and strategies
 #     scene_combined_elements(handler)
@@ -324,7 +324,7 @@
 
 #     module = "metasim.test.randomization.test_scene_randomizer"
 
-#     # Dynamically get scene creation functions that accept material_randomization parameter
+#     # Dynamically get scene creation functions that accept material parameter
 #     scene_creation_functions = [
 #         name
 #         for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isfunction)
@@ -346,17 +346,17 @@
 
 #     # Call seed reproducibility test first
 #     proxy.run_test(
-#         "scene_seed_reproducibility",
+#         "scene_seed",
 #         module=module,
 #     )
 
 #     # Test creation without material randomization
 #     for func_name in scene_creation_functions:
-#         proxy.run_test(func_name, module=module, material_randomization=False)
+#         proxy.run_test(func_name, module=module, material=False)
 
 #     # Test creation with material randomization
 #     for func_name in scene_creation_functions:
-#         proxy.run_test(func_name, module=module, material_randomization=True)
+#         proxy.run_test(func_name, module=module, material=True)
 
 #     # Test combined elements
 #     for func_name in scene_combined_functions:

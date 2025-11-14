@@ -25,7 +25,7 @@ def get_camera_xformable_from_randomizer(randomizer):
     return camera, xformable
 
 
-def camera_position_randomization(handler, distribution="uniform"):
+def camera_position(handler, distribution="uniform"):
     """Test camera position randomization with reproducible seed."""
     from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
 
@@ -58,7 +58,7 @@ def camera_position_randomization(handler, distribution="uniform"):
     log.info(f"Camera position randomization (Type: {distribution}) test passed")
 
 
-def camera_orientation_randomization(handler, distribution="uniform"):
+def camera_orientation(handler, distribution="uniform"):
     """Test camera orientation randomization."""
     from metasim.randomization.camera_randomizer import CameraOrientationRandomCfg
 
@@ -86,7 +86,7 @@ def camera_orientation_randomization(handler, distribution="uniform"):
     log.info(f"Camera orientation randomization (Type: {distribution}) test passed")
 
 
-def camera_look_at_randomization(handler, distribution="uniform"):
+def camera_look_at(handler, distribution="uniform"):
     """Test camera look-at target randomization."""
     # Create camera randomizer with look-at delta
     from metasim.randomization.camera_randomizer import CameraLookAtRandomCfg
@@ -117,7 +117,7 @@ def camera_look_at_randomization(handler, distribution="uniform"):
     log.info("Camera look-at randomization test passed")
 
 
-def camera_intrinsics_randomization(handler, distribution="uniform"):
+def camera_intrinsics(handler, distribution="uniform"):
     """Test camera intrinsics randomization."""
     from metasim.randomization.camera_randomizer import CameraIntrinsicsRandomCfg
 
@@ -157,7 +157,7 @@ def camera_intrinsics_randomization(handler, distribution="uniform"):
     log.info("Camera intrinsics randomization test passed")
 
 
-def camera_image_randomization(handler, distribution="uniform"):
+def camera_image(handler, distribution="uniform"):
     """Test camera image randomization."""
     from metasim.randomization.camera_randomizer import CameraImageRandomCfg
 
@@ -203,7 +203,7 @@ def camera_image_randomization(handler, distribution="uniform"):
     log.info(f"Camera image randomization (Type: {distribution}) test passed")
 
 
-def camera_seed_reproducibility(handler, distribution="uniform"):
+def camera_seed(handler, distribution="uniform"):
     """Test that camera randomization is reproducible with same seed."""
     from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
 
@@ -233,13 +233,18 @@ def camera_seed_reproducibility(handler, distribution="uniform"):
     log.info("Camera seed reproducibility test passed")
 
 
+def camera_envid(handler, distribution="uniform"):
+    pass
+
+
 TEST_FUNCTIONS = [
-    camera_seed_reproducibility,
-    camera_position_randomization,
-    camera_orientation_randomization,
-    camera_look_at_randomization,
-    camera_intrinsics_randomization,
-    camera_image_randomization,
+    camera_seed,
+    camera_position,
+    camera_orientation,
+    camera_look_at,
+    camera_intrinsics,
+    camera_image,
+    camera_envid,
 ]
 
 

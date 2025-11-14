@@ -12,7 +12,6 @@
 #     ObjectRandomizer,
 #     PhysicsRandomCfg,
 # )
-# from metasim.test.randomization.conftest import get_shared_scenario
 
 
 # def get_object_from_randomizer(randomizer):
@@ -26,7 +25,7 @@
 #         raise ValueError(f"Object {obj_name} not found in the scene")
 
 
-# def object_physics_randomization(handler, distribution="uniform"):
+# def object_physics(handler, distribution="uniform"):
 #     """Test object physics properties (mass, friction, restitution) randomization."""
 
 #     # Create object randomizer with physics randomization
@@ -61,9 +60,10 @@
 #     log.info(f"Object physics randomization (Type: {distribution}) test passed")
 
 
-# def object_pose_randomization(handler, distribution="uniform"):
+# def object_pose(handler, distribution="uniform"):
 #     """Test object pose (position and rotation) randomization."""
 #     from metasim.randomization.object_randomizer import PoseRandomCfg
+
 #     # Create object randomizer with pose randomization
 #     cfg = ObjectRandomCfg(
 #         obj_name="cube",
@@ -96,7 +96,7 @@
 #     log.info(f"Object pose randomization (Type: {distribution}) test passed")
 
 
-# def object_combined_randomization(handler, distribution="uniform"):
+# def object_combined(handler, distribution="uniform"):
 #     """Test combined object randomization (physics + pose)."""
 #     # Create object randomizer with both physics and pose randomization
 #     cfg = ObjectRandomCfg(
@@ -211,7 +211,7 @@
 #     log.info(f"Object operation types (Type: {distribution}) test passed")
 
 
-# def object_seed_reproducibility(handler):
+# def object_seed(handler):
 #     """Test that object randomization is reproducible with same seed."""
 #     # Create object randomizer
 #     cfg = ObjectRandomCfg(
@@ -244,12 +244,12 @@
 #     from metasim.utils.setup_util import get_handler
 
 #     handler = get_handler(scenario)
-#     object_seed_reproducibility(handler)
+#     object_seed(handler)
 #     distributions = ["uniform", "log_uniform", "gaussian"]
 #     for dist in distributions:
-#         object_physics_randomization(handler, distribution=dist)
-#         object_pose_randomization(handler, distribution=dist)
-#         object_combined_randomization(handler, distribution=dist)
+#         object_physics(handler, distribution=dist)
+#         object_pose(handler, distribution=dist)
+#         object_combined(handler, distribution=dist)
 #         object_operation_types(handler, distribution=dist)
 #     handler.close()
 
@@ -307,13 +307,13 @@
 #         name
 #         for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isfunction)
 #         if name.startswith("object_")
-#         and name != "object_seed_reproducibility"
+#         and name != "object_seed"
 #         and name != "object_multiple_objects"
 #     ]
 
 #     # Call seed reproducibility test first
 #     proxy.run_test(
-#         "object_seed_reproducibility",
+#         "object_seed",
 #         module=module,
 #     )
 
