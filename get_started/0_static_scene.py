@@ -104,6 +104,9 @@ if __name__ == "__main__":
             usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
             urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
             mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
+            extra_resources=[
+                "roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/meshes/texture_map.png"
+            ],
         ),
         ArticulationObjCfg(
             name="box_base",
