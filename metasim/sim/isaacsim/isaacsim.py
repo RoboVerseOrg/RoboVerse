@@ -205,13 +205,12 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
+            del self.scene
+            self.sim.clear_all_callbacks()
+            self.sim.clear_instance()
+            self.sim.stop()
+            self.sim.clear()
             self.simulation_app.close()
-            if self.scene is not None:
-                del self.scene
-            if self.sim is not None:
-                del self.sim
-            if self.simulation_app is not None:
-                del self.simulation_app
             self._is_closed = True
 
     def __del__(self):

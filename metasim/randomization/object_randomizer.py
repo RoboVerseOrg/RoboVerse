@@ -385,7 +385,7 @@ class ObjectRandomizer(BaseRandomizerType):
                             (1,), self.cfg.pose.distribution, (min_rad.item(), max_rad.item())
                         ).item()
                         # self._rng.uniform(min_rad.item(), max_rad.item())
-                        rotations.append(float(angle))
+                        rotations.append(angle)
                     else:
                         rotations.append(0.0)
 
