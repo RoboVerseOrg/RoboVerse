@@ -352,7 +352,7 @@ class ScissorCfg(BaseRLTaskCfg):
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 self.current_object_type: {
-                    "pos": torch.tensor([0, 0.0, 0.6075]),
+                    "pos": torch.tensor([0, 0.08, 0.6075]),
                     "rot": torch.tensor([0.707, 0.0, 0.0, 0.707]),
                     "dof_pos": {
                         "joint_0": -0.59,  # Initial position of the switch
@@ -760,7 +760,7 @@ def compute_task_reward(
     )
 
     # Success bonus: orientation is within `success_tolerance` of goal orientation
-    reward = torch.where(success == 1, reward + reach_goal_bonus, reward)
+    # reward = torch.where(success == 1, reward + reach_goal_bonus, reward)
 
     # Check env termination conditions, including maximum success number
     resets = torch.where(up_rew < -0.5, torch.ones_like(reset_buf), reset_buf)
@@ -769,7 +769,7 @@ def compute_task_reward(
 
     # Reset because of terminate or fall or success
     resets = torch.where(episode_length_buf >= max_episode_length, torch.ones_like(resets), resets)
-    resets = torch.where(success_buf >= 1, torch.ones_like(resets), resets)
+    # resets = torch.where(success_buf >= 1, torch.ones_like(resets), resets)
 
     goal_resets = torch.zeros_like(resets)
 

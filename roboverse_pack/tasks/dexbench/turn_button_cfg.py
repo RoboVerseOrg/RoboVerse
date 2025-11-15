@@ -130,6 +130,14 @@ class TurnButtonCfg(BaseRLTaskCfg):
             "button_2": material_train_cfg,
         }
     }
+    # randomization_cfg = {
+    #     "enable_floor": False,
+    #     "material_cfg": {
+    #         "table": {
+    #             "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+    #         },
+    #     }
+    # }
 
     def set_sim_params(self, sim_type=None) -> None:
         """Set the simulation parameters based on the simulator type."""
@@ -254,12 +262,26 @@ class TurnButtonCfg(BaseRLTaskCfg):
             }
         elif self.current_robot_type == "allegro":
             self.robots = [
-                FrankaAllegroHandRightCfg(use_vhacd=False, hand_controller="dof_pos", name="right_hand"),
-                FrankaAllegroHandLeftCfg(use_vhacd=False, hand_controller="dof_pos", name="left_hand"),
+                FrankaAllegroHandRightCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="right_hand",
+                    arm_translation_scale=0.04,
+                    arm_orientation_scale=0.05,
+                    arm_controller="ik",
+                ),
+                FrankaAllegroHandLeftCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="left_hand",
+                    arm_translation_scale=0.04,
+                    arm_orientation_scale=0.05,
+                    arm_controller="ik",
+                ),
             ]
             self.robot_init_state = {
                 "right_hand": {
-                    "pos": torch.tensor([0.75, 0.2, 0.0]),
+                    "pos": torch.tensor([0.8, 0.2, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -274,7 +296,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
                         "joint_9": 0.0,
                         "joint_10": 0.0,
                         "joint_11": 0.0,
-                        "joint_12": 0.0,
+                        "joint_12": 0.363,
                         "joint_13": 0.0,
                         "joint_14": 1.64,
                         "joint_15": 0.0,
@@ -288,7 +310,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.75, -0.2, 0.0]),
+                    "pos": torch.tensor([0.8, -0.2, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -303,7 +325,7 @@ class TurnButtonCfg(BaseRLTaskCfg):
                         "joint_9": 0.0,
                         "joint_10": 0.0,
                         "joint_11": 0.0,
-                        "joint_12": 0.0,
+                        "joint_12": 0.363,
                         "joint_13": 0.0,
                         "joint_14": 1.64,
                         "joint_15": 0.0,
@@ -816,17 +838,17 @@ def compute_task_reward(
     action_penalty = torch.sum(actions**2, dim=-1)
 
     up_rew = torch.zeros_like(right_hand_reward)
-    # up_rew = (1.41 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 30
-    up_rew = torch.where(
-        right_hand_dist <= 0.1,
-        (0.705 - right_object_pos[:, 2]) * 30,
-        up_rew,
-    )
-    up_rew = torch.where(
-        left_hand_dist <= 0.1,
-        up_rew + (0.705 - left_object_pos[:, 2]) * 30,
-        up_rew,
-    )
+    up_rew = (1.41 - (right_object_pos[:, 2] + left_object_pos[:, 2])) * 30
+    # up_rew = torch.where(
+    #     right_hand_dist <= 0.1,
+    #     (0.705 - right_object_pos[:, 2]) * 30,
+    #     up_rew,
+    # )
+    # up_rew = torch.where(
+    #     left_hand_dist <= 0.1,
+    #     up_rew + (0.705 - left_object_pos[:, 2]) * 30,
+    #     up_rew,
+    # )
 
     reward = right_hand_reward + left_hand_reward + up_rew - action_penalty * action_penalty_scale
 

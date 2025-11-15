@@ -46,7 +46,7 @@ class FrankaAllegroHandLeftCfg(BaseDexCfg):
     hand_translation_scale: float = 0.05
     hand_orientation_scale: float = 0.05
     dof_speed_scale: float = 20
-    fingertips = ["link_3_tip", "link_7_tip", "link_11_tip", "link_15_tip"]
+    fingertips = ["link_3", "link_7_tip", "link_11_tip", "link_15_tip"]
     fingertips_offset = [0.0, 0.0, 0.0]
     ee_base_link = "panda_link7"
     wrist = "base_link"
@@ -126,7 +126,7 @@ class FrankaAllegroHandLeftCfg(BaseDexCfg):
         "joint_1": 0.0,
         "joint_10": 0.0,
         "joint_11": 0.0,
-        "joint_12": 0.0,
+        "joint_12": 0.363,
         "joint_13": 0.0,
         "joint_14": 1.64,
         "joint_15": 0.0,

@@ -46,7 +46,7 @@ class FrankaAllegroHandRightCfg(BaseDexCfg):
     hand_translation_scale: float = 0.05
     hand_orientation_scale: float = 0.05
     dof_speed_scale: float = 20
-    fingertips = ["link_3_tip", "link_7_tip", "link_11_tip", "link_15_tip"]
+    fingertips = ["link_3", "link_7_tip", "link_11_tip", "link_15_tip"]
     fingertips_offset = [0.0, 0.0, 0.0]
     ee_base_link = "panda_link7"
     wrist = "base_link"
@@ -126,7 +126,7 @@ class FrankaAllegroHandRightCfg(BaseDexCfg):
         "joint_1": 0.0,
         "joint_10": 0.0,
         "joint_11": 0.0,
-        "joint_12": 0.0,
+        "joint_12": 0.363,
         "joint_13": 0.0,
         "joint_14": 1.64,
         "joint_15": 0.0,
@@ -154,8 +154,8 @@ class FrankaAllegroHandRightCfg(BaseDexCfg):
         self.load_robot_for_ik()
 
     def scale_hand_action(self, actions: torch.Tensor) -> torch.Tensor:
-        if self.robot_controller != "dof_pos":
-            raise ValueError("robot_controller must be 'dof_pos' to use scale_hand_action")
+        if self.hand_controller != "dof_pos":
+            raise ValueError("hand_controller must be 'dof_pos' to use scale_hand_action")
         if actions.shape[1] != len(self.hand_acutuated_idx):
             raise ValueError(
                 f"action shape {actions.shape} does not match hand dof {self.num_joints - self.num_arm_joints}"

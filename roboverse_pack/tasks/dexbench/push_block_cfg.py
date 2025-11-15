@@ -483,7 +483,7 @@ class PushBlockCfg(BaseRLTaskCfg):
         }
         state_obs = obs["state"]
         t = 0
-        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation()
+        state_obs[:, : self.robots[0].observation_shape] = self.robots[0].observation(use_palm=True)
         t += self.robots[0].observation_shape
         for name in self.robots[0].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -494,7 +494,7 @@ class PushBlockCfg(BaseRLTaskCfg):
             t += 6
         state_obs[:, t : t + self.action_shape // 2] = actions[:, : self.action_shape // 2]  # actions for right hand
         t += self.action_shape // 2
-        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation()
+        state_obs[:, t : t + self.robots[1].observation_shape] = self.robots[1].observation(use_palm=True)
         t += self.robots[1].observation_shape
         for name in self.robots[1].fingertips:
             # shape: (num_envs, 3) + (num_envs, 3) => (num_envs, 6)
@@ -763,7 +763,7 @@ def compute_task_reward(
 
     # # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     up_rew = torch.zeros_like(right_hand_reward)
-    up_rew = 5 - 5 * left_goal_dist - 5 * right_goal_dist
+    up_rew = 5 - 7 * left_goal_dist - 7 * right_goal_dist
     reward = right_hand_reward + left_hand_reward + up_rew
 
     left_success = torch.abs(left_goal_dist) <= 0.1
