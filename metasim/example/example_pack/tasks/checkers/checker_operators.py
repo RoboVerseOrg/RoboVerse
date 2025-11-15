@@ -149,7 +149,7 @@ class DrawerOpenChecker:
     open_threshold: float = 0.1
     """Minimum joint position to consider the drawer as open."""
 
-    def __init__(self, obj_name: str, joint_name: str = None, open_threshold: float = 0.1):
+    def __init__(self, obj_name: str, joint_name: str | None = None, open_threshold: float = 0.1):
         self.obj_name = obj_name
         self.joint_name = joint_name or f"{obj_name}_bottom_drawer_joint"
         self.open_threshold = open_threshold
