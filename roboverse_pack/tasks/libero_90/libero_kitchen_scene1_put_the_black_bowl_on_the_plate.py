@@ -119,10 +119,6 @@ class LiberoKitchen1PutBowlOnPlateTask(Libero90BaseTask):
         height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
 
         is_on_plate = xy_close & height_valid  # (N,)
-
-        # print('xy_distance:', xy_distance)
-        # print('height_diff:', height_diff)
-        # print('is_on_plate:', is_on_plate)
         return is_on_plate
 
     # rewrite checker

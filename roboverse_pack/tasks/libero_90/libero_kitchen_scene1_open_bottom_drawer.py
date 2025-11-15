@@ -56,7 +56,7 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
             ArticulationObjCfg(
                 name="wooden_cabinet",
                 fix_base_link=True,
-                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/usd/wooden_cabinet.usd",
+                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/usd/wooden_cabinet.usda",
                 urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/urdf/wooden_cabinet.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/mjcf/wooden_cabinet.xml",
             ),

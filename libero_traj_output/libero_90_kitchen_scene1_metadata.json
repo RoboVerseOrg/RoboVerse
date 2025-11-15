@@ -1,7 +1,0 @@
-{
-  "task_name": "libero_90_kitchen_scene1",
-  "robot_name": "franka",
-  "num_episodes": 50,
-  "source": "libero",
-  "original_file": "KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet_demo.hdf5"
-}
