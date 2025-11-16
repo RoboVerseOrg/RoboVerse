@@ -37,7 +37,7 @@ class Libero90BaseTask(BaseTaskEnv):
     def reset(self, states=None, env_ids=None):
         """Reset the checker."""
         states = super().reset(states, env_ids)
-        # self.checker.reset(self.handler, env_ids=env_ids)
+        self.checker.reset(self.handler, env_ids=env_ids)
         return states
 
     def _get_initial_states(self) -> list[dict] | None:
