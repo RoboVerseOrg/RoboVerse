@@ -427,6 +427,9 @@ class Args:
     ## Step timing
     min_step_time: float = 0.001
 
+    ## Device
+    device: str = "cuda"
+
     def __post_init__(self):
         log.info(f"Args: {self}")
 
@@ -476,7 +479,7 @@ if __name__ == "__main__":
 
     # Create task environment
     tic = time.time()
-    device = torch.device("cuda")
+    device = torch.device(args.device)
     env = task_cls(scenario, device=device)
 
     # Optionally wrap with Viser visualization
@@ -654,9 +657,9 @@ if __name__ == "__main__":
                 break
 
         # Enforce minimum step time
-        step_elapsed_time = time.time() - step_start_time
-        if step_elapsed_time < args.min_step_time:
-            time.sleep(args.min_step_time - step_elapsed_time)
+        # step_elapsed_time = time.time() - step_start_time
+        # if step_elapsed_time < args.min_step_time:
+        #     time.sleep(args.min_step_time - step_elapsed_time)
 
         step += 1
 
