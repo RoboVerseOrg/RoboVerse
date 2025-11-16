@@ -5,12 +5,13 @@ clip_actions: 1.0
 
 model:
   hidden_dim: [512, 512]
-  feature_dim: [512, 512]
+  feature_dim: [1024]
   dynamics_dim: [512, 512]
   reward_dim: 512
   termination_dim: 512
   actor_dim: [1024, 1024, 512]
   critic_dim: [1024, 1024, 512]
+  decode: False 
 
   encoder_type: "cnn"
   visual_feature_dim: 1024
@@ -53,8 +54,9 @@ learn:
   nupdate: 2
   reward_coef: 0.1
   value_coef: 0.1
-  termination_coef: 1.0
+  termination_coef: 0.1
   consistency_coef: 20
+  recon_coef: 0
   rho: 0.7
 
   lr: 3.e-4
@@ -62,8 +64,7 @@ learn:
   grad_clip_norm: 20
   tau: 0.01
   discount_denom: 5
-  discount_min: 0.99
-  discount_max: 0.995
+  discount: 0.99
 
   # planning params
   mpc: true

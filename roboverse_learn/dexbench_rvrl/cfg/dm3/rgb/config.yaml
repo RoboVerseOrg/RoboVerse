@@ -20,11 +20,11 @@ learn:
   agent_name: shadow_hand
   test: False
   resume: 0
-  log_interval: 10000
+  log_interval: 100000
   print_log: True
 
   # rollout params
-  max_iterations: 100000
+  max_iterations: 63000
 
   # training params
   batch_size: 16

@@ -130,6 +130,7 @@ class TDMPC2:
         self.reward_coef = learn_cfg.get("reward_coef", 0.1)
         self.termination_coef = learn_cfg.get("termination_coef", 1.0)
         self.value_coef = learn_cfg.get("value_coef", 0.1)
+        self.recon_coef = learn_cfg.get("recon_coef", 0.0)
 
         self.max_iterations = learn_cfg.get("max_iterations", 500000)
         self.nstep = learn_cfg.get("nstep", 1)
@@ -149,6 +150,7 @@ class TDMPC2:
         )
         self.latent_dim = self.model_cfg.get("latent_dim", 512)
         self.num_q = self.model_cfg.get("num_q", 5)
+        self.decode = self.model_cfg.get("decode", False)
 
         self.buffer = Buffer(
             self.obs_shape,
@@ -179,24 +181,22 @@ class TDMPC2:
         self.optim = torch.optim.Adam(
             [
                 {"params": self.model._encoder.parameters(), "lr": self.lr * self.enc_lr_scale},
+                {"params": self.model._decoder.parameters() if self.decode else [], "lr": self.lr * self.enc_lr_scale},
+                # {"params": self.model._linear.parameters()},
                 {"params": self.model._dynamics.parameters()},
                 {"params": self.model._reward.parameters()},
                 {"params": self.model._termination.parameters() if self.episodic else []},
-                {"params": self.model._Qs.params.values()},
+                {"params": self.model._Qs.parameters()},
                 {"params": self.model._task_emb.parameters() if self.multitask else []},
             ],
             lr=self.lr,
             capturable=True,
         )
-        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.lr, eps=1e-5, capturable=True)
+        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.lr, eps=1e-5)
         self.model.eval()
         self.scale = RunningScale(self.tau, self.device)
         self.mpc_iterations += 2 * int(self.action_dim >= 20)  # Heuristic for large action spaces
-        self.discount = (
-            torch.tensor([self._get_discount(ep_len) for ep_len in self.episode_lengths], device="cuda:0")
-            if self.multitask
-            else self._get_discount(self.max_episode_length)
-        )
+        self.discount = learn_cfg.get("discount", 0.99)
         print("Episode length:", self.max_episode_length)
         print("Discount factor:", self.discount)
         self._prev_mean = torch.zeros(self.num_envs, self.horizon, self.action_dim, device=self.device)
@@ -215,6 +215,7 @@ class TDMPC2:
         self.episode_rewards_step = RollingMeter(learn_cfg.get("window_size", 100))
         self.model_dir = model_dir
         self.log_dir = log_dir
+        self.save_image_path = os.path.join(self.log_dir, "tdmpc2_image.png")
         self.print_log = print_log
         self.wandb_run = wandb_run
         self.is_testing = is_testing
@@ -293,7 +294,7 @@ class TDMPC2:
                             action = torch.rand((self.num_envs, self.action_dim), device=self.device) * 2 - 1
                         else:
                             action = self.act(obs, t0=is_first)
-                        next_obs, reward, terminated, truncated, info = self.env.step(action)
+                        next_obs, reward, terminated, truncated, info = self.env.step(action, self.save_image_path)
                         done = torch.logical_or(terminated, truncated)
                         env_step = self.env.env.episode_lengths
                         is_first = (env_step == 0)
@@ -354,10 +355,11 @@ class TDMPC2:
             obs[key] = obs[key].to(self.device, non_blocking=True)
         if task is not None:
             task = torch.tensor([task], device=self.device)
+        z, _ = self.model.encode(obs, task)
         if self.mpc:
-            return self.plan(obs, t0=t0, eval_mode=eval_mode, task=task)
-        z = self.model.encode(obs, task)
-        action, info = self.model.pi(z, task)
+            return self.plan(z, t0=t0, eval_mode=eval_mode, task=task)
+        else:
+            action, info = self.model.pi(z, task)
         if eval_mode:
             action = info["mean"]
         return action
@@ -377,12 +379,12 @@ class TDMPC2:
             discount_update = self.discount[torch.tensor(task)] if self.multitask else self.discount
             discount = discount * discount_update
             if self.episodic:
-                termination = torch.clip(termination + (self.model.termination(z, task) > 0.5).float(), max=1.0)
+                termination = torch.clip(termination + self.model.termination(z, task), max=1.0)
         action, _ = self.model.pi(z, task)
         return G + discount * (1 - termination) * self.model.Q(z, action, task, return_type="avg")
 
     @torch.no_grad()
-    def _plan(self, obs, t0=False, eval_mode=False, task=None):
+    def _plan(self, z, t0=False, eval_mode=False, task=None):
         """
         Plan a sequence of actions using the learned world model.
 
@@ -396,7 +398,6 @@ class TDMPC2:
                 torch.Tensor: Action to take in the environment.
         """
         # Sample policy trajectories
-        z = self.model.encode(obs, task) # (num_envs, latent_dim)
         if self.num_pi_trajs > 0:
             pi_actions = torch.empty(
                 self.num_envs, self.horizon, self.num_pi_trajs, self.action_dim, device=self.device
@@ -438,28 +439,27 @@ class TDMPC2:
             elite_idxs = torch.topk(value.squeeze(2), self.num_elites, dim=1).indices
             elite_value = torch.gather(value, 1, elite_idxs.unsqueeze(2))
             elite_actions = actions.gather(
-				dim=2,
-				index=elite_idxs[:, None, :, None].expand(-1, self.horizon, self.num_elites, self.action_dim)
-			)
+                dim=2,
+                index=elite_idxs[:, None, :, None].expand(-1, self.horizon, self.num_elites, self.action_dim)
+            )
 
             # Update parameters
-            max_value = elite_value.max(dim=1, keepdim=True).values
-            score = torch.exp(self.temperature * (elite_value - max_value))
+            score = torch.exp(self.temperature * (elite_value - elite_value.max(1, keepdim=True).values))
             score = score / (score.sum(dim=1, keepdim=True) + 1e-9)
-            mean = (score.unsqueeze(1) * elite_actions).sum(dim=2)
-            std = ((score.unsqueeze(1) * (elite_actions - mean.unsqueeze(2)) ** 2).sum(dim=2)).sqrt()
-            std = std.clamp(self.min_std, self.max_std)
+            score_exp = score.unsqueeze(1)
+            mean = (score_exp * elite_actions).sum(dim=2) / (score_exp.sum(dim=2) + 1e-9)
+            std = ((score_exp * (elite_actions - mean.unsqueeze(2)) ** 2).sum(dim=2) /
+                (score_exp.sum(dim=2) + 1e-9)).sqrt().clamp(self.min_std, self.max_std)
             if self.multitask:
                 mean = mean * self.model._action_masks[task]
                 std = std * self.model._action_masks[task]
 
         logits = torch.log(score.squeeze(2) + 1e-9)
-        batch_idx = torch.arange(self.num_envs, device=elite_actions.device)
-        rand_idx = math.gumbel_softmax_sample(logits, temperature=self.temperature)  # (num_envs,)
+        rand_idx = math.gumbel_softmax_sample(logits, temperature=self.temperature, dim=1)  # (num_envs,)
         selected_actions = elite_actions.gather(
-			dim=2,
-			index=rand_idx[:, None, None, None].expand(-1, self.horizon, 1, self.action_dim)
-		).squeeze(2)
+            dim=2,
+            index=rand_idx[:, None, None, None].expand(-1, self.horizon, 1, self.action_dim)
+        ).squeeze(2)
         a, std = selected_actions[:, 0], std[:, 0]
         if not eval_mode:
             a = a + std * torch.randn_like(a)
@@ -477,8 +477,10 @@ class TDMPC2:
         Returns:
                 float: Loss of the policy update.
         """
+        self.pi_optim.zero_grad(set_to_none=True)
         action, info = self.model.pi(zs, task) # (horizon, batch_size, action_dim)
-        qs = self.model.Q(zs, action, task, return_type="avg", detach=True)
+        self.model.track_q_grad(False)
+        qs = self.model.Q(zs, action, task, return_type="avg")
         self.scale.update(qs[0])
         qs = self.scale(qs)
 
@@ -488,7 +490,7 @@ class TDMPC2:
         pi_loss.backward()
         pi_grad_norm = torch.nn.utils.clip_grad_norm_(self.model._pi.parameters(), self.grad_clip_norm)
         self.pi_optim.step()
-        self.pi_optim.zero_grad(set_to_none=True)
+        self.model.track_q_grad(True)
 
         with torch.no_grad():
             self.aggregator.update("loss/pi_loss", pi_loss.item())
@@ -524,11 +526,17 @@ class TDMPC2:
         next_obs = {
             k: obs[k][1:] for k in obs.keys()
         }
-        with torch.no_grad():
-            next_z = self.model.encode(next_obs, task)
-            td_targets = self._td_target(next_z, reward, terminated, task)
+        if not self.decode:
+            with torch.no_grad():
+                next_z, _ = self.model.encode(next_obs, task)
+                td_targets = self._td_target(next_z, reward, terminated, task)
+        else:
+            next_z, next_feature = self.model.encode(next_obs, task)
+            td_targets = self._td_target(next_z, reward, terminated, task).detach()
+            next_z = next_z.detach()
 
         # Prepare for update
+        self.optim.zero_grad(set_to_none=True)
         self.model.train()
 
         # Latent rollout
@@ -536,7 +544,7 @@ class TDMPC2:
         first_obs = {
             k: obs[k][0] for k in obs.keys()
         }
-        z = self.model.encode(first_obs, task)
+        z, _ = self.model.encode(first_obs, task)
         zs[0] = z
         consistency_loss = 0
         for t, (_action, _next_z) in enumerate(zip(action.unbind(0), next_z.unbind(0))):
@@ -550,7 +558,7 @@ class TDMPC2:
         qs_value = math.two_hot_inv(qs, self.num_bins, self.vmin, self.vmax)
         reward_preds = self.model.reward(_zs, action, task)
         if self.episodic:
-            termination_pred = self.model.termination(zs[:-1], task, unnormalized=True)
+            termination_pred = self.model.termination(zs[1:], task, unnormalized=True)
 
         # Compute losses
         reward_loss, value_loss = 0, 0
@@ -559,11 +567,35 @@ class TDMPC2:
         ):
             reward_loss = reward_loss + math.soft_ce(
                 rew_pred_unbind, rew_unbind, self.num_bins, self.reward_vmin, self.reward_vmax, self.reward_bin_size
-            ).mean() * (self.rho**t)
+            ).mean() * self.rho**t
             for _, qs_unbind_unbind in enumerate(qs_unbind.unbind(0)):
                 value_loss = value_loss + math.soft_ce(
                     qs_unbind_unbind, td_targets_unbind, self.num_bins, self.vmin, self.vmax, self.bin_size
-                ).mean() * (self.rho**t)
+                ).mean() * self.rho**t
+                
+        if self.decode:
+            recon_next_obs = self.model.decode(next_feature)
+            reconstruction_loss = 0.0
+            for k in recon_next_obs.keys():
+                recon_obs = recon_next_obs[k]
+                true_obs = next_obs[k]
+                if k == "rgb":
+                    import cv2
+                    import numpy as np
+                    
+                    img = recon_obs[0,0]
+                    img0 = img.permute(1,2,0).cpu().detach().numpy()[:, :, :3]
+                    img0_uint8 = (img0 * 255).astype(np.uint8)
+                    img0_bgr = cv2.cvtColor(img0_uint8, cv2.COLOR_RGB2BGR)
+                    img1 = true_obs[0,0]
+                    img1_uint8 = (img1.permute(1,2,0).cpu().detach().numpy()[:, :, :3] * 255).astype(np.uint8)
+                    img1_bgr = cv2.cvtColor(img1_uint8, cv2.COLOR_RGB2BGR)
+                    img_bgr = np.concatenate([img0_bgr, img1_bgr], axis=1)
+                    cv2.imwrite("tdmpc2_recon.png", img_bgr)
+                loss = F.mse_loss(recon_obs, true_obs, reduction='none')
+                loss = loss.sum(dim=tuple(range(2, loss.ndim)))
+                reconstruction_loss += loss.mean()
+            reconstruction_loss = reconstruction_loss / len(recon_next_obs.keys())
 
         consistency_loss = consistency_loss / self.horizon
         reward_loss = reward_loss / self.horizon
@@ -578,12 +610,13 @@ class TDMPC2:
             + self.termination_coef * termination_loss
             + self.value_coef * value_loss
         )
+        if self.decode:
+            total_loss = total_loss + self.recon_coef * reconstruction_loss
 
         # Update model
         total_loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip_norm)
         self.optim.step()
-        self.optim.zero_grad(set_to_none=True)
 
         # Update policy
         self.update_pi(zs.detach(), task)
@@ -598,6 +631,8 @@ class TDMPC2:
             self.aggregator.update("loss/reward_loss", reward_loss.item())
             if self.episodic:
                 self.aggregator.update("loss/termination_loss", termination_loss.item())
+            if self.decode:
+                self.aggregator.update("loss/reconstruction_loss", reconstruction_loss.item())
             self.aggregator.update("loss/value_loss", value_loss.item())
             self.aggregator.update("loss/total_loss", total_loss.item())
             self.aggregator.update("grad_norm/model_grad_norm", grad_norm.item())

@@ -36,20 +36,22 @@ class DrqDexEnv:
         return observations
 
     def step(
-        self, actions: torch.Tensor
+        self, 
+        actions: torch.Tensor,
+        save_image_path=None
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         step_actions = actions
         observations, rewards, dones, dones, info = self.env.step(step_actions)
         for key, value in observations.items():
             observations[key] = value
             if "rgb" in key:
-                import cv2
-                import numpy as np
-                img0 = value[0].permute(1, 2, 0).cpu().numpy()  # Get the first environment's camera image
-                img_uint8 = (img0 * 255).astype(np.uint8) if img0.dtype != np.uint8 else img0
-                img_bgr = cv2.cvtColor(img_uint8, cv2.COLOR_RGB2BGR)
-                cv2.imwrite("drq_image.png", img_bgr)
-                # exit(0)
+                if save_image_path is not None:
+                    import cv2
+                    import numpy as np
+                    img0 = value[0].permute(1, 2, 0).cpu().numpy()  # Get the first environment's camera image
+                    img_uint8 = (img0 * 255).astype(np.uint8) if img0.dtype != np.uint8 else img0
+                    img_bgr = cv2.cvtColor(img_uint8, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(save_image_path, img_bgr)
                 if dones.any():
                     for i in range(self._num_frames):
                         self._frames[key][dones, i, ...] = value[dones].to(self.device).clone()

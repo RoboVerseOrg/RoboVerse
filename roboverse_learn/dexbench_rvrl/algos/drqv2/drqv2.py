@@ -170,6 +170,7 @@ class DRQv2:
 
         self.model_dir = model_dir
         self.log_dir = log_dir
+        self.save_image_path = os.path.join(self.log_dir, "drqv2_image.png")
         self.print_log = print_log
         self.wandb_run = wandb_run
         self.is_testing = is_testing
@@ -262,7 +263,7 @@ class DRQv2:
                                 action = dist.sample(clip=None).to(self.sim_device)
 
                             start_time = time.time()
-                            next_obs, reward, terminated, truncated, info = self.env.step(action)
+                            next_obs, reward, terminated, truncated, info = self.env.step(action, save_image_path=self.save_image_path)
                             done = torch.logical_or(terminated, truncated)
                             self.replay_storage.add(obs, action, reward, next_obs, done)
 

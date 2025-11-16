@@ -19,7 +19,7 @@ learn:
   agent_name: shadow_hand
   test: False
   resume: 0
-  log_interval: 5000
+  log_interval: 50000
   print_log: True
   print_interval: 1
 

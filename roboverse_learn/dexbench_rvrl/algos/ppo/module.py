@@ -196,21 +196,21 @@ class ActorCritic(nn.Module):
     def forward(self):
         raise NotImplementedError
 
-    def act(self, observations):
+    def act(self, observations, save_image_path=None):
         feature = []
         for key in self.obs_key:
             if key in self.state_key:
                 feature.append(observations[key])
             elif key in self.img_key:
                 img = observations[key]
-                import cv2
-                import numpy as np
+                if save_image_path is not None:
+                    import cv2
+                    import numpy as np
 
-                img0 = img[0].permute(1, 2, 0).cpu().numpy()  # Get the first environment's camera image
-                img_uint8 = (img0 * 255).astype(np.uint8) if img0.dtype != np.uint8 else img0
-                img_bgr = cv2.cvtColor(img_uint8, cv2.COLOR_RGB2BGR)
-                cv2.imwrite("button_cnn_image_2.png", img_bgr)
-                # exit(0)
+                    img0 = img[0].permute(1, 2, 0).cpu().numpy()  # Get the first environment's camera image
+                    img_uint8 = (img0 * 255).astype(np.uint8) if img0.dtype != np.uint8 else img0
+                    img_bgr = cv2.cvtColor(img_uint8, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(save_image_path, img_bgr)
                 if self.encoder_type in ["resnet", "dinov3"] and self.use_transform:
                     img = self.transform(img)
                 if self.encoder_type in ["cnn", "resnet"]:

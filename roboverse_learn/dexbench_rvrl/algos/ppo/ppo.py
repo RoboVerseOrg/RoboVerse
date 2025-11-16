@@ -130,6 +130,7 @@ class PPO:
         ## logging
         self.model_dir = model_dir
         self.log_dir = log_dir
+        self.save_image_path = os.path.join(self.log_dir, "ppo_image.png")
         self.print_log = print_log
         self.wandb_run = wandb_run
         self.is_testing = is_testing
@@ -170,7 +171,7 @@ class PPO:
                 for t in range(self.nsteps):
                     self.global_step += self.num_envs
 
-                    action, log_prob, value, mu, sigma = self.actor_critic.act(obs)
+                    action, log_prob, value, mu, sigma = self.actor_critic.act(obs, save_image_path=self.save_image_path)
                     next_obs, reward, terminated, truncated, infos = self.env.step(action)
                     dones = torch.logical_or(terminated, truncated)
                     self.buffer.add_transitions(obs, action, reward, dones, value.view(-1), log_prob, mu, sigma)
@@ -187,7 +188,7 @@ class PPO:
                     self.cur_episode_length[dones] = 0
                     ep_infos.append(infos)
 
-                _, _, last_values, _, _ = self.actor_critic.act(obs)
+                _, _, last_values, _, _ = self.actor_critic.act(obs, save_image_path=self.save_image_path)
                 collection_time = time.time() - start_time
                 self.tot_time += collection_time
 
