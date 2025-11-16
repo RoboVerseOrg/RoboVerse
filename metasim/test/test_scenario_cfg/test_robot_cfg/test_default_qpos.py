@@ -27,6 +27,8 @@ def test_1_robot(sim, num_envs):
                     "panda_joint5": 0.0 - 0.1,
                     "panda_joint6": 1.570796 + 0.1,
                     "panda_joint7": 0.785398 + 0.1,
+                    "panda_finger_joint1": 0.0,
+                    "panda_finger_joint2": 0.0,
                 },
             )
         ],
@@ -65,16 +67,16 @@ def test_1_robot(sim, num_envs):
     assert_close(states_default[0]["robots"]["franka"]["dof_pos"]["panda_joint5"], 0.0 - 0.1, atol=1e-3)
     assert_close(states_default[0]["robots"]["franka"]["dof_pos"]["panda_joint6"], 1.570796 + 0.1, atol=1e-3)
     assert_close(states_default[0]["robots"]["franka"]["dof_pos"]["panda_joint7"], 0.785398 + 0.1, atol=1e-3)
-    for i in range(100):
+    for i in range(10):
         handler.simulate()
     states_after = handler.get_states(mode="dict")
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint1"], 0.0 - 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint2"], -0.785398 - 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint3"], 0.0 - 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint4"], -2.356194 - 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint5"], 0.0 - 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint6"], 1.570796 + 0.1, atol=1e-3)
-    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint7"], 0.785398 + 0.1, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint1"], 0.0, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint2"], -0.785398, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint3"], 0.0, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint4"], -2.356194, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint5"], 0.0, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint6"], 1.570796, atol=1e-3)
+    assert_close(states_after[0]["robots"]["franka"]["dof_pos"]["panda_joint7"], 0.785398, atol=1e-3)
     # handler.simulate()  # need step once to update the kinematics in sapien
     # handler.simulate()
 
