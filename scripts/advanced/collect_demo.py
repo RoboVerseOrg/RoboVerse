@@ -631,9 +631,40 @@ class DemoCollector:
         del self.cache[demo_idx]
 
     def final(self):
-        self.save_request_queue.put(None)  # signal to save_demo_mp to exit
-        self.save_proc.join()
-        assert self.cache == {}
+        """
+        Finalize collector:
+        - Save any remaining cached demos (mark them as 'failed' so they are persisted)
+        - Clear the cache
+        - Signal the save process to exit and join it
+        """
+        # If there are any remaining demos in cache, save them as 'failed' to persist data
+        if self.cache:
+            log.warning(f"Finalizing: {len(self.cache)} unfinished demo(s) found in cache. Saving them as 'failed'.")
+        for demo_idx in list(self.cache.keys()):
+            try:
+                log.info(f"Finalizing: saving unfinished demo {demo_idx} as failed")
+                # save will create directories and write status.txt for failed demos
+                self.save(demo_idx, status="failed")
+            except Exception as e:
+                log.error(f"Failed to save unfinished demo {demo_idx} during finalization: {e}")
+            try:
+                # ensure we remove it from cache even if save failed
+                self.delete(demo_idx)
+            except Exception as e:
+                log.error(f"Failed to delete demo {demo_idx} from cache during finalization: {e}")
+
+        # signal the background save process to exit and join
+        try:
+            self.save_request_queue.put(None)  # signal to save_demo_mp to exit
+            self.save_proc.join()
+        except Exception as e:
+            log.error(f"Error while shutting down save process: {e}")
+
+        # ensure cache is empty (no assert, just log if something remains)
+        if self.cache:
+            log.error("Collector finalization completed but cache is not empty.")
+        else:
+            log.info("Collector finalization completed and cache is empty.")
 
 
 def should_skip(log_dir: str, demo_idx: int):
@@ -771,7 +802,7 @@ def main():
     ## Setup
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
-    collector = DemoCollector(env.handler, robot, task_desc, demo_start_idx=args.demo_start_idx)
+    collector = DemoCollector(env.handler, robot, task_desc)
     # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
     pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
@@ -830,17 +861,13 @@ def main():
     stop_flag = False
 
     while not all(finished):
-        if stop_flag:
-            pass
-
         if tot_success >= args.num_demo_success:
-            log.info(f"Reached target number of successful demos ({args.num_demo_success}).")
-            stop_flag = True
+            log.info(f"Reached target number of successful demos ({args.num_demo_success}). Stopping collection.")
+            break
 
         if demo_indexer.next_idx >= max_demo:
-            if not stop_flag:
-                log.warning(f"Reached maximum demo index ({max_demo}), finishing in-flight demos.")
-            stop_flag = True
+            log.warning(f"Reached maximum demo index ({max_demo}). Stopping collection.")
+            break
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)

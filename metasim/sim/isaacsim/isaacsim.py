@@ -60,12 +60,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         self.scenario_cfg = scenario_cfg
-        # Calculate physics_dt to ensure dt * decimation = constant (0.015)
-        if self.scenario.sim_params.dt is not None:
-            self.physics_dt = self.scenario.sim_params.dt
-        else:
-            # Default: dt * decimation = 0.015
-            self.physics_dt = 0.015 / self.scenario.decimation
+        self.physics_dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._physics_step_counter = 0
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
@@ -205,11 +200,13 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            del self.scene
-            self.sim.clear_all_callbacks()
-            self.sim.clear_instance()
-            self.sim.stop()
-            self.sim.clear()
+            self.simulation_app.close()
+            if self.scene is not None:
+                del self.scene
+            if self.sim is not None:
+                del self.sim
+            if self.simulation_app is not None:
+                del self.simulation_app
             self._is_closed = True
 
     def __del__(self):
