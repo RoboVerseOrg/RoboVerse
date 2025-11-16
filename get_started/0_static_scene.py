@@ -104,6 +104,9 @@ if __name__ == "__main__":
             usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
             urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
             mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
+            extra_resources=[
+                "roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/meshes/texture_map.png"
+            ],
         ),
         ArticulationObjCfg(
             name="box_base",
@@ -165,3 +168,4 @@ if __name__ == "__main__":
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"
     log.info(f"Saving image to {save_path}")
     imageio.imwrite(save_path, next(iter(obs_tensor.cameras.values())).rgb[0].cpu().numpy())
+    handler.close()

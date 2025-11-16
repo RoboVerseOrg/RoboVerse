@@ -60,7 +60,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         self.scenario_cfg = scenario_cfg
-        self.dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
+        self.physics_dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
         self._physics_step_counter = 0
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
@@ -104,9 +104,8 @@ class IsaacsimHandler(BaseSimHandler):
                 friction_correlation_distance=self.scenario.sim_params.friction_correlation_distance,
                 friction_offset_threshold=self.scenario.sim_params.friction_offset_threshold,
             ),
+            dt=self.physics_dt,
         )
-        if self.scenario.sim_params.dt is not None:
-            sim_config.dt = self.scenario.sim_params.dt
 
         self.sim: SimulationContext = SimulationContext(sim_config)
         scene_config: InteractiveSceneCfg = InteractiveSceneCfg(
@@ -183,7 +182,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Force another simulation step and camera update to ensure proper initialization
         self.sim.step(render=False)
-        self.scene.update(dt=self.dt)
+        self.scene.update(dt=self.physics_dt)
         self._update_camera_pose()
 
         # Force a render to update camera data after position is set
@@ -200,19 +199,18 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            del self.scene
-            self.sim.clear_all_callbacks()
-            self.sim.clear_instance()
-            self.sim.stop()
-            self.sim.clear()
+            self.simulation_app.close()
+            if self.scene is not None:
+                del self.scene
+            if self.sim is not None:
+                del self.sim
+            if self.simulation_app is not None:
+                del self.simulation_app
             self._is_closed = True
 
     def __del__(self):
         """Cleanup for the environment."""
         self.close()
-        self.simulation_app.close()
-        self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
-        self._keyboard_sub = None
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -468,43 +466,48 @@ class IsaacsimHandler(BaseSimHandler):
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
+        # TODO: support set torque
         if isinstance(actions, torch.Tensor):
-            reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
-            action_tensor_all = actions[:, reverse_reindex]
+            actions_tensor = actions
         else:
-            # Process dictionary-based actions
-            action_tensors = []
+            per_robot_tensors = []
             for robot in self.robots:
-                actuator_names = [k for k, v in robot.actuators.items() if v.fully_actuated]
-                action_tensor = torch.zeros((self.num_envs, len(actuator_names)), device=self.device)
+                sorted_joint_names = self.get_joint_names(robot.name, sort=True)
+                robot_tensor = torch.zeros((self.num_envs, len(sorted_joint_names)), device=self.device)
                 for env_id in range(self.num_envs):
-                    for i, actuator_name in enumerate(actuator_names):
-                        action_tensor[env_id, i] = torch.tensor(
-                            actions[env_id][robot.name]["dof_pos_target"][actuator_name], device=self.device
-                        )
-                action_tensors.append(action_tensor)
-            action_tensor_all = torch.cat(action_tensors, dim=-1)
+                    joint_targets = actions[env_id][robot.name]["dof_pos_target"]
+                    for j, joint_name in enumerate(sorted_joint_names):
+                        robot_tensor[env_id, j] = torch.tensor(joint_targets[joint_name], device=self.device)
+                per_robot_tensors.append(robot_tensor)
+            actions_tensor = torch.cat(per_robot_tensors, dim=-1)
 
-        # Apply actions to all robots
-        start_idx = 0
-        for i, robot in enumerate(self.robots):
+        offset = 0
+        for robot in self.robots:
             robot_inst = self.scene.articulations[robot.name]
-            actionable_joint_ids = [
-                robot_inst.joint_names.index(jn)
-                for jn in self._get_joint_names(robot.name, sort=False)
-                if robot.actuators[jn].fully_actuated
-            ]
-            if self._manual_pd_on[i]:
-                robot_inst.set_joint_effort_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                    joint_ids=actionable_joint_ids,
-                )
-            else:
-                robot_inst.set_joint_position_target(
-                    action_tensor_all[:, start_idx : start_idx + len(actionable_joint_ids)],
-                    joint_ids=actionable_joint_ids,
-                )
-            start_idx += len(actionable_joint_ids)
+            sorted_joint_names = self.get_joint_names(robot.name, sort=True)
+            joint_count = len(sorted_joint_names)
+
+            if offset + joint_count > actions_tensor.shape[1]:
+                raise ValueError("Mismatch between provided actions and expected joint count.")
+
+            robot_actions_sorted = actions_tensor[:, offset : offset + joint_count]
+            offset += joint_count
+
+            name_to_sorted_idx = {name: idx for idx, name in enumerate(sorted_joint_names)}
+
+            joint_ids = []
+            action_indices = []
+            for joint_id, joint_name in enumerate(robot_inst.joint_names):
+                if joint_name in name_to_sorted_idx:
+                    joint_ids.append(joint_id)
+                    action_indices.append(name_to_sorted_idx[joint_name])
+
+            if not joint_ids:
+                continue
+
+            joint_targets = robot_actions_sorted[:, action_indices]
+            robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+            robot_inst.write_data_to_sim()
 
     def _simulate(self):
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
@@ -514,7 +517,7 @@ class IsaacsimHandler(BaseSimHandler):
         for _ in range(self.decimation):
             self._physics_step_counter += 1
             self.sim.step(render=False)
-            self.scene.update(dt=self.dt)
+            self.scene.update(dt=self.physics_dt)
             if self._physics_step_counter % self.render_interval == 0 and is_rendering:
                 self.sim.render()
 

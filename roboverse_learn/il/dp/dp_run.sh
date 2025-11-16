@@ -17,11 +17,11 @@ eval_num_envs=1
 eval_max_step=500
 expert_data_num=100
 sim_set=mujoco
-eval_ckpt_name=100          # Checkpoint epoch to evaluate
+eval_ckpt_name=100
 
 
 ## Choose training or inference algorithm
-algo_choose=2
+algo_choose=0
 
 algo_model=""
 eval_path="./info/outputs/DP/${task_name_set}/checkpoints/${eval_ckpt_name}.ckpt"
