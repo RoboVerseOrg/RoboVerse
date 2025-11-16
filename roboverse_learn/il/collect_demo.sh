@@ -8,9 +8,9 @@ num_envs=1              # Number of parallel environments
 demo_start_idx=0        # Index of the first demo to collect
 sim_set=mujoco
 cust_name=test
-num_demo_success=3    # Number of successful demonstrations to collect
+num_demo_success=100    # Number of successful demonstrations to collect
 
-expert_data_num=3
+expert_data_num=100
 
 obs_space=joint_pos
 act_space=joint_pos
