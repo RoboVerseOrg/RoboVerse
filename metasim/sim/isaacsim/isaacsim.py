@@ -210,7 +210,6 @@ class IsaacsimHandler(BaseSimHandler):
             self.sim.clear_instance()
             self.sim.stop()
             self.sim.clear()
-            self.simulation_app.close()
             self._is_closed = True
 
     def __del__(self):
