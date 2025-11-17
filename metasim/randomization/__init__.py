@@ -28,9 +28,22 @@ from .presets.light_presets import (
     LightPositionRanges,
     LightScenarios,
 )
-from .scene_randomizer import SceneGeometryCfg, SceneMaterialPoolCfg, SceneRandomCfg, SceneRandomizer
+from .presets.material_presets import MaterialRepository
+from .presets.scene_presets import AssetRepository, SceneUSDCollections, USDCollections
+from .scene_randomizer import (
+    EnvironmentLayerCfg,
+    ManualGeometryCfg,
+    ObjectsLayerCfg,
+    SceneMaterialPoolCfg,
+    SceneRandomCfg,
+    SceneRandomizer,
+    USDAssetCfg,
+    USDAssetPoolCfg,
+    WorkspaceLayerCfg,
+)
 
 __all__ = [
+    "AssetRepository",
     "CameraImageRandomCfg",
     "CameraIntrinsicsRandomCfg",
     "CameraOrientationRandomCfg",
@@ -38,6 +51,7 @@ __all__ = [
     "CameraPresets",
     "CameraRandomCfg",
     "CameraRandomizer",
+    "EnvironmentLayerCfg",
     "LightColorRandomCfg",
     "LightColorRanges",
     "LightIntensityRandomCfg",
@@ -50,17 +64,24 @@ __all__ = [
     "LightRandomCfg",
     "LightRandomizer",
     "LightScenarios",
+    "ManualGeometryCfg",
     "MaterialPresets",
     "MaterialRandomCfg",
     "MaterialRandomizer",
+    "MaterialRepository",
     "ObjectPresets",
     "ObjectRandomCfg",
     "ObjectRandomizer",
+    "ObjectsLayerCfg",
     "PhysicsRandomCfg",
     "PoseRandomCfg",
-    "SceneGeometryCfg",
     "SceneMaterialPoolCfg",
     "ScenePresets",
     "SceneRandomCfg",
     "SceneRandomizer",
+    "SceneUSDCollections",
+    "USDAssetCfg",
+    "USDAssetPoolCfg",
+    "USDCollections",
+    "WorkspaceLayerCfg",
 ]
