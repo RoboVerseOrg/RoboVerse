@@ -75,9 +75,6 @@ def contact_forces_mujoco_query(handler):
     # Expect at least some non-zero contact forces once the robot has interacted with the ground.
     assert torch.any(current.norm(dim=-1) > 0), "MuJoCo contact forces should be non-zero for some bodies."
 
-    # Global sum of contact forces across all bodies in each env should be close to zero.
-    total = current.sum(dim=1)  # (num_envs, 3)
-
     log.info("ContactForces on MuJoCo produces non-zero yet globally balanced contact forces.")
 
 
