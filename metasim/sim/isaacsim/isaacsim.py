@@ -258,6 +258,9 @@ class IsaacsimHandler(BaseSimHandler):
                             )
                             robot_inst.write_data_to_sim()
 
+            if len(self.cameras) > 0:
+                self.refresh_render()
+
         # if states is TensorState, reindex the tensors and set state
         elif isinstance(states, TensorState):
             if env_ids is None:
@@ -306,6 +309,8 @@ class IsaacsimHandler(BaseSimHandler):
                     states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                 )
 
+            if len(self.cameras) > 0:
+                self.refresh_render()
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
