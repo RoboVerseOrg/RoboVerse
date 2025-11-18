@@ -9,7 +9,7 @@ from roboverse_learn.rl.unitree_rl.configs.algorithm import (
     RslRlPpoAlgorithmCfg,
 )
 import roboverse_learn.rl.unitree_rl.helper.curriculum_utils as curr_funs
-from roboverse_learn.rl.unitree_rl.configs.cfg_queries import ContactForces
+from metasim.queries import ContactForces
 from roboverse_learn.rl.unitree_rl.configs.cfg_randomizers import (
     MaterialRandomizer,
     MassRandomizer,
