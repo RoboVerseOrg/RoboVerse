@@ -5,7 +5,7 @@ import torch
 from metasim.types import TensorState
 from metasim.utils.math import quat_rotate_inverse
 
-from roboverse_learn.rl.unitree_rl.configs.cfg_queries import ContactForces
+from metasim.queries import ContactForces
 from roboverse_pack.tasks.unitree_rl.base.types import EnvTypes
 from roboverse_learn.rl.unitree_rl.helper import get_indices_from_substring, hash_names
 
