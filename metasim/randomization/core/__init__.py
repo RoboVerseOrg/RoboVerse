@@ -9,8 +9,7 @@ from .isaacsim_adapter import IsaacSimAdapter
 from .object_registry import ObjectMetadata, ObjectRegistry
 
 __all__ = [
-    "ObjectRegistry",
-    "ObjectMetadata",
     "IsaacSimAdapter",
+    "ObjectMetadata",
+    "ObjectRegistry",
 ]
-

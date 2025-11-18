@@ -209,14 +209,24 @@ class MDLCollections:
 
     @classmethod
     def family(
-        cls, name: str, *, root: str | Path | None = None, repo: str | None = None, warn_missing: bool = True
+        cls,
+        name: str,
+        *,
+        root: str | Path | None = None,
+        repo: str | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = True,
     ) -> list[str]:
         """Get materials from a family (wood, metal, plastic, etc.).
+
+        Returns paths from HuggingFace manifest (if available) or local scan (fallback).
+        Actual download happens on-demand when materials are used.
 
         Args:
             name: Family name (e.g., 'wood', 'metal', 'plastic')
             root: Optional custom root path (overrides repository configuration)
             repo: Optional repository name to filter by (if None, uses all repositories)
+            max_materials: Optional limit on number of materials returned
             warn_missing: Whether to warn about missing materials
 
         Returns:
@@ -237,8 +247,10 @@ class MDLCollections:
             # Determine the repository configuration
             repo_config = cls.REPOSITORIES.get(info.repo)
             if not repo_config:
-                # if warn_missing:
-                #     print(f"[MDLCollections] Warning: Repository '{info.repo}' not found, skipping family '{name}'")
+                if warn_missing:
+                    import warnings
+
+                    warnings.warn(f"Repository '{info.repo}' not found, skipping family '{name}'", stacklevel=3)
                 continue
 
             # Determine base path
@@ -260,8 +272,14 @@ class MDLCollections:
 
             collected.extend(cls._collect_from_paths(paths, warn_missing=warn_missing, repo=info.repo))
 
-        # Deduplicate and sort to keep reproducible order
-        return sorted(dict.fromkeys(collected))
+        # Deduplicate and sort
+        unique = sorted(dict.fromkeys(collected))
+
+        # Apply limit if specified
+        if max_materials is not None and len(unique) > max_materials:
+            unique = unique[:max_materials]
+
+        return unique
 
     @classmethod
     def families(cls) -> dict[str, tuple[MDLCollections.FamilyInfo, ...]]:
@@ -601,9 +619,7 @@ class MaterialPresets:
     )
 
     @staticmethod
-    def plastic_object(
-        obj_name: str, color_range: tuple = MaterialProperties.COLOR_BRIGHT, randomization_mode: str = "combined"
-    ) -> MaterialRandomCfg:
+    def plastic_object(obj_name: str, color_range: tuple = MaterialProperties.COLOR_BRIGHT) -> MaterialRandomCfg:
         """Create plastic material configuration."""
         return MaterialRandomCfg(
             obj_name=obj_name,
@@ -618,13 +634,10 @@ class MaterialPresets:
                 restitution_range=MaterialProperties.RESTITUTION_MEDIUM,
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def rubber_object(
-        obj_name: str, color_range: tuple = MaterialProperties.COLOR_NEUTRAL, randomization_mode: str = "combined"
-    ) -> MaterialRandomCfg:
+    def rubber_object(obj_name: str, color_range: tuple = MaterialProperties.COLOR_NEUTRAL) -> MaterialRandomCfg:
         """Create rubber material configuration."""
         return MaterialRandomCfg(
             obj_name=obj_name,
@@ -639,7 +652,6 @@ class MaterialPresets:
                 restitution_range=MaterialProperties.RESTITUTION_HIGH,
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
@@ -647,7 +659,6 @@ class MaterialPresets:
         obj_name: str,
         family: str | Sequence[str],
         *,
-        randomization_mode: str = "combined",
         use_mdl: bool = True,
         assets_root: str | Path | None = None,
         mdl_paths: list[str] | None = None,
@@ -660,7 +671,7 @@ class MaterialPresets:
         primary_family = families[0]
 
         physical = physical_config or MaterialPresets._family_physical_default(primary_family)
-        config = MaterialRandomCfg(obj_name=obj_name, physical=physical, randomization_mode=randomization_mode)
+        config = MaterialRandomCfg(obj_name=obj_name, physical=physical)
 
         if use_mdl:
             resolved_paths = mdl_paths
@@ -689,7 +700,6 @@ class MaterialPresets:
         obj_name: str,
         use_mdl: bool = True,
         mdl_base_path: str = "roboverse_data/materials/vMaterials_2/Metal",
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Deprecated metal preset wrapper kept for backward compatibility."""
         warnings.warn(
@@ -706,7 +716,6 @@ class MaterialPresets:
         return MaterialPresets.mdl_family_object(
             obj_name=obj_name,
             family="metal",
-            randomization_mode=randomization_mode,
             use_mdl=use_mdl,
             mdl_paths=mdl_paths,
         )
@@ -716,7 +725,6 @@ class MaterialPresets:
         obj_name: str,
         use_mdl: bool = True,
         mdl_base_path: str = "roboverse_data/materials/arnold/Wood",
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Deprecated wood preset wrapper kept for backward compatibility."""
         warnings.warn(
@@ -733,7 +741,6 @@ class MaterialPresets:
         return MaterialPresets.mdl_family_object(
             obj_name=obj_name,
             family="wood",
-            randomization_mode=randomization_mode,
             use_mdl=use_mdl,
             mdl_paths=mdl_paths,
         )
@@ -744,7 +751,6 @@ class MaterialPresets:
         physical_config: PhysicalMaterialCfg | None = None,
         pbr_config: PBRMaterialCfg | None = None,
         mdl_config: MDLMaterialCfg | None = None,
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Create fully customizable material configuration."""
         return MaterialRandomCfg(
@@ -752,7 +758,6 @@ class MaterialPresets:
             physical=physical_config,
             pbr=pbr_config,
             mdl=mdl_config,
-            randomization_mode=randomization_mode,
         )
 
     @classmethod

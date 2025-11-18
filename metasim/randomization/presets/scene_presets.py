@@ -24,7 +24,6 @@ from metasim.randomization.scene_randomizer import (
     EnvironmentLayerCfg,
     ManualGeometryCfg,
     ObjectsLayerCfg,
-    SceneMaterialPoolCfg,
     SceneRandomCfg,
     USDAssetCfg,
     USDAssetPoolCfg,
@@ -183,16 +182,17 @@ class USDCollections:
         *,
         repo: str | None = None,
         max_assets: int | None = None,
-        auto_download: bool = False,
         warn_missing: bool = True,
     ) -> list[str]:
         """Get USD/URDF assets from a family.
+
+        Returns paths from HuggingFace manifest (if available) or local scan (fallback).
+        Actual download happens on-demand when assets are used.
 
         Args:
             name: Family name (e.g., 'table', 'chair', 'kujiale')
             repo: Optional repository name to filter by (if None, uses all repositories)
             max_assets: Optional limit on number of assets
-            auto_download: If True, attempt to download missing assets
             warn_missing: If True, warn about missing assets
 
         Returns:
@@ -210,7 +210,7 @@ class USDCollections:
             if repo is not None and info.repo != repo:
                 continue
 
-            collected.extend(cls._collect_usds_from_path(info.repo, info.path, max_assets, auto_download, warn_missing))
+            collected.extend(cls._collect_usds_from_path(info.repo, info.path, max_assets, warn_missing))
 
         # Deduplicate and sort
         return sorted(dict.fromkeys(collected))
@@ -221,7 +221,6 @@ class USDCollections:
         repo_name: str,
         rel_path: str,
         max_assets: int | None,
-        auto_download: bool,
         warn_missing: bool,
     ) -> list[str]:
         """Collect USD/URDF files from a repository path.
@@ -234,17 +233,21 @@ class USDCollections:
         repo = cls.REPOSITORIES[repo_name]
         search_path = repo.local_root / rel_path
 
-        usd_paths: list[str] = []
+        # Try remote manifest first (gets complete list from HuggingFace)
+        remote_paths = cls._collect_remote_usd_paths(repo_name, rel_path)
 
-        if search_path.exists():
-            # Scan for both USD and URDF formats
+        if remote_paths:
+            # Use remote manifest (complete list, files may not exist locally yet)
+            usd_paths = remote_paths
+        elif search_path.exists():
+            # Fallback to local scan (offline mode)
+            usd_paths = []
             for ext in ["*.usd", "*.usda", "*.usdz", "*.urdf"]:
                 usd_paths.extend(sorted([str(p) for p in search_path.rglob(ext)]))
         else:
-            remote_paths = cls._collect_remote_usd_paths(repo_name, rel_path)
-            if remote_paths:
-                usd_paths = remote_paths
-            elif warn_missing:
+            # No remote and no local
+            usd_paths = []
+            if warn_missing:
                 warnings.warn(
                     f"USD/URDF assets not found at {search_path}. Download from https://huggingface.co/{repo.repo_id}",
                     stacklevel=2,
@@ -390,7 +393,6 @@ class SceneUSDCollections:
         *,
         families: tuple[str, ...] | None = None,
         max_assets: int | None = None,
-        auto_download: bool = False,
         warn_missing: bool = False,
     ) -> list[str]:
         """Return table/workspace USD assets from the USD family registry.
@@ -398,7 +400,6 @@ class SceneUSDCollections:
         Args:
             families: USD families to source from (default: table)
             max_assets: Optional limit on number of assets
-            auto_download: If True, attempt to download missing assets
             warn_missing: If True, warn about missing assets
 
         Returns:
@@ -407,7 +408,6 @@ class SceneUSDCollections:
         return _collect_family_assets(
             families or SceneUSDCollections.TABLE_FAMILIES,
             max_assets=max_assets,
-            auto_download=auto_download,
             warn_missing=warn_missing,
         )
 
@@ -416,7 +416,6 @@ class SceneUSDCollections:
         *,
         families: tuple[str, ...] | None = None,
         max_assets: int | None = None,
-        auto_download: bool = False,
         warn_missing: bool = False,
     ) -> list[str]:
         """Return full scene USD assets from the USD family registry.
@@ -424,7 +423,6 @@ class SceneUSDCollections:
         Args:
             families: USD families to source from (default: kujiale)
             max_assets: Optional limit on number of assets
-            auto_download: If True, attempt to download missing assets
             warn_missing: If True, warn about missing assets
 
         Returns:
@@ -433,7 +431,6 @@ class SceneUSDCollections:
         return _collect_family_assets(
             families or SceneUSDCollections.SCENE_FAMILIES,
             max_assets=max_assets,
-            auto_download=auto_download,
             warn_missing=warn_missing,
         )
 
@@ -442,7 +439,6 @@ class SceneUSDCollections:
         *,
         families: tuple[str, ...] | None = None,
         max_assets: int | None = None,
-        auto_download: bool = False,
         warn_missing: bool = False,
     ) -> list[str]:
         """Return desktop object USD assets from the USD family registry.
@@ -453,7 +449,6 @@ class SceneUSDCollections:
         Args:
             families: USD families to source from (default: all object families)
             max_assets: Optional limit on number of assets
-            auto_download: If True, attempt to download missing assets
             warn_missing: If True, warn about missing assets
 
         Returns:
@@ -462,7 +457,6 @@ class SceneUSDCollections:
         return _collect_family_assets(
             families or SceneUSDCollections.OBJECT_FAMILIES,
             max_assets=max_assets,
-            auto_download=auto_download,
             warn_missing=warn_missing,
         )
 
@@ -471,7 +465,6 @@ class SceneUSDCollections:
     def table785(
         *,
         indices: list[int] | None = None,
-        auto_download: bool = False,
         return_configs: bool = False,
     ) -> list[str] | tuple[list[str], dict[str, dict]]:
         """Get Table785 curated set (5 specific table models from EmbodiedGen).
@@ -484,7 +477,6 @@ class SceneUSDCollections:
 
         Args:
             indices: Optional list of indices to select specific tables (0-4)
-            auto_download: If True, attempt to download missing assets
             return_configs: If True, returns (paths, configs) tuple where configs
                           contains default per-table calibrations
 
@@ -506,7 +498,6 @@ class SceneUSDCollections:
         paths = _collect_table785_assets(
             uuids=TABLE785_UUIDS,
             indices=indices,
-            auto_download=auto_download,
         )
 
         if return_configs:
@@ -520,7 +511,6 @@ class SceneUSDCollections:
     def kujiale_scenes(
         *,
         indices: list[int] | None = None,
-        auto_download: bool = False,
         return_configs: bool = False,
     ) -> list[str] | tuple[list[str], dict[str, dict]]:
         """Get Kujiale curated set (12 specific interior scenes from RoboVerse).
@@ -533,7 +523,6 @@ class SceneUSDCollections:
 
         Args:
             indices: Optional list of indices to select specific scenes (0-11)
-            auto_download: If True, attempt to download missing assets
             return_configs: If True, returns (paths, configs) tuple where configs
                           contains default per-scene calibrations
 
@@ -552,7 +541,6 @@ class SceneUSDCollections:
         paths = _collect_kujiale_scenes(
             scene_indices=KUJIALE_INDICES,
             indices=indices,
-            auto_download=auto_download,
         )
 
         if return_configs:
@@ -566,7 +554,6 @@ class SceneUSDCollections:
     def desktop_supplies(
         *,
         indices: list[int] | None = None,
-        auto_download: bool = False,
         return_configs: bool = False,
     ) -> list[str] | tuple[list[str], dict[str, dict]]:
         """Get desktop supplies curated set (10 specific fruit objects from EmbodiedGen).
@@ -581,7 +568,6 @@ class SceneUSDCollections:
 
         Args:
             indices: Optional list of indices to select specific objects (0-9)
-            auto_download: If True, attempt to download missing assets
             return_configs: If True, returns (paths, configs) tuple where configs
                           contains default per-object calibrations
 
@@ -595,7 +581,6 @@ class SceneUSDCollections:
         """
         # Curated desktop supplies: 10 fruits from EmbodiedGen
         # Source: https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/dataset/desktop_supplies/fruits
-        # TODO: Add curated UUIDs for other categories (decorations, office_stationery, office_tools, remote_control)
         DESKTOP_SUPPLIES_UUIDS = {
             "fruits": (
                 "0308c3ddcd2a5823ba0c74d624ae6e16",
@@ -613,7 +598,6 @@ class SceneUSDCollections:
         paths = _collect_desktop_supplies(
             curated_uuids=DESKTOP_SUPPLIES_UUIDS,
             indices=indices,
-            auto_download=auto_download,
         )
 
         if return_configs:
@@ -628,7 +612,6 @@ def _collect_family_assets(
     families: tuple[str, ...],
     *,
     max_assets: int | None,
-    auto_download: bool,
     warn_missing: bool,
 ) -> list[str]:
     """Aggregate unique USD asset paths from the given USD families."""
@@ -638,7 +621,6 @@ def _collect_family_assets(
             USDCollections.family(
                 family,
                 max_assets=max_assets,
-                auto_download=auto_download,
                 warn_missing=warn_missing,
             )
         )
@@ -653,7 +635,6 @@ def _collect_table785_assets(
     uuids: tuple[str, ...],
     *,
     indices: list[int] | None,
-    auto_download: bool,
 ) -> list[str]:
     """Collect Table785 asset paths from EmbodiedGen repository.
 
@@ -694,7 +675,6 @@ def _collect_kujiale_scenes(
     scene_indices: tuple[int, ...],
     *,
     indices: list[int] | None,
-    auto_download: bool,
 ) -> list[str]:
     """Collect Kujiale scene USD asset paths from RoboVerse repository.
 
@@ -725,7 +705,6 @@ def _collect_desktop_supplies(
     curated_uuids: dict[str, tuple[str, ...]],
     *,
     indices: list[int] | None,
-    auto_download: bool,
 ) -> list[str]:
     """Collect desktop supplies asset paths from EmbodiedGen repository.
 
@@ -745,8 +724,6 @@ def _collect_desktop_supplies(
     Args:
         curated_uuids: Dictionary mapping category names to UUID tuples
         indices: Optional list of indices to select specific objects
-        auto_download: If True, attempt to download missing assets
-
     Returns:
         List of asset file paths (USD or URDF)
     """
@@ -815,78 +792,65 @@ def get_kujiale_scenes_config() -> dict[str, dict]:
         # Configurations based on manually tuned values from roboverse_pack/scenes/kujiale_scene_*_cfg.py
         # These positions have been carefully calibrated for optimal viewing and robot-table alignment
         # rotation: (w, x, y, z) format - all use identity quaternion (1, 0, 0, 0)
-        # disable_physics: True - Kujiale scenes are visual backgrounds only
         "003.usda": {
             "position": (2.0, 1.8, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "004.usda": {
             "position": (-3.0, 1.0, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "008.usda": {
-            "position": (7.2, -1.5, 0.0),  # Not yet manually tuned
+            "position": (7.2, -1.5, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "009.usda": {
             "position": (3.2, -2.0, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "020.usda": {
             "position": (2.0, -1.0, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "021.usda": {
             "position": (-5.8, 1.8, 0.0),  # Not yet manually tuned
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "022.usda": {
             "position": (-1.0, 1.1, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "024.usda": {
             "position": (1.5, 2.6, 0.0),  # Not yet manually tuned
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "025.usda": {
             "position": (2.4, 5.7, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "031.usda": {
             "position": (4.0, -9.0, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "032.usda": {
             "position": (0.7, -1.1, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         "033.usda": {
             "position": (0.4, -7.0, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
-            "disable_physics": True,
         },
         # Additional scenes (can be added as they are tested)
         # Template for new scenes:
@@ -894,7 +858,6 @@ def get_kujiale_scenes_config() -> dict[str, dict]:
         #     "position": (x, y, 0.0),
         #     "rotation": (1.0, 0.0, 0.0, 0.0),
         #     "scale": (1.0, 1.0, 1.0),
-        #     "disable_physics": True,
         # },
     }
 
@@ -932,31 +895,26 @@ def get_table_configs() -> dict[str, dict]:
             "position": (0.0, 0.0, 0.37),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.2, 1.5, 1.0),
-            "fix_base_link": True,
         },
         "1522dad65f0859758dad5636ba348bf8": {  # Table 2
             "position": (0.3, 0.0, 0.37),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.2, 1.4, 1.0),
-            "fix_base_link": True,
         },
         "18848428c54456aa82070f2fd33f7bb4": {  # Table 3
             "position": (0.3, 0.0, 0.37),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.2, 1.6, 1.0),
-            "fix_base_link": True,
         },
         "848396479c0b5da3bc05d0ef74d4dcfb": {  # Table 4
             "position": (0.3, 0.0, 0.37),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (2.0, 1.6, 1.0),
-            "fix_base_link": True,
         },
         "b4b40966ebda5393bd4d7fc634062519": {  # Table 5
             "position": (0.3, 0.0, 0.37),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.3, 1.3, 1.0),
-            "fix_base_link": True,
         },
         # Additional tables from EmbodiedGen (can be added as they are tested)
         # Template for new tables:
@@ -964,7 +922,6 @@ def get_table_configs() -> dict[str, dict]:
         #     "position": (0.0, 0.0, 0.0),
         #     "rotation": (1.0, 0.0, 0.0, 0.0),
         #     "scale": (sx, sy, sz),
-        #     "fix_base_link": True,
         # },
     }
 
@@ -1258,34 +1215,18 @@ class ScenePresets:
         room_size: float = 5.0,
         wall_height: float = 3.0,
         wall_thickness: float = 0.1,
-        *,
-        floor_families: tuple[str, ...] | None = None,
-        wall_families: tuple[str, ...] | None = None,
-        ceiling_families: tuple[str, ...] | None = None,
     ) -> SceneRandomCfg:
         """Create an empty room with floor, walls, and ceiling.
-
-        Note: All four walls share the same material pool to ensure consistent appearance.
 
         Args:
             room_size: Size of the room (square)
             wall_height: Height of walls
             wall_thickness: Thickness of walls
-            floor_families: Optional override for floor material families
-            wall_families: Optional override for wall material families
-            ceiling_families: Optional override for ceiling material families
-
         Returns:
             Scene randomization configuration
         """
         half_room = room_size / 2.0
         half_thickness = wall_thickness / 2.0
-
-        # Shared material pool for all walls to ensure consistent color
-        wall_material_pool = SceneMaterialPoolCfg(
-            material_paths=SceneMaterialCollections.wall_materials(families=wall_families),
-            selection_strategy="random",
-        )
 
         return SceneRandomCfg(
             environment_layer=EnvironmentLayerCfg(
@@ -1296,11 +1237,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(room_size, room_size, wall_thickness),
                         position=(0.0, 0.0, 0.005),
-                        material_randomization=True,
-                        material_pool=SceneMaterialPoolCfg(
-                            material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
-                            selection_strategy="random",
-                        ),
+                        default_material="roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl",
                     ),
                     # Front wall (positive Y)
                     ManualGeometryCfg(
@@ -1308,8 +1245,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
                         position=(0.0, half_room + half_thickness, wall_height / 2),
-                        material_randomization=True,
-                        material_pool=wall_material_pool,
+                        default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
                     ),
                     # Back wall (negative Y)
                     ManualGeometryCfg(
@@ -1317,8 +1253,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
                         position=(0.0, -half_room - half_thickness, wall_height / 2),
-                        material_randomization=True,
-                        material_pool=wall_material_pool,
+                        default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
                     ),
                     # Left wall (negative X)
                     ManualGeometryCfg(
@@ -1326,8 +1261,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(wall_thickness, room_size, wall_height),
                         position=(-half_room - half_thickness, 0.0, wall_height / 2),
-                        material_randomization=True,
-                        material_pool=wall_material_pool,
+                        default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
                     ),
                     # Right wall (positive X)
                     ManualGeometryCfg(
@@ -1335,8 +1269,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(wall_thickness, room_size, wall_height),
                         position=(half_room + half_thickness, 0.0, wall_height / 2),
-                        material_randomization=True,
-                        material_pool=wall_material_pool,
+                        default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
                     ),
                     # Ceiling
                     ManualGeometryCfg(
@@ -1344,11 +1277,7 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(room_size, room_size, wall_thickness),
                         position=(0.0, 0.0, wall_height + wall_thickness / 2),
-                        material_randomization=True,
-                        material_pool=SceneMaterialPoolCfg(
-                            material_paths=SceneMaterialCollections.ceiling_materials(families=ceiling_families),
-                            selection_strategy="random",
-                        ),
+                        default_material="roboverse_data/materials/arnold/Architecture/Roof_Tiles.mdl",
                     ),
                 ],
             ),
@@ -1360,11 +1289,6 @@ class ScenePresets:
         wall_height: float = 3.0,
         table_size: tuple[float, float, float] = (1.5, 1.0, 0.05),
         table_height: float = 0.75,
-        *,
-        floor_families: tuple[str, ...] | None = None,
-        wall_families: tuple[str, ...] | None = None,
-        ceiling_families: tuple[str, ...] | None = None,
-        table_families: tuple[str, ...] | None = None,
     ) -> SceneRandomCfg:
         """Create a tabletop manipulation workspace.
 
@@ -1373,11 +1297,6 @@ class ScenePresets:
             wall_height: Height of walls
             table_size: Size of the table (x, y, z)
             table_height: Height of table surface from ground
-            floor_families: Optional override for floor material families
-            wall_families: Optional override for wall material families
-            ceiling_families: Optional override for ceiling material families
-            table_families: Optional override for table material families
-
         Returns:
             Scene randomization configuration
         """
@@ -1385,9 +1304,6 @@ class ScenePresets:
         cfg = ScenePresets.empty_room(
             room_size=room_size,
             wall_height=wall_height,
-            floor_families=floor_families,
-            wall_families=wall_families,
-            ceiling_families=ceiling_families,
         )
 
         # Add workspace layer with table
@@ -1398,11 +1314,6 @@ class ScenePresets:
                     geometry_type="cube",
                     size=table_size,
                     position=(0.0, 0.0, table_height - table_size[2] / 2),
-                    material_randomization=True,
-                    material_pool=SceneMaterialPoolCfg(
-                        material_paths=SceneMaterialCollections.table_materials(families=table_families),
-                        selection_strategy="random",
-                    ),
                 ),
             ],
         )
@@ -1413,16 +1324,12 @@ class ScenePresets:
     def floor_only(
         floor_size: float = 10.0,
         floor_thickness: float = 0.1,
-        *,
-        floor_families: tuple[str, ...] | None = None,
     ) -> SceneRandomCfg:
         """Create only a floor (minimal scene).
 
         Args:
             floor_size: Size of the floor (square)
             floor_thickness: Thickness of floor
-            floor_families: Optional override for floor material families
-
         Returns:
             Scene randomization configuration
         """
@@ -1434,11 +1341,6 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(floor_size, floor_size, floor_thickness),
                         position=(0.0, 0.0, 0.005),
-                        material_randomization=True,
-                        material_pool=SceneMaterialPoolCfg(
-                            material_paths=SceneMaterialCollections.floor_materials(families=floor_families),
-                            selection_strategy="random",
-                        ),
                     ),
                 ],
             ),
@@ -1484,8 +1386,7 @@ class ScenePresets:
                 name="kujiale_scene",
                 usd_paths=scene_paths,
                 position=(0.0, 0.0, 0.0),
-                disable_physics=True,  # Kujiale scenes are visual-only backgrounds
-                per_path_overrides=scene_configs,  # Apply per-scene calibrations
+                per_path_overrides=scene_configs,
                 selection_strategy="random",
             )
         else:
@@ -1493,7 +1394,6 @@ class ScenePresets:
                 name="kujiale_scene",
                 usd_path=scene_paths[scene_index or 0],
                 position=(0.0, 0.0, 0.0),
-                disable_physics=True,
             )
 
         # Create workspace layer with table
@@ -1532,7 +1432,6 @@ class ScenePresets:
         table_height: float = 0.7,
         num_distractor_objects: int = 0,
         *,
-        table_families: tuple[str, ...] | None = None,
         use_default_scene_config: bool = True,
     ) -> SceneRandomCfg:
         """Create a hybrid scene combining USD background with manual geometry workspace.
@@ -1544,7 +1443,6 @@ class ScenePresets:
             table_size: Table size
             table_height: Table height from ground
             num_distractor_objects: Number of distractor objects to add on table
-            table_families: Optional table material families
             use_default_scene_config: If True, apply default config for the Kujiale scene
                                      (looks up position/scale from get_kujiale_scenes_config)
 
@@ -1577,7 +1475,6 @@ class ScenePresets:
                         position=scene_position,
                         rotation=scene_rotation,
                         scale=scene_scale,
-                        disable_physics=True,  # Visual-only background
                     ),
                 ],
             )
@@ -1597,11 +1494,6 @@ class ScenePresets:
                     geometry_type="cube",
                     size=table_size,
                     position=(0.0, 0.0, table_height - table_size[2] / 2),
-                    material_randomization=True,
-                    material_pool=SceneMaterialPoolCfg(
-                        material_paths=SceneMaterialCollections.table_materials(families=table_families),
-                        selection_strategy="random",
-                    ),
                 ),
             ],
         )
@@ -1626,11 +1518,6 @@ class ScenePresets:
                         geometry_type="cube",
                         size=(0.05, 0.05, 0.05),
                         position=(x, y, z),
-                        material_randomization=True,
-                        material_pool=SceneMaterialPoolCfg(
-                            material_paths=SceneMaterialCollections.table_materials(families=("metal", "plastic")),
-                            selection_strategy="random",
-                        ),
                     )
                 )
 

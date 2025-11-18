@@ -1,15 +1,33 @@
-"""Randomization for RoboVerse. Basic randomizers from metasim will be automatically imported."""
+"""Randomization for RoboVerse.
+
+This module provides a comprehensive domain randomization framework with:
+- Core infrastructure (ObjectRegistry, IsaacSimAdapter)
+- Lifecycle management (SceneRandomizer)
+- Property editors (Material, Object, Light, Camera Randomizers)
+- User-friendly Presets
+
+Architecture:
+- Static Objects: Handler-managed (Robot, Task Objects, Camera, Light)
+- Dynamic Objects: SceneRandomizer-managed (Floor, Table, Distractors)
+- Unified access via ObjectRegistry
+- Hybrid simulation support (automatic handler dispatch)
+"""
 
 from metasim.randomization import *
 
+# Randomizers
 from .camera_randomizer import (
     CameraImageRandomCfg,
     CameraIntrinsicsRandomCfg,
+    CameraLookAtRandomCfg,
     CameraOrientationRandomCfg,
     CameraPositionRandomCfg,
     CameraRandomCfg,
     CameraRandomizer,
 )
+
+# Core infrastructure
+from .core import IsaacSimAdapter, ObjectMetadata, ObjectRegistry
 from .light_randomizer import (
     LightColorRandomCfg,
     LightIntensityRandomCfg,
@@ -18,8 +36,16 @@ from .light_randomizer import (
     LightRandomCfg,
     LightRandomizer,
 )
-from .material_randomizer import MaterialRandomCfg, MaterialRandomizer
+from .material_randomizer import (
+    MaterialRandomCfg,
+    MaterialRandomizer,
+    MDLMaterialCfg,
+    PBRMaterialCfg,
+    PhysicalMaterialCfg,
+)
 from .object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
+
+# Presets
 from .presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets, ScenePresets
 from .presets.light_presets import (
     LightColorRanges,
@@ -34,7 +60,7 @@ from .scene_randomizer import (
     EnvironmentLayerCfg,
     ManualGeometryCfg,
     ObjectsLayerCfg,
-    SceneMaterialPoolCfg,
+    SceneLayerCfg,
     SceneRandomCfg,
     SceneRandomizer,
     USDAssetCfg,
@@ -46,12 +72,14 @@ __all__ = [
     "AssetRepository",
     "CameraImageRandomCfg",
     "CameraIntrinsicsRandomCfg",
+    "CameraLookAtRandomCfg",
     "CameraOrientationRandomCfg",
     "CameraPositionRandomCfg",
     "CameraPresets",
     "CameraRandomCfg",
     "CameraRandomizer",
     "EnvironmentLayerCfg",
+    "IsaacSimAdapter",
     "LightColorRandomCfg",
     "LightColorRanges",
     "LightIntensityRandomCfg",
@@ -64,18 +92,23 @@ __all__ = [
     "LightRandomCfg",
     "LightRandomizer",
     "LightScenarios",
+    "MDLMaterialCfg",
     "ManualGeometryCfg",
     "MaterialPresets",
     "MaterialRandomCfg",
     "MaterialRandomizer",
     "MaterialRepository",
+    "ObjectMetadata",
     "ObjectPresets",
     "ObjectRandomCfg",
     "ObjectRandomizer",
+    "ObjectRegistry",
     "ObjectsLayerCfg",
+    "PBRMaterialCfg",
+    "PhysicalMaterialCfg",
     "PhysicsRandomCfg",
     "PoseRandomCfg",
-    "SceneMaterialPoolCfg",
+    "SceneLayerCfg",
     "ScenePresets",
     "SceneRandomCfg",
     "SceneRandomizer",

@@ -91,7 +91,7 @@ class CameraPresets:
     """Predefined camera randomization configurations for common use cases."""
 
     @staticmethod
-    def surveillance_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def surveillance_camera(camera_name: str) -> CameraRandomCfg:
         """Surveillance/security camera setup with micro-adjustments."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -122,11 +122,10 @@ class CameraPresets:
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_NORMAL, use_fov=True, distribution="uniform", enabled=True
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def handheld_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def handheld_camera(camera_name: str) -> CameraRandomCfg:
         """Handheld/mobile camera with natural movement patterns."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -147,11 +146,10 @@ class CameraPresets:
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_NORMAL, use_fov=True, distribution="uniform", enabled=True
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def robotic_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def robotic_camera(camera_name: str) -> CameraRandomCfg:
         """Robot-mounted camera with precise positioning."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -186,11 +184,10 @@ class CameraPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def surveillance_camera_absolute(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def surveillance_camera_absolute(camera_name: str) -> CameraRandomCfg:
         """Surveillance camera with absolute positioning (original behavior)."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -217,11 +214,10 @@ class CameraPresets:
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_NORMAL, use_fov=True, distribution="uniform", enabled=True
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def drone_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def drone_camera(camera_name: str) -> CameraRandomCfg:
         """Drone/aerial camera with high viewpoints."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -243,11 +239,10 @@ class CameraPresets:
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_WIDE, use_fov=True, distribution="uniform", enabled=True
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def cinema_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def cinema_camera(camera_name: str) -> CameraRandomCfg:
         """Cinematic camera with dramatic angles and focal lengths."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -272,11 +267,10 @@ class CameraPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def inspection_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def inspection_camera(camera_name: str) -> CameraRandomCfg:
         """Industrial inspection camera with close-up details."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -298,11 +292,10 @@ class CameraPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def demo_camera(camera_name: str, randomization_mode: str = "combined") -> CameraRandomCfg:
+    def demo_camera(camera_name: str) -> CameraRandomCfg:
         """Demonstration camera with maximum variation for testing."""
         return CameraRandomCfg(
             camera_name=camera_name,
@@ -324,7 +317,6 @@ class CameraPresets:
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_EXTREME, use_fov=True, distribution="uniform", enabled=True
             ),
-            randomization_mode=randomization_mode,
         )
 
 
