@@ -233,7 +233,6 @@ class SceneRandomizationManager:
                         distribution="uniform",
                         enabled=True,
                     ),
-                    randomization_mode="combined",
                 )
                 log.info(
                     f"    Main light: intensity {ceiling_main_range[0] / 1000:.0f}K-{ceiling_main_range[1] / 1000:.0f}K with orientation"
@@ -259,7 +258,6 @@ class SceneRandomizationManager:
                         distribution="uniform",
                         enabled=True,
                     ),
-                    randomization_mode="combined",
                 )
 
             # Store the config (will create randomizer with seed later)

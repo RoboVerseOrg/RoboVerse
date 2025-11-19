@@ -110,7 +110,7 @@ class DomainRandomizationManager:
             # )
             ## Box
             box_mat_rand = MaterialRandomizer(
-                MaterialPresets.mdl_family_object("box_base", family="metal", randomization_mode="combined"),
+                MaterialPresets.mdl_family_object("box_base", family="metal"),
                 seed=self.cfg.seed,
             )
 
@@ -148,10 +148,7 @@ class DomainRandomizationManager:
         # 4. Initialize camera randomizer
         if self.cfg.enable:
             camera_rand = CameraRandomizer(
-                CameraPresets.surveillance_camera(
-                    self.cfg.camera_name,
-                    randomization_mode=self.cfg.camera_scenario
-                ),
+                CameraPresets.surveillance_camera(self.cfg.camera_name),
                 seed=self.cfg.seed
             )
             camera_rand.bind_handler(self.sim_handler)

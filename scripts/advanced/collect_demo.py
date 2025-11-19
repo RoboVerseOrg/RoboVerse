@@ -265,12 +265,12 @@ class DomainRandomizationManager:
             light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
 
             if isinstance(light, DomeLightCfg):
-                config = LightPresets.dome_ambient(light_name, randomization_mode="combined")
+                config = LightPresets.dome_ambient(light_name)
             elif isinstance(light, (SphereLightCfg, DiskLightCfg)):
-                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
+                config = LightPresets.sphere_ceiling_light(light_name)
             else:
                 log.warning(f"Unknown light type for {light_name}, using sphere_ceiling_light preset")
-                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
+                config = LightPresets.sphere_ceiling_light(light_name)
 
             randomizer = LightRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)
@@ -287,7 +287,7 @@ class DomainRandomizationManager:
         log.info(f"  Setting up camera randomizers for {len(cameras)} cameras")
         for camera in cameras:
             camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
-            config = CameraPresets.surveillance_camera(camera_name, randomization_mode="combined")
+            config = CameraPresets.surveillance_camera(camera_name)
 
             randomizer = CameraRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)
@@ -298,11 +298,11 @@ class DomainRandomizationManager:
         """Get appropriate material configuration based on object type."""
         obj_lower = obj_name.lower()
         if "cube" in obj_lower:
-            return MaterialPresets.mdl_family_object(obj_name, family="metal", randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="metal")
         elif "sphere" in obj_lower:
-            return MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
+            return MaterialPresets.rubber_object(obj_name)
         else:
-            return MaterialPresets.mdl_family_object(obj_name, family="wood", randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="wood")
 
     def _setup_physics_randomizers(self, seed: int | None):
         """Setup unified ObjectRandomizers for robots and objects."""
