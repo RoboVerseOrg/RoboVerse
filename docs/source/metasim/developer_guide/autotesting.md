@@ -21,7 +21,7 @@ For example, if you add a feature for MuJoCo, you can write a test in the follow
 @pytest.mark.parametrize("sim,num_envs", get_test_parameters())
 def test_consistency(sim, num_envs):
     if sim not in ("mujoco",):
-        pytest.skip(f"Skipping simulator {sim} for this test)
+        pytest.skip(f"Skipping simulator {sim} for this test.)
 ```
 
 ## Run test in CI
