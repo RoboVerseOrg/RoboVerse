@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   merge_group:
     types: [checks_requested]
+  pull_request:
+    branches: [ "main" ]
 
 env:
   REGION: us-west-2
