@@ -65,7 +65,7 @@ class IsaacsimHandler(BaseSimHandler):
             self.physics_dt = self.scenario.sim_params.dt
         else:
             # Default: dt * decimation = 0.015
-            self.physics_dt = 0.015 / self.scenario.decimation        
+            self.physics_dt = 0.015 / self.scenario.decimation
         self._physics_step_counter = 0
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode

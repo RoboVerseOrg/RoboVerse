@@ -507,7 +507,7 @@ class DPRunner(BaseRunner):
             dp_camera = False
         else:
             dp_camera = True
-        
+
         if dp_camera:
             import warnings
             warnings.warn("Using dp camera position!")

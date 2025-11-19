@@ -1,6 +1,6 @@
 
 ## Seperate training and evaluation
-train_enable=True  # True for training, False for evaluation   
+train_enable=True  # True for training, False for evaluation
 eval_enable=True
 
 task_name_set=stack_cube
@@ -16,7 +16,7 @@ delta_ee=0
 eval_num_envs=1
 eval_max_step=300
 expert_data_num=100
-sim_set=isaacsim  
+sim_set=isaacsim
 eval_ckpt_name=100
 
 

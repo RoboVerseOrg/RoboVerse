@@ -571,16 +571,18 @@ class DemoCollector:
         else:
             additional_str = f"-{args.cust_name}" if args.cust_name else ""
             self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
-        
+
         self.success_counter = demo_start_idx
         self.failed_counter = demo_start_idx
-        log.info(f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}")
-    
+        log.info(
+            f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}"
+        )
+
     def _get_max_demo_index(self, status: str) -> int:
         status_dir = os.path.join(self.base_save_dir, status)
         if not os.path.exists(status_dir):
             return 0
-        
+
         max_idx = -1
         for item in os.listdir(status_dir):
             if item.startswith("demo_") and os.path.isdir(os.path.join(status_dir, item)):
@@ -589,7 +591,7 @@ class DemoCollector:
                     max_idx = max(max_idx, idx)
                 except (ValueError, IndexError):
                     continue
-        
+
         return max_idx + 1
 
     def create(self, demo_idx: int, data_dict: dict):
@@ -607,7 +609,6 @@ class DemoCollector:
         assert demo_idx in self.cache
         assert status in ["success", "failed"], f"Invalid status: {status}"
 
-    
         if status == "success":
             continuous_idx = self.success_counter
             self.success_counter += 1
@@ -707,21 +708,22 @@ class DemoIndexer:
 def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
-    
-    if args.task == 'stack_cube':
+
+    if args.task == "stack_cube":
         dp_camera = True
-    elif args.task == 'close_box':
+    elif args.task == "close_box":
         dp_camera = False
     else:
         dp_camera = True
-    
+
     if dp_camera:
         import warnings
+
         warnings.warn("Using dp camera position!")
         dp_pos = (1.0, 0.0, 0.75)
     else:
         dp_pos = (1.5, 0.0, 1.5)
-    
+
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
         robots=[args.robot],
