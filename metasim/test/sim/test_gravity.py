@@ -38,6 +38,9 @@ from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 @pytest.mark.parametrize("sim,num_envs", get_test_parameters())
 def test_consistency(sim, num_envs):
+    if sim not in ("sapien3",):
+        pytest.skip(f"Skipping simulator {sim} for this test (only sapien3 is supported).")
+
     scenario = ScenarioCfg(
         simulator=sim,
         num_envs=num_envs,

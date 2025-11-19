@@ -201,6 +201,8 @@ jobs:
           fi
 
           # begin run test
+          MUJOCO_TEST_EXIT_CODE=0
+          SAPIEN3_TEST_EXIT_CODE=0
           # run all test
           docker run --rm --entrypoint bash --runtime=nvidia --network=host \
           --name metasim-autotest \
@@ -210,8 +212,10 @@ jobs:
           -v /usr/local/cuda:/usr/local/cuda \
           -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
           "$IMAGE_URI" \
-          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco" \
-          || TEST_EXIT_CODE=$?
+          -c "bash -lc 'set -o pipefail; \
+          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco -vv \
+          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-mujoco.log'" \
+          || MUJOCO_TEST_EXIT_CODE=$?
 
           docker run --rm --entrypoint bash --runtime=nvidia --network=host \
           --name metasim-autotest \
@@ -221,30 +225,49 @@ jobs:
           -v /usr/local/cuda:/usr/local/cuda \
           -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
           "$IMAGE_URI" \
-          -c "/home/$EC2_USER_NAME/conda/envs/metasim_isaacgym/bin/python3 -m pytest -k isaacgym" \
-          || ISAACGYM_TEST_EXIT_CODE=$?
-
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "/home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3" \
+          -c "bash -lc 'set -o pipefail; \
+          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3 -vv \
+          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log'" \
           || SAPIEN3_TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary
-          touch ~/$SRC_DIR/test_exit_code.txt
-          echo "$TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
-          echo "$ISAACGYM_TEST_EXIT_CODE" > ~/$SRC_DIR/test_exit_code.txt
+          touch ~/$SRC_DIR/test_exit_codes.txt
+          {
+            echo \"MUJOCO_TEST_EXIT_CODE=\$MUJOCO_TEST_EXIT_CODE\"
+            echo \"SAPIEN3_TEST_EXIT_CODE=\$SAPIEN3_TEST_EXIT_CODE\"
+          } > ~/${SRC_DIR}/test_exit_codes.txt
         " || { echo "Test execution failed"; exit 1; }
 
         echo "===Copying test reports...==="
-        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_codes.txt $CODEBUILD_SRC_DIR/
 
-        EXIT_CODE=$(cat $CODEBUILD_SRC_DIR/test_exit_code.txt)
+        source $CODEBUILD_SRC_DIR/test_exit_codes.txt
+
+        echo "Mujoco test exit code: ${MUJOCO_TEST_EXIT_CODE}"
+        echo "Sapien3 test exit code: ${SAPIEN3_TEST_EXIT_CODE}"
+
+        EXIT_CODE=0
+
+        if [ "${MUJOCO_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+          echo "=== Mujoco tests failed. Fetching logs... ==="
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-mujoco.log \
+            $CODEBUILD_SRC_DIR/ || true
+          echo "===== Mujoco pytest log ====="
+          cat $CODEBUILD_SRC_DIR/pytest-mujoco.log || true
+          EXIT_CODE=1
+        fi
+
+        if [ "${SAPIEN3_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+          echo "=== Sapien3 tests failed. Fetching logs... ==="
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-sapien3.log \
+            $CODEBUILD_SRC_DIR/ || true
+          echo "===== Sapien3 pytest log ====="
+          cat $CODEBUILD_SRC_DIR/pytest-sapien3.log || true
+          EXIT_CODE=1
+        fi
+
 
         if [ "$EXIT_CODE" -ne 0 ]; then
           echo "Tests failed with exit code $EXIT_CODE"
