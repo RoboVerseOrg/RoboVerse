@@ -441,7 +441,7 @@ def initialize_randomizers(handler, args):
     return randomizers
 
 
-def apply_randomization(randomizers, level, handler=None):
+def apply_randomization(randomizers, level, handler=None, is_initial=False):
     """Apply all randomizers with global deferred visual flush.
 
     New Strategy (Performance Optimized):
@@ -452,19 +452,28 @@ def apply_randomization(randomizers, level, handler=None):
 
     Ensures all randomizations are applied atomically before flushing visuals,
     preventing intermediate states from being captured in recordings.
+
+    Args:
+        randomizers: Dictionary of randomizers
+        level: Randomization level (0-3)
+        handler: Simulation handler
+        is_initial: Whether this is the initial call (for scene creation)
     """
     # Enable global defer flag (blocks ALL internal flush calls)
     if handler:
         handler._defer_all_visual_flushes = True
 
     try:
-        # Level 0+: Scene creation
+        # Scene creation/switching logic:
+        # - Initial call: Always create scene (even level 0)
+        # - Periodic call: Only switch scene at level 1+ (level 0: no switching)
         if randomizers["scene"]:
-            scene_rand = randomizers["scene"]
-            original_auto_flush = scene_rand.cfg.auto_flush_visuals
-            scene_rand.cfg.auto_flush_visuals = False
-            scene_rand()
-            scene_rand.cfg.auto_flush_visuals = original_auto_flush
+            if is_initial or level >= 1:
+                scene_rand = randomizers["scene"]
+                original_auto_flush = scene_rand.cfg.auto_flush_visuals
+                scene_rand.cfg.auto_flush_visuals = False
+                scene_rand()
+                scene_rand.cfg.auto_flush_visuals = original_auto_flush
 
         # Level 1+: Material randomization
         if level >= 1:
@@ -511,8 +520,8 @@ def run_replay(env, randomizers, init_state, all_actions, args):
     log.info(f"Video: {video_path}")
     log.info(f"Randomization interval: {args.randomize_interval} steps")
 
-    # Initial randomization
-    apply_randomization(randomizers, args.level, env.handler)
+    # Initial randomization (create scene)
+    apply_randomization(randomizers, args.level, env.handler, is_initial=True)
 
     # Store original positions for later updates
     original_positions = {}
