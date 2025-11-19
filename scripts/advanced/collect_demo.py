@@ -835,7 +835,6 @@ def main():
     stop_flag = False
 
     while not all(finished):
-        # 如果已经达成停止条件，不再执行采集逻辑，等待循环自然结束
         if stop_flag:
             pass
 
