@@ -1,5 +1,9 @@
 import math
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
 import torch
 
 
