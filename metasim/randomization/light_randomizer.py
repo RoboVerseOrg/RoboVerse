@@ -433,6 +433,14 @@ class LightRandomizer(BaseRandomizerType):
         """Flush visual updates to ensure light changes are visible instantly.
 
         This is critical for real-time light switching to be visible.
+        Respects global defer flag for atomic multi-randomizer operations.
         """
+        # Check global defer flag (set by apply_randomization for 22→1 flush optimization)
+        if (
+            hasattr(self._actual_handler, "_defer_all_visual_flushes")
+            and self._actual_handler._defer_all_visual_flushes
+        ):
+            return  # Skip flush, will be done by apply_randomization
+
         if hasattr(self._actual_handler, "flush_visual_updates"):
             self._actual_handler.flush_visual_updates()

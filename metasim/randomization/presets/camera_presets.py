@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ..camera_randomizer import (
-    CameraImageRandomCfg,
     CameraIntrinsicsRandomCfg,
     CameraLookAtRandomCfg,
     CameraOrientationRandomCfg,
@@ -79,43 +78,26 @@ class CameraProperties:
     CLIPPING_NORMAL = ((0.05, 0.5), (10.0, 100.0))  # Normal range
     CLIPPING_FAR = ((0.1, 1.0), (100.0, 1000.0))  # Far range
 
-    # Image property ranges
-    ASPECT_RATIO_WIDE = (0.5, 2.0)  # Wide variation
-    ASPECT_RATIO_NORMAL = (0.8, 1.2)  # Normal variation
-    RESOLUTION_LOW = ((256, 512), (256, 512))  # Low resolution range
-    RESOLUTION_NORMAL = ((512, 1024), (512, 1024))  # Normal resolution range
-    RESOLUTION_HIGH = ((1024, 2048), (1024, 2048))  # High resolution range
-
 
 class CameraPresets:
     """Predefined camera randomization configurations for common use cases."""
 
     @staticmethod
     def surveillance_camera(camera_name: str) -> CameraRandomCfg:
-        """Surveillance/security camera setup with micro-adjustments."""
+        """Surveillance/security camera setup with micro-adjustments.
+
+        Uses orientation mode for small angular perturbations around a fixed position.
+        """
         return CameraRandomCfg(
             camera_name=camera_name,
             position=CameraPositionRandomCfg(
-                # Default: micro-adjustment mode
                 delta_range=CameraProperties.DELTA_SMALL,
                 use_delta=True,
-                # Alternative: absolute positioning
-                position_range=CameraProperties.POSITION_MEDIUM,
                 distribution="uniform",
                 enabled=True,
             ),
             orientation=CameraOrientationRandomCfg(
-                # Small rotation adjustments
                 rotation_delta=CameraProperties.ROTATION_DELTA_SMALL,
-                distribution="uniform",
-                enabled=True,
-            ),
-            look_at=CameraLookAtRandomCfg(
-                # Default: micro-adjustment mode
-                look_at_delta=CameraProperties.LOOKAT_DELTA_SMALL,
-                use_delta=True,
-                # Alternative: absolute look-at
-                look_at_range=CameraProperties.LOOKAT_WORKSPACE,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -126,25 +108,50 @@ class CameraPresets:
 
     @staticmethod
     def handheld_camera(camera_name: str) -> CameraRandomCfg:
-        """Handheld/mobile camera with natural movement patterns."""
+        """Handheld/mobile camera with natural movement patterns.
+
+        Uses look-at mode to simulate natural camera movement tracking an object.
+        """
         return CameraRandomCfg(
             camera_name=camera_name,
             position=CameraPositionRandomCfg(
                 position_range=CameraProperties.POSITION_CLOSE,
-                distribution="gaussian",  # More natural movement
-                enabled=True,
-            ),
-            orientation=CameraOrientationRandomCfg(
-                # Natural handheld shake
-                rotation_delta=CameraProperties.ROTATION_DELTA_MEDIUM,
                 distribution="gaussian",
                 enabled=True,
             ),
             look_at=CameraLookAtRandomCfg(
-                look_at_range=CameraProperties.LOOKAT_OBJECT, distribution="gaussian", enabled=True
+                look_at_range=CameraProperties.LOOKAT_OBJECT,
+                distribution="gaussian",
+                enabled=True,
             ),
             intrinsics=CameraIntrinsicsRandomCfg(
                 fov_range=CameraProperties.FOV_NORMAL, use_fov=True, distribution="uniform", enabled=True
+            ),
+        )
+
+    @staticmethod
+    def orbit_camera(camera_name: str) -> CameraRandomCfg:
+        """Orbit camera that circles around a fixed look-at point.
+
+        Position randomization with fixed look-at creates an orbit effect.
+        Camera position changes but always points at the same target (e.g., object center).
+        Perfect for capturing objects from multiple viewpoints.
+
+        Note: Ensure the camera's initial look_at is set to the target object center.
+        """
+        return CameraRandomCfg(
+            camera_name=camera_name,
+            position=CameraPositionRandomCfg(
+                delta_range=CameraProperties.DELTA_LARGE,
+                use_delta=True,
+                distribution="uniform",
+                enabled=True,
+            ),
+            intrinsics=CameraIntrinsicsRandomCfg(
+                fov_range=CameraProperties.FOV_NORMAL,
+                use_fov=True,
+                distribution="uniform",
+                enabled=True,
             ),
         )
 
@@ -173,14 +180,6 @@ class CameraPresets:
                 horizontal_aperture_range=CameraProperties.APERTURE_NORMAL,
                 focus_distance_range=CameraProperties.FOCUS_MEDIUM,
                 clipping_range=CameraProperties.CLIPPING_NORMAL,
-                distribution="uniform",
-                enabled=True,
-            ),
-            image=CameraImageRandomCfg(
-                aspect_ratio_range=CameraProperties.ASPECT_RATIO_NORMAL,
-                width_range=CameraProperties.RESOLUTION_NORMAL[0],
-                height_range=CameraProperties.RESOLUTION_NORMAL[1],
-                use_aspect_ratio=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -296,15 +295,14 @@ class CameraPresets:
 
     @staticmethod
     def demo_camera(camera_name: str) -> CameraRandomCfg:
-        """Demonstration camera with maximum variation for testing."""
+        """Demonstration camera with maximum variation for testing.
+
+        Uses look-at mode with spherical coordinates to orbit around the scene.
+        """
         return CameraRandomCfg(
             camera_name=camera_name,
             position=CameraPositionRandomCfg(
-                position_range=CameraProperties.POSITION_EXTREME, distribution="uniform", enabled=True
-            ),
-            orientation=CameraOrientationRandomCfg(
-                # Maximum rotation variation for testing
-                rotation_delta=CameraProperties.ROTATION_DELTA_LARGE,
+                position_range=CameraProperties.POSITION_EXTREME,
                 distribution="uniform",
                 enabled=True,
             ),

@@ -418,12 +418,12 @@ def initialize_randomizers(handler, args):
     log.info("-" * 70)
 
     camera_rand = CameraRandomizer(
-        CameraPresets.surveillance_camera("main_camera"),
+        CameraPresets.orbit_camera("main_camera"),
         seed=args.seed + 10,
     )
     camera_rand.bind_handler(handler)
     randomizers["camera"].append(camera_rand)
-    log.info("Camera: surveillance preset")
+    log.info("Camera: orbit preset (circles around table center)")
 
     log.info("\n" + "=" * 70)
     log.info("All Randomizers Initialized")
@@ -643,7 +643,7 @@ def main():
     np.random.seed(args.seed)
 
     log.info("=" * 70)
-    log.info("Domain Randomization - Perfect Architecture Demo")
+    log.info("Domain Randomization Demo")
     log.info("=" * 70)
     log.info(f"Scene Mode: {args.scene_mode}")
     log.info(f"Randomization Level: {args.level}")

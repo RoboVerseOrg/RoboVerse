@@ -17,7 +17,6 @@ from metasim.randomization import *
 
 # Randomizers
 from .camera_randomizer import (
-    CameraImageRandomCfg,
     CameraIntrinsicsRandomCfg,
     CameraLookAtRandomCfg,
     CameraOrientationRandomCfg,
@@ -70,7 +69,6 @@ from .scene_randomizer import (
 
 __all__ = [
     "AssetRepository",
-    "CameraImageRandomCfg",
     "CameraIntrinsicsRandomCfg",
     "CameraLookAtRandomCfg",
     "CameraOrientationRandomCfg",

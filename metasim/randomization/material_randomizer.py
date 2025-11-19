@@ -404,7 +404,7 @@ class MaterialRandomizer(BaseRandomizerType):
 
         # Check if object has physics
         if not self.registry.has_physics(self.cfg.obj_name):
-            logger.warning(
+            logger.debug(
                 f"MaterialRandomizer: Object '{self.cfg.obj_name}' has no physics. "
                 f"Physical material randomization will be skipped."
             )
@@ -541,11 +541,18 @@ class MaterialRandomizer(BaseRandomizerType):
         """Flush visual updates to ensure materials are visible instantly.
 
         This is critical for real-time material switching to be visible.
-        Respects _defer_visual_flush flag for atomic multi-randomizer operations.
+        Respects both instance-level and global defer flags for atomic multi-randomizer operations.
         """
         # Check if flush is deferred (for atomic multi-randomizer updates)
         if hasattr(self, "_defer_visual_flush") and self._defer_visual_flush:
             return  # Skip flush, will be done by caller
+
+        # Check global defer flag (set by apply_randomization for 22→1 flush optimization)
+        if (
+            hasattr(self._actual_handler, "_defer_all_visual_flushes")
+            and self._actual_handler._defer_all_visual_flushes
+        ):
+            return  # Skip flush, will be done by apply_randomization
 
         if hasattr(self._actual_handler, "flush_visual_updates"):
             self._actual_handler.flush_visual_updates()

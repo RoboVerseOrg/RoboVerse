@@ -425,16 +425,18 @@ class IsaacSimAdapter:
                 nudged_ops.append((translate_op, original_val))
 
             # Flush with offset
-            if hasattr(self.handler, "flush_visual_updates"):
-                self.handler.flush_visual_updates(settle_passes=1)
+            if not (hasattr(self.handler, "_defer_all_visual_flushes") and self.handler._defer_all_visual_flushes):
+                if hasattr(self.handler, "flush_visual_updates"):
+                    self.handler.flush_visual_updates(settle_passes=1)
 
             # Restore original
             for op, original_val in nudged_ops:
                 op.Set(original_val)
 
             # Final flush
-            if hasattr(self.handler, "flush_visual_updates"):
-                self.handler.flush_visual_updates(settle_passes=1)
+            if not (hasattr(self.handler, "_defer_all_visual_flushes") and self.handler._defer_all_visual_flushes):
+                if hasattr(self.handler, "flush_visual_updates"):
+                    self.handler.flush_visual_updates(settle_passes=1)
 
         except Exception as e:
             logger.debug(f"Pose nudge failed (non-critical): {e}")
