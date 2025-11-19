@@ -2,16 +2,26 @@
 
 ## Run test locally
 
-RoboVerse uses pytest for testing.
+RoboVerse uses pytest for testing. 
 
-Every time you should only run the test for one single simulator:
+Since installing different simulators in the same python environment may conflict with each other, you should only run tests for one simulator at a time:
 ```
 pytest -k ${sim}
 ```
 
-For example, to test the functionality of the isaaclab simulator, you can run:
+For example, to test the functionality of the MuJoCo simulator, run:
 ```
-pytest -k isaaclab
+pytest -k mujoco
+```
+### Adding Test cases
+When you add a new feature, you should only write tests for the simulator you have actually tested.
+For example, if you add a feature for MuJoCo, you can write a test in the following format and place it in a subfolder of `metasim/test`
+
+```
+@pytest.mark.parametrize("sim,num_envs", get_test_parameters())
+def test_consistency(sim, num_envs):
+    if sim not in ("mujoco",):
+        pytest.skip(f"Skipping simulator {sim} for this test)
 ```
 
 ## Run test in CI

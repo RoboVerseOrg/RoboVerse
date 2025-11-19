@@ -49,12 +49,13 @@ def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     (see `roboverse_pack.tasks.unitree_rl.locomotion.walk_g1_dof29.WalkG1Dof29Task`)
     but is reused across simulators.
     """
-    from metasim.scenario.lights import DomeLightCfg
-    from metasim.scenario.simulator_params import SimParamCfg
-    from roboverse_pack.robots.g1_cfg import G1Dof29Cfg
 
     if sim not in {"isaacsim", "mujoco"}:
         raise ValueError(f"Unsupported simulator '{sim}' for query tests")
+
+    from metasim.scenario.lights import DomeLightCfg
+    from metasim.scenario.simulator_params import SimParamCfg
+    from roboverse_pack.robots.g1_cfg import G1Dof29Cfg
 
     sim_params = SimParamCfg(
         dt=0.005,
