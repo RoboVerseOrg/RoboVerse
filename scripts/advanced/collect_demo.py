@@ -555,7 +555,7 @@ global_step = 0
 
 
 class DemoCollector:
-    def __init__(self, handler, robot_cfg, task_desc=""):
+    def __init__(self, handler, robot_cfg, task_desc="", demo_start_idx=0):
         assert isinstance(handler, BaseSimHandler)
         self.handler = handler
         self.robot_cfg = robot_cfg
@@ -571,6 +571,28 @@ class DemoCollector:
         else:
             additional_str = f"-{args.cust_name}" if args.cust_name else ""
             self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
+        
+        # 初始化连续编号计数器：从demo_start_idx开始，而不是从已有文件的最大编号继续
+        self.success_counter = demo_start_idx
+        self.failed_counter = demo_start_idx
+        log.info(f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}")
+    
+    def _get_max_demo_index(self, status: str) -> int:
+        """获取指定状态文件夹中已有的最大demo编号，用于确定下一个连续编号"""
+        status_dir = os.path.join(self.base_save_dir, status)
+        if not os.path.exists(status_dir):
+            return 0
+        
+        max_idx = -1
+        for item in os.listdir(status_dir):
+            if item.startswith("demo_") and os.path.isdir(os.path.join(status_dir, item)):
+                try:
+                    idx = int(item.split("_")[1])
+                    max_idx = max(max_idx, idx)
+                except (ValueError, IndexError):
+                    continue
+        
+        return max_idx + 1
 
     def create(self, demo_idx: int, data_dict: dict):
         assert demo_idx not in self.cache
@@ -587,12 +609,20 @@ class DemoCollector:
         assert demo_idx in self.cache
         assert status in ["success", "failed"], f"Invalid status: {status}"
 
-        save_dir = os.path.join(self.base_save_dir, status, f"demo_{demo_idx:04d}")
+        # 使用连续编号而不是原始demo_idx
+        if status == "success":
+            continuous_idx = self.success_counter
+            self.success_counter += 1
+        else:  # failed
+            continuous_idx = self.failed_counter
+            self.failed_counter += 1
+
+        save_dir = os.path.join(self.base_save_dir, status, f"demo_{continuous_idx:04d}")
         if os.path.exists(os.path.join(save_dir, "status.txt")):
             os.remove(os.path.join(save_dir, "status.txt"))
 
         os.makedirs(save_dir, exist_ok=True)
-        log.info(f"Saving demo {demo_idx} to {save_dir}")
+        log.info(f"Saving demo {demo_idx} (original) as {continuous_idx:04d} (continuous) to {save_dir}")
 
         ## Option 1: Save immediately, blocking and slower
 
@@ -679,7 +709,22 @@ class DemoIndexer:
 def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
+    
+    if args.task == 'stack_cube':
+        dp_camera = True
+    elif args.task == 'close_box':
+        dp_camera = False
+    else:
+        dp_camera = True
+    
+    if dp_camera:
+        import warnings
+        warnings.warn("Using dp camera position!")
+        dp_pos = (1.0, 0.0, 0.75)
+    else:
+        dp_pos = (1.5, 0.0, 1.5)
+    
+    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
@@ -731,7 +776,7 @@ def main():
     ## Setup
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
-    collector = DemoCollector(env.handler, robot, task_desc)
+    collector = DemoCollector(env.handler, robot, task_desc, demo_start_idx=args.demo_start_idx)
     # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
     pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
@@ -801,6 +846,7 @@ def main():
         if demo_indexer.next_idx >= max_demo:
             log.warning(f"Reached maximum demo index ({max_demo}).")
             stop_flag = True
+            break
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)

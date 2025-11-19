@@ -501,9 +501,23 @@ class DPRunner(BaseRunner):
         log.info(f"Using GPU device: {args.gpu_id}")
         task_cls = get_task_class(args.task)
 
+        if args.task == 'stack_cube':
+            dp_camera = True
+        elif args.task == 'close_box':
+            dp_camera = False
+        else:
+            dp_camera = True
+        
+        if dp_camera:
+            import warnings
+            warnings.warn("Using dp camera position!")
+            dp_pos = (1.0, 0.0, 0.75)
+        else:
+            dp_pos = (1.5, 0.0, 1.5)
+
         camera = PinholeCameraCfg(
             name="camera0",
-            pos=(1.5, 0, 1.5),
+            pos=dp_pos,
             look_at=(0.0, 0.0, 0.0)
         )
 
@@ -601,6 +615,7 @@ class DPRunner(BaseRunner):
             TimeOut = [False] * num_envs
             images_list = []
             print(policyRunner.policy_cfg)
+            # env.handler.refresh_render()
 
             dynamic_dr_interval = 20
             while step < MaxStep:
