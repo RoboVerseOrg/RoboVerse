@@ -550,11 +550,11 @@ class SceneRandomizer(BaseRandomizerType):
                 self._load_or_replace_usd(prim_path, element, layer_cfg.z_offset)
                 prim_paths.append(prim_path)
 
-        # Register to ObjectRegistry (only on first creation)
-        if element.name not in self._created_prims:
+        # Register to ObjectRegistry (use element_name for consistency)
+        if element_name not in self._created_prims:
             self.registry.register(
                 ObjectMetadata(
-                    name=element.name,
+                    name=element_name,  # Use pool name, not candidate name
                     category="scene_element",
                     lifecycle="dynamic",
                     prim_paths=prim_paths,

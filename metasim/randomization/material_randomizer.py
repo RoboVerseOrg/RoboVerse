@@ -297,6 +297,7 @@ class MaterialRandomizer(BaseRandomizerType):
             return
 
         # Apply material to each prim
+        applied_prims = []
         for prim_path in prim_paths:
             # Select MDL
             mdl_path = self._select_mdl_path()
@@ -316,10 +317,18 @@ class MaterialRandomizer(BaseRandomizerType):
                 self.adapter.apply_mdl_material(
                     prim_path, mdl_path, material_name, auto_download=self.cfg.mdl.auto_download
                 )
+                applied_prims.append(prim_path)  # Track successful applications
             except Exception as e:
                 logger.warning(f"Failed to apply MDL to {prim_path}: {e}")
 
             self._mark_visual_dirty()
+
+        # Force pose nudge on successfully applied prims (IsaacSim 4.5+ requirement)
+        if applied_prims and hasattr(self.adapter, "force_pose_nudge"):
+            try:
+                self.adapter.force_pose_nudge(applied_prims)
+            except Exception as e:
+                logger.debug(f"Pose nudge failed (non-critical): {e}")
 
     def _select_mdl_path(self) -> str:
         """Select MDL path based on selection strategy."""
@@ -532,6 +541,11 @@ class MaterialRandomizer(BaseRandomizerType):
         """Flush visual updates to ensure materials are visible instantly.
 
         This is critical for real-time material switching to be visible.
+        Respects _defer_visual_flush flag for atomic multi-randomizer operations.
         """
+        # Check if flush is deferred (for atomic multi-randomizer updates)
+        if hasattr(self, "_defer_visual_flush") and self._defer_visual_flush:
+            return  # Skip flush, will be done by caller
+
         if hasattr(self._actual_handler, "flush_visual_updates"):
             self._actual_handler.flush_visual_updates()

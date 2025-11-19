@@ -235,7 +235,9 @@ class IsaacSimAdapter:
                 raise FileNotFoundError(f"MDL file not found: {mdl_path}")
 
             logger.info(f"Downloading missing MDL: {mdl_path}")
-            if not check_and_download_single(mdl_path):
+            check_and_download_single(mdl_path)
+            # Verify file exists after download attempt
+            if not os.path.exists(mdl_path):
                 raise RuntimeError(f"Failed to download MDL: {mdl_path}")
 
         # Download textures
@@ -358,6 +360,66 @@ class IsaacSimAdapter:
             pv.SetInterpolation(UsdGeom.Tokens.faceVarying)
         except Exception as e:
             logger.debug(f"Failed to create UVs: {e}")
+
+    def force_pose_nudge(self, prim_paths: list[str]):
+        """Apply tiny temporary translation to force RTX BLAS update.
+
+        Required for IsaacSim 4.5+ to ensure material changes are immediately visible.
+        Without this, materials may appear unchanged until the object moves naturally.
+
+        Args:
+            prim_paths: Prim paths that had material changes
+        """
+        if not prim_paths:
+            return
+
+        try:
+            from pxr import Gf, UsdGeom
+
+            nudged_ops = []
+
+            for prim_path in prim_paths:
+                prim = self.stage.GetPrimAtPath(prim_path)
+                if not prim or not prim.IsValid():
+                    continue
+
+                xformable = UsdGeom.Xformable(prim)
+                if not xformable:
+                    continue
+
+                # Get or create translate op
+                translate_op = None
+                for op in xformable.GetOrderedXformOps():
+                    if op.GetOpType() == UsdGeom.XformOp.TypeTranslate:
+                        translate_op = op
+                        break
+
+                if translate_op is None:
+                    translate_op = xformable.AddTranslateOp(opSuffix="dr_refresh")
+
+                # Save original
+                original_val = translate_op.Get()
+                if original_val is None:
+                    original_val = Gf.Vec3d(0, 0, 0)
+
+                # Apply tiny offset
+                translate_op.Set(original_val + Gf.Vec3d(1e-4, 0, 0))
+                nudged_ops.append((translate_op, original_val))
+
+            # Flush with offset
+            if hasattr(self.handler, "flush_visual_updates"):
+                self.handler.flush_visual_updates(settle_passes=1)
+
+            # Restore original
+            for op, original_val in nudged_ops:
+                op.Set(original_val)
+
+            # Final flush
+            if hasattr(self.handler, "flush_visual_updates"):
+                self.handler.flush_visual_updates(settle_passes=1)
+
+        except Exception as e:
+            logger.debug(f"Pose nudge failed (non-critical): {e}")
 
     def _ensure_basic_uv_for_gprim(self, gprim):
         """Generate UV coordinates for geometric primitives (Cube, Sphere, etc.)."""

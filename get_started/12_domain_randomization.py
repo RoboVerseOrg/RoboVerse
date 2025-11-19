@@ -296,22 +296,36 @@ def initialize_randomizers(handler, args):
         randomizers["material_dynamic"].append(table_mat)
         log.info("Dynamic Object: table (Manual, wood/metal materials)")
 
-    # Wall materials (all 4 walls should use same material for consistency)
-    # Only add in Level 1+ for manual environment
+    # Manual geometry materials (floor, walls, ceiling)
+    # Only for modes with manual environment (mode < 2) and level >= 1
     if mode < 2 and level >= 1:
-        # Create one randomizer per wall, but with same seed so they select same material
-        wall_seed = args.seed + 100
+        # Floor
+        floor_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
+            seed=args.seed + 101,
+        )
+        floor_mat.bind_handler(handler)
+        randomizers["material_dynamic"].append(floor_mat)
+
+        # Walls (all 4 share same seed for consistency)
+        wall_seed = args.seed + 102
         for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
             wall_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
-                seed=wall_seed,  # Same seed for all walls = same material
+                seed=wall_seed,  # Same seed for all walls
             )
             wall_mat.bind_handler(handler)
             randomizers["material_dynamic"].append(wall_mat)
-        log.info("Dynamic Objects: 4 walls (shared seed for consistent material)")
 
-    # Floor and ceiling materials (optional, can add if needed)
-    # For now, they keep their default materials
+        # Ceiling
+        ceiling_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
+            seed=args.seed + 103,
+        )
+        ceiling_mat.bind_handler(handler)
+        randomizers["material_dynamic"].append(ceiling_mat)
+
+        log.info("Dynamic Objects: floor + 4 walls + ceiling (manual geometry materials)")
 
     # =========================================================================
     # STEP 3: Physics Randomization (ObjectRandomizer - Static Objects only)
@@ -409,20 +423,36 @@ def initialize_randomizers(handler, args):
     return randomizers
 
 
-def apply_randomization(randomizers, level):
-    """Apply randomizations at appropriate levels."""
-    # Level 0+: Scene creation (always needed, even for baseline)
-    if randomizers["scene"]:
-        randomizers["scene"]()
+def apply_randomization(randomizers, level, handler=None):
+    """Apply all randomizers with deferred visual flush.
 
-    # Level 1+: Material randomization
+    Ensures all randomizations are applied atomically before flushing visuals,
+    preventing intermediate states from being captured in recordings.
+    """
+    # Level 0+: Scene creation (temporarily disable auto-flush)
+    if randomizers["scene"]:
+        scene_rand = randomizers["scene"]
+        original_auto_flush = scene_rand.cfg.auto_flush_visuals
+        scene_rand.cfg.auto_flush_visuals = False
+        scene_rand()
+        scene_rand.cfg.auto_flush_visuals = original_auto_flush
+
+    # Level 1+: Material randomization (deferred flush)
     if level >= 1:
         for mat_rand in randomizers["material_static"]:
+            if hasattr(mat_rand, "_defer_visual_flush"):
+                mat_rand._defer_visual_flush = True
             mat_rand()
+            if hasattr(mat_rand, "_defer_visual_flush"):
+                mat_rand._defer_visual_flush = False
 
         # Dynamic Object materials
         for mat_rand in randomizers["material_dynamic"]:
+            if hasattr(mat_rand, "_defer_visual_flush"):
+                mat_rand._defer_visual_flush = True
             mat_rand()
+            if hasattr(mat_rand, "_defer_visual_flush"):
+                mat_rand._defer_visual_flush = False
 
     # Level 2+: Lighting
     if level >= 2:
@@ -433,6 +463,13 @@ def apply_randomization(randomizers, level):
     if level >= 3:
         for cam_rand in randomizers["camera"]:
             cam_rand()
+
+    # Single comprehensive flush after all randomizations
+    if handler and hasattr(handler, "flush_visual_updates"):
+        try:
+            handler.flush_visual_updates(wait_for_materials=True, settle_passes=3)
+        except Exception as e:
+            log.debug(f"Failed to flush visual updates: {e}")
 
 
 def run_replay(env, randomizers, init_state, all_actions, args):
@@ -453,24 +490,71 @@ def run_replay(env, randomizers, init_state, all_actions, args):
     log.info(f"Randomization interval: {args.randomize_interval} steps")
 
     # Initial randomization
-    apply_randomization(randomizers, args.level)
+    apply_randomization(randomizers, args.level, env.handler)
 
-    # Update positions to match table height
-    if randomizers["scene"]:
+    # Store original positions for later updates
+    original_positions = {}
+    for obj_name, obj_state in init_state["objects"].items():
+        original_positions[f"obj_{obj_name}"] = {
+            "x": float(obj_state["pos"][0]),
+            "y": float(obj_state["pos"][1]),
+            "z": float(obj_state["pos"][2]),
+        }
+    for robot_name, robot_state in init_state["robots"].items():
+        original_positions[f"robot_{robot_name}"] = {
+            "x": float(robot_state["pos"][0]),
+            "y": float(robot_state["pos"][1]),
+            "z": float(robot_state["pos"][2]),
+        }
+
+    # Update positions to match table (center + height)
+    def update_positions_to_table():
+        if not randomizers["scene"]:
+            return
+
         table_bounds = randomizers["scene"].get_table_bounds(env_id=0)
-        if table_bounds:
-            table_height = table_bounds.get("height", 0.7)
-            # Check for invalid height (overflow indicator)
-            if abs(table_height) < 100:  # Valid height should be < 100m
-                log.info(f"Adjusting positions to table height: {table_height:.3f}")
-                # Only adjust Z to table surface
-                for obj_state in init_state["objects"].values():
-                    obj_state["pos"][2] = table_height + 0.1
-                for robot_state in init_state["robots"].values():
-                    robot_state["pos"][2] = table_height
-                env.handler.set_states([init_state] * env.scenario.num_envs)
-            else:
-                log.warning(f"Invalid table height ({table_height}), skipping position update")
+        if not table_bounds or abs(table_bounds.get("height", 0)) > 100:
+            return
+
+        table_height = table_bounds["height"]
+        table_center_x = (table_bounds["x_min"] + table_bounds["x_max"]) / 2
+        table_center_y = (table_bounds["y_min"] + table_bounds["y_max"]) / 2
+
+        # Compute system center (robot + objects)
+        all_x = [original_positions[k]["x"] for k in original_positions]
+        all_y = [original_positions[k]["y"] for k in original_positions]
+        system_center_x = sum(all_x) / len(all_x)
+        system_center_y = sum(all_y) / len(all_y)
+
+        # Compute offset to align system to table center
+        offset_x = table_center_x - system_center_x
+        offset_y = table_center_y - system_center_y
+
+        log.info(
+            f"Adjusting positions: table center ({table_center_x:.2f}, {table_center_y:.2f}), height {table_height:.3f}"
+        )
+
+        # Compute original Z average
+        all_z = [original_positions[k]["z"] for k in original_positions]
+        avg_z = sum(all_z) / len(all_z)
+
+        # Apply offset (rigid body translation - preserves ALL relative positions)
+        for obj_name, obj_state in init_state["objects"].items():
+            orig = original_positions[f"obj_{obj_name}"]
+            obj_state["pos"][0] = orig["x"] + offset_x  # XY: center alignment
+            obj_state["pos"][1] = orig["y"] + offset_y
+            obj_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05  # Z: preserve relative + clearance
+
+        for robot_name, robot_state in init_state["robots"].items():
+            orig = original_positions[f"robot_{robot_name}"]
+            robot_state["pos"][0] = orig["x"] + offset_x
+            robot_state["pos"][1] = orig["y"] + offset_y
+            robot_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05
+
+        env.handler.set_states([init_state] * env.scenario.num_envs)
+
+    # Initial position update
+    update_positions_to_table()
 
     # Update camera look_at
     if randomizers["scene"]:
@@ -489,7 +573,10 @@ def run_replay(env, randomizers, init_state, all_actions, args):
         # Periodic randomization
         if step % args.randomize_interval == 0 and step > 0:
             log.info(f"Step {step}: Applying randomization")
-            apply_randomization(randomizers, args.level)
+            apply_randomization(randomizers, args.level, env.handler)
+
+            # # Update positions after table switch (preserves relative positions)
+            # update_positions_to_table()
 
         # Execute action
         actions = [all_actions[0][step]] * args.num_envs

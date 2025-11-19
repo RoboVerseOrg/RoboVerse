@@ -216,6 +216,7 @@ class MDLCollections:
         repo: str | None = None,
         max_materials: int | None = None,
         warn_missing: bool = True,
+        use_remote_manifest: bool = True,
     ) -> list[str]:
         """Get materials from a family (wood, metal, plastic, etc.).
 
@@ -224,6 +225,8 @@ class MDLCollections:
 
         Args:
             name: Family name (e.g., 'wood', 'metal', 'plastic')
+            use_remote_manifest: If True (default), query HuggingFace for complete list.
+                                If False, only scan local directory.
             root: Optional custom root path (overrides repository configuration)
             repo: Optional repository name to filter by (if None, uses all repositories)
             max_materials: Optional limit on number of materials returned
@@ -270,7 +273,11 @@ class MDLCollections:
                 # Directory
                 paths = [target_path]
 
-            collected.extend(cls._collect_from_paths(paths, warn_missing=warn_missing, repo=info.repo))
+            collected.extend(
+                cls._collect_from_paths(
+                    paths, warn_missing=warn_missing, repo=info.repo, use_remote_manifest=use_remote_manifest
+                )
+            )
 
         # Deduplicate and sort
         unique = sorted(dict.fromkeys(collected))
@@ -323,7 +330,12 @@ class MDLCollections:
 
     @classmethod
     def _collect_from_paths(
-        cls, paths: Iterable[Path], *, warn_missing: bool = True, repo: str | None = None
+        cls,
+        paths: Iterable[Path],
+        *,
+        warn_missing: bool = True,
+        repo: str | None = None,
+        use_remote_manifest: bool = True,
     ) -> list[str]:
         """Collect ``.mdl`` files under the provided directories.
 
@@ -331,6 +343,7 @@ class MDLCollections:
             paths: Directory or file paths to search
             warn_missing: Whether to warn about missing materials
             repo: Optional repository name for remote manifest lookups
+            use_remote_manifest: If True, query HuggingFace for complete list; if False, scan local only
 
         Returns:
             List of MDL file paths
@@ -339,17 +352,26 @@ class MDLCollections:
         missing: list[str] = []
 
         for target in paths:
+            # Check if user wants remote manifest
+            if use_remote_manifest:
+                # Try remote first (default: get complete list from HuggingFace)
+                remote_paths = cls._collect_remote_mdl_paths(target, repo=repo)
+
+                if remote_paths:
+                    # Use remote manifest (complete list)
+                    mdl_paths.extend(remote_paths)
+                    continue  # Skip local scan
+
+            # Local-only mode or remote unavailable
             if target.is_dir():
-                # Sort to ensure deterministic order for reproducibility
+                # Local directory scan
                 mdl_paths.extend(sorted(p.as_posix() for p in target.rglob("*.mdl")))
             elif target.is_file() and target.suffix.lower() == ".mdl":
+                # Single file
                 mdl_paths.append(target.as_posix())
             else:
-                remote_paths = cls._collect_remote_mdl_paths(target, repo=repo)
-                if remote_paths:
-                    mdl_paths.extend(remote_paths)
-                else:
-                    missing.append(target.as_posix())
+                # Not found locally and remote disabled/unavailable
+                missing.append(target.as_posix())
 
         if missing and warn_missing:
             repo_info = ""

@@ -183,6 +183,7 @@ class USDCollections:
         repo: str | None = None,
         max_assets: int | None = None,
         warn_missing: bool = True,
+        use_remote_manifest: bool = True,
     ) -> list[str]:
         """Get USD/URDF assets from a family.
 
@@ -194,6 +195,8 @@ class USDCollections:
             repo: Optional repository name to filter by (if None, uses all repositories)
             max_assets: Optional limit on number of assets
             warn_missing: If True, warn about missing assets
+            use_remote_manifest: If True (default), query HuggingFace for complete list.
+                                If False, only scan local directory.
 
         Returns:
             List of USD/URDF file paths (URDF files will be converted to USD at runtime)
@@ -210,7 +213,9 @@ class USDCollections:
             if repo is not None and info.repo != repo:
                 continue
 
-            collected.extend(cls._collect_usds_from_path(info.repo, info.path, max_assets, warn_missing))
+            collected.extend(
+                cls._collect_usds_from_path(info.repo, info.path, max_assets, warn_missing, use_remote_manifest)
+            )
 
         # Deduplicate and sort
         return sorted(dict.fromkeys(collected))
@@ -222,6 +227,7 @@ class USDCollections:
         rel_path: str,
         max_assets: int | None,
         warn_missing: bool,
+        use_remote_manifest: bool = True,
     ) -> list[str]:
         """Collect USD/URDF files from a repository path.
 
@@ -233,25 +239,40 @@ class USDCollections:
         repo = cls.REPOSITORIES[repo_name]
         search_path = repo.local_root / rel_path
 
-        # Try remote manifest first (gets complete list from HuggingFace)
-        remote_paths = cls._collect_remote_usd_paths(repo_name, rel_path)
+        # Check if user wants remote manifest
+        if use_remote_manifest:
+            # Try remote manifest first (gets complete list from HuggingFace)
+            remote_paths = cls._collect_remote_usd_paths(repo_name, rel_path)
 
-        if remote_paths:
-            # Use remote manifest (complete list, files may not exist locally yet)
-            usd_paths = remote_paths
-        elif search_path.exists():
-            # Fallback to local scan (offline mode)
-            usd_paths = []
-            for ext in ["*.usd", "*.usda", "*.usdz", "*.urdf"]:
-                usd_paths.extend(sorted([str(p) for p in search_path.rglob(ext)]))
+            if remote_paths:
+                # Use remote manifest (complete list, files may not exist locally yet)
+                usd_paths = remote_paths
+            elif search_path.exists():
+                # Fallback to local scan (offline mode)
+                usd_paths = []
+                for ext in ["*.usd", "*.usda", "*.usdz", "*.urdf"]:
+                    usd_paths.extend(sorted([str(p) for p in search_path.rglob(ext)]))
+            else:
+                # No remote and no local
+                usd_paths = []
+                if warn_missing:
+                    warnings.warn(
+                        f"USD/URDF assets not found at {search_path}. Download from https://huggingface.co/{repo.repo_id}",
+                        stacklevel=2,
+                    )
         else:
-            # No remote and no local
-            usd_paths = []
-            if warn_missing:
-                warnings.warn(
-                    f"USD/URDF assets not found at {search_path}. Download from https://huggingface.co/{repo.repo_id}",
-                    stacklevel=2,
-                )
+            # Local-only mode (user disabled remote)
+            if search_path.exists():
+                usd_paths = []
+                for ext in ["*.usd", "*.usda", "*.usdz", "*.urdf"]:
+                    usd_paths.extend(sorted([str(p) for p in search_path.rglob(ext)]))
+            else:
+                usd_paths = []
+                if warn_missing:
+                    warnings.warn(
+                        f"USD/URDF assets not found locally at {search_path}. Set use_remote_manifest=True to query HuggingFace.",
+                        stacklevel=2,
+                    )
 
         usd_paths = sorted(dict.fromkeys(usd_paths))
         if max_assets is not None and len(usd_paths) > max_assets:
