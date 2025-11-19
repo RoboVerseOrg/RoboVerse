@@ -227,7 +227,7 @@ jobs:
           || SAPIEN3_TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary
-          touch ~/$SRC_DIR/test_exit_code.txt
+          touch ~/$SRC_DIR/test_exit_codes.txt
           {
             echo \"MUJOCO_TEST_EXIT_CODE=\$MUJOCO_TEST_EXIT_CODE\"
             echo \"SAPIEN3_TEST_EXIT_CODE=\$SAPIEN3_TEST_EXIT_CODE\"
@@ -235,7 +235,7 @@ jobs:
         " || { echo "Test execution failed"; exit 1; }
 
         echo "===Copying test reports...==="
-        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_code.txt $CODEBUILD_SRC_DIR/
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_codes.txt $CODEBUILD_SRC_DIR/
 
         source $CODEBUILD_SRC_DIR/test_exit_codes.txt
 
