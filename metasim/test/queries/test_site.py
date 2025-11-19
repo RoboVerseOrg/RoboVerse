@@ -9,7 +9,6 @@ from loguru import logger as log
 rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.queries.site import SitePos, _get_site_id, _site_cache
-from metasim.test.queries.conftest import get_query_scenario
 
 
 def _pick_robot_site_name(handler) -> str:
@@ -126,73 +125,3 @@ def test_site_pos_mjx_returns_world_position_tensor(shared_handler):
     pytest.importorskip("mujoco")
     pytest.importorskip("jax")
     proxy.run_test(site_pos_mjx_query)
-
-
-def _get_site_test_funcs(sim: str):
-    """Return the site query bodies that should run for the requested simulator."""
-    mapping = {
-        "mujoco": [
-            site_id_cache_mujoco_query,
-            site_pos_mujoco_query,
-        ],
-        "mjx": [site_pos_mjx_query],
-    }
-    return mapping.get(sim, [])
-
-
-def _build_site_scenario(sim: str, num_envs: int):
-    """Reuse the shared query scenario configuration but allow MJX overrides."""
-    if sim == "mjx":
-        scenario = get_query_scenario("mujoco", num_envs)
-        scenario.update(simulator="mjx")
-        return scenario
-    return get_query_scenario(sim, num_envs)
-
-
-def _process_run_handler(scenario, test_funcs):
-    """Child-process helper used by run_test() for standalone execution."""
-    from metasim.utils.setup_util import get_handler
-
-    handler = get_handler(scenario)
-    try:
-        for func in test_funcs:
-            log.info(f"[site standalone] Running {func.__name__}()")
-            func(handler)
-    finally:
-        handler.close()
-
-
-def run_test(sim="mujoco", num_envs=1):
-    """Standalone runner to mirror pytest execution for site query tests."""
-    import multiprocessing as mp
-
-    log.info(f"Running Site query tests in standalone mode: sim={sim}, num_envs={num_envs}")
-    if sim == "mujoco" and num_envs != 1:
-        log.warning("MuJoCo only supports num_envs=1; overriding requested value %s -> 1", num_envs)
-        num_envs = 1
-
-    test_funcs = _get_site_test_funcs(sim)
-    if not test_funcs:
-        log.warning(f"No standalone Site query tests registered for sim '{sim}'")
-        return
-
-    scenario = _build_site_scenario(sim, num_envs)
-    ctx = mp.get_context("spawn")
-    proc = ctx.Process(target=_process_run_handler, args=(scenario, test_funcs))
-    proc.start()
-    proc.join(timeout=90)
-
-    if proc.is_alive():
-        proc.terminate()
-        raise TimeoutError(f"Standalone Site query test for {sim} (num_envs={num_envs}) timed out")
-
-    assert proc.exitcode == 0, f"Standalone Site query child exited with code {proc.exitcode}"
-    log.info("Standalone Site query tests finished successfully.")
-
-
-if __name__ == "__main__":
-    import sys
-
-    sim = sys.argv[1] if len(sys.argv) > 1 else "mujoco"
-    num_envs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    run_test(sim, num_envs)
