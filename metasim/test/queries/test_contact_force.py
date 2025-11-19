@@ -100,7 +100,7 @@ def test_contact_forces_isaacgym_with_shared_handler(shared_handler):
 def test_contact_forces_mujoco_with_shared_handler(shared_handler):
     """Run ContactForces test using the shared handler process (sim == 'mujoco')."""
     sim, proxy = shared_handler
-    if sim not in []:
+    if sim != "mujoco":
         pytest.skip("Skipping ContactForces test for non-mujoco sim")
 
     pytest.importorskip("mujoco")
