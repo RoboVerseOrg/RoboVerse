@@ -38,8 +38,9 @@ def get_test_parameters():
     # MuJoCo only supports num_envs=1 due to simulator limitations
     # Other simulators can test with multiple environments
     isaacsim_params = [("isaacsim", num_envs) for num_envs in [1, 2, 4]]
+    isaacgym_params = [("isaacgym", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
-    return mujoco_params + isaacsim_params
+    return mujoco_params + isaacsim_params + isaacgym_params
 
 
 def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
