@@ -227,7 +227,7 @@ jobs:
           "$IMAGE_URI" \
           -c "bash -lc 'set -o pipefail; \
           /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3 -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log" \
+          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log'" \
           || SAPIEN3_TEST_EXIT_CODE=$?
 
           # TODO check if test_exit_code necessary
