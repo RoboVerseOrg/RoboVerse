@@ -572,13 +572,11 @@ class DemoCollector:
             additional_str = f"-{args.cust_name}" if args.cust_name else ""
             self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
         
-        # 初始化连续编号计数器：从demo_start_idx开始，而不是从已有文件的最大编号继续
         self.success_counter = demo_start_idx
         self.failed_counter = demo_start_idx
         log.info(f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}")
     
     def _get_max_demo_index(self, status: str) -> int:
-        """获取指定状态文件夹中已有的最大demo编号，用于确定下一个连续编号"""
         status_dir = os.path.join(self.base_save_dir, status)
         if not os.path.exists(status_dir):
             return 0
@@ -609,7 +607,7 @@ class DemoCollector:
         assert demo_idx in self.cache
         assert status in ["success", "failed"], f"Invalid status: {status}"
 
-        # 使用连续编号而不是原始demo_idx
+    
         if status == "success":
             continuous_idx = self.success_counter
             self.success_counter += 1
