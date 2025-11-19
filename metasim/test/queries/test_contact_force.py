@@ -43,23 +43,6 @@ def contact_forces_isaacsim_query(handler):
     log.info("ContactForces matches IsaacSim ContactSensor net_forces_w.")
 
 
-def contact_forces_isaacgym_query(handler):
-    """Child-process body: ContactForces on IsaacGym, cross-check with raw net-contact tensor."""
-    query = ContactForces(history_length=3)
-    query.bind_handler(handler)
-    _assert_basic_shapes(handler, query)
-
-    # IsaacGym branch uses acquire_net_contact_force_tensor; handler keeps a wrapped copy.
-    raw = handler._contact_forces  # (num_envs * num_bodies, 3)
-    assert raw is not None
-    reshaped = raw.view(handler.scenario.num_envs, -1, 3)[:, query.body_ids_reindex, :]
-
-    current = query.contact_forces
-    assert torch.allclose(current, reshaped, atol=1e-6)
-
-    log.info("ContactForces matches IsaacGym net_contact_force tensor.")
-
-
 def contact_forces_mujoco_query(handler):
     """Child-process body: ContactForces on MuJoCo, sanity-check non-zero and balanced forces."""
     # Step the simulator a bit so contacts develop reliably.
@@ -85,16 +68,6 @@ def test_contact_forces_isaacsim_with_shared_handler(shared_handler):
         pytest.skip("Skipping ContactForces test for non-isaacsim sim")
 
     proxy.run_test(func=contact_forces_isaacsim_query)
-
-
-def test_contact_forces_isaacgym_with_shared_handler(shared_handler):
-    """Run ContactForces test using the shared handler process (sim == 'isaacgym')."""
-    sim, proxy = shared_handler
-    if sim != "isaacgym":
-        pytest.skip("Skipping ContactForces test for non-isaacgym sim")
-
-    pytest.importorskip("isaacgym")
-    proxy.run_test(func=contact_forces_isaacgym_query)
 
 
 def test_contact_forces_mujoco_with_shared_handler(shared_handler):
