@@ -824,7 +824,7 @@ def get_kujiale_scenes_config() -> dict[str, dict]:
             "scale": (1.0, 1.0, 1.0),
         },
         "008.usda": {
-            "position": (7.2, -1.5, 0.0),
+            "position": (-7.2, -1.5, 0.0),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (1.0, 1.0, 1.0),
         },
