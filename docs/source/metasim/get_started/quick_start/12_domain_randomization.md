@@ -361,10 +361,16 @@ Materials are randomized differently based on object type:
 
 **Mode 0** (Manual Geometry):
 - Table: Randomizes between wood and metal families
-- Walls: All 4 walls share the same material (uses shared seed)
-- Floor/Ceiling: Keep default materials
+- Floor: Randomizes between carpet, wood, and stone families
+- Walls: All 4 walls share the same material from masonry and architecture families
+- Ceiling: Randomizes between architecture and wall_board families
 
-**Mode 1+** (USD Assets):
+**Mode 1** (USD Table):
+- Box: Randomizes between wood and paper families
+- Table: Uses USD original materials (geometric diversity via model switching)
+- Floor, Walls, Ceiling: Randomize (same as Mode 0)
+
+**Mode 2/3** (USD Assets):
 - Scene objects use their original USD materials (no override)
 - Only static task objects (box_base) randomize materials
 - This preserves the visual coherence of USD scenes
@@ -373,19 +379,21 @@ The design principle: geometric randomization (USD switching) and material rando
 
 ## Position Update System
 
-After scene creation or switching, the system adjusts robot and object positions to match the table surface:
+After scene creation, the system adjusts robot and object positions to match the table surface:
 
 ```python
 table_bounds = scene_rand.get_table_bounds(env_id=0)
 if table_bounds:
     table_height = table_bounds['height']
+    clearance = 0.05
+    
     for obj_state in init_state["objects"].values():
-        obj_state["pos"][2] = table_height + 0.1  # Place above surface
+        obj_state["pos"][2] = table_height + clearance
     for robot_state in init_state["robots"].values():
-        robot_state["pos"][2] = table_height  # Place on surface
+        robot_state["pos"][2] = table_height + clearance
 ```
 
-For manual geometry, table bounds are computed directly from configuration. For USD assets, bounds are extracted from the loaded mesh using USD bounding box computation.
+This rigid body translation preserves relative positions between entities while ensuring all are placed above the table surface. For manual geometry, table bounds are computed from configuration. For USD assets, bounds are extracted from mesh bounding boxes.
 
 ## Reproducibility
 

@@ -365,9 +365,7 @@ Variant selection is deterministic given a seed. The system parses MDL files to 
 # 1. Create randomizer with configuration
 scene_cfg = ScenePresets.tabletop_workspace(
     room_size=10.0,
-    wall_height=5.0,
-    floor_families=("concrete", "carpet"),
-    wall_families=("wall_board", "paint")
+    wall_height=5.0
 )
 scene_rand = SceneRandomizer(scene_cfg, seed=42)
 
