@@ -205,6 +205,16 @@ def shared_handler(request):
     key = (sim, num_envs)
 
     if key not in _shared_handler_processes:
+        # Pre-flight asset check in the main process so we either
+        # download once up front or gracefully skip if assets are missing.
+        try:
+            scenario = get_query_scenario(sim, num_envs)
+            scenario.check_assets()
+        except Exception as e:
+            pytest.skip(
+                f"Skipping query tests for {key} because required assets are missing or failed to download: {e}"
+            )
+
         task_q = _MP_CTX.Queue()
         result_q = _MP_CTX.Queue()
 
@@ -216,7 +226,10 @@ def shared_handler(request):
         proc.start()
 
         try:
-            ready = result_q.get(timeout=120)
+            # Handler creation can trigger large asset downloads on first run;
+            # use a generous timeout here and rely on the pre-flight check above
+            # to surface missing-asset issues quickly.
+            ready = result_q.get(timeout=600)
         except Exception as e:
             proc.terminate()
             raise RuntimeError(f"Handler process failed to start for {key}: {e}") from e
