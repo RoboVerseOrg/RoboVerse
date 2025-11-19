@@ -1,6 +1,6 @@
 """All Queries."""
 
-from .net_contact_force import NetContactForce
+from .contact_force import ContactForces
 from .site import SitePos
 
-__all__ = ["NetContactForce", "SitePos"]
+__all__ = ["ContactForces", "SitePos"]

@@ -21,4 +21,5 @@ def get_test_parameters():
     genesis_params = [("genesis", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
     sapien3_params = [("sapien3", 1)]
-    return mujoco_params + isaacsim_params + isaacgym_params + genesis_params + sapien3_params
+    sapien2_params = [("sapien2", 1)]
+    return mujoco_params + isaacsim_params + isaacgym_params + genesis_params + sapien3_params + sapien2_params
