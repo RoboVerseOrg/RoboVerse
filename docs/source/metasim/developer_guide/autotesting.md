@@ -24,7 +24,7 @@ def test_consistency(sim, num_envs):
         pytest.skip(f"Skipping simulator {sim} for this test)
 ```
 
-## Run test in CI
+## Run test in CI 
 
 CI is automatically triggered every time a PR is ready to be merged (i.e., added to the [merge queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue)).
 
