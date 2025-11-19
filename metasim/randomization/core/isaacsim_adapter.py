@@ -255,7 +255,8 @@ class IsaacSimAdapter:
             raise ValueError(f"Invalid prim path: {prim_path}")
 
         # Ensure UV coordinates (critical for textures!)
-        self._ensure_uv_for_prim(prim)
+        # For articulations/complex objects, apply to all child meshes
+        self._ensure_uv_for_prim_recursive(prim)
 
         # Material naming:
         # - mdl_basename: Name from MDL file (e.g., "Plywood")
@@ -296,6 +297,23 @@ class IsaacSimAdapter:
 
         if not success:
             raise RuntimeError(f"Failed to bind material {actual_mdl_name} to {prim_path}")
+
+    def _ensure_uv_for_prim_recursive(self, prim):
+        """Recursively ensure UV coordinates for prim and all child meshes.
+
+        This is critical for articulations and complex objects with multiple meshes.
+        """
+        from pxr import UsdGeom
+
+        # Apply to current prim
+        self._ensure_uv_for_prim(prim)
+
+        # Recursively apply to all children
+        for child in prim.GetChildren():
+            if child.IsA(UsdGeom.Mesh) or child.IsA(UsdGeom.Gprim):
+                self._ensure_uv_for_prim(child)
+            elif child.GetChildren():  # Has children, continue recursion
+                self._ensure_uv_for_prim_recursive(child)
 
     def _ensure_uv_for_prim(self, prim):
         """Ensure UV coordinates for mesh (required for textures).

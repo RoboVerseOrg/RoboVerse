@@ -1216,7 +1216,15 @@ class IsaacsimHandler(BaseSimHandler):
         self.flush_visual_updates(settle_passes=1)
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
-        """Drive SimulationApp/scene/sensors for a few frames to settle visual state."""
+        """Drive SimulationApp/scene/sensors for a few frames to settle visual state.
+
+        Global defer mechanism: If _defer_all_visual_flushes is True, skip flush entirely.
+        This enables atomic batch randomization without intermediate rendering overhead.
+        """
+        # Check global defer flag (for batch randomization)
+        if getattr(self, "_defer_all_visual_flushes", False):
+            return  # Skip flush, will be done by batch controller
+
         passes = max(1, settle_passes)
         sim_app = getattr(self, "simulation_app", None)
         reason = "material refresh" if wait_for_materials else "visual flush"
