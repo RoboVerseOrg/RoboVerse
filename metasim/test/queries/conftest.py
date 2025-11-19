@@ -206,21 +206,11 @@ def _select_params_for_test(test_name: str, doc: str | None) -> list[tuple[str, 
 
     # Simulators that are actually supported by this queries suite
     supported_sims = ["isaacsim", "mujoco", "mjx"]
-    # Simulators that might be mentioned in test names/docstrings but are not
-    # backed by real query fixtures here (they will be skipped early).
-    unsupported_sims = ["isaacgym"]
 
     # First, look for supported simulators mentioned in the test
     requested_supported: list[str] = [sim for sim in supported_sims if sim in text]
     if requested_supported:
         return [p for p in all_params if p[0] in requested_supported]
-
-    # If the test explicitly targets an unsupported simulator (e.g. isaacgym),
-    # parametrize it with a dummy entry so it gets reported as skipped without
-    # accidentally binding to isaacsim/mujoco.
-    mentioned_unsupported = [sim for sim in unsupported_sims if sim in text]
-    if mentioned_unsupported:
-        return [(sim, 1) for sim in mentioned_unsupported]
 
     # Fallback: default to isaacsim + mujoco if a test does not explicitly
     # mention any simulator (generic tests).
