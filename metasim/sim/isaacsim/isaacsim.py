@@ -166,7 +166,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_robots()
         self._load_sensors()
         self._load_cameras()
-        self._load_terrain()
+        if self.scenario.scene is None:
+            self._load_terrain()
         self._load_scene()
         self._load_objects()
         self._load_lights()
