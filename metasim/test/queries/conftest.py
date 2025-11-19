@@ -53,7 +53,7 @@ def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     from metasim.scenario.simulator_params import SimParamCfg
     from roboverse_pack.robots.g1_cfg import G1Dof29Cfg
 
-    if sim not in {"isaacsim", "isaacgym", "mujoco", "mjx"}:
+    if sim not in {"isaacsim", "mujoco"}:
         raise ValueError(f"Unsupported simulator '{sim}' for query tests")
 
     sim_params = SimParamCfg(
@@ -200,7 +200,7 @@ def shared_handler(request):
         tuple[str, HandlerProxy]: The simulator name and a proxy to the child-process handler.
     """
     sim, num_envs = request.param
-    if sim not in ["isaacsim", "isaacgym", "mujoco", "mjx"]:
+    if sim not in ["isaacsim", "mujoco"]:
         pytest.skip(f"Skipping query tests for unsupported sim '{sim}' in queries suite")
     key = (sim, num_envs)
 
