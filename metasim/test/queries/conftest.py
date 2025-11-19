@@ -10,7 +10,6 @@ actually run is controlled by the simulator name (`sim`) coming
 from `get_test_parameters()`:
 
 - sim == "isaacsim": ContactForces + SitePos tests
-- sim == "isaacgym": ContactForces tests
 - sim == "mujoco":   ContactForces + SitePos-on-MuJoCo tests
 - sim == "mjx":      SitePos-on-MJX tests
 """
@@ -35,12 +34,13 @@ _shared_handler_processes: dict = {}
 
 def get_test_parameters():
     """Generate test parameters with different num_envs for different simulators."""
-    # MuJoCo only supports num_envs=1 due to simulator limitations
+    # MuJoCo & MJX only support num_envs=1 in these tests
     # Other simulators can test with multiple environments
     isaacsim_params = [("isaacsim", num_envs) for num_envs in [1, 2, 4]]
-    isaacgym_params = [("isaacgym", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
-    return mujoco_params + isaacsim_params + isaacgym_params
+    mjx_params = [("mjx", 1)]
+    # Order matters for reproducible node ids
+    return mujoco_params + isaacsim_params + mjx_params
 
 
 def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
@@ -51,7 +51,7 @@ def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     but is reused across simulators.
     """
 
-    if sim not in {"isaacsim", "mujoco"}:
+    if sim not in {"isaacsim", "mujoco", "mjx"}:
         raise ValueError(f"Unsupported simulator '{sim}' for query tests")
 
     from metasim.scenario.lights import DomeLightCfg
@@ -194,7 +194,61 @@ class HandlerProxy:
             return {"status": "timeout"}
 
 
-@pytest.fixture(scope="session", params=get_test_parameters())
+def _select_params_for_test(test_name: str, doc: str | None) -> list[tuple[str, int]]:
+    """Return subset of (sim, num_envs) pairs relevant for this test.
+
+    We infer the simulators a test cares about from its name/docstring to avoid
+    spinning up handlers for unrelated backends (e.g. running only MuJoCo tests
+    with `-k mujoco` will now only create MuJoCo handlers).
+    """
+    all_params = get_test_parameters()
+    text = f"{test_name}\n{doc or ''}"
+
+    # Simulators that are actually supported by this queries suite
+    supported_sims = ["isaacsim", "mujoco", "mjx"]
+    # Simulators that might be mentioned in test names/docstrings but are not
+    # backed by real query fixtures here (they will be skipped early).
+    unsupported_sims = ["isaacgym"]
+
+    # First, look for supported simulators mentioned in the test
+    requested_supported: list[str] = [sim for sim in supported_sims if sim in text]
+    if requested_supported:
+        return [p for p in all_params if p[0] in requested_supported]
+
+    # If the test explicitly targets an unsupported simulator (e.g. isaacgym),
+    # parametrize it with a dummy entry so it gets reported as skipped without
+    # accidentally binding to isaacsim/mujoco.
+    mentioned_unsupported = [sim for sim in unsupported_sims if sim in text]
+    if mentioned_unsupported:
+        return [(sim, 1) for sim in mentioned_unsupported]
+
+    # Fallback: default to isaacsim + mujoco if a test does not explicitly
+    # mention any simulator (generic tests).
+    fallback = ["isaacsim", "mujoco"]
+    return [p for p in all_params if p[0] in fallback]
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc):
+    """Dynamically parametrize the shared_handler fixture per test.
+
+    Each test only gets (sim, num_envs) combinations that match the simulator
+    mentioned in its name or docstring. This keeps `-k` filtering efficient and
+    avoids starting unused simulators.
+    """
+    if "shared_handler" not in metafunc.fixturenames:
+        return
+
+    params = _select_params_for_test(metafunc.function.__name__, metafunc.function.__doc__)
+    if not params:
+        # No relevant params -> leave test un-parametrized; pytest will error
+        # loudly rather than silently doing something unexpected.
+        return
+
+    ids = [f"{sim}-{num_envs}" for sim, num_envs in params]
+    metafunc.parametrize("shared_handler", params, indirect=True, ids=ids, scope="session")
+
+
+@pytest.fixture(scope="session")
 def shared_handler(request):
     """Start or reuse a handler process for this (sim, num_envs).
 
@@ -202,7 +256,7 @@ def shared_handler(request):
         tuple[str, HandlerProxy]: The simulator name and a proxy to the child-process handler.
     """
     sim, num_envs = request.param
-    if sim not in ["isaacsim", "mujoco"]:
+    if sim not in ["isaacsim", "mujoco", "mjx"]:
         pytest.skip(f"Skipping query tests for unsupported sim '{sim}' in queries suite")
     key = (sim, num_envs)
 
