@@ -509,8 +509,8 @@ class DPRunner(BaseRunner):
             dp_camera = True
 
         if dp_camera:
-            import warnings
-            warnings.warn("Using dp camera position!")
+            # import warnings
+            # warnings.warn("Using dp camera position!")
             dp_pos = (1.0, 0.0, 0.75)
         else:
             dp_pos = (1.5, 0.0, 1.5)
