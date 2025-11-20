@@ -16,6 +16,12 @@ from diffusion_policy.common.flow_matchers import TorchFlowMatcher
 
 
 class VITAImagePolicy(BaseImagePolicy):
+    """
+    Implementation of paper "VITA: Vision-to-action flow matching policy." arXiv preprint arXiv:2507.13231 (2025).
+    VITA is noise-free and conditioning-free flow matching policy that directly flows from latent images to actions.
+    VITA is highly performant and fast. The flow matching network and action decoder in VITA can be both simple MLP.
+    """
+
     def __init__(
         self,
         shape_meta: dict,

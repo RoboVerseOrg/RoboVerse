@@ -21,41 +21,10 @@ eval_ckpt_name=100
 
 
 ## Choose training or inference algorithm
-algo_choose=0
-
-algo_model=""
+# Supported models:
+#   "ddpm_unet_model", "ddpm_dit_model", "ddim_unet_model", "fm_unet_model", "fm_dit_model", "score_model", "vita_model"
+export algo_model="ddpm_dit_model"
 eval_path="./info/outputs/DP/${task_name_set}/checkpoints/${eval_ckpt_name}.ckpt"
-case $algo_choose in
-    0)
-        # DDPM settings
-        export algo_model="ddpm_model"
-        ;;
-    1)
-        # DDIM settings
-        export algo_model="ddim_model"
-        ;;
-    2)
-        # FM settings
-        export algo_model="fm_unet_model"
-        ;;
-    3)
-        # FM DiT Settings
-        export algo_model="fm_dit_model"
-        ;;
-    4)
-        # Score-based settings
-        export algo_model="score_model"
-        ;;
-    5)
-        # VITA Settings
-        export algo_model="vita_model"
-        ;;
-    *)
-        echo "Invalid algorithm choice: $algo_choose"
-        echo "Available options: 0 (DDPM), 1 (DDIM), 2 (FM UNet), 3 (FM DiT), 4 (Score-based), 5 (VITA)"
-        exit 1
-        ;;
-esac
 
 echo "Selected model: $algo_model"
 echo "Checkpoint path: $eval_path"

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any, Dict, Mapping, Optional
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.model.diffusion.flow_net import FlowTransformer
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 import torch
 
 from roboverse_learn.il.dp.models.ddpm_image_policy import DiffusionDenoisingImagePolicy
 
 
-class DiffusionUnetImagePolicy(DiffusionDenoisingImagePolicy):
+class DiffusionDiTImagePolicy(DiffusionDenoisingImagePolicy):
 
     def __init__(
         self,
@@ -23,16 +23,18 @@ class DiffusionUnetImagePolicy(DiffusionDenoisingImagePolicy):
         num_inference_steps: Optional[int] = None,
         obs_as_global_cond: bool = True,
         diffusion_step_embed_dim: int = 256,
-        down_dims: Sequence[int] = (256, 512, 1024),
-        kernel_size: int = 5,
-        n_groups: int = 8,
-        cond_predict_scale: bool = True,
+        hidden_dim: int = 512,
+        num_layers: int = 4,
+        num_heads: int = 8,
+        mlp_ratio: float = 4.0,
+        dropout: float = 0.1,
         scheduler_step_kwargs: Optional[Mapping[str, Any]] = None,
     ):
-        self.down_dims = tuple(down_dims)
-        self.kernel_size = kernel_size
-        self.n_groups = n_groups
-        self.cond_predict_scale = cond_predict_scale
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.mlp_ratio = mlp_ratio
+        self.dropout = dropout
 
         super().__init__(
             shape_meta=shape_meta,
@@ -56,13 +58,14 @@ class DiffusionUnetImagePolicy(DiffusionDenoisingImagePolicy):
         global_cond_dim: Optional[int],
         diffusion_step_embed_dim: int,
     ):
-        return ConditionalUnet1D(
+        return FlowTransformer(
             input_dim=input_dim,
-            local_cond_dim=None,
-            global_cond_dim=global_cond_dim,
-            diffusion_step_embed_dim=diffusion_step_embed_dim,
-            down_dims=self.down_dims,
-            kernel_size=self.kernel_size,
-            n_groups=self.n_groups,
-            cond_predict_scale=self.cond_predict_scale,
+            condition_dim=global_cond_dim,
+            hidden_dim=self.hidden_dim,
+            output_dim=input_dim,
+            num_layers=self.num_layers,
+            num_heads=self.num_heads,
+            mlp_ratio=self.mlp_ratio,
+            dropout=self.dropout,
+            time_embed_dim=diffusion_step_embed_dim,
         )
