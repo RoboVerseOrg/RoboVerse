@@ -15,8 +15,6 @@ _DEFAULT_FILE_TYPE = {
 }
 
 
-
-
 @configclass
 class SceneCfg:
     """Base config class for scenes."""
