@@ -726,7 +726,7 @@ class IsaacsimHandler(BaseSimHandler):
         raise ValueError(f"Unsupported object type: {type(obj)}")
 
     def _load_terrain(self) -> None:
-        # TODO support multiple terrains cfg
+        # # TODO support multiple terrains cfg
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainImporterCfg
 
@@ -742,12 +742,36 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
+            visual_material=sim_utils.MdlFileCfg(mdl_path="metasim/data/quick_start/materials/Ash.mdl"),
         )
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
 
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
+
+        from metasim.randomization.presets.scene_presets import (
+            SceneGeometryCfg,
+            SceneMaterialPoolCfg,
+            SceneRandomCfg,
+        )
+        from metasim.randomization.scene_randomizer import SceneRandomizer
+
+        scene_cfg = SceneRandomCfg(
+            floor=SceneGeometryCfg(
+                enabled=True,
+                size=(100, 100, 0.0001),
+                position=(0.0, 0.0, 0.00001),  # Slightly above z=0 to avoid z-fighting
+                material_randomization=True,
+            ),
+            floor_materials=SceneMaterialPoolCfg(
+                material_paths=["roboverse_data/materials/arnold/Wood/Ash.mdl"],
+                selection_strategy="sequential",
+            ),
+        )
+        scene_rand = SceneRandomizer(scene_cfg)
+        scene_rand.bind_handler(self)
+        scene_rand()
 
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.
