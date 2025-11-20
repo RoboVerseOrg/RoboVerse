@@ -9,6 +9,7 @@ All query tests share this single handler pipeline. Which tests
 actually run is controlled by the simulator name (`sim`) coming
 from `get_test_parameters()`:
 
+- sim == "isaacgym": ContactForces-on-IsaacGym tests
 - sim == "isaacsim": ContactForces + SitePos tests
 - sim == "mujoco":   ContactForces + SitePos-on-MuJoCo tests
 - sim == "mjx":      SitePos-on-MJX tests
@@ -37,10 +38,11 @@ def get_test_parameters():
     # MuJoCo & MJX only support num_envs=1 in these tests
     # Other simulators can test with multiple environments
     isaacsim_params = [("isaacsim", num_envs) for num_envs in [1, 2, 4]]
+    isaacgym_params = [("isaacgym", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
     mjx_params = [("mjx", 1)]
     # Order matters for reproducible node ids
-    return mujoco_params + isaacsim_params + mjx_params
+    return mujoco_params + isaacsim_params + isaacgym_params + mjx_params
 
 
 def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
@@ -51,7 +53,7 @@ def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     but is reused across simulators.
     """
 
-    if sim not in {"isaacsim", "mujoco", "mjx"}:
+    if sim not in {"isaacgym", "isaacsim", "mujoco", "mjx"}:
         raise ValueError(f"Unsupported simulator '{sim}' for query tests")
 
     from metasim.scenario.lights import DomeLightCfg
@@ -202,20 +204,15 @@ def _select_params_for_test(test_name: str, doc: str | None) -> list[tuple[str, 
     with `-k mujoco` will now only create MuJoCo handlers).
     """
     all_params = get_test_parameters()
-    text = f"{test_name}\n{doc or ''}"
+    text = f"{test_name}\n{doc or ''}".lower()
 
-    # Simulators that are actually supported by this queries suite
-    supported_sims = ["isaacsim", "mujoco", "mjx"]
+    supported = {"isaacgym", "isaacsim", "mujoco", "mjx"}
+    mentioned_supported = [sim for sim in supported if sim in text]
+    if mentioned_supported:
+        return [p for p in all_params if p[0] in mentioned_supported]
 
-    # First, look for supported simulators mentioned in the test
-    requested_supported: list[str] = [sim for sim in supported_sims if sim in text]
-    if requested_supported:
-        return [p for p in all_params if p[0] in requested_supported]
-
-    # Fallback: default to isaacsim + mujoco if a test does not explicitly
-    # mention any simulator (generic tests).
-    fallback = ["isaacsim", "mujoco"]
-    return [p for p in all_params if p[0] in fallback]
+    # No explicit sim mentioned -> Empty List
+    return []
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc):
@@ -246,7 +243,7 @@ def shared_handler(request):
         tuple[str, HandlerProxy]: The simulator name and a proxy to the child-process handler.
     """
     sim, num_envs = request.param
-    if sim not in ["isaacsim", "mujoco", "mjx"]:
+    if sim not in ["isaacgym", "isaacsim", "mujoco", "mjx"]:
         pytest.skip(f"Skipping query tests for unsupported sim '{sim}' in queries suite")
     key = (sim, num_envs)
 
