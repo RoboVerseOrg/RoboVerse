@@ -38,7 +38,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
-    task: str = "put_banana"
+    task: str = "kitchen_open_bottom_drawer"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
@@ -136,10 +136,14 @@ def main():
     task_cls = get_task_class(args.task)
     camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
 
+    scene_cfg = task_cls.scenario.scene if task_cls.scenario.scene is not None else args.scene
+    if scene_cfg is None:
+        log.warning("Scene is not specified by task or args; proceeding with None.")
+
     if args.robot == "None":
         scenario = task_cls.scenario.update(
             # robots=[args.robot],
-            scene=args.scene,
+            scene=scene_cfg,
             cameras=[camera],
             # random=args.random,
             render=args.render,
@@ -152,7 +156,7 @@ def main():
     else:
         scenario = task_cls.scenario.update(
             robots=[args.robot],
-            scene=args.scene,
+            scene=scene_cfg,
             cameras=[camera],
             # random=args.random,
             render=args.render,

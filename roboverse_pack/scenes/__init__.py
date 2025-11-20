@@ -20,3 +20,4 @@ from .tapwater_scene_138_cfg import TapwaterScene138Cfg
 from .tapwater_scene_144_cfg import TapwaterScene144Cfg
 from .tapwater_scene_152_cfg import TapwaterScene152Cfg
 from .tapwater_scene_155_cfg import TapwaterScene155Cfg
+from .libero_kitchen_tabletop_cfg import LiberoKitchenTabletopCfg

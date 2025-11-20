@@ -6,7 +6,6 @@ from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.scene import SceneCfg
 from metasim.task.registry import register_task
 
 from .libero_90_base import Libero90BaseTask
@@ -74,10 +73,7 @@ class LiberoKitchenScene2OpenTopDrawerTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        scene=SceneCfg(
-            name="libero_kitchen_tabletop",
-            mjcf_path="roboverse_data/assets/libero/scenes/libero_tabletop_base_style.xml",
-        ),
+        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 300
