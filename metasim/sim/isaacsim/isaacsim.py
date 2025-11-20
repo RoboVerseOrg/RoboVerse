@@ -750,8 +750,13 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
 
+        from metasim.randomization.presets.scene_presets import (
+            SceneGeometryCfg,
+            SceneMaterialPoolCfg,
+            SceneRandomCfg,
+        )
         from metasim.randomization.scene_randomizer import SceneRandomizer
-        from metasim.randomization.presets.scene_presets import ScenePresets, SceneRandomCfg, SceneGeometryCfg, SceneMaterialPoolCfg
+
         scene_cfg = SceneRandomCfg(
             floor=SceneGeometryCfg(
                 enabled=True,
