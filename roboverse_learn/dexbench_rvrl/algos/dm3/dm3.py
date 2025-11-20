@@ -284,6 +284,7 @@ class DreamerV3:
         self.episode_rewards_step = RollingMeter(learn_cfg.get("window_size", 1000))
         self.model_dir = model_dir
         self.log_dir = log_dir
+        self.save_image_path = os.path.join(self.log_dir, "dm3_recon.png")
         self.print_log = print_log
         self.wandb_run = wandb_run
         self.is_testing = is_testing
@@ -494,7 +495,7 @@ class DreamerV3:
                     img1_uint8 = (img1 * 255).astype(np.uint8)
                     img1_bgr = cv2.cvtColor(img1_uint8, cv2.COLOR_RGB2BGR)
                     img_bgr = np.concatenate([img1_bgr, img0_bgr], axis=1)
-                    cv2.imwrite("red_recon_img.png", img_bgr)
+                    cv2.imwrite(self.save_image_path, img_bgr)
                 recon_obs_dist = (
                     MSEDistribution(recon_obs, len(self.obs_shape[key])) if "rgb" in key else SymlogDist(recon_obs)
                 )

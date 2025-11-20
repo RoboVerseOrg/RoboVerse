@@ -210,7 +210,7 @@ class IterableReplayBuffer(IterableDataset):
 
 
 def _worker_init_fn(worker_id):
-	seed = np.random.get_state()[1][0] + worker_id
+	seed = int(np.random.get_state()[1][0]) + worker_id
 	np.random.seed(seed)
 	random.seed(seed)
 
