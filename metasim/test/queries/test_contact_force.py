@@ -78,30 +78,24 @@ def contact_forces_mujoco_query(handler):
     log.info("ContactForces on MuJoCo produces non-zero yet globally balanced contact forces.")
 
 
+@pytest.mark.isaacsim
 def test_contact_forces_isaacsim_with_shared_handler(shared_handler):
     """Run ContactForces test using the shared handler process (sim == 'isaacsim')."""
     sim, proxy = shared_handler  # (sim name, HandlerProxy)
-    if sim != "isaacsim":
-        pytest.skip("Skipping ContactForces test for non-isaacsim sim")
-
     proxy.run_test(func=contact_forces_isaacsim_query)
 
 
+@pytest.mark.isaacgym
 def test_contact_forces_isaacgym_with_shared_handler(shared_handler):
     """Run ContactForces test using the shared handler process (sim == 'isaacgym')."""
     sim, proxy = shared_handler
-    if sim != "isaacgym":
-        pytest.skip("Skipping ContactForces test for non-isaacgym sim")
-
     pytest.importorskip("isaacgym")
     proxy.run_test(func=contact_forces_isaacgym_query)
 
 
+@pytest.mark.mujoco
 def test_contact_forces_mujoco_with_shared_handler(shared_handler):
     """Run ContactForces test using the shared handler process (sim == 'mujoco')."""
     sim, proxy = shared_handler
-    if sim != "mujoco":
-        pytest.skip("Skipping ContactForces test for non-mujoco sim")
-
     pytest.importorskip("mujoco")
     proxy.run_test(func=contact_forces_mujoco_query)

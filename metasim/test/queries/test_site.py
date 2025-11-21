@@ -11,12 +11,22 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.queries.site import SitePos, _get_site_id, _site_cache
 
 
-def _pick_robot_site_name(handler) -> str:
-    """Pick a site name belonging to the robot from the MuJoCo model."""
+def _pick_robot_site_name(handler, is_mjx: bool = False) -> str:
+    """Pick a site name belonging to the robot from the MuJoCo/MJX model.
+
+    Args:
+        handler: The simulator handler (MuJoCo or MJX).
+        is_mjx: Whether this is an MJX handler (uses different attribute names).
+    """
     import pytest as _pytest
 
-    mj_model = handler.physics.model
-    robot_name = handler.robot.name
+    if is_mjx:
+        mj_model = handler._mj_model
+        robot_name = handler._robot.name
+    else:
+        mj_model = handler.physics.model
+        robot_name = handler.robot.name
+
     prefix = f"{robot_name}/"
 
     for i in range(mj_model.nsite):
@@ -24,23 +34,7 @@ def _pick_robot_site_name(handler) -> str:
         if name.startswith(prefix):
             return name
 
-    _pytest.skip(f"No site with prefix '{prefix}' found in MuJoCo model")
-
-
-def _pick_mjx_robot_site_name(handler) -> str:
-    """Pick a site name belonging to the robot from the MJX MuJoCo model."""
-    import pytest as _pytest
-
-    mj_model = handler._mj_model
-    robot_name = handler._robot.name
-    prefix = f"{robot_name}/"
-
-    for i in range(mj_model.nsite):
-        name = mj_model.site(i).name
-        if name.startswith(prefix):
-            return name
-
-    _pytest.skip(f"No site with prefix '{prefix}' found in MJX MuJoCo model")
+    _pytest.skip(f"No site with prefix '{prefix}' found in {'MJX' if is_mjx else 'MuJoCo'} model")
 
 
 def site_id_cache_mujoco_query(handler):
@@ -85,7 +79,7 @@ def site_pos_mjx_query(handler):
     """Child-process body: validate SitePos on a real MJX handler."""
     import torch as _torch
 
-    full_site_name = _pick_mjx_robot_site_name(handler)
+    full_site_name = _pick_robot_site_name(handler, is_mjx=True)
     site_name = full_site_name.split("/", 1)[1]
 
     query = SitePos(site_name)
@@ -96,32 +90,26 @@ def site_pos_mjx_query(handler):
     assert pos.shape == (handler.num_envs, 3)
 
 
+@pytest.mark.mujoco
 def test_get_site_id_populates_cache_with_real_model(shared_handler):
     """Use shared_handler; run only when sim == 'mujoco'."""
     sim, proxy = shared_handler
-    if sim != "mujoco":
-        pytest.skip("Skipping MuJoCo SitePos cache test for non-mujoco sim")
-
     pytest.importorskip("mujoco")
     proxy.run_test(site_id_cache_mujoco_query)
 
 
+@pytest.mark.mujoco
 def test_site_pos_mujoco_returns_world_position_tensor(shared_handler):
     """SitePos should return a (1, 3) tensor matching MuJoCo's site_xpos."""
     sim, proxy = shared_handler
-    if sim != "mujoco":
-        pytest.skip("Skipping MuJoCo SitePos test for non-mujoco sim")
-
     pytest.importorskip("mujoco")
     proxy.run_test(site_pos_mujoco_query)
 
 
+@pytest.mark.mjx
 def test_site_pos_mjx_returns_world_position_tensor(shared_handler):
     """SitePos should return an (N_env, 3) tensor for MJX."""
     sim, proxy = shared_handler
-    if sim != "mjx":
-        pytest.skip("Skipping MJX SitePos test for non-mjx sim")
-
     pytest.importorskip("mujoco")
     pytest.importorskip("jax")
     proxy.run_test(site_pos_mjx_query)
