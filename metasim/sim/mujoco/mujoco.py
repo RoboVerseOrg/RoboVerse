@@ -320,6 +320,8 @@ class MujocoHandler(BaseSimHandler):
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
+        else:
+            mjcf_model.option.timestep = 0.001
 
         self._add_cameras_to_model(mjcf_model)
         self._add_objects_to_model(mjcf_model)
@@ -338,11 +340,21 @@ class MujocoHandler(BaseSimHandler):
             builtin="checker",
             width=512,
             height=512,
-            rgb1=[0, 0, 0],
-            rgb2=[1.0, 1.0, 1.0],
+            rgb1=[0.72, 0.74, 0.78],
+            rgb2=[0.92, 0.94, 0.97],
+            mark="edge",
+            markrgb=[0.98, 0.78, 0.50],
         )
         mjcf_model.asset.add(
-            "material", name="matplane", reflectance="0.2", texture="texplane", texrepeat=[1, 1], texuniform=True
+            "material",
+            name="matplane",
+            texture="texplane",
+            texrepeat=[2, 2],
+            texuniform=True,
+            reflectance="0",
+            specular="0.2",
+            shininess="0.4",
+            emission="0.05",
         )
         ground = mjcf_model.worldbody.add(
             "geom",
