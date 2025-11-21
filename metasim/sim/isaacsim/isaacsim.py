@@ -750,29 +750,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
 
-        from metasim.randomization.presets.scene_presets import (
-            SceneGeometryCfg,
-            SceneMaterialPoolCfg,
-            SceneRandomCfg,
-        )
-        from metasim.randomization.scene_randomizer import SceneRandomizer
-
-        scene_cfg = SceneRandomCfg(
-            floor=SceneGeometryCfg(
-                enabled=True,
-                size=(100, 100, 0.0001),
-                position=(0.0, 0.0, 0.00001),  # Slightly above z=0 to avoid z-fighting
-                material_randomization=True,
-            ),
-            floor_materials=SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Wood/Ash.mdl"],
-                selection_strategy="sequential",
-            ),
-        )
-        scene_rand = SceneRandomizer(scene_cfg)
-        scene_rand.bind_handler(self)
-        scene_rand()
-
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.
 
