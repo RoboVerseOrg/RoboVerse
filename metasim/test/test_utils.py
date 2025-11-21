@@ -47,7 +47,7 @@ def isaacsim_app(request):
     if needs_isaacsim:
         from isaaclab.app import AppLauncher
 
-        app = AppLauncher(headless=False, enable_cameras=True).app
+        app = AppLauncher(headless=True, enable_cameras=True).app
         yield app
         # NOTE: Don't call app.close(), otherwise pytest summary will be skipped!
     else:
