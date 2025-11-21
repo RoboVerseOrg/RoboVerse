@@ -1,492 +1,260 @@
-"""Unified Object Randomizer for comprehensive object property randomization."""
+"""Object Randomizer - Property editor for object physics and pose.
+
+The ObjectRandomizer modifies physics properties and pose of existing objects.
+It supports both Static Objects (Handler-managed) and Dynamic Objects (Scene-managed)
+with intelligent handling based on object capabilities.
+
+Key features:
+- Physics randomization: mass, friction, restitution (Static Objects only)
+- Pose randomization: position, rotation (all objects)
+- Intelligent degradation: warns when Dynamic Objects receive physics randomization
+- Supports Hybrid simulation (uses physics_handler for Static, but needs special handling)
+"""
 
 from __future__ import annotations
 
-from typing import Any, Literal
+import math
+from typing import Literal
 
 import torch
+from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
+from metasim.randomization.core.isaacsim_adapter import IsaacSimAdapter
+from metasim.randomization.core.object_registry import ObjectRegistry
 from metasim.utils.configclass import configclass
+
+# =============================================================================
+# Configuration Classes
+# =============================================================================
 
 
 @configclass
 class PhysicsRandomCfg:
-    """Configuration for physics property randomization."""
+    """Physics property randomization configuration.
+
+    Attributes:
+        enabled: Whether to enable physics randomization
+        mass_range: Mass randomization range (kg)
+        friction_range: Friction coefficient range
+        restitution_range: Restitution (bounciness) range
+        distribution: Random sampling distribution
+        operation: Operation to apply (add, scale, abs)
+    """
 
     enabled: bool = False
-    """Whether to enable physics randomization."""
-
     mass_range: tuple[float, float] | None = None
-    """Mass randomization range. If None, mass won't be randomized."""
-
     friction_range: tuple[float, float] | None = None
-    """Friction randomization range. If None, friction won't be randomized.
-
-    Note: MaterialRandomizer can also modify friction. Consider using MaterialRandomizer
-    if you need complex material properties (PBR, MDL) along with friction changes.
-    """
-
     restitution_range: tuple[float, float] | None = None
-    """Restitution (bounce) randomization range. If None, restitution won't be randomized.
-
-    Note: MaterialRandomizer can also modify restitution. Consider using MaterialRandomizer
-    if you need complex material properties (PBR, MDL) along with restitution changes.
-    """
-
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
-    """Distribution type for physics randomization."""
-
     operation: Literal["add", "scale", "abs"] = "scale"
-    """Operation to apply: add (current + random), scale (current * random), abs (random only)."""
 
 
 @configclass
 class PoseRandomCfg:
-    """Configuration for pose (position and rotation) randomization."""
+    """Pose randomization configuration.
+
+    Attributes:
+        enabled: Whether to enable pose randomization
+        position_range: Position range per axis [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
+        rotation_range: Rotation range in degrees (min, max)
+        rotation_axes: Which axes to randomize rotation around (x, y, z)
+        distribution: Random sampling distribution
+        operation: Operation to apply (add, abs)
+        keep_on_ground: Keep object z >= 0
+    """
 
     enabled: bool = False
-    """Whether to enable pose randomization."""
-
-    position_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None
-    """Position randomization range for (x, y, z). If None, position won't be randomized."""
-
+    position_range: list[tuple[float, float]] | None = None
     rotation_range: tuple[float, float] | None = None
-    """Rotation randomization range in degrees around each axis. If None, rotation won't be randomized."""
-
     rotation_axes: tuple[bool, bool, bool] = (True, True, True)
-    """Which axes to randomize rotation around (x, y, z)."""
-
     distribution: Literal["uniform", "gaussian"] = "uniform"
-    """Distribution type for pose randomization."""
-
     operation: Literal["add", "abs"] = "add"
-    """Operation to apply: add (current + random), abs (random only)."""
-
     keep_on_ground: bool = True
-    """Whether to keep object on ground (z >= 0) for position randomization."""
 
 
 @configclass
 class ObjectRandomCfg:
-    """Unified configuration for object randomization."""
+    """Object randomization configuration.
+
+    Attributes:
+        obj_name: Name of object to randomize (must exist in ObjectRegistry)
+        body_name: Specific body name (for articulated objects, None = root)
+        env_ids: Environment IDs to apply randomization (None = all)
+        physics: Physics property randomization configuration
+        pose: Pose randomization configuration
+    """
 
     obj_name: str = ""
-    """Name of the object to randomize."""
-
     body_name: str | None = None
-    """Specific body name within the object. If None, applies to all bodies."""
-
     env_ids: list[int] | None = None
-    """Environment IDs to apply randomization to. If None, applies to all environments."""
-
     physics: PhysicsRandomCfg = PhysicsRandomCfg()
-    """Physics property randomization configuration."""
-
     pose: PoseRandomCfg = PoseRandomCfg()
-    """Pose randomization configuration."""
+
+
+# =============================================================================
+# Object Randomizer Implementation
+# =============================================================================
 
 
 class ObjectRandomizer(BaseRandomizerType):
-    """Unified object randomizer for comprehensive object property randomization.
+    """Object property randomizer for all objects.
 
-    This randomizer can handle:
-    - Physics properties: mass, friction, restitution
-    - Pose properties: position, rotation
-    - Applies to both articulated objects (robots) and rigid objects
+    Responsibilities:
+    - Modify physics properties (mass, friction, restitution) for Static Objects
+    - Modify pose (position, rotation) for all objects
+    - Intelligent handling: Static (via Handler) vs Dynamic (via USD)
+    - NOT responsible for: Creating/deleting objects, modifying materials
 
-    Note: For friction and restitution, MaterialRandomizer provides equivalent functionality
-    plus visual material properties (PBR, MDL). Consider your workflow:
-    - Use ObjectRandomizer for object-centric workflows (mass + pose + basic physics)
-    - Use MaterialRandomizer for material-centric workflows (visual + physics properties)
-    - Both can be used together: ObjectRandomizer for mass/pose, MaterialRandomizer for materials
+    Characteristics:
+    - Uses ObjectRegistry to find objects (supports all types)
+    - Static Objects: Uses Handler API for physics and pose
+    - Dynamic Objects: Uses IsaacSimAdapter for pose only (warns for physics)
+    - Hybrid support: uses physics_handler for Static Objects
+
+    Usage:
+        # For Static Objects (full support)
+        randomizer = ObjectRandomizer(
+            ObjectRandomCfg(
+                obj_name="box_base",
+                physics=PhysicsRandomCfg(
+                    enabled=True,
+                    mass_range=(0.1, 1.0)
+                ),
+                pose=PoseRandomCfg(
+                    enabled=True,
+                    position_range=[(0, 0.2), (0, 0.2), (0, 0)]
+                )
+            ),
+            seed=42
+        )
+
+        # For Dynamic Objects (pose only, physics warns)
+        randomizer = ObjectRandomizer(
+            ObjectRandomCfg(
+                obj_name="table",  # Created by SceneRandomizer
+                pose=PoseRandomCfg(
+                    enabled=True,
+                    position_range=[(0, 0.1), (0, 0.1), (0, 0)]
+                )
+            ),
+            seed=43
+        )
     """
 
+    REQUIRES_HANDLER = "physics"  # Use physics_handler for Hybrid
+
     def __init__(self, cfg: ObjectRandomCfg, seed: int | None = None):
-        self.cfg = cfg
-        super().__init__(seed=seed)
-
-    def set_seed(self, seed: int | None) -> None:
-        """Set or update RNG seed."""
-        super().set_seed(seed)
-
-    def _generate_random_tensor(
-        self, shape: tuple[int, ...], distribution: str, range_vals: tuple[float, float]
-    ) -> torch.Tensor:
-        """Generate random tensor using our reproducible RNG."""
-        if distribution == "uniform":
-            # Generate uniform random values using our RNG
-            if len(shape) == 1:
-                rand_vals = [self._rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[0])]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-            else:
-                rand_vals = [
-                    [self._rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[1])] for _ in range(shape[0])
-                ]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-        elif distribution == "log_uniform":
-            # Generate log-uniform values
-            log_min, log_max = torch.log(torch.tensor(range_vals[0])), torch.log(torch.tensor(range_vals[1]))
-            if len(shape) == 1:
-                rand_vals = [
-                    torch.exp(torch.tensor(self._rng.uniform(0.0, 1.0)) * (log_max - log_min) + log_min).item()
-                    for _ in range(shape[0])
-                ]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-            else:
-                rand_vals = [
-                    [
-                        torch.exp(torch.tensor(self._rng.uniform(0.0, 1.0)) * (log_max - log_min) + log_min).item()
-                        for _ in range(shape[1])
-                    ]
-                    for _ in range(shape[0])
-                ]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-        elif distribution == "gaussian":
-            # Generate Gaussian values
-            mean = (range_vals[0] + range_vals[1]) / 2
-            std = (range_vals[1] - range_vals[0]) / 6
-            if len(shape) == 1:
-                rand_vals = [
-                    max(range_vals[0], min(range_vals[1], self._rng.gauss(mean, std))) for _ in range(shape[0])
-                ]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-            else:
-                rand_vals = [
-                    [max(range_vals[0], min(range_vals[1], self._rng.gauss(mean, std))) for _ in range(shape[1])]
-                    for _ in range(shape[0])
-                ]
-                return torch.tensor(rand_vals, dtype=torch.float32)
-        else:
-            raise ValueError(f"Unsupported distribution: {distribution}")
-
-    def bind_handler(self, handler, *args: Any, **kwargs):
-        """Bind the handler to the randomizer."""
-        mod = handler.__class__.__module__
-
-        if mod.startswith("metasim.sim.isaacsim"):
-            super().bind_handler(handler, *args, **kwargs)
-        else:
-            raise ValueError(f"Unsupported handler type: {type(handler)} for ObjectRandomizer")
-
-    def _get_body_names(self, obj_name: str) -> list[str]:
-        """Get body names for an object."""
-        if hasattr(self.handler, "_get_body_names"):
-            return self.handler._get_body_names(obj_name)
-        else:
-            # Fallback implementation
-            if obj_name in self.handler.scene.articulations:
-                obj_inst = self.handler.scene.articulations[obj_name]
-                # This is a simplified approach - actual implementation may vary
-                return [f"body_{i}" for i in range(obj_inst.root_physx_view.get_masses().shape[1])]
-            return []
-
-    # Physics Property Methods
-    def get_mass(self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None) -> torch.Tensor:
-        """Get the mass of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            masses = obj_inst.root_physx_view.get_masses()
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                return masses[env_ids, body_idx]
-            else:
-                return masses[env_ids, :]
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            masses = obj_inst.root_physx_view.get_masses()
-            return masses[env_ids]
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def set_mass(
-        self, obj_name: str, mass: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None
-    ) -> None:
-        """Set the mass of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            masses = obj_inst.root_physx_view.get_masses()
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                masses[env_ids, body_idx] = mass
-            else:
-                masses[env_ids, :] = mass
-
-            obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids))
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            masses = obj_inst.root_physx_view.get_masses()
-            masses[env_ids] = mass
-            obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids))
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def get_friction(
-        self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None
-    ) -> torch.Tensor:
-        """Get the friction coefficient of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            friction = materials[..., 0]  # First component is static friction
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                return friction[env_ids, body_idx]
-            else:
-                return friction[env_ids, :]
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            friction = materials[..., 0]  # First component is static friction
-            return friction[env_ids]
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def set_friction(
-        self, obj_name: str, friction: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None
-    ) -> None:
-        """Set the friction coefficient of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                materials[env_ids, body_idx, 0] = friction  # Static friction
-                materials[env_ids, body_idx, 1] = friction  # Dynamic friction
-            else:
-                materials[env_ids, :, 0] = friction  # Static friction
-                materials[env_ids, :, 1] = friction  # Dynamic friction
-
-            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids))
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            # Rigid objects can have 3D materials array like articulations
-            if len(materials.shape) == 3:
-                # Format: [num_envs, num_bodies, num_properties] - same as articulations
-                materials[env_ids, :, 0] = friction  # Static friction
-                materials[env_ids, :, 1] = friction  # Dynamic friction
-            else:
-                # Format: [num_envs, num_properties] - 2D format
-                materials[env_ids, 0] = friction  # Static friction
-                materials[env_ids, 1] = friction  # Dynamic friction
-            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids))
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def get_restitution(
-        self, obj_name: str, body_name: str | None = None, env_ids: list[int] | None = None
-    ) -> torch.Tensor:
-        """Get the restitution (bounce) coefficient of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            restitution = materials[..., 2]  # Third component is restitution
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                return restitution[env_ids, body_idx]
-            else:
-                return restitution[env_ids, :]
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            restitution = materials[..., 2]  # Third component is restitution
-            return restitution[env_ids]
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def set_restitution(
-        self, obj_name: str, restitution: torch.Tensor, body_name: str | None = None, env_ids: list[int] | None = None
-    ) -> None:
-        """Set the restitution (bounce) coefficient of an object or specific body."""
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-
-            if body_name is not None:
-                body_names = self._get_body_names(obj_name)
-                if body_name not in body_names:
-                    raise ValueError(f"Body {body_name} not found in object {obj_name}")
-                body_idx = body_names.index(body_name)
-                materials[env_ids, body_idx, 2] = restitution
-            else:
-                materials[env_ids, :, 2] = restitution
-
-            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids))
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            materials = obj_inst.root_physx_view.get_material_properties()
-            # Rigid objects can have 3D materials array like articulations
-            if len(materials.shape) == 3:
-                # Format: [num_envs, num_bodies, num_properties] - same as articulations
-                materials[env_ids, :, 2] = restitution
-            else:
-                # Format: [num_envs, num_properties] - 2D format
-                materials[env_ids, 2] = restitution
-            obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids))
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    # Pose Methods
-    def get_pose(self, obj_name: str, env_ids: list[int] | None = None) -> tuple[torch.Tensor, torch.Tensor]:
-        """Get the pose (position and rotation) of an object.
-
-        Returns:
-            tuple: (position, rotation) where position is (N, 3) and rotation is (N, 4) quaternion
-        """
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            # Use data properties for articulations (same as rigid objects)
-            pos = obj_inst.data.root_pos_w[env_ids] - self.handler.scene.env_origins[env_ids]
-            rot = obj_inst.data.root_quat_w[env_ids]
-            return pos, rot
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            # Use data properties for rigid objects
-            pos = obj_inst.data.root_pos_w[env_ids] - self.handler.scene.env_origins[env_ids]
-            rot = obj_inst.data.root_quat_w[env_ids]
-            return pos, rot
-        else:
-            raise ValueError(f"Object {obj_name} not found")
-
-    def set_pose(
-        self, obj_name: str, position: torch.Tensor, rotation: torch.Tensor, env_ids: list[int] | None = None
-    ) -> None:
-        """Set the pose (position and rotation) of an object.
+        """Initialize object randomizer.
 
         Args:
-            obj_name: Name of the object to set pose for
-            position: (N, 3) position tensor
-            rotation: (N, 4) quaternion rotation tensor
-            env_ids: List of environment IDs to apply changes to. If None, applies to all environments.
+            cfg: Object randomization configuration
+            seed: Random seed for reproducibility
         """
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
+        super().__init__(seed=seed)
+        self.cfg = cfg
+        self.registry: ObjectRegistry | None = None
+        self.adapter: IsaacSimAdapter | None = None
 
-        if obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[obj_name]
-            # Use same low-level API for articulations
-            pose = torch.concat(
-                [
-                    position.to(self.handler.device, dtype=torch.float32) + self.handler.scene.env_origins[env_ids],
-                    rotation.to(self.handler.device, dtype=torch.float32),
-                ],
-                dim=-1,
-            )
-            obj_inst.write_root_pose_to_sim(pose, env_ids=torch.tensor(env_ids, device=self.handler.device))
-            obj_inst.write_root_velocity_to_sim(
-                torch.zeros((len(env_ids), 6), device=self.handler.device, dtype=torch.float32),
-                env_ids=torch.tensor(env_ids, device=self.handler.device),
-            )
-            obj_inst.write_data_to_sim()
-        elif obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[obj_name]
-            # Use proper pose setting method for rigid objects
-            pose = torch.concat(
-                [
-                    position.to(self.handler.device, dtype=torch.float32) + self.handler.scene.env_origins[env_ids],
-                    rotation.to(self.handler.device, dtype=torch.float32),
-                ],
-                dim=-1,
-            )
-            obj_inst.write_root_pose_to_sim(pose, env_ids=torch.tensor(env_ids, device=self.handler.device))
-            obj_inst.write_root_velocity_to_sim(
-                torch.zeros((len(env_ids), 6), device=self.handler.device, dtype=torch.float32),
-                env_ids=torch.tensor(env_ids, device=self.handler.device),
-            )
-            obj_inst.write_data_to_sim()
+    def bind_handler(self, handler):
+        """Bind handler and initialize Registry + Adapter.
+
+        For Hybrid simulation:
+        - _actual_handler is physics_handler (for physics operations)
+        - But Registry and Adapter come from render_handler (where objects are registered)
+
+        Args:
+            handler: SimHandler instance
+        """
+        super().bind_handler(handler)
+
+        # Special handling for Hybrid
+        if self._is_hybrid_handler(handler):
+            # Registry is in render_handler (where all objects are registered)
+            self.registry = ObjectRegistry.get_instance(handler.render_handler)
+            # Adapter also uses render_handler (for USD operations)
+            self.adapter = IsaacSimAdapter(handler.render_handler)
         else:
-            raise ValueError(f"Object {obj_name} not found")
+            # Non-Hybrid: use _actual_handler
+            self.registry = ObjectRegistry.get_instance(self._actual_handler)
+            self.adapter = IsaacSimAdapter(self._actual_handler)
 
-    def _euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> torch.Tensor:
-        """Convert Euler angles (in radians) to quaternion [w, x, y, z]."""
-        cr = torch.cos(torch.tensor(roll * 0.5))
-        sr = torch.sin(torch.tensor(roll * 0.5))
-        cp = torch.cos(torch.tensor(pitch * 0.5))
-        sp = torch.sin(torch.tensor(pitch * 0.5))
-        cy = torch.cos(torch.tensor(yaw * 0.5))
-        sy = torch.sin(torch.tensor(yaw * 0.5))
+    def __call__(self):
+        """Execute object randomization with intelligent handling."""
+        # Get object metadata from Registry
+        obj_meta = self.registry.get(self.cfg.obj_name)
+        if not obj_meta:
+            raise ValueError(
+                f"Object '{self.cfg.obj_name}' not found in registry. Available objects: {self.registry.list_objects()}"
+            )
 
-        w = cr * cp * cy + sr * sp * sy
-        x = sr * cp * cy - cr * sp * sy
-        y = cr * sp * cy + sr * cp * sy
-        z = cr * cp * sy - sr * sp * cy
+        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
 
-        return torch.tensor([w, x, y, z])
+        # Physics randomization (only for Static Objects with physics)
+        if self.cfg.physics.enabled:
+            if obj_meta.has_physics and obj_meta.lifecycle == "static":
+                # Convert env_ids to tensor (device will be matched later with actual data)
+                env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32)
+                self._randomize_physics(env_ids_tensor)
+            else:
+                if not obj_meta.has_physics:
+                    logger.warning(
+                        f"[ObjectRandomizer] Object '{self.cfg.obj_name}' has no physics (pure visual). "
+                        f"Physics randomization will be skipped."
+                    )
+                elif obj_meta.lifecycle == "dynamic":
+                    logger.warning(
+                        f"[ObjectRandomizer] Object '{self.cfg.obj_name}' is a Dynamic Object. "
+                        f"Physics randomization will be skipped. Use SceneRandomizer to manage transforms."
+                    )
 
-    def _quaternion_multiply(self, q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
-        """Multiply two quaternions [w, x, y, z]."""
-        w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
-        w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
+        # Pose randomization (all objects supported)
+        if self.cfg.pose.enabled:
+            if obj_meta.lifecycle == "static":
+                # Convert env_ids to tensor for Handler API
+                env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32, device=self._actual_handler.device)
+                self._randomize_pose_static(env_ids_tensor)
+            else:
+                self._randomize_pose_dynamic(obj_meta, env_ids)
 
-        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
-        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    # -------------------------------------------------------------------------
+    # Physics Randomization (Static Objects only, via Handler API)
+    # -------------------------------------------------------------------------
 
-        return torch.stack([w, x, y, z], dim=-1)
+    def _randomize_physics(self, env_ids: list[int]):
+        """Randomize physics properties for Static Objects.
 
-    # Randomization Methods
-    def randomize_physics(self) -> None:
-        """Randomize physics properties based on configuration."""
-        if not self.cfg.physics.enabled:
+        Args:
+            env_ids: Environment IDs to randomize
+        """
+        # Get object instance from Handler
+        try:
+            if self.cfg.obj_name in self._actual_handler.scene.articulations:
+                obj_inst = self._actual_handler.scene.articulations[self.cfg.obj_name]
+            elif self.cfg.obj_name in self._actual_handler.scene.rigid_objects:
+                obj_inst = self._actual_handler.scene.rigid_objects[self.cfg.obj_name]
+            else:
+                logger.error(f"Static object '{self.cfg.obj_name}' not found in Handler.scene")
+                return
+        except AttributeError:
+            logger.error("Handler does not have scene attribute")
             return
 
-        env_ids = self.cfg.env_ids or list(range(self.handler.num_envs))
+        # Keep env_ids as tensor (device will be matched per-operation)
+        num_envs = env_ids.shape[0]
 
         # Randomize mass
-        if self.cfg.physics.mass_range is not None:
-            current_mass = self.get_mass(self.cfg.obj_name, self.cfg.body_name, env_ids)
-            if len(current_mass.shape) == 1:
-                shape = (len(env_ids),)
-            else:
-                shape = (len(env_ids), current_mass.shape[1])
+        if self.cfg.physics.mass_range:
+            # Get all masses, then index by env_ids (match device)
+            all_masses = obj_inst.root_physx_view.get_masses()
+            env_ids_mass = env_ids.to(all_masses.device)
+            current_mass = all_masses[env_ids_mass] if len(all_masses.shape) > 0 else all_masses
+            num_links = current_mass.shape[1] if len(current_mass.shape) > 1 else 1
+            shape = (num_envs,) if num_links == 1 else (num_envs, num_links)
 
             rand_values = self._generate_random_tensor(
                 shape, self.cfg.physics.distribution, self.cfg.physics.mass_range
             )
-            # Ensure device compatibility
             rand_values = rand_values.to(current_mass.device)
 
             if self.cfg.physics.operation == "add":
@@ -498,162 +266,331 @@ class ObjectRandomizer(BaseRandomizerType):
             else:
                 raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
 
-            self.set_mass(self.cfg.obj_name, new_mass, self.cfg.body_name, env_ids)
+            # Set masses with indices parameter (use device-matched tensor)
+            obj_inst.root_physx_view.set_masses(new_mass, indices=env_ids_mass)
 
         # Randomize friction
-        if self.cfg.physics.friction_range is not None:
-            current_friction = self.get_friction(self.cfg.obj_name, self.cfg.body_name, env_ids)
-            if len(current_friction.shape) == 1:
-                shape = (len(env_ids),)
-            else:
-                shape = (len(env_ids), current_friction.shape[1])
-
-            rand_values = self._generate_random_tensor(
-                shape, self.cfg.physics.distribution, self.cfg.physics.friction_range
+        if self.cfg.physics.friction_range:
+            rand_friction = self._generate_random_tensor(
+                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.friction_range
             )
-            # Ensure device compatibility
-            rand_values = rand_values.to(current_friction.device)
+            rand_friction = rand_friction.to(self._actual_handler.device)
 
-            if self.cfg.physics.operation == "add":
-                new_friction = current_friction + rand_values
-            elif self.cfg.physics.operation == "scale":
-                new_friction = current_friction * rand_values
-            elif self.cfg.physics.operation == "abs":
-                new_friction = rand_values
-            else:
-                raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
+            try:
+                # Get current material properties
+                materials = obj_inst.root_physx_view.get_material_properties()
 
-            self.set_friction(self.cfg.obj_name, new_friction, self.cfg.body_name, env_ids)
+                # Update friction (index 0=static, 1=dynamic, 2=restitution)
+                if len(materials.shape) == 3:
+                    # [num_envs, num_bodies, 3]
+                    materials[env_ids, :, 0] = rand_friction.unsqueeze(1)
+                    materials[env_ids, :, 1] = rand_friction.unsqueeze(1)
+                else:
+                    # [num_envs, 3]
+                    materials[env_ids, 0] = rand_friction
+                    materials[env_ids, 1] = rand_friction
+
+                # Set back
+                obj_inst.root_physx_view.set_material_properties(materials, env_ids)
+            except Exception as e:
+                logger.warning(f"Failed to set friction: {e}")
 
         # Randomize restitution
-        if self.cfg.physics.restitution_range is not None:
-            current_restitution = self.get_restitution(self.cfg.obj_name, self.cfg.body_name, env_ids)
-            if len(current_restitution.shape) == 1:
-                shape = (len(env_ids),)
-            else:
-                shape = (len(env_ids), current_restitution.shape[1])
-
-            rand_values = self._generate_random_tensor(
-                shape, self.cfg.physics.distribution, self.cfg.physics.restitution_range
+        if self.cfg.physics.restitution_range:
+            rand_restitution = self._generate_random_tensor(
+                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.restitution_range
             )
-            # Ensure device compatibility
-            rand_values = rand_values.to(current_restitution.device)
+            rand_restitution = rand_restitution.to(self._actual_handler.device)
 
-            if self.cfg.physics.operation == "add":
-                new_restitution = current_restitution + rand_values
-            elif self.cfg.physics.operation == "scale":
-                new_restitution = current_restitution * rand_values
-            elif self.cfg.physics.operation == "abs":
-                new_restitution = rand_values
+            try:
+                # Get current material properties
+                materials = obj_inst.root_physx_view.get_material_properties()
+
+                # Update restitution (index 2)
+                if len(materials.shape) == 3:
+                    # [num_envs, num_bodies, 3]
+                    materials[env_ids, :, 2] = rand_restitution.unsqueeze(1)
+                else:
+                    # [num_envs, 3]
+                    materials[env_ids, 2] = rand_restitution
+
+                # Set back
+                obj_inst.root_physx_view.set_material_properties(materials, env_ids)
+            except Exception as e:
+                logger.warning(f"Failed to set restitution: {e}")
+
+    # -------------------------------------------------------------------------
+    # Pose Randomization (All Objects)
+    # -------------------------------------------------------------------------
+
+    def _randomize_pose_static(self, env_ids: torch.Tensor):
+        """Randomize pose for Static Objects via Handler API.
+
+        Args:
+            env_ids: Environment IDs to randomize (tensor)
+        """
+        # Get object instance from Handler
+        try:
+            if self.cfg.obj_name in self._actual_handler.scene.articulations:
+                obj_inst = self._actual_handler.scene.articulations[self.cfg.obj_name]
+            elif self.cfg.obj_name in self._actual_handler.scene.rigid_objects:
+                obj_inst = self._actual_handler.scene.rigid_objects[self.cfg.obj_name]
             else:
-                raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
-
-            self.set_restitution(self.cfg.obj_name, new_restitution, self.cfg.body_name, env_ids)
-
-    def randomize_pose(self) -> None:
-        """Randomize pose (position and rotation) based on configuration."""
-        if not self.cfg.pose.enabled:
+                logger.error(f"Static object '{self.cfg.obj_name}' not found in Handler.scene")
+                return
+        except AttributeError:
+            logger.error("Handler does not have scene attribute")
             return
 
-        env_ids = self.cfg.env_ids or list(range(self.handler.num_envs))
-        current_pos, current_rot = self.get_pose(self.cfg.obj_name, env_ids)
+        num_envs = env_ids.shape[0]
 
-        new_pos = current_pos.clone()
-        new_rot = current_rot.clone()
+        # Get current pose
+        root_state = obj_inst.data.root_state_w[env_ids]
+        current_pos = root_state[:, 0:3]
+        current_rot = root_state[:, 3:7]
 
         # Randomize position
-        if self.cfg.pose.position_range is not None:
-            for axis, (min_val, max_val) in enumerate(self.cfg.pose.position_range):
-                rand_values = self._generate_random_tensor(
-                    (len(env_ids),), self.cfg.pose.distribution, (min_val, max_val)
-                )
-                # Ensure device compatibility
-                rand_values = rand_values.to(current_pos.device)
+        new_pos = current_pos.clone()
+        if self.cfg.pose.position_range:
+            for axis in range(3):
+                if axis < len(self.cfg.pose.position_range):
+                    rand_offset = self._generate_random_tensor(
+                        (num_envs,), self.cfg.pose.distribution, self.cfg.pose.position_range[axis]
+                    )
+                    rand_offset = rand_offset.to(current_pos.device)
 
-                if self.cfg.pose.operation == "add":
-                    new_pos[:, axis] = current_pos[:, axis] + rand_values
-                elif self.cfg.pose.operation == "abs":
-                    new_pos[:, axis] = rand_values
-                else:
-                    raise ValueError(f"Unsupported position operation: {self.cfg.pose.operation}")
+                    if self.cfg.pose.operation == "add":
+                        new_pos[:, axis] += rand_offset
+                    else:  # abs
+                        new_pos[:, axis] = rand_offset
 
-            # Keep on ground if specified
+            # Keep on ground if requested
             if self.cfg.pose.keep_on_ground:
                 new_pos[:, 2] = torch.clamp(new_pos[:, 2], min=0.0)
 
         # Randomize rotation
-        if self.cfg.pose.rotation_range is not None:
-            min_angle, max_angle = self.cfg.pose.rotation_range
-            # Convert degrees to radians
-            min_rad = torch.deg2rad(torch.tensor(min_angle))
-            max_rad = torch.deg2rad(torch.tensor(max_angle))
+        new_rot = current_rot.clone()
+        if self.cfg.pose.rotation_range:
+            # Generate random Euler angles for all enabled axes (batch)
+            roll = torch.zeros(num_envs, device=current_rot.device)
+            pitch = torch.zeros(num_envs, device=current_rot.device)
+            yaw = torch.zeros(num_envs, device=current_rot.device)
 
-            for env_idx in range(len(env_ids)):
-                # Generate random rotations for each enabled axis
-                rotations = []
-                for axis_idx, enabled in enumerate(self.cfg.pose.rotation_axes):
-                    if enabled:
-                        angle = self._generate_random_tensor(
-                            (1,), self.cfg.pose.distribution, (min_rad.item(), max_rad.item())
-                        ).item()
-                        # self._rng.uniform(min_rad.item(), max_rad.item())
-                        rotations.append(angle)
-                    else:
-                        rotations.append(0.0)
+            if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
+                roll = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                roll = roll.to(current_rot.device)
 
-                # Create quaternion from Euler angles
-                delta_quat = self._euler_to_quaternion(rotations[0], rotations[1], rotations[2])
-                # Ensure device compatibility
-                delta_quat = delta_quat.to(current_rot.device)
+            if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
+                pitch = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                pitch = pitch.to(current_rot.device)
+
+            if self.cfg.pose.rotation_axes[2]:  # yaw (z-axis)
+                yaw = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                yaw = yaw.to(current_rot.device)
+
+            # Convert to quaternion (batch)
+            rand_quat = self._euler_to_quaternion_batch(roll, pitch, yaw)
+
+            if self.cfg.pose.operation == "add":
+                new_rot = self._quaternion_multiply(current_rot, rand_quat)
+            else:  # abs
+                new_rot = rand_quat
+
+        # Set new pose
+        new_root_state = root_state.clone()
+        new_root_state[:, 0:3] = new_pos
+        new_root_state[:, 3:7] = new_rot
+
+        obj_inst.write_root_state_to_sim(new_root_state, env_ids)
+        self._mark_visual_dirty()
+
+    def _randomize_pose_dynamic(self, obj_meta, env_ids: list[int]):
+        """Randomize pose for Dynamic Objects via USD.
+
+        Args:
+            obj_meta: Object metadata
+            env_ids: Environment IDs to randomize
+        """
+        prim_paths = self.registry.get_prim_paths(self.cfg.obj_name, env_ids)
+
+        for prim_path in prim_paths:
+            # Get current transform
+            try:
+                current_pos, current_rot, current_scale = self.adapter.get_transform(prim_path)
+            except Exception:
+                current_pos = (0.0, 0.0, 0.0)
+                current_rot = (1.0, 0.0, 0.0, 0.0)
+
+            # Randomize position
+            new_pos = None
+            if self.cfg.pose.position_range:
+                if self.cfg.pose.operation == "add":
+                    new_pos = tuple(
+                        current_pos[i] + self.rng.uniform(r[0], r[1])
+                        for i, r in enumerate(self.cfg.pose.position_range)
+                    )
+                else:  # abs
+                    new_pos = tuple(self.rng.uniform(r[0], r[1]) for r in self.cfg.pose.position_range)
+
+                if self.cfg.pose.keep_on_ground:
+                    new_pos = (new_pos[0], new_pos[1], max(0.0, new_pos[2]))
+
+            # Randomize rotation
+            new_rot = None
+            if self.cfg.pose.rotation_range:
+                # Generate random Euler angles
+                roll = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[0] else 0.0
+                pitch = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[1] else 0.0
+                yaw = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[2] else 0.0
+
+                # Convert to radians and then to quaternion
+                roll_rad = roll * (math.pi / 180.0)
+                pitch_rad = pitch * (math.pi / 180.0)
+                yaw_rad = yaw * (math.pi / 180.0)
+
+                new_rot = self._euler_to_quaternion(roll_rad, pitch_rad, yaw_rad)
 
                 if self.cfg.pose.operation == "add":
-                    # Multiply current rotation with delta rotation
-                    new_rot[env_idx] = self._quaternion_multiply(
-                        current_rot[env_idx].unsqueeze(0), delta_quat.unsqueeze(0)
-                    ).squeeze(0)
-                elif self.cfg.pose.operation == "abs":
-                    # Set absolute rotation
-                    new_rot[env_idx] = delta_quat
-                else:
-                    raise ValueError(f"Unsupported rotation operation: {self.cfg.pose.operation}")
+                    # Compose with current rotation
+                    import torch
 
-        self.set_pose(self.cfg.obj_name, new_pos, new_rot, env_ids)
+                    current_rot_tensor = torch.tensor(current_rot)
+                    new_rot_tensor = torch.tensor(new_rot)
+                    composed = self._quaternion_multiply(current_rot_tensor, new_rot_tensor)
+                    new_rot = tuple(composed.tolist())
 
-    def __call__(self) -> None:
-        """Execute object randomization based on configuration."""
-        pose_updated = False
+            # Apply transform
+            self.adapter.set_transform(prim_path, position=new_pos, rotation=new_rot)
 
-        if self.cfg.physics.enabled:
-            self.randomize_physics()
+        self._mark_visual_dirty()
 
-        if self.cfg.pose.enabled:
-            self.randomize_pose()
-            pose_updated = True
+    # -------------------------------------------------------------------------
+    # Helper Methods
+    # -------------------------------------------------------------------------
 
-        if pose_updated:
-            self._mark_visual_dirty()
+    def _generate_random_tensor(
+        self, shape: tuple[int, ...], distribution: str, range_vals: tuple[float, float]
+    ) -> torch.Tensor:
+        """Generate random tensor using reproducible RNG.
 
-    # Getter methods for backward compatibility and debugging
-    def get_properties(self) -> dict[str, Any]:
-        """Get current object properties for debugging/logging."""
-        env_ids = self.cfg.env_ids or list(range(self.handler.num_envs))
-        properties = {}
+        Args:
+            shape: Tensor shape
+            distribution: Distribution type
+            range_vals: Value range (min, max)
 
-        try:
-            if self.cfg.physics.enabled:
-                if self.cfg.physics.mass_range is not None:
-                    properties["mass"] = self.get_mass(self.cfg.obj_name, self.cfg.body_name, env_ids)
-                if self.cfg.physics.friction_range is not None:
-                    properties["friction"] = self.get_friction(self.cfg.obj_name, self.cfg.body_name, env_ids)
-                if self.cfg.physics.restitution_range is not None:
-                    properties["restitution"] = self.get_restitution(self.cfg.obj_name, self.cfg.body_name, env_ids)
+        Returns:
+            Random tensor
+        """
+        if distribution == "uniform":
+            if len(shape) == 1:
+                rand_vals = [self.rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[0])]
+            else:
+                rand_vals = [
+                    [self.rng.uniform(range_vals[0], range_vals[1]) for _ in range(shape[1])] for _ in range(shape[0])
+                ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
 
-            if self.cfg.pose.enabled:
-                pos, rot = self.get_pose(self.cfg.obj_name, env_ids)
-                properties["position"] = pos
-                properties["rotation"] = rot
+        elif distribution == "log_uniform":
+            log_min = math.log(range_vals[0])
+            log_max = math.log(range_vals[1])
+            if len(shape) == 1:
+                rand_vals = [math.exp(self.rng.uniform(log_min, log_max)) for _ in range(shape[0])]
+            else:
+                rand_vals = [
+                    [math.exp(self.rng.uniform(log_min, log_max)) for _ in range(shape[1])] for _ in range(shape[0])
+                ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
 
-        except Exception as e:
-            properties["error"] = str(e)
+        elif distribution == "gaussian":
+            mean = (range_vals[0] + range_vals[1]) / 2
+            std = (range_vals[1] - range_vals[0]) / 6
+            if len(shape) == 1:
+                rand_vals = [max(range_vals[0], min(range_vals[1], self.rng.gauss(mean, std))) for _ in range(shape[0])]
+            else:
+                rand_vals = [
+                    [max(range_vals[0], min(range_vals[1], self.rng.gauss(mean, std))) for _ in range(shape[1])]
+                    for _ in range(shape[0])
+                ]
+            return torch.tensor(rand_vals, dtype=torch.float32)
 
-        return properties
+        else:
+            raise ValueError(f"Unsupported distribution: {distribution}")
+
+    def _euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> tuple:
+        """Convert Euler angles to quaternion.
+
+        Args:
+            roll: Roll angle (radians)
+            pitch: Pitch angle (radians)
+            yaw: Yaw angle (radians)
+
+        Returns:
+            Quaternion (w, x, y, z)
+        """
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
+
+        w = cr * cp * cy + sr * sp * sy
+        x = sr * cp * cy - cr * sp * sy
+        y = cr * sp * cy + sr * cp * sy
+        z = cr * cp * sy - sr * sp * cy
+
+        return (w, x, y, z)
+
+    def _euler_to_quaternion_batch(self, roll: torch.Tensor, pitch: torch.Tensor, yaw: torch.Tensor) -> torch.Tensor:
+        """Convert Euler angles to quaternions (batch).
+
+        Args:
+            roll: Roll angles (radians)
+            pitch: Pitch angles (radians)
+            yaw: Yaw angles (radians)
+
+        Returns:
+            Quaternions [w, x, y, z]
+        """
+        cy = torch.cos(yaw * 0.5)
+        sy = torch.sin(yaw * 0.5)
+        cp = torch.cos(pitch * 0.5)
+        sp = torch.sin(pitch * 0.5)
+        cr = torch.cos(roll * 0.5)
+        sr = torch.sin(roll * 0.5)
+
+        w = cr * cp * cy + sr * sp * sy
+        x = sr * cp * cy - cr * sp * sy
+        y = cr * sp * cy + sr * cp * sy
+        z = cr * cp * sy - sr * sp * cy
+
+        return torch.stack([w, x, y, z], dim=-1)
+
+    def _quaternion_multiply(self, q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+        """Multiply two quaternions.
+
+        Args:
+            q1: First quaternion [w, x, y, z]
+            q2: Second quaternion [w, x, y, z]
+
+        Returns:
+            Product quaternion [w, x, y, z]
+        """
+        # Ensure both quaternions on same device
+        q2 = q2.to(q1.device)
+
+        w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
+        w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
+
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+
+        return torch.stack([w, x, y, z], dim=-1)

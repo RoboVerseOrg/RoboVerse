@@ -14,11 +14,45 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 try:
-    from huggingface_hub import HfApi
+    from huggingface_hub import HfApi, hf_hub_download
 except ImportError:  # pragma: no cover - optional dependency in some builds
     HfApi = None
+    hf_hub_download = None
 
 from ..material_randomizer import MaterialRandomCfg, MDLMaterialCfg, PBRMaterialCfg, PhysicalMaterialCfg
+
+# =============================================================================
+# Material Repository Configuration
+# =============================================================================
+
+
+@dataclass
+class MaterialRepository:
+    """Configuration for a single MDL material repository.
+
+    Args:
+        repo_id: HuggingFace repository ID (e.g., "RoboVerseOrg/roboverse_data")
+        repo_type: Repository type ("dataset" or "model")
+        local_root: Local directory where materials are stored
+        remote_root: Root path within the repository (if materials are in subdirectory)
+    """
+
+    repo_id: str
+    repo_type: str = "dataset"
+    local_root: Path | None = None
+    remote_root: Path = Path("")
+
+    def __post_init__(self):
+        """Set default local_root if not provided."""
+        if self.local_root is None:
+            repo_name = self.repo_id.split("/")[-1]
+            self.local_root = Path(f"roboverse_data/{repo_name}_materials")
+        elif isinstance(self.local_root, str):
+            self.local_root = Path(self.local_root)
+
+        if isinstance(self.remote_root, str):
+            self.remote_root = Path(self.remote_root)
+
 
 # =============================================================================
 # Common Material Property Ranges
@@ -60,117 +94,147 @@ class MaterialProperties:
 
 
 class MDLCollections:
-    """Collections of MDL material paths organized by type.
+    """Collections of MDL material paths organized by type and repository.
 
-    The collections below mirror the dataset layout hosted on Hugging Face so that
-    new assets are picked up automatically once downloaded locally. Call
-    :meth:`materials` for any dataset/category pair or use the higher-level
-    helpers for commonly used material families.
+    Supports multiple HuggingFace repositories for MDL materials, with automatic
+    discovery and optional downloads.
+
+    Example:
+        >>> # Use default repository
+        >>> wood_materials = MDLCollections.family("wood")
+        >>>
+        >>> # Register a new repository
+        >>> MDLCollections.register_repository(
+        ...     name="custom_mdl",
+        ...     repo_id="MyOrg/custom_materials",
+        ...     local_root="custom_materials",
+        ...     remote_root="mdl"
+        ... )
+        >>>
+        >>> # Use materials from specific repository
+        >>> custom_wood = MDLCollections.family("wood", repo="custom_mdl")
     """
 
-    HUGGINGFACE_MATERIALS_URL = "https://huggingface.co/datasets/RoboVerseOrg/roboverse_data/tree/main/materials"
-    DEFAULT_ROOT = Path("roboverse_data/materials")
-    HF_REPO_ID = "RoboVerseOrg/roboverse_data"
-    HF_REPO_TYPE = "dataset"
-    HF_REMOTE_ROOT = Path("materials")
+    REPOSITORIES: dict[str, MaterialRepository] = {
+        "default": MaterialRepository(
+            repo_id="RoboVerseOrg/roboverse_data",
+            local_root=Path("roboverse_data"),
+            remote_root=Path("materials"),
+        ),
+    }
+
     _HF_API: HfApi | None = None
-
-    ARNOLD_COLLECTIONS = {
-        "architecture": (Path("arnold/Architecture"),),
-        "carpet": (Path("arnold/Carpet"),),
-        "masonry": (Path("arnold/Masonry"),),
-        "natural": (Path("arnold/Natural"),),
-        "templates": (Path("arnold/Templates"),),
-        "wall_board": (Path("arnold/Wall_Board"),),
-        "wood": (Path("arnold/Wood"),),
-        "water": (Path("arnold/Natural/Water"), Path("arnold/Water_Opaque.mdl")),
-    }
-
-    VMATERIALS_COLLECTIONS = {
-        "carpet": (Path("vMaterials_2/Carpet"),),
-        "ceramic": (Path("vMaterials_2/Ceramic"),),
-        "composite": (Path("vMaterials_2/Composite"),),
-        "concrete": (Path("vMaterials_2/Concrete"),),
-        "fabric": (Path("vMaterials_2/Fabric"),),
-        "gems": (Path("vMaterials_2/Gems"),),
-        "glass": (Path("vMaterials_2/Glass"),),
-        "ground": (Path("vMaterials_2/Ground"),),
-        "leather": (Path("vMaterials_2/Leather"),),
-        "liquids": (Path("vMaterials_2/Liquids"),),
-        "masonry": (Path("vMaterials_2/Masonry"),),
-        "metal": (Path("vMaterials_2/Metal"),),
-        "other": (Path("vMaterials_2/Other"),),
-        "paint": (Path("vMaterials_2/Paint"),),
-        "paper": (Path("vMaterials_2/Paper"),),
-        "plaster": (Path("vMaterials_2/Plaster"),),
-        "plastic": (Path("vMaterials_2/Plastic"),),
-        "stone": (Path("vMaterials_2/Stone"),),
-        "wood": (Path("vMaterials_2/Wood"),),
-    }
-
-    _DATASET_MAP = {
-        "arnold": ARNOLD_COLLECTIONS,
-        "vmaterials_2": VMATERIALS_COLLECTIONS,
-    }
-
-    _ALIASES = {
-        "arnold": "arnold",
-        "vmaterials_2": "vmaterials_2",
-        "vmaterials": "vmaterials_2",
-        "vmaterials2": "vmaterials_2",
-        "v-materials": "vmaterials_2",
-    }
 
     @dataclass(frozen=True)
     class FamilyInfo:
-        """Metadata about a material family within a dataset."""
+        """Metadata about a material family.
 
-        dataset: str
-        category: str
+        Attributes:
+            repo: Repository name (must exist in REPOSITORIES)
+            path: Relative path to material directory or file
+            description: Optional human-readable description
+        """
+
+        repo: str
+        path: str
         description: str | None = None
 
         def slug(self) -> str:
-            """Return a canonical ``dataset:category`` identifier."""
-            return f"{self.dataset}:{self.category}"
+            """Return a canonical 'repo:path' identifier."""
+            return f"{self.repo}:{self.path}"
 
-    FAMILY_REGISTRY: dict[str, tuple[MDLCollections.FamilyInfo, ...]] = {
-        # Arnold defaults
+    FAMILY_REGISTRY: dict[str, tuple[FamilyInfo, ...]] = {
         "wood": (
-            FamilyInfo("arnold", "wood", "General-purpose wood grains (Arnold)"),
-            FamilyInfo("vmaterials_2", "wood", "Extended wood library (vMaterials2)"),
+            FamilyInfo("default", "arnold/Wood", "General-purpose wood grains (Arnold)"),
+            FamilyInfo("default", "vMaterials_2/Wood", "Extended wood library (vMaterials 2)"),
         ),
-        "architecture": (FamilyInfo("arnold", "architecture", "Ceiling/roof/shingle surfaces"),),
+        "architecture": (FamilyInfo("default", "arnold/Architecture", "Ceiling/roof/shingle surfaces"),),
         "carpet": (
-            FamilyInfo("arnold", "carpet", "Carpet and soft fabrics (Arnold)"),
-            FamilyInfo("vmaterials_2", "carpet", "Carpet collection (vMaterials2)"),
+            FamilyInfo("default", "arnold/Carpet", "Carpet and soft fabrics (Arnold)"),
+            FamilyInfo("default", "vMaterials_2/Carpet", "Carpet collection (vMaterials 2)"),
         ),
         "masonry": (
-            FamilyInfo("arnold", "masonry", "Bricks and masonry blocks (Arnold)"),
-            FamilyInfo("vmaterials_2", "masonry", "Bricks and stonework (vMaterials2)"),
+            FamilyInfo("default", "arnold/Masonry", "Bricks and masonry blocks (Arnold)"),
+            FamilyInfo("default", "vMaterials_2/Masonry", "Bricks and stonework (vMaterials 2)"),
         ),
-        "wall_board": (FamilyInfo("arnold", "wall_board", "Wall boards and trims"),),
-        "water": (FamilyInfo("arnold", "water", "Opaque + clear water shaders"),),
-        # NVIDIA vMaterials v2 defaults
-        "metal": (FamilyInfo("vmaterials_2", "metal", "Brushed/polished metal set"),),
-        "stone": (FamilyInfo("vmaterials_2", "stone", "Stone, terrazzo, rock surfaces"),),
-        "plastic": (FamilyInfo("vmaterials_2", "plastic", "Plastics and polymers"),),
-        "fabric": (FamilyInfo("vmaterials_2", "fabric", "Textiles and cloth surfaces"),),
-        "leather": (FamilyInfo("vmaterials_2", "leather", "Leather, suede, skin"),),
-        "glass": (FamilyInfo("vmaterials_2", "glass", "Glass and translucent materials"),),
-        "ceramic": (FamilyInfo("vmaterials_2", "ceramic", "Ceramic and tiles"),),
-        "concrete": (FamilyInfo("vmaterials_2", "concrete", "Concrete, cement, rough surfaces"),),
-        "paper": (FamilyInfo("vmaterials_2", "paper", "Paper and cardboard"),),
-        "paint": (FamilyInfo("vmaterials_2", "paint", "Coated paint finishes"),),
-        "ground": (FamilyInfo("vmaterials_2", "ground", "Soil, sand, and outdoor ground"),),
-        "gems": (FamilyInfo("vmaterials_2", "gems", "Gemstones"),),
-        "composite": (FamilyInfo("vmaterials_2", "composite", "Composite technical materials"),),
-        "other": (FamilyInfo("vmaterials_2", "other", "Miscellaneous utility shaders"),),
+        "wall_board": (FamilyInfo("default", "arnold/Wall_Board", "Wall boards and trims"),),
+        "water": (
+            FamilyInfo("default", "arnold/Natural/Water", "Water materials (subdirectory)"),
+            FamilyInfo("default", "arnold/Water_Opaque.mdl", "Opaque water shader (single file)"),
+        ),
+        "metal": (FamilyInfo("default", "vMaterials_2/Metal", "Brushed/polished metal set"),),
+        "stone": (FamilyInfo("default", "vMaterials_2/Stone", "Stone, terrazzo, rock surfaces"),),
+        "plastic": (FamilyInfo("default", "vMaterials_2/Plastic", "Plastics and polymers"),),
+        "fabric": (FamilyInfo("default", "vMaterials_2/Fabric", "Textiles and cloth surfaces"),),
+        "leather": (FamilyInfo("default", "vMaterials_2/Leather", "Leather, suede, skin"),),
+        "glass": (FamilyInfo("default", "vMaterials_2/Glass", "Glass and translucent materials"),),
+        "ceramic": (FamilyInfo("default", "vMaterials_2/Ceramic", "Ceramic and tiles"),),
+        "concrete": (FamilyInfo("default", "vMaterials_2/Concrete", "Concrete, cement, rough surfaces"),),
+        "paper": (FamilyInfo("default", "vMaterials_2/Paper", "Paper and cardboard"),),
+        "paint": (FamilyInfo("default", "vMaterials_2/Paint", "Coated paint finishes"),),
+        "ground": (FamilyInfo("default", "vMaterials_2/Ground", "Soil, sand, and outdoor ground"),),
+        "gems": (FamilyInfo("default", "vMaterials_2/Gems", "Gemstones"),),
+        "composite": (FamilyInfo("default", "vMaterials_2/Composite", "Composite technical materials"),),
+        "plaster": (FamilyInfo("default", "vMaterials_2/Plaster", "Plaster and stucco"),),
+        "liquids": (FamilyInfo("default", "vMaterials_2/Liquids", "Various liquids"),),
+        "natural": (FamilyInfo("default", "arnold/Natural", "Natural materials (Arnold)"),),
+        "templates": (FamilyInfo("default", "arnold/Templates", "Material templates (Arnold)"),),
+        "other": (FamilyInfo("default", "vMaterials_2/Other", "Miscellaneous utility shaders"),),
     }
 
     @classmethod
-    def family(cls, name: str, *, root: str | Path | None = None, warn_missing: bool = True) -> list[str]:
-        """Get an easy-to-remember *family* (wood, metal, plastic, ...)."""
-        base_root = Path(root) if root else cls.DEFAULT_ROOT
+    def register_repository(
+        cls,
+        name: str,
+        repo_id: str,
+        repo_type: str = "dataset",
+        local_root: str | Path | None = None,
+        remote_root: str | Path = "",
+    ) -> None:
+        """Register a new MDL material repository.
+
+        Args:
+            name: Short name for the repository
+            repo_id: HuggingFace repository ID
+            repo_type: Repository type
+            local_root: Local directory for materials
+            remote_root: Root path within the repository
+        """
+        cls.REPOSITORIES[name] = MaterialRepository(
+            repo_id=repo_id,
+            repo_type=repo_type,
+            local_root=Path(local_root) if local_root else None,
+            remote_root=Path(remote_root),
+        )
+
+    @classmethod
+    def family(
+        cls,
+        name: str,
+        *,
+        root: str | Path | None = None,
+        repo: str | None = None,
+        max_materials: int | None = None,
+        warn_missing: bool = True,
+        use_remote_manifest: bool = True,
+    ) -> list[str]:
+        """Get materials from a family (wood, metal, plastic, etc.).
+
+        Returns paths from HuggingFace manifest (if available) or local scan (fallback).
+        Actual download happens on-demand when materials are used.
+
+        Args:
+            name: Family name (e.g., 'wood', 'metal', 'plastic')
+            use_remote_manifest: If True (default), query HuggingFace for complete list.
+                                If False, only scan local directory.
+            root: Optional custom root path (overrides repository configuration)
+            repo: Optional repository name to filter by (if None, uses all repositories)
+            max_materials: Optional limit on number of materials returned
+            warn_missing: Whether to warn about missing materials
+
+        Returns:
+            List of MDL file paths from all matching family entries
+        """
         key = name.lower()
         infos = cls.FAMILY_REGISTRY.get(key)
         if not infos:
@@ -179,9 +243,50 @@ class MDLCollections:
 
         collected: list[str] = []
         for info in infos:
-            collected.extend(cls.materials(info.dataset, info.category, root=base_root, warn_missing=warn_missing))
-        # Deduplicate and sort to keep reproducible order when multiple datasets contribute.
-        return sorted(dict.fromkeys(collected))
+            # Filter by repository if specified
+            if repo is not None and info.repo != repo:
+                continue
+
+            # Determine the repository configuration
+            repo_config = cls.REPOSITORIES.get(info.repo)
+            if not repo_config:
+                if warn_missing:
+                    import warnings
+
+                    warnings.warn(f"Repository '{info.repo}' not found, skipping family '{name}'", stacklevel=3)
+                continue
+
+            # Determine base path
+            if root is not None:
+                base_root = Path(root)
+            else:
+                # Combine local_root with remote_root to form full local path
+                # E.g., local_root="roboverse_data" + remote_root="materials" -> "roboverse_data/materials"
+                base_root = repo_config.local_root / repo_config.remote_root
+
+            # Check if path is a single file or directory
+            target_path = base_root / info.path
+            if target_path.suffix == ".mdl":
+                # Single MDL file
+                paths = [target_path]
+            else:
+                # Directory
+                paths = [target_path]
+
+            collected.extend(
+                cls._collect_from_paths(
+                    paths, warn_missing=warn_missing, repo=info.repo, use_remote_manifest=use_remote_manifest
+                )
+            )
+
+        # Deduplicate and sort
+        unique = sorted(dict.fromkeys(collected))
+
+        # Apply limit if specified
+        if max_materials is not None and len(unique) > max_materials:
+            unique = unique[:max_materials]
+
+        return unique
 
     @classmethod
     def families(cls) -> dict[str, tuple[MDLCollections.FamilyInfo, ...]]:
@@ -194,75 +299,86 @@ class MDLCollections:
         families: Sequence[str],
         *,
         root: str | Path | None = None,
+        repo: str | None = None,
         warn_missing: bool = True,
     ) -> list[str]:
-        """Collect merged material lists from multiple families (deduplicated + sorted)."""
+        """Collect merged material lists from multiple families (deduplicated + sorted).
+
+        Args:
+            families: List of family names to collect
+            root: Optional custom root path
+            repo: Optional repository name
+            warn_missing: Whether to warn about missing materials
+
+        Returns:
+            Merged list of MDL file paths
+        """
         paths: list[str] = []
         for family in families:
-            paths.extend(cls.family(family, root=root, warn_missing=warn_missing))
+            paths.extend(cls.family(family, root=root, repo=repo, warn_missing=warn_missing))
 
         return sorted(dict.fromkeys(paths))
 
     @classmethod
-    def materials(
-        cls, dataset: str, category: str, root: str | Path | None = None, *, warn_missing: bool = True
+    def available_families(cls) -> list[str]:
+        """Get list of all available family names.
+
+        Returns:
+            Sorted list of family names
+        """
+        return sorted(cls.FAMILY_REGISTRY.keys())
+
+    @classmethod
+    def _collect_from_paths(
+        cls,
+        paths: Iterable[Path],
+        *,
+        warn_missing: bool = True,
+        repo: str | None = None,
+        use_remote_manifest: bool = True,
     ) -> list[str]:
-        """Return every ``.mdl`` inside the requested dataset/category grouping."""
-        dataset_key = cls._normalize_dataset(dataset)
-        category_key = category.lower()
+        """Collect ``.mdl`` files under the provided directories.
 
-        if dataset_key not in cls._DATASET_MAP:
-            raise KeyError(f"Unknown MDL dataset '{dataset}'. Known datasets: {tuple(cls._DATASET_MAP.keys())}.")
+        Args:
+            paths: Directory or file paths to search
+            warn_missing: Whether to warn about missing materials
+            repo: Optional repository name for remote manifest lookups
+            use_remote_manifest: If True, query HuggingFace for complete list; if False, scan local only
 
-        registry = cls._DATASET_MAP[dataset_key]
-        if category_key not in registry:
-            known = ", ".join(sorted(registry.keys()))
-            raise KeyError(f"Unknown category '{category}' for dataset '{dataset_key}'. Available: {known}.")
-
-        base_root = Path(root) if root else cls.DEFAULT_ROOT
-        targets = [base_root / rel for rel in registry[category_key]]
-        return cls._collect_from_paths(targets, warn_missing=warn_missing)
-
-    @classmethod
-    def catalog(cls, root: str | Path | None = None, *, warn_missing: bool = False) -> dict[str, dict[str, list[str]]]:
-        """Build a full catalog ``{dataset: {category: [paths]}}`` for quick inspection."""
-        catalog: dict[str, dict[str, list[str]]] = {}
-        for dataset, categories in cls._DATASET_MAP.items():
-            catalog[dataset] = {}
-            for category in categories:
-                catalog[dataset][category] = cls.materials(dataset, category, root=root, warn_missing=warn_missing)
-        return catalog
-
-    @classmethod
-    def available_categories(cls) -> dict[str, tuple[str, ...]]:
-        """Expose supported Hugging Face groupings for discoverability."""
-        return {dataset: tuple(sorted(categories.keys())) for dataset, categories in cls._DATASET_MAP.items()}
-
-    @classmethod
-    def _collect_from_paths(cls, paths: Iterable[Path], *, warn_missing: bool = True) -> list[str]:
-        """Collect ``.mdl`` files under the provided directories."""
+        Returns:
+            List of MDL file paths
+        """
         mdl_paths: list[str] = []
         missing: list[str] = []
 
         for target in paths:
+            # Check if user wants remote manifest
+            if use_remote_manifest:
+                # Try remote first (default: get complete list from HuggingFace)
+                remote_paths = cls._collect_remote_mdl_paths(target, repo=repo)
+
+                if remote_paths:
+                    # Use remote manifest (complete list)
+                    mdl_paths.extend(remote_paths)
+                    continue  # Skip local scan
+
+            # Local-only mode or remote unavailable
             if target.is_dir():
-                # Sort to ensure deterministic order for reproducibility
+                # Local directory scan
                 mdl_paths.extend(sorted(p.as_posix() for p in target.rglob("*.mdl")))
             elif target.is_file() and target.suffix.lower() == ".mdl":
+                # Single file
                 mdl_paths.append(target.as_posix())
             else:
-                remote_paths = cls._collect_remote_mdl_paths(target)
-                if remote_paths:
-                    mdl_paths.extend(remote_paths)
-                else:
-                    missing.append(target.as_posix())
+                # Not found locally and remote disabled/unavailable
+                missing.append(target.as_posix())
 
         if missing and warn_missing:
-            warning_msg = (
-                "Missing material assets:\n  - "
-                + "\n  - ".join(missing)
-                + f"\nDownload them from {MDLCollections.HUGGINGFACE_MATERIALS_URL}."
-            )
+            repo_info = ""
+            if repo and repo in cls.REPOSITORIES:
+                repo_config = cls.REPOSITORIES[repo]
+                repo_info = f" from repository '{repo}' ({repo_config.repo_id})"
+            warning_msg = f"Missing material assets{repo_info}:\n  - " + "\n  - ".join(missing)
             warnings.warn(warning_msg, stacklevel=2)
 
         # Remove duplicates before returning a deterministic, sorted list.
@@ -270,23 +386,37 @@ class MDLCollections:
         return sorted(unique)
 
     @classmethod
-    def _collect_remote_mdl_paths(cls, target: Path) -> list[str]:
+    def _collect_remote_mdl_paths(cls, target: Path, repo: str | None = None) -> list[str]:
         """Return remote ``.mdl`` paths that should exist under ``target``.
 
         Converts remote HuggingFace paths back into the expected local layout so
         downstream code can keep using ``roboverse_data/...`` style strings.
+
+        Args:
+            target: Local target path to search for
+            repo: Optional repository name (defaults to 'default')
+
+        Returns:
+            List of local MDL paths that should exist based on remote manifest
         """
-        manifest = cls._remote_manifest()
+        repo_name = repo or "default"
+        if repo_name not in cls.REPOSITORIES:
+            return []
+
+        repo_config = cls.REPOSITORIES[repo_name]
+        manifest = cls._remote_manifest(repo_name)
         if not manifest:
             return []
 
         try:
-            rel = target.relative_to(cls.DEFAULT_ROOT)
+            rel = target.relative_to(repo_config.local_root)
         except ValueError:
-            # Custom roots can't rely on the shared HuggingFace dataset layout.
+            # Target path doesn't match this repository
             return []
 
-        remote_prefix = (cls.HF_REMOTE_ROOT / rel).as_posix()
+        # rel already contains remote_root (e.g., "materials/arnold/Wood")
+        # So we should use rel directly as the remote prefix, not combine with remote_root again
+        remote_prefix = rel.as_posix()
         normalized_prefix = remote_prefix.rstrip("/")
 
         if normalized_prefix.endswith(".mdl"):
@@ -299,29 +429,39 @@ class MDLCollections:
 
         collected: list[str] = []
         for remote_path in candidates:
-            try:
-                relative_remote = Path(remote_path).relative_to(cls.HF_REMOTE_ROOT)
-            except ValueError:
-                continue
-            collected.append((cls.DEFAULT_ROOT / relative_remote).as_posix())
+            # Convert remote path back to local path
+            # remote_path is like "materials/arnold/Wood/Ash.mdl"
+            # We want "roboverse_data/materials/arnold/Wood/Ash.mdl"
+            collected.append((repo_config.local_root / remote_path).as_posix())
 
         return collected
 
     @classmethod
-    @lru_cache(maxsize=1)
-    def _remote_manifest(cls) -> tuple[str, ...]:
-        """Fetch the list of files hosted on HuggingFace (cached)."""
+    @lru_cache(maxsize=8)
+    def _remote_manifest(cls, repo: str = "default") -> tuple[str, ...]:
+        """Fetch the list of files hosted on HuggingFace (cached).
+
+        Args:
+            repo: Repository name (defaults to 'default')
+
+        Returns:
+            Tuple of file paths in the repository
+        """
+        if repo not in cls.REPOSITORIES:
+            return ()
+
+        repo_config = cls.REPOSITORIES[repo]
         api = cls._get_hf_api()
         if api is None:
             return ()
 
         try:
-            files = api.list_repo_files(repo_id=cls.HF_REPO_ID, repo_type=cls.HF_REPO_TYPE)
+            files = api.list_repo_files(repo_id=repo_config.repo_id, repo_type=repo_config.repo_type)
             # Sort files to ensure deterministic order for reproducibility
             files = sorted(files)
         except Exception as exc:  # pragma: no cover - network/SDK issues
             warnings.warn(
-                f"Failed to query HuggingFace repo '{cls.HF_REPO_ID}': {exc}",
+                f"Failed to query HuggingFace repo '{repo_config.repo_id}': {exc}",
                 stacklevel=2,
             )
             return ()
@@ -335,13 +475,6 @@ class MDLCollections:
         if cls._HF_API is None:
             cls._HF_API = HfApi()
         return cls._HF_API
-
-    @classmethod
-    def _normalize_dataset(cls, dataset: str) -> str:
-        key = dataset.lower()
-        if key in cls._ALIASES:
-            return cls._ALIASES[key]
-        return key
 
 
 # =============================================================================
@@ -508,9 +641,7 @@ class MaterialPresets:
     )
 
     @staticmethod
-    def plastic_object(
-        obj_name: str, color_range: tuple = MaterialProperties.COLOR_BRIGHT, randomization_mode: str = "combined"
-    ) -> MaterialRandomCfg:
+    def plastic_object(obj_name: str, color_range: tuple = MaterialProperties.COLOR_BRIGHT) -> MaterialRandomCfg:
         """Create plastic material configuration."""
         return MaterialRandomCfg(
             obj_name=obj_name,
@@ -525,13 +656,10 @@ class MaterialPresets:
                 restitution_range=MaterialProperties.RESTITUTION_MEDIUM,
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def rubber_object(
-        obj_name: str, color_range: tuple = MaterialProperties.COLOR_NEUTRAL, randomization_mode: str = "combined"
-    ) -> MaterialRandomCfg:
+    def rubber_object(obj_name: str, color_range: tuple = MaterialProperties.COLOR_NEUTRAL) -> MaterialRandomCfg:
         """Create rubber material configuration."""
         return MaterialRandomCfg(
             obj_name=obj_name,
@@ -546,7 +674,6 @@ class MaterialPresets:
                 restitution_range=MaterialProperties.RESTITUTION_HIGH,
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
@@ -554,7 +681,6 @@ class MaterialPresets:
         obj_name: str,
         family: str | Sequence[str],
         *,
-        randomization_mode: str = "combined",
         use_mdl: bool = True,
         assets_root: str | Path | None = None,
         mdl_paths: list[str] | None = None,
@@ -567,7 +693,7 @@ class MaterialPresets:
         primary_family = families[0]
 
         physical = physical_config or MaterialPresets._family_physical_default(primary_family)
-        config = MaterialRandomCfg(obj_name=obj_name, physical=physical, randomization_mode=randomization_mode)
+        config = MaterialRandomCfg(obj_name=obj_name, physical=physical)
 
         if use_mdl:
             resolved_paths = mdl_paths
@@ -596,7 +722,6 @@ class MaterialPresets:
         obj_name: str,
         use_mdl: bool = True,
         mdl_base_path: str = "roboverse_data/materials/vMaterials_2/Metal",
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Deprecated metal preset wrapper kept for backward compatibility."""
         warnings.warn(
@@ -613,7 +738,6 @@ class MaterialPresets:
         return MaterialPresets.mdl_family_object(
             obj_name=obj_name,
             family="metal",
-            randomization_mode=randomization_mode,
             use_mdl=use_mdl,
             mdl_paths=mdl_paths,
         )
@@ -623,7 +747,6 @@ class MaterialPresets:
         obj_name: str,
         use_mdl: bool = True,
         mdl_base_path: str = "roboverse_data/materials/arnold/Wood",
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Deprecated wood preset wrapper kept for backward compatibility."""
         warnings.warn(
@@ -640,7 +763,6 @@ class MaterialPresets:
         return MaterialPresets.mdl_family_object(
             obj_name=obj_name,
             family="wood",
-            randomization_mode=randomization_mode,
             use_mdl=use_mdl,
             mdl_paths=mdl_paths,
         )
@@ -651,7 +773,6 @@ class MaterialPresets:
         physical_config: PhysicalMaterialCfg | None = None,
         pbr_config: PBRMaterialCfg | None = None,
         mdl_config: MDLMaterialCfg | None = None,
-        randomization_mode: str = "combined",
     ) -> MaterialRandomCfg:
         """Create fully customizable material configuration."""
         return MaterialRandomCfg(
@@ -659,7 +780,6 @@ class MaterialPresets:
             physical=physical_config,
             pbr=pbr_config,
             mdl=mdl_config,
-            randomization_mode=randomization_mode,
         )
 
     @classmethod
@@ -678,12 +798,23 @@ class MaterialPresets:
         families: Sequence[str],
         *,
         root: str | Path | None = None,
+        repo: str | None = None,
         warn_missing: bool = True,
     ) -> list[str]:
-        """Collect merged material lists from multiple families (deduplicated + sorted)."""
+        """Collect merged material lists from multiple families (deduplicated + sorted).
+
+        Args:
+            families: List of family names to collect
+            root: Optional custom root path
+            repo: Optional repository name
+            warn_missing: Whether to warn about missing materials
+
+        Returns:
+            Merged list of MDL file paths
+        """
         paths: list[str] = []
         for family in families:
-            paths.extend(cls.family(family, root=root, warn_missing=warn_missing))
+            paths.extend(MDLCollections.family(family, root=root, repo=repo, warn_missing=warn_missing))
 
         return sorted(dict.fromkeys(paths))
 

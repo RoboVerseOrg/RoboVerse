@@ -750,29 +750,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
 
-        from metasim.randomization.presets.scene_presets import (
-            SceneGeometryCfg,
-            SceneMaterialPoolCfg,
-            SceneRandomCfg,
-        )
-        from metasim.randomization.scene_randomizer import SceneRandomizer
-
-        scene_cfg = SceneRandomCfg(
-            floor=SceneGeometryCfg(
-                enabled=True,
-                size=(100, 100, 0.0001),
-                position=(0.0, 0.0, 0.00001),  # Slightly above z=0 to avoid z-fighting
-                material_randomization=True,
-            ),
-            floor_materials=SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Wood/Ash.mdl"],
-                selection_strategy="sequential",
-            ),
-        )
-        scene_rand = SceneRandomizer(scene_cfg)
-        scene_rand.bind_handler(self)
-        scene_rand()
-
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.
 
@@ -1251,7 +1228,15 @@ class IsaacsimHandler(BaseSimHandler):
         self.flush_visual_updates(settle_passes=1)
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
-        """Drive SimulationApp/scene/sensors for a few frames to settle visual state."""
+        """Drive SimulationApp/scene/sensors for a few frames to settle visual state.
+
+        Global defer mechanism: If _defer_all_visual_flushes is True, skip flush entirely.
+        This enables atomic batch randomization without intermediate rendering overhead.
+        """
+        # Check global defer flag (for batch randomization)
+        if getattr(self, "_defer_all_visual_flushes", False):
+            return  # Skip flush, will be done by batch controller
+
         passes = max(1, settle_passes)
         sim_app = getattr(self, "simulation_app", None)
         reason = "material refresh" if wait_for_materials else "visual flush"

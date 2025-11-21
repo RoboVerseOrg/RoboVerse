@@ -1,88 +1,704 @@
 # 12. Domain Randomization
 
-This quick-start shows how to replay a demonstration trajectory while progressively enabling scene, material, lighting, and camera randomization. It mirrors the workflow we use for benchmarking: spawn a simple room, randomize it every *N* steps, and capture video for visual inspection.
+This tutorial demonstrates how to apply progressive domain randomization during trajectory replay. The system combines scene creation, material variation, lighting changes, and camera perturbations in a layered approach that mirrors real-world training workflows.
 
-## Run the demo
+## Quick Start
+
 ```bash
 python get_started/12_domain_randomization.py \
-    --sim isaacsim \
-    --render-mode pathtracing \
+    --scene_mode 1 \
     --level 2 \
-    --randomize-interval 10 \
-    --headless
+    --seed 42 \
+    --randomize_interval 60
 ```
 
-Drop `--headless` if you want to watch the replay live. The script streams RGB frames to `get_started/output/12_dr_level{N}_{sim}.mp4` and logs every randomization pass to the console.
+The script replays a close_box demonstration while applying randomization every 60 steps. Output video is saved to `get_started/output/12_dr_*.mp4`.
 
-### CLI highlights
-- `--level {0,1,2,3}` Progressive bundles (see table below).
-- `--randomize-interval N` Apply randomization every *N* simulation steps after reset.
-- `--render-mode {raytracing,pathtracing}` Ties into lighting intensity ranges.
-- `--object-states` Bypass randomization entirely and simply replay recorded states (useful for debugging trajectories or recording “clean” footage).
-- `--seed` Every randomizer shares the same deterministic RNG seed.
+## Architecture Overview
 
-## Progressive levels
-The script wires all available randomizers, then activates them based on the selected level.
+The refactored randomization system separates concerns between object lifecycle and property editing:
 
-| Level | Scene surfaces | Object randomization | Material randomization | Lighting randomization | Camera randomization |
-|-------|----------------|----------------------|------------------------|------------------------|----------------------|
-| 0 | Deterministic floor/wall/ceiling/table materials | Box mass/pose only | Disabled | Disabled | Disabled |
-| 1 | Material families unlocked | Enabled (same as level 0) | Box visual+physical materials sampled from `paper/wood` | Disabled | Disabled |
-| 2 | Same as level 1 | Enabled | Enabled | Ceiling lights randomize intensity, color temperature, pose | Disabled |
-| 3 | Same as level 2 | Enabled | Enabled | Enabled | `CameraPresets.surveillance_camera` perturbs intrinsics/extrinsics |
+### Object Types
 
-Randomization runs once at reset and then every `randomize_interval` steps. You can edit `apply_randomization()` in the script if you need a different cadence.
+**Static Objects** (Handler-managed):
+- Robot (franka)
+- Task objects (box_base)  
+- Cameras
+- Lights
 
-## Scene + material pools
-`ScenePresets.tabletop_workspace()` accepts `floor_families`, `wall_families`, `ceiling_families`, and `table_families`. Each tuple expands into MDL pools using `MDLCollections`, so you can express "give me concrete floors and painted walls" without hard-coding file paths:
+These are created by the Handler during environment initialization and remain throughout the simulation.
 
+**Dynamic Objects** (SceneRandomizer-managed):
+- Environment geometry (floors, walls, ceilings)
+- Workspace surfaces (tables, desktops)
+- Distractor objects (decorative items)
+
+These can be created, deleted, or switched at runtime for maximum flexibility.
+
+### Randomizer Types
+
+**SceneRandomizer** - Manages object lifecycle:
+- Creates and deletes scene elements
+- Switches between USD asset variants
+- Registers all objects to a central ObjectRegistry
+
+**Property Editors** - Modify object attributes:
+- MaterialRandomizer: Visual and physical material properties
+- ObjectRandomizer: Mass, friction, pose
+- LightRandomizer: Intensity, color, position
+- CameraRandomizer: Intrinsics and extrinsics
+
+This separation enables clean composition. For example, you can randomize materials on both static objects (robot links) and dynamic objects (table surface) using the same MaterialRandomizer interface.
+
+## Command Line Arguments
+
+### Scene Configuration
+
+**--scene_mode** (default: 3)
+
+Controls the type of scene geometry:
+
+- **0 (Manual)**: All procedural geometry
+  - Environment: Floor, 4 walls, ceiling (manual cubes)
+  - Workspace: 1.8m x 1.8m table (manual cube)
+  - Objects: None
+  
+- **1 (USD Table)**: Manual environment with USD table
+  - Environment: Manual geometry
+  - Workspace: Table785 (5 table models from EmbodiedGen)
+  - Objects: None
+  
+- **2 (USD Scene)**: Full USD environment and workspace
+  - Environment: Kujiale scenes (12 interior scenes)
+  - Workspace: Table785
+  - Objects: None
+  
+- **3 (Full USD)**: Maximum diversity
+  - Environment: Kujiale scenes
+  - Workspace: Table785
+  - Objects: Desktop supplies (10 fruit models)
+
+### Randomization Control
+
+**--level** (default: 1)
+
+Progressive randomization complexity:
+
+- **Level 0**: Baseline
+  - Fixed scene configuration
+  - No randomization (deterministic)
+  - Useful for debugging and baseline comparisons
+  
+- **Level 1**: Scene and Material
+  - Scene randomization: USD asset selection (modes 1-3)
+  - Material randomization: Visual and physical properties
+  - For mode 0: Table material randomizes between wood and metal families
+  
+- **Level 2**: Add Lighting
+  - Everything from Level 1
+  - Light intensity: 16K-30K (main), 6K-12K (corners) for raytracing
+  - Color temperature: 2700K-6000K range
+  - 5 lights total: 1 main DiskLight + 4 corner SphereLights
+  
+- **Level 3**: Full Randomization
+  - Everything from Level 2
+  - Camera randomization: Position, orientation, look-at point, FOV
+  - Surveillance camera preset with small perturbations
+
+**--randomize_interval** (default: 60)
+
+Number of simulation steps between randomization applications. Set to a higher value (e.g., 120) for less frequent changes.
+
+**--seed** (default: 42)
+
+Random seed for reproducibility. All randomizers derive their seeds from this base value using fixed offsets (e.g., `seed+1`, `seed+2`), ensuring independent but deterministic random streams.
+
+**--render_mode** (default: raytracing)
+
+Rendering quality. Choose `pathtracing` for higher quality at slower speed. This affects light intensity ranges automatically.
+
+## Scene Modes in Detail
+
+### Mode 0: Manual Geometry
+
+Best for understanding the core system. All geometry is created procedurally using cube primitives.
+
+**Environment**:
 ```python
-scene_cfg = ScenePresets.tabletop_workspace(
-    room_size=10.0,
-    wall_height=5.0,
-    table_size=(1.8, 1.8, 0.1),
-    table_height=0.7,
-    floor_families=("concrete", "carpet"),
-    wall_families=("wall_board", "paint"),
-    ceiling_families=("architecture",),
-    table_families=("wood", "plastic"),
+ScenePresets.empty_room(
+    room_size=10.0,      # 10m x 10m room
+    wall_height=5.0,     # 5m tall walls
 )
 ```
 
-When a listed `.mdl` or texture is missing locally, the randomizer automatically downloads it from the `RoboVerseOrg/roboverse_data` dataset on Hugging Face (matching the `roboverse_data/materials/...` layout). Existing files are reused—no duplicate downloads. If you prefer to prefetch everything manually, you can still run `huggingface_hub.snapshot_download(..., allow_patterns=["materials/**"])` once.
+Creates:
+- Floor: 10m x 10m x 0.1m at z=0.005 (Carpet_Beige material)
+- Walls: 4 walls, 0.1m thick (Brick_Pavers material)
+- Ceiling: 10m x 10m x 0.1m at z=5.05 (Roof_Tiles material)
 
-### Material variant randomization
-Many MDL files contain multiple material variants (e.g., `Rug_Carpet.mdl` has 4 variants: Base, Lines, Hexagonal, Honeycomb). By default, `randomize_material_variant=True` in material configurations, which means:
-- First, a random MDL file is selected from the pool
-- Then, a random variant within that file is selected
+**Workspace**:
+```python
+ManualGeometryCfg(
+    name="table",
+    geometry_type="cube",
+    size=(1.8, 1.8, 0.1),
+    position=(0.0, 0.0, 0.65),
+    default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl"
+)
+```
 
-This significantly expands diversity: the vMaterials_2 collection contains 315 MDL files with 2,605 total variants (8.3x multiplier). All selections use seeded RNG for full reproducibility.
+In Level 1+, MaterialRandomizer can change the table material between wood and metal families while keeping the geometry fixed.
 
-## Randomizers in play
-The demo coordinates five randomizer types. Feel free to lift the snippets into your own training loops.
+### Mode 1: USD Table
+
+Combines manual environment with realistic table models.
+
+**Workspace**:
+```python
+USDAssetPoolCfg(
+    name="table",
+    usd_paths=table_paths,  # 5 tables from EmbodiedGen
+    per_path_overrides=table_configs,  # Per-table calibrations
+    selection_strategy="random" if level >= 1 else "sequential"
+)
+```
+
+The system downloads complete EmbodiedGen asset folders (URDF + mesh files + textures), converts URDF to USD automatically, and switches between table models at each randomization trigger.
+
+### Mode 2: USD Scene
+
+Full interior scenes from the Kujiale dataset.
+
+**Environment**:
+```python
+USDAssetPoolCfg(
+    name="kujiale_scene",
+    usd_paths=scene_paths,  # 12 interior scenes
+    per_path_overrides=scene_configs,  # Position/scale calibrations
+    selection_strategy="random" if level >= 1 else "sequential"
+)
+```
+
+Kujiale scenes use a two-repository strategy:
+1. Download RoboVerse USDA (main scene description)
+2. Download InteriorAgent assets (meshes, textures, materials)
+3. Copy RoboVerse USDA to InteriorAgent folder
+4. Load USDA with relative references resolving to InteriorAgent assets
+
+This approach gives you curated scene layouts from RoboVerse while leveraging the complete asset library from InteriorAgent.
+
+### Mode 3: Full USD
+
+Adds desktop objects to Mode 2 for maximum visual diversity.
+
+**Objects**:
+```python
+ObjectsLayerCfg(
+    elements=[
+        USDAssetPoolCfg(
+            name=f"desktop_object_{i+1}",
+            usd_paths=object_paths,  # 10 fruit models
+            selection_strategy="random"
+        )
+        for i in range(3)  # Place 3 objects
+    ]
+)
+```
+
+Three desktop objects are randomly selected and placed in the scene.
+
+## Randomizer Details
 
 ### SceneRandomizer
-Creates the floor, four walls, ceiling, and table only when the scenario doesn’t already define a scene. Material pools can be deterministic (level 0) or sampled from the selected families (level ≥1).
 
-### ObjectRandomizer
-`ObjectPresets.heavy_object("box_base")` perturbs the box’s mass and friction while keeping the replayed pose fixed in this tutorial. You can edit `box_rand.cfg.pose` to allow position/rotation jitter during replay.
+Manages the three-layer hierarchy:
+
+**Layer 0 (Environment)**: Background geometry
+- Manual: Procedural shapes with material assignment
+- USD: Complete scene models (Kujiale)
+
+**Layer 1 (Workspace)**: Manipulation surfaces
+- Manual: Simple table primitive
+- USD: Realistic table models (Table785)
+
+**Layer 2 (Objects)**: Distractors
+- USD: Desktop items, decorations
+
+Each layer can be shared across all environments or instantiated per-environment. The `only_if_no_scene` flag prevents conflicts with scenario-defined scenes.
+
+Key responsibilities:
+- Download assets from HuggingFace on demand
+- Convert URDF to USD automatically
+- Apply default materials to manual geometry
+- Register all created objects to ObjectRegistry
 
 ### MaterialRandomizer
-`MaterialPresets.mdl_family_object("box_base", family=("paper", "wood"))` handles the object's visual material and optional physical overrides. The system implements two-stage randomization:
-1. Select a random MDL file from the configured pool
-2. Select a random material variant within that file (default behavior)
 
-For example, if a material pool contains `Rug_Carpet.mdl` (4 variants) and `Caoutchouc.mdl` (93 variants), this creates 97 possible material outcomes. Because MDL pools are resolved lazily, the first time a material is sampled it is downloaded along with any referenced textures.
+Handles both visual and physical material properties.
+
+**MDL Materials** (visual):
+```python
+MaterialPresets.mdl_family_object("box_base", family=("paper", "wood"))
+```
+
+Selects from MDL families. Each MDL file may contain multiple variants. The system:
+1. Downloads MDL file if missing (from RoboVerseOrg/roboverse_data)
+2. Downloads referenced textures (albedo, normal, roughness maps)
+3. Randomly selects a variant within the MDL (if `randomize_material_variant=True`)
+4. Applies the material using IsaacSim's official CreateMdlMaterialPrim API
+5. Generates UV coordinates for proper texture display
+
+**Physical Materials** (optional):
+```python
+PhysicalMaterialCfg(
+    friction_range=(0.3, 0.7),
+    restitution_range=(0.1, 0.3),
+    enabled=True
+)
+```
+
+Modifies physics properties on objects with RigidBodyAPI. Note that dynamic objects created by SceneRandomizer are visual-only and skip physical material randomization.
+
+### ObjectRandomizer
+
+Randomizes physics properties for static objects:
+
+```python
+ObjectPresets.heavy_object("box_base")
+```
+
+Includes:
+- Mass randomization (e.g., 15-25 kg)
+- Friction randomization
+- Restitution randomization
+- Optional pose randomization (disabled in this demo to preserve trajectory)
 
 ### LightRandomizer
-A `LightRandomizer` is attached to each ceiling light. The script selects different intensity ranges for ray-traced v path-traced renders and jitters color temperature, position, and (for the main disk light) orientation.
+
+Controls lighting parameters. The demo creates 5 lights:
+
+**Main Light** (DiskLight at ceiling center):
+```python
+LightRandomCfg(
+    light_name="ceiling_main",
+    intensity=LightIntensityRandomCfg(
+        intensity_range=(16000, 30000),  # Raytracing
+        enabled=True
+    ),
+    color=LightColorRandomCfg(
+        temperature_range=(3000, 6000),  # Warm to cool white
+        use_temperature=True,
+        enabled=True
+    )
+)
+```
+
+**Corner Lights** (4 SphereLights):
+- Slightly lower intensity range
+- Warmer temperature range (2700K-5500K)
+- Positioned at room corners for even ambient coverage
+
+Intensity ranges automatically adjust based on `--render_mode`. PathTracing requires higher values (22K-40K for main light) compared to RayTracing (16K-30K).
 
 ### CameraRandomizer
-Level 3 enables `CameraPresets.surveillance_camera`, which perturbs intrinsics/extrinsics in a combined mode so that the replayed footage mimics hand-held camera drift.
 
-## Output + customization tips
-- All renders land in `get_started/output/`. Delete the directory to keep only the latest clips.
-- The `randomizers` dict returned by `initialize_randomizers()` can be modified on the fly. For example, append more `MaterialRandomizer` instances if you add objects, or replace the `ScenePresets` call with `ScenePresets.custom_scene()` for custom geometry.
-- Because every randomizer shares the same seed, re-running the script with identical CLI arguments reproduces the full randomization timeline. Change the seed or interval to explore new perturbations.
+Active only at Level 3:
 
-This tutorial now reflects the production workflow we use internally—select a scene preset, pick material families, and let the randomizers pull assets on demand.
+```python
+CameraPresets.surveillance_camera("main_camera")
+```
+
+Applies small perturbations:
+- Position: +/- 0.1m around initial position
+- Orientation: +/- 5 degrees
+- Look-at target: +/- 0.05m around table center
+- FOV: 45-60 degrees
+
+These micro-adjustments simulate camera installation variations without drastically changing the viewpoint.
+
+## Asset Management
+
+### Automatic Downloading
+
+When an asset is requested but not found locally:
+
+1. **MDL Materials**: Download from `RoboVerseOrg/roboverse_data`
+   - Pattern: `materials/arnold/{family}/{file}.mdl`
+   - Includes all referenced textures
+
+2. **EmbodiedGen Assets** (Table785, Desktop Supplies): Download complete folders
+   - Pattern: `dataset/{category}/{uuid}/`
+   - Includes URDF, mesh files, and textures
+   - Automatically converts URDF to USD using MeshConverter
+
+3. **Kujiale Scenes**: Two-step process
+   - Download RoboVerse USDA (scene description)
+   - Download InteriorAgent assets (meshes, materials, HDR)
+   - Copy USDA to InteriorAgent folder for correct reference resolution
+
+All downloads use `huggingface_hub.snapshot_download()` with caching, so repeated runs reuse existing files.
+
+### URDF to USD Conversion
+
+EmbodiedGen provides tables and desktop objects as URDF files. The system automatically converts these to USD on first use:
+
+```python
+# User provides
+usd_path = "EmbodiedGenData/.../table/uuid.urdf"
+
+# System automatically
+1. Downloads complete folder (URDF + mesh/*.obj + textures/*.png)
+2. Uses AssetConverterFactory with MESH source type
+3. Converts to USD: uuid.usd
+4. Caches for subsequent use
+```
+
+The conversion uses the same logic as the standalone `urdf2usd.py` script, ensuring consistency.
+
+## Material Randomization Strategy
+
+Materials are randomized differently based on object type:
+
+**Mode 0** (Manual Geometry):
+- Table: Randomizes between wood and metal families
+- Floor: Randomizes between carpet, wood, and stone families
+- Walls: All 4 walls share the same material from masonry and architecture families
+- Ceiling: Randomizes between architecture and wall_board families
+
+**Mode 1** (USD Table):
+- Box: Randomizes between wood and paper families
+- Table: Uses USD original materials (geometric diversity via model switching)
+- Floor, Walls, Ceiling: Randomize (same as Mode 0)
+
+**Mode 2/3** (USD Assets):
+- Scene objects use their original USD materials (no override)
+- Only static task objects (box_base) randomize materials
+- This preserves the visual coherence of USD scenes
+
+The design principle: geometric randomization (USD switching) and material randomization (MDL application) are complementary but not mixed. Mode 0 focuses on material diversity, while modes 1-3 focus on geometric diversity.
+
+## Position Update System
+
+After scene creation, the system adjusts robot and object positions to match the table surface:
+
+```python
+table_bounds = scene_rand.get_table_bounds(env_id=0)
+if table_bounds:
+    table_height = table_bounds['height']
+    clearance = 0.05
+    
+    for obj_state in init_state["objects"].values():
+        obj_state["pos"][2] = table_height + clearance
+    for robot_state in init_state["robots"].values():
+        robot_state["pos"][2] = table_height + clearance
+```
+
+This rigid body translation preserves relative positions between entities while ensuring all are placed above the table surface. For manual geometry, table bounds are computed from configuration. For USD assets, bounds are extracted from mesh bounding boxes.
+
+## Reproducibility
+
+All randomization is deterministic when using the same seed:
+
+```python
+# Base seed from CLI
+base_seed = args.seed  # e.g., 42
+
+# Derived seeds for each randomizer
+scene_rand = SceneRandomizer(cfg, seed=base_seed)
+box_mat = MaterialRandomizer(cfg, seed=base_seed + 1)
+table_mat = MaterialRandomizer(cfg, seed=base_seed + 2)
+walls_mat = MaterialRandomizer(cfg, seed=base_seed + 100)  # Shared by all walls
+box_physics = ObjectRandomizer(cfg, seed=base_seed + 3)
+main_light = LightRandomizer(cfg, seed=base_seed + 4)
+corner_lights = [LightRandomizer(cfg, seed=base_seed + 5 + i) for i in range(4)]
+camera = CameraRandomizer(cfg, seed=base_seed + 10)
+```
+
+Each randomizer maintains an independent random number generator. Running the script twice with the same seed produces identical randomization sequences.
+
+## Customization Examples
+
+### Change Material Families
+
+```python
+# In initialize_randomizers()
+box_mat = MaterialRandomizer(
+    MaterialPresets.mdl_family_object(
+        "box_base",
+        family=("stone", "ceramic", "plastic")  # Different families
+    ),
+    seed=args.seed + 1
+)
+```
+
+### Add More Lights
+
+```python
+# Add a fill light
+fill_light = LightRandomizer(
+    LightRandomCfg(
+        light_name="fill_light",
+        intensity=LightIntensityRandomCfg(intensity_range=(5000, 10000), enabled=True)
+    ),
+    seed=args.seed + 20
+)
+randomizers["light"].append(fill_light)
+```
+
+### Use Custom Scene
+
+```python
+# Replace ScenePresets.empty_room()
+environment_layer = EnvironmentLayerCfg(
+    elements=[
+        ManualGeometryCfg(
+            name="custom_floor",
+            geometry_type="cube",
+            size=(15.0, 15.0, 0.1),
+            position=(0.0, 0.0, 0.005),
+            default_material="roboverse_data/materials/arnold/Stone/Marble.mdl"
+        ),
+        # Add custom walls, ceiling, etc.
+    ]
+)
+```
+
+### Modify Randomization Frequency
+
+```python
+# In run_replay()
+if step % args.randomize_interval == 0 and step > 0:
+    apply_randomization(randomizers, args.level)
+    
+# Try different patterns:
+# - Every N steps: step % N == 0
+# - Only at specific steps: step in [60, 120, 180]
+# - Probabilistic: if random.random() < 0.1
+```
+
+## Performance Considerations
+
+### Memory Usage
+
+The system is designed for efficient memory use:
+
+- **Manual Geometry**: USD DefinePrim is idempotent. Calling create repeatedly on the same path returns the existing prim without duplication.
+
+- **USD Assets**: The `_loaded_usds` cache tracks which assets are loaded at each path. Randomizing to the same USD skips reloading.
+
+- **Materials**: Each object gets its own material binding, but the underlying material prims are reused when the same material is applied multiple times.
+
+For long training runs, monitor memory if you observe growth. The current implementation is optimized for typical training scenarios (fixed object count, periodic randomization).
+
+### Asset Download
+
+First-time asset downloads can take several minutes depending on network speed:
+
+- Table785 (5 tables): ~200MB total
+- Kujiale scenes (12 scenes): ~2GB total (includes all meshes and textures)
+- Desktop supplies (10 objects): ~100MB total
+
+Subsequent runs use cached assets. To prefetch everything:
+
+```bash
+# Download all materials
+huggingface-cli download RoboVerseOrg/roboverse_data materials --repo-type dataset --local-dir roboverse_data
+
+# Download all Kujiale scenes
+huggingface-cli download spatialverse/InteriorAgent kujiale_0003 --repo-type dataset --local-dir third_party/InteriorAgent
+# Repeat for kujiale_0004, kujiale_0008, etc.
+```
+
+## Implementation Notes
+
+### ObjectRegistry
+
+Introduced in this refactoring, the ObjectRegistry provides unified access to all simulation objects regardless of whether they are static (Handler-managed) or dynamic (SceneRandomizer-managed).
+
+```python
+registry = ObjectRegistry.get_instance()
+all_objects = registry.list_objects()
+static_only = registry.list_objects(lifecycle='static')
+dynamic_only = registry.list_objects(lifecycle='dynamic')
+```
+
+Material, Object, Light, and Camera randomizers automatically query the registry to find their target objects. This eliminates the need for manual prim path specification in most cases.
+
+### Hybrid Simulation Support
+
+Randomizers that require specific handlers (e.g., IsaacSim for USD operations) automatically receive the appropriate sub-handler in Hybrid mode. This is transparent to users:
+
+```python
+# Works in both standalone IsaacSim and Hybrid (IsaacLab + IsaacSim) modes
+scene_rand = SceneRandomizer(cfg)
+scene_rand.bind_handler(handler)  # Automatically uses render_handler if Hybrid
+scene_rand()
+```
+
+### Why Dynamic Objects Are Visual-Only
+
+Scene elements created by SceneRandomizer cannot have physics simulation. This is an architectural constraint of IsaacLab: objects must be registered with the Handler during initialization. Post-initialization additions are visual-only.
+
+This design works well in practice:
+- Background geometry (floors, walls) rarely needs physics
+- Workspace surfaces (tables) can use invisible collision geometry if needed
+- Task objects with physics are managed by the Handler (static objects)
+
+## Common Workflows
+
+### Training Workflow
+
+```python
+# Set up randomizers once
+scene_rand = SceneRandomizer(scene_cfg, seed=base_seed)
+mat_rand = MaterialRandomizer(mat_cfg, seed=base_seed + 1)
+light_rand = LightRandomizer(light_cfg, seed=base_seed + 2)
+
+# Bind to environment
+scene_rand.bind_handler(env.handler)
+mat_rand.bind_handler(env.handler)
+light_rand.bind_handler(env.handler)
+
+# Training loop
+for epoch in range(num_epochs):
+    obs = env.reset()
+    
+    # Apply randomization at episode start
+    scene_rand()
+    mat_rand()
+    light_rand()
+    
+    for step in range(max_steps):
+        # Optional: Periodic mid-episode randomization
+        if step % randomize_interval == 0 and step > 0:
+            mat_rand()  # Vary materials during episode
+            light_rand()  # Vary lighting during episode
+        
+        action = policy(obs)
+        obs, reward, done, info = env.step(action)
+```
+
+### Evaluation Workflow
+
+```python
+# Level 0: Baseline (no randomization)
+python 12_domain_randomization.py --level 0 --seed 42
+
+# Levels 1-3: Progressive randomization
+for level in [1, 2, 3]:
+    python 12_domain_randomization.py --level {level} --seed 42
+```
+
+Compare videos to assess policy robustness across randomization complexity.
+
+## Extending the System
+
+### Add a New Randomizer
+
+```python
+# Create configuration
+@configclass
+class MyRandomCfg:
+    obj_name: str
+    my_param_range: tuple[float, float]
+
+# Implement randomizer
+class MyRandomizer(BaseRandomizerType):
+    def __init__(self, cfg: MyRandomCfg, seed: int | None = None):
+        super().__init__(seed=seed)
+        self.cfg = cfg
+    
+    def __call__(self):
+        obj = self.registry.get_object(self.cfg.obj_name)
+        value = self.rng.uniform(*self.cfg.my_param_range)
+        # Apply randomization...
+
+# Use in demo
+my_rand = MyRandomizer(cfg, seed=args.seed + 100)
+my_rand.bind_handler(handler)
+randomizers["custom"].append(my_rand)
+```
+
+### Add a New Asset Collection
+
+```python
+# In scene_presets.py
+class SceneUSDCollections:
+    @staticmethod
+    def my_custom_assets(
+        *,
+        indices: list[int] | None = None,
+        return_configs: bool = False
+    ) -> list[str] | tuple[list[str], dict]:
+        paths = [...]  # Your asset paths
+        configs = {...}  # Optional per-asset configs
+        
+        if return_configs:
+            return (paths, configs)
+        return paths
+```
+
+Then use in demo:
+
+```python
+paths, configs = SceneUSDCollections.my_custom_assets(return_configs=True)
+element = USDAssetPoolCfg(usd_paths=paths, per_path_overrides=configs)
+```
+
+## Troubleshooting
+
+### Assets Not Downloading
+
+Check network connectivity and HuggingFace access:
+
+```bash
+huggingface-cli whoami
+```
+
+If behind a firewall, you may need to prefetch assets manually.
+
+### Materials Not Appearing
+
+Ensure UV coordinates exist. The system auto-generates UVs for procedural geometry, but some USD meshes may lack them. Check IsaacSim logs for UV-related warnings.
+
+### Objects Falling Through Table
+
+This can happen if table bounds calculation fails. Check:
+
+```python
+table_bounds = scene_rand.get_table_bounds(env_id=0)
+print(table_bounds)  # Should show reasonable height (e.g., 0.7m)
+```
+
+If bounds are invalid (e.g., astronomical numbers), the position update is skipped. This usually indicates an issue with the USD asset or bounding box computation.
+
+### Memory Growing Over Time
+
+For long training runs, monitor memory usage:
+
+```python
+import psutil
+process = psutil.Process()
+
+# Before randomization
+mem_before = process.memory_info().rss / 1024 / 1024
+
+# After N episodes
+mem_after = process.memory_info().rss / 1024 / 1024
+print(f"Memory delta: {mem_after - mem_before:.1f} MB")
+```
+
+If growth exceeds 1GB/hour, this may indicate a leak. Profile to identify the source, though the current implementation is designed to be memory-stable.
+
+## Summary
+
+This tutorial demonstrates a complete domain randomization pipeline with:
+
+- Four scene complexity modes (manual to full USD)
+- Four randomization levels (baseline to full perturbation)
+- Automatic asset downloading and conversion
+- Reproducible randomization with explicit seeds
+- Clean separation between static and dynamic objects
+- Unified object access via ObjectRegistry
+
+The architecture supports both evaluation (short runs, visual diversity) and training (long runs, stability, reproducibility). Customize by editing randomizer configurations, adding new randomizers, or defining custom asset collections.

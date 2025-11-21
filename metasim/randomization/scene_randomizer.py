@@ -1,7 +1,21 @@
-"""Scene randomizer for domain randomization.
+"""Scene Randomizer - Dynamic object lifecycle manager.
 
-This module provides functionality to randomize scene geometry and surface materials,
-including walls, floors, ceilings, and tabletops when no predefined scene exists.
+The SceneRandomizer is responsible for managing dynamic objects that can be
+created, deleted, and switched at runtime. It operates on three hierarchical layers:
+
+Layers:
+- Environment: Backgrounds, rooms, walls, floors, ceilings
+- Workspace: Tables, desktops, manipulation surfaces
+- Objects: Static distractor objects (cups, fruits, etc.)
+
+Key features:
+- Direct USD Stage manipulation (bypasses Handler)
+- Supports Manual Geometry (procedural) and USD Assets
+- Registers all created objects to ObjectRegistry
+- Built-in material randomization for Manual Geometry
+
+Note: All objects created by SceneRandomizer are pure visual (disable_physics=True)
+      and cannot be added to Handler's scene structure due to IsaacLab limitations.
 """
 
 from __future__ import annotations
@@ -13,111 +27,227 @@ from typing import Literal
 from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
+from metasim.randomization.core.object_registry import ObjectMetadata, ObjectRegistry
 from metasim.utils.configclass import configclass
 
+# =============================================================================
+# Scene Element Configurations
+# =============================================================================
+
 
 @configclass
-class SceneGeometryCfg:
-    """Configuration for scene geometry elements.
+class ManualGeometryCfg:
+    """Manual procedural geometry configuration.
 
-    Args:
-        enabled: Whether to create this geometry element
-        size: Size of the geometry (x, y, z) in meters
-        position: Position of the geometry (x, y, z) in meters
-        material_randomization: Whether to randomize material for this element
+    SceneRandomizer creates geometry with optional default material.
+    For material randomization, use MaterialRandomizer.
+
+    Attributes:
+        name: Unique element name
+        geometry_type: Primitive type (cube, sphere, cylinder, plane)
+        size: Geometry size (x, y, z) in meters
+        position: World position (x, y, z)
+        rotation: Orientation quaternion (w, x, y, z)
+        add_collision: Whether to add collision (usually False for scene elements)
+        default_material: Default MDL material path (applied once at creation, optional)
+        enabled: Whether this element is active
+
+    Example:
+        # Create table with default material
+        table = ManualGeometryCfg(
+            name="table",
+            geometry_type="cube",
+            size=(1.8, 1.8, 0.1),
+            default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl"  # Optional
+        )
+
+        # Later: Randomize material (separate step)
+        table_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("table", family=("wood", "stone"))
+        )
     """
 
-    enabled: bool = True
-    size: tuple[float, float, float] = (1.0, 1.0, 0.1)
+    name: str = dataclasses.MISSING
+    geometry_type: Literal["cube", "sphere", "cylinder", "plane"] = "cube"
+    size: tuple[float, float, float] = (1.0, 1.0, 1.0)
     position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    material_randomization: bool = True
+    rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    add_collision: bool = False
+    default_material: str | None = None
+    enabled: bool = True
 
 
 @configclass
-class SceneMaterialPoolCfg:
-    """Configuration for scene material pools.
+class USDAssetCfg:
+    """Single USD asset configuration.
 
-    Args:
-        material_paths: List of paths to material files (MDL). Can use "path/to/file.mdl::MaterialName"
-                       to specify a particular material variant within a file
-        selection_strategy: How to select from available materials
-        weights: Optional weights for weighted selection
-        randomize_material_variant: If True, randomly select from all material variants in each MDL file.
-                                   This expands diversity significantly (e.g., floor materials can use
-                                   all 4 variants from Rug_Carpet.mdl instead of just the first one).
-                                   **Default: True** to maximize diversity. Fully reproducible with seed.
+    Attributes:
+        name: Unique element name
+        usd_path: Path to USD file
+        position: World position (x, y, z)
+        rotation: Orientation quaternion (w, x, y, z)
+        scale: Scale factor (x, y, z)
+        auto_download: Enable automatic asset download
+        enabled: Whether this element is active
+
+    Note: Scene objects are always pure visual (physics disabled)
     """
 
-    material_paths: list[str] = dataclasses.field(default_factory=list)
-    selection_strategy: Literal["random", "sequential", "weighted"] = "random"
-    weights: list[float] | None = None
-    randomize_material_variant: bool = True  # Default True for maximum diversity
+    name: str = dataclasses.MISSING
+    usd_path: str = dataclasses.MISSING
+    position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    auto_download: bool = True
+    enabled: bool = True
 
     def __post_init__(self):
-        """Validate material pool configuration."""
-        if self.selection_strategy == "weighted":
-            if self.weights is None or len(self.weights) != len(self.material_paths):
-                raise ValueError("weights must be provided and match material_paths length for weighted selection")
+        if not self.usd_path:
+            raise ValueError(f"USDAssetCfg '{self.name}': usd_path cannot be empty")
+
+
+@configclass
+class USDAssetPoolCfg:
+    """USD asset pool configuration.
+
+    Randomly selects one USD from a pool. Supports per-path configuration overrides.
+
+    Attributes:
+        name: Pool name
+        usd_paths: List of USD file paths (will be converted to candidates)
+        per_path_overrides: Dict mapping USD path to override config
+        position: Default position for all USDs
+        rotation: Default rotation for all USDs
+        scale: Default scale for all USDs
+        selection_strategy: Selection strategy (random, sequential)
+        auto_download: Enable automatic download
+        enabled: Whether this pool is active
+    """
+
+    name: str = dataclasses.MISSING
+    usd_paths: list[str] | None = None
+    per_path_overrides: dict[str, dict] | None = None
+    position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    selection_strategy: Literal["random", "sequential"] = "random"
+    auto_download: bool = True
+    enabled: bool = True
+    candidates: list[USDAssetCfg] | None = None  # Will be auto-generated
+
+    def __post_init__(self):
+        if not self.usd_paths:
+            raise ValueError(f"USDAssetPoolCfg '{self.name}': usd_paths cannot be empty")
+
+        # Convert usd_paths to candidates
+        self.candidates = []
+        for i, path in enumerate(self.usd_paths):
+            cfg_kwargs = {
+                "name": f"{self.name}_{i}",
+                "usd_path": path,
+                "position": self.position,
+                "rotation": self.rotation,
+                "scale": self.scale,
+                "auto_download": self.auto_download,
+                "enabled": self.enabled,
+            }
+
+            # Apply per-path overrides (filter out invalid keys)
+            if self.per_path_overrides:
+                from pathlib import Path
+
+                override = self.per_path_overrides.get(path) or self.per_path_overrides.get(Path(path).name)
+                if override:
+                    # Only update valid USDAssetCfg fields
+                    valid_keys = {"position", "rotation", "scale", "auto_download", "enabled"}
+                    for k, v in override.items():
+                        if k in valid_keys:
+                            cfg_kwargs[k] = v
+
+            self.candidates.append(USDAssetCfg(**cfg_kwargs))
+
+
+# =============================================================================
+# Layer Configurations
+# =============================================================================
+
+
+@configclass
+class SceneLayerCfg:
+    """Scene layer configuration.
+
+    Attributes:
+        elements: List of scene elements (Manual Geometry or USD Assets)
+        shared: Whether elements are shared across all environments
+        z_offset: Z-axis offset to apply to all elements
+        enabled: Whether this layer is active
+    """
+
+    elements: list[ManualGeometryCfg | USDAssetCfg | USDAssetPoolCfg] = dataclasses.field(default_factory=list)
+    shared: bool = True
+    z_offset: float = 0.0
+    enabled: bool = True
+
+
+# Type aliases for clarity
+EnvironmentLayerCfg = SceneLayerCfg
+WorkspaceLayerCfg = SceneLayerCfg
+ObjectsLayerCfg = SceneLayerCfg
 
 
 @configclass
 class SceneRandomCfg:
-    """Configuration for scene randomization.
+    """Scene randomization configuration.
 
-    Args:
-        floor: Floor geometry configuration
-        walls: Wall geometry configuration (4 walls)
-        ceiling: Ceiling geometry configuration
-        table: Table/desktop geometry configuration
-        floor_materials: Material pool for floor
-        wall_materials: Material pool for walls
-        ceiling_materials: Material pool for ceiling
-        table_materials: Material pool for table/desktop
-        only_if_no_scene: Only create scene elements if no predefined scene exists
-        env_ids: List of environment IDs to apply randomization to (None = all)
-        auto_flush_visuals: Automatically flush visual updates after material changes
+    Attributes:
+        environment_layer: Environment layer (floor, walls, ceiling)
+        workspace_layer: Workspace layer (tables, desktops)
+        objects_layer: Objects layer (distractors)
+        auto_flush_visuals: Auto flush visual updates after material changes
+        only_if_no_scene: Only create scene if none exists
     """
 
-    floor: SceneGeometryCfg | None = None
-    walls: SceneGeometryCfg | None = None
-    ceiling: SceneGeometryCfg | None = None
-    table: SceneGeometryCfg | None = None
-
-    floor_materials: SceneMaterialPoolCfg | None = None
-    wall_materials: SceneMaterialPoolCfg | None = None
-    ceiling_materials: SceneMaterialPoolCfg | None = None
-    table_materials: SceneMaterialPoolCfg | None = None
-
-    only_if_no_scene: bool = True
-    env_ids: list[int] | None = None
+    environment_layer: SceneLayerCfg | None = None
+    workspace_layer: SceneLayerCfg | None = None
+    objects_layer: SceneLayerCfg | None = None
     auto_flush_visuals: bool = True
+    only_if_no_scene: bool = False
 
-    def __post_init__(self):
-        """Validate scene randomization configuration."""
-        # Check if at least one element is enabled
-        enabled_elements = [
-            elem for elem in [self.floor, self.walls, self.ceiling, self.table] if elem is not None and elem.enabled
-        ]
-        if not enabled_elements:
-            logger.warning("No scene elements enabled in SceneRandomCfg")
+
+# =============================================================================
+# Scene Randomizer Implementation
+# =============================================================================
 
 
 class SceneRandomizer(BaseRandomizerType):
-    """Randomizer for scene geometry and materials.
+    """Scene randomizer for dynamic object lifecycle management.
 
-    This randomizer creates and randomizes scene elements (floor, walls, ceiling, table)
-    when no predefined scene exists. It samples materials from curated ARNOLD and
-    vMaterials collections.
+    Responsibilities:
+    - Create dynamic objects (Manual Geometry and USD Assets)
+    - Delete dynamic objects
+    - Switch dynamic objects (USD switching)
+    - Set dynamic object transforms
+    - NOT responsible for: Material randomization (use MaterialRandomizer)
 
-    Example:
-        >>> cfg = SceneRandomCfg(
-        ...     floor=SceneGeometryCfg(enabled=True, size=(10.0, 10.0, 0.1)),
-        ...     floor_materials=SceneMaterialPoolCfg(material_paths=["..."])
-        ... )
-        >>> randomizer = SceneRandomizer(cfg, seed=42)
-        >>> randomizer.bind_handler(handler)
-        >>> randomizer()  # Apply randomization
+    Characteristics:
+    - Operates directly on USD Stage (bypasses Handler)
+    - All created objects are pure visual (disable_physics=True)
+    - Registers objects to ObjectRegistry for unified access
+    - Supports Hybrid simulation (uses render_handler)
+
+    Usage:
+        cfg = SceneRandomCfg(
+            workspace_layer=SceneLayerCfg(
+                shared=True,
+                elements=[USDAssetPoolCfg(name="table", usd_paths=[...])]
+            )
+        )
+        randomizer = SceneRandomizer(cfg, seed=42)
+        randomizer.bind_handler(handler)
+        randomizer()  # Create/switch scene objects
     """
+
+    REQUIRES_HANDLER = "render"  # Use render_handler for Hybrid
 
     def __init__(self, cfg: SceneRandomCfg, seed: int | None = None):
         """Initialize scene randomizer.
@@ -126,490 +256,796 @@ class SceneRandomizer(BaseRandomizerType):
             cfg: Scene randomization configuration
             seed: Random seed for reproducibility
         """
-        # Initialize material selection state for sequential selection
-        self._material_selection_state = {
-            "floor_index": 0,
-            "wall_index": 0,
-            "ceiling_index": 0,
-            "table_index": 0,
-        }
-
-        # Track created prims to avoid recreating
-        self._created_prims = set()
-
-        self.cfg = cfg
         super().__init__(seed=seed)
+        self.cfg = cfg
+        self.registry: ObjectRegistry | None = None
 
-        logger.debug(f"SceneRandomizer initialized with seed {self._seed}")
+        # USD Stage (lazy initialized)
+        self.stage = None
+        self.prim_utils = None
 
-    def set_seed(self, seed: int | None) -> None:
-        """Set seed and reset sequential selection state."""
-        super().set_seed(seed)
-        # Reset sequential indices so repeated seeding reproduces selections
-        for key in self._material_selection_state:
-            self._material_selection_state[key] = 0
+        # Track created prims for switching
+        self._created_prims: dict[str, list[str]] = {}
+        self._loaded_usds: dict[str, str] = {}  # {prim_path: usd_path}
 
     def bind_handler(self, handler):
-        """Bind the scene randomizer to a simulation handler.
+        """Bind handler and initialize USD Stage.
 
         Args:
-            handler: Simulation handler to bind to
+            handler: SimHandler instance (automatically uses render_handler for Hybrid)
         """
         super().bind_handler(handler)
 
-        # Check if scene exists
-        if self.cfg.only_if_no_scene:
-            self._check_scene_exists()
+        # Get Registry (use _actual_handler for Hybrid support)
+        self.registry = ObjectRegistry.get_instance(self._actual_handler)
 
-    def _check_scene_exists(self) -> bool:
-        """Check if a predefined scene exists.
+        # Initialize USD
+        try:
+            import omni.isaac.core.utils.prims as prim_utils
+        except ModuleNotFoundError:
+            import isaacsim.core.utils.prims as prim_utils
 
-        Returns:
-            True if scene exists, False otherwise
-        """
-        # Check if handler has a scene object
-        if hasattr(self.handler, "scenario") and hasattr(self.handler.scenario, "scene"):
-            if self.handler.scenario.scene is not None:
-                logger.info("Predefined scene detected, SceneRandomizer will skip geometry creation")
-                return True
-            else:
-                logger.debug("No predefined scene provided; SceneRandomizer will create geometry")
-
-                return False
-        return False
+        self.prim_utils = prim_utils
+        self.stage = prim_utils.get_current_stage()
 
     def __call__(self, env_ids: list[int] | None = None):
-        """Apply scene randomization.
+        """Execute scene randomization.
 
         Args:
-            env_ids: Optional list of environment IDs to randomize. If None, uses cfg.env_ids
+            env_ids: Environment IDs to randomize (None = all environments)
         """
-        if not self.handler:
+        if not self._actual_handler:
             raise RuntimeError("Handler not bound. Call bind_handler() first.")
 
         # Skip if scene exists and only_if_no_scene is True
         if self.cfg.only_if_no_scene and self._check_scene_exists():
-            # Still apply material randomization to existing elements
-            self._randomize_materials_only(env_ids)
             return
 
-        # Get environment IDs to randomize
-        target_env_ids = env_ids if env_ids is not None else self.cfg.env_ids
-        if target_env_ids is None:
-            target_env_ids = list(range(self.handler.num_envs))
+        # Get target environment IDs
+        target_env_ids = env_ids if env_ids is not None else list(range(self._actual_handler.num_envs))
 
-        # Create and randomize scene elements for each environment
-        for env_id in target_env_ids:
-            self._randomize_scene_for_env(env_id)
+        # Process layers
+        if self.cfg.environment_layer and self.cfg.environment_layer.enabled:
+            self._process_layer(self.cfg.environment_layer, "environment", target_env_ids)
 
-        # Auto-flush visual updates after material changes (if enabled)
+        if self.cfg.workspace_layer and self.cfg.workspace_layer.enabled:
+            self._process_layer(self.cfg.workspace_layer, "workspace", target_env_ids)
+
+        if self.cfg.objects_layer and self.cfg.objects_layer.enabled:
+            self._process_layer(self.cfg.objects_layer, "objects", target_env_ids)
+
+        # Auto-flush visual updates
         if self.cfg.auto_flush_visuals:
-            self._mark_visual_dirty()
-            flush_fn = getattr(self.handler, "flush_visual_updates", None)
-            if callable(flush_fn):
-                try:
-                    flush_fn(wait_for_materials=True, settle_passes=2)
-                except Exception as e:
-                    logger.debug(f"Failed to auto-flush visual updates: {e}")
+            self._flush_visual_updates()
 
-    def _randomize_scene_for_env(self, env_id: int):
-        """Randomize scene for a specific environment.
+    def _check_scene_exists(self) -> bool:
+        """Check if scene already exists."""
+        # Check if any layer has created prims
+        return len(self._created_prims) > 0
 
-        Args:
-            env_id: Environment ID
-        """
-        env_prim_path = f"/World/envs/env_{env_id}"
-
-        # Create/randomize floor
-        if self.cfg.floor is not None and self.cfg.floor.enabled:
-            self._create_or_update_floor(env_prim_path, env_id)
-
-        # Create/randomize walls
-        if self.cfg.walls is not None and self.cfg.walls.enabled:
-            self._create_or_update_walls(env_prim_path, env_id)
-
-        # Create/randomize ceiling
-        if self.cfg.ceiling is not None and self.cfg.ceiling.enabled:
-            self._create_or_update_ceiling(env_prim_path, env_id)
-
-        # Create/randomize table
-        if self.cfg.table is not None and self.cfg.table.enabled:
-            self._create_or_update_table(env_prim_path, env_id)
-
-    def _create_or_update_floor(self, env_prim_path: str, env_id: int):
-        """Create or update floor geometry and material.
-
-        We always create our own large floor plane positioned slightly above z=0
-        to ensure materials are visible, rather than trying to modify IsaacSim's terrain.
+    def _process_layer(
+        self,
+        layer_cfg: SceneLayerCfg,
+        layer_name: str,
+        env_ids: list[int],
+    ):
+        """Process a scene layer.
 
         Args:
-            env_prim_path: Environment prim path
-            env_id: Environment ID
+            layer_cfg: Layer configuration
+            layer_name: Layer name (environment, workspace, objects)
+            env_ids: Environment IDs to process
         """
-        # Create our own floor geometry at World level (shared across envs)
-        floor_path = "/World/scene_floor"
+        for element in layer_cfg.elements:
+            if not element.enabled:
+                continue
 
-        if floor_path not in self._created_prims:
-            # Use configured size and position
-            floor_size = self.cfg.floor.size
-            floor_position = self.cfg.floor.position
+            if isinstance(element, ManualGeometryCfg):
+                self._process_manual_geometry(element, layer_name, layer_cfg, env_ids)
+            elif isinstance(element, USDAssetCfg):
+                self._process_usd_asset(element, layer_name, layer_cfg, env_ids)
+            elif isinstance(element, USDAssetPoolCfg):
+                self._process_usd_pool(element, layer_name, layer_cfg, env_ids)
 
-            self._create_cube_prim(floor_path, floor_size, floor_position)
-            self._created_prims.add(floor_path)
-            logger.info(f"Created custom floor plane at {floor_path} (size={floor_size}, pos={floor_position})")
+    # -------------------------------------------------------------------------
+    # Manual Geometry Processing
+    # -------------------------------------------------------------------------
 
-        # Randomize material every time this is called
-        if self.cfg.floor.material_randomization and self.cfg.floor_materials is not None:
-            material_path = self._select_material(self.cfg.floor_materials, "floor_index")
-            if material_path:
-                material_name = material_path.split("/")[-1].replace(".mdl", "")
-                logger.info(f"Applying floor material: {material_name} to {floor_path}")
-                self._apply_scene_material(material_path, floor_path, self.cfg.floor_materials)
-
-    def _create_or_update_walls(self, env_prim_path: str, env_id: int):
-        """Create or update wall geometry and materials (4 walls).
+    def _process_manual_geometry(
+        self,
+        element: ManualGeometryCfg,
+        layer_name: str,
+        layer_cfg: SceneLayerCfg,
+        env_ids: list[int],
+    ):
+        """Process manual geometry element.
 
         Args:
-            env_prim_path: Environment prim path
-            env_id: Environment ID
+            element: Manual geometry configuration
+            layer_name: Layer name
+            layer_cfg: Layer configuration
+            env_ids: Environment IDs
         """
-        # Wall naming: front, back, left, right
-        wall_configs = self._generate_wall_configs(self.cfg.walls.size, self.cfg.walls.position)
+        if layer_cfg.shared:
+            # Shared: create one prim for all environments
+            prim_path = f"/World/scene_{layer_name}_{element.name}"
+            self._create_geometry_prim(element, prim_path, layer_cfg.z_offset)
+            prim_paths = [prim_path]
+        else:
+            # Per-env: create one prim per environment
+            prim_paths = []
+            for env_id in env_ids:
+                prim_path = f"/World/envs/env_{env_id}/scene_{layer_name}_{element.name}"
+                self._create_geometry_prim(element, prim_path, layer_cfg.z_offset)
+                prim_paths.append(prim_path)
 
-        logger.debug(f"Wall configs: {wall_configs}")
+        # Register to ObjectRegistry (only on first creation)
+        if element.name not in self._created_prims:
+            self.registry.register(
+                ObjectMetadata(
+                    name=element.name,
+                    category="scene_element",
+                    lifecycle="dynamic",
+                    prim_paths=prim_paths,
+                    shared=layer_cfg.shared,
+                    has_physics=False,
+                    layer=layer_name,
+                )
+            )
+            self._created_prims[element.name] = prim_paths
 
-        # Select material once for all walls (same material for all 4 walls)
-        material_path = None
-        if self.cfg.walls.material_randomization and self.cfg.wall_materials is not None:
-            material_path = self._select_material(self.cfg.wall_materials, "wall_index")
-
-        for wall_name, (size, position) in wall_configs.items():
-            wall_path = f"{env_prim_path}/scene_wall_{wall_name}"
-
-            logger.debug(f"Creating wall '{wall_name}' at {wall_path}: size={size}, position={position}")
-
-            # Create wall if it doesn't exist
-            if wall_path not in self._created_prims:
-                self._create_cube_prim(wall_path, size, position)
-                self._created_prims.add(wall_path)
-                logger.debug(f"Wall '{wall_name}' created and added to _created_prims")
-            else:
-                logger.debug(f"Wall '{wall_name}' already exists, skipping creation")
-
-            # Apply the selected material to this wall
-            if material_path:
-                self._apply_scene_material(material_path, wall_path, self.cfg.wall_materials)
-
-    def _create_or_update_ceiling(self, env_prim_path: str, env_id: int):
-        """Create or update ceiling geometry and material.
+    def _create_geometry_prim(self, element: ManualGeometryCfg, prim_path: str, z_offset: float):
+        """Create a procedural geometry prim.
 
         Args:
-            env_prim_path: Environment prim path
-            env_id: Environment ID
+            element: Manual geometry configuration
+            prim_path: USD prim path
+            z_offset: Z-axis offset
         """
-        ceiling_path = f"{env_prim_path}/scene_ceiling"
+        from pxr import Gf, UsdGeom
 
-        # Create ceiling if it doesn't exist
-        if ceiling_path not in self._created_prims:
-            self._create_cube_prim(ceiling_path, self.cfg.ceiling.size, self.cfg.ceiling.position)
-            self._created_prims.add(ceiling_path)
+        if not self.stage:
+            logger.warning("No stage available for geometry creation")
+            return
 
-        # Randomize material
-        if self.cfg.ceiling.material_randomization and self.cfg.ceiling_materials is not None:
-            material_path = self._select_material(self.cfg.ceiling_materials, "ceiling_index")
-            if material_path:
-                self._apply_scene_material(material_path, ceiling_path, self.cfg.ceiling_materials)
+        # Adjust position with z_offset
+        pos = list(element.position)
+        pos[2] += z_offset
 
-    def _create_or_update_table(self, env_prim_path: str, env_id: int):
-        """Create or update table/desktop geometry and material.
+        # Create geometry based on type
+        if element.geometry_type == "cube":
+            geom = UsdGeom.Cube.Define(self.stage, prim_path)
+            geom.GetSizeAttr().Set(2.0)  # Unit cube, will scale via transform
+        elif element.geometry_type == "sphere":
+            geom = UsdGeom.Sphere.Define(self.stage, prim_path)
+            geom.GetRadiusAttr().Set(element.size[0])
+        elif element.geometry_type == "cylinder":
+            geom = UsdGeom.Cylinder.Define(self.stage, prim_path)
+            geom.GetRadiusAttr().Set(element.size[0])
+            geom.GetHeightAttr().Set(element.size[2])
+        elif element.geometry_type == "plane":
+            geom = UsdGeom.Mesh.Define(self.stage, prim_path)
+            # Define plane vertices
+            points = [
+                (-element.size[0] / 2, -element.size[1] / 2, 0),
+                (element.size[0] / 2, -element.size[1] / 2, 0),
+                (element.size[0] / 2, element.size[1] / 2, 0),
+                (-element.size[0] / 2, element.size[1] / 2, 0),
+            ]
+            geom.CreatePointsAttr().Set(points)
+            geom.CreateFaceVertexCountsAttr().Set([4])
+            geom.CreateFaceVertexIndicesAttr().Set([0, 1, 2, 3])
+        else:
+            logger.error(f"Unsupported geometry type: {element.geometry_type}")
+            return
+
+        # Set transform (position, rotation, scale)
+        xform = UsdGeom.Xformable(geom)
+        xform.ClearXformOpOrder()
+        xform.AddTranslateOp().Set(Gf.Vec3d(*pos))
+        xform.AddOrientOp().Set(
+            Gf.Quatf(element.rotation[0], Gf.Vec3f(element.rotation[1], element.rotation[2], element.rotation[3]))
+        )
+        # Scale to actual size (cube is 2.0 units, scale to desired size)
+        scale_factor = (element.size[0] / 2.0, element.size[1] / 2.0, element.size[2] / 2.0)
+        xform.AddScaleOp().Set(Gf.Vec3d(*scale_factor))
+
+        # Add collision if requested
+        if element.add_collision:
+            from pxr import UsdPhysics
+
+            UsdPhysics.CollisionAPI.Apply(geom.GetPrim())
+
+        # Apply default material if specified (once, not randomized)
+        if element.default_material:
+            try:
+                if not hasattr(self, "adapter"):
+                    from metasim.randomization.core.isaacsim_adapter import IsaacSimAdapter
+
+                    self.adapter = IsaacSimAdapter(self._actual_handler)
+
+                # Apply material (adapter will handle unique naming internally)
+                self.adapter.apply_mdl_material(prim_path, element.default_material)
+            except Exception:
+                pass
+
+    # -------------------------------------------------------------------------
+    # USD Asset Processing
+    # -------------------------------------------------------------------------
+
+    def _process_usd_pool(
+        self,
+        element: USDAssetPoolCfg,
+        layer_name: str,
+        layer_cfg: SceneLayerCfg,
+        env_ids: list[int],
+    ):
+        """Process USD asset pool (select one and load).
 
         Args:
-            env_prim_path: Environment prim path
-            env_id: Environment ID
+            element: USD asset pool configuration
+            layer_name: Layer name
+            layer_cfg: Layer configuration
+            env_ids: Environment IDs
         """
-        table_path = f"{env_prim_path}/scene_table"
+        # Select from candidates (usd_paths was converted to candidates in __post_init__)
+        if not element.candidates:
+            logger.error(f"USD pool '{element.name}' has no candidates")
+            return
 
-        # Create table if it doesn't exist
-        if table_path not in self._created_prims:
-            self._create_cube_prim(table_path, self.cfg.table.size, self.cfg.table.position)
-            self._created_prims.add(table_path)
+        if element.selection_strategy == "random":
+            asset_cfg = self.rng.choice(element.candidates)
+        else:  # sequential
+            if not hasattr(self, "_usd_pool_indices"):
+                self._usd_pool_indices = {}
+            pool_key = element.name
+            if pool_key not in self._usd_pool_indices:
+                self._usd_pool_indices[pool_key] = 0
+            idx = self._usd_pool_indices[pool_key] % len(element.candidates)
+            self._usd_pool_indices[pool_key] += 1
+            asset_cfg = element.candidates[idx]
 
-        # Randomize material
-        if self.cfg.table.material_randomization and self.cfg.table_materials is not None:
-            material_path = self._select_material(self.cfg.table_materials, "table_index")
-            if material_path:
-                self._apply_scene_material(material_path, table_path, self.cfg.table_materials)
+        # Process the selected USD asset (use pool name for consistent prim_path)
+        self._process_usd_asset(asset_cfg, layer_name, layer_cfg, env_ids, override_name=element.name)
 
-    def _generate_wall_configs(
-        self, base_size: tuple[float, float, float], base_position: tuple[float, float, float]
-    ) -> dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Generate configurations for 4 walls around a room.
+    def _process_usd_asset(
+        self,
+        element: USDAssetCfg,
+        layer_name: str,
+        layer_cfg: SceneLayerCfg,
+        env_ids: list[int],
+        override_name: str | None = None,
+    ):
+        """Process single USD asset.
 
         Args:
-            base_size: Base wall size (room_length, thickness, height)
-            base_position: Center position of walls (x, y, z_center)
-
-        Returns:
-            Dictionary mapping wall names to (size, position) tuples
+            element: USD asset configuration
+            layer_name: Layer name
+            layer_cfg: Layer configuration
+            env_ids: Environment IDs
+            override_name: Override name for consistent prim paths (used by pools)
         """
-        room_length, thickness, height = base_size
-        cx, cy, cz = base_position
+        # Handle auto-download if needed
+        if element.auto_download:
+            if not hasattr(self, "_prepared_usds"):
+                self._prepared_usds = set()
 
-        # Calculate wall positions and sizes to form a complete enclosure
-        # The room is centered at (cx, cy), with room_length x room_length size
-        # Walls are placed at the edges, with thickness extending outward
+            if not self._ensure_usd_downloaded(element.usd_path, self._prepared_usds, auto_download=True):
+                logger.error(f"Failed to download USD: {element.usd_path}")
+                return
 
-        half_room = room_length / 2.0  # Distance from center to edge
-        half_thickness = thickness / 2.0
+        # Use override_name (from pool) for consistent prim_path across randomizations
+        element_name = override_name if override_name else element.name
 
-        # Front/Back walls extend in X direction, should cover full width INCLUDING side wall thickness
-        # Left/Right walls extend in Y direction, fit BETWEEN front/back walls
+        if layer_cfg.shared:
+            # Shared: create one prim for all environments
+            prim_path = f"/World/scene_{layer_name}_{element_name}"
+            self._load_or_replace_usd(prim_path, element, layer_cfg.z_offset)
+            prim_paths = [prim_path]
+        else:
+            # Per-env: create one prim per environment
+            prim_paths = []
+            for env_id in env_ids:
+                prim_path = f"/World/envs/env_{env_id}/scene_{layer_name}_{element_name}"
+                self._load_or_replace_usd(prim_path, element, layer_cfg.z_offset)
+                prim_paths.append(prim_path)
 
-        return {
-            # Front wall (positive Y side)
-            # - Extends in X direction: width = room_length + 2*thickness (to cover side walls)
-            # - Center Y position: cy + half_room + half_thickness (outer edge of room)
-            "front": (
-                (room_length + 2 * thickness, thickness, height),  # Cover corners
-                (cx, cy + half_room + half_thickness, cz),
-            ),
-            # Back wall (negative Y side)
-            "back": (
-                (room_length + 2 * thickness, thickness, height),  # Cover corners
-                (cx, cy - half_room - half_thickness, cz),
-            ),
-            # Left wall (negative X side)
-            # - Extends in Y direction: length = room_length (fits between front/back)
-            # - Center X position: cx - half_room - half_thickness (outer edge of room)
-            "left": (
-                (thickness, room_length, height),  # Fits between front/back walls
-                (cx - half_room - half_thickness, cy, cz),
-            ),
-            # Right wall (positive X side)
-            "right": (
-                (thickness, room_length, height),  # Fits between front/back walls
-                (cx + half_room + half_thickness, cy, cz),
-            ),
-        }
+        # Register to ObjectRegistry (use element_name for consistency)
+        if element_name not in self._created_prims:
+            self.registry.register(
+                ObjectMetadata(
+                    name=element_name,  # Use pool name, not candidate name
+                    category="scene_element",
+                    lifecycle="dynamic",
+                    prim_paths=prim_paths,
+                    shared=layer_cfg.shared,
+                    has_physics=False,
+                    layer=layer_name,
+                )
+            )
+            self._created_prims[element_name] = prim_paths
 
-    def _create_cube_prim(self, prim_path: str, size: tuple[float, float, float], position: tuple[float, float, float]):
-        """Create a cube primitive with physics collision using IsaacSim commands.
+    def _load_or_replace_usd(self, prim_path: str, element: USDAssetCfg, z_offset: float):
+        """Load or replace USD asset at prim_path.
 
         Args:
             prim_path: USD prim path
-            size: Size of the cube (x, y, z)
-            position: Position of the cube (x, y, z)
+            element: USD asset configuration
+            z_offset: Z-axis offset
+        """
+        # Check if we need to replace
+        if prim_path in self._loaded_usds:
+            if self._loaded_usds[prim_path] != element.usd_path:
+                # Different USD: replace
+                logger.info(f"Replacing USD at {prim_path}")
+                logger.info(f"   Old: {self._loaded_usds[prim_path]}")
+                logger.info(f"   New: {element.usd_path}")
+                self._delete_usd(prim_path)
+                self._load_usd(prim_path, element, z_offset)
+                self._loaded_usds[prim_path] = element.usd_path
+                logger.info("USD replaced successfully")
+            else:
+                # Same USD: skip (already loaded)
+                pass
+        else:
+            # First time: load
+            self._load_usd(prim_path, element, z_offset)
+            self._loaded_usds[prim_path] = element.usd_path
+
+    def _load_usd(self, prim_path: str, element: USDAssetCfg, z_offset: float):
+        """Load USD asset.
+
+        Args:
+            prim_path: USD prim path
+            element: USD asset configuration
+            z_offset: Z-axis offset
+        """
+        import os
+
+        from pxr import Gf, UsdGeom
+
+        # Check for Kujiale path remapping (RoboVerse -> InteriorAgent folder)
+        usd_to_load = element.usd_path
+        if hasattr(self, "_usda_path_mapping") and element.usd_path in self._usda_path_mapping:
+            usd_to_load = self._usda_path_mapping[element.usd_path]
+
+        # Check if URDF (needs conversion)
+        is_urdf = usd_to_load.endswith(".urdf")
+
+        if is_urdf:
+            # URDF: Convert to USD first (using MESH converter)
+            usd_path = self._convert_urdf_to_usd(usd_to_load)
+            if not usd_path:
+                logger.error(f"Failed to convert URDF: {element.usd_path}")
+                # Create empty Xform as placeholder
+                self.stage.DefinePrim(prim_path, "Xform")
+                return
+
+            # Load the converted USD (use absolute path)
+            usd_path_abs = os.path.abspath(usd_path)
+            try:
+                try:
+                    from omni.isaac.core.utils.stage import add_reference_to_stage
+                except ImportError:
+                    import isaacsim.core.utils.stage as stage_utils
+
+                    add_reference_to_stage = stage_utils.add_reference_to_stage
+
+                add_reference_to_stage(usd_path_abs, prim_path)
+            except Exception as e:
+                logger.error(f"Failed to load converted USD: {e}")
+                return
+        else:
+            # USD: Use reference (absolute path)
+            usd_path_abs = os.path.abspath(usd_to_load)
+            try:
+                try:
+                    from omni.isaac.core.utils.stage import add_reference_to_stage
+                except ImportError:
+                    import isaacsim.core.utils.stage as stage_utils
+
+                    add_reference_to_stage = stage_utils.add_reference_to_stage
+
+                add_reference_to_stage(usd_path_abs, prim_path)
+            except Exception as e:
+                # Fallback: use USD API directly
+                ref_prim = self.stage.DefinePrim(prim_path, "Xform")
+                if not ref_prim:
+                    logger.error(f"Failed to create prim at {prim_path}")
+                    return
+                # Use absolute path and don't specify defaultPrim (USD will auto-find)
+                ref_prim.GetReferences().AddReference(usd_path_abs)
+
+        # Set transform
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if prim and prim.IsValid():
+            xform = UsdGeom.Xformable(prim)
+
+            # Check for existing xform ops (from converted USD)
+            existing_ops = xform.GetOrderedXformOps()
+
+            if existing_ops:
+                # Update existing ops (preserve precision)
+                pos = list(element.position)
+                pos[2] += z_offset
+
+                for op in existing_ops:
+                    op_name = op.GetOpName()
+                    if "translate" in op_name:
+                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
+                            op.Set(Gf.Vec3d(*pos))
+                        else:
+                            op.Set(Gf.Vec3f(*pos))
+                    elif "scale" in op_name:
+                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
+                            op.Set(Gf.Vec3d(*element.scale))
+                        else:
+                            op.Set(Gf.Vec3f(*element.scale))
+                    elif "orient" in op_name and element.rotation != (1.0, 0.0, 0.0, 0.0):
+                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
+                            op.Set(Gf.Quatd(element.rotation[0], Gf.Vec3d(*element.rotation[1:])))
+                        else:
+                            op.Set(Gf.Quatf(element.rotation[0], Gf.Vec3f(*element.rotation[1:])))
+            else:
+                # No existing ops, create new (use double for consistency with URDF converter)
+                xform.ClearXformOpOrder()
+                pos = list(element.position)
+                pos[2] += z_offset
+                xform.AddTranslateOp().Set(Gf.Vec3d(*pos))
+                if element.rotation != (1.0, 0.0, 0.0, 0.0):
+                    xform.AddOrientOp().Set(
+                        Gf.Quatd(
+                            element.rotation[0], Gf.Vec3d(element.rotation[1], element.rotation[2], element.rotation[3])
+                        )
+                    )
+                xform.AddScaleOp().Set(Gf.Vec3d(*element.scale))
+
+            # Disable physics (all scene objects are pure visual)
+            self._disable_physics_for_prim(prim)
+
+    def _delete_usd(self, prim_path: str):
+        """Delete USD prim.
+
+        Args:
+            prim_path: USD prim path
         """
         try:
-            # Lazy import IsaacSim modules
-            try:
-                import omni.isaac.core.utils.prims as prim_utils
-            except ModuleNotFoundError:
-                import isaacsim.core.utils.prims as prim_utils
+            import omni.isaac.core.utils.prims as prim_utils
+        except ModuleNotFoundError:
+            import isaacsim.core.utils.prims as prim_utils
 
-            from pxr import Gf, UsdGeom, UsdPhysics
+        if prim_utils.is_prim_path_valid(prim_path):
+            prim_utils.delete_prim(prim_path)
 
-            # Get stage
-            stage = prim_utils.get_current_stage()
-            if not stage:
-                logger.warning("No stage available")
-                return
-
-            # Create cube directly using USD
-            cube_prim = stage.DefinePrim(prim_path, "Cube")
-            if not cube_prim:
-                logger.warning(f"Failed to define cube at {prim_path}")
-                return
-
-            cube = UsdGeom.Cube(cube_prim)
-
-            # Set cube size to 2.0 (default is 2.0, gives us a 2x2x2 cube, then we scale by 0.5*desired)
-            # Actually, USD Cube size=2.0 means each edge is 2.0 units
-            # So we need to scale by (desired_size / 2.0)
-            cube.GetSizeAttr().Set(2.0)
-
-            # Add xform ops for scale and translation
-            xform = UsdGeom.Xformable(cube_prim)
-
-            # Clear any existing xform ops to start fresh
-            xform.ClearXformOpOrder()
-
-            # Add translation operation first
-            translate_op = xform.AddTranslateOp()
-            translate_op.Set(Gf.Vec3d(*position))
-
-            # Then add scale operation (scale is relative to the translated position)
-            scale_op = xform.AddScaleOp()
-            # USD Cube with size=2.0 has edges of length 2.0
-            # So to get desired size, we scale by (desired / 2.0)
-            scale_factor = tuple(s / 2.0 for s in size)
-            scale_op.Set(Gf.Vec3d(*scale_factor))
-
-            # Add physics collision - IMPORTANT for table to support objects!
-            # For static geometry (floor, walls, table), we ONLY need CollisionAPI
-            # DO NOT add RigidBodyAPI - that makes it dynamic and it will fall!
-            collision_api = UsdPhysics.CollisionAPI.Apply(cube_prim)
-
-            logger.debug(
-                f"Created cube at {prim_path} with size {size} (scale={scale_factor}) and position {position} with collision"
-            )
-
-        except Exception as e:
-            logger.warning(f"Failed to create cube prim {prim_path}: {e}")
-
-    def _select_material(self, material_pool: SceneMaterialPoolCfg, state_key: str) -> str | None:
-        """Select a material from the pool based on selection strategy.
-
-        Args:
-            material_pool: Material pool configuration
-            state_key: Key for tracking sequential selection state
-
-        Returns:
-            Selected material path or None
-        """
-        if not material_pool.material_paths:
-            return None
-
-        if material_pool.selection_strategy == "random":
-            return self._rng.choice(material_pool.material_paths)
-
-        elif material_pool.selection_strategy == "sequential":
-            idx = self._material_selection_state[state_key] % len(material_pool.material_paths)
-            self._material_selection_state[state_key] += 1
-            return material_pool.material_paths[idx]
-
-        elif material_pool.selection_strategy == "weighted":
-            return self._rng.choices(material_pool.material_paths, weights=material_pool.weights, k=1)[0]
-
-        return None
-
-    def _apply_scene_material(self, material_path: str, prim_path: str, pool_cfg: SceneMaterialPoolCfg):
-        """Apply MDL material to a prim with optional material variant randomization.
-
-        Args:
-            material_path: Path to MDL file
-            prim_path: USD prim path
-            pool_cfg: Material pool configuration (for randomize_material_variant setting)
-        """
-        from metasim.randomization.material_randomizer import MaterialRandomizer, list_materials_in_mdl
-
-        # Convert to absolute path
-        material_path = os.path.abspath(material_path)
-
-        # Download MDL file and textures using MaterialRandomizer's shared method
-        dummy_randomizer = MaterialRandomizer.__new__(MaterialRandomizer)
-        dummy_randomizer.handler = self.handler
-
-        prepared_mdls = set()
-        if not dummy_randomizer._ensure_mdl_downloaded(material_path, prepared_mdls, auto_download=True):
-            logger.warning(f"Failed to download MDL or textures for {material_path}")
-            return
-
-        # Select material variant if enabled
-        material_name = None
-        if pool_cfg.randomize_material_variant and "::" not in material_path:
-            available_materials = list_materials_in_mdl(material_path)
-            if len(available_materials) > 1:
-                material_name = self._rng.choice(available_materials)
-                logger.debug(
-                    f"Randomly selected material '{material_name}' from "
-                    f"{len(available_materials)} variants in {os.path.basename(material_path)}"
-                )
-
-        # Apply material
-        dummy_randomizer._apply_mdl_to_prim(material_path, prim_path, material_name)
-
-    def _calculate_uv_tile_scale(self, prim, prim_path: str) -> float:
-        """Calculate appropriate UV tile scale based on geometry size.
-
-        For large surfaces like walls and floors, we want textures to repeat
-        rather than stretch. This function calculates a tile_scale that makes
-        textures repeat approximately every 1-2 meters.
+    def _disable_physics_for_prim(self, prim):
+        """Recursively disable physics for a prim.
 
         Args:
             prim: USD prim
-            prim_path: Path to the prim (for logging)
-
-        Returns:
-            tile_scale: Scale factor for UV coordinates (smaller = more repetitions)
         """
-        try:
-            from pxr import UsdGeom
+        from pxr import UsdPhysics
 
-            prim_type = prim.GetTypeName()
+        # Recursive processing
+        for descendant in prim.GetAllChildren():
+            self._disable_physics_for_prim(descendant)
 
-            if prim_type == "Cube":
-                # Get cube size and scale
-                cube = UsdGeom.Cube(prim)
-                size = cube.GetSizeAttr().Get() or 2.0  # Default USD cube size is 2.0
+        # Remove physics APIs
+        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            prim.RemoveAPI(UsdPhysics.RigidBodyAPI)
 
-                # Get scale from xform
-                xformable = UsdGeom.Xformable(prim)
-                xform_ops = xformable.GetOrderedXformOps()
-                scale = [1.0, 1.0, 1.0]
-                for op in xform_ops:
-                    if op.GetOpType() == UsdGeom.XformOp.TypeScale:
-                        scale_value = op.Get()
-                        if scale_value:
-                            scale = list(scale_value)
-                        break
+        if prim.HasAPI(UsdPhysics.CollisionAPI):
+            prim.RemoveAPI(UsdPhysics.CollisionAPI)
 
-                # Calculate actual dimensions
-                actual_sizes = [size * s for s in scale]
+    # -------------------------------------------------------------------------
+    # URDF Conversion
+    # -------------------------------------------------------------------------
 
-                # For walls, we care about the two largest dimensions (width and height)
-                # For floors/ceilings, same applies
-                sorted_sizes = sorted(actual_sizes, reverse=True)
-                max_dimension = sorted_sizes[0]  # Largest dimension
-
-                # We want textures to repeat approximately every 1 meter
-                # tile_scale controls how many times the 0-1 UV range is used
-                # Larger dimensions need larger tile_scale values for more repetitions
-                target_texture_size = 1.0  # Target: texture repeats every 1 meter
-                tile_scale = max_dimension / target_texture_size
-
-                logger.debug(
-                    f"Cube {prim_path}: size={size}, scale={scale}, actual={actual_sizes}, tile_scale={tile_scale:.2f}"
-                )
-                return tile_scale
-
-            else:
-                # For other geometry types, use a default moderate tiling
-                return 2.0
-
-        except Exception as e:
-            logger.warning(f"Failed to calculate tile scale for {prim_path}: {e}")
-            return 1.0  # Default fallback
-
-    def _randomize_materials_only(self, env_ids: list[int] | None = None):
-        """Apply material randomization to existing scene elements only.
-
-        This is used when a predefined scene exists but we still want to
-        randomize materials on existing geometry.
+    def _ensure_usd_downloaded(self, usd_path: str, prepared_usds: set[str], auto_download: bool) -> bool:
+        """Download USD/URDF and dependencies if needed.
 
         Args:
-            env_ids: Optional list of environment IDs to randomize
-        """
-        # Get environment IDs to randomize
-        target_env_ids = env_ids if env_ids is not None else self.cfg.env_ids
-        if target_env_ids is None:
-            target_env_ids = list(range(self.handler.num_envs))
-
-        logger.debug("Applying material randomization to existing scene elements")
-
-        # This would require detecting existing scene elements
-        # For now, we skip this in favor of explicit material randomization
-        pass
-
-    def get_scene_properties(self) -> dict:
-        """Get current scene properties.
+            usd_path: Path to USD/URDF file
+            prepared_usds: Cache set
+            auto_download: Whether to download
 
         Returns:
-            Dictionary containing scene element properties
+            True if ready, False otherwise
         """
-        properties = {
-            "created_prims": list(self._created_prims),
-            "num_elements": len(self._created_prims),
-        }
+        if usd_path in prepared_usds:
+            return True
 
-        return properties
+        # Special: Kujiale scenes
+        if usd_path.endswith(".usda") and "kujiale" in usd_path.lower():
+            success = self._download_kujiale_scene_folder(usd_path)
+            if success:
+                prepared_usds.add(usd_path)
+            return success
+
+        # Check if file exists
+        if not os.path.exists(usd_path):
+            if not auto_download:
+                return False
+
+            # Special: EmbodiedGen URDF (download folder)
+            if usd_path.endswith(".urdf") and "EmbodiedGenData" in usd_path:
+                success = self._download_embodiedgen_asset_folder(usd_path)
+                if success:
+                    prepared_usds.add(usd_path)
+                return success
+
+            # Generic: single file
+            try:
+                from metasim.utils.hf_util import check_and_download_single
+
+                check_and_download_single(usd_path)
+            except Exception:
+                return False
+
+        prepared_usds.add(usd_path)
+        return True
+
+    def _download_embodiedgen_asset_folder(self, urdf_path: str) -> bool:
+        """Download complete EmbodiedGen asset folder (URDF + mesh/ + textures)."""
+        from pathlib import Path
+
+        from huggingface_hub import snapshot_download
+
+        try:
+            path_obj = Path(urdf_path)
+            parts = path_obj.parts
+
+            if "EmbodiedGenData" not in parts:
+                return False
+
+            idx = parts.index("EmbodiedGenData")
+            asset_folder_parts = parts[idx + 1 : -1]  # e.g., dataset/basic_furniture/table/uuid
+            asset_folder = "/".join(asset_folder_parts)
+
+            local_base = Path(*parts[: idx + 1])
+
+            logger.info(f"Downloading EmbodiedGen folder: {asset_folder}")
+
+            snapshot_download(
+                repo_id="HorizonRobotics/EmbodiedGenData",
+                repo_type="dataset",
+                local_dir=str(local_base),
+                allow_patterns=[f"{asset_folder}/*"],
+                local_dir_use_symlinks=False,
+            )
+
+            return path_obj.exists()
+
+        except Exception as e:
+            logger.error(f"Download failed: {e}")
+            return False
+
+    def _download_kujiale_scene_folder(self, usda_path: str) -> bool:
+        """Download RoboVerse main USDA + InteriorAgent assets.
+
+        Strategy:
+        1. Download RoboVerse USDA file (main scene description)
+        2. Download InteriorAgent assets (meshes, textures that USDA references)
+        3. Use RoboVerse USDA as primary (it references InteriorAgent assets)
+
+        Args:
+            usda_path: Path to RoboVerse USDA (e.g., roboverse_data/scenes/kujiale/003.usda)
+
+        Returns:
+            True if both main USDA and assets are available
+        """
+        from pathlib import Path
+
+        from huggingface_hub import snapshot_download
+
+        try:
+            path_obj = Path(usda_path)
+            scene_num = int(path_obj.stem)
+
+            # Step 1: Download RoboVerse main USDA file
+            if not path_obj.exists():
+                logger.info(f"Downloading RoboVerse Kujiale USDA: {path_obj.name}")
+
+                # Determine local directory structure
+                if "roboverse_data" in str(path_obj):
+                    local_dir = "roboverse_data"
+                    remote_path = str(path_obj.relative_to("roboverse_data"))
+                else:
+                    # Fallback
+                    local_dir = str(path_obj.parent)
+                    remote_path = path_obj.name
+
+                snapshot_download(
+                    repo_id="RoboVerseOrg/roboverse_data",
+                    repo_type="dataset",
+                    local_dir=local_dir,
+                    allow_patterns=[remote_path],
+                    local_dir_use_symlinks=False,
+                )
+
+                if not path_obj.exists():
+                    logger.warning(f"RoboVerse USDA not found after download: {usda_path}")
+
+            # Step 2: Download InteriorAgent assets (meshes, textures)
+            remote_folder = f"kujiale_{scene_num:04d}"
+            local_base = Path("third_party/InteriorAgent")
+            downloaded_folder = local_base / remote_folder
+
+            if not downloaded_folder.exists():
+                local_base.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Downloading InteriorAgent assets: {remote_folder}")
+
+                snapshot_download(
+                    repo_id="spatialverse/InteriorAgent",
+                    repo_type="dataset",
+                    local_dir=str(local_base),
+                    allow_patterns=[f"{remote_folder}/*"],
+                    local_dir_use_symlinks=False,
+                )
+
+            # Verify: RoboVerse USDA exists (primary file)
+            if not path_obj.exists():
+                logger.error(f"RoboVerse USDA missing: {usda_path}")
+                return False
+
+            # Verify: InteriorAgent assets exist (referenced assets)
+            if not downloaded_folder.exists():
+                logger.error(f"InteriorAgent assets missing: {downloaded_folder}")
+                return False
+
+            # Step 3: Copy RoboVerse USDA to InteriorAgent folder
+            # RoboVerse USDA uses relative refs: "./Meshes/..."
+            # By copying to InteriorAgent folder, refs resolve correctly
+            usda_in_interior = downloaded_folder / path_obj.name
+
+            if not usda_in_interior.exists():
+                try:
+                    import shutil
+
+                    shutil.copy2(path_obj, usda_in_interior)
+                except Exception as e:
+                    logger.error(f"Failed to copy USDA to InteriorAgent folder: {e}")
+                    return False
+
+            # Update path to use the USDA in InteriorAgent folder
+            # (This will be used by _load_usd via element.usd_path remapping)
+            if not hasattr(self, "_usda_path_mapping"):
+                self._usda_path_mapping = {}
+            self._usda_path_mapping[usda_path] = str(usda_in_interior)
+            return True
+
+        except Exception as e:
+            logger.error(f"Kujiale download failed: {e}")
+            return False
+
+    def _convert_urdf_to_usd(self, urdf_path: str) -> str | None:
+        """Convert URDF to USD using AssetConverterFactory (MESH source type).
+
+        Args:
+            urdf_path: Path to URDF file
+
+        Returns:
+            Path to converted USD file, or None if failed
+        """
+        from pathlib import Path
+
+        try:
+            urdf_path_obj = Path(urdf_path)
+            usd_output = urdf_path_obj.parent / (urdf_path_obj.stem + ".usd")
+
+            # If already converted, use existing
+            if usd_output.exists():
+                return str(usd_output)
+
+            logger.info(f"Converting URDF to USD: {urdf_path}")
+
+            # Use AssetConverterFactory with MESH source type
+            try:
+                from generation.asset_converter import AssetConverterFactory
+                from generation.enums import AssetType
+
+                converter = AssetConverterFactory.create(
+                    target_type=AssetType.USD,
+                    source_type=AssetType.MESH,  # KEY: MESH not URDF!
+                    simulation_app=None,  # Already running
+                    exit_close=False,
+                    force_usd_conversion=True,
+                    make_instanceable=True,
+                )
+
+                converter.convert(str(urdf_path), str(usd_output))
+
+                if not usd_output.exists():
+                    logger.error(f"USD not created: {usd_output}")
+                    return None
+
+                logger.info(f"Converted: {usd_output}")
+                return str(usd_output)
+
+            except Exception as e:
+                logger.error(f"Conversion failed: {e}")
+                return None
+
+        except Exception as e:
+            logger.error(f"URDF conversion error: {e}")
+            return None
+
+    # -------------------------------------------------------------------------
+    # Utility Methods
+    # -------------------------------------------------------------------------
+
+    def _flush_visual_updates(self):
+        """Flush visual updates to ensure materials are visible.
+
+        Respects global defer flag for atomic multi-randomizer operations.
+        """
+        # Check global defer flag (set by apply_randomization for 22→1 flush optimization)
+        if (
+            hasattr(self._actual_handler, "_defer_all_visual_flushes")
+            and self._actual_handler._defer_all_visual_flushes
+        ):
+            return  # Skip flush, will be done by apply_randomization
+
+        if hasattr(self._actual_handler, "flush_visual_updates"):
+            self._actual_handler.flush_visual_updates()
+
+    def get_table_bounds(self, env_id: int = 0) -> dict[str, float] | None:
+        """Get workspace table bounding box.
+
+        This is a utility method for positioning task objects relative to the table.
+
+        Args:
+            env_id: Environment ID to query
+
+        Returns:
+            Dict with keys: height, x_min, x_max, y_min, y_max (or None if no workspace)
+        """
+        if not self.cfg.workspace_layer or not self.cfg.workspace_layer.elements:
+            return None
+
+        from pxr import UsdGeom
+
+        # Get first workspace element
+        element = self.cfg.workspace_layer.elements[0]
+
+        if self.cfg.workspace_layer.shared:
+            prim_path = f"/World/scene_workspace_{element.name}"
+        else:
+            prim_path = f"/World/envs/env_{env_id}/scene_workspace_{element.name}"
+
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if not prim or not prim.IsValid():
+            return None
+
+        # For ManualGeometry, use the config directly (more reliable than bounding box)
+        if isinstance(element, ManualGeometryCfg):
+            pos = element.position
+            size = element.size
+
+            # Table bounds from geometry config
+            half_x = size[0] / 2
+            half_y = size[1] / 2
+            height = pos[2] + size[2] / 2  # Top surface
+
+            return {
+                "height": float(height),
+                "x_min": float(pos[0] - half_x),
+                "x_max": float(pos[0] + half_x),
+                "y_min": float(pos[1] - half_y),
+                "y_max": float(pos[1] + half_y),
+            }
+
+        # For USD assets, use bounding box
+        bbox_cache = UsdGeom.BBoxCache(0, ["default", "render"])
+        bbox = bbox_cache.ComputeWorldBound(prim)
+        bbox_range = bbox.ComputeAlignedRange()
+
+        min_point = bbox_range.GetMin()
+        max_point = bbox_range.GetMax()
+
+        return {
+            "height": float(max_point[2]),
+            "x_min": float(min_point[0]),
+            "x_max": float(max_point[0]),
+            "y_min": float(min_point[1]),
+            "y_max": float(max_point[1]),
+        }

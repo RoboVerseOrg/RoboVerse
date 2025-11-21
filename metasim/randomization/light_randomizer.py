@@ -1,22 +1,43 @@
+"""Light Randomizer - Property editor for light properties.
+
+The LightRandomizer modifies properties of existing lights.
+Lights are Static Objects (Handler-created) but accessed directly via USD
+because IsaacLab does not provide a Light API.
+
+Key features:
+- Intensity randomization
+- Color randomization (RGB or color temperature)
+- Position randomization
+- Orientation randomization
+- Supports Hybrid simulation (uses render_handler)
+"""
+
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Literal
+import math
+from typing import Literal
 
 import torch
 from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
+from metasim.randomization.core.isaacsim_adapter import IsaacSimAdapter
+from metasim.randomization.core.object_registry import ObjectRegistry
 from metasim.utils.configclass import configclass
+
+# =============================================================================
+# Configuration Classes
+# =============================================================================
 
 
 @configclass
 class LightIntensityRandomCfg:
-    """Configuration for light intensity randomization.
+    """Light intensity randomization configuration.
 
-    Args:
-        intensity_range: Range for intensity randomization (min, max)
-        distribution: Type of distribution for random sampling
+    Attributes:
+        intensity_range: Intensity range (min, max)
+        distribution: Random sampling distribution
         enabled: Whether to apply intensity randomization
     """
 
@@ -27,13 +48,13 @@ class LightIntensityRandomCfg:
 
 @configclass
 class LightColorRandomCfg:
-    """Configuration for light color randomization.
+    """Light color randomization configuration.
 
-    Args:
-        color_range: RGB color ranges as ((r_min,r_max), (g_min,g_max), (b_min,b_max))
-        temperature_range: Color temperature range in Kelvin (alternative to color_range)
-        use_temperature: Whether to use color temperature instead of RGB
-        distribution: Type of distribution for random sampling
+    Attributes:
+        color_range: RGB color ranges ((r_min, r_max), (g_min, g_max), (b_min, b_max))
+        temperature_range: Color temperature range in Kelvin
+        use_temperature: Use color temperature instead of RGB
+        distribution: Random sampling distribution
         enabled: Whether to apply color randomization
     """
 
@@ -46,12 +67,12 @@ class LightColorRandomCfg:
 
 @configclass
 class LightPositionRandomCfg:
-    """Configuration for light position randomization.
+    """Light position randomization configuration.
 
-    Args:
-        position_range: Position ranges as ((x_min,x_max), (y_min,y_max), (z_min,z_max))
+    Attributes:
+        position_range: Position ranges ((x_min, x_max), (y_min, y_max), (z_min, z_max))
         relative_to_origin: Whether positions are relative to original position
-        distribution: Type of distribution for random sampling
+        distribution: Random sampling distribution
         enabled: Whether to apply position randomization
     """
 
@@ -63,12 +84,12 @@ class LightPositionRandomCfg:
 
 @configclass
 class LightOrientationRandomCfg:
-    """Configuration for light orientation randomization.
+    """Light orientation randomization configuration.
 
-    Args:
-        angle_range: Angle ranges in degrees as ((roll_min,roll_max), (pitch_min,pitch_max), (yaw_min,yaw_max))
+    Attributes:
+        angle_range: Angle ranges in degrees ((roll_min, roll_max), (pitch_min, pitch_max), (yaw_min, yaw_max))
         relative_to_origin: Whether angles are relative to original orientation
-        distribution: Type of distribution for random sampling
+        distribution: Random sampling distribution
         enabled: Whether to apply orientation randomization
     """
 
@@ -80,16 +101,15 @@ class LightOrientationRandomCfg:
 
 @configclass
 class LightRandomCfg:
-    """Unified configuration for light randomization.
+    """Light randomization configuration.
 
-    Args:
-        light_name: Name of the light to randomize
-        intensity: Intensity randomization configuration (optional)
-        color: Color randomization configuration (optional)
-        position: Position randomization configuration (optional)
-        orientation: Orientation randomization configuration (optional)
-        env_ids: List of environment IDs to apply randomization to (None = all)
-        randomization_mode: How to apply multiple randomization types
+    Attributes:
+        light_name: Name of light to randomize (must exist in ObjectRegistry)
+        intensity: Intensity randomization configuration
+        color: Color randomization configuration
+        position: Position randomization configuration
+        orientation: Orientation randomization configuration
+        env_ids: Environment IDs to apply randomization (None = all, but lights are usually shared)
     """
 
     light_name: str = dataclasses.MISSING
@@ -98,465 +118,329 @@ class LightRandomCfg:
     position: LightPositionRandomCfg | None = None
     orientation: LightOrientationRandomCfg | None = None
     env_ids: list[int] | None = None
-    randomization_mode: Literal["combined", "intensity_only", "color_only", "position_only", "orientation_only"] = (
-        "combined"
-    )
 
     def __post_init__(self):
-        """Validate configuration."""
-        available_configs = [
-            cfg for cfg in [self.intensity, self.color, self.position, self.orientation] if cfg is not None
-        ]
-        if not available_configs:
-            # If no configurations provided, create a default intensity configuration
-            logger.warning(
-                f"No light configurations provided for {self.light_name}. Creating default intensity configuration."
-            )
+        configs = [cfg for cfg in [self.intensity, self.color, self.position, self.orientation] if cfg]
+        if not configs:
+            logger.warning(f"No light configurations for {self.light_name}. Creating default intensity config.")
             self.intensity = LightIntensityRandomCfg(intensity_range=(100.0, 1000.0), enabled=True)
-            available_configs = [self.intensity]
+            configs = [self.intensity]
 
-        enabled_configs = [cfg for cfg in available_configs if getattr(cfg, "enabled", True)]
+        enabled_configs = [cfg for cfg in configs if getattr(cfg, "enabled", True)]
         if not enabled_configs:
             raise ValueError("At least one light randomization type must be enabled")
 
 
-class LightRandomizer(BaseRandomizerType):
-    """Light randomizer supporting intensity, color, position, and orientation.
+# =============================================================================
+# Light Randomizer Implementation
+# =============================================================================
 
-    Supports multiple randomization modes and distributions with reproducible seeding.
+
+class LightRandomizer(BaseRandomizerType):
+    """Light property randomizer.
+
+    Responsibilities:
+    - Modify light properties (intensity, color, position, orientation)
+    - NOT responsible for: Creating/deleting lights
+
+    Characteristics:
+    - Uses ObjectRegistry to find lights
+    - Uses IsaacSimAdapter for light property modification
+    - Direct USD access (IsaacLab has no Light API)
+    - Hybrid support: uses render_handler
+
+    Usage:
+        randomizer = LightRandomizer(
+            LightRandomCfg(
+                light_name="ceiling_light",
+                intensity=LightIntensityRandomCfg(
+                    intensity_range=(5000, 20000)
+                )
+            ),
+            seed=42
+        )
+        randomizer.bind_handler(handler)
+        randomizer()  # Apply light randomization
     """
 
+    REQUIRES_HANDLER = "render"  # Use render_handler for Hybrid
+
     def __init__(self, cfg: LightRandomCfg, seed: int | None = None):
-        self.cfg = cfg
+        """Initialize light randomizer.
+
+        Args:
+            cfg: Light randomization configuration
+            seed: Random seed for reproducibility
+        """
         super().__init__(seed=seed)
+        self.cfg = cfg
+        self.registry: ObjectRegistry | None = None
+        self.adapter: IsaacSimAdapter | None = None
+        self._original_positions: dict[str, tuple] = {}
+        self._original_orientations: dict[str, tuple] = {}
 
-    def set_seed(self, seed: int | None) -> None:
-        """Set or update RNG seed."""
-        super().set_seed(seed)
+    def bind_handler(self, handler):
+        """Bind handler and initialize adapter.
 
-    def bind_handler(self, handler, *args: Any, **kwargs):
-        """Bind the handler to the randomizer."""
-        mod = handler.__class__.__module__
+        Args:
+            handler: SimHandler instance (automatically uses render_handler for Hybrid)
+        """
+        super().bind_handler(handler)
 
-        if mod.startswith("metasim.sim.isaacsim"):
-            super().bind_handler(handler, *args, **kwargs)
-            # Import IsaacSim specific modules only when needed
-            try:
-                global omni, prim_utils
-                import omni
+        # Use _actual_handler (automatically selected for Hybrid)
+        self.registry = ObjectRegistry.get_instance(self._actual_handler)
+        self.adapter = IsaacSimAdapter(self._actual_handler)
 
-                try:
-                    import omni.isaac.core.utils.prims as prim_utils
-                except ModuleNotFoundError:
-                    import isaacsim.core.utils.prims as prim_utils
+    def __call__(self):
+        """Execute light randomization."""
+        # Get light prim paths from Registry
+        try:
+            prim_paths = self.registry.get_prim_paths(self.cfg.light_name)
+        except ValueError as e:
+            logger.error(f"LightRandomizer: {e}")
+            return
 
-                self.stage = omni.usd.get_context().get_stage()
-            except ImportError as e:
-                raise ImportError(f"Failed to import IsaacSim modules: {e}") from e
+        # Apply randomization to each light prim
+        for prim_path in prim_paths:
+            if self.cfg.intensity and self.cfg.intensity.enabled:
+                self._randomize_intensity(prim_path)
+
+            if self.cfg.color and self.cfg.color.enabled:
+                self._randomize_color(prim_path)
+
+            if self.cfg.position and self.cfg.position.enabled:
+                self._randomize_position(prim_path)
+
+            if self.cfg.orientation and self.cfg.orientation.enabled:
+                self._randomize_orientation(prim_path)
+
+        self._mark_visual_dirty()
+
+        # Flush visual updates for instant switching
+        self._flush_visual_updates()
+
+    # -------------------------------------------------------------------------
+    # Randomization Methods
+    # -------------------------------------------------------------------------
+
+    def _randomize_intensity(self, prim_path: str):
+        """Randomize light intensity.
+
+        Args:
+            prim_path: Light prim path
+        """
+        if not self.cfg.intensity.intensity_range:
+            return
+
+        intensity = self._generate_random_value(self.cfg.intensity.intensity_range, self.cfg.intensity.distribution)
+
+        try:
+            self.adapter.set_light_intensity(prim_path, intensity)
+        except Exception as e:
+            logger.warning(f"Failed to set light intensity for {prim_path}: {e}")
+
+    def _randomize_color(self, prim_path: str):
+        """Randomize light color.
+
+        Args:
+            prim_path: Light prim path
+        """
+        if self.cfg.color.use_temperature and self.cfg.color.temperature_range:
+            # Color temperature mode
+            temp = self._generate_random_value(self.cfg.color.temperature_range, self.cfg.color.distribution)
+            color = self._temperature_to_rgb(temp)
+        elif self.cfg.color.color_range:
+            # RGB mode
+            color = tuple(
+                self._generate_random_value(r, self.cfg.color.distribution) for r in self.cfg.color.color_range
+            )
         else:
-            raise ValueError(f"Unsupported handler type: {type(handler)} for LightRandomizer")
+            return
 
-    def _get_light_prim(self, light_name: str):
-        """Get light prim from the scene."""
-        # First try the direct path using the configured name
-        light_paths = [
-            f"/World/{light_name}",  # Direct name path (new preferred approach)
+        try:
+            self.adapter.set_light_color(prim_path, color)
+        except Exception as e:
+            logger.warning(f"Failed to set light color for {prim_path}: {e}")
+
+    def _randomize_position(self, prim_path: str):
+        """Randomize light position.
+
+        Args:
+            prim_path: Light prim path
+        """
+        if not self.cfg.position.position_range:
+            return
+
+        # Get original position (for relative mode)
+        if prim_path not in self._original_positions:
+            try:
+                pos, _, _ = self.adapter.get_transform(prim_path)
+                self._original_positions[prim_path] = pos
+            except Exception:
+                self._original_positions[prim_path] = (0.0, 0.0, 0.0)
+
+        original_pos = self._original_positions[prim_path]
+
+        # Generate random position
+        if self.cfg.position.relative_to_origin:
+            new_pos = tuple(
+                original_pos[i] + self._generate_random_value(r, self.cfg.position.distribution)
+                for i, r in enumerate(self.cfg.position.position_range)
+            )
+        else:
+            new_pos = tuple(
+                self._generate_random_value(r, self.cfg.position.distribution) for r in self.cfg.position.position_range
+            )
+
+        try:
+            self.adapter.set_transform(prim_path, position=new_pos)
+        except Exception as e:
+            logger.warning(f"Failed to set light position for {prim_path}: {e}")
+
+    def _randomize_orientation(self, prim_path: str):
+        """Randomize light orientation.
+
+        Args:
+            prim_path: Light prim path
+        """
+        if not self.cfg.orientation.angle_range:
+            return
+
+        # Get original orientation (for relative mode)
+        if prim_path not in self._original_orientations:
+            try:
+                _, rot, _ = self.adapter.get_transform(prim_path)
+                self._original_orientations[prim_path] = rot
+            except Exception:
+                self._original_orientations[prim_path] = (1.0, 0.0, 0.0, 0.0)
+
+        # Generate random Euler angles
+        angles = [
+            self._generate_random_value(r, self.cfg.orientation.distribution) for r in self.cfg.orientation.angle_range
         ]
 
-        # Also try index-based paths for backward compatibility
-        if light_name.startswith("light_"):
-            light_index = light_name.replace("light_", "")
-        else:
-            light_index = light_name
+        # Convert to radians and quaternion
+        roll_rad = angles[0] * (math.pi / 180.0)
+        pitch_rad = angles[1] * (math.pi / 180.0)
+        yaw_rad = angles[2] * (math.pi / 180.0)
 
-        # Add index-based paths as fallback
-        light_paths.extend([
-            f"/World/DistantLight_{light_index}",
-            f"/World/SphereLight_{light_index}",
-            f"/World/CylinderLight_{light_index}",
-            f"/World/DiskLight_{light_index}",
-            f"/World/DomeLight_{light_index}",
-            "/World/DefaultLight",  # Fallback default light
-        ])
+        new_rot = self._euler_to_quaternion(roll_rad, pitch_rad, yaw_rad)
 
-        for path in light_paths:
-            prim = prim_utils.get_prim_at_path(path)
-            if prim and prim.IsValid():
-                # Determine light type from path or prim type
-                light_type = self._get_light_type_from_path_or_prim(path, prim)
-                return prim, path, light_type
+        if self.cfg.orientation.relative_to_origin:
+            # Compose with original rotation
+            original_rot = self._original_orientations[prim_path]
+            import torch
 
-        raise ValueError(f"Light {light_name} not found in scene. Tried paths: {light_paths}")
+            new_rot_tensor = self._quaternion_multiply(torch.tensor(original_rot), torch.tensor(new_rot))
+            new_rot = tuple(new_rot_tensor.tolist())
 
-    def _get_light_type_from_path_or_prim(self, path: str, prim) -> str:
-        """Determine light type from USD path or prim type."""
-        # First try to determine from path
-        if "DistantLight" in path:
-            return "distant"
-        elif "SphereLight" in path:
-            return "sphere"
-        elif "CylinderLight" in path:
-            return "cylinder"
-        elif "DiskLight" in path:
-            return "disk"
-        elif "DomeLight" in path:
-            return "dome"
+        try:
+            self.adapter.set_transform(prim_path, rotation=new_rot)
+        except Exception as e:
+            logger.warning(f"Failed to set light orientation for {prim_path}: {e}")
 
-        # If path doesn't contain type info, get it from the prim itself
-        prim_type = prim.GetTypeName()
-        if prim_type == "DistantLight":
-            return "distant"
-        elif prim_type == "SphereLight":
-            return "sphere"
-        elif prim_type == "CylinderLight":
-            return "cylinder"
-        elif prim_type == "DiskLight":
-            return "disk"
-        elif prim_type == "DomeLight":
-            return "dome"
-        elif prim_type == "Light":
-            return "generic"
-        else:
-            return "unknown"
+    # -------------------------------------------------------------------------
+    # Helper Methods
+    # -------------------------------------------------------------------------
 
-    def _get_env_ids(self) -> list[int]:
-        """Get environment IDs to operate on."""
-        return self.cfg.env_ids or list(range(self.handler.num_envs))
-
-    def _generate_random_value(self, value_range: tuple[float, float], distribution: str = "uniform") -> float:
-        """Generate a single random value using reproducible RNG."""
+    def _generate_random_value(self, value_range: tuple[float, float], distribution: str) -> float:
+        """Generate a single random value."""
         if distribution == "uniform":
-            return self._rng.uniform(value_range[0], value_range[1])
+            return self.rng.uniform(value_range[0], value_range[1])
         elif distribution == "log_uniform":
-            log_min = torch.log(torch.tensor(value_range[0])).item()
-            log_max = torch.log(torch.tensor(value_range[1])).item()
-            return torch.exp(torch.tensor(self._rng.uniform(log_min, log_max))).item()
+            log_min = math.log(value_range[0])
+            log_max = math.log(value_range[1])
+            return math.exp(self.rng.uniform(log_min, log_max))
         elif distribution == "gaussian":
             mean = (value_range[0] + value_range[1]) / 2
             std = (value_range[1] - value_range[0]) / 6
-            val = self._rng.gauss(mean, std)
+            val = self.rng.gauss(mean, std)
             return max(value_range[0], min(value_range[1], val))
         else:
             raise ValueError(f"Unsupported distribution: {distribution}")
 
-    def _kelvin_to_rgb(self, temperature: float) -> tuple[float, float, float]:
-        """Convert color temperature in Kelvin to RGB values."""
-        # Simplified conversion - for more accurate conversion, use proper color science
-        temp = temperature / 100.0
+    def _temperature_to_rgb(self, temp_kelvin: float) -> tuple[float, float, float]:
+        """Convert color temperature to RGB.
+
+        Args:
+            temp_kelvin: Color temperature in Kelvin (1000-40000)
+
+        Returns:
+            RGB tuple (0-1 range)
+        """
+        # Clamp temperature
+        temp = max(1000, min(40000, temp_kelvin)) / 100.0
 
         # Calculate red
         if temp <= 66:
-            red = 255
+            red = 1.0
         else:
             red = temp - 60
             red = 329.698727446 * (red**-0.1332047592)
-            red = max(0, min(255, red))
+            red = max(0, min(255, red)) / 255.0
 
         # Calculate green
         if temp <= 66:
             green = temp
-            green = 99.4708025861 * torch.log(torch.tensor(green)).item() - 161.1195681661
+            green = 99.4708025861 * math.log(green) - 161.1195681661
+            green = max(0, min(255, green)) / 255.0
         else:
             green = temp - 60
             green = 288.1221695283 * (green**-0.0755148492)
-        green = max(0, min(255, green))
+            green = max(0, min(255, green)) / 255.0
 
         # Calculate blue
         if temp >= 66:
-            blue = 255
+            blue = 1.0
         elif temp <= 19:
-            blue = 0
+            blue = 0.0
         else:
             blue = temp - 10
-            blue = 138.5177312231 * torch.log(torch.tensor(blue)).item() - 305.0447927307
-            blue = max(0, min(255, blue))
+            blue = 138.5177312231 * math.log(blue) - 305.0447927307
+            blue = max(0, min(255, blue)) / 255.0
 
-        return (red / 255.0, green / 255.0, blue / 255.0)
+        return (red, green, blue)
 
-    def randomize_intensity(self) -> None:
-        """Randomize light intensity."""
-        if not self.cfg.intensity or not self.cfg.intensity.enabled:
-            return
+    def _euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> tuple:
+        """Convert Euler angles to quaternion."""
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
 
-        try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+        w = cr * cp * cy + sr * sp * sy
+        x = sr * cp * cy - cr * sp * sy
+        y = cr * sp * cy + sr * cp * sy
+        z = cr * cp * sy - sr * sp * cy
 
-            if self.cfg.intensity.intensity_range:
-                new_intensity = self._generate_random_value(
-                    self.cfg.intensity.intensity_range, self.cfg.intensity.distribution
-                )
+        return (w, x, y, z)
 
-                # Set intensity attribute (common to all light types)
-                intensity_attr = light_prim.GetAttribute("inputs:intensity")
-                if intensity_attr:
-                    intensity_attr.Set(new_intensity)
+    def _quaternion_multiply(self, q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+        """Multiply two quaternions."""
+        w1, x1, y1, z1 = q1[0], q1[1], q1[2], q1[3]
+        w2, x2, y2, z2 = q2[0], q2[1], q2[2], q2[3]
 
-                else:
-                    logger.warning(f"Could not find intensity attribute for {light_type} light {self.cfg.light_name}")
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
 
-        except Exception as e:
-            logger.warning(f"Failed to randomize intensity for light {self.cfg.light_name}: {e}")
+        return torch.tensor([w, x, y, z])
 
-    def randomize_color(self) -> None:
-        """Randomize light color."""
-        if not self.cfg.color or not self.cfg.color.enabled:
-            return
+    def _flush_visual_updates(self):
+        """Flush visual updates to ensure light changes are visible instantly.
 
-        try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+        This is critical for real-time light switching to be visible.
+        Respects global defer flag for atomic multi-randomizer operations.
+        """
+        # Check global defer flag (set by apply_randomization for 22→1 flush optimization)
+        if (
+            hasattr(self._actual_handler, "_defer_all_visual_flushes")
+            and self._actual_handler._defer_all_visual_flushes
+        ):
+            return  # Skip flush, will be done by apply_randomization
 
-            if self.cfg.color.use_temperature and self.cfg.color.temperature_range:
-                # Use color temperature
-                temperature = self._generate_random_value(self.cfg.color.temperature_range, self.cfg.color.distribution)
-                rgb = self._kelvin_to_rgb(temperature)
-
-            elif self.cfg.color.color_range:
-                # Use RGB values
-                r = self._generate_random_value(self.cfg.color.color_range[0], self.cfg.color.distribution)
-                g = self._generate_random_value(self.cfg.color.color_range[1], self.cfg.color.distribution)
-                b = self._generate_random_value(self.cfg.color.color_range[2], self.cfg.color.distribution)
-                rgb = (r, g, b)
-
-            else:
-                return
-
-            # Set color attribute (common to all light types)
-            color_attr = light_prim.GetAttribute("inputs:color")
-            if color_attr:
-                from pxr import Gf
-
-                color_attr.Set(Gf.Vec3f(*rgb))
-            else:
-                logger.warning(f"Could not find color attribute for {light_type} light {self.cfg.light_name}")
-
-        except Exception as e:
-            logger.warning(f"Failed to randomize color for light {self.cfg.light_name}: {e}")
-
-    def randomize_position(self) -> None:
-        """Randomize light position (not applicable to distant lights)."""
-        if not self.cfg.position or not self.cfg.position.enabled:
-            return
-
-        try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
-
-            # Skip position randomization for distant lights (they don't have meaningful position)
-            if light_type == "distant":
-                #                 logger.debug(f"Skipping position randomization for distant light {self.cfg.light_name}")
-                return
-
-            if self.cfg.position.position_range:
-                if self.cfg.position.relative_to_origin:
-                    # Get current position and add offset
-                    translate_attr = light_prim.GetAttribute("xformOp:translate")
-                    if translate_attr:
-                        current_pos = translate_attr.Get()
-                        if current_pos is None:
-                            current_pos = (0.0, 0.0, 0.0)
-                    else:
-                        current_pos = (0.0, 0.0, 0.0)
-
-                    # Generate random offset
-                    x_offset = self._generate_random_value(
-                        self.cfg.position.position_range[0], self.cfg.position.distribution
-                    )
-                    y_offset = self._generate_random_value(
-                        self.cfg.position.position_range[1], self.cfg.position.distribution
-                    )
-                    z_offset = self._generate_random_value(
-                        self.cfg.position.position_range[2], self.cfg.position.distribution
-                    )
-
-                    new_pos = (current_pos[0] + x_offset, current_pos[1] + y_offset, current_pos[2] + z_offset)
-                else:
-                    # Use absolute positioning - directly sample from the range
-                    x_pos = self._generate_random_value(
-                        self.cfg.position.position_range[0], self.cfg.position.distribution
-                    )
-                    y_pos = self._generate_random_value(
-                        self.cfg.position.position_range[1], self.cfg.position.distribution
-                    )
-                    z_pos = self._generate_random_value(
-                        self.cfg.position.position_range[2], self.cfg.position.distribution
-                    )
-
-                    new_pos = (x_pos, y_pos, z_pos)
-
-                # Set position
-                translate_attr = light_prim.GetAttribute("xformOp:translate")
-                if not translate_attr:
-                    from pxr import Sdf
-
-                    translate_attr = light_prim.CreateAttribute("xformOp:translate", Sdf.ValueTypeNames.Double3)
-
-                from pxr import Gf
-
-                translate_attr.Set(Gf.Vec3d(*new_pos))
-                # logger.info(
-                #     f"Set {light_type} light '{self.cfg.light_name}' position to ({new_pos[0]:.1f}, {new_pos[1]:.1f}, {new_pos[2]:.1f})"
-                # )
-
-        except Exception as e:
-            logger.warning(f"Failed to randomize position for light {self.cfg.light_name}: {e}")
-
-    def randomize_orientation(self) -> None:
-        """Randomize light orientation (mainly for distant and area lights)."""
-        if not self.cfg.orientation or not self.cfg.orientation.enabled:
-            return
-
-        try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
-
-            if self.cfg.orientation.angle_range:
-                if self.cfg.orientation.relative_to_origin:
-                    # Get current rotation
-                    rotate_attr = light_prim.GetAttribute("xformOp:rotateXYZ")
-                    if rotate_attr:
-                        current_rot = rotate_attr.Get()
-                        if current_rot is None:
-                            current_rot = (0.0, 0.0, 0.0)
-                    else:
-                        current_rot = (0.0, 0.0, 0.0)
-                else:
-                    current_rot = (0.0, 0.0, 0.0)
-
-                # Generate random rotation offset
-                roll_offset = self._generate_random_value(
-                    self.cfg.orientation.angle_range[0], self.cfg.orientation.distribution
-                )
-                pitch_offset = self._generate_random_value(
-                    self.cfg.orientation.angle_range[1], self.cfg.orientation.distribution
-                )
-                yaw_offset = self._generate_random_value(
-                    self.cfg.orientation.angle_range[2], self.cfg.orientation.distribution
-                )
-
-                new_rot = (current_rot[0] + roll_offset, current_rot[1] + pitch_offset, current_rot[2] + yaw_offset)
-
-                # Set rotation
-                rotate_attr = light_prim.GetAttribute("xformOp:rotateXYZ")
-                if not rotate_attr:
-                    from pxr import Sdf
-
-                    rotate_attr = light_prim.CreateAttribute("xformOp:rotateXYZ", Sdf.ValueTypeNames.Double3)
-
-                from pxr import Gf
-
-                rotate_attr.Set(Gf.Vec3d(*new_rot))
-        #                 logger.debug(f"Set {light_type} light orientation to {new_rot}")
-
-        except Exception as e:
-            logger.warning(f"Failed to randomize orientation for light {self.cfg.light_name}: {e}")
-
-    def get_light_properties(self) -> dict:
-        """Get current light properties for logging."""
-        try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
-
-            properties = {"light_path": light_path, "light_type": light_type}
-
-            # Get intensity
-            intensity_attr = light_prim.GetAttribute("inputs:intensity")
-            if intensity_attr:
-                properties["intensity"] = intensity_attr.Get()
-
-            # Get color
-            color_attr = light_prim.GetAttribute("inputs:color")
-            if color_attr:
-                properties["color"] = color_attr.Get()
-
-            # Get position (skip for distant lights)
-            if light_type != "distant":
-                translate_attr = light_prim.GetAttribute("xformOp:translate")
-                if translate_attr:
-                    properties["position"] = translate_attr.Get()
-
-            # Get rotation
-            rotate_attr = light_prim.GetAttribute("xformOp:rotateXYZ")
-            if rotate_attr:
-                properties["rotation"] = rotate_attr.Get()
-
-            # Get light-specific properties
-            if light_type in ["sphere", "disk"]:
-                radius_attr = light_prim.GetAttribute("inputs:radius")
-                if radius_attr:
-                    properties["radius"] = radius_attr.Get()
-            elif light_type == "cylinder":
-                radius_attr = light_prim.GetAttribute("inputs:radius")
-                length_attr = light_prim.GetAttribute("inputs:length")
-                if radius_attr:
-                    properties["radius"] = radius_attr.Get()
-                if length_attr:
-                    properties["length"] = length_attr.Get()
-
-            return properties
-        except Exception as e:
-            logger.warning(f"Failed to get light properties: {e}")
-            return {}
-
-    def __call__(self) -> None:
-        """Execute light randomization based on configuration."""
-        did_update = False
-        try:
-            enabled_types = self._get_enabled_light_types()
-            if not enabled_types:
-                return
-
-            if self.cfg.randomization_mode == "combined":
-                did_update = self._apply_combined_randomization(enabled_types)
-            elif self.cfg.randomization_mode == "intensity_only":
-                if "intensity" in enabled_types:
-                    self.randomize_intensity()
-                    did_update = True
-            elif self.cfg.randomization_mode == "color_only":
-                if "color" in enabled_types:
-                    self.randomize_color()
-                    did_update = True
-            elif self.cfg.randomization_mode == "position_only":
-                if "position" in enabled_types:
-                    self.randomize_position()
-                    did_update = True
-            elif self.cfg.randomization_mode == "orientation_only":
-                if "orientation" in enabled_types:
-                    self.randomize_orientation()
-                    did_update = True
-            else:
-                raise ValueError(f"Unknown randomization mode: {self.cfg.randomization_mode}")
-
-        except Exception as e:
-            logger.error(f"Light randomization failed for {self.cfg.light_name}: {e}")
-            raise
-        else:
-            if did_update:
-                self._mark_visual_dirty()
-
-    def _get_enabled_light_types(self) -> list[str]:
-        """Get list of enabled light randomization types."""
-        enabled = []
-        if self.cfg.intensity and self.cfg.intensity.enabled:
-            enabled.append("intensity")
-        if self.cfg.color and self.cfg.color.enabled:
-            enabled.append("color")
-        if self.cfg.position and self.cfg.position.enabled:
-            enabled.append("position")
-        if self.cfg.orientation and self.cfg.orientation.enabled:
-            enabled.append("orientation")
-        return enabled
-
-    def _apply_combined_randomization(self, enabled_types: list[str]) -> bool:
-        """Apply all enabled randomization types."""
-        updated = False
-        if "intensity" in enabled_types:
-            self.randomize_intensity()
-            updated = True
-        if "color" in enabled_types:
-            self.randomize_color()
-            updated = True
-        if "position" in enabled_types:
-            self.randomize_position()
-            updated = True
-        if "orientation" in enabled_types:
-            self.randomize_orientation()
-            updated = True
-
-        return updated
+        if hasattr(self._actual_handler, "flush_visual_updates"):
+            self._actual_handler.flush_visual_updates()
