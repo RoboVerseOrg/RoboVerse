@@ -5,13 +5,12 @@ except ImportError:
 
 import pytest
 import torch
-from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.sim_context import HandlerContext
-from metasim.test.test_utils import assert_close
+from metasim.test.test_utils import assert_close, isaacsim_app, isaacsim_context  # noqa: F401
 from metasim.utils.state import state_tensor_to_nested
 from roboverse_pack.robots.franka_cfg import FrankaCfg
 
@@ -20,35 +19,8 @@ def _get_test_parameters():
     return [("isaacsim", 1), ("isaacsim", 2), ("mujoco", 1), ("mujoco", 2)]
 
 
-@pytest.fixture(scope="session")
-def simulation_app():
-    from isaaclab.app import AppLauncher
-
-    app = AppLauncher(headless=False, enable_cameras=True).app
-    yield app
-    # NOTE: Don't call app.close(), otherwise pytest summary will be skipped!
-
-
-@pytest.fixture(scope="function", autouse=True)
-def isaacsim_context():
-    import isaaclab.sim as sim_utils
-    import isaacsim.core.utils.stage as stage_utils
-
-    log.debug("Creating new stage")
-    stage_utils.create_new_stage()
-    log.debug("New stage created")
-    sim_cfg = sim_utils.SimulationCfg()
-    sim = sim_utils.SimulationContext(sim_cfg)
-    sim._app_control_on_stop_handle = None
-    yield sim
-    log.debug("Stopping simulation")
-    sim.clear_all_callbacks()
-    sim.clear_instance()
-    log.debug("Simulation stopped")
-
-
 @pytest.mark.parametrize("sim,num_envs", _get_test_parameters())
-def test_consistency(simulation_app, sim, num_envs):
+def test_consistency(isaacsim_app, sim, num_envs):  # noqa: F811
     scenario = ScenarioCfg(
         simulator=sim,
         num_envs=num_envs,
@@ -122,7 +94,7 @@ def test_consistency(simulation_app, sim, num_envs):
         }
     ] * num_envs
 
-    with HandlerContext(scenario, simulation_app) as handler:
+    with HandlerContext(scenario, isaacsim_app) as handler:
         handler.set_states(init_states)
         states = state_tensor_to_nested(handler, handler.get_states())
         for i in range(num_envs):
