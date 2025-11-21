@@ -51,6 +51,14 @@ class BaseDexCfg(RobotCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        sorted_joint_names = sorted(list(self.joint_limits.keys()))
+        self.actuators = {k: self.actuators[k] for k in sorted_joint_names}
+        self.joint_limits = {
+            k: self.joint_limits[k] for k in sorted_joint_names
+        }
+        self.default_joint_positions = {
+            k: self.default_joint_positions[k] for k in sorted_joint_names
+        }
         self.num_fingertips = len(self.fingertips) if self.fingertips else 0
         self.observation_shape = self.num_joints * 2 + 7 + self.num_fingertips * 7
         self.dof_names: list[str] = list(self.default_joint_positions.keys())

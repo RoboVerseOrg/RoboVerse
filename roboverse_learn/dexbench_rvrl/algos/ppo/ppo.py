@@ -286,6 +286,10 @@ class PPO:
                         axis=-1,
                     )
                     kl_mean = kl.mean()
+                    if kl_mean > self.desired_kl * 20.0:
+                        log.warning("KL divergence is exploding, terminating training early!")
+                        kl_over_limit = True
+                        break
                     if kl_mean > self.desired_kl * 1.5 and self.schedule == "clip":
                         kl_over_limit = True
                         break
