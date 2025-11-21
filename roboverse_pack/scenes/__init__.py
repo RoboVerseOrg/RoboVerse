@@ -14,6 +14,7 @@ from .kujiale_scene_0025_cfg import KujialeScene0025Cfg
 from .kujiale_scene_0031_cfg import KujialeScene0031Cfg
 from .kujiale_scene_0032_cfg import KujialeScene0032Cfg
 from .kujiale_scene_0033_cfg import KujialeScene0033Cfg
+from .libero_kitchen_tabletop_cfg import LiberoKitchenTabletopCfg
 from .manycore_scene_827313_cfg import ManycoreScene827313Cfg
 from .tapwater_scene_131_cfg import TapwaterScene131Cfg
 from .tapwater_scene_138_cfg import TapwaterScene138Cfg

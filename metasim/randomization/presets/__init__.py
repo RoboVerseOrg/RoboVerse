@@ -9,11 +9,12 @@ from .light_presets import (
     LightPresets,
     LightScenarios,
 )
-from .material_presets import MaterialPresets, MaterialProperties, MDLCollections
+from .material_presets import MaterialPresets, MaterialProperties, MaterialRepository, MDLCollections
 from .object_presets import ObjectPresets
-from .scene_presets import SceneMaterialCollections, ScenePresets
+from .scene_presets import AssetRepository, SceneMaterialCollections, ScenePresets, SceneUSDCollections, USDCollections
 
 __all__ = [
+    "AssetRepository",
     "CameraPresets",
     "CameraProperties",
     "CameraScenarios",
@@ -26,7 +27,10 @@ __all__ = [
     "MDLCollections",
     "MaterialPresets",
     "MaterialProperties",
+    "MaterialRepository",
     "ObjectPresets",
     "SceneMaterialCollections",
     "ScenePresets",
+    "SceneUSDCollections",
+    "USDCollections",
 ]

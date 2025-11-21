@@ -1,26 +1,43 @@
-"""Domain Randomization Demo with Trajectory Replay
+"""Domain Randomization Demo - Refactored Architecture
 
-Replays close_box task trajectories with progressive domain randomization.
+This demo showcases the refactored Domain Randomization architecture with clean
+separation of concerns and unified object access.
 
-Scene Setup:
-- Enclosed room: 10m x 10m x 5m with walls and ceiling
-- Table: 1.8m x 1.8m at height 0.7m with physics collision
-- Objects placed on table surface
+Architecture Highlights:
+1. Two Object Types:
+   - Static Objects: Handler-managed (Robot, box_base, Camera, Light)
+   - Dynamic Objects: SceneRandomizer-managed (Floor, Table, Distractors)
 
-Lighting (5 lights, all inside room):
-- 1 central DiskLight (main directional light, supports orientation randomization)
-- 4 corner SphereLight (even ambient coverage)
-- Intensities auto-adjusted for render mode:
-  * PathTracing: 28K + 12Kx4 = 76K total
-  * RayTracing: 20K + 7Kx4 = 48K total
+2. Two Randomizer Types:
+   - Lifecycle Manager: SceneRandomizer (create/delete/switch)
+   - Property Editors: Material/Object/Light/Camera (edit properties)
+
+3. Unified Access:
+   - ObjectRegistry: Automatic, transparent access to all objects
+   - MaterialRandomizer can randomize Dynamic Objects (table, floor)
+
+4. Hybrid Support:
+   - Automatic handler dispatch based on REQUIRES_HANDLER
+   - Zero configuration needed
+
+Performance Optimization:
+- Global defer mechanism: 22 flushes → 1 flush (~15-30x speedup)
+- Unified settle_passes=2 for quality-performance balance
+
+Scene Modes:
+- Mode 0: Manual (all manual geometry)
+- Mode 1: USD Table (USD table + manual environment)
+- Mode 2: USD Scene (Kujiale + Table785)
+- Mode 3: Full USD (Kujiale + Table785 + Desktop objects)
 
 Randomization Levels:
 - Level 0: Baseline (no randomization)
-- Level 1: Material randomization
-- Level 2: Material + Lighting randomization
-- Level 3: Material + Lighting + Camera randomization
+- Level 1: Scene/Material randomization
+- Level 2: Level 1 + Lighting randomization (intensity/color/position/orientation)
+- Level 3: Level 2 + Camera randomization
 
-All randomizations applied simultaneously every N steps (default: 10)
+Run:
+    python get_started/12_domain_randomization.py --scene_mode 0 --level 2
 """
 
 from __future__ import annotations
@@ -40,17 +57,29 @@ from loguru import logger as log
 from rich.logging import RichHandler
 
 from metasim.randomization import (
+    # Randomizers
     CameraPresets,
     CameraRandomizer,
+    # Scene Configuration
+    EnvironmentLayerCfg,
     LightRandomizer,
+    ManualGeometryCfg,
     MaterialPresets,
     MaterialRandomizer,
     ObjectPresets,
     ObjectRandomizer,
+    # Core (NEW - usually transparent)
+    ObjectRegistry,
+    ObjectsLayerCfg,
+    SceneRandomCfg,
     SceneRandomizer,
+    USDAssetPoolCfg,
+    WorkspaceLayerCfg,
 )
-from metasim.randomization.presets.scene_presets import ScenePresets
-from metasim.randomization.scene_randomizer import SceneMaterialPoolCfg
+from metasim.randomization.presets.scene_presets import (
+    ScenePresets,
+    SceneUSDCollections,
+)
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
 from metasim.scenario.render import RenderCfg
@@ -62,45 +91,27 @@ from metasim.utils.obs_utils import ObsSaver
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 
-def get_actions(all_actions, action_idx: int, num_envs: int):
-    """Get actions for all environments at a given step."""
-    envs_actions = all_actions[:num_envs]
-    actions = [
-        env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
-    ]
-    return actions
-
-
-def get_runout(all_actions, action_idx: int):
-    """Check if all trajectories have run out of actions."""
-    runout = all([action_idx >= len(all_actions[i]) for i in range(len(all_actions))])
-    return runout
-
-
 def create_env(args):
-    """Create task environment."""
+    """Create task environment with lights and camera."""
     task_name = "close_box"
     task_cls = get_task_class(task_name)
-
-    table_height = 0.7
 
     camera = PinholeCameraCfg(
         name="main_camera",
         width=1024,
         height=1024,
-        pos=(2.0, -2.0, 2.0),
-        look_at=(0.0, 0.0, table_height + 0.05),
+        pos=(1.2, -1.2, 1.5),
+        look_at=(0.0, 0.0, 0.75),
+        focal_length=18.0,
     )
 
-    # Lighting configuration for enclosed room (10m x 10m x 5m)
-    # All lights positioned inside room to avoid wall blocking
-    # Layout: 1 central DiskLight + 4 corner SphereLight
+    # Lighting setup
     if args.render_mode == "pathtracing":
-        ceiling_main = 28000.0
-        ceiling_corners = 12000.0
+        ceiling_main = 18000.0
+        ceiling_corners = 8000.0
     else:
-        ceiling_main = 20000.0
-        ceiling_corners = 7000.0
+        ceiling_main = 12000.0
+        ceiling_corners = 5000.0
 
     lights = [
         DiskLightCfg(
@@ -108,36 +119,20 @@ def create_env(args):
             intensity=ceiling_main,
             color=(1.0, 1.0, 1.0),
             radius=1.2,
-            pos=(0.0, 0.0, 4.5),
+            pos=(0.0, 0.0, 2.8),
             rot=(0.7071, 0.0, 0.0, 0.7071),
         ),
         SphereLightCfg(
-            name="ceiling_ne",
-            intensity=ceiling_corners,
-            color=(1.0, 1.0, 1.0),
-            radius=0.6,
-            pos=(3.0, 3.0, 4.0),
+            name="ceiling_ne", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, 1.0, 2.5)
         ),
         SphereLightCfg(
-            name="ceiling_nw",
-            intensity=ceiling_corners,
-            color=(1.0, 1.0, 1.0),
-            radius=0.6,
-            pos=(-3.0, 3.0, 4.0),
+            name="ceiling_nw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, 1.0, 2.5)
         ),
         SphereLightCfg(
-            name="ceiling_sw",
-            intensity=ceiling_corners,
-            color=(1.0, 1.0, 1.0),
-            radius=0.6,
-            pos=(-3.0, -3.0, 4.0),
+            name="ceiling_sw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, -1.0, 2.5)
         ),
         SphereLightCfg(
-            name="ceiling_se",
-            intensity=ceiling_corners,
-            color=(1.0, 1.0, 1.0),
-            radius=0.6,
-            pos=(3.0, -3.0, 4.0),
+            name="ceiling_se", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, -1.0, 2.5)
         ),
     ]
 
@@ -161,118 +156,204 @@ def create_env(args):
     return env
 
 
-def get_init_states(level, num_envs):
-    """Get initial states for objects and robot based on level."""
-    box_base_height = 0.15
-    table_surface_z = 0.7
-
-    objects = {
-        "box_base": {
-            "pos": torch.tensor([-0.2, 0.0, table_surface_z + box_base_height / 2]),
-            "rot": torch.tensor([0.0, 0.7071, 0.0, 0.7071]),
-            "dof_pos": {"box_joint": 0.0},
-        },
-    }
-
-    robot = {
-        "franka": {
-            "pos": torch.tensor([0.0, -0.4, table_surface_z]),
-            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-            "dof_pos": {
-                "panda_joint1": 0.0,
-                "panda_joint2": -0.785398,
-                "panda_joint3": 0.0,
-                "panda_joint4": -2.356194,
-                "panda_joint5": 0.0,
-                "panda_joint6": 1.570796,
-                "panda_joint7": 0.785398,
-                "panda_finger_joint1": 0.04,
-                "panda_finger_joint2": 0.04,
-            },
-        },
-    }
-
-    return [{"objects": objects, "robots": robot}] * num_envs
-
-
 def initialize_randomizers(handler, args):
-    """Initialize all randomizers based on randomization level."""
+    """Initialize all randomizers showcasing the new architecture."""
+    mode = args.scene_mode
+    level = args.level
+
+    log.info("=" * 70)
+    log.info("NEW ARCHITECTURE: Static vs Dynamic Objects")
+    log.info("=" * 70)
+    log.info("Static Objects (Handler-managed):")
+    log.info("  - Robot (franka)")
+    log.info("  - Task Object (box_base)")
+    log.info("  - Camera (main_camera)")
+    log.info("  - Lights (5 lights)")
+    log.info("")
+    log.info("Dynamic Objects (SceneRandomizer-managed):")
+    log.info("  - Environment (Floor/Walls/Ceiling or Kujiale scene)")
+    log.info("  - Workspace (Table)")
+    log.info("  - Objects (Desktop items)")
+    log.info("=" * 70)
+
     randomizers = {
-        "object": [],
-        "material": [],
+        "scene": None,
+        "object_physics": [],
+        "material_static": [],  # Materials for Static Objects
+        "material_dynamic": [],  # Materials for Dynamic Objects
         "light": [],
         "camera": [],
-        "scene": None,
     }
 
-    level = args.level
-    log.info("=" * 70)
-    log.info(f"Randomization Level: {level}")
-    log.info("=" * 70)
+    # =========================================================================
+    # STEP 1: Create Scene (SceneRandomizer - Lifecycle Manager)
+    # =========================================================================
 
-    log.info("\n[Scene Setup]")
+    log.info("\n[STEP 1] Scene Creation (SceneRandomizer)")
     log.info("-" * 70)
 
-    scene_cfg = ScenePresets.tabletop_workspace(
-        room_size=10.0,
-        wall_height=5.0,
-        table_size=(1.8, 1.8, 0.1),
-        table_height=0.7,
-        floor_families=("carpet", "wood", "stone", "concrete", "architecture"),
-        wall_families=("architecture", "wall_board", "masonry", "paint", "composite"),
-        ceiling_families=("architecture", "wall_board", "wood"),
-        table_families=("wood", "stone", "plastic", "ceramic", "metal"),
-    )
+    if mode >= 2:
+        # USD Scene
+        scene_paths, scene_configs = SceneUSDCollections.kujiale_scenes(return_configs=True)
+        log.info(f"Environment: Kujiale USD ({len(scene_paths)} scenes)")
 
-    if level < 1:
-        scene_cfg.floor_materials = SceneMaterialPoolCfg(
-            material_paths=["roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl"],
-            selection_strategy="sequential",
+        env_element = USDAssetPoolCfg(
+            name="kujiale_scene",
+            usd_paths=scene_paths,
+            per_path_overrides=scene_configs,
+            selection_strategy="random" if level >= 1 else "sequential",
         )
-        scene_cfg.wall_materials = SceneMaterialPoolCfg(
-            material_paths=["roboverse_data/materials/arnold/Masonry/Stucco.mdl"],
-            selection_strategy="sequential",
-        )
-        scene_cfg.ceiling_materials = SceneMaterialPoolCfg(
-            material_paths=["roboverse_data/materials/arnold/Architecture/Ceiling_Tiles.mdl"],
-            selection_strategy="sequential",
-        )
-        scene_cfg.table_materials = SceneMaterialPoolCfg(
-            material_paths=["roboverse_data/materials/arnold/Wood/Plywood.mdl"],
-            selection_strategy="sequential",
-        )
-        log.info("  Scene with fixed materials")
+        environment_layer = EnvironmentLayerCfg(elements=[env_element])
     else:
-        log.info("  Scene with randomized materials")
+        # Manual Scene - Complete room
+        log.info("Environment: Manual geometry (10m x 10m x 5m)")
+        base_cfg = ScenePresets.empty_room(
+            room_size=10.0,
+            wall_height=5.0,
+        )
+        environment_layer = base_cfg.environment_layer
+
+    if mode >= 1:
+        # USD Table
+        table_paths, table_configs = SceneUSDCollections.table785(return_configs=True)
+        log.info(f"Workspace: Table785 USD ({len(table_paths)} tables)")
+
+        workspace_element = USDAssetPoolCfg(
+            name="table",
+            usd_paths=table_paths,
+            per_path_overrides=table_configs,
+            selection_strategy="random" if level >= 1 else "sequential",
+        )
+        workspace_layer = WorkspaceLayerCfg(elements=[workspace_element])
+    else:
+        # Manual Table (with default Plywood, MaterialRandomizer will randomize in level 1+)
+        log.info("Workspace: Manual table (Plywood default, randomized in level 1+)")
+        workspace_layer = WorkspaceLayerCfg(
+            elements=[
+                ManualGeometryCfg(
+                    name="table",
+                    geometry_type="cube",
+                    size=(1.8, 1.8, 0.1),
+                    position=(0.0, 0.0, 0.7 - 0.05),  # 0.65m (table surface at 0.7m)
+                    default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl",
+                )
+            ]
+        )
+
+    if mode >= 3:
+        # Desktop Objects
+        object_paths, object_configs = SceneUSDCollections.desktop_supplies(return_configs=True)
+        log.info(f"Objects: Desktop supplies ({len(object_paths)} items, placing 3)")
+
+        objects_layer = ObjectsLayerCfg(
+            elements=[
+                USDAssetPoolCfg(
+                    name=f"desktop_object_{i + 1}",
+                    usd_paths=object_paths,
+                    per_path_overrides=object_configs,
+                    selection_strategy="random" if level >= 1 else "sequential",
+                )
+                for i in range(3)
+            ]
+        )
+    else:
+        objects_layer = None
+
+    # Create SceneRandomizer
+    scene_cfg = SceneRandomCfg(
+        environment_layer=environment_layer,
+        workspace_layer=workspace_layer,
+        objects_layer=objects_layer,
+    )
 
     scene_rand = SceneRandomizer(scene_cfg, seed=args.seed)
     scene_rand.bind_handler(handler)
     randomizers["scene"] = scene_rand
 
-    log.info("    Room: 10m x 10m x 5m")
-    log.info("    Table: 1.8m x 1.8m at z=0.7m with collider")
+    log.info("SceneRandomizer created (manages Dynamic Objects lifecycle)")
 
-    box_rand = ObjectRandomizer(
-        ObjectPresets.heavy_object("box_base"),
-        seed=args.seed,
-    )
-    box_rand.cfg.pose.rotation_range = (0, 0)
-    box_rand.cfg.pose.position_range[2] = (0, 0)
-    box_rand.bind_handler(handler)
-    box_rand()
+    # =========================================================================
+    # STEP 2: Material Randomization (NEW: Works for ALL objects)
+    # =========================================================================
 
-    log.info("\n[Level 1+] Material Randomization")
+    log.info("\n[STEP 2] Material Randomization (MaterialRandomizer)")
     log.info("-" * 70)
 
+    # Static Object material
     box_mat = MaterialRandomizer(
-        MaterialPresets.mdl_family_object("box_base", family=("paper", "wood")),
-        seed=args.seed,
+        MaterialPresets.mdl_family_object("box_base", family=("wood", "plastic")),
+        seed=args.seed + 1,
     )
     box_mat.bind_handler(handler)
-    randomizers["material"].append(box_mat)
-    log.info("  box_base: wood material")
+    randomizers["material_static"].append(box_mat)
+    log.info("Static Object: box_base (wood/plastic/metal/ceramic materials)")
 
-    log.info("\n[Level 2+] Light Randomization")
+    # Dynamic Object materials (NEW FEATURE!)
+    # Note: Only for Mode 0 (manual table)
+    # Mode 1+ use USD tables with their own materials
+    if mode == 0:
+        table_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
+            seed=args.seed + 2,
+        )
+        table_mat.bind_handler(handler)
+        randomizers["material_dynamic"].append(table_mat)
+        log.info("Dynamic Object: table (Manual, wood/metal materials)")
+
+    # Manual geometry materials (floor, walls, ceiling)
+    # Only for modes with manual environment (mode < 2) and level >= 1
+    if mode < 2 and level >= 1:
+        # Floor
+        floor_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
+            seed=args.seed + 101,
+        )
+        floor_mat.bind_handler(handler)
+        randomizers["material_dynamic"].append(floor_mat)
+
+        # Walls (all 4 share same seed for consistency)
+        wall_seed = args.seed + 102
+        for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
+            wall_mat = MaterialRandomizer(
+                MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
+                seed=wall_seed,  # Same seed for all walls
+            )
+            wall_mat.bind_handler(handler)
+            randomizers["material_dynamic"].append(wall_mat)
+
+        # Ceiling
+        ceiling_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
+            seed=args.seed + 103,
+        )
+        ceiling_mat.bind_handler(handler)
+        randomizers["material_dynamic"].append(ceiling_mat)
+
+        log.info("Dynamic Objects: floor + 4 walls + ceiling (manual geometry materials)")
+
+    # =========================================================================
+    # STEP 3: Physics Randomization (ObjectRandomizer - Static Objects only)
+    # =========================================================================
+
+    log.info("\n[STEP 3] Physics Randomization (ObjectRandomizer)")
+    log.info("-" * 70)
+
+    box_physics = ObjectRandomizer(
+        ObjectPresets.heavy_object("box_base"),
+        seed=args.seed + 3,
+    )
+    box_physics.cfg.pose.rotation_range = (0, 0)  # Disable rotation for stability
+    box_physics.cfg.pose.position_range = [(0, 0), (0, 0), (0, 0)]  # Disable position jitter
+    box_physics.bind_handler(handler)
+    box_physics()  # Apply once at start
+    randomizers["object_physics"].append(box_physics)
+    log.info("Static Object: box_base (mass randomization)")
+
+    # =========================================================================
+    # STEP 4: Light Randomization (LightRandomizer)
+    # =========================================================================
+
+    log.info("\n[STEP 4] Light Randomization (LightRandomizer)")
     log.info("-" * 70)
 
     from metasim.randomization import (
@@ -284,316 +365,320 @@ def initialize_randomizers(handler, args):
     )
 
     if args.render_mode == "pathtracing":
-        ceiling_main_range = (22000.0, 40000.0)
-        ceiling_corner_range = (10000.0, 18000.0)
+        main_range = (22000.0, 40000.0)
+        corner_range = (10000.0, 18000.0)
     else:
-        ceiling_main_range = (16000.0, 30000.0)
-        ceiling_corner_range = (6000.0, 12000.0)
+        main_range = (16000.0, 30000.0)
+        corner_range = (6000.0, 12000.0)
 
-    main_light_cfg = LightRandomCfg(
-        light_name="ceiling_main",
-        intensity=LightIntensityRandomCfg(
-            intensity_range=ceiling_main_range,
-            distribution="uniform",
-            enabled=True,
-        ),
-        color=LightColorRandomCfg(
-            temperature_range=(3000.0, 6000.0),
-            use_temperature=True,
-            distribution="uniform",
-            enabled=True,
-        ),
-        position=LightPositionRandomCfg(
-            position_range=((-1.0, 1.0), (-1.0, 1.0), (-0.2, 0.2)),
-            relative_to_origin=True,
-            distribution="uniform",
-            enabled=True,
-        ),
-        orientation=LightOrientationRandomCfg(
-            angle_range=((-20.0, 20.0), (-20.0, 20.0), (-180.0, 180.0)),
-            relative_to_origin=True,
-            distribution="uniform",
-            enabled=True,
-        ),
-        randomization_mode="combined",
-    )
-    main_light_rand = LightRandomizer(main_light_cfg, seed=args.seed)
-    main_light_rand.bind_handler(handler)
-    randomizers["light"].append(main_light_rand)
-
-    for light_name in ["ceiling_ne", "ceiling_nw", "ceiling_sw", "ceiling_se"]:
-        light_cfg = LightRandomCfg(
-            light_name=light_name,
-            intensity=LightIntensityRandomCfg(
-                intensity_range=ceiling_corner_range,
-                distribution="uniform",
-                enabled=True,
-            ),
-            color=LightColorRandomCfg(
-                temperature_range=(2700.0, 5500.0),
-                use_temperature=True,
-                distribution="uniform",
-                enabled=True,
-            ),
-            position=LightPositionRandomCfg(
-                position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.2, 0.2)),
+    # Main light with orientation randomization (simulates different lighting angles)
+    main_light = LightRandomizer(
+        LightRandomCfg(
+            light_name="ceiling_main",
+            intensity=LightIntensityRandomCfg(intensity_range=main_range, enabled=True),
+            color=LightColorRandomCfg(temperature_range=(3000.0, 6000.0), use_temperature=True, enabled=True),
+            orientation=LightOrientationRandomCfg(
+                angle_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),  # Small angle variations
                 relative_to_origin=True,
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode="combined",
+        ),
+        seed=args.seed + 4,
+    )
+    main_light.bind_handler(handler)
+    randomizers["light"].append(main_light)
+
+    # Corner lights with position and orientation randomization
+    for i, light_name in enumerate(["ceiling_ne", "ceiling_nw", "ceiling_sw", "ceiling_se"]):
+        corner_light = LightRandomizer(
+            LightRandomCfg(
+                light_name=light_name,
+                intensity=LightIntensityRandomCfg(intensity_range=corner_range, enabled=True),
+                color=LightColorRandomCfg(temperature_range=(2700.0, 5500.0), use_temperature=True, enabled=True),
+                position=LightPositionRandomCfg(
+                    position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),  # Small position jitter
+                    relative_to_origin=True,
+                    distribution="uniform",
+                    enabled=True,
+                ),
+            ),
+            seed=args.seed + 5 + i,
         )
-        light_rand = LightRandomizer(light_cfg, seed=args.seed)
-        light_rand.bind_handler(handler)
-        randomizers["light"].append(light_rand)
+        corner_light.bind_handler(handler)
+        randomizers["light"].append(corner_light)
 
-    log.info(f"  Configured {len(randomizers['light'])} light randomizers")
-    log.info(f"    DiskLight (main): {ceiling_main_range[0] / 1000:.0f}K-{ceiling_main_range[1] / 1000:.0f}K")
-    log.info(f"    SphereLight (corners): {ceiling_corner_range[0] / 1000:.0f}K-{ceiling_corner_range[1] / 1000:.0f}K")
-    log.info("    Randomization: intensity, color, position, orientation (DiskLight only)")
+    log.info(f"Configured {len(randomizers['light'])} lights (with position/orientation randomization)")
 
-    log.info("\n[Level 3+] Camera Randomization")
+    # =========================================================================
+    # STEP 5: Camera Randomization (CameraRandomizer)
+    # =========================================================================
+
+    log.info("\n[STEP 5] Camera Randomization (CameraRandomizer)")
     log.info("-" * 70)
 
     camera_rand = CameraRandomizer(
-        CameraPresets.surveillance_camera("main_camera", randomization_mode="combined"),
-        seed=args.seed,
+        CameraPresets.orbit_camera("main_camera"),
+        seed=args.seed + 10,
     )
     camera_rand.bind_handler(handler)
     randomizers["camera"].append(camera_rand)
-    log.info("  Camera: surveillance preset")
+    log.info("Camera: orbit preset (circles around table center)")
 
     log.info("\n" + "=" * 70)
+    log.info("All Randomizers Initialized")
+    log.info("=" * 70)
+
+    # Inspect ObjectRegistry
+    if level >= 1:
+        registry = ObjectRegistry.get_instance()
+        log.info("\nObjectRegistry Contents:")
+        log.info(f"  Static Objects: {registry.list_objects(lifecycle='static')}")
+        log.info(
+            f"  Dynamic Objects: {registry.list_objects(lifecycle='dynamic')} (will be populated after scene_rand())"
+        )
+
     return randomizers
 
 
-def apply_randomization(randomizers, level, handler) -> None:
-    """Apply all randomizers simultaneously with deferred visual flush.
+def apply_randomization(randomizers, level, handler=None, is_initial=False):
+    """Apply all randomizers with global deferred visual flush.
 
-    Ensures all randomizations (scene, object, material, light, camera) are
-    applied atomically before flushing visuals, preventing intermediate states
-    from being captured in video recordings.
+    New Strategy (Performance Optimized):
+    - Set global defer flag on handler to block ALL internal flushes
+    - This includes: MaterialRandomizer, LightRandomizer, force_pose_nudge, etc.
+    - Single atomic flush at the end (settle_passes=2)
+    - Result: ~22 flushes → 1 flush (~15-30x speedup)
+
+    Ensures all randomizations are applied atomically before flushing visuals,
+    preventing intermediate states from being captured in recordings.
+
+    Args:
+        randomizers: Dictionary of randomizers
+        level: Randomization level (0-3)
+        handler: Simulation handler
+        is_initial: Whether this is the initial call (for scene creation)
     """
-    # Temporarily disable auto-flush in scene randomizer
-    scene_rand = randomizers["scene"]
-    if scene_rand:
-        original_auto_flush = scene_rand.cfg.auto_flush_visuals
-        scene_rand.cfg.auto_flush_visuals = False
-        scene_rand()
-        scene_rand.cfg.auto_flush_visuals = original_auto_flush
+    # Enable global defer flag (blocks ALL internal flush calls)
+    if handler:
+        handler._defer_all_visual_flushes = True
 
-    # Apply object randomization
-    if level >= 0:
-        for rand in randomizers["object"]:
-            rand()
+    try:
+        # Scene creation/switching logic:
+        # - Initial call: Always create scene (even level 0)
+        # - Periodic call: Only switch scene at level 1+ (level 0: no switching)
+        if randomizers["scene"]:
+            if is_initial or level >= 1:
+                scene_rand = randomizers["scene"]
+                original_auto_flush = scene_rand.cfg.auto_flush_visuals
+                scene_rand.cfg.auto_flush_visuals = False
+                scene_rand()
+                scene_rand.cfg.auto_flush_visuals = original_auto_flush
 
-    # Apply material randomization with deferred flush
-    if level >= 1:
-        for rand in randomizers["material"]:
-            if hasattr(rand, "_defer_visual_flush"):
-                rand._defer_visual_flush = True
-            rand()
-            if hasattr(rand, "_defer_visual_flush"):
-                rand._defer_visual_flush = False
+        # Level 1+: Material randomization
+        if level >= 1:
+            for mat_rand in randomizers["material_static"]:
+                mat_rand()
 
-    # Apply light randomization
-    if level >= 2:
-        for rand in randomizers["light"]:
-            rand()
+            for mat_rand in randomizers["material_dynamic"]:
+                mat_rand()
 
-    # Apply camera randomization
-    if level >= 3:
-        for rand in randomizers["camera"]:
-            rand()
+        # Level 2+: Lighting
+        if level >= 2:
+            for light_rand in randomizers["light"]:
+                light_rand()
 
-    # Single comprehensive flush after all randomizations complete
-    flush_fn = getattr(handler, "flush_visual_updates", None)
-    if callable(flush_fn):
-        try:
-            flush_fn(wait_for_materials=True, settle_passes=3)
-        except Exception as e:
-            log.debug(f"Failed to flush visual updates: {e}")
+        # Level 3+: Camera
+        if level >= 3:
+            for cam_rand in randomizers["camera"]:
+                cam_rand()
 
-
-def get_states(all_states, action_idx: int, num_envs: int):
-    """Get states for all environments at a given step."""
-    envs_states = all_states[:num_envs]
-    states = [env_states[action_idx] if action_idx < len(env_states) else env_states[-1] for env_states in envs_states]
-    return states
+    finally:
+        # Disable global defer flag and perform single comprehensive flush
+        if handler:
+            handler._defer_all_visual_flushes = False
+            if hasattr(handler, "flush_visual_updates"):
+                try:
+                    # Unified settle_passes=2 balances quality and performance
+                    handler.flush_visual_updates(wait_for_materials=True, settle_passes=2)
+                except Exception as e:
+                    log.debug(f"Failed to flush visual updates: {e}")
 
 
-def run_replay_with_randomization(env, randomizers, init_state, all_actions, all_states, args):
-    """Replay trajectory with periodic randomization."""
+def run_replay(env, randomizers, init_state, all_actions, args):
+    """Run trajectory replay with randomization."""
     os.makedirs("get_started/output", exist_ok=True)
 
-    mode_tag = "states" if args.object_states else f"level{args.level}"
-    video_path = f"get_started/output/12_dr_{mode_tag}_{args.sim}.mp4"
+    mode_names = {0: "manual", 1: "usd_table", 2: "usd_scene", 3: "full_usd"}
+    video_path = f"get_started/output/12_dr_mode{args.scene_mode}_{mode_names[args.scene_mode]}_level{args.level}.mp4"
 
     obs_saver = ObsSaver(video_path=video_path)
 
     log.info("\n" + "=" * 70)
     log.info("Trajectory Replay with Domain Randomization")
     log.info("=" * 70)
-    log.info(f"Video output: {video_path}")
-    log.info(f"Randomization interval: every {args.randomize_interval} steps")
+    log.info(f"Video: {video_path}")
+    log.info(f"Randomization interval: {args.randomize_interval} steps")
 
-    traj_length = len(all_actions[0]) if all_actions else (len(all_states[0]) if all_states else 0)
-    log.info(f"Trajectory length: {traj_length} steps")
+    # Initial randomization (create scene)
+    apply_randomization(randomizers, args.level, env.handler, is_initial=True)
 
-    randomization_enabled = not args.object_states
-    if randomization_enabled:
-        apply_randomization(randomizers, args.level, env.handler)
+    # Store original positions for later updates
+    original_positions = {}
+    for obj_name, obj_state in init_state["objects"].items():
+        original_positions[f"obj_{obj_name}"] = {
+            "x": float(obj_state["pos"][0]),
+            "y": float(obj_state["pos"][1]),
+            "z": float(obj_state["pos"][2]),
+        }
+    for robot_name, robot_state in init_state["robots"].items():
+        original_positions[f"robot_{robot_name}"] = {
+            "x": float(robot_state["pos"][0]),
+            "y": float(robot_state["pos"][1]),
+            "z": float(robot_state["pos"][2]),
+        }
 
-    obs, extras = env.reset(states=[init_state] * args.num_envs)
+    # Update positions to match table (center + height)
+    def update_positions_to_table():
+        if not randomizers["scene"]:
+            return
+
+        table_bounds = randomizers["scene"].get_table_bounds(env_id=0)
+        if not table_bounds or abs(table_bounds.get("height", 0)) > 100:
+            return
+
+        table_height = table_bounds["height"]
+        table_center_x = (table_bounds["x_min"] + table_bounds["x_max"]) / 2
+        table_center_y = (table_bounds["y_min"] + table_bounds["y_max"]) / 2
+
+        # Compute system center (robot + objects)
+        all_x = [original_positions[k]["x"] for k in original_positions]
+        all_y = [original_positions[k]["y"] for k in original_positions]
+        system_center_x = sum(all_x) / len(all_x)
+        system_center_y = sum(all_y) / len(all_y)
+
+        # Compute offset to align system to table center
+        offset_x = table_center_x - system_center_x
+        offset_y = table_center_y - system_center_y
+
+        log.info(
+            f"Adjusting positions: table center ({table_center_x:.2f}, {table_center_y:.2f}), height {table_height:.3f}"
+        )
+
+        # Compute original Z average
+        all_z = [original_positions[k]["z"] for k in original_positions]
+        avg_z = sum(all_z) / len(all_z)
+
+        # Apply offset (rigid body translation - preserves ALL relative positions)
+        for obj_name, obj_state in init_state["objects"].items():
+            orig = original_positions[f"obj_{obj_name}"]
+            obj_state["pos"][0] = orig["x"] + offset_x  # XY: center alignment
+            obj_state["pos"][1] = orig["y"] + offset_y
+            obj_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05  # Z: preserve relative + clearance
+
+        for robot_name, robot_state in init_state["robots"].items():
+            orig = original_positions[f"robot_{robot_name}"]
+            robot_state["pos"][0] = orig["x"] + offset_x
+            robot_state["pos"][1] = orig["y"] + offset_y
+            robot_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05
+
+        env.handler.set_states([init_state] * env.scenario.num_envs)
+
+    # Initial position update
+    update_positions_to_table()
+
+    # Update camera look_at
+    if randomizers["scene"]:
+        table_bounds = randomizers["scene"].get_table_bounds(env_id=0)
+        if table_bounds:
+            for camera in env.handler.cameras:
+                if camera.name == "main_camera":
+                    camera.look_at = (0.0, 0.0, table_bounds["height"] + 0.05)
+            if hasattr(env.handler, "_update_camera_pose"):
+                env.handler._update_camera_pose()
+
+    obs, _ = env.reset(states=[init_state] * args.num_envs)
 
     step = 0
-    num_envs = env.scenario.num_envs
-
-    while True:
-        if randomization_enabled and step % args.randomize_interval == 0 and step > 0:
-            log.info(f"Step {step}: Applying randomizations")
+    while step < len(all_actions[0]):
+        # Periodic randomization
+        if step % args.randomize_interval == 0 and step > 0:
+            log.info(f"Step {step}: Applying randomization")
             apply_randomization(randomizers, args.level, env.handler)
 
-        if args.object_states:
-            if all_states is None:
-                raise ValueError("State playback requested but no states were loaded from trajectory")
-
-            states = get_states(all_states, step, num_envs)
-            env.handler.set_states(states, env_ids=list(range(num_envs)))
-            env.handler.refresh_render()
-            obs = env.handler.get_states()
-
-            if hasattr(env, "checker"):
-                success = env.checker.check(env.handler, obs)
-            else:
-                success = torch.zeros(num_envs, dtype=torch.bool)
-
-            time_out = torch.zeros_like(success)
-        else:
-            actions = get_actions(all_actions, step, num_envs)
-            obs, reward, success, time_out, extras = env.step(actions)
-
-        if success.any():
-            log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded")
-
-        if time_out.any():
-            log.info(f"Env {time_out.nonzero().squeeze(-1).tolist()} timed out")
-
-        if success.all() or time_out.all():
-            log.info("All environments terminated")
-            break
-
+        # Execute action
+        actions = [all_actions[0][step]] * args.num_envs
+        obs, reward, success, time_out, extras = env.step(actions)
         obs_saver.add(obs)
 
-        if args.object_states:
-            if get_runout(all_states, step + 1):
-                log.info("Trajectory ended")
-                break
-        else:
-            if get_runout(all_actions, step + 1):
-                log.info("Trajectory ended")
-                break
+        if success.any() or time_out.any():
+            log.info("Task completed")
+            break
 
         step += 1
 
     obs_saver.save()
     log.info(f"\nVideo saved: {video_path}")
 
+    # Show final Registry state
+    if args.level >= 1:
+        registry = ObjectRegistry.get_instance()
+        log.info("\nFinal ObjectRegistry State:")
+        log.info(f"  Total objects: {len(registry.list_objects())}")
+        log.info(f"  Static: {registry.list_objects(lifecycle='static')}")
+        log.info(f"  Dynamic: {registry.list_objects(lifecycle='dynamic')}")
+
 
 def main():
     @configclass
     class Args:
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
-        renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
+        sim: Literal["isaacsim"] = "isaacsim"
+        renderer: str | None = None
         robot: str = "franka"
         scene: str | None = None
         num_envs: int = 1
         headless: bool = False
-        seed: int | None = 42
-
+        seed: int = 42
+        scene_mode: Literal[0, 1, 2, 3] = 3
         level: Literal[0, 1, 2, 3] = 1
-        """Randomization level:
-        0 - Baseline (no DR)
-        1 - Material randomization
-        2 - Material + Light randomization
-        3 - Material + Light + Camera randomization
-        """
-
-        randomize_interval: int = 10
-
-        object_states: bool = False
-        """If True, replay using object states (deterministic)."""
-
+        randomize_interval: int = 60
         render_mode: Literal["raytracing", "pathtracing"] = "raytracing"
-        """Rendering mode:
-        - raytracing: Fast with shadows
-        - pathtracing: Highest quality (slower)
-        """
 
     args = tyro.cli(Args)
 
-    if args.seed is not None:
-        random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        np.random.seed(args.seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(args.seed)
-            torch.cuda.manual_seed_all(args.seed)
+    # Set seeds
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
 
     log.info("=" * 70)
-    log.info("Domain Randomization Demo with Trajectory Replay")
+    log.info("Domain Randomization Demo")
     log.info("=" * 70)
-    log.info("\nConfiguration:")
-    log.info(f"  Simulator: {args.sim}")
-    log.info(f"  Render mode: {args.render_mode}")
-    log.info(f"  Robot: {args.robot}")
-    log.info(f"  Seed: {args.seed}")
-    log.info(f"  Randomization level: {args.level}")
+    log.info(f"Scene Mode: {args.scene_mode}")
+    log.info(f"Randomization Level: {args.level}")
+    log.info(f"Seed: {args.seed}")
 
-    log.info("\nScene:")
-    log.info("  Room: 10m x 10m x 5m (enclosed)")
-    log.info("  Table: 1.8m x 1.8m at z=0.7m")
-
-    log.info(f"\nLighting ({args.render_mode}):")
-    if args.render_mode == "pathtracing":
-        log.info("  DiskLight (main): 28K, 4x SphereLight (corners): 12K each")
-        log.info("  Total: ~76K")
-    else:
-        log.info("  DiskLight (main): 20K, 4x SphereLight (corners): 7K each")
-        log.info("  Total: ~48K")
-    log.info("  All lights inside room")
-
+    # Create environment
     env = create_env(args)
     handler = env.handler
 
+    # Load trajectory
     traj_filepath = env.traj_filepath
-    log.info(f"\nLoading trajectory: {traj_filepath}")
-    assert os.path.exists(traj_filepath), f"Trajectory file not found: {traj_filepath}"
-
-    init_states, all_actions, all_states = get_traj(traj_filepath, env.scenario.robots[0], handler)
+    init_states, all_actions, _ = get_traj(traj_filepath, env.scenario.robots[0], handler)
     init_state = init_states[0]
 
-    for obj_name, obj_state in init_state["objects"].items():
-        obj_state["pos"][2] += 0.7
-
-    for robot_name, robot_state in init_state["robots"].items():
-        robot_state["pos"][2] += 0.7
-
-    env.handler.set_states(init_states, env_ids=list(range(args.num_envs)))
-    log.info(f"Loaded {len(all_actions[0]) if all_actions else 0} actions")
-
+    # Initialize randomizers (NEW: Auto-initializes and populates ObjectRegistry)
     randomizers = initialize_randomizers(handler, args)
 
-    if args.object_states:
-        log.info("\nWARNING: State-based replay mode (no randomization applied)")
+    # Run replay
+    run_replay(env, randomizers, init_state, all_actions, args)
 
-    run_replay_with_randomization(env, randomizers, init_state, all_actions, all_states, args)
-
+    # Cleanup
     env.close()
     if args.sim == "isaacsim":
         env.handler.simulation_app.close()
 
-    log.info("\nDemo completed")
+    log.info("\nDemo completed successfully!")
 
 
 if __name__ == "__main__":

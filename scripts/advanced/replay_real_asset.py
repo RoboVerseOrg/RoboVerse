@@ -283,7 +283,6 @@ class LightRandomizationManager:
                         distribution="uniform",
                         enabled=True,
                     ),
-                    randomization_mode="combined",
                 )
             else:
                 light_cfg = LightRandomCfg(
@@ -305,7 +304,6 @@ class LightRandomizationManager:
                         distribution="uniform",
                         enabled=True,
                     ),
-                    randomization_mode="combined",
                 )
 
             self.light_randomizers.append(light_cfg)

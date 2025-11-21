@@ -7,7 +7,6 @@ import torch
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.scene import SceneCfg
 from metasim.task.registry import register_task
 from metasim.types import TensorState
 
@@ -67,10 +66,7 @@ class LiberoKitchenScene3PutFryingPanOnStoveTask(Libero90BaseTask):
         ],
         robots=["franka"],
         # Scene configuration
-        scene=SceneCfg(
-            name="libero_kitchen_tabletop",
-            mjcf_path="roboverse_data/assets/libero/scenes/libero_tabletop_base_style.xml",
-        ),
+        scene="libero_kitchen_tabletop",
     )
 
     # Task parameters

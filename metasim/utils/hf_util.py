@@ -238,18 +238,6 @@ class FileDownloader:
         #     self._add(traj_filepath)
 
     def _add_from_scene(self, scene: SceneCfg):
-        assert isinstance(scene, SceneCfg)
-
-        self._add(scene.file_name(self.scenario.simulator))
-
-    def _add_from_scene(self, scene: SceneCfg):
-        assert isinstance(scene, SceneCfg)
-
-        self._add(scene.file_name(self.scenario.simulator))
-
-    def _add_from_scene(self, scene: SceneCfg):
-        assert isinstance(scene, SceneCfg)
-
         self._add(scene.file_name(self.scenario.simulator))
 
     def _add_from_object(self, obj: BaseObjCfg):
