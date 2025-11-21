@@ -86,7 +86,6 @@ class IsaacsimHandler(BaseSimHandler):
             app_launcher = AppLauncher(args)
             self.simulation_app = app_launcher.app
         else:
-            assert args is not None, "args must be provided when simulation_app is given."
             self.simulation_app = simulation_app
 
         # physics context
@@ -94,7 +93,7 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
         sim_config: SimulationCfg = SimulationCfg(
-            device=args.device,
+            device="cuda:0",
             render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
@@ -198,6 +197,9 @@ class IsaacsimHandler(BaseSimHandler):
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
+        import traceback
+
+        traceback.print_stack()
         if not self._is_closed:
             self.simulation_app.close()
             if self.scene is not None:
@@ -207,10 +209,6 @@ class IsaacsimHandler(BaseSimHandler):
             if self.simulation_app is not None:
                 del self.simulation_app
             self._is_closed = True
-
-    def __del__(self):
-        """Cleanup for the environment."""
-        self.close()
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
