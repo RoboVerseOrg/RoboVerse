@@ -13,13 +13,25 @@ def assert_close(a, b, atol=1e-3, message="Consistency Error"):
 
 
 def get_test_parameters():
-    """Generate test parameters with different num_envs for different simulators."""
-    # MuJoCo only supports num_envs=1 due to simulator limitations
-    # Other simulators can test with multiple environments
+    """Generate test parameters with different num_envs for different simulators.
+
+    Note: MuJoCo, MJX, SAPIEN2, and SAPIEN3 are limited to num_envs=1 in tests due to
+    current test setup constraints (single-environment physics data access patterns).
+    IsaacGym, IsaacSim, and Genesis support multiple parallel environments.
+    """
     isaacsim_params = [("isaacsim", num_envs) for num_envs in [1, 2, 4]]
     isaacgym_params = [("isaacgym", num_envs) for num_envs in [1, 2, 4]]
     genesis_params = [("genesis", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
+    mjx_params = [("mjx", 1)]
     sapien3_params = [("sapien3", 1)]
     sapien2_params = [("sapien2", 1)]
-    return mujoco_params + isaacsim_params + isaacgym_params + genesis_params + sapien3_params + sapien2_params
+    return (
+        mujoco_params
+        + mjx_params
+        + isaacsim_params
+        + isaacgym_params
+        + genesis_params
+        + sapien3_params
+        + sapien2_params
+    )
