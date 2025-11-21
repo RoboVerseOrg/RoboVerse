@@ -375,25 +375,25 @@ class ObjectRandomizer(BaseRandomizerType):
             roll = torch.zeros(num_envs, device=current_rot.device)
             pitch = torch.zeros(num_envs, device=current_rot.device)
             yaw = torch.zeros(num_envs, device=current_rot.device)
-            
+
             if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
                 roll = self._generate_random_tensor(
                     (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
                 ) * (math.pi / 180.0)
                 roll = roll.to(current_rot.device)
-            
+
             if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
                 pitch = self._generate_random_tensor(
                     (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
                 ) * (math.pi / 180.0)
                 pitch = pitch.to(current_rot.device)
-            
+
             if self.cfg.pose.rotation_axes[2]:  # yaw (z-axis)
                 yaw = self._generate_random_tensor(
                     (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
                 ) * (math.pi / 180.0)
                 yaw = yaw.to(current_rot.device)
-            
+
             # Convert to quaternion (batch)
             rand_quat = self._euler_to_quaternion_batch(roll, pitch, yaw)
 
