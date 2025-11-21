@@ -197,9 +197,6 @@ class IsaacsimHandler(BaseSimHandler):
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
-        import traceback
-
-        traceback.print_stack()
         if not self._is_closed:
             self.simulation_app.close()
             if self.scene is not None:
