@@ -28,12 +28,12 @@ def _assert_basic_shapes(handler, query: ContactForces):
     assert torch.allclose(current, hist[:, -1])
 
 
-def contact_forces_isaacsim_query(handler):
-    """Child-process body: ContactForces on IsaacSim, cross-check with ContactSensor."""
+@pytest.mark.isaacsim
+def test_contact_forces_isaacsim_with_shared_handler(handler):
+    """Run ContactForces test using the shared handler process (sim == 'isaacsim')."""
     query = ContactForces(history_length=3)
     query.bind_handler(handler)
     _assert_basic_shapes(handler, query)
-
     # IsaacSim branch uses ContactSensor net_forces_w internally; verify consistency.
     sensor_forces = handler.contact_sensor.data.net_forces_w  # (num_envs, num_bodies, 3)
     expected = sensor_forces[:, query.body_ids_reindex, :]
@@ -43,8 +43,9 @@ def contact_forces_isaacsim_query(handler):
     log.info("ContactForces matches IsaacSim ContactSensor net_forces_w.")
 
 
-def contact_forces_isaacgym_query(handler):
-    """Child-process body: ContactForces on IsaacGym, cross-check with raw net-contact tensor."""
+@pytest.mark.isaacgym
+def test_contact_forces_isaacgym_with_shared_handler(handler):
+    """Run ContactForces test using the shared handler process (sim == 'isaacgym')."""
     query = ContactForces(history_length=3)
     query.bind_handler(handler)
     _assert_basic_shapes(handler, query)
@@ -60,12 +61,12 @@ def contact_forces_isaacgym_query(handler):
     log.info("ContactForces matches IsaacGym net_contact_force tensor.")
 
 
-def contact_forces_mujoco_query(handler):
-    """Child-process body: ContactForces on MuJoCo, sanity-check non-zero and balanced forces."""
+@pytest.mark.mujoco
+def test_contact_forces_mujoco_with_shared_handler(handler):
+    """Run ContactForces test using the shared handler process (sim == 'mujoco')."""
     # Step the simulator a bit so contacts develop reliably.
     for _ in range(10):
         handler.simulate()
-
     query = ContactForces(history_length=3)
     query.bind_handler(handler)
     _assert_basic_shapes(handler, query)
@@ -76,32 +77,3 @@ def contact_forces_mujoco_query(handler):
     assert torch.any(current.norm(dim=-1) > 0), "MuJoCo contact forces should be non-zero for some bodies."
 
     log.info("ContactForces on MuJoCo produces non-zero yet globally balanced contact forces.")
-
-
-def test_contact_forces_isaacsim_with_shared_handler(shared_handler):
-    """Run ContactForces test using the shared handler process (sim == 'isaacsim')."""
-    sim, proxy = shared_handler  # (sim name, HandlerProxy)
-    if sim != "isaacsim":
-        pytest.skip("Skipping ContactForces test for non-isaacsim sim")
-
-    proxy.run_test(func=contact_forces_isaacsim_query)
-
-
-def test_contact_forces_isaacgym_with_shared_handler(shared_handler):
-    """Run ContactForces test using the shared handler process (sim == 'isaacgym')."""
-    sim, proxy = shared_handler
-    if sim != "isaacgym":
-        pytest.skip("Skipping ContactForces test for non-isaacgym sim")
-
-    pytest.importorskip("isaacgym")
-    proxy.run_test(func=contact_forces_isaacgym_query)
-
-
-def test_contact_forces_mujoco_with_shared_handler(shared_handler):
-    """Run ContactForces test using the shared handler process (sim == 'mujoco')."""
-    sim, proxy = shared_handler
-    if sim != "mujoco":
-        pytest.skip("Skipping ContactForces test for non-mujoco sim")
-
-    pytest.importorskip("mujoco")
-    proxy.run_test(func=contact_forces_mujoco_query)

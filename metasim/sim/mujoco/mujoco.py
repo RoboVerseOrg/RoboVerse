@@ -183,6 +183,7 @@ class MujocoHandler(BaseSimHandler):
             self.robot_body_names.extend(robot_body_names)
 
         self._init_torque_control()
+        self._apply_default_joint_positions()
 
         if not self.headless:
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
@@ -328,6 +329,21 @@ class MujocoHandler(BaseSimHandler):
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _apply_default_joint_positions(self) -> None:
+        """Set initial joint positions from robot/object configs if provided."""
+
+        # Robots
+        for robot_idx, robot in enumerate(self.robots):
+            if not getattr(robot, "default_joint_positions", None):
+                continue
+            prefix = self._mujoco_robot_names[robot_idx]
+            for joint_name, joint_pos in robot.default_joint_positions.items():
+                joint = self.physics.data.joint(f"{prefix}{joint_name}")
+                joint.qpos = joint_pos
+                joint.qvel = 0
+
+        self.physics.forward()
 
     def _add_default_ground(self, mjcf_model: mjcf.RootElement) -> None:
         """Add default ground plane."""

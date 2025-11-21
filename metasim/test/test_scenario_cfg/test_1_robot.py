@@ -6,9 +6,8 @@ import rootutils
 # from metasim.sim.sim_context import HandlerContext
 from loguru import logger as log
 
-from metasim.scenario.scenario import ScenarioCfg
-
 rootutils.setup_root(__file__, pythonpath=True)
+from metasim.scenario.scenario import ScenarioCfg
 from metasim.test.test_utils import get_test_parameters
 from roboverse_pack.robots.franka_cfg import FrankaCfg
 
@@ -59,7 +58,7 @@ if __name__ == "__main__":
     import sys
 
     # 默认参数
-    sim = "mujoco"
+    sim = "isaacsim"
     num_envs = 1
 
     # 从命令行获取参数
