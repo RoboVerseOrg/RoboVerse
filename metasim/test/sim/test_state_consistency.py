@@ -17,7 +17,7 @@ from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 
 def _get_test_parameters():
-    return [("isaacsim", 1), ("isaacsim", 2), ("mujoco", 1)]
+    return [("isaacsim", 1), ("isaacsim", 2), ("mujoco", 1), ("mujoco", 2)]
 
 
 @pytest.fixture(scope="session")

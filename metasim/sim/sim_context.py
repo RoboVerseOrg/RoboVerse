@@ -19,7 +19,10 @@ class HandlerContext:
 
     def __enter__(self) -> BaseSimHandler:
         try:
-            self.handler.launch(simulation_app=self.simulation_app)
+            if self.scenario.simulator == "isaacsim":
+                self.handler.launch(simulation_app=self.simulation_app)
+            else:
+                self.handler.launch()
         except Exception as e:
             log.error("An error occurred during handler launch: {}", e)
             log.error("Stack trace:\n{}", traceback.format_exc())
@@ -29,6 +32,6 @@ class HandlerContext:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if exc_type is not None:
             log.error("Error in SimContext:")
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            log.error("Stack trace:\n{}", traceback.format_exception(exc_type, exc_value, exc_traceback))
         if self.scenario.simulator != "isaacsim":
             self.handler.close()
