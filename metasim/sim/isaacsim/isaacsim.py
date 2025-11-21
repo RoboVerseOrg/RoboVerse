@@ -60,7 +60,12 @@ class IsaacsimHandler(BaseSimHandler):
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
         self.scenario_cfg = scenario_cfg
-        self.physics_dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
+        # Calculate physics_dt to ensure dt * decimation = constant (0.015)
+        if self.scenario.sim_params.dt is not None:
+            self.physics_dt = self.scenario.sim_params.dt
+        else:
+            # Default: dt * decimation = 0.015
+            self.physics_dt = 0.015 / self.scenario.decimation
         self._physics_step_counter = 0
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
@@ -166,7 +171,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_robots()
         self._load_sensors()
         self._load_cameras()
-        self._load_terrain()
+        if self.scenario.scene is None:
+            self._load_terrain()
         self._load_scene()
         self._load_objects()
         self._load_lights()
@@ -258,6 +264,9 @@ class IsaacsimHandler(BaseSimHandler):
                             )
                             robot_inst.write_data_to_sim()
 
+            if len(self.cameras) > 0:
+                self.refresh_render()
+
         # if states is TensorState, reindex the tensors and set state
         elif isinstance(states, TensorState):
             if env_ids is None:
@@ -306,6 +315,8 @@ class IsaacsimHandler(BaseSimHandler):
                     states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                 )
 
+            if len(self.cameras) > 0:
+                self.refresh_render()
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
@@ -715,7 +726,7 @@ class IsaacsimHandler(BaseSimHandler):
         raise ValueError(f"Unsupported object type: {type(obj)}")
 
     def _load_terrain(self) -> None:
-        # TODO support multiple terrains cfg
+        # # TODO support multiple terrains cfg
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainImporterCfg
 
@@ -731,12 +742,36 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
+            visual_material=sim_utils.MdlFileCfg(mdl_path="metasim/data/quick_start/materials/Ash.mdl"),
         )
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
 
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
+
+        from metasim.randomization.presets.scene_presets import (
+            SceneGeometryCfg,
+            SceneMaterialPoolCfg,
+            SceneRandomCfg,
+        )
+        from metasim.randomization.scene_randomizer import SceneRandomizer
+
+        scene_cfg = SceneRandomCfg(
+            floor=SceneGeometryCfg(
+                enabled=True,
+                size=(100, 100, 0.0001),
+                position=(0.0, 0.0, 0.00001),  # Slightly above z=0 to avoid z-fighting
+                material_randomization=True,
+            ),
+            floor_materials=SceneMaterialPoolCfg(
+                material_paths=["roboverse_data/materials/arnold/Wood/Ash.mdl"],
+                selection_strategy="sequential",
+            ),
+        )
+        scene_rand = SceneRandomizer(scene_cfg)
+        scene_rand.bind_handler(self)
+        scene_rand()
 
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.

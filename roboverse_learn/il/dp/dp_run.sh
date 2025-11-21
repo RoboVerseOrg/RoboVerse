@@ -1,9 +1,9 @@
 
 ## Seperate training and evaluation
-train_enable=True
+train_enable=True  # True for training, False for evaluation
 eval_enable=True
 
-task_name_set=close_box
+task_name_set=stack_cube
 level=0
 config_name=dp_runner
 num_epochs=100              # Number of training epochs
@@ -14,48 +14,17 @@ obs_space=joint_pos
 act_space=joint_pos
 delta_ee=0
 eval_num_envs=1
-eval_max_step=500
+eval_max_step=300
 expert_data_num=100
-sim_set=mujoco
+sim_set=isaacsim
 eval_ckpt_name=100
 
 
 ## Choose training or inference algorithm
-algo_choose=0
-
-algo_model=""
+# Supported models:
+#   "ddpm_unet_model", "ddpm_dit_model", "ddim_unet_model", "fm_unet_model", "fm_dit_model", "score_model", "vita_model"
+export algo_model="ddpm_dit_model"
 eval_path="./info/outputs/DP/${task_name_set}/checkpoints/${eval_ckpt_name}.ckpt"
-case $algo_choose in
-    0)
-        # DDPM settings
-        export algo_model="ddpm_model"
-        ;;
-    1)
-        # DDIM settings
-        export algo_model="ddim_model"
-        ;;
-    2)
-        # FM settings
-        export algo_model="fm_unet_model"
-        ;;
-    3)
-        # FM DiT Settings
-        export algo_model="fm_dit_model"
-        ;;
-    4)
-        # Score-based settings
-        export algo_model="score_model"
-        ;;
-    5)
-        # VITA Settings
-        export algo_model="vita_model"
-        ;;
-    *)
-        echo "Invalid algorithm choice: $algo_choose"
-        echo "Available options: 0 (DDPM), 1 (DDIM), 2 (FM UNet), 3 (FM DiT), 4 (Score-based), 5 (VITA)"
-        exit 1
-        ;;
-esac
 
 echo "Selected model: $algo_model"
 echo "Checkpoint path: $eval_path"
@@ -78,6 +47,7 @@ eval_config.eval_args.task=${task_name_set} \
 eval_config.eval_args.max_step=${eval_max_step} \
 eval_config.eval_args.num_envs=${eval_num_envs} \
 eval_config.eval_args.sim=${sim_set} \
++eval_config.eval_args.max_demo=${expert_data_num} \
 train_enable=${train_enable} \
 eval_enable=${eval_enable} \
 eval_path=${eval_path} \

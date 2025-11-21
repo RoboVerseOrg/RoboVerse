@@ -273,7 +273,7 @@ class G1Dof27Cfg(G1Dof23Cfg):
 class G1Dof29Cfg(G1Dof27Cfg):
     name: str = "g1_dof29"
     num_joints: int = 29
-    usd_path: str = "roboverse_data/robots/g1/usd/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd"
+    usd_path: str = "roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd"
     xml_path: str = "roboverse_data/robots/g1/mjcf/g1_29dof_rev_1_0.xml"
     urdf_path: str = "roboverse_data/robots/g1/urdf/g1_29dof_rev_1_0.urdf"
     mjcf_path = xml_path

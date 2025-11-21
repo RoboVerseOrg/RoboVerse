@@ -7,7 +7,7 @@ from roboverse_learn.rl.unitree_rl.configs.algorithm import (
     RslRlPpoActorCriticRecurrentCfg,
 )
 from roboverse_learn.rl.unitree_rl.helper.curriculum_utils import lin_vel_cmd_levels
-from roboverse_learn.rl.unitree_rl.configs.cfg_queries import ContactForces
+from metasim.queries import ContactForces
 from roboverse_learn.rl.unitree_rl.configs.cfg_randomizers import (
     MaterialRandomizer,
     MassRandomizer,

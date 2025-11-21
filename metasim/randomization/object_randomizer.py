@@ -371,26 +371,36 @@ class ObjectRandomizer(BaseRandomizerType):
         # Randomize rotation
         new_rot = current_rot.clone()
         if self.cfg.pose.rotation_range:
-            # Generate random Euler angles
-            for axis_idx, randomize_axis in enumerate(self.cfg.pose.rotation_axes):
-                if randomize_axis:
-                    rand_angle = self._generate_random_tensor(
-                        (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
-                    )
-                    # Convert degrees to radians
-                    rand_angle = rand_angle * (math.pi / 180.0)
+            # Generate random Euler angles for all enabled axes (batch)
+            roll = torch.zeros(num_envs, device=current_rot.device)
+            pitch = torch.zeros(num_envs, device=current_rot.device)
+            yaw = torch.zeros(num_envs, device=current_rot.device)
+            
+            if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
+                roll = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                roll = roll.to(current_rot.device)
+            
+            if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
+                pitch = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                pitch = pitch.to(current_rot.device)
+            
+            if self.cfg.pose.rotation_axes[2]:  # yaw (z-axis)
+                yaw = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                yaw = yaw.to(current_rot.device)
+            
+            # Convert to quaternion (batch)
+            rand_quat = self._euler_to_quaternion_batch(roll, pitch, yaw)
 
-                    # Convert to quaternion and compose
-                    rand_quat = self._euler_to_quaternion_batch(
-                        rand_angle if axis_idx == 0 else torch.zeros_like(rand_angle),
-                        rand_angle if axis_idx == 1 else torch.zeros_like(rand_angle),
-                        rand_angle if axis_idx == 2 else torch.zeros_like(rand_angle),
-                    )
-
-                    if self.cfg.pose.operation == "add":
-                        new_rot = self._quaternion_multiply(current_rot, rand_quat)
-                    else:  # abs
-                        new_rot = rand_quat
+            if self.cfg.pose.operation == "add":
+                new_rot = self._quaternion_multiply(current_rot, rand_quat)
+            else:  # abs
+                new_rot = rand_quat
 
         # Set new pose
         new_root_state = root_state.clone()

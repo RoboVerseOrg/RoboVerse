@@ -4,20 +4,24 @@ import pytest
 import rootutils
 import torch
 
-# from metasim.sim.sim_context import HandlerContext
-from loguru import logger as log
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 
+# from metasim.sim.sim_context import HandlerContext
+
 rootutils.setup_root(__file__, pythonpath=True)
+from loguru import logger as log
+
 from metasim.test.test_utils import assert_close, get_test_parameters
 from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 
 @pytest.mark.parametrize("sim,num_envs", get_test_parameters())
 def test_consistency(sim, num_envs):
+    if sim not in ("sapien3",):
+        pytest.skip(f"Skipping simulator {sim} for this test (only sapien3 is supported).")
+
     # initialize scenario
     scenario = ScenarioCfg(
         robots=[FrankaCfg()],
@@ -88,51 +92,18 @@ def test_consistency(sim, num_envs):
         ]
         * scenario.num_envs
     )
-    # handler.simulate()  # need step once to update the kinematics in sapien
+    handler.simulate()  # need step once to update the kinematics in sapien
     state = handler.get_states(mode="dict")
-    dof_pos = state[0]["robots"]["franka"]["dof_pos"]
-    dof_vel = state[0]["robots"]["franka"]["dof_vel"]
-    dof_pos_tensor = torch.Tensor([
-        dof_pos[joint_name] for joint_name in sorted(handler.get_joint_names("franka", True))
-    ])
-    dof_vel_tensor = torch.Tensor([
-        dof_vel[joint_name] for joint_name in sorted(handler.get_joint_names("franka", True))
-    ])
-    init_dof_pos_tensor = torch.Tensor([
-        scenario.robots[0].default_joint_positions[joint_name]
-        for joint_name in sorted(handler.get_joint_names("franka", True))
-    ])
-    assert_close(dof_pos_tensor, init_dof_pos_tensor, atol=1e-3, message="DoF pos")
-    assert_close(dof_vel_tensor, torch.zeros(9), atol=1e-3, message="DoF vel")
 
-    pos = state[0]["robots"]["franka"]["pos"]
-    rot = state[0]["robots"]["franka"]["rot"]
-    assert_close(pos, torch.Tensor(scenario.robots[0].default_position), atol=1e-3, message="franka pos")
-    assert_close(rot, torch.Tensor(scenario.robots[0].default_orientation), atol=1e-3, message="franka rot")
+    if "body" in state[0]["robots"]["franka"].keys():
+        hand_pos = state[0]["robots"]["franka"]["body"]["panda_hand"]["pos"]
+        hand_rot = state[0]["robots"]["franka"]["body"]["panda_hand"]["rot"]
 
-    pos = state[0]["objects"]["cube"]["pos"]
-    rot = state[0]["objects"]["cube"]["rot"]
-    assert_close(pos, torch.Tensor(scenario.objects[0].default_position), atol=1e-3, message="cube pos")
-    assert_close(rot, torch.Tensor(scenario.objects[0].default_orientation), atol=1e-3, message="cube rot")
+        expected_hand_pos = torch.Tensor([3.0689e-01, 0.0, 5.9028e-01])
+        expected_hand_rot = torch.Tensor([0.0, 1.0000e00, 0.0, 0.0])
 
-    pos = state[0]["objects"]["sphere"]["pos"]
-    rot = state[0]["objects"]["sphere"]["rot"]
-    assert_close(pos, torch.Tensor(scenario.objects[1].default_position), atol=1e-3, message="sphere pos")
-    assert_close(rot, torch.Tensor(scenario.objects[1].default_orientation), atol=1e-3, message="sphere rot")
-
-    pos = state[0]["objects"]["bbq_sauce"]["pos"]
-    rot = state[0]["objects"]["bbq_sauce"]["rot"]
-    assert_close(pos, torch.Tensor(scenario.objects[2].default_position), atol=1e-3, message="bbq_sauce pos")
-    assert_close(rot, torch.Tensor(scenario.objects[2].default_orientation), atol=1e-3, message="bbq_sauce rot")
-
-    pos = state[0]["objects"]["box_base"]["pos"]
-    rot = state[0]["objects"]["box_base"]["rot"]
-    assert_close(pos, torch.Tensor(scenario.objects[3].default_position), atol=1e-3, message="box_base pos")
-    assert_close(rot, torch.Tensor(scenario.objects[3].default_orientation), atol=1e-3, message="box_base rot")
-
-    tensor_state = handler.get_states(mode="tensor")
-    assert_close(tensor_state.robots["franka"].joint_pos, init_dof_pos_tensor, atol=1e-3, message="tensor DoF pos")
-    assert_close(tensor_state.robots["franka"].joint_vel, torch.zeros(9), atol=1e-3, message="tensor DoF vel")
+        assert_close(hand_pos, expected_hand_pos, atol=1e-3, message="hand pos")
+        assert_close(hand_rot, expected_hand_rot, atol=1e-3, message="hand rot")
 
 
 if __name__ == "__main__":

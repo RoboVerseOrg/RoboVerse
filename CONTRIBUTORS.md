@@ -41,6 +41,7 @@ Guidelines for modifications:
 * Xinying Guo
 * Yikai Tang
 * Yongce Liu
+* Yu Hong
 * Yuchen Huang
 * Yuran Wang
 * Yutong Liang
