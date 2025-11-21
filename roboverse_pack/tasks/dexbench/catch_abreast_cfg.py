@@ -22,6 +22,8 @@ from roboverse_pack.robots.franka_allegro_left_cfg import FrankaAllegroHandLeftC
 from roboverse_pack.robots.franka_allegro_right_cfg import FrankaAllegroHandRightCfg
 from roboverse_pack.robots.franka_shadow_left_cfg import FrankaShadowHandLeftCfg
 from roboverse_pack.robots.franka_shadow_right_cfg import FrankaShadowHandRightCfg
+from roboverse_pack.robots.franka_xhand_left_cfg import FrankaXHandLeftCfg
+from roboverse_pack.robots.franka_xhand_right_cfg import FrankaXHandRightCfg
 
 from .base_cfg import BaseRLTaskCfg, SimParamCfg
 
@@ -94,7 +96,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
     dist_reward_scale = 50.0
     action_penalty_scale = 0
     success_tolerance = 0.1
-    reach_goal_bonus = 500.0
+    reach_goal_bonus = 250.0
     throw_bonus = 10.0
     fall_penalty = 0.0
     leave_penalty = 0.0  # Penalty for leaving the base
@@ -187,7 +189,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.45, -1.1, 0.0]),
+                    "pos": torch.tensor([0.45, -1.0, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "FFJ1": 0.0,
@@ -226,8 +228,20 @@ class CatchAbreastCfg(BaseRLTaskCfg):
             }
         elif self.current_robot_type == "allegro":
             self.robots = [
-                FrankaAllegroHandRightCfg(use_vhacd=False, hand_controller="dof_pos", name="right_hand"),
-                FrankaAllegroHandLeftCfg(use_vhacd=False, hand_controller="dof_pos", name="left_hand"),
+                FrankaAllegroHandRightCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="right_hand",
+                    arm_controller="ik",
+                    arm_orientation_scale=0.05,
+                ),
+                FrankaAllegroHandLeftCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="left_hand",
+                    arm_controller="ik",
+                    arm_orientation_scale=0.05,
+                ),
             ]
             self.robot_init_state = {
                 "right_hand": {
@@ -260,7 +274,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                     },
                 },
                 "left_hand": {
-                    "pos": torch.tensor([0.23, -1.1, 0.0]),
+                    "pos": torch.tensor([0.23, -1.0, 0.0]),
                     "rot": torch.tensor([0, 0, 0, 1]),
                     "dof_pos": {
                         "joint_0": 0.0,
@@ -279,6 +293,75 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                         "joint_13": 0.0,
                         "joint_14": 1.64,
                         "joint_15": 0.0,
+                        "panda_joint1": 0.0,
+                        "panda_joint2": -0.4116,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": -2.0366,
+                        "panda_joint5": -0.02386,
+                        "panda_joint6": 3.1105,
+                        "panda_joint7": -2.35619,
+                    },
+                },
+            }
+        elif self.current_robot_type == "xhand":
+            self.robots = [
+                FrankaXHandRightCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="right_hand",
+                    arm_controller="ik",
+                    arm_orientation_scale=0.05,
+                ),
+                FrankaXHandLeftCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="left_hand",
+                    arm_controller="ik",
+                    arm_orientation_scale=0.05,
+                ),
+            ]
+            self.robot_init_state = {
+                "right_hand": {
+                    "pos": torch.tensor([0.15, -0.55, 0.0]),
+                    "rot": torch.tensor([0, 0, 0, 1]),
+                    "dof_pos": {
+                        "right_hand_index_bend_joint": 0.0,
+                        "right_hand_index_joint1": 0.0,
+                        "right_hand_index_joint2": 0.0,
+                        "right_hand_mid_joint1": 0.0,
+                        "right_hand_mid_joint2": 0.0,
+                        "right_hand_pinky_joint1": 0.0,
+                        "right_hand_pinky_joint2": 0.0,
+                        "right_hand_ring_joint1": 0.0,
+                        "right_hand_ring_joint2": 0.0,
+                        "right_hand_thumb_bend_joint": 0.0,
+                        "right_hand_thumb_rota_joint1": 0.0,
+                        "right_hand_thumb_rota_joint2": 0.0,
+                        "panda_joint1": 0.0,
+                        "panda_joint2": -0.4116,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": -2.0366,
+                        "panda_joint5": -0.02386,
+                        "panda_joint6": 3.1105,
+                        "panda_joint7": -2.35619,
+                    },
+                },
+                "left_hand": {
+                    "pos": torch.tensor([0.15, -1.0, 0.0]),
+                    "rot": torch.tensor([0, 0, 0, 1]),
+                    "dof_pos": {
+                        "left_hand_index_bend_joint": 0.0,
+                        "left_hand_index_joint1": 0.0,
+                        "left_hand_index_joint2": 0.0,
+                        "left_hand_mid_joint1": 0.0,
+                        "left_hand_mid_joint2": 0.0,
+                        "left_hand_pinky_joint1": 0.0,
+                        "left_hand_pinky_joint2": 0.0,
+                        "left_hand_ring_joint1": 0.0,
+                        "left_hand_ring_joint2": 0.0,
+                        "left_hand_thumb_bend_joint": 0.0,
+                        "left_hand_thumb_rota_joint1": 0.0,
+                        "left_hand_thumb_rota_joint2": 0.0,
                         "panda_joint1": 0.0,
                         "panda_joint2": -0.4116,
                         "panda_joint3": 0.0,
@@ -341,7 +424,7 @@ class CatchAbreastCfg(BaseRLTaskCfg):
                 self.img_w,
             )
         self.init_goal_pos = torch.tensor(
-            [-0.355, -1.1, 0.85], dtype=torch.float32, device=self.device
+            [-0.355, -1.0, 0.85], dtype=torch.float32, device=self.device
         )  # Initial goal position, shape (3,)
         self.init_goal_rot = torch.tensor(
             [1.0, 0.0, 0.0, 0.0], dtype=torch.float32, device=self.device
@@ -763,7 +846,7 @@ def compute_task_reward(
                 )False
     """
     # Distance from the hand to the object
-    diff_xy = target_pos[:, :2] - object_pos[:, :2]
+    diff_xyz = target_pos[:, :3] - object_pos[:, :3]
     goal_dist = torch.norm(target_pos - object_pos, p=2, dim=-1)
     reward_dist = goal_dist
 
@@ -778,16 +861,20 @@ def compute_task_reward(
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     reward = torch.exp(-0.2 * (dist_rew * dist_reward_scale)) - action_penalty * action_penalty_scale
 
+    # Success
+    success = (diff_xyz[:, 0] < 0.02) & (diff_xyz[:, 0] < 0.05) & (torch.abs(diff_xyz)[:, 1] < 0.05) & (torch.abs(diff_xyz)[:, 2] < 0.03)
+    # success = torch.abs(goal_dist) <= 0.05
+
     # Find out which envs hit the goal and update successes count
     goal_resets = torch.where(
-        torch.abs(goal_dist) <= 0.05,
+        success,
         torch.ones_like(reset_goal_buf),
         reset_goal_buf,
     )
     success_buf = torch.where(
         success_buf == 0,
         torch.where(
-            torch.abs(goal_dist) <= 0.05,
+            success,
             torch.ones_like(success_buf),
             success_buf,
         ),
@@ -795,7 +882,7 @@ def compute_task_reward(
     )
 
     # Reward for throwing the object
-    thrown = (diff_xy[:, 1] >= -0.35) & (diff_xy[:, 1] <= -0.1) & (object_pos[:, 2] >= 0.7)
+    thrown = (diff_xyz[:, 1] >= -0.25) & (diff_xyz[:, 1] <= -0.13) & (object_pos[:, 2] >= 0.7)
     reward = torch.where(thrown, reward + throw_bonus, reward)
 
     # Success bonus: orientation is within `success_tolerance` of goal orientation
@@ -813,7 +900,7 @@ def compute_task_reward(
         dim=-1,
     )
     left_hand_base_dist = torch.norm(
-        left_hand_pos - torch.tensor([-0.25, -1.1, 0.77], dtype=torch.float, device=left_hand_pos.device), p=2, dim=-1
+        left_hand_pos - torch.tensor([-0.25, -1.0, 0.77], dtype=torch.float, device=left_hand_pos.device), p=2, dim=-1
     )
 
     reward = torch.where(right_hand_base_dist >= 0.1, reward - leave_penalty, reward)

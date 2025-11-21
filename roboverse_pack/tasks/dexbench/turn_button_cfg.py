@@ -98,43 +98,43 @@ class TurnButtonCfg(BaseRLTaskCfg):
     reach_goal_bonus = 40.0
     reset_position_noise = 0.0
     reset_dof_pos_noise = 0.0
-    use_high_randomness = True
+    use_high_randomness = False
     material_train_cfg = {
         "metallic_range": (0.0, 0.7),
         "roughness_range": (0.2, 0.6),
         "diffuse_color_range": ((0.0, 0.7), (0.0, 0.7), (0.0, 0.7)),
     }
 
-    materia_test_cfg = {
+    material_test_cfg = {
         "metallic_range": (0.7, 1.0),
         "roughness_range": (0.6, 0.8),
         "diffuse_color_range": ((0.7, 1.0), (0.7, 1.0), (0.7, 1.0)),
     }
     randomization_cfg = {
         "enable_floor": True,
-        "floor_materials": SceneMaterialCollections.floor_train_materials(),
+        "floor_materials": SceneMaterialCollections.floor_test_materials(),
         "light_randomize_freq": 125,
         "randomize_cfg": {
             # "dome_light": {
             #     "intensity_range": (0.25, 2.0),  
             # },
-            "camera_0": {
-                "randomization_mode": "combined",
-                "position_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
-                "look_at_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
-            }
             # "camera_0": {
             #     "randomization_mode": "combined",
-            #     "position_delta_range": ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
-            #     "look_at_delta_range": ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
+            #     "position_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
+            #     "look_at_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
             # }
+            "camera_0": {
+                "randomization_mode": "combined",
+                "position_delta_range": ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
+                "look_at_delta_range": ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
+            }
         },
         "material_cfg": {
             "table": {
-                "material_path": SceneMaterialCollections.table_train_materials(),
+                "material_path": SceneMaterialCollections.table_test_materials(),
             },
-            "button_1": material_train_cfg,
-            "button_2": material_train_cfg,
+            "button_1": material_test_cfg,
+            "button_2": material_test_cfg,
         }
     }
     # randomization_cfg = {

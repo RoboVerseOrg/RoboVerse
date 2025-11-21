@@ -1,0 +1,72 @@
+seed: -1
+
+clip_observations: 5.0
+clip_actions: 1.0
+
+model: # only works for MlpPolicy right now
+  cnn:
+    stages: 5
+    kernel_size: 4
+    stride: 2
+    depth: [32, 64, 128, 256, 512]
+  hidden_dim: [1024, 1024, 512]
+  recurrent_hidden_dim: 512
+  representation_hidden_dim: 1024
+  value_hidden_dim: [1024, 1024, 1024]
+  continue_hidden_dim: [512]
+  reward_hidden_dim: [512]
+  actor_hidden_dim: [1024, 1024, 1024]
+learn:
+  agent_name: shadow_hand
+  test: False
+  resume: 0
+  log_interval: 10000
+  print_log: True
+
+  # rollout params
+  max_iterations: 100000
+
+  # training params
+  batch_size: 16
+  batch_length: 64
+  horizon: 15
+  prefill: 6400
+  buffer_size: 5000
+  amp: False
+  nstep: 1
+
+  # all model params
+  bins: 255
+  symlog_input: True
+  vmin: -20
+  vmax: 20
+
+  # world model params
+  model_lr: 1.e-4
+  model_eps: 1.e-8
+  model_clip: 1000.0
+  free_nats: 1.0
+  stochastic_length: 32
+  stochastic_classes: 32
+  deterministic_size: 512
+
+  # actor-critic params
+  # actor_grad: "reinforce"
+  actor_grad: "dynamics"
+  actor_lr: 8.e-5
+  actor_eps: 1.e-5
+  actor_clip: 100.0
+  actor_ent_coef: 3.e-4
+  critic_lr: 8.e-5
+  critic_eps: 1.e-5
+  critic_clip: 100.0
+  gae_lambda: 0.95
+  gamma: 0.99
+
+env:
+  img_h: 128
+  img_w: 128
+  light:
+    type: "dome"
+    intensity: 1500.0
+    color: [1.0, 1.0, 1.0]

@@ -22,6 +22,8 @@ from roboverse_pack.robots.franka_allegro_left_cfg import FrankaAllegroHandLeftC
 from roboverse_pack.robots.franka_allegro_right_cfg import FrankaAllegroHandRightCfg
 from roboverse_pack.robots.franka_shadow_left_cfg import FrankaShadowHandLeftCfg
 from roboverse_pack.robots.franka_shadow_right_cfg import FrankaShadowHandRightCfg
+from roboverse_pack.robots.franka_xhand_left_cfg import FrankaXHandLeftCfg
+from roboverse_pack.robots.franka_xhand_right_cfg import FrankaXHandRightCfg
 from metasim.randomization.presets.scene_presets import SceneMaterialCollections
 
 from .base_cfg import BaseRLTaskCfg, SimParamCfg
@@ -147,8 +149,45 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
             ]
             self.robot_init_state = {
                 "right_hand": {
-                    "pos": torch.tensor([0.0, -0.49, 0.0]),
+                    "pos": torch.tensor([0.0, 0.59, 0.0]),
                     "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
+                    "dof_pos": {
+                        "FFJ1": 0.0,
+                        "FFJ2": 0.0,
+                        "FFJ3": 0.0,
+                        "FFJ4": 0.0,
+                        "LFJ1": 0.0,
+                        "LFJ2": 0.0,
+                        "LFJ3": 0.0,
+                        "LFJ4": 0.0,
+                        "LFJ5": 0.0,
+                        "MFJ1": 0.0,
+                        "MFJ2": 0.0,
+                        "MFJ3": 0.0,
+                        "MFJ4": 0.0,
+                        "RFJ1": 0.0,
+                        "RFJ2": 0.0,
+                        "RFJ3": 0.0,
+                        "RFJ4": 0.0,
+                        "THJ1": 0.0,
+                        "THJ2": 0.0,
+                        "THJ3": 0.0,
+                        "THJ4": 0.0,
+                        "THJ5": 0.0,
+                        "WRJ1": 0.0,
+                        "WRJ2": 0.0,
+                        "panda_joint1": 0.0,
+                        "panda_joint2": -0.65209,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": -1.97,
+                        "panda_joint5": 0.0,
+                        "panda_joint6": 2.9065,
+                        "panda_joint7": -2.356194,
+                    },
+                },
+                "left_hand": {
+                    "pos": torch.tensor([0.0, -0.97, 0.0]),
+                    "rot": torch.tensor([-0.7071, 0, 0, 0.7071]),
                     "dof_pos": {
                         "FFJ1": 0.0,
                         "FFJ2": 0.0,
@@ -180,37 +219,46 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
                         "panda_joint4": -1.5707963,
                         "panda_joint5": 0.0,
                         "panda_joint6": 3.1415928,
-                        "panda_joint7": 0.785398,
+                        "panda_joint7": -2.356194,
                     },
                 },
-                "left_hand": {
-                    "pos": torch.tensor([0.0, -1.0, 0.0]),
-                    "rot": torch.tensor([0.7071, 0, 0, 0.7071]),
+            }
+        elif self.current_robot_type == "allegro":
+            self.robots = [
+                FrankaAllegroHandRightCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="right_hand",
+                    arm_controller="ik",
+                ),
+                FrankaAllegroHandLeftCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="left_hand",
+                    arm_controller="ik",
+                ),
+            ]
+            self.robot_init_state = {
+                "right_hand": {
+                    "pos": torch.tensor([0.0, 0.10, 0.0]),
+                    "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
                     "dof_pos": {
-                        "FFJ1": 0.0,
-                        "FFJ2": 0.0,
-                        "FFJ3": 0.0,
-                        "FFJ4": 0.0,
-                        "LFJ1": 0.0,
-                        "LFJ2": 0.0,
-                        "LFJ3": 0.0,
-                        "LFJ4": 0.0,
-                        "LFJ5": 0.0,
-                        "MFJ1": 0.0,
-                        "MFJ2": 0.0,
-                        "MFJ3": 0.0,
-                        "MFJ4": 0.0,
-                        "RFJ1": 0.0,
-                        "RFJ2": 0.0,
-                        "RFJ3": 0.0,
-                        "RFJ4": 0.0,
-                        "THJ1": 0.0,
-                        "THJ2": 0.0,
-                        "THJ3": 0.0,
-                        "THJ4": 0.0,
-                        "THJ5": 0.0,
-                        "WRJ1": 0.0,
-                        "WRJ2": 0.0,
+                        "joint_0": 0.0,
+                        "joint_1": 0.0,
+                        "joint_2": 0.0,
+                        "joint_3": 0.0,
+                        "joint_4": 0.0,
+                        "joint_5": 0.0,
+                        "joint_6": 0.0,
+                        "joint_7": 0.0,
+                        "joint_8": 0.0,
+                        "joint_9": 0.0,
+                        "joint_10": 0.0,
+                        "joint_11": 0.0,
+                        "joint_12": 0.0,
+                        "joint_13": 0.0,
+                        "joint_14": 1.64,
+                        "joint_15": 0.0,
                         "panda_joint1": 0.0,
                         "panda_joint2": -0.65209,
                         "panda_joint3": 0.0,
@@ -220,16 +268,9 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
                         "panda_joint7": -2.356194,
                     },
                 },
-            }
-        elif self.current_robot_type == "allegro":
-            self.robots = [
-                FrankaAllegroHandRightCfg(use_vhacd=False, hand_controller="dof_pos", name="right_hand"),
-                FrankaAllegroHandLeftCfg(use_vhacd=False, hand_controller="dof_pos", name="left_hand"),
-            ]
-            self.robot_init_state = {
-                "right_hand": {
-                    "pos": torch.tensor([0.0, 0.10, 0.0]),
-                    "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
+                "left_hand": {
+                    "pos": torch.tensor([0.0, -0.83, 0.0]),
+                    "rot": torch.tensor([-0.7071, 0, 0, 0.7071]),
                     "dof_pos": {
                         "joint_0": 0.0,
                         "joint_1": 0.0,
@@ -256,26 +297,39 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
                         "panda_joint7": -2.35619445,
                     },
                 },
-                "left_hand": {
-                    "pos": torch.tensor([0.0, -0.83, 0.0]),
-                    "rot": torch.tensor([0.7071, 0, 0, 0.7071]),
+            }
+        elif self.current_robot_type == "xhand":
+            self.robots = [
+                FrankaXHandRightCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="right_hand",
+                    arm_controller="ik",
+                ),
+                FrankaXHandLeftCfg(
+                    use_vhacd=False, 
+                    hand_controller="dof_pos", 
+                    name="left_hand",
+                    arm_controller="ik",
+                ),
+            ]
+            self.robot_init_state = {
+                "right_hand": {
+                    "pos": torch.tensor([0.0, 0.10, 0.0]),
+                    "rot": torch.tensor([0.7071, 0, 0, -0.7071]),
                     "dof_pos": {
-                        "joint_0": 0.0,
-                        "joint_1": 0.0,
-                        "joint_2": 0.0,
-                        "joint_3": 0.0,
-                        "joint_4": 0.0,
-                        "joint_5": 0.0,
-                        "joint_6": 0.0,
-                        "joint_7": 0.0,
-                        "joint_8": 0.0,
-                        "joint_9": 0.0,
-                        "joint_10": 0.0,
-                        "joint_11": 0.0,
-                        "joint_12": 0.0,
-                        "joint_13": 0.0,
-                        "joint_14": 1.64,
-                        "joint_15": 0.0,
+                        "right_hand_index_bend_joint": 0.0,
+                        "right_hand_index_joint1": 0.0,
+                        "right_hand_index_joint2": 0.0,
+                        "right_hand_mid_joint1": 0.0,
+                        "right_hand_mid_joint2": 0.0,
+                        "right_hand_pinky_joint1": 0.0,
+                        "right_hand_pinky_joint2": 0.0,
+                        "right_hand_ring_joint1": 0.0,
+                        "right_hand_ring_joint2": 0.0,
+                        "right_hand_thumb_bend_joint": 0.0,
+                        "right_hand_thumb_rota_joint1": 0.0,
+                        "right_hand_thumb_rota_joint2": 0.0,
                         "panda_joint1": 0.0,
                         "panda_joint2": -0.65209,
                         "panda_joint3": 0.0,
@@ -283,6 +337,31 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
                         "panda_joint5": 0.0,
                         "panda_joint6": 2.9065,
                         "panda_joint7": -2.356194,
+                    },
+                },
+                "left_hand": {
+                    "pos": torch.tensor([0.0, -0.83, 0.0]),
+                    "rot": torch.tensor([-0.7071, 0, 0, 0.7071]),
+                    "dof_pos": {
+                        "left_hand_index_bend_joint": 0.0,
+                        "left_hand_index_joint1": 0.0,
+                        "left_hand_index_joint2": 0.0,
+                        "left_hand_mid_joint1": 0.0,
+                        "left_hand_mid_joint2": 0.0,
+                        "left_hand_pinky_joint1": 0.0,
+                        "left_hand_pinky_joint2": 0.0,
+                        "left_hand_ring_joint1": 0.0,
+                        "left_hand_ring_joint2": 0.0,
+                        "left_hand_thumb_bend_joint": 0.0,
+                        "left_hand_thumb_rota_joint1": 0.0,
+                        "left_hand_thumb_rota_joint2": 0.0,
+                        "panda_joint1": 3.1415926,
+                        "panda_joint2": 0.0,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": 0.0,
+                        "panda_joint5": 0.0,
+                        "panda_joint6": 3.3415928,
+                        "panda_joint7": -2.35619445,
                     },
                 },
             }
@@ -337,7 +416,7 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
             ]
             self.obs_shape["rgb"] = (3, self.img_h, self.img_w)
         self.init_goal_pos = torch.tensor(
-            [0.0, -0.35, 0.9], dtype=torch.float32, device=self.device
+            [0.0, -0.06, 0.9], dtype=torch.float32, device=self.device
         )  # Initial goal position, shape (3,)
         self.init_goal_rot = torch.tensor(
             [1.0, 0.0, 0.0, 0.0], dtype=torch.float32, device=self.device
@@ -346,7 +425,7 @@ class Over2UnderarmCfg(BaseRLTaskCfg):
         self.init_states = {
             "objects": {
                 self.current_object_type: {
-                    "pos": torch.tensor([0.0, -0.06, 1.4]),
+                    "pos": torch.tensor([0.0, -0.43, 1.4]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -778,12 +857,12 @@ def compute_task_reward(
     )
 
     right_hand_base_dist = torch.norm(
-        right_hand_base_pos - torch.tensor([0.0, 0.0, 0.9], dtype=torch.float, device=right_hand_base_pos.device),
+        right_hand_base_pos - torch.tensor([0.0, 0.3, 0.9], dtype=torch.float, device=right_hand_base_pos.device),
         p=2,
         dim=-1,
     )
     left_hand_base_dist = torch.norm(
-        left_hand_base_pos - torch.tensor([0.0, -0.8, 0.9], dtype=torch.float, device=left_hand_base_pos.device),
+        left_hand_base_pos - torch.tensor([0.0, -0.48, 0.86], dtype=torch.float, device=left_hand_base_pos.device),
         p=2,
         dim=-1,
     )
