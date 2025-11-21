@@ -68,13 +68,13 @@ def isaacsim_context(request):
         log.debug("Creating new stage")
         stage_utils.create_new_stage()
         log.debug("New stage created")
-        sim_cfg = sim_utils.SimulationCfg()
+        sim_cfg = sim_utils.SimulationCfg()  # TODO: pass parameters from scenario cfg
         sim_context = sim_utils.SimulationContext(sim_cfg)
         sim_context._app_control_on_stop_handle = None
         yield sim_context
-        log.debug("Stopping simulation")
+        log.debug("Clearing simulation context")
         sim_context.clear_all_callbacks()
         sim_context.clear_instance()
-        log.debug("Simulation stopped")
+        log.debug("Simulation context cleared")
     else:
         yield None
