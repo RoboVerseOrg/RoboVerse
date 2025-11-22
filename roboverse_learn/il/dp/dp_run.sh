@@ -1,6 +1,6 @@
 
 ## Seperate training and evaluation
-train_enable=True  # True for training, False for evaluation
+train_enable=False  # True for training, False for evaluation
 eval_enable=True
 
 task_name_set=stack_cube
@@ -23,7 +23,7 @@ eval_ckpt_name=100
 ## Choose training or inference algorithm
 # Supported models:
 #   "ddpm_unet_model", "ddpm_dit_model", "ddim_unet_model", "fm_unet_model", "fm_dit_model", "score_model", "vita_model"
-export algo_model="ddpm_dit_model"
+export algo_model="ddpm_unet_model"
 eval_path="./info/outputs/DP/${task_name_set}/checkpoints/${eval_ckpt_name}.ckpt"
 
 echo "Selected model: $algo_model"

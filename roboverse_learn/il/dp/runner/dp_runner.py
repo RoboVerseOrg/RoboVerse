@@ -549,7 +549,7 @@ class DPRunner(BaseRunner):
         if ckpt_path is None:
             checkpoint = self.get_checkpoint_path()
         else:
-            checkpoint = ckpt_path
+            checkpoint = pathlib.Path(ckpt_path)
         if checkpoint is None:
             raise ValueError(
                 "No checkpoint found, please provide a valid checkpoint path."

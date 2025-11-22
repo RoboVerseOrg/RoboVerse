@@ -6,7 +6,7 @@ task_name_set=stack_cube
 random_level=0          # 0: No randomization 1: Randomize visual material 2: Randomize camera pose 3: Randomize object reflection and lighting
 num_envs=1              # Number of parallel environments
 demo_start_idx=0        # Index of the first demo to collect
-sim_set=mujoco
+sim_set=isaacsim      # isaacsim or pybullet
 cust_name=test
 num_demo_success=100    # Number of successful demonstrations to collect
 
