@@ -753,16 +753,11 @@ class IsaacsimHandler(BaseSimHandler):
         from metasim.randomization.scene_randomizer import (
             EnvironmentLayerCfg,
             ManualGeometryCfg,
-            ObjectsLayerCfg,
             SceneRandomCfg,
-            USDAssetCfg,
-            USDAssetPoolCfg,
-            WorkspaceLayerCfg,
+            SceneRandomizer,
         )
-        from metasim.randomization.scene_randomizer import SceneRandomizer
 
         scene_cfg = SceneRandomCfg(
-
             environment_layer=EnvironmentLayerCfg(
                 elements=[
                     # Floor
