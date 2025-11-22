@@ -138,13 +138,35 @@ class TurnButtonCfg(BaseRLTaskCfg):
         }
     }
     # randomization_cfg = {
-    #     "enable_floor": False,
+    #     "enable_floor": True,
+    #     "floor_materials": SceneMaterialCollections.floor_train_materials(),
+    #     "light_randomize_freq": 125,
+    #     "randomize_cfg": {
+    #         # "dome_light": {
+    #         #     "intensity_range": (0.25, 2.0),  
+    #         # },
+    #         "camera_0": {
+    #             "randomization_mode": "combined",
+    #             "position_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
+    #             "look_at_delta_range": ((-0.03, 0.03), (-0.03, 0.03), (-0.03, 0.03)),
+    #         }
+    #     },
     #     "material_cfg": {
     #         "table": {
-    #             "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+    #             "material_path": SceneMaterialCollections.table_train_materials(),
     #         },
+    #         "button_1": material_train_cfg,
+    #         "button_2": material_train_cfg,
     #     }
     # }
+    randomization_cfg = {
+        "enable_floor": False,
+        "material_cfg": {
+            "table": {
+                "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+            },
+        }
+    }
 
     def set_sim_params(self, sim_type=None) -> None:
         """Set the simulation parameters based on the simulator type."""
