@@ -38,10 +38,10 @@ def _pick_robot_site_name(handler, is_mjx: bool = False) -> str:
 
 
 @pytest.mark.mujoco
-def test_get_site_id_populates_cache_with_real_model(shared_handler):
+def test_get_site_id_populates_cache_with_real_model(handler):
     """Use shared_handler; run only when sim == 'mujoco'."""
     _site_cache.clear()
-    mj_model = shared_handler.physics.model
+    mj_model = handler.physics.model
     assert mj_model.nsite > 0
 
     site_name = mj_model.site(0).name
@@ -57,36 +57,36 @@ def test_get_site_id_populates_cache_with_real_model(shared_handler):
 
 
 @pytest.mark.mujoco
-def test_site_pos_mujoco_returns_world_position_tensor(shared_handler):
+def test_site_pos_mujoco_returns_world_position_tensor(handler):
     """SitePos should return a (1, 3) tensor matching MuJoCo's site_xpos."""
     import torch as _torch
 
-    full_site_name = _pick_robot_site_name(shared_handler)
+    full_site_name = _pick_robot_site_name(handler)
     site_name = full_site_name.split("/", 1)[1]
 
     query = SitePos(site_name)
-    query.bind_handler(shared_handler)
+    query.bind_handler(handler)
 
     pos = query()
     assert isinstance(pos, _torch.Tensor)
     assert pos.shape == (1, 3)
 
-    sid = _get_site_id(shared_handler.physics.model, full_site_name)
-    expected = shared_handler.data.site_xpos[sid]
+    sid = _get_site_id(handler.physics.model, full_site_name)
+    expected = handler.data.site_xpos[sid]
     assert _torch.allclose(pos.squeeze(0), _torch.as_tensor(expected, dtype=pos.dtype), atol=1e-5)
 
 
 @pytest.mark.mjx
-def test_site_pos_mjx_returns_world_position_tensor(shared_handler):
+def test_site_pos_mjx_returns_world_position_tensor(handler):
     """SitePos should return an (N_env, 3) tensor for MJX."""
     import torch as _torch
 
-    full_site_name = _pick_robot_site_name(shared_handler, is_mjx=True)
+    full_site_name = _pick_robot_site_name(handler, is_mjx=True)
     site_name = full_site_name.split("/", 1)[1]
 
     query = SitePos(site_name)
-    query.bind_handler(shared_handler)
+    query.bind_handler(handler)
 
     pos = query()
     assert isinstance(pos, _torch.Tensor)
-    assert pos.shape == (shared_handler.num_envs, 3)
+    assert pos.shape == (handler.num_envs, 3)

@@ -28,7 +28,15 @@ def get_test_parameters():
     mjx_params = [("mjx", 1)]
     sapien3_params = [("sapien3", 1)]
     sapien2_params = [("sapien2", 1)]
-    return mujoco_params + isaacsim_params + isaacgym_params + genesis_params + sapien3_params + sapien2_params
+    return (
+        mujoco_params
+        + mjx_params
+        + isaacsim_params
+        + isaacgym_params
+        + genesis_params
+        + sapien3_params
+        + sapien2_params
+    )
 
 
 @pytest.fixture(scope="session")

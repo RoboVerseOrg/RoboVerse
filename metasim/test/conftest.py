@@ -114,11 +114,12 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
     """Child process target: create handler and execute requested test functions."""
     import traceback
 
-    from metasim.utils.setup_util import get_handler
+    from metasim.sim.sim_context import HandlerContext
 
     log.info(f"[shared-handler] Creating simulation handler for {sim}, num_envs={num_envs}")
     scenario = scenario_fn(sim, num_envs)
-    handler = get_handler(scenario)
+    ctx = HandlerContext(scenario)
+    handler = ctx.__enter__()
     log.info("[shared-handler] Handler created")
 
     # Notify ready
@@ -159,7 +160,7 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
     finally:
         try:
             log.info("[shared-handler] Closing handler...")
-            handler.close()
+            ctx.__exit__(None, None, None)
             log.info("[shared-handler] Handler closed")
         except Exception:
             log.exception("[shared-handler] Error closing handler")
