@@ -13,7 +13,8 @@ Pytest **(by default)** automatically discovers and runs **test functions** that
 #### Markers and Fixtures
 - **Markers**: Use `@pytest.mark.isaacsim`, `isaacgym`, `mujoco`, `mjx`, or `@pytest.mark.sim("sim1","sim2")` to declare which backends a test needs. Use `@pytest.mark.general` for tests that need no simulator/handler.
 - **Fixtures**:
-  - `handler`: for simulator-backed tests. When present, the test body is executed in the child process with the handler instance passed in.
+  - `handler`: for simulator-backed tests. Provides a shared handler instance that is reused across tests with the same `(sim, num_envs)` configuration.
+  - `isaacsim_app`: session-scoped fixture that creates the IsaacSim AppLauncher when needed. Automatically provided by the central conftest.py.
   - **Important**: Tests marked `@pytest.mark.general` should **NOT** request `handler`. General tests are for pure unit tests without simulators.
 - **Param selection**: Marker declarations + `get_test_parameters` determine which `(sim,num_envs)` combos get applied. `-k` still filters collected tests by substring after parametrization.
 
@@ -21,8 +22,10 @@ Pytest **(by default)** automatically discovers and runs **test functions** that
 
 The `handler` fixture provides **significant performance benefits** by reusing simulator instances across multiple tests. Instead of creating and destroying a handler for every test, it creates one handler per `(sim, num_envs)` combination and reuses it for all tests in a session that share the same scenario configuration.
 
+**Implementation**: The test infrastructure uses `HandlerContext` from `metasim/sim/sim_context.py` to manage handler lifecycle. This ensures consistent behavior with production code and proper cleanup across all simulator backends. For IsaacSim specifically, `HandlerContext` keeps handlers alive between tests (only clearing the simulation context), which avoids expensive application restarts.
+
 **Best Practice: Group tests by scenario**
-- **Why**: Tests that share the same scenario (robot configuration, environment setup, etc.) can reuse the same handler process, dramatically reducing test execution time.
+- **Why**: Tests that share the same scenario (robot configuration, environment setup, etc.) can reuse the same handler instance, dramatically reducing test execution time.
 - **How**: Organize all tests that need the same scenario into a single directory (or file), then register one scenario builder for that entire directory using `register_shared_suite()`.
 - **Example**: The `queries/` test suite has tests for contact forces, site positions, etc. All these tests use the same robot and environment setup, so they all share one handler per `(sim, num_envs)` combo.
 
@@ -89,7 +92,7 @@ import pytest
 @pytest.mark.mujoco
 def test_gripper_open_close(handler):
     """Test gripper opening and closing."""
-    # Runs in the child process; this arg is the handler instance
+    # handler is the shared handler instance for this (sim, num_envs) combo
     assert handler.scenario.simulator == "mujoco"
 
 @pytest.mark.sim("mujoco", "isaacsim")
@@ -114,7 +117,7 @@ def test_grasp_cube(handler):
 2. When a test in your suite requests `handler`, pytest parametrizes it based on the test's markers (e.g., `@pytest.mark.mujoco`)
 3. Your `get_manipulation_scenario(sim, num_envs)` is called **once** to build the scenario for each `(sim, num_envs)` combination
 4. The handler is **reused** across all tests in `manipulation/` that have the same `(sim, num_envs)` - dramatically faster than creating a new handler for each test
-5. The test body runs inside the child process automatically; the handler instance is passed as the argument tied to the `handler` fixture.
+5. The handler instance is passed directly to your test function via the `handler` fixture
 
 **Important**: Do not request `handler` on `@pytest.mark.general` tests - those are for pure unit tests without simulators.
 

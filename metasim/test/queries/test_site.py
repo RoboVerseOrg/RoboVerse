@@ -22,12 +22,12 @@ def _pick_robot_site_name(handler, is_mjx: bool = False) -> str:
 
     if is_mjx:
         mj_model = handler._mj_model
-        robot_name = handler._robot.name
+        # Use the MJCF identifier which matches site name prefixes
+        prefix = handler._mujoco_robot_name
     else:
         mj_model = handler.physics.model
-        robot_name = handler.robot.name
-
-    prefix = f"{robot_name}/"
+        # Use the MJCF identifier which matches site name prefixes
+        prefix = handler._mujoco_robot_names[0]
 
     for i in range(mj_model.nsite):
         name = mj_model.site(i).name
