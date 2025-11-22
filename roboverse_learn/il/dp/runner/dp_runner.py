@@ -546,9 +546,10 @@ class DPRunner(BaseRunner):
         log.trace(f"Time to launch: {toc - tic:.2f}s")
 
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        checkpoint = self.get_checkpoint_path()
-        # checkpoint = ckpt_path if checkpoint is None else checkpoint
-        checkpoint = ckpt_path if ckpt_path is None else checkpoint
+        if ckpt_path is None:
+            checkpoint = self.get_checkpoint_path()
+        else:
+            checkpoint = ckpt_path
         if checkpoint is None:
             raise ValueError(
                 "No checkpoint found, please provide a valid checkpoint path."
