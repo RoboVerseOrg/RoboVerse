@@ -9,7 +9,6 @@ from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 from metasim.randomization.camera_randomizer import CameraRandomCfg, CameraRandomizer
-from metasim.test.randomization.conftest import get_shared_scenario
 
 
 def get_camera_xformable_from_randomizer(randomizer):
@@ -243,67 +242,9 @@ TEST_FUNCTIONS = [
 ]
 
 
-def _process_run_handler(scenario):
-    """Process function for standalone mode - creates its own handler."""
-    from metasim.utils.setup_util import get_handler
-
-    handler = get_handler(scenario)
-    distributions = ["uniform", "log_uniform", "gaussian"]
-    for dist in distributions:
-        for test_func in TEST_FUNCTIONS:
-            test_func(handler, distribution=dist)
-    handler.close()
-
-
-def run_test(sim="isaacsim", num_envs=2):
-    """Standalone test function for direct execution.
-
-    This function is used when running the test file directly (not via pytest).
-    It creates its own handler and runs all tests.
-
-    Args:
-        sim: Simulator type
-        num_envs: Number of environments
-    """
-    import multiprocessing as mp
-
-    log.info(f"Running camera randomizer test in standalone mode with {sim} and {num_envs}")
-
-    if sim not in ["isaacsim"]:
-        log.warning(f"Skipping: Only testing IsaacSim here, got {sim}")
-        return
-
-    scenario = get_shared_scenario(sim, num_envs)
-    ctx = mp.get_context("spawn")
-    p = ctx.Process(target=_process_run_handler, args=(scenario,))
-    p.start()
-    p.join(timeout=60)
-
-    assert p.exitcode == 0, f"IsaacSim process exited abnormally: {p.exitcode}"
-    log.info("IsaacSim headless test finished successfully.")
-
-
-@pytest.mark.usefixtures("shared_handler")
-def test_camera_randomizer_with_shared_handler(shared_handler):
-    """Run camera randomizer tests using the child-process handler via proxy."""
-    log.info("Running camera randomizer tests with shared handler (proxy)")
-
-    proxy = shared_handler  # HandlerProxy
-
-    distributions = ["uniform", "log_uniform", "gaussian"]
-
-    # Run all camera test functions with different distributions
-    for dist in distributions:
-        for test_func in TEST_FUNCTIONS:
-            proxy.run_test(func=test_func, distribution=dist)
-
-    log.info("All camera randomizer tests completed with shared handler (proxy)")
-
-
-if __name__ == "__main__":
-    # Direct execution for quick testing - uses standalone mode
-    import sys
-
-    sim = "isaacsim" if len(sys.argv) < 2 else sys.argv[1]
-    num_envs = 2 if len(sys.argv) < 3 else int(sys.argv[2])
-    run_test(sim, num_envs)
+@pytest.mark.isaacsim
+@pytest.mark.parametrize("distribution", ["uniform", "log_uniform", "gaussian"])
+@pytest.mark.parametrize("test_func", TEST_FUNCTIONS, ids=[f.__name__ for f in TEST_FUNCTIONS])
+def test_camera_randomizers(handler, test_func, distribution):
+    """Run camera randomizer checks inside the shared handler process."""
+    test_func(handler, distribution=distribution)

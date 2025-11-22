@@ -114,12 +114,11 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
     """Child process target: create handler and execute requested test functions."""
     import traceback
 
-    from metasim.sim.sim_context import HandlerContext
+    from metasim.utils.setup_util import get_handler
 
     log.info(f"[shared-handler] Creating simulation handler for {sim}, num_envs={num_envs}")
     scenario = scenario_fn(sim, num_envs)
-    ctx = HandlerContext(scenario)
-    handler = ctx.__enter__()
+    handler = get_handler(scenario)
     log.info("[shared-handler] Handler created")
 
     # Notify ready
@@ -160,7 +159,7 @@ def _run_test_in_process(task_queue: mp.Queue, result_queue: mp.Queue, sim: str,
     finally:
         try:
             log.info("[shared-handler] Closing handler...")
-            ctx.__exit__(None, None, None)
+            handler.close()
             log.info("[shared-handler] Handler closed")
         except Exception:
             log.exception("[shared-handler] Error closing handler")
@@ -178,13 +177,12 @@ class HandlerProxy:
     def run_test(
         self,
         func: Callable,
-        timeout: float | None = None,
         *args,
+        timeout: float | None = None,
         **kwargs,
     ):
         """Request the handler process to run `func(handler, *args, **kwargs)`."""
-        if timeout is None:
-            timeout = self._timeout
+        effective_timeout = timeout if timeout is not None else self._timeout
 
         task = {
             "func": func,
@@ -194,7 +192,7 @@ class HandlerProxy:
         self._task_queue.put(task)
 
         try:
-            res = self._result_queue.get(timeout=timeout)
+            res = self._result_queue.get(timeout=effective_timeout)
         except Exception as e:
             raise RuntimeError(f"Timeout waiting for result of {getattr(func, '__name__', '<unknown>')}: {e}") from e
 

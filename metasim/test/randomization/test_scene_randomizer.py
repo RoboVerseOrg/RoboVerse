@@ -15,8 +15,6 @@ Key fixes:
 
 from __future__ import annotations
 
-import multiprocessing as mp
-
 import pytest
 import rootutils
 from loguru import logger as log
@@ -29,7 +27,6 @@ from metasim.randomization.scene_randomizer import (
     SceneRandomCfg,
     SceneRandomizer,
 )
-from metasim.test.randomization.conftest import get_shared_scenario
 
 
 def _assert_contains(prims: list[str], substrings: list[str]):
@@ -277,61 +274,24 @@ def scene_env_ids(handler):
     log.info("Scene env_ids scoping test passed")
 
 
-TEST_FUNCTIONS = [
-    scene_floor,
-    scene_walls,
-    scene_ceiling,
-    scene_table,
-    scene_combined,
-    scene_material_selection,
-    scene_seed,
-    scene_env_ids,
+_SCENE_CASES = [
+    pytest.param(scene_floor, {"material_randomization": False}, id="scene_floor"),
+    pytest.param(scene_floor, {"material_randomization": True}, id="scene_floor_material"),
+    pytest.param(scene_walls, {"material_randomization": False}, id="scene_walls"),
+    pytest.param(scene_walls, {"material_randomization": True}, id="scene_walls_material"),
+    pytest.param(scene_ceiling, {"material_randomization": False}, id="scene_ceiling"),
+    pytest.param(scene_ceiling, {"material_randomization": True}, id="scene_ceiling_material"),
+    pytest.param(scene_table, {"material_randomization": False}, id="scene_table"),
+    pytest.param(scene_table, {"material_randomization": True}, id="scene_table_material"),
+    pytest.param(scene_combined, {}, id="scene_combined"),
+    pytest.param(scene_material_selection, {}, id="scene_material_selection"),
+    pytest.param(scene_seed, {}, id="scene_seed"),
+    pytest.param(scene_env_ids, {}, id="scene_env_ids"),
 ]
 
 
-def _process_run_handler(scenario):
-    from metasim.utils.setup_util import get_handler
-
-    handler = get_handler(scenario)
-    for func in TEST_FUNCTIONS:
-        # Run material and non-material variants where applicable
-        if func in (scene_floor, scene_walls, scene_ceiling, scene_table):
-            func(handler, material_randomization=False)
-            func(handler, material_randomization=True)
-        else:
-            func(handler)
-    handler.close()
-
-
-def run_test(sim: str = "isaacsim", num_envs: int = 2):
-    if sim not in ["isaacsim"]:
-        log.warning(f"Skipping: Only testing IsaacSim here, got {sim}")
-        return
-    scenario = get_shared_scenario(sim, num_envs)
-    ctx = mp.get_context("spawn")
-    p = ctx.Process(target=_process_run_handler, args=(scenario,))
-    p.start()
-    p.join(timeout=90)
-    assert p.exitcode == 0, f"IsaacSim process exited abnormally: {p.exitcode}"
-    log.info("Scene randomizer standalone test finished successfully")
-
-
-@pytest.mark.usefixtures("shared_handler")
-def test_scene_randomizer_with_shared_handler(shared_handler):
-    log.info("Running scene randomizer tests with shared handler (proxy)")
-    proxy = shared_handler
-    for func in TEST_FUNCTIONS:
-        if func in (scene_floor, scene_walls, scene_ceiling, scene_table):
-            proxy.run_test(func, material_randomization=False)
-            proxy.run_test(func, material_randomization=True)
-        else:
-            proxy.run_test(func)
-    log.info("All scene randomizer tests completed with shared handler (proxy)")
-
-
-if __name__ == "__main__":
-    import sys
-
-    sim = "isaacsim" if len(sys.argv) < 2 else sys.argv[1]
-    num_envs = 2 if len(sys.argv) < 3 else int(sys.argv[2])
-    run_test(sim, num_envs)
+@pytest.mark.isaacsim
+@pytest.mark.parametrize(("test_func", "kwargs"), _SCENE_CASES)
+def test_scene_randomizers(handler, test_func, kwargs):
+    """Run scene randomizer checks inside the shared handler process."""
+    test_func(handler, **kwargs)
