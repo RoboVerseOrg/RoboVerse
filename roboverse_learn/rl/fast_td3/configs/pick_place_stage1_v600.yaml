@@ -1,12 +1,17 @@
-# Base Configuration for FastTD3 Training
-# Default configuration with IsaacGym simulator and H1 humanoid robot
+# Stage 1 Configuration (v_max tuned to 600)
+
+# Rationale:
+#   - Max reward per step = 2.0 (gripper_close scale)
+#   - Max episode length = 300 steps
+#   - Worst-case undiscounted return ≈ 2.0 * 300 = 600
+#   - Set v_max = 600 to match true value range (instead of default 1500)
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["vega"]
-task: "pick_place_base"
+task: "pick_place_approach_grasp"
 decimation: 4
 train_or_eval: "train"
 headless: false
@@ -22,8 +27,8 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 800
-num_eval_envs: 800
+num_envs: 512
+num_eval_envs: 512
 total_timesteps: 2000000
 learning_starts: 10
 num_steps: 1
@@ -40,7 +45,8 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 8
+num_updates: 5
+
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -55,8 +61,8 @@ num_atoms: 101
 # -------------------------------------------------------------------------------
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
-v_min: 0
-v_max: 1500.0
+v_min: 0.0
+v_max: 800.0   # tuned for Stage 1 reward range
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4
@@ -77,11 +83,13 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "get_started_fttd3"
-exp_name: "get_started_fttd3"
+wandb_project: "pick_place_stage1"
+exp_name: "pick_place_stage1"
 use_wandb: false
 checkpoint_path: null
 eval_interval: 10000
-save_interval: 15000
+save_interval: 10000
 video_width: 1024
 video_height: 1024
+
+

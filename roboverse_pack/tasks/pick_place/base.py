@@ -66,6 +66,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 name="wall",
                 size=(0.8, 0.1, 0.3),
                 mass=1000.0,
+                fix_base_link=True,
                 physics=PhysicStateType.RIGIDBODY,
                 color=(0.7, 0.7, 0.7),
             ),
@@ -139,6 +140,10 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         robots=["vega"],
         sim_params=SimParamCfg(
             dt=0.005,
+            num_position_iterations=16,  # 增加位置迭代次数以减少穿模
+            num_velocity_iterations=4,  # 增加速度迭代次数以提高稳定性
+            max_depenetration_velocity=10.0,  # 增加最大去穿透速度，防止快速移动时穿模
+            contact_offset=0.002,  # 增加接触偏移量，提前检测碰撞
         ),
         decimation=4,
     )
@@ -152,6 +157,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         self._pre_init_trajectory_tracking(scenario, device)
         self._complete_trajectory_tracking_init(device)
+        self.auto_grip_ratio = None
         super().__init__(scenario, device)
 
         # Initialize finger joint indices for left hand
@@ -307,6 +313,8 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
     def reset(self, env_ids=None):
         """Reset environment and last actions."""
+        if self.auto_grip_ratio is None:
+            self.auto_grip_ratio = torch.zeros(self.num_envs, device=self.device)
         if env_ids is None or self._last_action is None:
             self._last_action = self._initial_states.robots[self.robot_name].joint_pos[:, :]
         else:
@@ -318,6 +326,11 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             env_ids_tensor = (
                 torch.tensor(env_ids, device=self.device) if not isinstance(env_ids, torch.Tensor) else env_ids
             )
+
+        if env_ids is None:
+            self.auto_grip_ratio.zero_()
+        else:
+            self.auto_grip_ratio[env_ids_tensor] = 0.0
 
         self.current_waypoint_idx[env_ids_tensor] = 0
         self.waypoints_reached[env_ids_tensor] = False
@@ -350,6 +363,9 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # Calculate distance from hand to box
         hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
 
+        if self.auto_grip_ratio is None:
+            self.auto_grip_ratio = torch.zeros(self.num_envs, device=self.device)
+
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
         real_actions = torch.maximum(torch.minimum(new_actions, self._action_high), self._action_low)
@@ -357,16 +373,13 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         # Auto-control finger joints based on distance to object
         # If far from object: open hand (finger open positions)
         # If close to object: close hand (finger close positions)
-        distance_threshold = 0.03
-        finger_targets_open = self.gripper_open_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
-        finger_targets_close = self.gripper_close_q.unsqueeze(0).expand(self.num_envs, -1)  # (B, 11)
+        distance_threshold = 0.05
+        close_mask = hand_box_dist <= distance_threshold
+        delta = torch.where(close_mask, torch.full_like(hand_box_dist, 0.1), torch.full_like(hand_box_dist, -0.1))
+        self.auto_grip_ratio = torch.clamp(self.auto_grip_ratio + delta, 0.0, 1.0)
 
-        # Determine target finger positions based on distance
-        finger_targets = torch.where(
-            hand_box_dist.unsqueeze(-1) > distance_threshold,
-            finger_targets_open,
-            finger_targets_close,
-        )  # (B, 11)
+        grip_lerp = self.auto_grip_ratio.unsqueeze(-1)
+        finger_targets = self.gripper_open_q + grip_lerp * (self.gripper_close_q - self.gripper_open_q)
 
         # Set finger joint targets in actions
         for i, joint_idx in enumerate(self.left_hand_finger_joint_indices):
@@ -556,23 +569,14 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         # Calculate reward based on distance
         approach_reward_far = 1 - torch.tanh(hand_box_dist)  # (B,)
-        approach_reward_near = 1 - 2 * torch.tanh(hand_box_dist * 10)  # (B,)
+        approach_reward_near = 2 - 2 * torch.tanh(hand_box_dist * 10)  # (B,)
 
         return approach_reward_far + approach_reward_near  # (B,)
 
     def _reward_gripper_close(self, env_states) -> torch.Tensor:
-        """Reward for hand being close to box."""
-        box_pos = env_states.objects["object"].root_state[:, 0:3]  # (B, 3)
-        hand_pos = self._get_hand_position(env_states)  # (B, 3)
-
-        # Calculate distance from hand to box
-        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)  # (B,)
-
-        # Check if hand is close to box (within threshold)
-        close_threshold = 0.08
-        hand_close_bonus = (hand_box_dist < close_threshold).float()  # (B,)
-
-        return hand_close_bonus  # (B,)
+        """Reward for maintaining a valid grasp."""
+        # Use the boolean grasp flag computed in `step`
+        return self.object_grasped.float()
 
     def _reward_robot_target_qpos(self, env_states) -> torch.Tensor:
         """Reward for robot staying close to target joint positions."""
@@ -593,7 +597,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
             target_pos = self.waypoint_positions[self.current_waypoint_idx]
             distance = torch.norm(hand_pos - target_pos, dim=-1)
 
-            approach_reward = (1 - torch.tanh(1.0 * distance)) * self.w_tracking_approach
+            approach_reward = (2 - torch.tanh(1.0 * distance)- torch.tanh(3.0 * distance)) * self.w_tracking_approach
             approach_reward = approach_reward * grasped_mask.float()
 
             reached = (distance < self.reach_threshold) & grasped_mask
@@ -662,12 +666,18 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         box_mat_flat = box_mat.view(self.num_envs, -1)  # [num_envs, 9]
 
         box_to_hand = box_pos - hand_pos  # [num_envs, 3]
+        distance_to_box = torch.norm(box_to_hand, dim=-1, keepdim=True)  # [num_envs, 1]
+
+        # Each finger tip to box relative displacement: (B, 5, 3) -> (B, 15)
+        box_pos_expanded = box_pos.unsqueeze(1)  # [num_envs, 1, 3]
+        finger_to_box = finger_tips_pos - box_pos_expanded  # [num_envs, 5, 3]
+        finger_to_box_flat = finger_to_box.view(self.num_envs, -1)  # [num_envs, 15]
 
         target_pos = self.waypoint_positions[self.current_waypoint_idx]
         target_to_hand = target_pos - hand_pos
         distance_to_target = torch.norm(target_to_hand, dim=-1, keepdim=True)
 
-        waypoint_onehot = torch.nn.functional.one_hot(self.current_waypoint_idx, num_classes=self.num_waypoints).float()
+        # waypoint_onehot = torch.nn.functional.one_hot(self.current_waypoint_idx, num_classes=self.num_waypoints).float()
 
         num_reached = self.waypoints_reached.sum(dim=1, keepdim=True).float() / self.num_waypoints
         grasped_flag = self.object_grasped.float().unsqueeze(-1)
@@ -675,14 +685,15 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         obs_list = [
             robot_joint_pos,
             robot_joint_vel,
-            hand_pos,  # Hand base position
-            finger_tips_pos.view(self.num_envs, -1),  # All finger tips flattened (B, 15)
+            # hand_pos,  # Hand base position
             box_mat_flat[:, 3:],
             box_to_hand,
-            target_pos,
+            distance_to_box,
+            finger_to_box_flat,  # Each finger tip to box relative displacement (B, 15)
+            # target_pos,
             target_to_hand,
             distance_to_target,
-            waypoint_onehot,
+            # waypoint_onehot,
             num_reached,
             grasped_flag,
         ]
@@ -711,23 +722,23 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                     },
                     # Trajectory waypoints (world coordinates)
                     "traj_marker_0": {
-                        "pos": torch.tensor([0.460000, -0.00000, 1.020000]),
+                        "pos": torch.tensor([0.40000, -0.460000, 1.020000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_1": {
-                        "pos": torch.tensor([0.400000, -0.00000, 1.220000]),
+                        "pos": torch.tensor([0.400000, -0.320000, 1.220000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_2": {
-                        "pos": torch.tensor([0.340000, -0.00000, 1.360000]),
+                        "pos": torch.tensor([0.40000, -0.190000, 1.360000]),
                         "rot": torch.tensor([0.998750, 0.000000, 0.049979, 0.000000]),
                     },
                     "traj_marker_3": {
-                        "pos": torch.tensor([0.430000, -0.00000, 1.220000]),
+                        "pos": torch.tensor([0.40000, -0.070000, 1.220000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_4": {
-                        "pos": torch.tensor([0.030000, 0.000000, 1.080000]),
+                        "pos": torch.tensor([0.40000, 0.000000, 1.080000]),
                         "rot": torch.tensor([0.984726, 0.000000, 0.174108, 0.000000]),
                     },
                 },

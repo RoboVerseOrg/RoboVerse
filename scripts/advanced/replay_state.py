@@ -39,13 +39,13 @@ from metasim.utils.kinematics import get_ee_state
 class Args:
     """Replay trajectory for a given task."""
 
-    task: str = "put_banana"
-    robot: str = "franka"
+    task: str = "pick_place_base"
+    robot: str = "vega"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "sapien3"
+        "isaacsim"
     )
     renderer: (
         Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None
@@ -77,7 +77,7 @@ def _suffix_path(p: str | None, suffix: str) -> str | None:
 
 
 def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
-    envs_actions = all_actions[:num_envs]
+    envs_actions = all_actions[2:3]
     return [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
     ]
@@ -127,7 +127,7 @@ class ObsSaver:
 
 def main():
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))
+    camera = PinholeCameraCfg(pos=(1.5, 1.5, 2.2), look_at=(0.0, 0.0, 1.0), width=1080, height=1080)
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
@@ -140,12 +140,12 @@ def main():
     )
     num_envs: int = scenario.num_envs
 
-    device = torch.device("cpu")
+    device = torch.device("cuda")
     t0 = time.time()
     env = task_cls(scenario, device=device)
     log.trace(f"Time to launch: {time.time() - t0:.2f}s")
 
-    traj_filepath = env.traj_filepath
+    traj_filepath = "/home/balen/murphy/isaaclab_rv/1/RoboVerse/eval_trajs/pick_place_base_vega_eval_20251112_151459_v2.pkl"
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
     t0 = time.time()
     init_states, all_actions, all_states = get_traj(traj_filepath, scenario.robots[0], env.handler)
@@ -189,9 +189,6 @@ def main():
         obs = env.handler.get_states()
         saver_state.add(obs)
 
-        # Log EE state
-        ee_states = get_ee_state(obs, robot_config=scenario.robots[0])
-        log.debug(f"EE state at step {step}: {ee_states}")
 
         try:
             success = env.checker.check(env.handler)

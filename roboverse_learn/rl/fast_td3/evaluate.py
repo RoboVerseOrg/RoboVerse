@@ -423,7 +423,7 @@ def evaluate(
 
 def main():
     parser = argparse.ArgumentParser(description='FastTD3 Evaluation')
-    parser.add_argument('--checkpoint', type=str, default='/home/balen/murphy/murphy_rv/RoboVerse/models/pick_place_obstacle_135000.pt',
+    parser.add_argument('--checkpoint', type=str, default='/home/balen/murphy/isaaclab_rv/1/RoboVerse/models/pick_place_base_15000.pt',
                        help='Path to checkpoint file')
     parser.add_argument('--num_episodes', type=int, default=1,
                        help='Number of episodes per environment (default: 1, each env saves one episode)')

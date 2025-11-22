@@ -51,7 +51,7 @@ if __name__ == "__main__":
             "sapien2",
             "sapien3",
             "mujoco",
-        ] = "isaacsim"
+        ] = "isaacgym"
 
         ## Others
         num_envs: int = 1

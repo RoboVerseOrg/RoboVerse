@@ -24,9 +24,12 @@ class VegaCfg(RobotCfg):
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
-    urdf_path: str = "/home/priosin/murphy/demos/RoboVerse/roboverse_pack/robots_vega/humanoid/vega_1/vega.urdf"
+    urdf_path: str = "roboverse_pack/robots_vega/humanoid/vega_1/vega.urdf"
     usd_path: str = "roboverse_pack/robots_vega/humanoid/vega_1/vega/vega.usd"
-
+    
+    # Isaac Gym specific settings
+    isaacgym_flip_visual_attachments: bool = False
+    collapse_fixed_joints: bool = False
     # Physical properties
     enabled_gravity: bool = False  # Disable gravity for default setup
 

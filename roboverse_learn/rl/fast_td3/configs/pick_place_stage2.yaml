@@ -1,12 +1,13 @@
-# Base Configuration for FastTD3 Training
-# Default configuration with IsaacGym simulator and H1 humanoid robot
+# Stage 2 Configuration: Trajectory Tracking
+# This stage focuses on learning to track waypoints while holding the object
+# Should be initialized from Stage 1 checkpoint
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["vega"]
-task: "pick_place_base"
+task: "pick_place_track"  # Stage 2 task
 decimation: 4
 train_or_eval: "train"
 headless: false
@@ -24,7 +25,7 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 num_envs: 800
 num_eval_envs: 800
-total_timesteps: 2000000
+total_timesteps: 2000000  # Train Stage 2 for 2M steps
 learning_starts: 10
 num_steps: 1
 
@@ -40,7 +41,8 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 8
+num_updates: 5
+
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -77,11 +79,13 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "get_started_fttd3"
-exp_name: "get_started_fttd3"
+wandb_project: "pick_place_stage2"
+exp_name: "pick_place_stage2"
 use_wandb: false
-checkpoint_path: null
+checkpoint_path: "/home/balen/murphy/isaaclab_rv/1/RoboVerse/models/pick_place_base_15000.pt"  # Load Stage 1 checkpoint
 eval_interval: 10000
 save_interval: 15000
 video_width: 1024
 video_height: 1024
+
+
