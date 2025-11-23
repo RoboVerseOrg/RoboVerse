@@ -117,7 +117,7 @@ extend-exclude = [
 ]
 
 [tool.setuptools]
-packages = ["metasim", "roboverse_pack"]
+packages = ["metasim", "roboverse_pack", "roboverse_learn"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
