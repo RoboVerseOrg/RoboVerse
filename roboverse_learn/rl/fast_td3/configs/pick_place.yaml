@@ -5,8 +5,8 @@
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacsim"
-robots: ["franka"]
-task: "pick_place.approach_grasp_simple"
+robots: ["vega"]
+task: "approachgrasphand"
 decimation: 4
 train_or_eval: "train"
 headless: True
@@ -22,8 +22,8 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 400
-num_eval_envs: 400
+num_envs: 300
+num_eval_envs: 300
 total_timesteps: 2000000
 learning_starts: 10
 num_steps: 1
@@ -40,7 +40,7 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 5
+num_updates: 2
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -56,10 +56,10 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 600.0
+v_max: 500.0
 policy_noise: 0.001
 std_min: 0.001
-std_max: 0.4
+std_max: 0.02
 noise_clip: 0.5
 
 # -------------------------------------------------------------------------------

@@ -167,6 +167,8 @@ def main() -> None:
         robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
     )
     envs = task_cls(scenario, device=device)
+    from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    envs= TaskViserWrapper(envs)
     eval_envs = envs
 
     # ---------------- derive shapes ------------------------------------

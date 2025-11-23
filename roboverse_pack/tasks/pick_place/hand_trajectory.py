@@ -64,6 +64,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 mass=1000.0,
                 physics=PhysicStateType.RIGIDBODY,
                 color=(0.7, 0.7, 0.7),
+                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="table",
@@ -73,13 +74,14 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
+                fix_base_link=True,
             ),
             # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
             RigidObjCfg(
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -90,7 +92,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 name="traj_marker_1",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -101,7 +103,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 name="traj_marker_2",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -112,7 +114,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 name="traj_marker_3",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -123,7 +125,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 name="traj_marker_4",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker/marker.usd",
+                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
@@ -443,16 +445,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         return obs, reward, terminated, time_out, info
 
     def _get_hand_position(self, states):
-        """Get position of the palm center using fingertip offsets.
-
-        The hand position is approximated as the midpoint between the thumb tip and
-        the little finger tip. Since some tip links are removed during URDF import,
-        we reconstruct their world positions from the last articulated segment using
-        fixed offsets derived from the URDF (`L_th_l2` and `L_lf_l2`).
-
-        Returns:
-            hand_pos: (B, 3) tensor with position of hand base
-        """
+        """Get palm center using a fixed transform from link L_arm_l7."""
         rs = states.robots[self.robot.name]
         device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
 
@@ -463,34 +456,22 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         )
 
         name_to_index = {name: idx for idx, name in enumerate(rs.body_names)}
-        required_links = ["L_th_l2", "L_lf_l2"]
-        missing_links = [link for link in required_links if link not in name_to_index]
-        if missing_links:
-            raise ValueError(f"Required finger links missing in body_names: {missing_links}")
+        if "L_arm_l7" not in name_to_index:
+            raise ValueError("Required link 'L_arm_l7' missing in body_names.")
 
-        thumb_link_index = name_to_index["L_th_l2"]
-        pinky_link_index = name_to_index["L_lf_l2"]
+        link_index = name_to_index["L_arm_l7"]
+        link_pos = body_state[:, link_index, 0:3]
+        link_quat = body_state[:, link_index, 3:7]
 
-        thumb_link_pos = body_state[:, thumb_link_index, 0:3]  # (B, 3)
-        thumb_link_quat = body_state[:, thumb_link_index, 3:7]  # (B, 4)
-        pinky_link_pos = body_state[:, pinky_link_index, 0:3]  # (B, 3)
-        pinky_link_quat = body_state[:, pinky_link_index, 3:7]  # (B, 4)
+        # Offset from L_arm_l7 (provided values, meters, expressed in local frame)
+        hand_offset_local = torch.tensor([0.21864, -0.035, -0.02213], device=device).unsqueeze(0)
 
-        # Offsets from URDF (expressed in local link frames)
-        thumb_tip_offset = torch.tensor([-0.0230, 0.0151, 0.0018], device=device).unsqueeze(0)  # (1, 3)
-        pinky_tip_offset = torch.tensor([-0.0182, 0.0, -0.0306], device=device).unsqueeze(0)  # (1, 3)
-
-        thumb_rot = matrix_from_quat(thumb_link_quat)  # (B, 3, 3)
-        pinky_rot = matrix_from_quat(pinky_link_quat)  # (B, 3, 3)
-
-        thumb_tip_world = thumb_link_pos + torch.bmm(
-            thumb_rot, thumb_tip_offset.expand(thumb_link_pos.shape[0], -1).unsqueeze(-1)
-        ).squeeze(-1)
-        pinky_tip_world = pinky_link_pos + torch.bmm(
-            pinky_rot, pinky_tip_offset.expand(pinky_link_pos.shape[0], -1).unsqueeze(-1)
+        link_rot = matrix_from_quat(link_quat)
+        hand_pos = link_pos + torch.bmm(
+            link_rot, hand_offset_local.expand(link_pos.shape[0], -1).unsqueeze(-1)
         ).squeeze(-1)
 
-        return 0.5 * (thumb_tip_world + pinky_tip_world)
+        return hand_pos
 
     def _get_finger_tips_positions(self, states):
         """Get positions of all five finger tips.

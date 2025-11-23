@@ -74,18 +74,18 @@ class VegaCfg(RobotCfg):
         "R_arm_j6": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         "R_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Left hand - Thumb
-        "L_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
-        "L_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
-        "L_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
+        "L_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=2.2, stiffness=800, damping=45),
+        "L_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=2.2, stiffness=800, damping=45),
+        "L_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=40),
         # Left hand - Fingers
-        "L_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "L_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "L_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
+        "L_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.8, stiffness=700, damping=45),
         # Right hand - Thumb
         "R_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
@@ -131,11 +131,11 @@ class VegaCfg(RobotCfg):
         "R_arm_j5": (0.0, 0.0),
         "R_arm_j6": (0.0, 0.0),
         "R_arm_j7": (0.0, 0.0),
-        # Left hand - Thumb
+        # Left hand - Thumb (from URDF)
         "L_th_j0": (-0.0158, 1.605),
         "L_th_j1": (-0.3468, 0.1834),
         "L_th_j2": (-0.4298, 0.2731),
-        # Left hand - Fingers
+        # Left hand - Fingers (from URDF)
         "L_ff_j1": (-1.0946, 0.2891),
         "L_ff_j2": (-1.2101, 0.3681),
         "L_mf_j1": (-1.0844, 0.2801),
@@ -240,31 +240,31 @@ class VegaCfg(RobotCfg):
     # Left hand gripper open/close positions (all left hand finger joints)
     # Order: L_th_j0, L_th_j1, L_th_j2, L_ff_j1, L_ff_j2, L_mf_j1, L_mf_j2, L_rf_j1, L_rf_j2, L_lf_j1, L_lf_j2
     gripper_close_q: list[float] = [
-        1.20,  # L_th_j0: thumb abduction (close towards palm)
-        -0.30,  # L_th_j1: thumb flexion (negative closes)
-        -0.40,  # L_th_j2: thumb tip flexion
-        -0.95,  # L_ff_j1: index finger proximal (negative closes)
-        -1.05,  # L_ff_j2: index finger distal
-        -0.95,  # L_mf_j1: middle finger proximal
-        -1.05,  # L_mf_j2: middle finger distal
-        -0.90,  # L_rf_j1: ring finger proximal
-        -1.00,  # L_rf_j2: ring finger distal
-        -0.90,  # L_lf_j1: little finger proximal
-        -1.00,  # L_lf_j2: little finger distal
-    ]  # Closed hand (approx. 85-90% of lower joint limits)
+        -0.0158,  # L_th_j0 lower limit
+        -0.3468,  # L_th_j1 lower limit
+        -0.4298,  # L_th_j2 lower limit
+        -1.0946,  # L_ff_j1 lower limit
+        -1.2101,  # L_ff_j2 lower limit
+        -1.0844,  # L_mf_j1 lower limit
+        -1.2026,  # L_mf_j2 lower limit
+        -1.0154,  # L_rf_j1 lower limit
+        -1.1156,  # L_rf_j2 lower limit
+        -1.0118,  # L_lf_j1 lower limit
+        -1.1073,  # L_lf_j2 lower limit
+    ]  # Closed hand (URDF lower bounds)
     gripper_open_q: list[float] = [
-        0.20,  # L_th_j0: relaxed abduction
-        0.0,  # L_th_j1: thumb flexion open
-        0.0,  # L_th_j2: thumb tip open
-        0.0,  # L_ff_j1: index finger proximal open
-        0.0,  # L_ff_j2: index finger distal open
-        0.0,  # L_mf_j1: middle finger proximal open
-        0.0,  # L_mf_j2: middle finger distal open
-        0.0,  # L_rf_j1: ring finger proximal open
-        0.0,  # L_rf_j2: ring finger distal open
-        0.0,  # L_lf_j1: little finger proximal open
-        0.0,  # L_lf_j2: little finger distal open
-    ]  # Open hand (neutral positions)
+        1.605,  # L_th_j0 upper limit
+        0.1834,  # L_th_j1 upper limit
+        0.2731,  # L_th_j2 upper limit
+        0.2891,  # L_ff_j1 upper limit
+        0.3681,  # L_ff_j2 upper limit
+        0.2801,  # L_mf_j1 upper limit
+        0.3533,  # L_mf_j2 upper limit
+        0.2840,  # L_rf_j1 upper limit
+        0.3599,  # L_rf_j2 upper limit
+        0.2811,  # L_lf_j1 upper limit
+        0.4014,  # L_lf_j2 upper limit
+    ]  # Open hand (URDF upper bounds)
 
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)
