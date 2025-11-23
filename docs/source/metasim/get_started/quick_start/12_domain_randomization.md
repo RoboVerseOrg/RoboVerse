@@ -1,6 +1,6 @@
 # 12. Domain Randomization
 
-This tutorial demonstrates how to apply progressive domain randomization during trajectory replay. The system combines scene creation, material variation, lighting changes, and camera perturbations in a layered approach that mirrors real-world training workflows.
+This tutorial shows how to use domain randomization during trajectory replay. We'll go from simple material changes to full scene randomization with lighting and camera variations - basically everything you need for robust sim-to-real transfer.
 
 ## Quick Start
 
@@ -14,9 +14,94 @@ python get_started/12_domain_randomization.py \
 
 The script replays a close_box demonstration while applying randomization every 60 steps. Output video is saved to `get_started/output/12_dr_*.mp4`.
 
+## Visual Examples
+
+Here are videos showing what each mode and level looks like. All use the same close_box trajectory, just with different randomization settings.
+
+### Mode 0: Manual Geometry
+
+<table>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode0_manual_level0.mp4" controls></video>
+      <p align="center"><b>Level 0: Baseline</b><br>Fixed scene, no randomization</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode0_manual_level1.mp4" controls></video>
+      <p align="center"><b>Level 1: Material</b><br>Table material varies between wood/metal</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode0_manual_level2.mp4" controls></video>
+      <p align="center"><b>Level 2: + Lighting</b><br>Material + light intensity/color</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode0_manual_level3.mp4" controls></video>
+      <p align="center"><b>Level 3: Full</b><br>Material + lighting + camera</p>
+    </td>
+  </tr>
+</table>
+
+### Mode 1: USD Table
+
+<table>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level0.mp4" controls></video>
+      <p align="center"><b>Level 0: Baseline</b><br>Single USD table model</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level1.mp4" controls></video>
+      <p align="center"><b>Level 1: Scene</b><br>Switches between 5 table models</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level2.mp4" controls></video>
+      <p align="center"><b>Level 2: + Lighting</b><br>Table switching + lighting</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level3.mp4" controls></video>
+      <p align="center"><b>Level 3: Full</b><br>Table + lighting + camera</p>
+    </td>
+  </tr>
+</table>
+
+### Mode 2: USD Scene
+
+<table>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level0.mp4" controls></video>
+      <p align="center"><b>Level 0: Baseline</b><br>Single Kujiale interior scene</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level1.mp4" controls></video>
+      <p align="center"><b>Level 1: Scene</b><br>Switches between 12 interior scenes</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level2.mp4" controls></video>
+      <p align="center"><b>Level 2: + Lighting</b><br>Scene switching + lighting</p>
+    </td>
+    <td width="50%">
+      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level3.mp4" controls></video>
+      <p align="center"><b>Level 3: Full</b><br>Scene + lighting + camera</p>
+    </td>
+  </tr>
+</table>
+
+**Notes:**
+- Level 0 is useful for debugging - everything stays the same
+- Level 1 adds scene/material variation
+- Level 2 is where things get interesting with lighting changes
+- Level 3 throws in camera randomization for good measure
+
 ## Architecture Overview
 
-The refactored randomization system separates concerns between object lifecycle and property editing:
+The randomization system separates two concerns: managing object lifecycle vs. editing their properties.
 
 ### Object Types
 
@@ -121,7 +206,7 @@ Rendering quality. Choose `pathtracing` for higher quality at slower speed. This
 
 ### Mode 0: Manual Geometry
 
-Best for understanding the core system. All geometry is created procedurally using cube primitives.
+Good starting point for understanding how things work. Everything is just cube primitives.
 
 **Environment**:
 ```python
@@ -147,7 +232,7 @@ ManualGeometryCfg(
 )
 ```
 
-In Level 1+, MaterialRandomizer can change the table material between wood and metal families while keeping the geometry fixed.
+In Level 1+, the MaterialRandomizer switches table material between wood and metal families while keeping geometry fixed.
 
 ### Mode 1: USD Table
 
@@ -163,7 +248,7 @@ USDAssetPoolCfg(
 )
 ```
 
-The system downloads complete EmbodiedGen asset folders (URDF + mesh files + textures), converts URDF to USD automatically, and switches between table models at each randomization trigger.
+The system downloads EmbodiedGen assets (URDF + meshes + textures), auto-converts URDF to USD, and switches between models at each randomization step.
 
 ### Mode 2: USD Scene
 
@@ -179,13 +264,13 @@ USDAssetPoolCfg(
 )
 ```
 
-Kujiale scenes use a two-repository strategy:
-1. Download RoboVerse USDA (main scene description)
+Kujiale scenes use a two-repo setup:
+1. Download RoboVerse USDA (scene layout)
 2. Download InteriorAgent assets (meshes, textures, materials)
-3. Copy RoboVerse USDA to InteriorAgent folder
-4. Load USDA with relative references resolving to InteriorAgent assets
+3. Copy USDA to InteriorAgent folder
+4. Load with references resolving to InteriorAgent assets
 
-This approach gives you curated scene layouts from RoboVerse while leveraging the complete asset library from InteriorAgent.
+This gives you curated layouts from RoboVerse with the full asset library from InteriorAgent.
 
 ### Mode 3: Full USD
 
@@ -257,7 +342,7 @@ PhysicalMaterialCfg(
 )
 ```
 
-Modifies physics properties on objects with RigidBodyAPI. Note that dynamic objects created by SceneRandomizer are visual-only and skip physical material randomization.
+Randomizes physics properties on objects with RigidBodyAPI. Note: dynamic objects from SceneRandomizer are visual-only, so they skip this.
 
 ### ObjectRandomizer
 
@@ -314,7 +399,7 @@ Applies small perturbations:
 - Look-at target: +/- 0.05m around table center
 - FOV: 45-60 degrees
 
-These micro-adjustments simulate camera installation variations without drastically changing the viewpoint.
+These small perturbations simulate installation variations without drastically changing the viewpoint.
 
 ## Asset Management
 
@@ -360,22 +445,22 @@ The conversion uses the same logic as the standalone `urdf2usd.py` script, ensur
 Materials are randomized differently based on object type:
 
 **Mode 0** (Manual Geometry):
-- Table: Randomizes between wood and metal families
-- Floor: Randomizes between carpet, wood, and stone families
-- Walls: All 4 walls share the same material from masonry and architecture families
-- Ceiling: Randomizes between architecture and wall_board families
+- Table: Wood and metal families
+- Floor: Carpet, wood, and stone families
+- Walls: All 4 walls share same material (masonry/architecture families)
+- Ceiling: Architecture and wall_board families
 
 **Mode 1** (USD Table):
-- Box: Randomizes between wood and paper families
-- Table: Uses USD original materials (geometric diversity via model switching)
-- Floor, Walls, Ceiling: Randomize (same as Mode 0)
+- Box: Wood and paper families
+- Table: USD original materials (we get diversity from model switching instead)
+- Floor, Walls, Ceiling: Same as Mode 0
 
 **Mode 2/3** (USD Assets):
-- Scene objects use their original USD materials (no override)
-- Only static task objects (box_base) randomize materials
-- This preserves the visual coherence of USD scenes
+- Scene objects keep their original materials
+- Only task objects (like box_base) get randomized
+- This keeps USD scenes looking coherent
 
-The design principle: geometric randomization (USD switching) and material randomization (MDL application) are complementary but not mixed. Mode 0 focuses on material diversity, while modes 1-3 focus on geometric diversity.
+The idea: geometric randomization (switching USD models) and material randomization (applying MDL) are complementary. Mode 0 is all about materials, modes 1-3 are about geometry.
 
 ## Position Update System
 
@@ -393,7 +478,7 @@ if table_bounds:
         robot_state["pos"][2] = table_height + clearance
 ```
 
-This rigid body translation preserves relative positions between entities while ensuring all are placed above the table surface. For manual geometry, table bounds are computed from configuration. For USD assets, bounds are extracted from mesh bounding boxes.
+This moves objects up/down to sit on the table surface. For manual geometry, bounds come from config. For USD assets, we extract them from mesh bounding boxes.
 
 ## Reproducibility
 
@@ -492,13 +577,13 @@ For long training runs, monitor memory if you observe growth. The current implem
 
 ### Asset Download
 
-First-time asset downloads can take several minutes depending on network speed:
+First run can take a few minutes depending on your network:
 
-- Table785 (5 tables): ~200MB total
-- Kujiale scenes (12 scenes): ~2GB total (includes all meshes and textures)
-- Desktop supplies (10 objects): ~100MB total
+- Table785 (5 tables): ~200MB
+- Kujiale scenes (12 scenes): ~2GB (all meshes and textures)
+- Desktop supplies (10 objects): ~100MB
 
-Subsequent runs use cached assets. To prefetch everything:
+Later runs use cached assets. To prefetch everything:
 
 ```bash
 # Download all materials
@@ -513,7 +598,7 @@ huggingface-cli download spatialverse/InteriorAgent kujiale_0003 --repo-type dat
 
 ### ObjectRegistry
 
-Introduced in this refactoring, the ObjectRegistry provides unified access to all simulation objects regardless of whether they are static (Handler-managed) or dynamic (SceneRandomizer-managed).
+ObjectRegistry gives unified access to all sim objects, whether they're static (Handler-managed) or dynamic (SceneRandomizer-managed).
 
 ```python
 registry = ObjectRegistry.get_instance()
@@ -522,11 +607,11 @@ static_only = registry.list_objects(lifecycle='static')
 dynamic_only = registry.list_objects(lifecycle='dynamic')
 ```
 
-Material, Object, Light, and Camera randomizers automatically query the registry to find their target objects. This eliminates the need for manual prim path specification in most cases.
+Material, Object, Light, and Camera randomizers query the registry automatically to find their targets. No need for manual prim path specification in most cases.
 
 ### Hybrid Simulation Support
 
-Randomizers that require specific handlers (e.g., IsaacSim for USD operations) automatically receive the appropriate sub-handler in Hybrid mode. This is transparent to users:
+Randomizers that need specific handlers (e.g., IsaacSim for USD ops) automatically get the right sub-handler in Hybrid mode. It just works:
 
 ```python
 # Works in both standalone IsaacSim and Hybrid (IsaacLab + IsaacSim) modes
@@ -537,12 +622,12 @@ scene_rand()
 
 ### Why Dynamic Objects Are Visual-Only
 
-Scene elements created by SceneRandomizer cannot have physics simulation. This is an architectural constraint of IsaacLab: objects must be registered with the Handler during initialization. Post-initialization additions are visual-only.
+Scene elements created by SceneRandomizer can't have physics - it's an IsaacLab constraint. Objects need to be registered with the Handler during init; anything added later is visual-only.
 
-This design works well in practice:
-- Background geometry (floors, walls) rarely needs physics
-- Workspace surfaces (tables) can use invisible collision geometry if needed
-- Task objects with physics are managed by the Handler (static objects)
+This works fine in practice:
+- Background geometry (floors, walls) rarely needs physics anyway
+- Tables can use invisible collision geometry if needed
+- Task objects with physics are managed by the Handler
 
 ## Common Workflows
 
@@ -672,33 +757,15 @@ print(table_bounds)  # Should show reasonable height (e.g., 0.7m)
 
 If bounds are invalid (e.g., astronomical numbers), the position update is skipped. This usually indicates an issue with the USD asset or bounding box computation.
 
-### Memory Growing Over Time
-
-For long training runs, monitor memory usage:
-
-```python
-import psutil
-process = psutil.Process()
-
-# Before randomization
-mem_before = process.memory_info().rss / 1024 / 1024
-
-# After N episodes
-mem_after = process.memory_info().rss / 1024 / 1024
-print(f"Memory delta: {mem_after - mem_before:.1f} MB")
-```
-
-If growth exceeds 1GB/hour, this may indicate a leak. Profile to identify the source, though the current implementation is designed to be memory-stable.
-
 ## Summary
 
-This tutorial demonstrates a complete domain randomization pipeline with:
+This tutorial covers a complete domain randomization setup:
 
-- Four scene complexity modes (manual to full USD)
+- Four scene modes (manual to full USD)
 - Four randomization levels (baseline to full perturbation)
 - Automatic asset downloading and conversion
 - Reproducible randomization with explicit seeds
-- Clean separation between static and dynamic objects
+- Clean separation between static/dynamic objects
 - Unified object access via ObjectRegistry
 
-The architecture supports both evaluation (short runs, visual diversity) and training (long runs, stability, reproducibility). Customize by editing randomizer configurations, adding new randomizers, or defining custom asset collections.
+Works well for both evaluation (short runs, visual diversity) and training (long runs, stability, reproducibility). Customize by editing configs, adding randomizers, or defining custom asset collections.
