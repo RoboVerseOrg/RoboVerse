@@ -650,6 +650,10 @@ class IsaacsimHandler(BaseSimHandler):
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                     ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
+                    ),
                 )
             )
             return
