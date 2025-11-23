@@ -249,7 +249,16 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         # Terminate episode if object is released
         terminated = terminated | newly_released
 
+        # Track lift state: check if joint2 has been lifted significantly
+        lift_active = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        if self.joint2_index is not None and self.initial_joint_pos is not None:
+            current_joint2 = updated_states.robots[self.robot_name].joint_pos[:, self.joint2_index]
+            initial_joint2 = self.initial_joint_pos[:, self.joint2_index]
+            # Lift is active if joint2 has moved up significantly (more than 0.1 radians)
+            lift_active = (current_joint2 - initial_joint2) > 0.1
+
         info["grasp_success"] = self.object_grasped
+        info["lift_active"] = lift_active
         info["stage"] = torch.full((self.num_envs,), 1, dtype=torch.long, device=self.device)
 
         return obs, reward, terminated, time_out, info

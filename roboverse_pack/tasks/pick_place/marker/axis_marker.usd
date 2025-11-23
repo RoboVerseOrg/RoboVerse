@@ -4,7 +4,9 @@
     upAxis = "Z"
 )
 
-def Xform "axis_marker"
+def Xform "axis_marker" (
+    apiSchemas = ["PhysicsRigidBodyAPI"]
+)
 {
     def Xform "base_link"
     {
