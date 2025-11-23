@@ -1,6 +1,6 @@
 # Configuration for FastTD3 Training - Track Task
-# Stage 3: Track task - 专门用于训练轨迹跟踪部分
-# 从保存的抓取状态开始，只训练轨迹跟踪部分
+# Stage 3: Track task - for training trajectory tracking
+# Starts from saved grasp states, only trains trajectory tracking
 
 # -------------------------------------------------------------------------------
 # Environment
@@ -12,8 +12,8 @@ decimation: 4
 train_or_eval: "train"
 headless: True
 
-# State file path for track task (抓取状态的pkl文件路径)
-# 如果为null，将使用默认路径或环境变量PICK_PLACE_TRACK_STATE_FILE
+# State file path for track task (pkl file path for grasp states)
+# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
 state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl"
 
 # -------------------------------------------------------------------------------
