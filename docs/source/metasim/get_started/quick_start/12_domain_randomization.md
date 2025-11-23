@@ -20,78 +20,90 @@ Here are videos showing what each mode and level looks like. All use the same cl
 
 ### Mode 0: Manual Geometry
 
-<table>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode0_manual_level0.mp4" controls></video>
-      <p align="center"><b>Level 0: Baseline</b><br>Fixed scene, no randomization</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode0_manual_level1.mp4" controls></video>
-      <p align="center"><b>Level 1: Material</b><br>Table material varies between wood/metal</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode0_manual_level2.mp4" controls></video>
-      <p align="center"><b>Level 2: + Lighting</b><br>Material + light intensity/color</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode0_manual_level3.mp4" controls></video>
-      <p align="center"><b>Level 3: Full</b><br>Material + lighting + camera</p>
-    </td>
-  </tr>
-</table>
+<div style="display: flex; justify-content: space-between; width: 100%;">
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode0_manual_level0.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 0: Baseline</b><br>Fixed scene, no randomization</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode0_manual_level1.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 1: Material</b><br>Table material varies between wood/metal</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode0_manual_level2.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 2: + Lighting</b><br>Material + light intensity/color</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode0_manual_level3.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 3: Full</b><br>Material + lighting + camera</p>
+    </div>
+</div>
 
 ### Mode 1: USD Table
 
-<table>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level0.mp4" controls></video>
-      <p align="center"><b>Level 0: Baseline</b><br>Single USD table model</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level1.mp4" controls></video>
-      <p align="center"><b>Level 1: Scene</b><br>Switches between 5 table models</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level2.mp4" controls></video>
-      <p align="center"><b>Level 2: + Lighting</b><br>Table switching + lighting</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode1_usd_table_level3.mp4" controls></video>
-      <p align="center"><b>Level 3: Full</b><br>Table + lighting + camera</p>
-    </td>
-  </tr>
-</table>
+<div style="display: flex; justify-content: space-between; width: 100%;">
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode1_usd_table_level0.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 0: Baseline</b><br>Single USD table model</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode1_usd_table_level1.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 1: Scene</b><br>Switches between 5 table models</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode1_usd_table_level2.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 2: + Lighting</b><br>Table switching + lighting</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode1_usd_table_level3.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 3: Full</b><br>Table + lighting + camera</p>
+    </div>
+</div>
 
 ### Mode 2: USD Scene
 
-<table>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level0.mp4" controls></video>
-      <p align="center"><b>Level 0: Baseline</b><br>Single Kujiale interior scene</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level1.mp4" controls></video>
-      <p align="center"><b>Level 1: Scene</b><br>Switches between 12 interior scenes</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level2.mp4" controls></video>
-      <p align="center"><b>Level 2: + Lighting</b><br>Scene switching + lighting</p>
-    </td>
-    <td width="50%">
-      <video src="../../../_static/standard_output/12_dr_mode2_usd_scene_level3.mp4" controls></video>
-      <p align="center"><b>Level 3: Full</b><br>Scene + lighting + camera</p>
-    </td>
-  </tr>
-</table>
+<div style="display: flex; justify-content: space-between; width: 100%;">
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode2_usd_scene_level0.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 0: Baseline</b><br>Single Kujiale interior scene</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode2_usd_scene_level1.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 1: Scene</b><br>Switches between 12 interior scenes</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode2_usd_scene_level2.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 2: + Lighting</b><br>Scene switching + lighting</p>
+    </div>
+    <div style="width: 23%; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline>
+            <source src="https://roboverse.wiki/_static/standard_output/12_dr_mode2_usd_scene_level3.mp4" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"><b>Level 3: Full</b><br>Scene + lighting + camera</p>
+    </div>
+</div>
 
 **Notes:**
 - Level 0 is useful for debugging - everything stays the same
