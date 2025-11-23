@@ -43,10 +43,10 @@ def load_states_from_pkl(pkl_path: str):
     """Load state list from pkl file."""
     if not os.path.exists(pkl_path):
         raise FileNotFoundError(f"State file not found: {pkl_path}")
-    
+
     with open(pkl_path, "rb") as f:
         states_list = pickle.load(f)
-    
+
     log.info(f"Loaded {len(states_list)} states from {pkl_path}")
     return states_list
 
@@ -57,47 +57,47 @@ def convert_state_to_dict_format(state_dict: dict, device: torch.device, robot_n
         "objects": {},
         "robots": {},
     }
-    
+
     if "objects" in state_dict and "robots" in state_dict:
         return state_dict
-    
+
     # Convert flat format to nested
     for name, entity_state in state_dict.items():
         if name in ["objects", "robots"]:
             continue
-        
+
         pos = entity_state.get("pos")
         rot = entity_state.get("rot")
-        
+
         if isinstance(pos, (list, tuple, np.ndarray)):
             pos = torch.tensor(pos, device=device, dtype=torch.float32)
         elif isinstance(pos, torch.Tensor):
             pos = pos.to(device).float()
-        
+
         if isinstance(rot, (list, tuple, np.ndarray)):
             rot = torch.tensor(rot, device=device, dtype=torch.float32)
         elif isinstance(rot, torch.Tensor):
             rot = rot.to(device).float()
-        
+
         entity_entry = {
             "pos": pos,
             "rot": rot,
         }
-        
+
         if "dof_pos" in entity_state:
             entity_entry["dof_pos"] = entity_state["dof_pos"]
-        
+
         if name == robot_name:
             nested_state["robots"][name] = entity_entry
         else:
             nested_state["objects"][name] = entity_entry
-    
+
     return nested_state
 
 
 def main():
     parser = argparse.ArgumentParser(description='Replay Lift States')
-    parser.add_argument('--state_file', type=str, 
+    parser.add_argument('--state_file', type=str,
                        default='eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl',
                        help='State file path (pkl format)')
     parser.add_argument('--task', type=str, default='pick_place.track',
@@ -129,7 +129,7 @@ def main():
 
     log.info(f"Loading states from {args.state_file}")
     states_list = load_states_from_pkl(args.state_file)
-    
+
     if len(states_list) == 0:
         log.error("No states found in file")
         return
@@ -145,7 +145,7 @@ def main():
         except Exception as e:
             log.warning(f"Failed to disable DR: {e}")
     task_cls = get_task_class(args.task)
-    
+
     cameras = []
     if args.render:
         cameras = [
@@ -208,12 +208,12 @@ def main():
                         gripper_pos, _ = env._get_ee_state(handler_states)
                         gripper_pos_np = gripper_pos[0].cpu().numpy()
                         gripper_box_dist = np.linalg.norm(box_pos - gripper_pos_np)
-                        
+
                         robot_state_tensor = handler_states.robots[robot_name]
                         joint_positions = robot_state_tensor.joint_pos[0].cpu().numpy()
                         joint_names = sorted(scenario.robots[0].actuators.keys())
                         gripper_joint_names = [name for name in joint_names if "finger" in name.lower()]
-                        
+
                         if len(gripper_joint_names) >= 2:
                             gripper_angles = [
                                 joint_positions[joint_names.index(gripper_joint_names[0])],
@@ -221,7 +221,7 @@ def main():
                             ]
                         else:
                             gripper_angles = joint_positions[:2].tolist()
-                        
+
                         if state_idx == 0 or state_idx % 10 == 0 or state_idx == len(states_list) - 1:
                             log.info(
                                 f"[State {state_idx:3d}/{len(states_list)-1}] "
@@ -258,4 +258,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

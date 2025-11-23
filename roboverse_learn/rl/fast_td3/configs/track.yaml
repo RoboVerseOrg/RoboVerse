@@ -91,5 +91,3 @@ eval_interval: 5000
 save_interval: 5000
 video_width: 1024
 video_height: 1024
-
-
