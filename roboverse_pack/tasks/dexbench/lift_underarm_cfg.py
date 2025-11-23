@@ -426,7 +426,7 @@ class LiftUnderarmCfg(BaseRLTaskCfg):
                     name="camera_0",
                     width=self.img_w,
                     height=self.img_h,
-                    pos=(-1.0, -1.4, 1.5),
+                    pos=(-0.7, -0.9, 1.3),
                     look_at=(0.0, -0.6, 0.7),
                 )
             ]  # TODO

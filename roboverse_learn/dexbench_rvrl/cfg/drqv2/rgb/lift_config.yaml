@@ -1,0 +1,54 @@
+seed: -1
+
+clip_observations: 5.0
+clip_actions: 1.0
+
+policy: # only works for MlpPolicy right now
+  pi_hid_sizes: [1024, 512]
+  q_hid_sizes: [1024, 512]
+  activation: elu # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+  encoder_type: "cnn"
+  cnn:
+    stages: 5
+    kernel_size: 4
+    stride: 2
+    depth: [32, 64, 128, 256, 512]
+  visual_feature_dim: 1024
+  use_state: True
+learn:
+  agent_name: shadow_hand
+  test: False
+  resume: 0
+  log_interval: 50000
+  print_log: True
+  print_interval: 1
+
+  # rollout params
+  max_iterations: 250000
+  nstep: 3
+  env_step: 1
+  num_frames: 3
+
+  # training params
+  max_grad_norm: 1
+  actor_lr: 1.e-4
+  critic_lr: 1.e-4
+  encoder_lr: 1.e-4
+  tau: 0.01
+  std_clip: 0.3
+  std_schedule: "linear(1.0,0.1,500000)"
+
+  batch_size: 128
+  prefill: 2000
+  buffer_size: 500000
+  replay_buffer_num_workers: 4
+
+  gamma: 0.99
+
+env:
+  img_h: 128
+  img_w: 128
+  light:
+    type: "dome"
+    intensity: 1500.0
+    color: [1.0, 1.0, 1.0]
