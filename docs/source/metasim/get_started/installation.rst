@@ -100,6 +100,7 @@ Install IsaacGym
 Please first install vulkan if you haven't:
 
 .. code-block:: bash
+
     sudo apt install mesa-vulkan-drivers vulkan-tools
 
 Then:
