@@ -36,21 +36,28 @@ metasim/test/
 ├── test_utils.py                  # get_test_parameters()
 │
 ├── queries/                       # Suite 1: All query-related tests (ONE scenario)
+│   ├── __init__.py               # REQUIRED: Makes this a Python package
 │   ├── conftest.py               # Register ONE scenario for all query tests
 │   ├── test_contact_force.py     # Tests using G1 robot scenario
 │   ├── test_site.py              # Tests using G1 robot scenario
 │
 ├── manipulation/                  # Suite 2: Manipulation tests (ONE scenario)
+│   ├── __init__.py               # REQUIRED: Makes this a Python package
 │   ├── conftest.py               # Register ONE scenario for manipulation tests
 │   ├── test_gripper.py           # Tests using gripper robot scenario
 │   └── test_grasping.py          # Tests using gripper robot scenario
 │
 └── locomotion/                    # Suite 3: Locomotion tests (MULTIPLE scenarios + general tests)
+    ├── __init__.py               # REQUIRED: Makes this a Python package
     ├── conftest.py               # Register TWO scenarios: walking + running
     ├── test_walking.py           # Tests using bipedal walking scenario
     ├── test_running.py           # Tests using quadruped running scenario
     └── test_locomotion_general.py           # General tests (no handler - conftest has no effect)
 ```
+
+> **IMPORTANT: Every test directory MUST have an `__init__.py` file!**
+>
+> Without `__init__.py`, pytest treats the directory as a plain directory instead of a Python package. This causes test modules to have short names like `test_gripper` instead of `metasim.test.manipulation.test_gripper`, which breaks the `register_shared_suite()` prefix matching. If your tests fail with `AttributeError: 'SubRequest' object has no attribute 'param'`, check that all parent directories have `__init__.py` files.
 
 **Key Points**:
 - **Single scenario per suite**: `queries/` and `manipulation/` each register ONE scenario for all tests in that directory - maximizes handler reuse and minimizes startup overhead.

@@ -25,7 +25,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.sim_context import HandlerContext
 from metasim.test.test_utils import get_test_parameters
 
-_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx"}
+_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "sapien3"}
 
 # pkg_prefix -> scenario_fn
 _SUITE_REGISTRY: dict[str, Callable[[str, int], ScenarioCfg]] = {}
@@ -52,6 +52,7 @@ def pytest_configure(config):
         ("isaacgym", "tests that require or target IsaacGym"),
         ("mujoco", "tests that require or target MuJoCo"),
         ("mjx", "tests that require or target MJX"),
+        ("sapien3", "tests that require or target SAPIEN3"),
         ("sim(*sims)", "specify one or more simulator backends for a test"),
         ("general", "tests that require no simulator/handler"),
     ]:
@@ -227,4 +228,13 @@ def isaacsim_app(request):
 @pytest.fixture(scope="session")
 def handler(request, isaacsim_app):
     """Fixture providing a shared handler instance for the test session."""
+    if not hasattr(request, "param"):
+        # For session-scoped fixtures, request.node is the session, so get info from fspath
+        module_info = getattr(request, "fspath", "unknown")
+        pytest.fail(
+            f"Test uses 'handler' fixture but no scenario is registered. "
+            f"Ensure your test module's conftest.py calls register_shared_suite() "
+            f"with the correct module prefix (fspath: {module_info}). "
+            f"Registered prefixes: {list(_SUITE_REGISTRY.keys())}"
+        )
     return _get_or_create_handler(request.param, request, isaacsim_app)

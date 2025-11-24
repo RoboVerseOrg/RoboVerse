@@ -1,0 +1,1 @@
+"""Scenario configuration test suite."""
