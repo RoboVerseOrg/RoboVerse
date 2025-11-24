@@ -1,0 +1,45 @@
+#
+control_dt: 0.02
+
+msg_type: "hg"     # "hg" or "go"
+imu_type: "pelvis"    # "torso" or "pelvis"
+
+lowcmd_topic: "rt/lowcmd"
+lowstate_topic: "rt/lowstate"
+
+enable_actions_reindex: True
+
+policy_path: "outputs/unitree_rl/g1_dof12_dof12_walking/0000_0000_000000/exported/model_exported_jit.pt"
+
+
+kps: [100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40]
+
+kds: [2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2]
+
+default_angles: [-0.1,  0.0,  0.0,  0.3, -0.2, 0.0,
+                  -0.1,  0.0,  0.0,  0.3, -0.2, 0.0]
+
+joint_names: [
+    "left_hip_pitch_joint",
+    "left_hip_roll_joint",
+    "left_hip_yaw_joint",
+    "left_knee_joint",
+    "left_ankle_pitch_joint",
+    "left_ankle_roll_joint",
+    "right_hip_pitch_joint",
+    "right_hip_roll_joint",
+    "right_hip_yaw_joint",
+    "right_knee_joint",
+    "right_ankle_pitch_joint",
+    "right_ankle_roll_joint",
+]
+
+ang_vel_scale: 0.25
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+cmd_scale: [2.0, 2.0, 0.25]
+num_actions: 12
+num_obs: 47
+
+max_cmd: [0.8, 0.5, 1.57]

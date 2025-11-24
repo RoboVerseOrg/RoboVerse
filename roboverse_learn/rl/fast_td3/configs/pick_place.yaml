@@ -4,12 +4,12 @@
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
-sim: "isaacgym"
+sim: "isaacsim"
 robots: ["franka"]
-task: "pick_place_base"
+task: "pick_place.approach_grasp_simple"
 decimation: 4
 train_or_eval: "train"
-headless: false
+headless: True
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -22,8 +22,8 @@ device_rank: 0
 # -------------------------------------------------------------------------------
 # Rollout & Timesteps
 # -------------------------------------------------------------------------------
-num_envs: 800
-num_eval_envs: 800
+num_envs: 400
+num_eval_envs: 400
 total_timesteps: 2000000
 learning_starts: 10
 num_steps: 1
@@ -40,7 +40,7 @@ tau: 0.1
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 6
+num_updates: 5
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -56,7 +56,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 1200.0
+v_max: 600.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4
@@ -81,7 +81,7 @@ wandb_project: "get_started_fttd3"
 exp_name: "get_started_fttd3"
 use_wandb: false
 checkpoint_path: null
-eval_interval: 10000
-save_interval: 15000
+eval_interval: 5000
+save_interval: 5000
 video_width: 1024
 video_height: 1024

@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
-from pytorch3d import transforms
+from scipy.spatial.transform import Rotation
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 # from metasim.task.gym_registration import make_vec
@@ -116,7 +116,15 @@ class OpenVLARunner:
         image = x.numpy()
         image = Image.fromarray(image)
 
-        instruction = self.env.task_env.task_desc
+        # instruction = self.env.task_env.task_desc
+        if hasattr(self.env.task_env, "task_desc"):
+            instruction = self.env.task_env.task_desc
+        else:
+            # generate by task name
+            task_desc = self.task_name.replace('_', ' ')
+            instruction = task_desc[0].upper() + task_desc[1:]
+        # instruction = self.env.task_env.task_desc
+        # 'Pick up the butter and place it in the basket'  for pick butter tasks
 
         # Process inputs manually for OpenVLAForActionPrediction
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
@@ -129,13 +137,30 @@ class OpenVLARunner:
             action = self.model.predict_action(
                 input_ids=inputs["input_ids"],
                 pixel_values=inputs["pixel_values"],
-                unnorm_key="roboverse_dataset",
+                unnorm_key="bridge_orig",
                 do_sample=False
             )
 
-        print(f"Raw VLA model output: {action}")
+        print(f"VLA model output (denormalized): pos={action[:3]}, rot={action[3:6]}, gripper={action[6]}")
         action = torch.tensor(action, dtype=torch.float32, device=self.device)
         return action.unsqueeze(0) if (self.num_envs == 1 and action.dim() == 1) else action
+
+    # ---------------- Quaternion utilities (scipy-based) ----------------
+    @staticmethod
+    def quat_to_scipy(quat_torch):
+        """Convert pytorch3d quaternion (w,x,y,z) to scipy format (x,y,z,w)."""
+        # Input: (B, 4) tensor with (w, x, y, z)
+        # Output: (B, 4) numpy array with (x, y, z, w)
+        quat_np = quat_torch.cpu().numpy()
+        return np.concatenate([quat_np[:, 1:], quat_np[:, 0:1]], axis=-1)
+
+    @staticmethod
+    def quat_from_scipy(quat_scipy, device):
+        """Convert scipy quaternion (x,y,z,w) to pytorch3d format (w,x,y,z)."""
+        # Input: (B, 4) numpy array with (x, y, z, w)
+        # Output: (B, 4) tensor with (w, x, y, z)
+        quat_torch = np.concatenate([quat_scipy[:, 3:], quat_scipy[:, :3]], axis=-1)
+        return torch.from_numpy(quat_torch).to(device).float()
 
     # ---------------- EE control + IK ----------------
     def ee_control_actions(self, obs) -> list[dict]:
@@ -149,7 +174,7 @@ class OpenVLARunner:
         rs = obs.robots[self.robot_name]
 
         # IK solver expects original joint order, but state uses alphabetical order
-        reorder_idx = self.env.handler.get_joint_reindex(self.robot_name)
+        reorder_idx = self.env.task_env.handler.get_joint_reindex(self.robot_name)
         inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
         joint_pos_raw = rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)
         curr_robot_q = joint_pos_raw[:, inverse_reorder_idx].to(self.device).float()
@@ -165,24 +190,47 @@ class OpenVLARunner:
         # Base pose
         robot_pos, robot_quat = robot_root_state[:, 0:3], robot_root_state[:, 3:7]
         # print(f"Robot position in world: {robot_pos}")
-        # Local frame transform
-        inv_base_q = transforms.quaternion_invert(robot_quat)
-        curr_ee_pos_local = transforms.quaternion_apply(inv_base_q, ee_p_world - robot_pos)
-        curr_ee_quat_local = transforms.quaternion_multiply(inv_base_q, ee_q_world)
+
+        # Local frame transform using scipy
+        # Convert to scipy format and use Rotation for quaternion operations
+        robot_quat_scipy = self.quat_to_scipy(robot_quat)
+        ee_q_world_scipy = self.quat_to_scipy(ee_q_world)
+
+        # Invert base quaternion
+        inv_base_rot = Rotation.from_quat(robot_quat_scipy).inv()
+
+        # Apply rotation to position vector
+        ee_p_relative = (ee_p_world - robot_pos).cpu().numpy()
+        curr_ee_pos_local_np = inv_base_rot.apply(ee_p_relative)
+        curr_ee_pos_local = torch.from_numpy(curr_ee_pos_local_np).to(self.device).float()
+
+        # Multiply quaternions: inv_base_q * ee_q_world
+        curr_ee_rot_local = inv_base_rot * Rotation.from_quat(ee_q_world_scipy)
+        curr_ee_quat_local = self.quat_from_scipy(curr_ee_rot_local.as_quat(), self.device)
 
         # 3) Apply deltas
         ee_pos_delta = action[:num_envs, :3]
         ee_rot_delta = action[:num_envs, 3:-1]
-        ee_quat_delta = transforms.matrix_to_quaternion(
-            transforms.euler_angles_to_matrix(ee_rot_delta, "XYZ")
-        )
+
+        # Convert euler angles to quaternion using scipy
+        ee_rot_delta_np = ee_rot_delta.cpu().numpy()
+        ee_quat_delta_rot = Rotation.from_euler('XYZ', ee_rot_delta_np)
+        ee_quat_delta = self.quat_from_scipy(ee_quat_delta_rot.as_quat(), self.device)
+
         gripper_open = action[:num_envs, -1]
         ee_pos_target = curr_ee_pos_local + ee_pos_delta
-        ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_delta)
+
+        # Multiply quaternions: curr_ee_quat_local * ee_quat_delta
+        curr_ee_quat_local_scipy = self.quat_to_scipy(curr_ee_quat_local)
+        ee_quat_delta_scipy = self.quat_to_scipy(ee_quat_delta)
+        ee_quat_target_rot = Rotation.from_quat(curr_ee_quat_local_scipy) * Rotation.from_quat(ee_quat_delta_scipy)
+        ee_quat_target = self.quat_from_scipy(ee_quat_target_rot.as_quat(), self.device)
 
 
         # 4) IK (seed = current q)
         q_solution, ik_succ = self.ik_solver.solve_ik_batch(ee_pos_target, ee_quat_target, curr_robot_q)
+        if not ik_succ.all():
+            print(f"WARNING: IK failed for {(~ik_succ).sum().item()}/{num_envs} environments")
 
         # 5) Gripper control
         from metasim.utils.ik_solver import process_gripper_command
@@ -215,8 +263,16 @@ def evaluate_episode(env, runner: OpenVLARunner, max_steps: int, episode_num: in
         # Save observation for video
         obs_saver.add(obs)
 
-        if (hasattr(terminated, "any") and terminated.any()) or (hasattr(truncated, "any") and truncated.any()):
+        # Check termination: only terminated=True means success, truncated=True means timeout (failure)
+        is_terminated = terminated.any().item() if hasattr(terminated, "any") else bool(terminated)
+        is_truncated = truncated.any().item() if hasattr(truncated, "any") else bool(truncated)
+
+        if is_terminated:
             stats["success"] = True
+            print(f"Task succeeded at step {step + 1}")
+            break
+        elif is_truncated:
+            print(f"Task failed: timeout at step {step + 1}")
             break
 
     # Save the episode video

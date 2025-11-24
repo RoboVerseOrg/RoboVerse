@@ -2,13 +2,15 @@
 export CUDA_VISIBLE_DEVICES=0
 
 ## Parameters
-task_name_set=close_box   # close_box
+task_name_set=stack_cube
 random_level=0          # 0: No randomization 1: Randomize visual material 2: Randomize camera pose 3: Randomize object reflection and lighting
 num_envs=1              # Number of parallel environments
 demo_start_idx=0        # Index of the first demo to collect
-max_demo_idx=1000        # Maximum index of demos to collect
 sim_set=mujoco
-cust_name=noDR
+cust_name=test
+num_demo_success=100    # Number of successful demonstrations to collect
+
+expert_data_num=100
 
 obs_space=joint_pos
 act_space=joint_pos
@@ -26,14 +28,14 @@ python ./scripts/advanced/collect_demo.py \
 --run_unfinished \
 --headless \
 --demo_start_idx=${demo_start_idx} \
---max_demo_idx=${max_demo_idx} \
+--num_demo_success ${num_demo_success} \
 --cust_name=${cust_name} \
 #--enable_randomization
 
 ## Convert demonstration data
 python ./roboverse_learn/il/data2zarr_dp.py \
 --task_name ${task_name_set}FrankaL${random_level}_${extra} \
---expert_data_num 100 \
---metadata_dir ./roboverse_demo/demo_${sim_set}/${task_name_set}-${cust_name}/robot-franka \
+--expert_data_num ${expert_data_num} \
+--metadata_dir ./roboverse_demo/demo_${sim_set}/${task_name_set}-${cust_name}/robot-franka/success \
 --action_space ${act_space} \
 --observation_space ${obs_space}

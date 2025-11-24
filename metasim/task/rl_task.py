@@ -57,9 +57,6 @@ class RLTaskEnv(BaseTaskEnv):
         )
         self.num_actions = self._action_low.shape[0]
 
-        self.input_dim = self.num_obs
-        self.output_dim = self.num_actions
-
     # -------------------------------------------------------------------------
     # hooks / spaces
     # -------------------------------------------------------------------------

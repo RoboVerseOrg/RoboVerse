@@ -11,6 +11,7 @@ from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
 from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.scene import SceneCfg
 
 from .parse_util import extract_mesh_paths_from_urdf, extract_paths_from_mjcf
 
@@ -26,7 +27,7 @@ LOCAL_DIR = "roboverse_data"
 hf_api = HfApi()
 
 
-def _extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
+def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
     """Extract texture file paths referenced in an MDL file by parsing its content.
 
     Args:
@@ -47,8 +48,9 @@ def _extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
             content = f.read()
 
         # Parse texture_2d declarations in MDL files
-        # Pattern: texture_2d("./path/to/texture.png", optional_args)
-        texture_pattern = r'texture_2d\("([^"]+)"[^)]*\)'
+        # Pattern: texture_2d("./path/to/texture.png", optional_args) or texture_2d ( "./path", optional_args)
+        # Note: Allow optional whitespace before and after opening parenthesis
+        texture_pattern = r'texture_2d\s*\(\s*"([^"]+)"[^)]*\)'
         matches = re.findall(texture_pattern, content)
 
         for match in matches:
@@ -184,7 +186,7 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
             if os.path.exists(filepath):
                 try:
                     # Parse MDL file and extract texture paths
-                    texture_paths = _extract_texture_paths_from_mdl(filepath)
+                    texture_paths = extract_texture_paths_from_mdl(filepath)
                     # Add textures that don't exist locally to the download list
                     for texture_path in texture_paths:
                         if not os.path.exists(texture_path):
@@ -219,7 +221,7 @@ class FileDownloader:
         for robot in self.scenario.robots:
             self._add_from_object(robot)
         if self.scenario.scene is not None:
-            self._add_from_object(self.scenario.scene)
+            self._add_from_scene(self.scenario.scene)
         # if self.scenario.task is not None:
         #     traj_filepath = self.scenario.task.traj_filepath
         #     if traj_filepath is None:
@@ -235,6 +237,9 @@ class FileDownloader:
         #         traj_filepath = os.path.join(traj_filepath, f"{self.scenario.robots[0].name}_v2.pkl.gz")
         #     self._add(traj_filepath)
 
+    def _add_from_scene(self, scene: SceneCfg):
+        self._add(scene.file_name(self.scenario.simulator))
+
     def _add_from_object(self, obj: BaseObjCfg):
         ## TODO: add a primitive base object class?
         if (
@@ -243,19 +248,7 @@ class FileDownloader:
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return
-
-        if self.scenario.simulator in ["isaaclab", "isaacsim"]:
-            self._add(obj.usd_path)
-        elif self.scenario.simulator in ["pybullet", "sapien2", "sapien3", "genesis"] or (
-            self.scenario.simulator == "isaacgym" and not obj.isaacgym_read_mjcf
-        ):
-            self._add(obj.urdf_path)
-        elif self.scenario.simulator in ["mujoco"] or (
-            self.scenario.simulator == "isaacgym" and obj.isaacgym_read_mjcf
-        ):
-            self._add(obj.mjcf_path)
-        elif self.scenario.simulator in ["mjx"]:
-            self._add(obj.mjx_mjcf_path)
+        self._add(obj.file_name(self.scenario.simulator))
 
         for extra_resource in obj.extra_resources:
             self._add(extra_resource)

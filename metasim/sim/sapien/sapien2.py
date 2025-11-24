@@ -52,7 +52,8 @@ class Sapien2Handler(BaseSimHandler):
         assert parse_version(sapien.__version__) >= parse_version("2.0.0"), "Sapien version should be 2.0.0 or higher"
         assert parse_version(sapien.__version__) < parse_version("3.0.0a0"), "Sapien version should be lower than 3.0.0"
         super().__init__(scenario, optional_queries)
-        self.headless = False  # XXX: no headless anyway
+        # self.headless = False  # XXX: no headless anyway
+        self.headless = scenario.headless
 
     def _build_sapien(self):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine

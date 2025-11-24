@@ -113,7 +113,7 @@ class LightPresets:
     """Pre-configured light randomization presets organized by light type and scenario."""
 
     @staticmethod
-    def distant_outdoor_sun(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def distant_outdoor_sun(light_name: str) -> LightRandomCfg:
         """DistantLight preset for outdoor sun lighting.
 
         Strong directional light with natural daylight colors.
@@ -136,11 +136,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def distant_indoor_sun(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def distant_indoor_sun(light_name: str) -> LightRandomCfg:
         """DistantLight preset for indoor scenes with window lighting.
 
         Moderate directional light simulating sunlight through windows.
@@ -162,11 +161,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def distant_enclosed_room(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def distant_enclosed_room(light_name: str) -> LightRandomCfg:
         """DistantLight preset for enclosed rooms with walls.
 
         High intensity to compensate for enclosed environment.
@@ -184,11 +182,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def sphere_ceiling_light(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def sphere_ceiling_light(light_name: str) -> LightRandomCfg:
         """SphereLight preset for ceiling-mounted lights in open scenes.
 
         Moderate intensity with warm indoor colors.
@@ -212,11 +209,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def sphere_task_light(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def sphere_task_light(light_name: str) -> LightRandomCfg:
         """SphereLight preset for task lighting (desk lamps, reading lights).
 
         Higher intensity with small position variation.
@@ -239,11 +235,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def sphere_enclosed_room_global(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def sphere_enclosed_room_global(light_name: str) -> LightRandomCfg:
         """SphereLight preset for enclosed rooms (with is_global=True).
 
         High intensity with intensity and color randomization ONLY.
@@ -260,11 +255,10 @@ class LightPresets:
             color=LightColorRandomCfg(color_range=LightColorRanges.NATURAL, distribution="uniform", enabled=True),
             # NO position randomization for enclosed rooms!
             position=None,
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def sphere_enclosed_room_local(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def sphere_enclosed_room_local(light_name: str) -> LightRandomCfg:
         """SphereLight preset for enclosed rooms (with is_global=False).
 
         Moderate intensity with small position offsets to stay inside room.
@@ -289,11 +283,10 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
-    def dome_ambient(light_name: str, randomization_mode: str = "combined") -> LightRandomCfg:
+    def dome_ambient(light_name: str) -> LightRandomCfg:
         """DomeLight preset for ambient sky lighting.
 
         Provides uniform ambient lighting from all directions.
@@ -310,7 +303,6 @@ class LightPresets:
                 distribution="uniform",
                 enabled=True,
             ),
-            randomization_mode=randomization_mode,
         )
 
     @staticmethod
@@ -324,7 +316,6 @@ class LightPresets:
         return LightRandomCfg(
             light_name=light_name,
             intensity=LightIntensityRandomCfg(intensity_range=intensity_range, distribution="uniform", enabled=True),
-            randomization_mode="intensity_only",
         )
 
     @staticmethod
@@ -336,7 +327,6 @@ class LightPresets:
         return LightRandomCfg(
             light_name=light_name,
             color=LightColorRandomCfg(color_range=LightColorRanges.FULL_SPECTRUM, distribution="uniform", enabled=True),
-            randomization_mode="color_only",
         )
 
     @staticmethod
@@ -351,7 +341,6 @@ class LightPresets:
             position=LightPositionRandomCfg(
                 position_range=position_range, relative_to_origin=False, distribution="uniform", enabled=True
             ),
-            randomization_mode="position_only",
         )
 
 
@@ -365,9 +354,9 @@ class LightScenarios:
         For open scenes or studios.
         """
         return [
-            LightPresets.distant_outdoor_sun("key_light", "combined"),
-            LightPresets.sphere_ceiling_light("fill_light", "combined"),
-            LightPresets.sphere_task_light("rim_light", "combined"),
+            LightPresets.distant_outdoor_sun("key_light"),
+            LightPresets.sphere_ceiling_light("fill_light"),
+            LightPresets.sphere_task_light("rim_light"),
         ]
 
     @staticmethod
@@ -379,16 +368,16 @@ class LightScenarios:
         SphereLights: Fill lighting from different positions
         """
         return [
-            LightPresets.distant_enclosed_room("main_light", "combined"),
-            LightPresets.sphere_enclosed_room_global("fill_light", "combined"),
-            LightPresets.sphere_enclosed_room_global("back_light", "combined"),
-            LightPresets.sphere_enclosed_room_global("table_light", "combined"),
+            LightPresets.distant_enclosed_room("main_light"),
+            LightPresets.sphere_enclosed_room_global("fill_light"),
+            LightPresets.sphere_enclosed_room_global("back_light"),
+            LightPresets.sphere_enclosed_room_global("table_light"),
         ]
 
     @staticmethod
     def outdoor_daylight() -> list[LightRandomCfg]:
         """Outdoor scene with sun and ambient sky lighting."""
         return [
-            LightPresets.distant_outdoor_sun("sun_light", "combined"),
-            LightPresets.dome_ambient("sky_light", "combined"),
+            LightPresets.distant_outdoor_sun("sun_light"),
+            LightPresets.dome_ambient("sky_light"),
         ]

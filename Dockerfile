@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 ENV NVIDIA_VISIBLE_DEVICES=all
 
-## Uncomment this command to change apt source if you encouter connection issues in China mainland
+## NOTE: Uncomment this command to change apt source if you encounter connection issues in China mainland
 # RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
 #     sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
 
@@ -80,7 +80,6 @@ WORKDIR ${HOME}/RoboVerse
 ########################################################
 ## Install isaaclab, mujoco, sapien3, pybullet
 ########################################################
-
 ## Create conda environment
 RUN mamba create -n metasim python=3.11 -y \
     && mamba clean -a -y
@@ -96,16 +95,14 @@ RUN cd ${HOME}/RoboVerse \
 # Test proxy connection
 # RUN wget --method=HEAD --output-document - https://www.google.com/
 
-## Install IsaacLab v2.2.0
+## Install IsaacLab v2.2.1
 RUN mkdir -p ${HOME}/packages \
     && cd ${HOME}/packages \
     && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
-    && git clone --depth 1 --branch v2.2.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab220 \
-    && cd IsaacLab220 \
-    && sed -i '/^EXTRAS_REQUIRE = {/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n}' source/isaaclab_rl/setup.py \
-    && sed -i 's/if platform\.system() == "Linux":/if False:/' source/isaaclab_mimic/setup.py \
-    && ./isaaclab.sh -i \
+    && git clone --depth 1 --branch v2.2.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab221 \
+    && cd IsaacLab221 \
+    && ./isaaclab.sh -i none \
     && pip cache purge
 
 ########################################################

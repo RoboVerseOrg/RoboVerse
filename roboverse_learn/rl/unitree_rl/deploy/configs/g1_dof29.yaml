@@ -1,0 +1,65 @@
+control_dt: 0.02
+
+msg_type: "hg"     # "hg" or "go"
+imu_type: "pelvis"    # "torso" or "pelvis"
+
+lowcmd_topic: "rt/lowcmd"
+lowstate_topic: "rt/lowstate"
+
+enable_actions_reindex: True
+
+# Trained policy for 29-DoF (no hands)
+policy_path: "outputs/unitree_rl/walk_g1_dof29/pretrain_noMassFrictionRandomization/exported/model_exported_jit.pt"
+
+# should be aligned to the joint order in `joint_names`
+kps: [200, 150, 150, 200, 20, 20, 200, 150, 150, 200, 20, 20, 200, 200, 200, 40, 40, 40, 40, 20, 20, 20, 40, 40, 40, 40, 20, 20, 20]
+kds: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 4, 4, 5, 5, 5, 10, 10, 10, 10, 4, 4, 4, 10, 10, 10, 10, 4, 4, 4]
+
+# Default joint positions in actuator definition order (29 joints)
+default_angles: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0, -0.1, 0.0, 0.0, 0.3, -0.2, 0.0,
+                 0.0, 0.0, 0.0,
+                 0.3, 0.25, 0.0, 0.97, 0.15, 0.0, 0.0,
+                 0.3, -0.25, 0.0, 0.97, -0.15, 0.0, 0.0]
+
+joint_names: [
+  "left_hip_pitch_joint",
+  "left_hip_roll_joint",
+  "left_hip_yaw_joint",
+  "left_knee_joint",
+  "left_ankle_pitch_joint",
+  "left_ankle_roll_joint",
+  "right_hip_pitch_joint",
+  "right_hip_roll_joint",
+  "right_hip_yaw_joint",
+  "right_knee_joint",
+  "right_ankle_pitch_joint",
+  "right_ankle_roll_joint",
+  "waist_yaw_joint",
+  "waist_roll_joint",
+  "waist_pitch_joint",
+  "left_shoulder_pitch_joint",
+  "left_shoulder_roll_joint",
+  "left_shoulder_yaw_joint",
+  "left_elbow_joint",
+  "left_wrist_roll_joint",
+  "left_wrist_pitch_joint",
+  "left_wrist_yaw_joint",
+  "right_shoulder_pitch_joint",
+  "right_shoulder_roll_joint",
+  "right_shoulder_yaw_joint",
+  "right_elbow_joint",
+  "right_wrist_roll_joint",
+  "right_wrist_pitch_joint",
+  "right_wrist_yaw_joint",
+]
+
+ang_vel_scale: 0.2
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+cmd_scale: [1.0, 1.0, 1.0]
+num_actions: 29
+num_obs: 96
+obs_len_history: 5
+
+max_cmd: [0.8, 0.5, 1.57]

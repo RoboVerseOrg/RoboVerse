@@ -52,6 +52,7 @@ class Attention(nn.Module):
 
 class AdaLNBlock(nn.Module):
     """ Adaptive LayerNorm Transformer Block as in DiT (Peebles et al. 2022) """
+
     def __init__(
         self,
         dim,
@@ -160,6 +161,12 @@ class FlowTransformer(nn.Module):
         nn.init.normal_(self.time_embed[3].weight, std=0.02)
 
     def forward(self, x, t, global_cond, local_cond=None):
+        if not torch.is_tensor(t):
+            t = torch.tensor(t, device=x.device)
+        if t.ndim == 0:
+            # DP timesteps arrive as scalars
+            t = t.expand(x.shape[0])
+
         x = self.input_proj(x)
         t = self.time_embed(t)
         c = self.cond_embed(global_cond)
@@ -212,6 +219,7 @@ class FlowNetLayer(nn.Module):
 
 class SimpleFlowNet(nn.Module):
     """ A simple flow network with only MLP layers for VITA policy (Gao et al. 2025) """
+
     def __init__(
         self,
         input_dim,

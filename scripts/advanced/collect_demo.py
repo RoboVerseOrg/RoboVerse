@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
@@ -28,8 +27,10 @@ class Args:
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
-    max_demo_idx: int | None = None
-    """Maximum number of demos to collect, None for all demos"""
+    # max_demo_idx: int | None = None
+    # """Maximum number of demos to collect, None for all demos"""
+    num_demo_success: int | None = None
+    """Target number of successful demos to collect"""
     retry_num: int = 0
     """Number of retries for a failed demo"""
     headless: bool = True
@@ -74,9 +75,10 @@ class Args:
         assert self.run_all or self.run_unfinished or self.run_failed, (
             "At least one of run_all, run_unfinished, or run_failed must be True"
         )
-        if self.max_demo_idx is None:
-            self.max_demo_idx = math.inf
-
+        # if self.max_demo_idx is None:
+        #     self.max_demo_idx = math.inf
+        if self.num_demo_success is None:
+            self.num_demo_success = 100
         if self.demo_start_idx is None:
             self.demo_start_idx = 0
 
@@ -263,12 +265,12 @@ class DomainRandomizationManager:
             light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
 
             if isinstance(light, DomeLightCfg):
-                config = LightPresets.dome_ambient(light_name, randomization_mode="combined")
+                config = LightPresets.dome_ambient(light_name)
             elif isinstance(light, (SphereLightCfg, DiskLightCfg)):
-                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
+                config = LightPresets.sphere_ceiling_light(light_name)
             else:
                 log.warning(f"Unknown light type for {light_name}, using sphere_ceiling_light preset")
-                config = LightPresets.sphere_ceiling_light(light_name, randomization_mode="combined")
+                config = LightPresets.sphere_ceiling_light(light_name)
 
             randomizer = LightRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)
@@ -285,7 +287,7 @@ class DomainRandomizationManager:
         log.info(f"  Setting up camera randomizers for {len(cameras)} cameras")
         for camera in cameras:
             camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
-            config = CameraPresets.surveillance_camera(camera_name, randomization_mode="combined")
+            config = CameraPresets.surveillance_camera(camera_name)
 
             randomizer = CameraRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)
@@ -296,11 +298,11 @@ class DomainRandomizationManager:
         """Get appropriate material configuration based on object type."""
         obj_lower = obj_name.lower()
         if "cube" in obj_lower:
-            return MaterialPresets.mdl_family_object(obj_name, family="metal", randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="metal")
         elif "sphere" in obj_lower:
-            return MaterialPresets.rubber_object(obj_name, randomization_mode="combined")
+            return MaterialPresets.rubber_object(obj_name)
         else:
-            return MaterialPresets.mdl_family_object(obj_name, family="wood", randomization_mode="combined")
+            return MaterialPresets.mdl_family_object(obj_name, family="wood")
 
     def _setup_physics_randomizers(self, seed: int | None):
         """Setup unified ObjectRandomizers for robots and objects."""
@@ -553,7 +555,7 @@ global_step = 0
 
 
 class DemoCollector:
-    def __init__(self, handler, robot_cfg, task_desc=""):
+    def __init__(self, handler, robot_cfg, task_desc="", demo_start_idx=0):
         assert isinstance(handler, BaseSimHandler)
         self.handler = handler
         self.robot_cfg = robot_cfg
@@ -570,6 +572,28 @@ class DemoCollector:
             additional_str = f"-{args.cust_name}" if args.cust_name else ""
             self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
 
+        self.success_counter = demo_start_idx
+        self.failed_counter = demo_start_idx
+        log.info(
+            f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}"
+        )
+
+    def _get_max_demo_index(self, status: str) -> int:
+        status_dir = os.path.join(self.base_save_dir, status)
+        if not os.path.exists(status_dir):
+            return 0
+
+        max_idx = -1
+        for item in os.listdir(status_dir):
+            if item.startswith("demo_") and os.path.isdir(os.path.join(status_dir, item)):
+                try:
+                    idx = int(item.split("_")[1])
+                    max_idx = max(max_idx, idx)
+                except (ValueError, IndexError):
+                    continue
+
+        return max_idx + 1
+
     def create(self, demo_idx: int, data_dict: dict):
         assert demo_idx not in self.cache
         assert isinstance(demo_idx, int)
@@ -585,12 +609,19 @@ class DemoCollector:
         assert demo_idx in self.cache
         assert status in ["success", "failed"], f"Invalid status: {status}"
 
-        save_dir = os.path.join(self.base_save_dir, status, f"demo_{demo_idx:04d}")
+        if status == "success":
+            continuous_idx = self.success_counter
+            self.success_counter += 1
+        else:  # failed
+            continuous_idx = self.failed_counter
+            self.failed_counter += 1
+
+        save_dir = os.path.join(self.base_save_dir, status, f"demo_{continuous_idx:04d}")
         if os.path.exists(os.path.join(save_dir, "status.txt")):
             os.remove(os.path.join(save_dir, "status.txt"))
 
         os.makedirs(save_dir, exist_ok=True)
-        log.info(f"Saving demo {demo_idx} to {save_dir}")
+        log.info(f"Saving demo {demo_idx} (original) as {continuous_idx:04d} (continuous) to {save_dir}")
 
         ## Option 1: Save immediately, blocking and slower
 
@@ -677,7 +708,22 @@ class DemoIndexer:
 def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=(1.5, 0.0, 1.5), look_at=(0.0, 0.0, 0.0))
+
+    if args.task == "stack_cube":
+        dp_camera = True
+    elif args.task == "close_box":
+        dp_camera = False
+    else:
+        dp_camera = True
+
+    if dp_camera:
+        # import warnings
+        # warnings.warn("Using dp camera position!")
+        dp_pos = (1.0, 0.0, 0.75)
+    else:
+        dp_pos = (1.5, 0.0, 1.5)
+
+    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
@@ -714,11 +760,12 @@ def main():
     ########################################################
     ## Main
     ########################################################
-    if args.max_demo_idx > n_demo:
-        log.warning(
-            f"Max demo {args.max_demo_idx} is greater than the number of demos in the dataset {n_demo}, using {n_demo}"
-        )
-    max_demo = min(args.max_demo_idx, n_demo)
+    # if args.max_demo_idx > n_demo:
+    #     log.warning(
+    #         f"Max demo {args.max_demo_idx} is greater than the number of demos in the dataset {n_demo}, using {n_demo}"
+    #     )
+    # max_demo = min(args.max_demo_idx, n_demo)
+    max_demo = n_demo
     try_num = args.retry_num + 1
 
     ## Demo collection state machine:
@@ -728,8 +775,9 @@ def main():
     ## Setup
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
-    collector = DemoCollector(env.handler, robot, task_desc)
-    pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
+    collector = DemoCollector(env.handler, robot, task_desc, demo_start_idx=args.demo_start_idx)
+    # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
+    pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
     ## State variables
     failure_count = [0] * env.handler.num_envs
@@ -749,7 +797,7 @@ def main():
 
     demo_indexer = DemoIndexer(
         save_root_dir=save_root_dir,
-        start_idx=0,
+        start_idx=args.demo_start_idx,
         end_idx=max_demo,
         pbar=pbar,
     )
@@ -783,7 +831,21 @@ def main():
         collector.create(demo_idx, obs[env_id])
 
     ## Main Loop
+    stop_flag = False
+
     while not all(finished):
+        if stop_flag:
+            pass
+
+        if tot_success >= args.num_demo_success:
+            log.info(f"Reached target number of successful demos ({args.num_demo_success}).")
+            stop_flag = True
+
+        if demo_indexer.next_idx >= max_demo:
+            log.warning(f"Reached maximum demo index ({max_demo}).")
+            stop_flag = True
+            break
+
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)
         obs, reward, success, time_out, extras = env.step(actions)
@@ -815,7 +877,7 @@ def main():
                 collector.save(demo_idx, status="success")
                 collector.delete(demo_idx)
 
-                if demo_indexer.next_idx < max_demo:
+                if (not stop_flag) and (demo_indexer.next_idx < max_demo):
                     new_demo_idx = demo_indexer.next_idx
                     demo_idxs[env_id] = new_demo_idx
                     log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx}")
@@ -853,7 +915,7 @@ def main():
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
                 failure_count[env_id] = 0
                 tot_give_up += 1
-                pbar.update(1)
+                # pbar.update(1)
                 pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
 
                 if demo_indexer.next_idx < max_demo:

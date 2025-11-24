@@ -30,7 +30,7 @@ class EmptyChecker:
     def reset(self, handler: BaseSimHandler, env_ids: list[int] | None = None):
         pass
 
-    def check(self, handler: BaseSimHandler) -> torch.BoolTensor:
+    def check(self, handler: BaseSimHandler, states: TensorState) -> torch.BoolTensor:
         return torch.zeros(handler.num_envs, dtype=torch.bool, device=handler.device)
 
     def get_debug_viewers(self) -> list[BaseObjCfg]:

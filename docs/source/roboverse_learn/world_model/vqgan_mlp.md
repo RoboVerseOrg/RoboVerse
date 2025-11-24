@@ -1,1 +1,0 @@
-# VQGAN_MLP
