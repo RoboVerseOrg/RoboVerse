@@ -197,17 +197,6 @@ class CameraRandomizer(BaseRandomizerType):
         self.adapter: IsaacSimAdapter | None = None
         self._original_positions: dict[str, tuple] = {}
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize Adapter.
-
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Initialize IsaacSimAdapter for USD operations
-        self.adapter = IsaacSimAdapter(self._actual_handler)
-
     def __call__(self):
         """Execute camera randomization."""
         # Find camera in Handler

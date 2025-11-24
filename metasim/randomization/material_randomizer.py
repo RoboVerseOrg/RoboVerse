@@ -233,32 +233,6 @@ class MaterialRandomizer(BaseRandomizerType):
         # Torch generator for tensor operations
         self._torch_generator: torch.Generator | None = None
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize adapter.
-
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Use _actual_handler (automatically selected for Hybrid)
-        self.registry = ObjectRegistry.get_instance(self._actual_handler)
-        self.adapter = IsaacSimAdapter(self._actual_handler)
-
-        # Sync torch generator
-        self._sync_torch_generator()
-
-    def set_seed(self, seed: int | None) -> None:
-        """Set seed and sync torch generator."""
-        super().set_seed(seed)
-        self._sync_torch_generator()
-
-    def _sync_torch_generator(self):
-        """Synchronize torch generator with RNG seed."""
-        if self._seed is not None:
-            self._torch_generator = torch.Generator()
-            self._torch_generator.manual_seed(self._seed)
-
     def __call__(self):
         """Execute material randomization.
 

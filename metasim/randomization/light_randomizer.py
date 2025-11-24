@@ -179,18 +179,6 @@ class LightRandomizer(BaseRandomizerType):
         self._original_positions: dict[str, tuple] = {}
         self._original_orientations: dict[str, tuple] = {}
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize adapter.
-
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Use _actual_handler (automatically selected for Hybrid)
-        self.registry = ObjectRegistry.get_instance(self._actual_handler)
-        self.adapter = IsaacSimAdapter(self._actual_handler)
-
     def __call__(self):
         """Execute light randomization."""
         # Get light prim paths from Registry

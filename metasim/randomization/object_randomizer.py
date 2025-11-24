@@ -156,29 +156,6 @@ class ObjectRandomizer(BaseRandomizerType):
         self.registry: ObjectRegistry | None = None
         self.adapter: IsaacSimAdapter | None = None
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize Registry + Adapter.
-
-        For Hybrid simulation:
-        - _actual_handler is physics_handler (for physics operations)
-        - But Registry and Adapter come from render_handler (where objects are registered)
-
-        Args:
-            handler: SimHandler instance
-        """
-        super().bind_handler(handler)
-
-        # Special handling for Hybrid
-        if self._is_hybrid_handler(handler):
-            # Registry is in render_handler (where all objects are registered)
-            self.registry = ObjectRegistry.get_instance(handler.render_handler)
-            # Adapter also uses render_handler (for USD operations)
-            self.adapter = IsaacSimAdapter(handler.render_handler)
-        else:
-            # Non-Hybrid: use _actual_handler
-            self.registry = ObjectRegistry.get_instance(self._actual_handler)
-            self.adapter = IsaacSimAdapter(self._actual_handler)
-
     def __call__(self):
         """Execute object randomization with intelligent handling."""
         # Get object metadata from Registry
