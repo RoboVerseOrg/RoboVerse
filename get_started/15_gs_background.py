@@ -337,6 +337,16 @@ if __name__ == "__main__":
         # Simulate and get observations (camera stays fixed)
         env.simulate()
         obs = env.get_states(mode="tensor")
+
+        # Fix RGB tensor dimensions if needed (handle 5D -> 4D conversion)
+        # ObsSaver expects (num_envs, H, W, C) but some simulators return (num_envs, 1, H, W, C)
+        from metasim.types import CameraState
+
+        for cam_name, cam_state in obs.cameras.items():
+            if cam_state.rgb is not None and cam_state.rgb.dim() == 5:
+                # Shape: (num_envs, 1, H, W, C) -> squeeze to (num_envs, H, W, C)
+                obs.cameras[cam_name] = CameraState(rgb=cam_state.rgb.squeeze(1), depth=cam_state.depth)
+
         obs_saver.add(obs)
 
     obs_saver.save()
