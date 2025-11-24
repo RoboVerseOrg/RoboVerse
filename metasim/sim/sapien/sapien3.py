@@ -479,6 +479,7 @@ class Sapien3Handler(BaseSimHandler):
         super().launch()
         self._build_sapien()
         if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+            assert ROBO_SPLATTER_AVAILABLE, "RoboSplatter is not available. GS background rendering will be disabled."
             self._build_gs_background()
 
     def close(self):
@@ -572,7 +573,10 @@ class Sapien3Handler(BaseSimHandler):
         for camera in self.cameras:
             cam_inst = self.camera_ids[camera.name]
 
-            if self.gs_background is not None:
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
                 # Build RoboSplatter camera from SAPIEN pose and scenario intrinsics, then render GS
                 gs_cam = SplatCamera.init_from_pose_list(
                     pose_list=cam_inst.get_model_matrix(),

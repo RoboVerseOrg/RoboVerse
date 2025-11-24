@@ -483,11 +483,21 @@ class IsaacsimHandler(BaseSimHandler):
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
 
-            if self.gs_background is not None and rgb_data is not None:
+            # GS background blending
+            if (
+                self.scenario.gs_scene is not None
+                and self.scenario.gs_scene.with_gs_background
+                and rgb_data is not None
+            ):
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
+
                 foreground_mask = self._get_foreground_mask(
                     instance_seg_data, instance_seg_id2label, instance_id_seg_data, instance_id_seg_id2label
                 )
                 assert foreground_mask is not None, "Foreground mask is None"
+
                 # Get camera parameters (already as torch tensors on device)
                 Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
 

@@ -649,7 +649,7 @@ class MujocoHandler(BaseSimHandler):
                     depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
 
             # Additional GS background rendering and blending (if enabled)
-            if self.gs_background is not None:
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
 

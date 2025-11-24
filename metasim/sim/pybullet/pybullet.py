@@ -355,6 +355,7 @@ class SinglePybulletHandler(BaseSimHandler):
         super().launch()
         self._build_pybullet()
         if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+            assert ROBO_SPLATTER_AVAILABLE, "RoboSplatter is not available. GS background rendering will be disabled."
             self._build_gs_background()
         self.already_disconnect = False
 
@@ -458,7 +459,11 @@ class SinglePybulletHandler(BaseSimHandler):
             depth_img = self._convert_depth_buffer(depth_buffer, near_plane, far_plane)
             segmentation_mask = np.reshape(img_arr[4], (height, width))
 
-            if self.gs_background is not None:
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
+
                 # Extract camera parameters from PyBullet
                 Ks, c2w = self._get_camera_params(view_matrix, projection_matrix, width, height)
 
