@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import numpy as np
 import rootutils
 import torch
@@ -15,12 +20,15 @@ import os
 
 import cv2
 from huggingface_hub import snapshot_download
+from tqdm import tqdm
 
 from metasim.constants import PhysicStateType, SimType
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import GSSceneCfg, ScenarioCfg
 from metasim.utils import configclass
+from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
 
 
@@ -130,9 +138,15 @@ if __name__ == "__main__":
             name="table",
             scale=(1, 1, 1),
             physics=PhysicStateType.RIGIDBODY,
+            fix_base_link=True,
             usd_path=f"{data_dir}/demo_assets/table/usd/table.usd",
             urdf_path=f"{data_dir}/demo_assets/table/result/table.urdf",
             mjcf_path=f"{data_dir}/demo_assets/table/mjcf/table.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
+            # You need set pose for fix_base_link object to update usd stage for isaac 5.0.
+            default_position=(0.4, -0.2, 0.4),
+            default_orientation=(1.0, 0.0, 0.0, 0.0),
         ),
         RigidObjCfg(
             name="banana",
@@ -141,6 +155,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/banana/usd/banana.usd",
             urdf_path=f"{data_dir}/demo_assets/banana/result/banana.urdf",
             mjcf_path=f"{data_dir}/demo_assets/banana/mjcf/banana.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="book",
@@ -149,6 +165,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/book/usd/book.usd",
             urdf_path=f"{data_dir}/demo_assets/book/result/book.urdf",
             mjcf_path=f"{data_dir}/demo_assets/book/mjcf/book.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="lamp",
@@ -157,6 +175,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/lamp/usd/lamp.usd",
             urdf_path=f"{data_dir}/demo_assets/lamp/result/lamp.urdf",
             mjcf_path=f"{data_dir}/demo_assets/lamp/mjcf/lamp.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="mug",
@@ -165,6 +185,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/mug/usd/mug.usd",
             urdf_path=f"{data_dir}/demo_assets/mug/result/mug.urdf",
             mjcf_path=f"{data_dir}/demo_assets/mug/mjcf/mug.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="remote_control",
@@ -173,6 +195,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/remote_control/usd/remote_control.usd",
             urdf_path=f"{data_dir}/demo_assets/remote_control/result/remote_control.urdf",
             mjcf_path=f"{data_dir}/demo_assets/remote_control/mjcf/remote_control.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="rubiks_cube",
@@ -181,6 +205,8 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/rubik's_cube/usd/rubik's_cube.usd",
             urdf_path=f"{data_dir}/demo_assets/rubik's_cube/result/rubik's_cube.urdf",
             mjcf_path=f"{data_dir}/demo_assets/rubik's_cube/mjcf/rubik's_cube.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
         RigidObjCfg(
             name="vase",
@@ -189,10 +215,12 @@ if __name__ == "__main__":
             usd_path=f"{data_dir}/demo_assets/vase/usd/vase.usd",
             urdf_path=f"{data_dir}/demo_assets/vase/result/vase.urdf",
             mjcf_path=f"{data_dir}/demo_assets/vase/mjcf/vase.xml",
+            file_type={**RobotCfg.file_type, "isaacgym": "mjcf"},
+            # genesis_read_mjcf=True,
         ),
     ]
-
     # set initial states
+    z_offset = 0.2
     init_states = [
         {
             "objects": {
@@ -278,3 +306,42 @@ if __name__ == "__main__":
     depth = depth.squeeze()
     depth_color = depth_to_colormap(depth, inv_depth=True, depth_range=(1.0, 5.0))
     cv2.imwrite(save_path, depth_color[:, :, ::-1].copy(), [int(cv2.IMWRITE_JPEG_QUALITY), 95])  # RGB -> BGR
+
+    # Video with fixed camera
+    obs_saver = ObsSaver(video_path=f"get_started/output/15_gs_background_dynamic_{args.sim}.mp4")
+    total_step = 100
+
+    # Optional: Add robot actions for dynamic scene (similar to 14_real_assets.py)
+    robot = scenario.robots[0] if scenario.robots else None
+
+    for idx in tqdm(range(total_step)):
+        # Optional: Add random robot actions if robot exists
+        if robot is not None:
+            actions = [
+                {
+                    robot.name: {
+                        "dof_pos_target": {
+                            joint_name: (
+                                torch.rand(1).item()
+                                * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                                + robot.joint_limits[joint_name][0]
+                            )
+                            for joint_name in robot.joint_limits.keys()
+                        }
+                    }
+                }
+                for _ in range(scenario.num_envs)
+            ]
+            env.set_dof_targets(actions)
+
+        # Simulate and get observations (camera stays fixed)
+        env.simulate()
+        obs = env.get_states(mode="tensor")
+        obs_saver.add(obs)
+
+    obs_saver.save()
+    log.info(f"Video saved to get_started/output/15_gs_background_dynamic_{args.sim}.mp4")
+
+    if hasattr(env, "simulation_app"):
+        env.close()
+        env.simulation_app.close()

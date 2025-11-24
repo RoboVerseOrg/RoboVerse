@@ -579,7 +579,6 @@ class MujocoHandler(BaseSimHandler):
 
             rgb = None
             depth = None
-
             if "rgb" in camera.data_types:
                 if sys.platform == "darwin":
                     with self._mj_lock:  # optional but safer
@@ -605,6 +604,7 @@ class MujocoHandler(BaseSimHandler):
                         width=camera.width, height=camera.height, camera_id=camera_id, depth=False
                     )
                     rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+
             if "depth" in camera.data_types:
                 if sys.platform == "darwin":
                     with self._mj_lock:
@@ -650,6 +650,10 @@ class MujocoHandler(BaseSimHandler):
 
             # Additional GS background rendering and blending (if enabled)
             if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
+
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
 
