@@ -223,7 +223,21 @@ class IsaacsimHandler(BaseSimHandler):
         if isinstance(states, list):
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
-            states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
+
+            # Handle different state list lengths:
+            # 1. Single state -> replicate across all envs (most common for initial setup)
+            # 2. States matching num_envs -> use corresponding state per env
+            if len(states) == 1:
+                # Replicate single state across all environments
+                states_flat = [states[0]["objects"] | states[0]["robots"] for _ in range(self.num_envs)]
+            elif len(states) == self.num_envs:
+                # Use provided states for each environment
+                states_flat = [states[i]["objects"] | states[i]["robots"] for i in range(self.num_envs)]
+            else:
+                raise ValueError(
+                    f"States list length ({len(states)}) must be either 1 (replicate to all envs) "
+                    f"or match num_envs ({self.num_envs}). Got {len(states)} states."
+                )
             for obj in self.objects + self.robots:
                 if obj.name not in states_flat[0]:
                     log.warning(f"Missing {obj.name} in states, setting its velocity to zero")
@@ -730,13 +744,50 @@ class IsaacsimHandler(BaseSimHandler):
         raise ValueError(f"Unsupported object type: {type(obj)}")
 
     def _load_terrain(self) -> None:
-        # # TODO support multiple terrains cfg
         import isaaclab.sim as sim_utils
-        from isaaclab.terrains import TerrainImporterCfg
+        from isaaclab.terrains import TerrainGeneratorCfg, TerrainImporterCfg
+        from isaaclab.terrains.trimesh import mesh_terrains_cfg as mesh_cfg
+
+        # Auto-download terrain material if missing (same as DR)
+        mdl_path = "roboverse_data/materials/arnold/Wood/Ash.mdl"
+        if not os.path.exists(mdl_path):
+            try:
+                from metasim.utils.hf_util import check_and_download_single, extract_texture_paths_from_mdl
+
+                log.info(f"Downloading terrain material: {mdl_path}")
+                check_and_download_single(mdl_path)
+
+                # Download textures (same as DR's apply_mdl_material)
+                if os.path.exists(mdl_path):
+                    try:
+                        texture_paths = extract_texture_paths_from_mdl(mdl_path)
+                        for tex_path in texture_paths:
+                            if not os.path.exists(tex_path):
+                                log.debug(f"Downloading texture: {tex_path}")
+                                check_and_download_single(tex_path)
+                    except Exception as e:
+                        log.debug(f"Failed to download textures: {e}")
+            except Exception as e:
+                log.warning(f"Failed to download terrain material {mdl_path}: {e}")
+
+        plane_gen_cfg = TerrainGeneratorCfg(
+            size=(100.0, 100.0),  # ground size (in total)
+            horizontal_scale=0.1,
+            vertical_scale=0.0,
+            slope_threshold=None,
+            use_cache=False,
+            sub_terrains={
+                "flat": mesh_cfg.MeshPlaneTerrainCfg(
+                    proportion=1.0,
+                    size=(10.0, 10.0),
+                ),
+            },
+        )
 
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
-            terrain_type="plane",
+            terrain_type="generator",
+            terrain_generator=plane_gen_cfg,
             collision_group=-1,
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
@@ -746,7 +797,12 @@ class IsaacsimHandler(BaseSimHandler):
                 restitution=0.0,
             ),
             debug_vis=False,
-            visual_material=sim_utils.MdlFileCfg(mdl_path="metasim/data/quick_start/materials/Ash.mdl"),
+            visual_material=sim_utils.MdlFileCfg(
+                mdl_path=mdl_path,
+                project_uvw=True,
+                texture_scale=(1.0, 1.0),
+                albedo_brightness=1.2,
+            ),
         )
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
