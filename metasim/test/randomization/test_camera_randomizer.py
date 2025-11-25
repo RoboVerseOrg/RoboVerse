@@ -11,14 +11,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.randomization.camera_randomizer import CameraRandomCfg, CameraRandomizer
 
 
-def get_transform(handler):
-    """Extract position and rotation from xformable."""
-    camera_inst = handler.scene.sensors["test_camera"]
-    position, rotation = camera_inst._view.get_world_poses()
-
-    return position.detach().cpu(), rotation.detach().cpu()
-
-
 def camera_seed(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     """Test that camera randomization is reproducible with same seed."""
     from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
@@ -40,12 +32,12 @@ def camera_seed(handler, distribution="uniform", common_range=(1e-8, 10.0)):
 
     # Apply randomization with seed 789
     randomizer()
-    pos_val1, _ = get_transform(handler)
+    pos_val1, _ = _get_transform(handler)
 
     # Reset seed and apply again - should give same results
     randomizer.set_seed(789)
     randomizer()
-    pos_val2, _ = get_transform(handler)
+    pos_val2, _ = _get_transform(handler)
 
     assert torch.allclose(torch.tensor(pos_val1), torch.tensor(pos_val2), atol=1e-4), (
         f"Same seed should produce same random values, got {pos_val1} and {pos_val2}"
@@ -72,11 +64,11 @@ def camera_position(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     randomizer.bind_handler(handler)
 
     # Get camera prim directly to check actual USD changes
-    current_pos, _ = get_transform(handler)
+    current_pos, _ = _get_transform(handler)
     # Apply randomization
     randomizer()
     # Get new position from USD (which is what the randomizer actually updates)
-    new_pos, _ = get_transform(handler)
+    new_pos, _ = _get_transform(handler)
 
     # Check that position changed and is within delta range
     pos_diff = torch.abs(torch.tensor(current_pos) - torch.tensor(new_pos))
@@ -110,11 +102,11 @@ def camera_orientation(handler, distribution="uniform", common_range=(1e-8, 10.0
     # Get camera instance
 
     # Get current orientation from camera instance (quaternion)
-    _, current_quat = get_transform(handler)
+    _, current_quat = _get_transform(handler)
     # Apply randomization
     randomizer()
     # Get new orientation
-    _, new_quat = get_transform(handler)
+    _, new_quat = _get_transform(handler)
 
     # Check that orientation changed
     assert not torch.allclose(torch.tensor(current_quat), torch.tensor(new_quat), atol=1e-4), (
@@ -153,11 +145,11 @@ def camera_look_at(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     randomizer.bind_handler(handler)
 
     # Get current transform from camera instance
-    _, current_quat = get_transform(handler)
+    _, current_quat = _get_transform(handler)
     # Apply randomization
     randomizer()
     # Get new transform
-    _, new_quat = get_transform(handler)
+    _, new_quat = _get_transform(handler)
 
     # Rotation should change due to look-at target change
     assert not torch.allclose(torch.tensor(current_quat), torch.tensor(new_quat), atol=1e-4), (
@@ -248,6 +240,14 @@ def test_camera_randomizers(handler, test_func, distribution):
     """Run camera randomizer checks inside the shared handler process."""
     common_range = (1e-8, 20.0)
     test_func(handler, distribution=distribution, common_range=common_range)
+
+
+def _get_transform(handler):
+    """Extract position and rotation from xformable."""
+    camera_inst = handler.scene.sensors["test_camera"]
+    position, rotation = camera_inst._view.get_world_poses()
+
+    return position.detach().cpu(), rotation.detach().cpu()
 
 
 if __name__ == "__main__":

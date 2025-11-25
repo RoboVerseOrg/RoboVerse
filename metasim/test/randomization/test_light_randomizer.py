@@ -12,34 +12,6 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.randomization.light_randomizer import LightRandomCfg, LightRandomizer
 
 
-def get_light_prim_from_randomizer(randomizer: LightRandomizer):
-    """Helper function to get light prim and attributes from randomizer."""
-    # Get prim path from registry
-    prim_paths = randomizer.registry.get_prim_paths(randomizer.cfg.light_name)
-    if not prim_paths:
-        raise ValueError(f"Light '{randomizer.cfg.light_name}' not found in the scene")
-
-    light_path = prim_paths[0]  # Get first light
-
-    # Get prim from adapter's stage
-    light_prim = randomizer.adapter.stage.GetPrimAtPath(light_path)
-    if not light_prim or not light_prim.IsValid():
-        raise ValueError(f"Invalid light prim at path: {light_path}")
-
-    # Determine light type from prim type
-    light_type = light_prim.GetTypeName()
-    if "Disk" in light_type:
-        light_type = "disk"
-    elif "Sphere" in light_type:
-        light_type = "sphere"
-    elif "Distant" in light_type:
-        light_type = "distant"
-    else:
-        light_type = "unknown"
-
-    return light_prim, light_path, light_type
-
-
 def light_intensity(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     """Test light intensity randomization with reproducible seed."""
     from metasim.randomization.light_randomizer import LightIntensityRandomCfg
@@ -57,7 +29,7 @@ def light_intensity(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    light_prim, light_path, _ = get_light_prim_from_randomizer(randomizer)
+    light_prim, light_path, _ = _get_light_prim_from_randomizer(randomizer)
 
     # Get current intensity using adapter
     current_intensity = randomizer.adapter.get_light_intensity(light_path)
@@ -90,7 +62,7 @@ def light_color(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    light_prim, _, _ = get_light_prim_from_randomizer(randomizer)
+    light_prim, _, _ = _get_light_prim_from_randomizer(randomizer)
 
     # Get current color
     color_attr = light_prim.GetAttribute("inputs:color")
@@ -128,7 +100,7 @@ def light_color_temperature(handler, distribution="uniform", common_range=(1e-8,
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    light_prim, _, _ = get_light_prim_from_randomizer(randomizer)
+    light_prim, _, _ = _get_light_prim_from_randomizer(randomizer)
 
     # Get current color
     color_attr = light_prim.GetAttribute("inputs:color")
@@ -161,7 +133,7 @@ def light_position(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    light_prim, light_path, light_type = get_light_prim_from_randomizer(randomizer)
+    light_prim, light_path, light_type = _get_light_prim_from_randomizer(randomizer)
 
     # Skip for distant lights
     if light_type == "distant":
@@ -202,7 +174,7 @@ def light_orientation(handler, distribution="uniform", common_range=(1e-8, 10.0)
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    light_prim, light_path, _ = get_light_prim_from_randomizer(randomizer)
+    light_prim, light_path, _ = _get_light_prim_from_randomizer(randomizer)
 
     # Get current rotation using adapter (returns quaternion)
     _, current_rot, _ = randomizer.adapter.get_transform(light_path)
@@ -238,7 +210,7 @@ def light_seed(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     # Test reproducibility
     randomizer = LightRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
-    light_prim, light_path, _ = get_light_prim_from_randomizer(randomizer)
+    light_prim, light_path, _ = _get_light_prim_from_randomizer(randomizer)
 
     # Apply randomization twice with same seed - should give same results
     randomizer()
@@ -268,6 +240,34 @@ def test_light_randomizers(handler, test_func, distribution):
     """Run light randomizer checks inside the shared handler process."""
     common_range = (1e-8, 20.0)
     test_func(handler, distribution=distribution, common_range=common_range)
+
+
+def _get_light_prim_from_randomizer(randomizer: LightRandomizer):
+    """Helper function to get light prim and attributes from randomizer."""
+    # Get prim path from registry
+    prim_paths = randomizer.registry.get_prim_paths(randomizer.cfg.light_name)
+    if not prim_paths:
+        raise ValueError(f"Light '{randomizer.cfg.light_name}' not found in the scene")
+
+    light_path = prim_paths[0]  # Get first light
+
+    # Get prim from adapter's stage
+    light_prim = randomizer.adapter.stage.GetPrimAtPath(light_path)
+    if not light_prim or not light_prim.IsValid():
+        raise ValueError(f"Invalid light prim at path: {light_path}")
+
+    # Determine light type from prim type
+    light_type = light_prim.GetTypeName()
+    if "Disk" in light_type:
+        light_type = "disk"
+    elif "Sphere" in light_type:
+        light_type = "sphere"
+    elif "Distant" in light_type:
+        light_type = "distant"
+    else:
+        light_type = "unknown"
+
+    return light_prim, light_path, light_type
 
 
 if __name__ == "__main__":
