@@ -77,14 +77,13 @@ class LiberoKitchenScene2StackMiddleBowlOnBackBowlTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 300
     task_desc = "Stack the middle black bowl (bowl_2) on the back black bowl (bowl_3) (scene2)"
 
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene2_stack_the_middle_black_bowl_on_the_back_black_bowl_traj_v2.pkl"

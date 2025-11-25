@@ -77,14 +77,13 @@ class LiberoKitchenScene2PutBowlAtFrontOnPlateTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 300
     task_desc = "Put the black bowl at the front (bowl_1) on the plate (scene2)"
 
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene2_put_the_black_bowl_at_the_front_on_the_plate_traj_v2.pkl"

@@ -71,14 +71,13 @@ class LiberoKitchenScene4CloseTheBottomDrawerOfTheCabinetAndOpenTheTopDrawerTask
             ),
         ],
         robots=["franka"],
-        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 300
     task_desc = "Close the bottom drawer of the cabinet and open the top drawer (scene4)"
 
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene4_close_the_bottom_drawer_of_the_cabinet_and_open_the_top_drawer_traj_v2.pkl"

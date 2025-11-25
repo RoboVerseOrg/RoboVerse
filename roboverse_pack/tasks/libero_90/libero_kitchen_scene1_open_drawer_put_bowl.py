@@ -85,8 +85,7 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        # Scene configuration (from BDDL problem domain)
-        scene="libero_kitchen_tabletop",
+        # Scene configuration (from BDDL problem domain),
     )
 
     # Task parameters
@@ -95,7 +94,7 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
 
     # Workspace configuration (from BDDL regions)
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.91),)  # kitchen_table_offset
+    workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it_traj_v2.pkl"

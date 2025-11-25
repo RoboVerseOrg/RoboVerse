@@ -62,7 +62,7 @@ class LiberoKitchenOpenTopDrawerTask(Libero90BaseTask):
         ],
         robots=["franka"],
         # Scene configuration (from BDDL problem domain)
-        scene="libero_kitchen_tabletop",
+        # ,
     )
 
     # Task parameters
@@ -71,7 +71,7 @@ class LiberoKitchenOpenTopDrawerTask(Libero90BaseTask):
 
     # Workspace configuration (from BDDL regions)
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.91),)  # kitchen_table_offset
+    workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
     # Checker: top drawer must be open
@@ -85,5 +85,6 @@ class LiberoKitchenOpenTopDrawerTask(Libero90BaseTask):
 
     # Trajectory file path
     traj_filepath = (
-        "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
+        # "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
+        "roboverse_data/trajs/libero90_ground/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
     )

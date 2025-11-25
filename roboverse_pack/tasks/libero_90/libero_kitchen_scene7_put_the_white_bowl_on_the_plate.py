@@ -60,14 +60,13 @@ class LiberoKitchenScene7PutTheWhiteBowlOnThePlateTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 300
     task_desc = "Put the white bowl on the plate (scene7)"
 
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene7_put_the_white_bowl_on_the_plate_traj_v2.pkl"
