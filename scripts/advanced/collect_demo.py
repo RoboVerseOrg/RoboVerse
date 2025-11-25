@@ -709,19 +709,25 @@ def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
 
-    if args.task == "stack_cube":
+    if args.task in {"stack_cube", "pick_cube", "pick_butter"}:
         dp_camera = True
-    elif args.task == "close_box":
-        dp_camera = False
     else:
-        dp_camera = True
+        dp_camera = args.task != "close_box"
 
-    if dp_camera:
+    is_libero_dataset = "libero_90" in args.task
+
+    if is_libero_dataset:
+        dp_pos = (2.0, 0.0, 2)
+    elif dp_camera:
         # import warnings
         # warnings.warn("Using dp camera position!")
         dp_pos = (1.0, 0.0, 0.75)
     else:
         dp_pos = (1.5, 0.0, 1.5)
+    
+    # libero specific camera position
+    # dp_pos = (0.8, -0, 1.6)
+    # look_at = (-2.5, 0.0, 0.0)
 
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
     scenario = task_cls.scenario.update(
@@ -842,9 +848,9 @@ def main():
             stop_flag = True
 
         if demo_indexer.next_idx >= max_demo:
-            log.warning(f"Reached maximum demo index ({max_demo}).")
+            if not stop_flag:
+                log.warning(f"Reached maximum demo index ({max_demo}), finishing in-flight demos.")
             stop_flag = True
-            break
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)
