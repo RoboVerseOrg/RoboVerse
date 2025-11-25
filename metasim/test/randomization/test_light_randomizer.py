@@ -114,6 +114,7 @@ def light_color_temperature(handler, distribution="uniform", common_range=(1e-8,
     from metasim.randomization.light_randomizer import LightColorRandomCfg
 
     # Create light randomizer with color temperature
+    common_range = (common_range[0] + 1000, common_range[1] + 1000)  # Shift to valid temperature range
     cfg = LightRandomCfg(
         light_name="test_light",
         color=LightColorRandomCfg(
@@ -212,8 +213,14 @@ def light_orientation(handler, distribution="uniform", common_range=(1e-8, 10.0)
 
     assert current_rot != new_rot, "Light orientation should have changed after randomization"
     # Check that quaternion values changed
-    delta = torch.tensor([abs(new_rot[i] - current_rot[i]) for i in range(4)])
-    assert torch.any(delta > 0.001), "Rotation should have changed measurably"
+    from metasim.utils.math import euler_xyz_from_quat
+
+    n_r, n_p, n_y = euler_xyz_from_quat(torch.tensor(new_rot).unsqueeze(0))
+    # Check that each rotation axis change is within specified delta range
+    ranges = torch.tensor(cfg.orientation.angle_range)
+    assert torch.all(torch.abs(torch.stack([n_r, n_p, n_y], dim=-1)) <= (ranges[:, 1] - ranges[:, 0])), (
+        f"Orientation delta should be within range {cfg.orientation.angle_range}, got angles: {[n_r, n_p, n_y]}"
+    )
 
     log.info(f"Light orientation randomization (Type: {distribution}) test passed")
 
@@ -245,11 +252,11 @@ def light_seed(handler, distribution="uniform", common_range=(1e-8, 10.0)):
 
 
 TEST_FUNCTIONS = [
-    # light_intensity,
-    # light_color,
-    # light_color_temperature,
-    # light_position,
-    # light_orientation,
+    light_intensity,
+    light_color,
+    light_color_temperature,
+    light_position,
+    light_orientation,
     light_seed,
 ]
 

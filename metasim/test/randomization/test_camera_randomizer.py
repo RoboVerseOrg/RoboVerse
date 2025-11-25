@@ -122,8 +122,8 @@ def camera_orientation(handler, distribution="uniform", common_range=(1e-8, 10.0
     )
     from metasim.utils.math import euler_xyz_from_quat
 
-    c_r, c_p, c_y = euler_xyz_from_quat(new_quat)
-    n_r, n_p, n_y = euler_xyz_from_quat(current_quat)
+    c_r, c_p, c_y = euler_xyz_from_quat(current_quat)
+    n_r, n_p, n_y = euler_xyz_from_quat(new_quat)
     # Check that each rotation axis change is within specified delta range
     ranges = torch.tensor(cfg.orientation.rotation_delta)
     assert torch.all(
