@@ -724,7 +724,7 @@ def main():
         dp_pos = (1.0, 0.0, 0.75)
     else:
         dp_pos = (1.5, 0.0, 1.5)
-    
+
     # libero specific camera position
     # dp_pos = (0.8, -0, 1.6)
     # look_at = (-2.5, 0.0, 0.0)

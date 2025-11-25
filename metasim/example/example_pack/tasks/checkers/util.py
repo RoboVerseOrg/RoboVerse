@@ -13,9 +13,7 @@ def _get_root_state(states: Any, obj_name: str) -> torch.Tensor:
     raise ValueError(f"Object {obj_name} not found in states")
 
 
-def _normalize_env_slice(
-    tensor: torch.Tensor, env_ids: list[int] | torch.Tensor | None, handler: Any
-) -> torch.Tensor:
+def _normalize_env_slice(tensor: torch.Tensor, env_ids: list[int] | torch.Tensor | None, handler: Any) -> torch.Tensor:
     if env_ids is None:
         return tensor
 
