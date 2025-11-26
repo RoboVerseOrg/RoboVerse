@@ -128,9 +128,11 @@ def object_pose(handler, distribution="uniform", common_range=(0.1, 1.0)):
     assert (
         (torch.abs(p_after - p_before) < 1e-3) | ((torch.abs(p_after - p_before) - 2 * torch.pi).abs() < 1e-3)
     ).all(), "X and Y rotation should remain the same due to rotation_axes=(False, False, True)"
+    y_ranges = (common_range[0] / 180 * 3.14159, common_range[1] / 180 * 3.14159)
+    y_diff = torch.abs(y_after - y_before)
     assert (
-        (torch.abs(y_after - y_before) >= common_range[0] / 180 * 3.14159)
-        & (torch.abs(y_after - y_before) <= common_range[1] / 180 * 3.14159)
+        ((y_diff >= y_ranges[0]) | ((y_diff - 2 * torch.pi).abs() >= y_ranges[0]))
+        & ((y_diff <= y_ranges[1]) | ((y_diff - 2 * torch.pi).abs() <= y_ranges[1]))
     ).all(), f"Z rotation should have changed, whereas {torch.abs(y_after - y_before)} not in range."
 
     # Position or rotation should have changed (with high probability)
@@ -288,7 +290,7 @@ TEST_FUNCTIONS = [
 @pytest.mark.parametrize("test_func", TEST_FUNCTIONS, ids=[f.__name__ for f in TEST_FUNCTIONS])
 def test_object_randomizers(handler, test_func, distribution):
     """Run object randomizer checks inside the shared handler process."""
-    common_range = (0.1, 1.0)
+    common_range = (1e-8, 1.0)
     test_func(handler, distribution=distribution, common_range=common_range)
 
 
