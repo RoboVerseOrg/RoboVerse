@@ -73,6 +73,7 @@ ENV PATH=${HOME}/.local/bin:$PATH
 COPY --chown=${DOCKER_USER} ./metasim ${HOME}/RoboVerse/metasim
 COPY --chown=${DOCKER_USER} ./third_party ${HOME}/RoboVerse/third_party
 COPY --chown=${DOCKER_USER} ./roboverse_pack ${HOME}/RoboVerse/roboverse_pack
+COPY --chown=${DOCKER_USER} ./roboverse_learn ${HOME}/RoboVerse/roboverse_learn
 COPY --chown=${DOCKER_USER} ./pyproject.toml ${HOME}/RoboVerse/pyproject.toml
 
 WORKDIR ${HOME}/RoboVerse
