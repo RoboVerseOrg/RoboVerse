@@ -57,17 +57,19 @@ def download_interior_agent() -> None:
 
 
 def copy_usd_assets() -> None:
-    """Copy the three-digit USD scenes into the asset directory."""
-    ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    """
+    Copy RoboVerse-curated USD scenes (e.g., 0003.usda)
+    from the asset directory into the third_party/InteriorAgent directory.
+    """
+    THIRD_PARTY_DIR.mkdir(parents=True, exist_ok=True)
 
-    for scene_dir in sorted(THIRD_PARTY_DIR.glob("kujiale_*")):
-        if not scene_dir.is_dir():
-            continue
-
-        for usd_file in scene_dir.glob("*.usda"):
-            stem = usd_file.stem
-            if stem.isdigit() and len(stem) == 3:
-                shutil.copy2(usd_file, ASSET_DIR / usd_file.name)
+    # Look for numeric scene IDs such as '003', '0123', etc.
+    for usd_file in sorted(ASSET_DIR.glob("*.usda")):
+        stem = usd_file.stem
+        if stem.isdigit() and len(stem) in (3, 4):
+            dst = THIRD_PARTY_DIR / usd_file.name
+            shutil.copy2(usd_file, dst)
+            logger.info(f"Copied {usd_file} -> {dst}")
 
 
 def main() -> None:
@@ -75,6 +77,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     for line in LICENSE_NOTICE.splitlines():
         logger.info(line)
+
     download_roboverse_usd()
     download_interior_agent()
     copy_usd_assets()

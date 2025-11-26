@@ -34,7 +34,6 @@ from torch.amp import autocast
 from datetime import datetime
 
 from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
-from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import save_traj_file
 
@@ -134,9 +133,6 @@ def evaluate(
     amp_enabled: bool = False,
     amp_device_type: str = "cpu",
     amp_dtype: torch.dtype = torch.float16,
-    render: bool = True,
-    video_path: str = None,
-    render_each_episode: bool = True,
     save_traj: bool = True,
     save_states: bool = True,
     save_every_n_steps: int = 1,
@@ -156,9 +152,6 @@ def evaluate(
         amp_enabled: Whether to use automatic mixed precision
         amp_device_type: Device type for AMP
         amp_dtype: Data type for AMP
-        render: Whether to render and save video
-        video_path: Path to save rendered video (base path for multiple videos)
-        render_each_episode: If True, save a separate video for each episode
         save_traj: Whether to save trajectories
         save_states: Whether to save full states (not just actions)
         save_every_n_steps: Save every N steps (1=save all, 2=save every other step)
@@ -174,15 +167,6 @@ def evaluate(
     episode_returns = []
     episode_lengths = []
     episode_successes = []
-
-    # For single video mode
-    frames = [] if (render and not render_each_episode) else None
-
-    # For per-episode video mode
-    episode_frames = {} if (render and render_each_episode) else None
-    if render_each_episode:
-        for i in range(num_eval_envs):
-            episode_frames[i] = []
 
     # For trajectory saving
     all_episodes = {} if save_traj else None  # Dict: env_id -> list of episodes
@@ -214,14 +198,6 @@ def evaluate(
         for i in range(num_eval_envs):
             current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
 
-    if render and not render_each_episode:
-        frames.append(env.render())
-    elif render_each_episode:
-        current_frame = env.render()
-        for i in range(num_eval_envs):
-            if not done_masks[i]:
-                episode_frames[i].append(current_frame)
-
     max_steps = env.max_episode_steps * num_episodes
 
     for step in range(max_steps):
@@ -233,10 +209,41 @@ def evaluate(
             norm_obs = obs_normalizer(obs)
             actions = actor(norm_obs)
 
+        # Get current states before step (for trajectory saving if all waypoints reached)
+        pre_step_states = None
+        if save_traj and hasattr(env, 'handler') and env.handler is not None:
+            pre_step_states = env.handler.get_states(mode="tensor")
+        
         next_obs, rewards, terminated, time_out, infos = env.step(actions.float())
+        
+        # Check if all waypoints are reached - if so, terminate immediately and save trajectory
+        all_waypoints_reached = infos.get("all_waypoints_reached", torch.zeros(num_eval_envs, dtype=torch.bool, device=device))
+        if all_waypoints_reached.any():
+            # For envs that just reached all waypoints, save trajectory immediately (trajectory up to before this step)
+            for i in range(num_eval_envs):
+                if all_waypoints_reached[i] and not done_masks[i] and not finished_envs[i]:
+                    if save_traj and len(current_episode_actions[i]) > 0:
+                        episode_data = {
+                            "init_state": current_episode_init_state[i],
+                            "actions": current_episode_actions[i],
+                            "states": current_episode_states[i] if save_states else None,
+                        }
+                        all_episodes[i].append(episode_data)
+                        log.info(f"Env {i} Episode {episodes_per_env[i].item()}: All waypoints reached! Saved trajectory ({len(current_episode_actions[i])} steps, return: {current_returns[i].item():.2f})")
+                        
+                        # Reset trajectory tracking for this env
+                        current_episode_actions[i] = []
+                        if save_states:
+                            current_episode_states[i] = []
+                        episode_step_count[i] = 0
+                    
+                    # Mark as done immediately
+                    terminated[i] = True
+                    done_masks[i] = True
+        
         dones = terminated | time_out
 
-        # Record trajectory data (with downsampling)
+        # Record trajectory data (with downsampling) - only if not all waypoints reached
         if save_traj:
             # Get states from handler for trajectory recording
             handler_states = None
@@ -244,8 +251,8 @@ def evaluate(
                 handler_states = env.handler.get_states(mode="tensor")
 
             for i in range(num_eval_envs):
-                # Only record for envs that haven't finished all episodes
-                if not finished_envs[i] and not done_masks[i] and (episode_step_count[i] % save_every_n_steps == 0):
+                # Only record for envs that haven't finished all episodes and haven't reached all waypoints
+                if not finished_envs[i] and not done_masks[i] and not all_waypoints_reached[i] and (episode_step_count[i] % save_every_n_steps == 0):
                     # Get robot joint positions as actions from handler states
                     robot_name = scenario.robots[0].name
                     joint_names = sorted(scenario.robots[0].actuators.keys())
@@ -274,27 +281,14 @@ def evaluate(
                 if not finished_envs[i] and not done_masks[i]:
                     episode_step_count[i] += 1
 
-        # Render current frame
-        if render:
-            current_frame = env.render()
-            if not render_each_episode:
-                frames.append(current_frame)
-            else:
-                for i in range(num_eval_envs):
-                    # Only render for envs that haven't finished all episodes
-                    if not finished_envs[i] and not done_masks[i]:
-                        episode_frames[i].append(current_frame)
-
-        # Update episode statistics (only for envs still running)
-        active_mask = ~done_masks & ~finished_envs
+        # Update episode statistics (only for envs still running and haven't reached all waypoints)
+        active_mask = ~done_masks & ~finished_envs & ~all_waypoints_reached
         current_returns = torch.where(active_mask, current_returns + rewards, current_returns)
         current_lengths = torch.where(active_mask, current_lengths + 1, current_lengths)
 
         # Check for newly completed episodes (only for envs that haven't finished all episodes)
         newly_done = dones & ~done_masks & ~finished_envs
         if newly_done.any():
-            import imageio.v2 as iio
-
             for i in range(num_eval_envs):
                 if newly_done[i]:
                     episode_returns.append(current_returns[i].item())
@@ -304,22 +298,7 @@ def evaluate(
                     if "success" in infos:
                         episode_successes.append(infos["success"][i].item())
 
-                    # Save individual episode video if enabled
-                    if render_each_episode and episode_frames[i] and video_path:
-                        # Use env_id and episode number for filename
-                        base_dir = os.path.dirname(video_path)
-                        base_name = os.path.splitext(os.path.basename(video_path))[0]
-                        ext = os.path.splitext(video_path)[1] or '.mp4'
-                        ep_video_path = os.path.join(base_dir, f"{base_name}_env{i:02d}_ep{episodes_per_env[i].item():02d}{ext}")
-
-                        os.makedirs(base_dir, exist_ok=True)
-                        iio.mimsave(ep_video_path, episode_frames[i], fps=30)
-                        log.info(f"Env {i} Episode {episodes_per_env[i].item()}: Saved video to {ep_video_path} (return: {current_returns[i].item():.2f})")
-
-                        # Clear frames for this env
-                        episode_frames[i] = []
-
-                    # Save trajectory for this episode if enabled
+                    # Save trajectory for this episode if enabled (skip if already saved due to all waypoints reached)
                     if save_traj and len(current_episode_actions[i]) > 0:
                         episode_data = {
                             "init_state": current_episode_init_state[i],
@@ -334,6 +313,9 @@ def evaluate(
                         if save_states:
                             current_episode_states[i] = []
                         episode_step_count[i] = 0
+                    elif save_traj and all_waypoints_reached[i]:
+                        # Trajectory already saved when all waypoints were reached
+                        log.info(f"Env {i} Episode {episodes_per_env[i].item()}: Trajectory already saved when all waypoints reached")
 
                     episodes_completed += 1
                     episodes_per_env[i] += 1
@@ -363,20 +345,8 @@ def evaluate(
                 for i in range(num_eval_envs):
                     current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
 
-            # Add first frame for new episodes if rendering per episode
-            if render_each_episode:
-                current_frame = env.render()
-                for i in range(num_eval_envs):
-                    episode_frames[i].append(current_frame)
         else:
             obs = next_obs
-
-    # Save single video if rendering all episodes together
-    if render and not render_each_episode and frames and video_path:
-        import imageio.v2 as iio
-        os.makedirs(os.path.dirname(video_path), exist_ok=True)
-        iio.mimsave(video_path, frames, fps=30)
-        log.info(f"Saved evaluation video to {video_path}")
 
     # Save all trajectories to file if enabled
     if save_traj and all_episodes:
@@ -423,23 +393,17 @@ def evaluate(
 
 def main():
     parser = argparse.ArgumentParser(description='FastTD3 Evaluation')
-    parser.add_argument('--checkpoint', type=str, default='roboverse_data/models/walk_1400.pt',
+    parser.add_argument('--checkpoint', type=str, default='/home/balen/murphy/isaaclab_rv/2/RoboVerse/models/trackgrasphandrelative_35000.pt',
                        help='Path to checkpoint file')
     parser.add_argument('--num_episodes', type=int, default=1,
                        help='Number of episodes per environment (default: 1, each env saves one episode)')
-
-    # Rendering arguments
-    parser.add_argument('--render', type=int, default=1,
-                       help='Render mode: 0=no render, 1=render each episode separately (default), 2=single combined video')
-    parser.add_argument('--video_path', type=str, default='output/eval_rollout.mp4',
-                       help='Path to save video (base name for multiple videos)')
 
     parser.add_argument('--device_rank', type=int, default=0,
                        help='GPU device rank')
     parser.add_argument('--num_envs', type=int, default=None,
                        help='Number of parallel environments (default: from checkpoint config)')
     parser.add_argument('--headless', action='store_true',
-                       help='Run in headless mode')
+                       help='Run in headless mode (saves GPU memory, default for eval)')
 
     # Trajectory saving arguments (default: enabled)
     parser.add_argument('--save_traj', type=int, default=1,
@@ -453,9 +417,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Convert render mode to booleans
-    render = args.render > 0
-    render_each_episode = args.render == 1
     save_traj = bool(args.save_traj)
     save_states = bool(args.save_states)
 
@@ -485,24 +446,13 @@ def main():
     task_cls = get_task_class(task_name)
     num_envs = args.num_envs if args.num_envs is not None else config.get("num_envs", 1)
 
-    # Configure cameras for rendering if needed
-    cameras = []
-    if args.render:
-        cameras = [
-            PinholeCameraCfg(
-                width=config.get("video_width", 1024),
-                height=config.get("video_height", 1024),
-                pos=(4.0, -4.0, 4.0),
-                look_at=(0.0, 0.0, 0.0),
-            )
-        ]
-
+    # Always use headless mode with empty cameras to save GPU memory
     scenario = task_cls.scenario.update(
         robots=config.get("robots", ["franka"]),
         simulator=config.get("sim", "mujoco"),
         num_envs=num_envs,
-        headless=args.headless or not args.render,
-        cameras=cameras,
+        headless=True,  # Always headless to save GPU memory
+        cameras=[],  # Empty cameras to prevent GPU OOM
     )
 
     env = task_cls(scenario, device=device)
@@ -541,15 +491,8 @@ def main():
 
     # Run evaluation
     log.info(f"Evaluating for {args.num_episodes} episodes...")
-    log.info(f"  - Render: {render}")
-    log.info(f"  - Render each episode: {render_each_episode}")
     log.info(f"  - Save trajectories: {save_traj}")
     log.info(f"  - Save states: {save_states}")
-
-    if render_each_episode and render:
-        log.info(f"Saving separate video for each episode to {args.video_path}_epXXX.mp4")
-    elif render:
-        log.info(f"Saving single combined video to {args.video_path}")
 
     if save_traj:
         log.info(f"Saving trajectories to {args.traj_dir}/ (every {args.save_every_n_steps} steps)")
@@ -565,9 +508,6 @@ def main():
         amp_enabled=amp_enabled,
         amp_device_type=amp_device_type,
         amp_dtype=amp_dtype,
-        render=render,
-        video_path=args.video_path if render else None,
-        render_each_episode=render_each_episode,
         save_traj=save_traj,
         save_states=save_states,
         save_every_n_steps=args.save_every_n_steps,

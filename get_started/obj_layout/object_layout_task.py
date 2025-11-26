@@ -27,7 +27,7 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
-from metasim.utils.math import matrix_from_euler, quat_from_matrix, quat_mul
+from metasim.utils.math import matrix_from_euler, matrix_from_quat, quat_from_matrix, quat_inv, quat_mul
 from metasim.utils.obs_utils import display_obs
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -43,6 +43,81 @@ def save_poses_to_file(obs, scenario, filename="saved_poses.py"):
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = filename.replace(".py", f"_{timestamp}.py")
+
+    # Try to get hand position and whale relative pose
+    hand_pos = None
+    hand_whale_relative_pos = None
+    hand_whale_relative_rot = None
+    
+    try:
+        # Find vega robot
+        vega_robot = None
+        for robot in scenario.robots:
+            if robot.name == "vega" and robot.name in obs.robots:
+                vega_robot = robot
+                break
+        
+        # Find whale/banana object
+        whale_obj = None
+        for obj in scenario.objects:
+            if obj.name in ["banana", "whale"] and obj.name in obs.objects:
+                whale_obj = obj
+                break
+        
+        if vega_robot and whale_obj:
+            # Get hand position from L_arm_l7 link
+            robot_state = obs.robots[vega_robot.name]
+            device = robot_state.joint_pos.device
+            
+            if robot_state.body_state is not None and robot_state.body_names is not None:
+                body_state = robot_state.body_state
+                
+                name_to_index = {name: idx for idx, name in enumerate(robot_state.body_names)}
+                if "L_arm_l7" in name_to_index:
+                    link_index = name_to_index["L_arm_l7"]
+                    link_pos = body_state[0, link_index, 0:3]  # First env
+                    link_quat = body_state[0, link_index, 3:7]
+                    
+                    # Offset from L_arm_l7 (provided values, meters, expressed in local frame)
+                    hand_offset_local = torch.tensor([0.25864, -0.035, -0.03513], device=device)
+                    
+                    link_rot = matrix_from_quat(link_quat.unsqueeze(0))
+                    hand_pos_tensor = link_pos + (link_rot @ hand_offset_local.unsqueeze(-1)).squeeze(-1)
+                    hand_pos_np = hand_pos_tensor.cpu().numpy()
+                    # Ensure it's a 1D array with 3 elements
+                    if hand_pos_np.ndim > 1:
+                        hand_pos_np = hand_pos_np.flatten()
+                    hand_pos = hand_pos_np[:3]  # Take first 3 elements
+                    
+                    # Get whale position
+                    whale_state = obs.objects[whale_obj.name]
+                    whale_pos_tensor = whale_state.root_state[0, 0:3]  # Keep on device
+                    whale_pos_np = whale_pos_tensor.cpu().numpy()
+                    if whale_pos_np.ndim > 1:
+                        whale_pos_np = whale_pos_np.flatten()
+                    whale_pos = whale_pos_np[:3]
+                    
+                    whale_quat_tensor = whale_state.root_state[0, 3:7].to(device)  # Move to same device
+                    
+                    # Calculate relative position in object (whale) frame
+                    # First get the difference in world frame
+                    hand_whale_diff_world = hand_pos - whale_pos
+                    # Then transform to object frame: R_whale^T @ diff_world
+                    whale_rot = matrix_from_quat(whale_quat_tensor.unsqueeze(0))  # (1, 3, 3)
+                    hand_whale_diff_world_tensor = torch.tensor(hand_whale_diff_world, device=device).unsqueeze(0).unsqueeze(-1)  # (1, 3, 1)
+                    hand_whale_relative_pos_tensor = (whale_rot.transpose(-2, -1) @ hand_whale_diff_world_tensor).squeeze()  # (3,)
+                    hand_whale_relative_pos = hand_whale_relative_pos_tensor.cpu().numpy()
+                    
+                    # Calculate relative rotation (hand_quat * inverse(whale_quat))
+                    hand_quat_tensor = link_quat.unsqueeze(0)  # Already on device
+                    whale_quat_inv = quat_inv(whale_quat_tensor.unsqueeze(0))
+                    relative_quat = quat_mul(hand_quat_tensor, whale_quat_inv)[0]
+                    hand_whale_relative_rot_np = relative_quat.cpu().numpy()
+                    if hand_whale_relative_rot_np.ndim > 1:
+                        hand_whale_relative_rot_np = hand_whale_relative_rot_np.flatten()
+                    hand_whale_relative_rot = hand_whale_relative_rot_np[:4]  # Take first 4 elements
+    except Exception as e:
+        log.warning(f"Failed to compute hand position and relative pose: {e}")
 
     with open(filename, "w") as f:
         f.write('"""Saved poses from keyboard control"""\n\n')
@@ -98,6 +173,22 @@ def save_poses_to_file(obs, scenario, filename="saved_poses.py"):
             f.write("        },\n")
 
         f.write("    },\n")
+        
+        # Save hand position and relative pose if available
+        if hand_pos is not None and hand_whale_relative_pos is not None:
+            f.write('    "hand_info": {\n')
+            f.write('        "hand_position": torch.tensor([{:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_pos[0], hand_pos[1], hand_pos[2]
+            ))
+            f.write('        "hand_whale_relative_pos": torch.tensor([{:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_whale_relative_pos[0], hand_whale_relative_pos[1], hand_whale_relative_pos[2]
+            ))
+            f.write('        "hand_whale_relative_rot": torch.tensor([{:.6f}, {:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_whale_relative_rot[0], hand_whale_relative_rot[1], 
+                hand_whale_relative_rot[2], hand_whale_relative_rot[3]
+            ))
+            f.write("    },\n")
+        
         f.write("}\n")
 
     return filename
@@ -160,6 +251,7 @@ class ObjectKeyboardClient:
             "     TAB   - Switch entity",
             "     j     - Toggle joint mode",
             "     c     - Save poses",
+            "     r     - Reset to initial state",
             "     ESC   - Quit",
         ]
 
@@ -315,13 +407,14 @@ def process_input(dpos: float = 0.01, drot: float = 0.05, dangle: float = 0.02, 
 
 
 def process_common_input():
-    """Process common input (TAB, J, C, ESC)"""
+    """Process common input (TAB, J, C, R, ESC)"""
     keys = pygame.key.get_pressed()
 
     if not hasattr(process_common_input, "tab_pressed"):
         process_common_input.tab_pressed = False
         process_common_input.c_pressed = False
         process_common_input.j_pressed = False
+        process_common_input.r_pressed = False
 
     switch = False
     if keys[pygame.K_TAB] and not process_common_input.tab_pressed:
@@ -344,7 +437,14 @@ def process_common_input():
     elif not keys[pygame.K_j]:
         process_common_input.j_pressed = False
 
-    return switch, save_poses, toggle_joint
+    reset_env = False
+    if keys[pygame.K_r] and not process_common_input.r_pressed:
+        reset_env = True
+        process_common_input.r_pressed = True
+    elif not keys[pygame.K_r]:
+        process_common_input.r_pressed = False
+
+    return switch, save_poses, toggle_joint, reset_env
 
 
 def obs_to_state_dict(obs, scenario):
@@ -405,7 +505,7 @@ class Args:
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
 
     ## Control parameters
     step_size: float = 0.01
@@ -416,7 +516,7 @@ class Args:
     enable_gravity: bool = True  # Whether to enable gravity for objects and robots
 
     ## Viser visualization
-    enable_viser: bool = True
+    enable_viser: bool = False
     viser_port: int = 8080
 
     ## Display
@@ -460,6 +560,7 @@ if __name__ == "__main__":
         renderer=args.renderer,
         num_envs=args.num_envs,
         headless=args.headless,
+        decimation=2,
     )
 
     # Configure gravity for all objects and robots based on args
@@ -537,14 +638,20 @@ if __name__ == "__main__":
         if not running or pygame.key.get_pressed()[pygame.K_ESCAPE]:
             break
 
-        # Process common input (TAB, J, C)
-        switch, save_poses_flag, toggle_joint = process_common_input()
+        # Process common input (TAB, J, C, R)
+        switch, save_poses_flag, toggle_joint, reset_env = process_common_input()
 
         if switch:
             keyboard_client.switch_entity()
 
         if toggle_joint:
             keyboard_client.toggle_joint_mode()
+
+        if reset_env:
+            log.info("Resetting environment to initial states (R key)")
+            obs, extras = env.reset()
+            step = 0
+            continue
 
         # Save poses when C is pressed
         if save_poses_flag:

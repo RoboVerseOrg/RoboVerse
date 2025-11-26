@@ -10,9 +10,13 @@ try:
 except ImportError:
     pass
 
+# CRITICAL: Setup root path BEFORE importing any local packages
+import rootutils
+rootutils.setup_root(__file__, pythonpath=True)
+
+# Now import local packages after root is set up
 import imageio as iio
 import numpy as np
-import rootutils
 import torch
 import tyro
 from loguru import logger as log
@@ -30,7 +34,6 @@ from metasim.randomization import (
     SceneRandomizer,
 )
 from metasim.randomization.presets.scene_presets import ScenePresets
-from metasim.randomization.scene_randomizer import SceneMaterialPoolCfg
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
 from metasim.scenario.render import RenderCfg
@@ -38,8 +41,6 @@ from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
 from metasim.utils.state import TensorState
-
-rootutils.setup_root(__file__, pythonpath=True)
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -50,7 +51,7 @@ class Args:
     """Replay trajectory for a given task."""
 
     task: str = "put_banana"
-    robot: str = "franka"
+    robot: str = "vega"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
@@ -77,9 +78,9 @@ class Args:
     """Height of walls (in meters)"""
     table_height: float = 0.7
     """Height of table surface from ground (in meters)"""
-    randomize_materials: bool = True
+    randomize_materials: bool = False
     """Enable material randomization for scene elements"""
-    randomize_lights: bool = True
+    randomize_lights: bool = False
     """Enable light randomization (intensity, color, position)"""
     base_seed: int = 1
     """Base random seed for scene randomization"""
@@ -153,30 +154,16 @@ class SceneRandomizationManager:
             log.error(f"Unknown scene type: {args.scene_type}")
             return
 
-        # Override material settings
+        # Override material settings if not randomizing
+        # Note: Materials are set via default_material in ManualGeometryCfg elements
         if not args.randomize_materials:
             log.info("\nUsing fixed materials")
-            scene_cfg.floor_materials = SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl"],
-                selection_strategy="sequential",
-            )
-            scene_cfg.wall_materials = SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Masonry/Stucco.mdl"],
-                selection_strategy="sequential",
-            )
-            scene_cfg.ceiling_materials = SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Architecture/Ceiling_Tiles.mdl"],
-                selection_strategy="sequential",
-            )
-            scene_cfg.table_materials = SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Wood/Plywood.mdl"],
-                selection_strategy="sequential",
-            )
+            # Materials are already set in ScenePresets via default_material
+            # No need to override as they're already configured
         else:
             log.info("\nUsing randomized materials:")
-            log.info("  Floor: ~150 materials")
-            log.info("  Walls: ~150 materials")
-            log.info("  Ceiling: ~50 materials")
+            log.info("  Materials will be randomized via MaterialRandomizer")
+            log.info("  (Note: Material randomization requires separate MaterialRandomizer setup)")
 
         # Create scene randomizer (will be called multiple times with different seeds)
         self.scene_cfg = scene_cfg
@@ -475,7 +462,7 @@ def main():
     )
     num_envs: int = scenario.num_envs
 
-    device = torch.device("cpu")
+    device = torch.device("cuda")
     t0 = time.time()
     env = task_cls(scenario, device=device)
     log.trace(f"Time to launch: {time.time() - t0:.2f}s")
@@ -488,7 +475,7 @@ def main():
     # ========================================
     # Step 3: Load trajectory (ONCE!)
     # ========================================
-    traj_filepath = "/home/priosin/murphy/ui/RoboVerse/teleop_trajs/put_banana_franka_20251029_220717_v2.pkl"
+    traj_filepath = "/home/balen/murphy/isaaclab_rv/2/RoboVerse/eval_trajs/trackgrasphandrelative_vega_eval_20251126_133029_v2.pkl"
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
     t0 = time.time()
     init_states, all_actions, all_states = get_traj(traj_filepath, scenario.robots[0], env.handler)

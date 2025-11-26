@@ -6,7 +6,7 @@
 # -------------------------------------------------------------------------------
 sim: "isaacsim"
 robots: ["vega"]
-task: "approachgrasphand"
+task: "trackgrasphandrelative"
 decimation: 4
 train_or_eval: "train"
 headless: True
@@ -56,7 +56,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 600.0
+v_max: 1000.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.02

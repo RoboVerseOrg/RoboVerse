@@ -25,16 +25,82 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
-from metasim.utils.math import matrix_from_euler, quat_from_matrix, quat_mul
+from metasim.utils.math import matrix_from_euler, matrix_from_quat, quat_from_matrix, quat_inv, quat_mul
 from metasim.utils.setup_util import get_handler
 
 
-def save_poses_to_file(states, objects, robots, filename="saved_poses.py"):
+def save_poses_to_file(states, objects, robots, handler=None, filename="saved_poses.py"):
     """Save current poses of all objects and robots to a Python file"""
     import datetime
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = filename.replace(".py", f"_{timestamp}.py")
+
+    # Try to get hand position and whale relative pose if handler is available
+    hand_pos = None
+    hand_whale_relative_pos = None
+    hand_whale_relative_rot = None
+    
+    if handler is not None:
+        try:
+            # Get tensor state to access body_state
+            tensor_states = handler.get_states(mode="tensor")
+            
+            # Find vega robot
+            vega_robot = None
+            for robot in robots:
+                if robot.name == "vega" and robot.name in tensor_states.robots:
+                    vega_robot = robot
+                    break
+            
+            # Find whale/banana object
+            whale_obj = None
+            for obj in objects:
+                if obj.name in ["banana", "whale"] and obj.name in tensor_states.objects:
+                    whale_obj = obj
+                    break
+            
+            if vega_robot and whale_obj:
+                # Get hand position from L_arm_l7 link
+                rs = tensor_states.robots[vega_robot.name]
+                device = rs.joint_pos.device if isinstance(rs.joint_pos, torch.Tensor) else torch.device("cpu")
+                
+                body_state = rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state, device=device).float()
+                
+                name_to_index = {name: idx for idx, name in enumerate(rs.body_names)}
+                if "L_arm_l7" in name_to_index:
+                    link_index = name_to_index["L_arm_l7"]
+                    link_pos = body_state[0, link_index, 0:3]  # First env
+                    link_quat = body_state[0, link_index, 3:7]
+                    
+                    # Offset from L_arm_l7 (provided values, meters, expressed in local frame)
+                    hand_offset_local = torch.tensor([0.25864, -0.035, -0.03513], device=device)
+                    
+                    link_rot = matrix_from_quat(link_quat.unsqueeze(0))
+                    hand_pos_tensor = link_pos + (link_rot @ hand_offset_local.unsqueeze(-1)).squeeze(-1)
+                    hand_pos = hand_pos_tensor.cpu().numpy()
+                    
+                    # Get whale position and rotation
+                    whale_state = tensor_states.objects[whale_obj.name]
+                    whale_pos = whale_state.root_state[0, 0:3]  # Keep on device
+                    whale_quat = whale_state.root_state[0, 3:7].to(device)  # Keep on device
+                    
+                    # Calculate relative position in object (whale) frame
+                    # First get the difference in world frame
+                    hand_whale_diff_world = hand_pos_tensor - whale_pos
+                    # Then transform to object frame: R_whale^T @ diff_world
+                    whale_rot = matrix_from_quat(whale_quat.unsqueeze(0))  # (1, 3, 3)
+                    hand_whale_relative_pos_tensor = (whale_rot.transpose(-2, -1) @ hand_whale_diff_world.unsqueeze(-1)).squeeze()  # (3,)
+                    hand_whale_relative_pos = hand_whale_relative_pos_tensor.cpu().numpy()
+                    
+                    # Calculate relative rotation (hand_quat * inverse(whale_quat))
+                    hand_quat_tensor = link_quat.unsqueeze(0)  # Already on device
+                    whale_quat_tensor = whale_quat.unsqueeze(0)
+                    whale_quat_inv = quat_inv(whale_quat_tensor)
+                    relative_quat = quat_mul(hand_quat_tensor, whale_quat_inv)[0]
+                    hand_whale_relative_rot = relative_quat.cpu().numpy()
+        except Exception as e:
+            log.warning(f"Failed to compute hand position and relative pose: {e}")
 
     with open(filename, "w") as f:
         f.write('"""Saved poses from keyboard control"""\n\n')
@@ -78,6 +144,22 @@ def save_poses_to_file(states, objects, robots, filename="saved_poses.py"):
                 f.write("        },\n")
 
         f.write("    },\n")
+        
+        # Save hand position and relative pose if available
+        if hand_pos is not None and hand_whale_relative_pos is not None:
+            f.write('    "hand_info": {\n')
+            f.write('        "hand_position": torch.tensor([{:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_pos[0], hand_pos[1], hand_pos[2]
+            ))
+            f.write('        "hand_whale_relative_pos": torch.tensor([{:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_whale_relative_pos[0], hand_whale_relative_pos[1], hand_whale_relative_pos[2]
+            ))
+            f.write('        "hand_whale_relative_rot": torch.tensor([{:.6f}, {:.6f}, {:.6f}, {:.6f}]),\n'.format(
+                hand_whale_relative_rot[0], hand_whale_relative_rot[1], 
+                hand_whale_relative_rot[2], hand_whale_relative_rot[3]
+            ))
+            f.write("    },\n")
+        
         f.write("}\n")
 
     return filename
@@ -141,6 +223,7 @@ class ObjectKeyboardClient:
             "     TAB   - Switch entity",
             "     j     - Toggle joint mode",
             "     c     - Save poses",
+            "     r     - Reset to initial state",
             "     ESC   - Quit",
         ]
 
@@ -310,13 +393,14 @@ def process_input(dpos: float = 0.01, drot: float = 0.05, dangle: float = 0.02, 
 
 
 def process_common_input():
-    """Process common input (TAB, J, C, ESC) - separate function"""
+    """Process common input (TAB, J, C, R, ESC) - separate function"""
     keys = pygame.key.get_pressed()
 
     if not hasattr(process_common_input, "tab_pressed"):
         process_common_input.tab_pressed = False
         process_common_input.c_pressed = False
         process_common_input.j_pressed = False
+        process_common_input.r_pressed = False
 
     switch = False
     if keys[pygame.K_TAB] and not process_common_input.tab_pressed:
@@ -339,7 +423,14 @@ def process_common_input():
     elif not keys[pygame.K_j]:
         process_common_input.j_pressed = False
 
-    return switch, save_poses, toggle_joint
+    reset_scene = False
+    if keys[pygame.K_r] and not process_common_input.r_pressed:
+        reset_scene = True
+        process_common_input.r_pressed = True
+    elif not keys[pygame.K_r]:
+        process_common_input.r_pressed = False
+
+    return switch, save_poses, toggle_joint, reset_scene
 
 
 if __name__ == "__main__":
@@ -563,8 +654,8 @@ if __name__ == "__main__":
         if not running or (keyboard_client.update() and pygame.key.get_pressed()[pygame.K_ESCAPE]):
             break
 
-        # Process common input (TAB, J, C)
-        switch, save_poses, toggle_joint = process_common_input()
+        # Process common input (TAB, J, C, R)
+        switch, save_poses, toggle_joint, reset_scene = process_common_input()
 
         if switch:
             keyboard_client.switch_entity()
@@ -572,11 +663,19 @@ if __name__ == "__main__":
         if toggle_joint:
             keyboard_client.toggle_joint_mode()
 
+        if reset_scene:
+            log.info("Resetting scene to initial state (R key)")
+            handler.set_states(init_states * scenario.num_envs)
+            handler.simulate()
+            handler.refresh_render()
+            step = 0
+            continue
+
         # Save poses when C is pressed
         if save_poses:
             current_states = handler.get_states(mode="dict")
             saved_file = save_poses_to_file(
-                current_states, scenario.objects, scenario.robots, filename="get_started/output/saved_poses.py"
+                current_states, scenario.objects, scenario.robots, handler=handler, filename="get_started/output/saved_poses.py"
             )
             log.info(f"Poses saved to: {saved_file}")
 
