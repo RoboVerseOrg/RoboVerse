@@ -349,10 +349,12 @@ def replay_single_variant(env, scenario, all_states, variant_id: int, args) -> s
     total = len(episode_states)
     num_envs = env.scenario.num_envs
 
-    log.info(f"Replaying {total} states from episode 0")
+    # Limit to maximum 70 frames
+    max_frames = min(60, total)
+    log.info(f"Replaying {max_frames} states from episode 0 (total available: {total})")
 
     # Replay states
-    for step in range(total):
+    for step in range(max_frames):
         log.debug(f"[STATE] Step {step}/{total - 1}")
 
         # Get state dict for this step
@@ -398,7 +400,7 @@ def main():
     # Step 1: Create environment (ONCE!)
     # ========================================
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(pos=(1.5, -1.5, 2.0), look_at=(0.0, 0.0, 0.0), width=2048, height=2048)
+    camera = PinholeCameraCfg(pos=(1.1, -1.5, 2.0), look_at=(0.0, 0.0, 0.8), width=2048, height=2048)
 
     # Setup lighting for enclosed scene
     lights = None

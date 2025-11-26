@@ -12,8 +12,8 @@ def Xform "Sphere" (
 {
     def Sphere "visual_sphere"
     {
-        double radius = 0.05
-        color3f[] primvars:displayColor = [(1.0, 0.0, 0.0)]
+        double radius = 0.20
+        color3f[] primvars:displayColor = [(0.5, 0.5, 1.0)]
         double3 xformOp:translate = (0, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
