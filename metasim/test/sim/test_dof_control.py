@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
 import rootutils
 import torch
@@ -197,7 +199,7 @@ def test_dof_targets_gripper_control(handler):
         handler.simulate()
 
     state_open = handler.get_states(mode="dict")
-    finger1_open = state_open[0]["robots"]["franka"]["dof_pos"]["panda_finger_joint1"]
+    finger1_open = deepcopy(state_open[0]["robots"]["franka"]["dof_pos"]["panda_finger_joint1"])
 
     # Close gripper
     close_target = open_target.copy()

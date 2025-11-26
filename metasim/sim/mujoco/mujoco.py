@@ -433,6 +433,16 @@ class MujocoHandler(BaseSimHandler):
                 self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
 
             obj_attached = mjcf_model.attach(obj_mjcf)
+
+            # Apply default position and orientation to the object's root body,
+            # matching the behavior of other backends (IsaacGym/IsaacSim/PyBullet).
+            if hasattr(obj, "default_position") and obj.default_position is not None:
+                obj_attached.pos = list(obj.default_position)
+            if hasattr(obj, "default_orientation") and obj.default_orientation is not None:
+                # MuJoCo expects quaternions in (w, x, y, z) order, which matches BaseObjCfg.
+                qw, qx, qy, qz = obj.default_orientation
+                obj_attached.quat = [qw, qx, qy, qz]
+
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")
             self.object_body_names.append(obj_attached.full_identifier)
