@@ -182,3 +182,9 @@ register_shared_suite("metasim.test.sim.test_state_consistency", get_state_consi
 register_shared_suite("metasim.test.sim.test_gravity", get_gravity_scenario)
 register_shared_suite("metasim.test.sim.test_init_pose", get_init_pose_scenario)
 register_shared_suite("metasim.test.sim.test_kinemetics", get_kinematics_scenario)
+
+# Register new test suites (reuse existing scenarios that match requirements)
+register_shared_suite("metasim.test.sim.test_handler_lifecycle", get_init_pose_scenario)
+register_shared_suite("metasim.test.sim.test_parallel_handler", get_init_pose_scenario)
+register_shared_suite("metasim.test.sim.test_state_modes", get_init_pose_scenario)
+register_shared_suite("metasim.test.sim.test_dof_control", get_init_pose_scenario)
