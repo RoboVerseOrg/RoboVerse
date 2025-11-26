@@ -31,20 +31,18 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
     """
 
     GRASP_DISTANCE_THRESHOLD = 0.04  # Distance threshold for grasp check and hand closing
-    GRASP_HISTORY_WINDOW = 5  # Number of frames to check for stable grasp
+    GRASP_HISTORY_WINDOW = 10  # Number of frames to check for stable grasp
 
-    # Shoulder lift disabled for debugging
-    SHOULDER_INITIAL_POS = 0.0
-    SHOULDER_LIFT_OFFSET = 0.0
-    SHOULDER_LIFT_KP = 0.0
-    SHOULDER_MAX_DELTA = 0.0
+    # Shoulder lift parameters (L_arm_j1)
+    SHOULDER_LIFT_OFFSET = -1.0  # Lift shoulder joint down (negative = lift up for L_arm_j1)
+    SHOULDER_LIFT_KP = 0.2  # Proportional gain for shoulder lift control
+    SHOULDER_MAX_DELTA = 0.3  # Maximum change per step
     HAND_MARKER_NAME = "hand_debug_marker"
 
     DEFAULT_CONFIG_SIMPLE = deepcopy(TrajectoryTrackingTaskBase.DEFAULT_CONFIG)
     DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"].update({
         "hand_approach": 0.5,
-        "grasp_reward": 4.0,
-        "waypoint_reward": 3.0,
+        "grasp_reward": 20.0,
     })
     DEFAULT_CONFIG_SIMPLE["grasp_config"] = {
         "grasp_check_distance": GRASP_DISTANCE_THRESHOLD,
@@ -152,7 +150,7 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         ),
         decimation=4,
     )
-    max_episode_steps = 200
+    max_episode_steps = 250
 
     def __init__(self, scenario, device=None):
         # Placeholders needed during super().__init__ (reset may be called there)
@@ -163,6 +161,7 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         self._initial_box_height = None
         self.shoulder_joint_name = "L_arm_j1"
         self.shoulder_joint_index = None
+        self.initial_joint_pos = None
 
         super().__init__(scenario, device)
 
@@ -170,12 +169,10 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         self.reward_functions = [
             self._reward_hand_approach,
             self._reward_grasp,
-            self._reward_waypoint_proximity,
         ]
         self.reward_weights = [
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["hand_approach"],
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["grasp_reward"],
-            self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["waypoint_reward"],
         ]
 
         # Get config values
@@ -239,6 +236,11 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         self._grasp_notified[env_ids_tensor] = False
         self._distance_history[env_ids_tensor] = float("inf")
 
+        # Store initial joint positions if not already stored
+        if self.initial_joint_pos is None:
+            states = self.handler.get_states(mode="tensor")
+            self.initial_joint_pos = states.robots[self.robot_name].joint_pos.clone()
+
         return obs, info
 
     def step(self, actions):
@@ -252,6 +254,10 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         # Simple hand control: keep hand open (debug mode)
         real_actions, hand_pos, hand_box_dist = self._apply_simple_hand_control(real_actions, current_states)
         self._update_hand_marker(current_states, hand_pos)
+
+        # Apply shoulder lift control if stable grasp
+        if self.stable_grasp is not None and self.stable_grasp.any() and self.shoulder_joint_index is not None:
+            real_actions = self._apply_shoulder_lift_control(real_actions, current_states)
 
         # Bypass TrajectoryTrackingTaskBase.step to avoid its hand control logic
         # Call RLTaskEnv.step directly
@@ -304,6 +310,36 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
 
         return actions, hand_pos, hand_box_dist
 
+    def _apply_shoulder_lift_control(self, actions, current_states):
+        """Apply shoulder lift control when stable grasp."""
+        if self.initial_joint_pos is None:
+            self.initial_joint_pos = current_states.robots[self.robot_name].joint_pos.clone()
+
+        joint_pos = current_states.robots[self.robot_name].joint_pos
+        shoulder_idx = self.shoulder_joint_index
+
+        # Target position: initial position + lift offset (negative offset lifts up for L_arm_j1)
+        target_lift = self.initial_joint_pos[:, shoulder_idx] + self.SHOULDER_LIFT_OFFSET
+        joint_error = target_lift - joint_pos[:, shoulder_idx]
+
+        # Apply proportional control with max delta limit
+        desired = joint_pos[:, shoulder_idx] + self.SHOULDER_LIFT_KP * joint_error
+        delta = torch.clamp(
+            desired - joint_pos[:, shoulder_idx],
+            -self.SHOULDER_MAX_DELTA,
+            self.SHOULDER_MAX_DELTA,
+        )
+        shoulder_value = torch.clamp(
+            joint_pos[:, shoulder_idx] + delta,
+            self._action_low[shoulder_idx],
+            self._action_high[shoulder_idx],
+        )
+
+        # Apply lift control only to environments where stable grasp
+        actions[self.stable_grasp, shoulder_idx] = shoulder_value[self.stable_grasp]
+
+        return actions
+
     def _compute_grasp_state(self, states):
         """Compute if object is grasped (requires 5 stable frames based on distance only)."""
         box_pos = states.objects["object"].root_state[:, 0:3]
@@ -351,24 +387,12 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
         return approach_reward_far + approach_reward_near
 
     def _reward_grasp(self, env_states) -> torch.Tensor:
-        """Reward based on current hand proximity only (no stability requirement)."""
-        box_pos = env_states.objects["object"].root_state[:, 0:3]
-        hand_pos = self._get_hand_position(env_states)
-        hand_box_dist = torch.norm(hand_pos - box_pos, dim=-1)
-        return (hand_box_dist < self.hand_close_distance).float()
-
-    def _reward_waypoint_proximity(self, env_states) -> torch.Tensor:
-        """Waypoint reward computed only when stable grasp."""
-        if not hasattr(self, "waypoint_positions") or self.waypoint_positions is None or self.stable_grasp is None:
+        """Reward only when stable grasp."""
+        if self.stable_grasp is None:
             return torch.zeros(self.num_envs, device=self.device)
+        return self.stable_grasp.float()
 
-        target_pos = self.waypoint_positions[0]
-        box_pos = env_states.objects["object"].root_state[:, 0:3]
-        distances = torch.norm(box_pos - target_pos, dim=-1)
 
-        clipped = distances.clamp(0.0, 0.5)
-        normalized = 1 - (clipped / 0.5)
-        return normalized * self.stable_grasp.float()
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""
@@ -433,7 +457,7 @@ class ApproachGraspHand(TrajectoryTrackingTaskBase):
                             "L_arm_j2": 0.0,
                             "L_arm_j3": 0.0,
                             "L_arm_j4": 0.0,
-                            "L_arm_j5": 0.0,
+                            "L_arm_j5": 1.5,
                             "L_arm_j6": 0.0,
                             "L_arm_j7": 0.0,
                             # Right arm - neutral pose

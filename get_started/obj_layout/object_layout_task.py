@@ -396,12 +396,12 @@ def obs_to_state_dict(obs, scenario):
 @configclass
 class Args:
     task: str = "put_banana"
-    robot: str = "franka"
+    robot: str = "vega"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
     ## Simulator
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     num_envs: int = 1
@@ -413,7 +413,7 @@ class Args:
     angle_size: float = 0.02
 
     ## Physics settings
-    enable_gravity: bool = False  # Whether to enable gravity for objects and robots
+    enable_gravity: bool = True  # Whether to enable gravity for objects and robots
 
     ## Viser visualization
     enable_viser: bool = True

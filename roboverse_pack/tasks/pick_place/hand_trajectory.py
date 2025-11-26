@@ -24,7 +24,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
     """
 
     DEFAULT_CONFIG = {
-        "action_scale": 0.03,
+        "action_scale": 0.01,
         "reward_config": {
             "scales": {
                 "hand_approach": 2.0,
@@ -464,7 +464,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         link_quat = body_state[:, link_index, 3:7]
 
         # Offset from L_arm_l7 (provided values, meters, expressed in local frame)
-        hand_offset_local = torch.tensor([0.21864, -0.035, -0.02213], device=device).unsqueeze(0)
+        hand_offset_local = torch.tensor([0.25864, -0.035, -0.03513], device=device).unsqueeze(0)
 
         link_rot = matrix_from_quat(link_quat)
         hand_pos = link_pos + torch.bmm(
