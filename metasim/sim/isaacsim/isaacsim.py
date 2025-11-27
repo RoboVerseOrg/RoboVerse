@@ -177,8 +177,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_lights()
         self._load_render_settings()
-        for callback in self._callbacks:
-            callback(self)
+        if self.scenario.callback is not None:
+            self.scenario.callback(self)
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
