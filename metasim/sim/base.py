@@ -47,7 +47,7 @@ class BaseSimHandler(ABC):
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
         self._state_cache_expire = True
         self._states: TensorState | list[DictEnvState] = None
-        self._callback = scenario.callback
+        self._callbacks = scenario.callbacks
 
     def launch(self) -> None:
         """Launch the simulation."""

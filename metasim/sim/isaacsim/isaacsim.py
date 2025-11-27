@@ -177,7 +177,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_lights()
         self._load_render_settings()
-        self._callback(self)
+        for callback in self._callbacks:
+            callback(self)
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
@@ -623,6 +624,7 @@ class IsaacsimHandler(BaseSimHandler):
                 prim_path=prim_path,
                 spawn=sim_utils.UsdFileCfg(
                     usd_path=obj.usd_path,
+                    activate_contact_sensors=True,
                     scale=obj.scale,
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
                     articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
@@ -659,6 +661,7 @@ class IsaacsimHandler(BaseSimHandler):
                     spawn=sim_utils.MeshCuboidCfg(
                         size=obj.size,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                        activate_contact_sensors=True,
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
@@ -679,6 +682,7 @@ class IsaacsimHandler(BaseSimHandler):
                     spawn=sim_utils.MeshSphereCfg(
                         radius=obj.radius,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                        activate_contact_sensors=True,
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
@@ -696,6 +700,7 @@ class IsaacsimHandler(BaseSimHandler):
                         radius=obj.radius,
                         height=obj.height,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                        activate_contact_sensors=True,
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
@@ -729,6 +734,7 @@ class IsaacsimHandler(BaseSimHandler):
                 collision_props=collision_props,
                 scale=obj.scale,
                 articulation_props=sim_utils.ArticulationRootPropertiesCfg(articulation_enabled=False),
+                activate_contact_sensors=True,
             )
             if isinstance(obj, RigidObjCfg):
                 self.scene.rigid_objects[obj.name] = RigidObject(
