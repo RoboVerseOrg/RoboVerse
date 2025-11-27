@@ -1,35 +1,78 @@
-### How to write and run tests
+# Testing Infrastructure
 
-#### Test Discovery
-Pytest **(by default)** automatically discovers and runs **test functions** that meet ALL of the following criteria:
+## Overview
 
-* Function name starts with `test_` (e.g., `test_contact_forces_mujoco()`) OR method name starts with `test_` in classes named `Test*` (that do not define `__init__`)
-* Located in files whose names start with `test_` or end with `_test.py` (e.g., `test_site.py`, `test_contact_force.py`)
-* Within the directories pytest is invoked on (e.g., the current directory or paths given on the command line) and their subdirectories
+RoboVerse provides a comprehensive testing infrastructure built on pytest that enables efficient, cross-backend testing of simulation functionality. The system is designed around handler reuse and scenario sharing, dramatically reducing test execution time while maintaining full coverage across all supported simulator backends (MuJoCo, MJX, IsaacGym, IsaacSim).
 
-**Note**: Not all functions in test files are run—only those whose names start with `test_`. Helper functions like `_pick_robot_site_name()` or `contact_forces_mujoco_query()` are not executed as tests by pytest.
+Key features of the testing system include:
 
+- **Shared Handler Architecture**: Handler instances are reused across multiple tests with the same configuration, avoiding expensive initialization overhead
+- **Multi-Backend Parametrization**: Tests automatically run across specified simulator backends using pytest markers
+- **Scenario-Based Organization**: Test suites are organized around shared scenarios, maximizing handler reuse
+- **HandlerContext Integration**: Lifecycle management ensures consistent behavior with production code and proper cleanup
 
-#### Markers and Fixtures
-- **Markers**: Use `@pytest.mark.isaacsim`, `isaacgym`, `mujoco`, `mjx`, or `@pytest.mark.sim("sim1","sim2")` to declare which backends a test needs. Use `@pytest.mark.general` for tests that need no simulator/handler.
-- **Fixtures**:
-  - `handler`: for simulator-backed tests. Provides a shared handler instance that is reused across tests with the same `(sim, num_envs)` configuration.
-  - `isaacsim_app`: session-scoped fixture that creates the IsaacSim AppLauncher when needed. Automatically provided by the central conftest.py.
-  - **Important**: Tests marked `@pytest.mark.general` should **NOT** request `handler`. General tests are for pure unit tests without simulators.
-- **Param selection**: Marker declarations + `get_test_parameters` determine which `(sim,num_envs)` combos get applied. `-k` still filters collected tests by substring after parametrization.
+The testing infrastructure covers:
+- Core simulator functionality (DOF control, gravity, kinematics, state management)
+- Randomization systems (camera, light, material, object, scene)
+- Query systems (contact forces, site positions)
+- Utility modules (camera, dict, gaussian splatting, math, string, tensor)
+- Robot configuration and scenario setup
 
-#### Registering Your Test Suite with Shared Handler
+## Test Discovery
 
-The `handler` fixture provides **significant performance benefits** by reusing simulator instances across multiple tests. Instead of creating and destroying a handler for every test, it creates one handler per `(sim, num_envs)` combination and reuses it for all tests in a session that share the same scenario configuration.
+Pytest automatically discovers and runs test functions that meet the following criteria:
+
+- **Function naming**: Name starts with `test_` (e.g., `test_contact_forces_mujoco()`) OR method name starts with `test_` in classes named `Test*` (without `__init__`)
+- **File naming**: Located in files whose names start with `test_` or end with `_test.py` (e.g., `test_site.py`, `test_contact_force.py`)
+- **Directory scope**: Within the directories pytest is invoked on and their subdirectories
+
+> **Note**: Helper functions like `_pick_robot_site_name()` or `contact_forces_mujoco_query()` are not executed as tests by pytest since they don't start with `test_`.
+
+## Markers and Fixtures
+
+### Test Markers
+
+Markers declare which simulator backends a test requires:
+
+- `@pytest.mark.mujoco`: Test runs on MuJoCo backend
+- `@pytest.mark.mjx`: Test runs on MuJoCo MJX backend
+- `@pytest.mark.isaacgym`: Test runs on IsaacGym backend
+- `@pytest.mark.isaacsim`: Test runs on IsaacSim backend
+- `@pytest.mark.sim("sim1", "sim2")`: Test runs on multiple specified backends
+- `@pytest.mark.general`: Test requires no simulator/handler (pure unit test)
+
+### Core Fixtures
+
+**`handler`**: Provides a shared handler instance for simulator-backed tests. The handler is reused across all tests with the same `(sim, num_envs)` configuration, providing significant performance benefits.
+
+**`isaacsim_app`**: Session-scoped fixture that creates the IsaacSim AppLauncher when needed. Automatically provided by the central conftest.
+
+> **Important**: Tests marked `@pytest.mark.general` should NOT request the `handler` fixture. General tests are for pure unit tests without simulators.
+
+### Parametrization
+
+Marker declarations combined with `get_test_parameters()` determine which `(sim, num_envs)` combinations get applied to each test. The `-k` flag filters collected tests by substring after parametrization.
+
+## Shared Handler Architecture
+
+### Performance Benefits
+
+The `handler` fixture provides significant performance benefits by reusing simulator instances across multiple tests. Instead of creating and destroying a handler for every test, it creates one handler per `(sim, num_envs)` combination and reuses it for all tests in a session that share the same scenario configuration.
 
 **Implementation**: The test infrastructure uses `HandlerContext` from `metasim/sim/sim_context.py` to manage handler lifecycle. This ensures consistent behavior with production code and proper cleanup across all simulator backends. For IsaacSim specifically, `HandlerContext` keeps handlers alive between tests (only clearing the simulation context), which avoids expensive application restarts.
 
-**Best Practice: Group tests by scenario**
-- **Why**: Tests that share the same scenario (robot configuration, environment setup, etc.) can reuse the same handler instance, dramatically reducing test execution time.
-- **How**: Organize all tests that need the same scenario into a single directory (or file), then register one scenario builder for that entire directory using `register_shared_suite()`.
-- **Example**: The `queries/` test suite has tests for contact forces, site positions, etc. All these tests use the same robot and environment setup, so they all share one handler per `(sim, num_envs)` combo.
+### Best Practice: Group Tests by Scenario
 
-**Directory Structure Example:**
+**Why**: Tests that share the same scenario (robot configuration, environment setup, etc.) can reuse the same handler instance, dramatically reducing test execution time.
+
+**How**: Organize all tests that need the same scenario into a single directory (or file), then register one scenario builder for that entire directory using `register_shared_suite()`.
+
+**Example**: The `queries/` test suite has tests for contact forces, site positions, etc. All these tests use the same robot and environment setup, so they all share one handler per `(sim, num_envs)` combo.
+
+## Test Suite Organization
+
+### Directory Structure
+
 ```
 metasim/test/
 ├── conftest.py                    # Central shared handler machinery
@@ -52,19 +95,24 @@ metasim/test/
     ├── conftest.py               # Register TWO scenarios: walking + running
     ├── test_walking.py           # Tests using bipedal walking scenario
     ├── test_running.py           # Tests using quadruped running scenario
-    └── test_locomotion_general.py           # General tests (no handler - conftest has no effect)
+    └── test_locomotion_general.py # General tests (no handler - conftest has no effect)
 ```
 
 > **IMPORTANT: Every test directory MUST have an `__init__.py` file!**
 >
 > Without `__init__.py`, pytest treats the directory as a plain directory instead of a Python package. This causes test modules to have short names like `test_gripper` instead of `metasim.test.manipulation.test_gripper`, which breaks the `register_shared_suite()` prefix matching. If your tests fail with `AttributeError: 'SubRequest' object has no attribute 'param'`, check that all parent directories have `__init__.py` files.
 
-**Key Points**:
-- **Single scenario per suite**: `queries/` and `manipulation/` each register ONE scenario for all tests in that directory - maximizes handler reuse and minimizes startup overhead.
-- **Multiple scenarios in one suite**: `locomotion/` registers TWO scenarios because walking tests need a bipedal robot while running tests need a quadruped robot. Each scenario is registered with a different prefix matching the specific test file.
-- **General tests can coexist**: `locomotion/test_locomotion_general.py` contains tests marked `@pytest.mark.general` that don't request the `handler` fixture. The `conftest.py` registrations have no effect on these tests since they don't use the handler.
+### Key Design Principles
 
-**Example: Registering the `manipulation/` test suite**
+- **Single scenario per suite**: `queries/` and `manipulation/` each register ONE scenario for all tests in that directory - maximizes handler reuse and minimizes startup overhead
+- **Multiple scenarios in one suite**: `locomotion/` registers TWO scenarios because walking tests need a bipedal robot while running tests need a quadruped robot. Each scenario is registered with a different prefix matching the specific test file
+- **General tests can coexist**: `locomotion/test_locomotion_general.py` contains tests marked `@pytest.mark.general` that don't request the `handler` fixture. The `conftest.py` registrations have no effect on these tests since they don't use the handler
+
+## Registering Test Suites
+
+### Single Scenario Registration
+
+When all tests in a directory share the same scenario, register once for the entire directory.
 
 **In `metasim/test/manipulation/conftest.py`:**
 ```python
@@ -120,19 +168,17 @@ def test_grasp_cube(handler):
 ```
 
 **How it works:**
-1. The central [conftest.py](metasim/test/conftest.py) finds your registration by matching the `"metasim.test.manipulation"` prefix to all test modules in that directory
+1. The central conftest finds your registration by matching the `"metasim.test.manipulation"` prefix to all test modules in that directory
 2. When a test in your suite requests `handler`, pytest parametrizes it based on the test's markers (e.g., `@pytest.mark.mujoco`)
-3. Your `get_manipulation_scenario(sim, num_envs)` is called **once** to build the scenario for each `(sim, num_envs)` combination
-4. The handler is **reused** across all tests in `manipulation/` that have the same `(sim, num_envs)` - dramatically faster than creating a new handler for each test
+3. Your `get_manipulation_scenario(sim, num_envs)` is called once to build the scenario for each `(sim, num_envs)` combination
+4. The handler is reused across all tests in `manipulation/` that have the same `(sim, num_envs)` - dramatically faster than creating a new handler for each test
 5. The handler instance is passed directly to your test function via the `handler` fixture
 
-**Important**: Do not request `handler` on `@pytest.mark.general` tests - those are for pure unit tests without simulators.
+> **Important**: Do not request `handler` on `@pytest.mark.general` tests - those are for pure unit tests without simulators.
 
----
+### Multiple Scenario Registration
 
-**Example: Registering multiple scenarios in `locomotion/` suite**
-
-When tests in the same directory need different robot configurations, register multiple scenarios with different prefixes:
+When tests in the same directory need different robot configurations, register multiple scenarios with different prefixes.
 
 **In `metasim/test/locomotion/conftest.py`:**
 ```python
@@ -200,9 +246,9 @@ def test_high_speed_stability(handler):
 
 The key difference: `test_walking.py` gets the bipedal scenario, `test_running.py` gets the quadruped scenario, because their full module paths match different registration prefixes.
 
----
+## General Tests (No Simulator)
 
-**Example: General tests (no simulator required)**
+Tests marked `@pytest.mark.general` are pure unit tests that don't require any simulator or handler.
 
 **In `metasim/test/locomotion/test_locomotion_general.py`:**
 ```python
@@ -236,12 +282,54 @@ def test_string_parsing():
     assert parse_robot_name("robot/link_1") == "robot"
 ```
 
-**Key points**:
-- Tests marked `@pytest.mark.general` should NEVER request the `handler` fixture. They're for testing pure Python logic, utilities, and classes without needing a simulator.
-- General tests can be placed in any subdirectory alongside simulator tests. The `conftest.py` scenario registrations have no effect on them since they don't use the `handler` fixture.
+**Key points:**
+- Tests marked `@pytest.mark.general` should NEVER request the `handler` fixture
+- They're for testing pure Python logic, utilities, and classes without needing a simulator
+- General tests can be placed in any subdirectory alongside simulator tests
+- The `conftest.py` scenario registrations have no effect on them since they don't use the `handler` fixture
 
-#### Examples
-- Run MuJoCo-only tests: `pytest <folder_or_file> -k mujoco`
-- Run isaacgym tests ensuring import order: `python metasim/test/isaacgym_entry.py <folder_or_file> -k isaacgym`
-- General tests (no sim): `pytest <folder_or_file> -k general`
+## Running Tests
 
+### Run All Tests
+```bash
+pytest metasim/test/
+```
+
+### Run Specific Test Categories
+```bash
+# Simulator tests
+pytest metasim/test/sim/
+
+# Randomization tests
+pytest metasim/test/randomization/
+
+# Query tests
+pytest metasim/test/queries/
+
+# Utility tests
+pytest metasim/test/utils/
+```
+
+### Run Tests for Specific Backend
+```bash
+# MuJoCo only
+pytest metasim/test/ -k mujoco
+
+# IsaacGym (use entry script for proper import order)
+python metasim/test/isaacgym_entry.py metasim/test/ -k isaacgym
+
+# IsaacSim only
+pytest metasim/test/ -k isaacsim
+
+# General tests (no simulator)
+pytest metasim/test/ -k general
+```
+
+### Run Specific Test File or Function
+```bash
+# Single file
+pytest metasim/test/sim/test_gravity.py
+
+# Single function
+pytest metasim/test/sim/test_gravity.py::test_gravity_mujoco
+```

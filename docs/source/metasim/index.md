@@ -42,6 +42,7 @@ concept/handler
 concept/task
 concept/get_extras
 concept/randomization
+concept/autotest
 <!-- user_guide/collect_demo_tutorial -->
 <!-- user_guide/teleoperate_demo -->
 <!-- user_guide/real2sim -->
