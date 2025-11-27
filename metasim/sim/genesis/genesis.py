@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import math
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import genesis as gs
 import numpy as np
 import torch
-from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
-from genesis.vis.camera import Camera
 from loguru import logger as log
+
+if TYPE_CHECKING:
+    from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
+    from genesis.vis.camera import Camera
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import (
@@ -136,6 +140,7 @@ class GenesisHandler(BaseSimHandler):
                 material=gs.materials.Rigid(gravity_compensation=1 if not self.robot.enabled_gravity else 0),
             )
             self.object_inst_dict[self.robot.name] = self.robot_inst
+            self._sanitize_joint_dofs(self.robot_inst)
 
         ## Add objects
         for obj in self.scenario.objects:
@@ -175,6 +180,7 @@ class GenesisHandler(BaseSimHandler):
             else:
                 raise NotImplementedError(f"Object type {type(obj)} not supported")
             self.object_inst_dict[obj.name] = obj_inst
+            self._sanitize_joint_dofs(obj_inst)
 
         ## Add cameras
         for camera in self.cameras:
@@ -569,6 +575,31 @@ class GenesisHandler(BaseSimHandler):
         self.scene_inst = None
         self.object_inst_dict = {}
         self.camera_inst_dict = {}
+
+    @staticmethod
+    def _sanitize_dof_array(values: np.ndarray | list | tuple | None, default: float = 0.0) -> np.ndarray | None:
+        """Ensure DOF parameter arrays contain numeric values so Genesis solver can cast to float32."""
+        if values is None:
+            return None
+        arr_obj = np.array(values, dtype=object)
+        sanitized = []
+        for item in arr_obj.flatten():
+            if item is None or (isinstance(item, float) and math.isnan(item)):
+                sanitized.append(default)
+            else:
+                sanitized.append(float(item))
+        return np.array(sanitized, dtype=gs.np_float).reshape(arr_obj.shape)
+
+    def _sanitize_joint_dofs(self, entity: RigidEntity | None) -> None:
+        """Replace invalid joint DOF parameters that would break Genesis build."""
+        if entity is None or not hasattr(entity, "joints"):
+            return
+        for joint in getattr(entity, "joints", []):
+            if not hasattr(joint, "_dofs_frictionloss"):
+                continue
+            sanitized = self._sanitize_dof_array(joint.dofs_frictionloss, default=0.0)
+            if sanitized is not None:
+                joint._dofs_frictionloss = sanitized
 
     def _sanitize_urdf(self, urdf_path: str | None) -> str | None:
         """

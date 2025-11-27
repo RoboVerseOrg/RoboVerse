@@ -149,8 +149,20 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 
-            for i in env_ids:
-                self.remotes[i].send(("set_states", ([states[i]],)))
+            if len(states) == 1:
+                payload = states[0]
+                for env_idx in env_ids:
+                    self.remotes[env_idx].send(("set_states", ([payload],)))
+                return
+
+            if len(states) != len(env_ids):
+                raise ValueError(
+                    f"states nums {len(states)} and env_ids nums {len(env_ids)} are inconsistent, "
+                    "in parallel mode, it must be one-to-one or single broadcast"
+                )
+
+            for local_idx, env_idx in enumerate(env_ids):
+                self.remotes[env_idx].send(("set_states", ([states[local_idx]],)))
 
         def _get_states(self, env_ids: list[int] | None = None, **kwargs) -> TensorState:
             if env_ids is None:
