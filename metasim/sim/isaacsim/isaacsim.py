@@ -616,6 +616,10 @@ class IsaacsimHandler(BaseSimHandler):
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
                     articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
                 ),
+                init_state=ArticulationCfg.InitialStateCfg(
+                    pos=obj.default_position,
+                    rot=obj.default_orientation,
+                ),
                 actuators={},
             )
             self.scene.articulations[obj.name] = Articulation(articulation_cfg)
@@ -674,6 +678,10 @@ class IsaacsimHandler(BaseSimHandler):
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                     ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
+                    ),
                 )
             )
             return
@@ -690,6 +698,10 @@ class IsaacsimHandler(BaseSimHandler):
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
+                    ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
                     ),
                 )
             )
