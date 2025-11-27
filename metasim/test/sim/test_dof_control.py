@@ -12,6 +12,31 @@ from loguru import logger as log
 rootutils.setup_root(__file__, pythonpath=True)
 
 
+@pytest.fixture(autouse=True)
+def reset_robot_to_default(handler, request):
+    """Reset robot to default joint positions before each test.
+
+    This ensures test isolation when using session-scoped handler fixtures.
+    """
+    # Skip for general tests that don't need a handler
+    if isinstance(handler, dict) and handler.get("general"):
+        return
+
+    # Get the robot's default joint positions from the scenario config
+    robot = handler.scenario.robots[0]
+    default_positions = robot.default_joint_positions
+
+    # Build the state dict to reset the robot
+    reset_state = [{"robots": {robot.name: {"dof_pos": default_positions}}, "objects": {}}] * handler.scenario.num_envs
+
+    # Reset the robot state
+    handler.set_states(reset_state)
+
+    # Simulate a few steps to stabilize
+    for _ in range(10):
+        handler.simulate()
+
+
 @pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
 def test_set_dof_targets_basic(handler):
     """Test basic set_dof_targets functionality."""
