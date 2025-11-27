@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Callable, Literal
 
 from metasim.utils.configclass import configclass
 from metasim.utils.hf_util import FileDownloader
@@ -15,6 +15,12 @@ from .render import RenderCfg
 from .robot import RobotCfg
 from .scene import GSSceneCfg, SceneCfg
 from .simulator_params import SimParamCfg
+
+## Avoid circular import
+try:
+    from metasim.sim.base import BaseSimHandler
+except ImportError:
+    pass
 
 
 @configclass
@@ -51,6 +57,7 @@ class ScenarioCfg:
     env_spacing: float = 1.0
     decimation: int = 15
     gravity: tuple[float, float, float] = (0.0, 0.0, -9.81)
+    callback: Callable[[BaseSimHandler], None] = None
 
     def __post_init__(self) -> None:
         """Resolve strings & fetch assets; skip until `simulator` is set."""
