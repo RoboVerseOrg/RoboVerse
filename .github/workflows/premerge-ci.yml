@@ -201,11 +201,26 @@ jobs:
           fi
 
           # begin run test
+          GENERAL_TEST_EXIT_CODE=0
           MUJOCO_TEST_EXIT_CODE=0
           SAPIEN3_TEST_EXIT_CODE=0
           ISAACSIM_TEST_EXIT_CODE=0
           ISAACGYM_TEST_EXIT_CODE=0
           # run all test
+          # Run general tests (no simulator required)
+          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+          --name metasim-autotest \
+          --user 1000:1000 --privileged \
+          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+          -v /usr/local/cuda:/usr/local/cuda \
+          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+          "$IMAGE_URI" \
+          -c "bash -lc 'set -o pipefail; \
+          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k general -vv \
+          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-general.log'" \
+          || GENERAL_TEST_EXIT_CODE=$?
+
           docker run --rm --entrypoint bash --runtime=nvidia --network=host \
           --name metasim-autotest \
           --user 1000:1000 --privileged \
@@ -261,6 +276,7 @@ jobs:
           # TODO check if test_exit_code necessary
           touch ~/$SRC_DIR/test_exit_codes.txt
           {
+            echo \"GENERAL_TEST_EXIT_CODE=\$GENERAL_TEST_EXIT_CODE\"
             echo \"MUJOCO_TEST_EXIT_CODE=\$MUJOCO_TEST_EXIT_CODE\"
             echo \"SAPIEN3_TEST_EXIT_CODE=\$SAPIEN3_TEST_EXIT_CODE\"
             echo \"ISAACSIM_TEST_EXIT_CODE=\$ISAACSIM_TEST_EXIT_CODE\"
@@ -273,12 +289,23 @@ jobs:
 
         source $CODEBUILD_SRC_DIR/test_exit_codes.txt
 
+        echo "General test exit code: ${GENERAL_TEST_EXIT_CODE}"
         echo "Mujoco test exit code: ${MUJOCO_TEST_EXIT_CODE}"
         echo "Sapien3 test exit code: ${SAPIEN3_TEST_EXIT_CODE}"
         echo "IsaacSim test exit code: ${ISAACSIM_TEST_EXIT_CODE}"
         echo "IsaacGym test exit code: ${ISAACGYM_TEST_EXIT_CODE}"
 
         EXIT_CODE=0
+
+        if [ "${GENERAL_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+          echo "=== General tests failed. Fetching logs... ==="
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-general.log \
+            $CODEBUILD_SRC_DIR/ || true
+          echo "===== General pytest log ====="
+          cat $CODEBUILD_SRC_DIR/pytest-general.log || true
+          EXIT_CODE=1
+        fi
 
         if [ "${MUJOCO_TEST_EXIT_CODE:-0}" -ne 0 ]; then
           echo "=== Mujoco tests failed. Fetching logs... ==="

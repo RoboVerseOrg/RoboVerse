@@ -240,7 +240,7 @@ def test_parallel_envs_partial_env_ids(handler):
         pytest.skip("Test requires at least 2 parallel environments")
 
     ##FIXME: IsaacSim needs a simulate or scene update after set_states to flush changes, otherwise would cause issues in this test.
-    if handler.simulator == "isaacsim":
+    if handler.scenario.simulator == "isaacsim":
         handler.scene.update(dt=handler.physics_dt)
 
     # Get initial states

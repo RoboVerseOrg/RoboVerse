@@ -22,15 +22,21 @@ def reset_robot_to_default(handler, request):
     if isinstance(handler, dict) and handler.get("general"):
         return
 
+    # Get current state to preserve object positions
+    current_states = handler.get_states(mode="dict")
+
     # Get the robot's default joint positions from the scenario config
     robot = handler.scenario.robots[0]
     default_positions = robot.default_joint_positions
 
-    # Build the state dict to reset the robot
-    reset_state = [{"robots": {robot.name: {"dof_pos": default_positions}}, "objects": {}}] * handler.scenario.num_envs
+    # Update only the robot DOF positions, keeping everything else the same
+    reset_states = []
+    for state in current_states:
+        reset_state = {"objects": state.get("objects", {}), "robots": {robot.name: {"dof_pos": default_positions}}}
+        reset_states.append(reset_state)
 
     # Reset the robot state
-    handler.set_states(reset_state)
+    handler.set_states(reset_states)
 
     # Simulate a few steps to stabilize
     for _ in range(10):
