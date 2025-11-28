@@ -183,6 +183,7 @@ class MujocoHandler(BaseSimHandler):
             self.robot_body_names.extend(robot_body_names)
 
         self._init_torque_control()
+        self._apply_default_joint_positions()
 
         if not self.headless:
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
@@ -331,6 +332,21 @@ class MujocoHandler(BaseSimHandler):
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
 
+    def _apply_default_joint_positions(self) -> None:
+        """Set initial joint positions from robot/object configs if provided."""
+
+        # Robots
+        for robot_idx, robot in enumerate(self.robots):
+            if not getattr(robot, "default_joint_positions", None):
+                continue
+            prefix = self._mujoco_robot_names[robot_idx]
+            for joint_name, joint_pos in robot.default_joint_positions.items():
+                joint = self.physics.data.joint(f"{prefix}{joint_name}")
+                joint.qpos = joint_pos
+                joint.qvel = 0
+
+        self.physics.forward()
+
     def _add_default_ground(self, mjcf_model: mjcf.RootElement) -> None:
         """Add default ground plane."""
         mjcf_model.asset.add(
@@ -417,6 +433,16 @@ class MujocoHandler(BaseSimHandler):
                 self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
 
             obj_attached = mjcf_model.attach(obj_mjcf)
+
+            # Apply default position and orientation to the object's root body,
+            # matching the behavior of other backends (IsaacGym/IsaacSim/PyBullet).
+            if hasattr(obj, "default_position") and obj.default_position is not None:
+                obj_attached.pos = list(obj.default_position)
+            if hasattr(obj, "default_orientation") and obj.default_orientation is not None:
+                # MuJoCo expects quaternions in (w, x, y, z) order, which matches BaseObjCfg.
+                qw, qx, qy, qz = obj.default_orientation
+                obj_attached.quat = [qw, qx, qy, qz]
+
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")
             self.object_body_names.append(obj_attached.full_identifier)

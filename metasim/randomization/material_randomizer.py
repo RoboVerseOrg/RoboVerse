@@ -233,32 +233,6 @@ class MaterialRandomizer(BaseRandomizerType):
         # Torch generator for tensor operations
         self._torch_generator: torch.Generator | None = None
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize adapter.
-
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Use _actual_handler (automatically selected for Hybrid)
-        self.registry = ObjectRegistry.get_instance(self._actual_handler)
-        self.adapter = IsaacSimAdapter(self._actual_handler)
-
-        # Sync torch generator
-        self._sync_torch_generator()
-
-    def set_seed(self, seed: int | None) -> None:
-        """Set seed and sync torch generator."""
-        super().set_seed(seed)
-        self._sync_torch_generator()
-
-    def _sync_torch_generator(self):
-        """Synchronize torch generator with RNG seed."""
-        if self._seed is not None:
-            self._torch_generator = torch.Generator()
-            self._torch_generator.manual_seed(self._seed)
-
     def __call__(self):
         """Execute material randomization.
 
@@ -436,7 +410,6 @@ class MaterialRandomizer(BaseRandomizerType):
             new_friction = self._generate_random_tensor(
                 num_envs, self.cfg.physical.friction_range, self.cfg.physical.distribution
             )
-            new_friction = new_friction.to(self._actual_handler.device)
 
             try:
                 # Get current material properties
@@ -445,24 +418,23 @@ class MaterialRandomizer(BaseRandomizerType):
                 # Update friction (index 0=static, 1=dynamic, 2=restitution)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids_tensor, :, 0] = new_friction.unsqueeze(1)
-                    materials[env_ids_tensor, :, 1] = new_friction.unsqueeze(1)
+                    materials[env_ids_tensor, :, 0] = new_friction.unsqueeze(1).to(materials.device)
+                    materials[env_ids_tensor, :, 1] = new_friction.unsqueeze(1).to(materials.device)
                 else:
                     # [num_envs, 3]
-                    materials[env_ids_tensor, 0] = new_friction
-                    materials[env_ids_tensor, 1] = new_friction
+                    materials[env_ids_tensor, 0] = new_friction.to(materials.device)
+                    materials[env_ids_tensor, 1] = new_friction.to(materials.device)
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids_tensor)
             except Exception as e:
-                logger.warning(f"Failed to set friction: {e}")
+                logger.error(f"Failed to set friction: {e}")
 
         # Randomize restitution
         if self.cfg.physical.restitution_range:
             new_restitution = self._generate_random_tensor(
                 num_envs, self.cfg.physical.restitution_range, self.cfg.physical.distribution
             )
-            new_restitution = new_restitution.to(self._actual_handler.device)
 
             try:
                 # Get current material properties
@@ -471,15 +443,15 @@ class MaterialRandomizer(BaseRandomizerType):
                 # Update restitution (index 2)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids_tensor, :, 2] = new_restitution.unsqueeze(1)
+                    materials[env_ids_tensor, :, 2] = new_restitution.unsqueeze(1).to(materials.device)
                 else:
                     # [num_envs, 3]
-                    materials[env_ids_tensor, 2] = new_restitution
+                    materials[env_ids_tensor, 2] = new_restitution.to(materials.device)
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids_tensor)
             except Exception as e:
-                logger.warning(f"Failed to set restitution: {e}")
+                logger.error(f"Failed to set restitution: {e}")
 
     # -------------------------------------------------------------------------
     # Helper Methods

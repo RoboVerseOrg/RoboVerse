@@ -921,10 +921,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         # if states is list[DictEnvState], iterate over it and set state
         if isinstance(states, list):
-            assert len(states) == self.num_envs, (
-                f"The length of the state list ({len(states)}) must match the length of num_envs ({self.num_envs})."
-            )
-
             pos_list = []
             rot_list = []
             q_list = []

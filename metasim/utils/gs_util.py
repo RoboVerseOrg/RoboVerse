@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import List, Union
 
 import numpy as np
+import quaternion  # noqa: F401
 import torch
 from PIL import Image
-from pyquaternion import Quaternion
 
 
 def quaternion_multiply(init_quat: List[float], rotate_quat: List[float]) -> List[float]:
@@ -23,9 +23,9 @@ def quaternion_multiply(init_quat: List[float], rotate_quat: List[float]) -> Lis
         ValueError: If the input quaternions are not valid.
     """
     qx, qy, qz, qw = init_quat
-    q1 = Quaternion(w=qw, x=qx, y=qy, z=qz)
+    q1 = np.quaternion(qw, qx, qy, qz)
     qx, qy, qz, qw = rotate_quat
-    q2 = Quaternion(w=qw, x=qx, y=qy, z=qz)
+    q2 = np.quaternion(qw, qx, qy, qz)
     quat = q2 * q1
 
     return [quat.x, quat.y, quat.z, quat.w]

@@ -91,7 +91,6 @@ class IsaacsimHandler(BaseSimHandler):
             app_launcher = AppLauncher(args)
             self.simulation_app = app_launcher.app
         else:
-            assert args is not None, "args must be provided when simulation_app is given."
             self.simulation_app = simulation_app
 
         # physics context
@@ -99,7 +98,7 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
         sim_config: SimulationCfg = SimulationCfg(
-            device=args.device,
+            device="cuda:0",
             render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
@@ -213,10 +212,6 @@ class IsaacsimHandler(BaseSimHandler):
             if self.simulation_app is not None:
                 del self.simulation_app
             self._is_closed = True
-
-    def __del__(self):
-        """Cleanup for the environment."""
-        self.close()
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -626,6 +621,10 @@ class IsaacsimHandler(BaseSimHandler):
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
                     articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
                 ),
+                init_state=ArticulationCfg.InitialStateCfg(
+                    pos=obj.default_position,
+                    rot=obj.default_orientation,
+                ),
                 actuators={},
             )
             self.scene.articulations[obj.name] = Articulation(articulation_cfg)
@@ -684,6 +683,10 @@ class IsaacsimHandler(BaseSimHandler):
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                     ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
+                    ),
                 )
             )
             return
@@ -700,6 +703,10 @@ class IsaacsimHandler(BaseSimHandler):
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
+                    ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
                     ),
                 )
             )
