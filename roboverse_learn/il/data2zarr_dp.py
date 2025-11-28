@@ -77,7 +77,7 @@ def main():
     print("Metadata load dir:", load_dir)
 
     # Scan success folder to find all existing demo indices
-    success_dir = os.path.join(load_dir, "success")
+    success_dir = os.path.join(load_dir)
     demo_indices = []
 
     if os.path.exists(success_dir) and os.path.isdir(success_dir):
