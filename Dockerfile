@@ -78,7 +78,7 @@ COPY --chown=${DOCKER_USER} ./pyproject.toml ${HOME}/RoboVerse/pyproject.toml
 WORKDIR ${HOME}/RoboVerse
 
 ########################################################
-## Install isaaclab, mujoco, sapien3, pybullet
+## Install isaacsim, mujoco, sapien3, pybullet
 ########################################################
 ## Create conda environment
 RUN mamba create -n metasim python=3.11 -y \
