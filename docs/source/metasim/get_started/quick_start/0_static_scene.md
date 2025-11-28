@@ -10,11 +10,11 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 ### Examples
 
-#### Isaac Lab
+#### Isaac Sim
 ```bash
 python get_started/0_static_scene.py  --sim isaacsim
 ```
-/isaacsim
+
 #### Isaac Gym
 ```bash
 python get_started/0_static_scene.py  --sim isaacgym
