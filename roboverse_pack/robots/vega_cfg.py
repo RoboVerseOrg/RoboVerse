@@ -24,8 +24,8 @@ class VegaCfg(RobotCfg):
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
-    urdf_path: str = "/home/priosin/murphy/demos/RoboVerse/roboverse_pack/robots_vega/humanoid/vega_1/vega.urdf"
-    usd_path: str = "roboverse_pack/robots_vega/humanoid/vega_1/vega/vega.usd"
+    urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
+    usd_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega/vega.usd"
 
     # Physical properties
     enabled_gravity: bool = False  # Disable gravity for default setup
