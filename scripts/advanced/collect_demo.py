@@ -645,10 +645,9 @@ def should_skip(log_dir: str, demo_idx: int):
         if not os.path.exists(success_path) and not os.path.exists(failed_path):
             return False
         return True
-        
+
     if args.run_all:
         return False
-
 
     if args.run_failed:
         if os.path.exists(success_path):

@@ -75,11 +75,11 @@ def main():
     downsample_ratio = args.downsample_ratio
 
     print("Metadata load dir:", load_dir)
-    
+
     # Scan success folder to find all existing demo indices
     success_dir = os.path.join(load_dir, "success")
     demo_indices = []
-    
+
     if os.path.exists(success_dir) and os.path.isdir(success_dir):
         for item in os.listdir(success_dir):
             if item.startswith("demo_") and os.path.isdir(os.path.join(success_dir, item)):
@@ -91,10 +91,10 @@ def main():
                         demo_indices.append(demo_idx)
                 except (ValueError, IndexError):
                     continue
-        
+
         demo_indices.sort()
         print(f"Found {len(demo_indices)} demos in success folder: {demo_indices[:10]}{'...' if len(demo_indices) > 10 else ''}")
-        
+
         # Use actual number of demos if requested number is not enough
         if len(demo_indices) < num:
             print(f"Requested {num} demos but only {len(demo_indices)} available. Using all available demos.")
@@ -106,7 +106,7 @@ def main():
         # Fallback to old behavior if success folder doesn't exist
         print(f"Success folder not found at {success_dir}, falling back to sequential processing")
         demo_indices = list(range(num))
-    
+
     save_dir = f"data_policy/{task_name}_{len(demo_indices)}.zarr"
     print("ZARR save dir:", save_dir)
 
@@ -138,7 +138,7 @@ def main():
         demo_dir = os.path.join(success_dir, f"demo_{demo_id}")
         if not os.path.isdir(demo_dir):
             demo_dir = os.path.join(load_dir, f"demo_{demo_id}")
-        
+
         if not os.path.isdir(demo_dir):
             print(f"Skipping episode {demo_idx} as directory {demo_dir} does not exist.")
             continue
