@@ -572,12 +572,6 @@ class DemoCollector:
             additional_str = f"-{args.cust_name}" if args.cust_name else ""
             self.base_save_dir = f"roboverse_demo/demo_{args.sim}/{TaskName}{additional_str}/robot-{args.robot}"
 
-        self.success_counter = demo_start_idx
-        self.failed_counter = demo_start_idx
-        log.info(
-            f"Initialized counters from demo_start_idx={demo_start_idx}: success={self.success_counter}, failed={self.failed_counter}"
-        )
-
     def _get_max_demo_index(self, status: str) -> int:
         status_dir = os.path.join(self.base_save_dir, status)
         if not os.path.exists(status_dir):
@@ -609,12 +603,8 @@ class DemoCollector:
         assert demo_idx in self.cache
         assert status in ["success", "failed"], f"Invalid status: {status}"
 
-        if status == "success":
-            continuous_idx = self.success_counter
-            self.success_counter += 1
-        else:  # failed
-            continuous_idx = self.failed_counter
-            self.failed_counter += 1
+        # Use demo_idx directly as continuous_idx to maintain consistency
+        continuous_idx = demo_idx
 
         save_dir = os.path.join(self.base_save_dir, status, f"demo_{continuous_idx:04d}")
         if os.path.exists(os.path.join(save_dir, "status.txt")):
@@ -651,13 +641,14 @@ def should_skip(log_dir: str, demo_idx: int):
     success_path = os.path.join(log_dir, "success", demo_name, "status.txt")
     failed_path = os.path.join(log_dir, "failed", demo_name, "status.txt")
 
-    if args.run_all:
-        return False
-
     if args.run_unfinished:
         if not os.path.exists(success_path) and not os.path.exists(failed_path):
             return False
         return True
+        
+    if args.run_all:
+        return False
+
 
     if args.run_failed:
         if os.path.exists(success_path):
