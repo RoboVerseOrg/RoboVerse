@@ -42,7 +42,6 @@ concept/handler
 concept/task
 concept/get_extras
 concept/randomization
-concept/autotest
 <!-- user_guide/collect_demo_tutorial -->
 <!-- user_guide/teleoperate_demo -->
 <!-- user_guide/real2sim -->
@@ -67,7 +66,7 @@ features/cross_sim
 :maxdepth: 2
 :titlesonly:
 
-developer_guide/autotesting
+developer_guide/autotest
 developer_guide/docstring
 developer_guide/precommit_hooks
 developer_guide/contributing_new_robot
