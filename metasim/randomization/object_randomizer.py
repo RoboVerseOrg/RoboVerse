@@ -351,18 +351,11 @@ class ObjectRandomizer(BaseRandomizerType):
             pitch = torch.zeros(num_envs, device=current_rot.device)
             yaw = torch.zeros(num_envs, device=current_rot.device)
 
-            for env_idx in range(len(env_ids)):
-                # Generate random rotations for each enabled axis
-                rotations = []
-                for axis_idx, enabled in enumerate(self.cfg.pose.rotation_axes):
-                    if enabled:
-                        angle = self._generate_random_tensor(
-                            (1,), self.cfg.pose.distribution, (min_rad.item(), max_rad.item())
-                        ).item()
-                        # self._rng.uniform(min_rad.item(), max_rad.item())
-                        rotations.append(angle)
-                    else:
-                        rotations.append(0.0)
+            if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
+                roll = self._generate_random_tensor(
+                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
+                ) * (math.pi / 180.0)
+                roll = roll.to(current_rot.device)
 
             if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
                 pitch = self._generate_random_tensor(
