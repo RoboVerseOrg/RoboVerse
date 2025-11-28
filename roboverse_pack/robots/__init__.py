@@ -2,6 +2,7 @@
 
 from metasim.scenario.robot import RobotCfg
 
+from .agibot_a2_cfg import AgibotA2Dof12Cfg
 from .allegrohand_cfg import AllegroHandCfg
 from .aloha import AlohaCfg
 from .ant_cfg import AntCfg
