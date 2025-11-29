@@ -11,7 +11,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.test.test_utils import assert_close
 
 
-@pytest.mark.mujoco
+@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
 def test_default_qpos(handler):
     """Test that default joint positions are correctly applied."""
     handler.set_dof_targets(

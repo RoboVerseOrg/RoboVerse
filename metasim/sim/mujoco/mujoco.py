@@ -466,6 +466,10 @@ class MujocoHandler(BaseSimHandler):
                 child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
                 robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
                 robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+            if hasattr(robot, "default_position") and robot.default_position is not None:
+                robot_attached.pos = list(robot.default_position)
+            if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
+                robot_attached.quat = robot.default_orientation
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
 
