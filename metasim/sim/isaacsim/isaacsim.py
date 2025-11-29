@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from copy import deepcopy
 
 import numpy as np
 import torch
 from loguru import logger as log
+from scipy.interpolate import RegularGridInterpolator
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.cameras import PinholeCameraCfg
@@ -29,6 +31,7 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.terrain_utils import TerrainGenerator
 
 # Optional: RoboSplatter imports for GS background rendering
 try:
@@ -198,8 +201,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Initialize GS background if enabled
         self._build_gs_background()
-
-        return super().launch()
+        super().launch()
+        self.sim.reset()  # crucial for calling _initialize_callbacks in binded sensors
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -486,7 +489,6 @@ class IsaacsimHandler(BaseSimHandler):
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
-        # TODO: support set torque
         if isinstance(actions, torch.Tensor):
             actions_tensor = actions
         else:
@@ -497,12 +499,15 @@ class IsaacsimHandler(BaseSimHandler):
                 for env_id in range(self.num_envs):
                     joint_targets = actions[env_id][robot.name]["dof_pos_target"]
                     for j, joint_name in enumerate(sorted_joint_names):
-                        robot_tensor[env_id, j] = torch.tensor(joint_targets[joint_name], device=self.device)
+                        robot_tensor[env_id, j] = torch.tensor(
+                            joint_targets[joint_name],
+                            device=self.device,
+                        )
                 per_robot_tensors.append(robot_tensor)
             actions_tensor = torch.cat(per_robot_tensors, dim=-1)
 
         offset = 0
-        for robot in self.robots:
+        for i, robot in enumerate(self.robots):
             robot_inst = self.scene.articulations[robot.name]
             sorted_joint_names = self.get_joint_names(robot.name, sort=True)
             joint_count = len(sorted_joint_names)
@@ -526,7 +531,14 @@ class IsaacsimHandler(BaseSimHandler):
                 continue
 
             joint_targets = robot_actions_sorted[:, action_indices]
-            robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+
+            if self._manual_pd_on[i]:
+                # torque / effort control
+                robot_inst.set_joint_effort_target(joint_targets, joint_ids=joint_ids)
+            else:
+                # position control
+                robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+
             robot_inst.write_data_to_sim()
 
     def _simulate(self):
@@ -791,6 +803,11 @@ class IsaacsimHandler(BaseSimHandler):
             },
         )
 
+        ground_cfg = getattr(self.scenario, "ground", None)
+        static_friction = getattr(ground_cfg, "static_friction", 1.0) if ground_cfg is not None else 1.0
+        dynamic_friction = getattr(ground_cfg, "dynamic_friction", 1.0) if ground_cfg is not None else 1.0
+        restitution = getattr(ground_cfg, "restitution", 0.0) if ground_cfg is not None else 0.0
+
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
             terrain_type="generator",
@@ -799,9 +816,9 @@ class IsaacsimHandler(BaseSimHandler):
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
                 restitution_combine_mode="multiply",
-                static_friction=1.0,
-                dynamic_friction=1.0,
-                restitution=0.0,
+                static_friction=static_friction,
+                dynamic_friction=dynamic_friction,
+                restitution=restitution,
             ),
             debug_vis=False,
             visual_material=sim_utils.MdlFileCfg(
@@ -816,6 +833,140 @@ class IsaacsimHandler(BaseSimHandler):
 
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
+        if ground_cfg is not None:
+            self._build_custom_terrain_mesh(ground_cfg)
+
+    def _build_custom_terrain_mesh(self, ground_cfg) -> None:
+        """Procedurally author a USD mesh using TerrainGenerator."""
+        tg = TerrainGenerator(ground_cfg)
+        stage_vertices, stage_triangles, height_mat = tg.generate_terrain(ground_cfg, type="both")
+
+        max_triangles = getattr(ground_cfg, "max_mesh_triangles", 20000)
+        raw_heights = (height_mat / tg.vertical_scale).astype(np.float32)
+        ds_heights, scale_x, scale_y = self._downsample_height_field(raw_heights, tg.horizontal_scale, max_triangles)
+        if not math.isclose(scale_x, scale_y, rel_tol=1e-4):
+            stage_vertices = stage_vertices.copy()
+            stage_vertices[:, 1] *= scale_y / max(scale_x, 1e-6)
+
+        stage_height_mat = ds_heights * tg.vertical_scale
+        if stage_triangles.shape[0] != stage_triangles.shape[0]:
+            log.info(
+                "Downsampled IsaacSim terrain mesh from %d to %d triangles (limit=%d).",
+                len(stage_triangles),
+                len(stage_triangles),
+                max_triangles,
+            )
+
+        self._ground_mesh_vertices = stage_vertices
+        self._ground_mesh_triangles = stage_triangles.astype(np.int32)
+        self._height_mat = stage_height_mat
+
+        # Center the terrain at the origin
+        terrain_vertices = self._ground_mesh_vertices.copy()
+        half_width = (terrain_vertices[:, 0].max() - terrain_vertices[:, 0].min()) / 2.0
+        half_height = (terrain_vertices[:, 1].max() - terrain_vertices[:, 1].min()) / 2.0
+        terrain_vertices[:, 0] -= half_width
+        terrain_vertices[:, 1] -= half_height
+
+        from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics, UsdShade
+
+        try:
+            import omni.isaac.core.utils.prims as prim_utils
+        except ModuleNotFoundError:
+            import isaacsim.core.utils.prims as prim_utils
+
+        stage = prim_utils.get_current_stage()
+        if stage is None:
+            log.error("IsaacSim stage is not available; cannot create terrain mesh.")
+            return
+
+        ground_root_path = "/World/ground"
+        ground_root = stage.GetPrimAtPath(ground_root_path)
+        if not ground_root or not ground_root.IsValid():
+            ground_root = stage.DefinePrim(ground_root_path, "Xform")
+        else:
+            for child in list(ground_root.GetChildren()):
+                stage.RemovePrim(child.GetPath())
+
+        mesh_path = f"{ground_root_path}/generated_mesh"
+        mesh = UsdGeom.Mesh.Define(stage, mesh_path)
+        mesh.CreateSubdivisionSchemeAttr().Set("none")
+        mesh.CreateDoubleSidedAttr(True)
+        mesh.CreatePointsAttr([Gf.Vec3f(float(x), float(y), float(z)) for x, y, z in terrain_vertices])
+        mesh.CreateFaceVertexCountsAttr([3] * len(self._ground_mesh_triangles))
+        mesh.CreateFaceVertexIndicesAttr(self._ground_mesh_triangles.flatten().tolist())
+        mesh.CreateExtentAttr(self._compute_mesh_extent(terrain_vertices))
+        mesh.CreateDisplayColorAttr([Gf.Vec3f(0.6, 0.6, 0.6)])
+
+        # Enable physics collisions on the generated mesh
+        collision_api = UsdPhysics.CollisionAPI.Apply(mesh.GetPrim())
+        collision_api.CreateCollisionEnabledAttr(True)
+        UsdPhysics.MeshCollisionAPI.Apply(mesh.GetPrim())
+        rigid_api = UsdPhysics.RigidBodyAPI.Apply(mesh.GetPrim())
+        rigid_api.CreateRigidBodyEnabledAttr(False)
+
+        physx_collision_api = PhysxSchema.PhysxCollisionAPI.Apply(mesh.GetPrim())
+        physx_collision_api.CreateRestOffsetAttr(0.0)
+        physx_collision_api.CreateContactOffsetAttr(0.02)
+        PhysxSchema.PhysxTriangleMeshCollisionAPI.Apply(mesh.GetPrim())
+
+        static_friction = getattr(ground_cfg, "static_friction", 1.0)
+        dynamic_friction = getattr(ground_cfg, "dynamic_friction", 1.0)
+        restitution = getattr(ground_cfg, "restitution", 0.0)
+
+        material_path = "/World/Materials/TerrainMaterial"
+        usd_material = UsdShade.Material.Define(stage, material_path)
+        material_api = UsdPhysics.MaterialAPI.Apply(usd_material.GetPrim())
+        material_api.CreateStaticFrictionAttr(static_friction)
+        material_api.CreateDynamicFrictionAttr(dynamic_friction)
+        material_api.CreateRestitutionAttr(restitution)
+        mat_binding = UsdShade.MaterialBindingAPI(mesh.GetPrim())
+        mat_binding.Bind(usd_material, materialPurpose="physics")
+
+        self._ground_mesh_vertices = terrain_vertices
+        self._terrain_margin = tg.margin
+
+        log.info(
+            "Generated IsaacSim terrain mesh with %d vertices and %d triangles.",
+            len(self._ground_mesh_vertices),
+            len(self._ground_mesh_triangles),
+        )
+
+    def _downsample_height_field(
+        self, height_field_raw: np.ndarray, horizontal_scale: float, max_triangles: int
+    ) -> tuple[np.ndarray, float, float]:
+        """Reduce height-field resolution to keep triangle count manageable for PhysX GPU buffers."""
+        rows, cols = height_field_raw.shape
+        total_triangles = 2 * max(rows - 1, 0) * max(cols - 1, 0)
+        if max_triangles is None or max_triangles <= 0 or total_triangles <= max_triangles or total_triangles == 0:
+            return height_field_raw, horizontal_scale, horizontal_scale
+
+        reduction = math.sqrt(total_triangles / max_triangles)
+        new_rows = max(2, math.floor((rows - 1) / reduction) + 1)
+        new_cols = max(2, math.floor((cols - 1) / reduction) + 1)
+
+        src_x = np.linspace(0.0, rows - 1, rows, dtype=np.float32)
+        src_y = np.linspace(0.0, cols - 1, cols, dtype=np.float32)
+        interpolator = RegularGridInterpolator((src_x, src_y), height_field_raw, bounds_error=False, fill_value=None)
+        dst_x = np.linspace(0.0, rows - 1, new_rows, dtype=np.float32)
+        dst_y = np.linspace(0.0, cols - 1, new_cols, dtype=np.float32)
+        grid = np.stack(np.meshgrid(dst_x, dst_y, indexing="ij"), axis=-1)
+        downsampled = interpolator(grid)
+
+        total_width_x = (rows - 1) * horizontal_scale
+        total_width_y = (cols - 1) * horizontal_scale
+        scale_x = total_width_x / max(new_rows - 1, 1)
+        scale_y = total_width_y / max(new_cols - 1, 1)
+
+        return downsampled.astype(np.float32), scale_x, scale_y
+
+    @staticmethod
+    def _compute_mesh_extent(vertices: np.ndarray):
+        from pxr import Gf
+
+        min_corner = vertices.min(axis=0)
+        max_corner = vertices.max(axis=0)
+        return [Gf.Vec3f(*min_corner.tolist()), Gf.Vec3f(*max_corner.tolist())]
 
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.

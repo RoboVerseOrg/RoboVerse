@@ -91,6 +91,12 @@ def get_args(test=False):
             "help": "simulator type, currently only isaacgym is supported",
         },
         {
+            "name": "--ground",
+            "type": str,
+            "default": None,
+            "help": "The ground to load.",
+        },
+        {
             "name": "--headless",
             "action": "store_true",
             "default": True,
@@ -125,7 +131,7 @@ def get_args(test=False):
             "action": "store_true",
             "default": False,
             "help": "Whether to load the JIT model",
-        },
+        }
         # {"name": "--run_name", "type": str, "required": True if not test else False, "help": "Name of the run. Overrides config file if provided."},
         # {"name": "--load_run", "type": str, "default": None, "help": "Path to the config file. If provided, will override command line arguments."},
         # {"name": "--use_wandb", "action": "store_true", "default": True, "help": "Use wandb for logging"},

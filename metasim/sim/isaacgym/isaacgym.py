@@ -35,8 +35,8 @@ from metasim.scenario.objects import (
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
-from metasim.utils.dict import class_to_dict
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.terrain_utils import TerrainGenerator
 
 
 class IsaacgymHandler(BaseSimHandler):
@@ -326,9 +326,13 @@ class IsaacgymHandler(BaseSimHandler):
                 self.gym.set_camera_location(camera_handle, self._envs[i_env], camera_eye, camera_lookat)
                 if cam_cfg.mount_to is not None:
                     if isinstance(cam_cfg.mount_link, str):
-                        mount_handle = self._robot_link_dict[cam_cfg.mount_link]
+                        mount_handle = self._robot_link_dict[
+                            cam_cfg.mount_link.split("/")[-1]
+                        ]  # isaacgym requires the leaf prim
                     elif isinstance(cam_cfg.mount_link, tuple):
-                        mount_handle = self._robot_link_dict[cam_cfg.mount_link[1]]
+                        mount_handle = self._robot_link_dict[
+                            cam_cfg.mount_link[1].split("/")[-1]
+                        ]  # isaacgym requires the leaf prim
                     camera_pose = gymapi.Transform(
                         gymapi.Vec3(*cam_cfg.mount_pos), gymapi.Quat(*cam_cfg.mount_quat[1:], cam_cfg.mount_quat[0])
                     )
@@ -470,8 +474,6 @@ class IsaacgymHandler(BaseSimHandler):
                 # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
 
                 robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                # robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
-                # robot_dof_props["damping"][i] = i_actuator_cfg.damping
                 robot_dof_props["stiffness"][i] = 0.0
                 robot_dof_props["damping"][i] = 0.0
                 robot_dof_props["armature"][i] = getattr(self.robots[0], "armature", 0.01)
@@ -524,9 +526,7 @@ class IsaacgymHandler(BaseSimHandler):
         )  # x, y, z, w order for gymapi.Quat
 
         # add ground plane
-        plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0, 0, 1)
-        self.gym.add_ground(self.sim, plane_params)
+        self._add_ground()
 
         # get object and robot asset
         obj_assets_list = [self._load_object_asset(obj) for obj in self.objects]
@@ -684,12 +684,6 @@ class IsaacgymHandler(BaseSimHandler):
                 robot_rigid_body_indices[rigid_body_name] = rigid_body_idx
 
             self._env_rigid_body_global_indices[-1]["robot"] = robot_rigid_body_indices
-
-            # domain randomization for robots
-            # FIXME: add domain randomization with new API
-            # self.rand_rigid_body_fric(self.scenario.random.friction, i, robot_rigid_shape_props_asset)
-            # robot_body_props = self.gym.get_actor_rigid_body_properties(env, robot_handle)
-            # self.rand_rigid_body_mass(self.scenario.random.mass, i, robot_body_props)
 
         # GET initial state, copy for reset later
         self._initial_state = np.copy(self.gym.get_sim_rigid_body_states(self.sim, gymapi.STATE_ALL))
@@ -1165,34 +1159,65 @@ class IsaacgymHandler(BaseSimHandler):
     def _get_joint_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._joint_info[obj_name]["global_indices"][jn] for jn in self._get_joint_names(obj_name)]
 
-    def rand_rigid_body_fric(self, cfg, env_id: int, props: list[gymapi.RigidShapeProperties]):
-        """Randomize the friction of the rigid bodies."""
-        if not cfg.enabled:
-            return
-        if not hasattr(self, "_rand_fric_dist"):
-            params_dict = class_to_dict(cfg)
-            params_dict["num_envs"] = self.num_envs
-            params_dict["device"] = self.device
-            dist_fn = cfg.dist_fn
-            self._rand_fric_dist = dist_fn(params_dict)
-        # TODO: add rigid body id index
-        for s in range(len(props)):
-            props[s].friction = self._rand_fric_dist[env_id]
-        return props
+    def _add_ground(self):
+        if self.scenario.ground is not None:
+            tg = TerrainGenerator(self.scenario.ground)
+            vertices, triangles, height_mat = tg.generate_terrain(self.scenario.ground, type="both")
+            tm_params = gymapi.TriangleMeshParams()
+            tm_params.nb_vertices = vertices.shape[0]
+            tm_params.nb_triangles = triangles.shape[0]
 
-    def rand_rigid_body_mass(self, cfg, env_id: int, props: list[gymapi.RigidBodyProperties]):
-        """Randomize the base mass."""
-        if not cfg.enabled:
-            return
-        if not hasattr(self, "_rand_mass_dist"):
-            params_dict = class_to_dict(cfg)
-            params_dict["num_envs"] = self.num_envs
-            params_dict["device"] = self.device
-            dist_fn = cfg.dist_fn
-            self._rand_mass_dist = dist_fn(params_dict)
-        # TODO: add rigid body id index
-        props[0].mass += self._rand_mass_dist[env_id]
-        return props
+            # Center the terrain at the origin
+            half_width = (vertices[:, 0].max() - vertices[:, 0].min()) / 2.0
+            half_height = (vertices[:, 1].max() - vertices[:, 1].min()) / 2.0
+            tm_params.transform.p.x = -half_width
+            tm_params.transform.p.y = -half_height
+            tm_params.transform.p.z = 0.0
+            tm_params.static_friction = getattr(self.scenario.ground, "static_friction", 1.0)
+            tm_params.dynamic_friction = getattr(self.scenario.ground, "dynamic_friction", 1.0)
+            tm_params.restitution = getattr(self.scenario.ground, "restitution", 0.0)
+            self.gym.add_triangle_mesh(
+                self.sim, vertices.flatten(order="C"), triangles.flatten(order="C"), tm_params
+            )  # add terrain to sim
+            self._ground_mesh_vertices = vertices
+            self._ground_mesh_triangles = triangles
+            self._height_mat = height_mat
+        else:
+            plane_params = gymapi.PlaneParams()
+            plane_params.normal = gymapi.Vec3(0, 0, 1)
+            plane_params.static_friction = 1.0
+            plane_params.dynamic_friction = 1.0
+            plane_params.restitution = 0.0
+            self.gym.add_ground(self.sim, plane_params)
+
+            # Generate a flat grid mesh for Warp registration based on env grid layout.
+            step = float(self.scenario.env_spacing)
+            num_per_row = math.sqrt(self.num_envs) if self.num_envs > 0 else 1
+            num_rows = math.ceil(self.num_envs / max(num_per_row, 1)) if self.num_envs > 0 else 1
+            width = max(1, num_per_row) * step
+            height = max(1, num_rows) * step
+            border_offset = 20.0  # extend the ground a bit
+            hw, hh = width * 0.5 + border_offset, height * 0.5 + border_offset
+
+            # 4 corner vertices (x, y, z=0)
+            self._ground_mesh_vertices = np.array(
+                [
+                    [-hw, -hh, 0.0],  # 0
+                    [hw, -hh, 0.0],  # 1
+                    [-hw, hh, 0.0],  # 2
+                    [hw, hh, 0.0],  # 3
+                ],
+                dtype=np.float32,
+            )
+
+            # two triangles covering the quad (CCW winding, normal +Z)
+            self._ground_mesh_triangles = np.array(
+                [
+                    [0, 2, 1],
+                    [1, 2, 3],
+                ],
+                dtype=np.int32,
+            )
 
     @property
     def num_envs(self) -> int:

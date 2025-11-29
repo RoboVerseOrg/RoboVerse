@@ -116,13 +116,14 @@ class WalkG1Dof12EnvCfg(BaseEnvCfg):
     }
     callbacks_reset = {
         "random_root_state": (
-            reset_funcs.random_root_state,
+            reset_funcs.random_root_state_terrain_aware,
             {
                 "pose_range": [
-                    [0., 0., 0, 0, 0, 0],
+                    [0., 0., 0, 0, 0, 0],  # x, y, z_offset, roll, pitch, yaw
                     [0., 0., 0, 0, 0, 0],
                 ],
                 "velocity_range": [[-0.5] * 6, [0.5] * 6],
+                # base_height_offset is None by default, uses robot's default z position (0.8m from cfg_base.py)
             },
         ),
         "reset_joints_by_scale": (
