@@ -7,11 +7,14 @@ from loguru import logger as log
 
 def assert_close(a, b, atol=1e-3, message="Consistency Error"):
     if isinstance(a, torch.Tensor):
+        b = torch.tensor(b)
         assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b} " + message
     elif isinstance(a, float):
+        b = float(b)
         assert math.isclose(a, b, abs_tol=atol), f"a: {a} != b: {b} " + message
     else:
         raise ValueError(f"Unsupported type: {type(a)}")
+    return True
 
 
 def get_test_parameters():

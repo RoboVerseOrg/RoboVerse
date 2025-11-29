@@ -11,7 +11,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 
-@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx")
+@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
 def test_qpos_limit(handler):
     """Test that joint limits are respected during simulation."""
     handler.set_dof_targets(
