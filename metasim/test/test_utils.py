@@ -16,6 +16,7 @@ def assert_close(a, b, atol=1e-3, message="Consistency Error"):
         raise ValueError(f"Unsupported type: {type(a)}")
     return True
 
+
 def get_test_parameters():
     """Generate test parameters with different num_envs for different simulators.
 

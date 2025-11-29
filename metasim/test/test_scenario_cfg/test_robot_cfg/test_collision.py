@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 import rootutils
-import math
-from loguru import logger as log
 import torch
 
 rootutils.setup_root(__file__, pythonpath=True)
 
-from roboverse_pack.robots.franka_cfg import FrankaCfg
 from metasim.sim.base import BaseSimHandler
+
 
 @pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
 def test_self_collision(handler: BaseSimHandler):
@@ -54,12 +54,12 @@ def test_self_collision(handler: BaseSimHandler):
 
     states_after = handler.get_states(mode="dict")
 
-    assert(
-        math.isclose(states_after[0]["robots"]["franka1"]["dof_pos"]["panda_joint2"], 1.3, abs_tol=1e-3)
-    ), "franka1 (without self collisions) joint 2 should be close to 1.3"
-    assert(
-        not math.isclose(states_after[0]["robots"]["franka2"]["dof_pos"]["panda_joint2"], 1.3, abs_tol=1e-3)
-    ), "franka2 (with self collisions) joint 2 should not be close to 1.3"
+    assert math.isclose(states_after[0]["robots"]["franka1"]["dof_pos"]["panda_joint2"], 1.3, abs_tol=1e-3), (
+        "franka1 (without self collisions) joint 2 should be close to 1.3"
+    )
+    assert not math.isclose(states_after[0]["robots"]["franka2"]["dof_pos"]["panda_joint2"], 1.3, abs_tol=1e-3), (
+        "franka2 (with self collisions) joint 2 should not be close to 1.3"
+    )
 
 
 @pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
@@ -94,11 +94,9 @@ def test_mutual_collision(handler: BaseSimHandler):
                         "panda_finger_joint1": 0.0,
                         "panda_finger_joint2": 0.0,
                     }
-                }
+                },
             },
-            "objects": {
-                
-            }
+            "objects": {},
         }
     ] * handler.scenario.num_envs
 
@@ -193,6 +191,6 @@ def test_mutual_collision(handler: BaseSimHandler):
     franka1_dof_target_tensor = torch.tensor(franka1_dof_target_list)
     franka2_dof_target_tensor = torch.tensor(franka2_dof_target_list)
     concated_targets = torch.cat([franka1_dof_target_tensor, franka2_dof_target_tensor], dim=0)
-    assert(
-        not torch.allclose(concated_states, concated_targets, atol=1e-3)
-    ), "franka1 and franka2 should be in collision, thus the states should not be close to the targets"
+    assert not torch.allclose(concated_states, concated_targets, atol=1e-3), (
+        "franka1 and franka2 should be in collision, thus the states should not be close to the targets"
+    )

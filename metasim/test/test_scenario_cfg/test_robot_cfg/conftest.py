@@ -61,23 +61,26 @@ def get_qpos_limit_scenario(sim: str, num_envs: int) -> ScenarioCfg:
         simulator=sim,
     )
 
-def get_default_pos_scenario(sim: str, num_envs: int) -> ScenarioCfg:
 
+def get_default_pos_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Create scenario configuration for default position tests."""
     if sim not in _SUPPORTED_SIMS:
         raise ValueError(f"Unsupported simulator '{sim}' for default position tests")
 
     return ScenarioCfg(
-        robots=[FrankaCfg(
-            name="franka",
-            default_position=(0, 0, 1.0),
-            default_orientation=(0.707107, 0, 0, 0.707107),
-        )],
+        robots=[
+            FrankaCfg(
+                name="franka",
+                default_position=(0, 0, 1.0),
+                default_orientation=(0.707107, 0, 0, 0.707107),
+            )
+        ],
         headless=True,
         num_envs=num_envs,
         simulator=sim,
     )
-    
+
+
 def get_collision_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Create scenario configuration for self collision tests."""
     if sim not in _SUPPORTED_SIMS:
@@ -99,7 +102,7 @@ def get_collision_scenario(sim: str, num_envs: int) -> ScenarioCfg:
                     "panda_finger_joint2": 0.0,
                 },
                 default_position=(0, 0, 1.0),
-                enabled_self_collisions=False
+                enabled_self_collisions=False,
             ),
             FrankaCfg(
                 name="franka2",
@@ -116,7 +119,7 @@ def get_collision_scenario(sim: str, num_envs: int) -> ScenarioCfg:
                 },
                 default_position=(0, 1, 1.0),
                 enabled_self_collisions=True,
-            )
+            ),
         ],
         headless=True,
         num_envs=num_envs,
