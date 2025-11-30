@@ -272,6 +272,21 @@ class MujocoHandler(BaseSimHandler):
                 if len(pos) >= 3:
                     joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
 
+        # Apply scale to mesh elements (for visual meshes)
+        for mesh in mjcf_model.find_all("mesh"):
+            if hasattr(mesh, "scale") and mesh.scale is not None:
+                mesh_scale = list(mesh.scale)
+                if len(mesh_scale) >= 3:
+                    mesh.scale = [
+                        mesh_scale[0] * scale_x,
+                        mesh_scale[1] * scale_y,
+                        mesh_scale[2] * scale_z,
+                    ]
+                elif len(mesh_scale) == 1:
+                    # Uniform scale
+                    uniform_scale = max(scale_x, scale_y, scale_z)
+                    mesh.scale = [mesh_scale[0] * uniform_scale]
+
     def _set_framebuffer_size(self, mjcf_model, width, height):
         visual_elem = mjcf_model.visual
         global_elem = None
