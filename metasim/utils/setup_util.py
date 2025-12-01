@@ -9,6 +9,7 @@ import sys
 from loguru import logger as log
 
 from metasim.constants import SimType
+from metasim.scenario.grounds import GroundCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
@@ -243,3 +244,40 @@ def get_scene(scene_name: str) -> SceneCfg:
             continue
 
     raise ValueError(f"Scene config class '{attr_name}' not found in {candidate_packages}. Errors: {errors}")
+
+
+def get_ground(ground_name: str) -> GroundCfg:
+    """Resolve a ground configuration by name."""
+    if is_snake_case(ground_name):
+        GroundName = to_camel_case(ground_name)
+    elif is_camel_case(ground_name):
+        GroundName = ground_name
+    else:
+        raise ValueError(f"Invalid ground name: {ground_name}")
+
+    candidate_packages = [
+        "roboverse_pack.grounds",
+    ]
+
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    for fname in os.listdir(cwd):
+        if fname.endswith(".py") and not fname.startswith("_"):
+            candidate_packages.append(os.path.splitext(fname)[0])
+
+    attr_name = f"{GroundName}Cfg"
+    errors: list[str] = []
+
+    for pkg_name in candidate_packages:
+        try:
+            pkg = importlib.import_module(pkg_name)
+            ground_cls = getattr(pkg, attr_name)
+            return ground_cls()
+        except AttributeError:
+            continue
+        except Exception as e:
+            errors.append(f"{pkg_name}: {e}")
+
+    raise ValueError(f"Ground config class '{attr_name}' not found in {candidate_packages}. Errors: {errors}")
