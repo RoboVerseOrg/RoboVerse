@@ -23,14 +23,14 @@ class AgibotA2Dof12Cfg(RobotCfg):
         "idx02_left_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, torque_limit=76.8, velocity_limit=12.0),
         "idx03_left_hip_pitch": BaseActuatorCfg(stiffness=200, damping=6.0, torque_limit=216.0, velocity_limit=12.0),
         "idx04_left_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx05_left_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=50.0, velocity_limit=12.0),
-        "idx06_left_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=50.0, velocity_limit=12.0),
+        "idx05_left_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
+        "idx06_left_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
         "idx07_right_hip_roll": BaseActuatorCfg(stiffness=130, damping=5.0, torque_limit=76.8, velocity_limit=12.0),
         "idx08_right_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, torque_limit=76.8, velocity_limit=12.0),
         "idx09_right_hip_pitch": BaseActuatorCfg(stiffness=200, damping=6.0, torque_limit=216.0, velocity_limit=12.0),
         "idx10_right_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx11_right_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=50.0, velocity_limit=12.0),
-        "idx12_right_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=50.0, velocity_limit=12.0),
+        "idx11_right_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
+        "idx12_right_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
     }
 
     joint_limits: dict[str, tuple[float, float]] = {
