@@ -14,6 +14,7 @@ from roboverse_learn.rl.unitree_rl.configs.locomotion.walk_agibot_a2_dof12 impor
     WalkAgibotA2Dof12EnvCfg,
     WalkAgibotA2Dof12RslRlTrainCfg,
 )
+from roboverse_learn.rl.unitree_rl.helper.utils import Indexer
 from roboverse_pack.tasks.unitree_rl.base import LeggedRobotTask
 
 
@@ -81,29 +82,23 @@ class WalkAgibotA2Dof12Task(LeggedRobotTask):
 
     def _init_buffers(self):
         # ---------- obs slice ----------
-        i = 0
+        indexer = Indexer()
 
-        def take(n: int) -> slice:
-            nonlocal i
-            s = slice(i, i + n)
-            i += n
-            return s
-
-        s_sin = take(1)
-        s_cos = take(1)
-        s_cmd = take(3)  # [lin_x, lin_y, yaw]
+        s_sin = indexer.take(1)
+        s_cos = indexer.take(1)
+        s_cmd = indexer.take(3)  # [lin_x, lin_y, yaw]
         s_cmd_lin = slice(s_cmd.start, s_cmd.start + 2)  # only use the first two dimensions for scaling
-        s_dof_pos = take(self.num_actions)
-        s_dof_vel = take(self.num_actions)
-        s_prev_act = take(self.num_actions)
-        s_base_ang = take(3)
-        s_base_euler = take(3)
+        s_dof_pos = indexer.take(self.num_actions)
+        s_dof_vel = indexer.take(self.num_actions)
+        s_prev_act = indexer.take(self.num_actions)
+        s_base_ang = indexer.take(3)
+        s_base_euler = indexer.take(3)
 
-        self.num_obs_single = i  # should be 47
+        self.num_obs_single = indexer.i  # should be 47
 
-        s_base_lin = take(3)
+        s_base_lin = indexer.take(3)
 
-        self.num_priv_obs_single = i  # should be 50
+        self.num_priv_obs_single = indexer.i  # should be 50
 
         # ---------- init buffer ----------
         self.obs_clip_limit = 100.0
