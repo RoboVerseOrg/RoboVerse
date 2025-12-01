@@ -43,6 +43,7 @@ from .sapien2 import _load_init_pose
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -586,7 +587,7 @@ class Sapien3Handler(BaseSimHandler):
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
 
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 seg_labels = cam_inst.get_picture("Segmentation")

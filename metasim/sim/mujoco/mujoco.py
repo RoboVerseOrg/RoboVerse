@@ -66,6 +66,7 @@ from metasim.utils.gs_util import alpha_blend_rgba
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -665,7 +666,7 @@ class MujocoHandler(BaseSimHandler):
                     image_width=camera.width,
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 # Get semantic segmentation (geom IDs and object IDs)

@@ -33,6 +33,7 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -157,9 +158,11 @@ class IsaacsimHandler(BaseSimHandler):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
-                    position_tensor = torch.tensor(camera.pos, device=self.device).unsqueeze(0)
+                    position_tensor = torch.tensor(camera.pos, device=self.device, dtype=torch.float32).unsqueeze(0)
                     position_tensor = position_tensor.repeat(self.num_envs, 1)
-                    camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
+                    camera_lookat_tensor = torch.tensor(
+                        camera.look_at, device=self.device, dtype=torch.float32
+                    ).unsqueeze(0)
                     camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
                     # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
@@ -510,7 +513,7 @@ class IsaacsimHandler(BaseSimHandler):
                     device=self.device,
                 )
 
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
 
                 # Get RGB Blending with GS background
                 sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)

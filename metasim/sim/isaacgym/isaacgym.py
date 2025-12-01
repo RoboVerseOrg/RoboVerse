@@ -11,6 +11,7 @@ from loguru import logger as log
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -240,7 +241,7 @@ class IsaacgymHandler(BaseSimHandler):
                 image_width=width,
                 device=self.device,
             )
-            gs_result = self.gs_background.render(gs_cam)
+            gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
 
             # Get GS background and normalize to tensors on device (handle numpy or torch)
             gs_rgb = gs_result.rgb[0].to(self.device)

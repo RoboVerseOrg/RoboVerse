@@ -17,8 +17,8 @@ from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
 # from metasim.utils.hf_util import FileDownloader
 try:
-    from robo_splatter.models.basic import RenderConfig
-    from robo_splatter.models.gaussians import VanillaGaussians
+    from robo_splatter.models.basic import GSInstance, RenderConfig
+    from robo_splatter.models.gaussians import RigidsGaussians
     from robo_splatter.render.scenes import Scene
 
     ROBO_SPLATTER_AVAILABLE = True
@@ -296,15 +296,14 @@ class BaseSimHandler(ABC):
 
         # Apply coordinate transform
         qx, qy, qz, qw = quaternion_multiply([qx, qy, qz, qw], [0.7071, 0, 0, 0.7071])
-        init_pose = torch.tensor([x, y, z, qx, qy, qz, qw])
+        init_pose = torch.tensor([x, y, z, qx, qy, qz, qw], dtype=torch.float32).cpu()
 
         # Load GS model
-        gs_model = VanillaGaussians(
-            model_path=self.scenario.gs_scene.gs_background_path, device="cuda" if torch.cuda.is_available() else "cpu"
+        gs_model = RigidsGaussians(
+            instances={0: GSInstance(gs_model_path=self.scenario.gs_scene.gs_background_path, init_pose=init_pose)},
+            device="cuda" if torch.cuda.is_available() else "cpu",
         )
-        gs_model.apply_global_transform(global_pose=init_pose)
-
-        self.gs_background = Scene(render_config=RenderConfig(), background_models=gs_model)
+        self.gs_background = Scene(render_config=RenderConfig(), foreground_models=gs_model)
 
     @property
     def num_envs(self) -> int:
