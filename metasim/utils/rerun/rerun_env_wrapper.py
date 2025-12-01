@@ -6,12 +6,12 @@ during training and evaluation.
 
 from __future__ import annotations
 
-from typing import Any
+import logging
 
-import numpy as np
+logger = logging.getLogger(__name__)
 
 try:
-    import rerun as rr
+    import rerun as rr  # noqa: F401
 
     RERUN_AVAILABLE = True
 except ImportError:
@@ -64,11 +64,10 @@ class TaskRerunWrapper:
     def _setup_visualization(self, app_name: str, spawn: bool):
         """Setup Rerun visualization."""
         if self.handler is None:
-            print("[TaskRerunWrapper] Warning: No handler found, skipping visualization setup")
+            logger.warning("No handler found, skipping visualization setup")
             return
 
         try:
-            from metasim.utils.hf_util import check_and_download_recursive
             from metasim.utils.rerun.rerun_util import RerunVisualizer
             from metasim.utils.state import state_tensor_to_nested
 
@@ -97,11 +96,12 @@ class TaskRerunWrapper:
                     robot_state = self._extract_state(robot_states.get(robot.name, {}))
                     self.visualizer.visualize_item(robot, robot.name, robot_state)
 
-            print(f"[TaskRerunWrapper] Rerun visualization initialized")
+            logger.info("Rerun visualization initialized")
 
         except Exception as e:
-            print(f"[TaskRerunWrapper] Failed to setup visualization: {e}")
+            logger.error(f"Failed to setup visualization: {e}")
             import traceback
+
             traceback.print_exc()
             self.visualizer = None
 
@@ -175,7 +175,7 @@ class TaskRerunWrapper:
                 self.visualizer.set_time(self.step_count)
 
         except Exception as e:
-            print(f"[TaskRerunWrapper] Visualization update failed: {e}")
+            logger.debug(f"Visualization update failed: {e}")
 
     def step(self, action):
         """Step the environment and update visualization."""
@@ -203,4 +203,3 @@ class TaskRerunWrapper:
     def __getattr__(self, name):
         """Proxy all other attributes to the wrapped environment."""
         return getattr(self.env, name)
-

@@ -12,10 +12,8 @@ from __future__ import annotations
 import logging
 import math
 import os
-import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -81,19 +79,19 @@ def normalize_quaternion(quat: list[float]) -> list[float]:
 
 def resolve_mesh_path(filename: str, urdf_dir: Path) -> str | None:
     """Resolve mesh path from URDF to absolute path.
-    
+
     Args:
         filename: Mesh filename from URDF (may be relative or package://)
         urdf_dir: Directory containing the URDF file
-        
+
     Returns:
         Absolute path to mesh file, or None if not found
     """
     if os.path.isabs(filename) and os.path.exists(filename):
         return filename
-    
+
     candidates = []
-    
+
     # Handle package:// URIs - package root is usually the URDF directory
     if filename.startswith("package://"):
         rel_path = filename.split("package://", 1)[1]
@@ -120,7 +118,7 @@ def resolve_mesh_path(filename: str, urdf_dir: Path) -> str | None:
             urdf_dir.parent / "meshes" / "visual" / filename,
             urdf_dir.parent / "meshes" / "visual" / base_name,
         ]
-        
+
         # Also try resolving relative paths like ../meshes/...
         try:
             resolved = (urdf_dir / filename).resolve()
@@ -128,7 +126,7 @@ def resolve_mesh_path(filename: str, urdf_dir: Path) -> str | None:
                 candidates.append(resolved)
         except Exception:
             pass
-    
+
     for cand in candidates:
         try:
             resolved = cand.resolve() if not cand.is_absolute() else cand
@@ -137,7 +135,7 @@ def resolve_mesh_path(filename: str, urdf_dir: Path) -> str | None:
                 return str(resolved)
         except Exception:
             continue
-    
+
     logger.warning(f"Could not resolve mesh path: {filename} from {urdf_dir}")
     logger.debug(f"Tried candidates: {[str(c) for c in candidates[:5]]}")
     return None
@@ -145,10 +143,10 @@ def resolve_mesh_path(filename: str, urdf_dir: Path) -> str | None:
 
 def parse_urdf_full(urdf_path: str) -> dict:
     """Parse URDF file extracting links, joints, and kinematic tree.
-    
+
     Args:
         urdf_path: Path to URDF file
-        
+
     Returns:
         Dictionary with:
         - 'links': dict of link_name -> list of visual geometries
@@ -159,32 +157,29 @@ def parse_urdf_full(urdf_path: str) -> dict:
     urdf_dir = Path(urdf_path).parent
     tree = ET.parse(urdf_path)
     root = tree.getroot()
-    
+
     links = {}
     joints = {}
     parent_map = {}  # child_link -> parent_link
     child_links = set()
     all_links = set()
-    
+
     # Parse all links
     for link in root.findall(".//link"):
         link_name = link.get("name", "unnamed")
         all_links.add(link_name)
         visuals = []
-        
+
         for visual in link.findall("visual"):
             visual_info = {"origin": np.eye(4)}
-            
+
             # Parse origin
             origin = visual.find("origin")
             if origin is not None:
                 xyz = origin.get("xyz", "0 0 0").split()
                 rpy = origin.get("rpy", "0 0 0").split()
-                visual_info["origin"] = _make_transform(
-                    [float(x) for x in xyz],
-                    [float(r) for r in rpy]
-                )
-            
+                visual_info["origin"] = _make_transform([float(x) for x in xyz], [float(r) for r in rpy])
+
             # Parse geometry
             geometry = visual.find("geometry")
             if geometry is not None:
@@ -192,7 +187,7 @@ def parse_urdf_full(urdf_path: str) -> dict:
                 box = geometry.find("box")
                 sphere = geometry.find("sphere")
                 cylinder = geometry.find("cylinder")
-                
+
                 if mesh is not None:
                     filename = mesh.get("filename", "")
                     scale = mesh.get("scale", "1 1 1").split()
@@ -215,7 +210,7 @@ def parse_urdf_full(urdf_path: str) -> dict:
                     visual_info["type"] = "cylinder"
                     visual_info["radius"] = radius
                     visual_info["length"] = length
-            
+
             # Parse material color
             material = visual.find("material")
             if material is not None:
@@ -227,45 +222,42 @@ def parse_urdf_full(urdf_path: str) -> dict:
                     visual_info["color"] = [0.8, 0.8, 0.8, 1.0]
             else:
                 visual_info["color"] = [0.8, 0.8, 0.8, 1.0]
-            
+
             if "type" in visual_info:
                 visuals.append(visual_info)
-        
+
         links[link_name] = visuals
-    
+
     # Parse all joints
     for joint in root.findall(".//joint"):
         joint_name = joint.get("name", "unnamed")
         joint_type = joint.get("type", "fixed")
-        
+
         parent_elem = joint.find("parent")
         child_elem = joint.find("child")
-        
+
         if parent_elem is None or child_elem is None:
             continue
-            
+
         parent_link = parent_elem.get("link")
         child_link = child_elem.get("link")
-        
+
         # Parse joint origin
         origin = joint.find("origin")
         if origin is not None:
             xyz = origin.get("xyz", "0 0 0").split()
             rpy = origin.get("rpy", "0 0 0").split()
-            joint_origin = _make_transform(
-                [float(x) for x in xyz],
-                [float(r) for r in rpy]
-            )
+            joint_origin = _make_transform([float(x) for x in xyz], [float(r) for r in rpy])
         else:
             joint_origin = np.eye(4)
-        
+
         # Parse joint axis
         axis_elem = joint.find("axis")
         if axis_elem is not None:
             axis = [float(x) for x in axis_elem.get("xyz", "0 0 1").split()]
         else:
             axis = [0, 0, 1]
-        
+
         joints[joint_name] = {
             "parent": parent_link,
             "child": child_link,
@@ -273,14 +265,14 @@ def parse_urdf_full(urdf_path: str) -> dict:
             "type": joint_type,
             "axis": axis,
         }
-        
+
         parent_map[child_link] = (parent_link, joint_name)
         child_links.add(child_link)
-    
+
     # Find root link (links that are not children of any joint)
     root_links = all_links - child_links
-    root_link = list(root_links)[0] if root_links else (list(all_links)[0] if all_links else None)
-    
+    root_link = next(iter(root_links)) if root_links else (next(iter(all_links)) if all_links else None)
+
     return {
         "links": links,
         "joints": joints,
@@ -291,45 +283,45 @@ def parse_urdf_full(urdf_path: str) -> dict:
 
 def compute_link_transforms(urdf_data: dict, dof_pos: dict | None = None) -> dict:
     """Compute world transforms for each link using forward kinematics.
-    
+
     Args:
         urdf_data: Output from parse_urdf_full()
         dof_pos: Optional dict mapping joint_name -> joint position (radians)
-        
+
     Returns:
         Dictionary mapping link_name -> 4x4 world transform matrix
     """
     if dof_pos is None:
         dof_pos = {}
-    
+
     links = urdf_data["links"]
     joints = urdf_data["joints"]
     parent_map = urdf_data["parent_map"]
     root_link = urdf_data["root_link"]
-    
+
     link_transforms = {}
-    
+
     def compute_link_transform(link_name: str) -> np.ndarray:
         """Recursively compute the world transform for a link."""
         if link_name in link_transforms:
             return link_transforms[link_name]
-        
+
         if link_name == root_link or link_name not in parent_map:
             # Root link is at identity
             link_transforms[link_name] = np.eye(4)
             return link_transforms[link_name]
-        
+
         parent_link, joint_name = parent_map[link_name]
         parent_transform = compute_link_transform(parent_link)
-        
+
         joint_info = joints[joint_name]
         joint_origin = joint_info["origin"]
         joint_type = joint_info["type"]
         axis = joint_info["axis"]
-        
+
         # Get joint position
         joint_pos = dof_pos.get(joint_name, 0.0)
-        
+
         # Compute joint transform based on type
         if joint_type == "revolute" or joint_type == "continuous":
             # Rotation about axis
@@ -341,34 +333,30 @@ def compute_link_transforms(urdf_data: dict, dof_pos: dict | None = None) -> dic
         else:
             # Fixed joint
             joint_transform = np.eye(4)
-        
+
         # Link transform = parent * joint_origin * joint_rotation
         link_transforms[link_name] = parent_transform @ joint_origin @ joint_transform
         return link_transforms[link_name]
-    
+
     # Compute transform for all links
     for link_name in links:
         compute_link_transform(link_name)
-    
+
     return link_transforms
 
 
 def _axis_angle_to_transform(axis: list, angle: float) -> np.ndarray:
     """Convert axis-angle to 4x4 transformation matrix (rotation only).
-    
+
     Uses Rodrigues' rotation formula.
     """
     axis = np.array(axis, dtype=float)
     axis = axis / (np.linalg.norm(axis) + 1e-10)
-    
-    K = np.array([
-        [0, -axis[2], axis[1]],
-        [axis[2], 0, -axis[0]],
-        [-axis[1], axis[0], 0]
-    ])
-    
+
+    K = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+
     R = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
-    
+
     T = np.eye(4)
     T[:3, :3] = R
     return T
@@ -376,12 +364,12 @@ def _axis_angle_to_transform(axis: list, angle: float) -> np.ndarray:
 
 def parse_urdf_simple(urdf_path: str) -> dict:
     """Simple URDF parser that extracts link visual geometries.
-    
+
     This is a fallback when yourdfpy is not available.
-    
+
     Args:
         urdf_path: Path to URDF file
-        
+
     Returns:
         Dictionary with link names as keys and list of visual geometries as values
     """
@@ -393,13 +381,13 @@ def _make_transform(xyz: list, rpy: list) -> np.ndarray:
     """Create 4x4 transformation matrix from xyz and rpy."""
     T = np.eye(4)
     T[:3, 3] = xyz
-    
+
     # Roll, pitch, yaw to rotation matrix
     roll, pitch, yaw = rpy
     cr, sr = np.cos(roll), np.sin(roll)
     cp, sp = np.cos(pitch), np.sin(pitch)
     cy, sy = np.cos(yaw), np.sin(yaw)
-    
+
     T[0, 0] = cy * cp
     T[0, 1] = cy * sp * sr - sy * cr
     T[0, 2] = cy * sp * cr + sy * sr
@@ -409,7 +397,7 @@ def _make_transform(xyz: list, rpy: list) -> np.ndarray:
     T[2, 0] = -sp
     T[2, 1] = cp * sr
     T[2, 2] = cp * cr
-    
+
     return T
 
 
@@ -643,7 +631,7 @@ class RerunVisualizer:
             state: Optional state with dof_pos
         """
         urdf_path = cfg.urdf_path
-        
+
         # Try to resolve the URDF path
         urdf_path_resolved = Path(urdf_path)
         if not urdf_path_resolved.exists():
@@ -653,7 +641,7 @@ class RerunVisualizer:
                 if candidate.exists():
                     urdf_path_resolved = candidate
                     break
-        
+
         if not urdf_path_resolved.exists():
             logger.warning(f"URDF file not found: {urdf_path} (resolved: {urdf_path_resolved})")
             # Create a simple placeholder box for missing URDFs
@@ -672,7 +660,7 @@ class RerunVisualizer:
             logger.info(f"Loading URDF for {name}: {urdf_path_resolved}")
             urdf_data = parse_urdf_full(str(urdf_path_resolved))
             link_visuals = urdf_data["links"]
-            
+
             if not link_visuals:
                 logger.warning(f"No visual geometries found in URDF: {urdf_path_resolved}")
                 self._visualize_placeholder(name, position, rotation)
@@ -692,7 +680,7 @@ class RerunVisualizer:
                         dof_pos[k] = v.item()
                     elif hasattr(v, "cpu"):
                         dof_pos[k] = v.cpu().numpy().item()
-            
+
             # Compute forward kinematics to get link world transforms
             link_transforms = compute_link_transforms(urdf_data, dof_pos)
 
@@ -717,14 +705,14 @@ class RerunVisualizer:
             for link_name, visuals in link_visuals.items():
                 if not visuals:
                     continue
-                    
+
                 # Get link's local transform in URDF frame (relative to robot root)
                 link_local_transform = link_transforms.get(link_name, np.eye(4))
-                
+
                 # Extract position and rotation for the link (relative to robot root, not world)
                 link_pos = link_local_transform[:3, 3].tolist()
                 link_rot = self._rotation_matrix_to_quaternion(link_local_transform[:3, :3])
-                
+
                 # Log link transform relative to robot root
                 rr.log(
                     f"world/{name}/{link_name}",
@@ -733,7 +721,7 @@ class RerunVisualizer:
                         rotation=rr.Quaternion(xyzw=[link_rot[1], link_rot[2], link_rot[3], link_rot[0]]),
                     ),
                 )
-                
+
                 for i, visual_info in enumerate(visuals):
                     self._log_visual_with_scale(
                         f"world/{name}/{link_name}/visual_{i}",
@@ -754,6 +742,7 @@ class RerunVisualizer:
         except Exception as e:
             logger.error(f"Error visualizing URDF {name}: {e}")
             import traceback
+
             traceback.print_exc()
             # Create placeholder on error
             self._visualize_placeholder(name, position, rotation)
@@ -761,16 +750,16 @@ class RerunVisualizer:
     def _quaternion_to_rotation_matrix(self, quat: tuple) -> np.ndarray:
         """Convert quaternion (w, x, y, z) to 3x3 rotation matrix."""
         w, x, y, z = quat
-        
+
         # Normalize
-        norm = np.sqrt(w*w + x*x + y*y + z*z)
+        norm = np.sqrt(w * w + x * x + y * y + z * z)
         if norm > 1e-10:
-            w, x, y, z = w/norm, x/norm, y/norm, z/norm
-        
+            w, x, y, z = w / norm, x / norm, y / norm, z / norm
+
         R = np.array([
-            [1 - 2*y*y - 2*z*z, 2*x*y - 2*w*z, 2*x*z + 2*w*y],
-            [2*x*y + 2*w*z, 1 - 2*x*x - 2*z*z, 2*y*z - 2*w*x],
-            [2*x*z - 2*w*y, 2*y*z + 2*w*x, 1 - 2*x*x - 2*y*y]
+            [1 - 2 * y * y - 2 * z * z, 2 * x * y - 2 * w * z, 2 * x * z + 2 * w * y],
+            [2 * x * y + 2 * w * z, 1 - 2 * x * x - 2 * z * z, 2 * y * z - 2 * w * x],
+            [2 * x * z - 2 * w * y, 2 * y * z + 2 * w * x, 1 - 2 * x * x - 2 * y * y],
         ])
         return R
 
@@ -800,7 +789,7 @@ class RerunVisualizer:
         global_scale: tuple,
     ) -> None:
         """Log a visual geometry with global scale applied to vertices/sizes.
-        
+
         Args:
             entity_path: Rerun entity path
             visual_info: Dictionary with type, origin, color, and geometry params
@@ -811,13 +800,13 @@ class RerunVisualizer:
         pos = origin[:3, 3].tolist()
         rot_matrix = origin[:3, :3]
         quat = self._rotation_matrix_to_quaternion(rot_matrix)
-        
+
         # Get color (RGBA 0-1 range)
         rgba = visual_info.get("color", [0.8, 0.8, 0.8, 1.0])
         color = [int(c * 255) for c in rgba[:3]]
-        
+
         visual_type = visual_info.get("type")
-        
+
         # Log transform for this visual
         rr.log(
             entity_path,
@@ -826,15 +815,15 @@ class RerunVisualizer:
                 rotation=rr.Quaternion(xyzw=[quat[1], quat[2], quat[3], quat[0]]),
             ),
         )
-        
+
         if visual_type == "mesh":
             mesh_path = visual_info.get("filename")
             mesh_scale = visual_info.get("scale", [1, 1, 1])
-            
+
             if not mesh_path:
                 logger.debug(f"No mesh path for {entity_path}")
                 return
-                
+
             if not os.path.exists(mesh_path):
                 logger.debug(f"Mesh file not found: {mesh_path}")
                 rr.log(
@@ -845,15 +834,15 @@ class RerunVisualizer:
                     ),
                 )
                 return
-            
+
             ext = Path(mesh_path).suffix.lower()
             mesh_loaded = False
-            
+
             if TRIMESH_AVAILABLE:
                 try:
                     mesh = None
                     texture_info_data = None  # Store texture info for later
-                    
+
                     # First, try to load with textures for OBJ files
                     if ext == ".obj":
                         try:
@@ -862,63 +851,63 @@ class RerunVisualizer:
                             if isinstance(mesh_with_tex, trimesh.Scene):
                                 # Extract texture info before concatenating
                                 for geom_name, geom in mesh_with_tex.geometry.items():
-                                    if hasattr(geom, 'visual') and geom.visual is not None:
+                                    if hasattr(geom, "visual") and geom.visual is not None:
                                         vis = geom.visual
-                                        if hasattr(vis, 'uv') and vis.uv is not None and hasattr(vis, 'material'):
+                                        if hasattr(vis, "uv") and vis.uv is not None and hasattr(vis, "material"):
                                             mat = vis.material
-                                            if hasattr(mat, 'image') and mat.image is not None:
+                                            if hasattr(mat, "image") and mat.image is not None:
                                                 texture_info_data = {
-                                                    'uv': np.array(vis.uv, dtype=np.float32),
-                                                    'image': np.array(mat.image)
+                                                    "uv": np.array(vis.uv, dtype=np.float32),
+                                                    "image": np.array(mat.image),
                                                 }
                                                 break
                                 mesh = mesh_with_tex.dump(concatenate=True)
-                            elif hasattr(mesh_with_tex, 'visual'):
+                            elif hasattr(mesh_with_tex, "visual"):
                                 vis = mesh_with_tex.visual
-                                if hasattr(vis, 'uv') and vis.uv is not None and hasattr(vis, 'material'):
+                                if hasattr(vis, "uv") and vis.uv is not None and hasattr(vis, "material"):
                                     mat = vis.material
-                                    if hasattr(mat, 'image') and mat.image is not None:
+                                    if hasattr(mat, "image") and mat.image is not None:
                                         texture_info_data = {
-                                            'uv': np.array(vis.uv, dtype=np.float32),
-                                            'image': np.array(mat.image)
+                                            "uv": np.array(vis.uv, dtype=np.float32),
+                                            "image": np.array(mat.image),
                                         }
                                 mesh = mesh_with_tex
                         except Exception:
                             mesh = None
-                    
+
                     # Fall back to force="mesh" for reliable geometry loading
-                    if mesh is None or not hasattr(mesh, 'vertices'):
+                    if mesh is None or not hasattr(mesh, "vertices"):
                         if ext == ".dae":
                             mesh = trimesh.load(mesh_path, force="mesh", resolver=None)
                         else:
                             mesh = trimesh.load(mesh_path, force="mesh")
-                    
+
                     if isinstance(mesh, trimesh.Scene):
                         mesh = mesh.dump(concatenate=True)
-                    
-                    if hasattr(mesh, 'vertices') and hasattr(mesh, 'faces'):
+
+                    if hasattr(mesh, "vertices") and hasattr(mesh, "faces"):
                         vertices = np.array(mesh.vertices, dtype=np.float32)
-                        
+
                         # Apply URDF mesh scale first
                         if mesh_scale != [1, 1, 1]:
                             vertices = vertices * np.array(mesh_scale, dtype=np.float32)
-                        
+
                         # Apply global scale to vertices
                         vertices = vertices * np.array(global_scale, dtype=np.float32)
-                        
+
                         faces = np.array(mesh.faces, dtype=np.uint32)
-                        
+
                         if len(vertices) > 0 and len(faces) > 0:
                             mesh3d_kwargs = {
                                 "vertex_positions": vertices,
                                 "triangle_indices": faces,
                             }
-                            
+
                             # Compute vertex normals for better lighting
                             if self.use_normals:
                                 try:
                                     mesh.fix_normals()
-                                    if hasattr(mesh, '_cache'):
+                                    if hasattr(mesh, "_cache"):
                                         mesh._cache.clear()
                                     normals = mesh.vertex_normals.astype(np.float32)
                                     norms = np.linalg.norm(normals, axis=1, keepdims=True)
@@ -927,13 +916,13 @@ class RerunVisualizer:
                                     mesh3d_kwargs["vertex_normals"] = normals
                                 except Exception as e:
                                     logger.debug(f"Failed to compute normals for {mesh_path}: {e}")
-                            
+
                             has_texture = False
-                            
+
                             # Try to use pre-extracted texture info
                             if texture_info_data is not None:
-                                uv = texture_info_data['uv']
-                                texture_image = texture_info_data['image']
+                                uv = texture_info_data["uv"]
+                                texture_image = texture_info_data["image"]
                                 if len(uv) == len(vertices) and texture_image.size > 0:
                                     mesh3d_kwargs["vertex_texcoords"] = uv
                                     if len(texture_image.shape) == 2:
@@ -941,10 +930,10 @@ class RerunVisualizer:
                                     mesh3d_kwargs["albedo_texture"] = texture_image
                                     has_texture = True
                                     logger.debug(f"Loaded texture for {mesh_path}: {texture_image.shape}")
-                            
+
                             # Fall back to vertex colors
                             if not has_texture:
-                                if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
+                                if hasattr(mesh, "visual") and hasattr(mesh.visual, "vertex_colors"):
                                     vc = mesh.visual.vertex_colors
                                     if vc is not None and len(vc) == len(vertices):
                                         mesh3d_kwargs["vertex_colors"] = vc[:, :3].tolist()
@@ -952,20 +941,26 @@ class RerunVisualizer:
                                         mesh3d_kwargs["vertex_colors"] = [color] * len(vertices)
                                 else:
                                     mesh3d_kwargs["vertex_colors"] = [color] * len(vertices)
-                            
+
                             rr.log(entity_path, rr.Mesh3D(**mesh3d_kwargs))
                             mesh_loaded = True
                             texture_info = " with texture" if has_texture else ""
-                            normals_info = " with normals" if self.use_normals and "vertex_normals" in mesh3d_kwargs else ""
-                            logger.debug(f"Loaded mesh: {mesh_path} ({len(vertices)} verts, scale={global_scale}){texture_info}{normals_info}")
+                            normals_info = (
+                                " with normals" if self.use_normals and "vertex_normals" in mesh3d_kwargs else ""
+                            )
+                            logger.debug(
+                                f"Loaded mesh: {mesh_path} ({len(vertices)} verts, scale={global_scale}){texture_info}{normals_info}"
+                            )
                 except Exception as e:
                     logger.warning(f"trimesh failed for {mesh_path}: {e}")
-            
+
             if not mesh_loaded and ext in [".obj", ".glb", ".gltf", ".stl", ".dae"]:
                 try:
                     # Asset3D can load textures automatically for supported formats
                     if global_scale != (1.0, 1.0, 1.0):
-                        logger.warning(f"Cannot apply scale to Asset3D: {mesh_path}. Install trimesh for proper scaling.")
+                        logger.warning(
+                            f"Cannot apply scale to Asset3D: {mesh_path}. Install trimesh for proper scaling."
+                        )
                     rr.log(
                         entity_path,
                         rr.Asset3D(path=mesh_path),
@@ -974,7 +969,7 @@ class RerunVisualizer:
                     logger.debug(f"Loaded mesh as Asset3D: {mesh_path}")
                 except Exception as e:
                     logger.debug(f"Asset3D failed for {mesh_path}: {e}")
-            
+
             if not mesh_loaded:
                 logger.warning(f"Could not load mesh: {mesh_path} (format: {ext})")
                 rr.log(
@@ -985,12 +980,12 @@ class RerunVisualizer:
                     ),
                 )
             return
-        
+
         elif visual_type == "box":
             size = visual_info.get("size", [1, 1, 1])
             # Apply global scale to box size
             scaled_size = [s * gs for s, gs in zip(size, global_scale)]
-            
+
             # Use Mesh3D for solid rendering
             if TRIMESH_AVAILABLE:
                 try:
@@ -1008,7 +1003,7 @@ class RerunVisualizer:
                     return
                 except Exception:
                     pass
-            
+
             # Fallback
             half_sizes = [s / 2 for s in scaled_size]
             rr.log(
@@ -1018,13 +1013,13 @@ class RerunVisualizer:
                     colors=[color],
                 ),
             )
-        
+
         elif visual_type == "sphere":
             radius = visual_info.get("radius", 1.0)
             # Apply average scale to sphere radius
             avg_scale = sum(global_scale) / 3.0
             scaled_radius = radius * avg_scale
-            
+
             # Use Mesh3D for solid rendering
             if TRIMESH_AVAILABLE:
                 try:
@@ -1042,7 +1037,7 @@ class RerunVisualizer:
                     return
                 except Exception:
                     pass
-            
+
             # Fallback
             rr.log(
                 entity_path,
@@ -1051,15 +1046,15 @@ class RerunVisualizer:
                     colors=[color],
                 ),
             )
-        
+
         elif visual_type == "cylinder":
             radius = visual_info.get("radius", 1.0)
             length = visual_info.get("length", 1.0)
-            
+
             # Apply scale (xy for radius, z for length)
             scaled_radius = radius * (global_scale[0] + global_scale[1]) / 2.0
             scaled_length = length * global_scale[2]
-            
+
             if TRIMESH_AVAILABLE:
                 try:
                     cylinder = trimesh.creation.cylinder(radius=scaled_radius, height=scaled_length)
@@ -1090,7 +1085,7 @@ class RerunVisualizer:
         visual_info: dict,
     ) -> None:
         """Log a visual geometry using the simple URDF parser output (no global scale).
-        
+
         Args:
             entity_path: Rerun entity path
             visual_info: Dictionary with type, origin, color, and geometry params
@@ -1153,7 +1148,7 @@ class RerunVisualizer:
                 rotation=rr.Quaternion(xyzw=[rotation[1], rotation[2], rotation[3], rotation[0]]),
             ),
         )
-        
+
         # Use Mesh3D for solid surface rendering instead of Boxes3D (which renders as wireframe)
         # Log geometry to child entity so it inherits parent transform
         if TRIMESH_AVAILABLE:
@@ -1173,7 +1168,7 @@ class RerunVisualizer:
                 return
             except Exception as e:
                 logger.debug(f"Failed to create cube mesh: {e}")
-        
+
         # Fallback to Boxes3D - uses half_size
         half_size = [s / 2 for s in size]
         rr.log(
@@ -1208,7 +1203,7 @@ class RerunVisualizer:
                 rotation=rr.Quaternion(xyzw=[rotation[1], rotation[2], rotation[3], rotation[0]]),
             ),
         )
-        
+
         # Use Mesh3D for solid surface rendering instead of Ellipsoids3D (which renders as wireframe)
         # Log geometry to child entity so it inherits parent transform
         if TRIMESH_AVAILABLE:
@@ -1228,7 +1223,7 @@ class RerunVisualizer:
                 return
             except Exception as e:
                 logger.debug(f"Failed to create sphere mesh: {e}")
-        
+
         # Fallback to Ellipsoids3D
         rr.log(
             f"world/{name}/visual",
@@ -1319,9 +1314,7 @@ class RerunVisualizer:
                 transform_args["translation"] = position
             if rotation is not None:
                 # rotation is [w, x, y, z], rerun wants xyzw
-                transform_args["rotation"] = rr.Quaternion(
-                    xyzw=[rotation[1], rotation[2], rotation[3], rotation[0]]
-                )
+                transform_args["rotation"] = rr.Quaternion(xyzw=[rotation[1], rotation[2], rotation[3], rotation[0]])
 
             rr.log(f"world/{name}", rr.Transform3D(**transform_args))
 
@@ -1331,7 +1324,7 @@ class RerunVisualizer:
 
     def _update_urdf_joints(self, name: str, state: dict) -> None:
         """Update joint positions for an articulated URDF model.
-        
+
         Args:
             name: Name of the item
             state: State dict with 'pos', 'rot', 'dof_pos'
@@ -1339,14 +1332,14 @@ class RerunVisualizer:
         urdf_info = self._urdf_models.get(name)
         if not urdf_info:
             return
-        
+
         urdf_data = urdf_info["urdf_data"]
-        
+
         # Get joint positions
         dof_pos = state.get("dof_pos", {})
         if not dof_pos:
             return
-        
+
         # Convert tensor values to floats
         dof_pos_float = {}
         for k, v in dof_pos.items():
@@ -1356,18 +1349,18 @@ class RerunVisualizer:
                 dof_pos_float[k] = v.cpu().numpy().item()
             else:
                 dof_pos_float[k] = float(v)
-        
+
         # Compute new link transforms using forward kinematics
         link_transforms = compute_link_transforms(urdf_data, dof_pos_float)
-        
+
         # Update each link's transform (relative to robot root, since world/{name} has root transform)
         for link_name in urdf_data["links"]:
             link_local_transform = link_transforms.get(link_name, np.eye(4))
-            
+
             # Use local transform relative to robot root (not world transform)
             link_pos = link_local_transform[:3, 3].tolist()
             link_rot = self._rotation_matrix_to_quaternion(link_local_transform[:3, :3])
-            
+
             rr.log(
                 f"world/{name}/{link_name}",
                 rr.Transform3D(
@@ -1375,7 +1368,6 @@ class RerunVisualizer:
                     rotation=rr.Quaternion(xyzw=[link_rot[1], link_rot[2], link_rot[3], link_rot[0]]),
                 ),
             )
-
 
     def set_time(self, time_step: int) -> None:
         """Set the current time step for timeline-based visualization.
@@ -1468,4 +1460,3 @@ class RerunVisualizer:
         """Close the visualizer and clean up resources."""
         self.clear()
         logger.info("Rerun visualizer closed")
-
