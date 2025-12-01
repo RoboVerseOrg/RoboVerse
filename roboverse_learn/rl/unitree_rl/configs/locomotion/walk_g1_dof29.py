@@ -112,7 +112,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         },
     )
 
-    callbacks_query = {"contact_forces": ContactForces(history_length=3), "lidar_point_cloud": LidarPointCloud(enabled=True)}
+    callbacks_query = {"contact_forces": ContactForces(history_length=3), "lidar_point_cloud": LidarPointCloud(enabled=False)}
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(
             obj_name="g1_dof29",

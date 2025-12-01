@@ -291,6 +291,9 @@ class LeggedRobotTask(AgentTask):
                 torch.mean(self.episode_not_terminations[key][env_ids]) / self.max_episode_steps
             )
             self.episode_not_terminations[key][env_ids] = 0.0
+        states = self.handler.get_states()
+        info = {"privileged_observation": self._privileged_observation(states)}
+        return self.obs_buf, info
 
     def step(
         self,

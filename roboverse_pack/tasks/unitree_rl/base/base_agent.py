@@ -28,6 +28,12 @@ class AgentTask(RLTaskEnv):
         _callbacks_cfg = asdict(getattr(self.cfg, "callbacks", CallbacksCfg()))
         self._query: dict = _callbacks_cfg.pop("query", {})
         self.robot = scenario.robots[0]
+
+        # Initialize observation/action space attributes that RLTaskEnv would set
+        # We call BaseTaskEnv.__init__ directly to avoid early reset() call
+        self._observation_space = None
+        self._action_space = None
+
         BaseTaskEnv.__init__(self, scenario=scenario, device=device)
         self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states(), self.device)
         # buffers will be allocated lazily once handler is available

@@ -81,14 +81,14 @@ class WalkG1Dof29Task(LeggedRobotTask):
 
     def _init_buffers(self):
         # commands + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_obs_single = 3 + 3 + 3 + self.num_actions * 3
+        self.num_obs = 3 + 3 + 3 + self.num_actions * 3
         # commands + base_lin_vel + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_priv_obs_single = 3 + 3 + 3 + 3 + self.num_actions * 3
+        self.num_priv_obs = 3 + 3 + 3 + 3 + self.num_actions * 3
         # Rewrite SOME Hyfer-Parameters
         self.obs_clip_limit = 100.0
-        self.obs_scale = torch.ones(size=(self.num_obs_single,), dtype=torch.float, device=self.device)
-        self.priv_obs_scale = torch.ones(size=(self.num_priv_obs_single,), dtype=torch.float, device=self.device)
-        self.obs_noise = torch.zeros(size=(self.num_obs_single,), dtype=torch.float, device=self.device)
+        self.obs_scale = torch.ones(size=(self.num_obs,), dtype=torch.float, device=self.device)
+        self.priv_obs_scale = torch.ones(size=(self.num_priv_obs,), dtype=torch.float, device=self.device)
+        self.obs_noise = torch.zeros(size=(self.num_obs,), dtype=torch.float, device=self.device)
 
         ##################### for observation scale #####################
         self.obs_scale[3:6] = 0.2  # angular velocity
