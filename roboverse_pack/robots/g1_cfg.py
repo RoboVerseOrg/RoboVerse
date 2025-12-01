@@ -57,22 +57,6 @@ class G1Dof12Cfg(RobotCfg):
         "right_ankle_roll_joint": (-0.2618, 0.2618),
     }
 
-    # torque_limits: dict[str, float] = {
-    #     # Hips & legs
-    #     "left_hip_pitch_joint": 88,
-    #     "left_hip_roll_joint": 139,
-    #     "left_hip_yaw_joint": 88,
-    #     "left_knee_joint": 139,
-    #     "left_ankle_pitch_joint": 25,
-    #     "left_ankle_roll_joint": 25,
-    #     "right_hip_pitch_joint": 88,
-    #     "right_hip_roll_joint": 139,
-    #     "right_hip_yaw_joint": 88,
-    #     "right_knee_joint": 139,
-    #     "right_ankle_pitch_joint": 25,
-    #     "right_ankle_roll_joint": 25,
-    # }
-
     default_joint_positions: dict[str, float] = {
         # Hips & legs
         "left_hip_pitch_joint": -0.1,
@@ -165,23 +149,6 @@ class G1Dof23Cfg(G1Dof12Cfg):
         "right_elbow_joint": (-1.0472, 2.0944),
         "right_wrist_roll_joint": (-1.972222, 1.972222),
     }
-
-    # torque_limits = {
-    #     **G1Dof12Cfg().torque_limits,
-    #     # Waist
-    #     "waist_yaw_joint": 88,
-    #     # Shoulders & arms
-    #     "left_shoulder_pitch_joint": 25,
-    #     "left_shoulder_roll_joint": 25,
-    #     "left_shoulder_yaw_joint": 25,
-    #     "left_elbow_joint": 25,
-    #     "left_wrist_roll_joint": 25,
-    #     "right_shoulder_pitch_joint": 25,
-    #     "right_shoulder_roll_joint": 25,
-    #     "right_shoulder_yaw_joint": 25,
-    #     "right_elbow_joint": 25,
-    #     "right_wrist_roll_joint": 25,
-    # }
 
     default_joint_positions = {
         **G1Dof12Cfg().default_joint_positions,
@@ -291,12 +258,6 @@ class G1Dof29Cfg(G1Dof27Cfg):
         "waist_pitch_joint": (-0.52, 0.52),
     }
 
-    # torque_limits = {
-    #     **G1Dof27Cfg().torque_limits,
-    #     "waist_roll_joint": 25,
-    #     "waist_pitch_joint": 25,
-    # }
-
     default_joint_positions = {
         **G1Dof27Cfg().default_joint_positions,
         "waist_roll_joint": 0.0,
@@ -308,27 +269,6 @@ class G1Dof29Cfg(G1Dof27Cfg):
         "waist_roll_joint": "effort",
         "waist_pitch_joint": "effort",
     }
-
-    # def __post_init__(self):
-    #     self.cameras: list = [
-    #         PinholeCameraCfg(
-    #             name="front_cam",
-    #             data_types=["rgb"],
-    #             height=480,
-    #             width=640,
-    #             focal_length=7.6,
-    #             focus_distance=400.0,
-    #             horizontal_aperture=20.0,
-    #             clipping_range=(0.1, 1.0e5),
-    #             mount_to=self.name,
-    #             mount_link="d435_link",
-    #             mount_pos=(0, 0.0, 0),
-    #             # mount_quat=(0.5, -0.5, 0.5, -0.5), # ros convention
-    #             mount_quat=(1, 0, 0, 0),  # world convention
-    #             # update_period: float = 0.02,
-    #         )
-    #     ]
-    #     return super().__post_init__()
 
 
 @configclass
@@ -376,25 +316,6 @@ class G1Dof29Dex3Cfg(G1Dof29Cfg):
         "right_hand_index_0_joint": (0.0, 1.57079632),
         "right_hand_index_1_joint": (0.0, 1.74532925),
     }
-
-    # torque_limits = {
-    #     **G1Dof29Cfg().torque_limits,
-    #     # Hands
-    #     "left_hand_thumb_0_joint": 2.45,
-    #     "left_hand_thumb_1_joint": 1.4,
-    #     "left_hand_thumb_2_joint": 1.4,
-    #     "left_hand_middle_0_joint": 1.4,
-    #     "left_hand_middle_1_joint": 1.4,
-    #     "left_hand_index_0_joint": 1.4,
-    #     "left_hand_index_1_joint": 1.4,
-    #     "right_hand_thumb_0_joint": 2.45,
-    #     "right_hand_thumb_1_joint": 1.4,
-    #     "right_hand_thumb_2_joint": 1.4,
-    #     "right_hand_middle_0_joint": 1.4,
-    #     "right_hand_middle_1_joint": 1.4,
-    #     "right_hand_index_0_joint": 1.4,
-    #     "right_hand_index_1_joint": 1.4,
-    # }
 
     default_joint_positions = {
         **G1Dof29Cfg().default_joint_positions,
@@ -447,37 +368,6 @@ class G1Dof29Dex3Cfg(G1Dof29Cfg):
                 clipping_range=(0.1, 1.0e5),
                 mount_to=self.name,
                 mount_link="d435_link",
-                mount_pos=(0, 0.0, 0),
-                # mount_quat=(0.5, -0.5, 0.5, -0.5), # ros convention
-                mount_quat=(1, 0, 0, 0),  # world convention
-                # update_period: float = 0.02,
-            )
-        ]
-        return super().__post_init__()
-
-
-@configclass
-class G1Dof29SensorsCfg(G1Dof29Cfg):
-    name: str = "g1_dof29"
-    num_joints: int = 29
-    usd_path: str = "roboverse_data/robots/g1/usd/g1_29dof_sensors/g1_29dof_sensors.usd"
-    xml_path: str = "roboverse_data/robots/g1/xml/g1_29dof_rev_1_0.xml"
-    urdf_path: str = "roboverse_data/robots/g1/urdf/g1_29dof_rev_1_0.urdf"
-    mjcf_path = xml_path
-
-    def __post_init__(self):
-        self.cameras: list = [
-            PinholeCameraCfg(
-                name="front_cam",
-                data_types=["rgb"],
-                height=480,
-                width=640,
-                focal_length=7.6,
-                focus_distance=400.0,
-                horizontal_aperture=20.0,
-                clipping_range=(0.1, 1.0e5),
-                mount_to=self.name,
-                mount_link="torso_link/d435_link",
                 mount_pos=(0, 0.0, 0),
                 # mount_quat=(0.5, -0.5, 0.5, -0.5), # ros convention
                 mount_quat=(1, 0, 0, 0),  # world convention
