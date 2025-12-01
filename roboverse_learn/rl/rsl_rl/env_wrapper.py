@@ -19,9 +19,21 @@ class RslRlEnvWrapper:
         self.train_cfg = train_cfg
 
     def step(self, actions: torch.Tensor) -> tuple[TensorDict, torch.Tensor, torch.Tensor, dict]:
-        """Execute actions and return observations, rewards, dones, extras."""
-        _ = self.env.step(actions)
-        return self.obs_buf, self.env.rew_buf, self.env.reset_buf, self.env.extras
+        """Execute actions and return observations, rewards, dones, extras.
+
+        RSL-RL expects combined done flags (terminated OR truncated).
+        """
+        # Call step and get Gymnasium format returns
+        obs_tensor, rewards, terminated, truncated, info = self.env.step(actions)
+
+        # RSL-RL expects combined done flags (terminated OR truncated)
+        dones = torch.logical_or(terminated, truncated)
+
+        # Merge info into extras
+        extras = {**self.env.extras, **info}
+
+        # Return RSL-RL format with TensorDict observations
+        return self.obs_buf, rewards, dones, extras
 
     def get_observations(self) -> TensorDict:
         """Return current observations as TensorDict."""

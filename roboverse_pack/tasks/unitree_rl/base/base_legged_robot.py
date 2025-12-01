@@ -201,6 +201,7 @@ class LeggedRobotTask(AgentTask):
         self.rew_buf = torch.zeros(size=(self.num_envs,), dtype=torch.float, device=self.device)
         self.reset_buf = torch.zeros(size=(self.num_envs,), dtype=torch.bool, device=self.device)
         self.time_out_buf = torch.zeros(size=(self.num_envs,), dtype=torch.bool, device=self.device)
+        self._terminated_buf = torch.zeros(size=(self.num_envs,), dtype=torch.bool, device=self.device)
 
         self.up_axis_idx = 2
         self.gravity_vec = torch.tensor(
@@ -299,7 +300,15 @@ class LeggedRobotTask(AgentTask):
         self,
         actions: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict]:
-        """Apply actions, simulate for `decimation` steps, and compute RLTask-style outputs."""
+        """Apply actions, simulate for `decimation` steps, and return Gymnasium-style outputs.
+
+        Returns:
+            obs: Observations for next step (includes history)
+            reward: Rewards from this step
+            terminated: Episode terminated due to failure condition
+            truncated: Episode truncated due to timeout
+            info: Additional information dictionary
+        """
         if not isinstance(actions, torch.Tensor):
             actions = torch.as_tensor(actions, device=self.device, dtype=torch.float32)
         if actions.ndim == 1:
@@ -320,27 +329,42 @@ class LeggedRobotTask(AgentTask):
 
         self._post_physics_step(env_states)
 
+        # Return Gymnasium-compatible format
         return (
-            self.obs_buf,
-            self.rew_buf,
-            self.reset_buf,
-            self.time_out_buf,
-            self.extras,
+            self.obs_buf,  # Observations with history
+            self.rew_buf,  # Rewards
+            self._terminated_buf,  # Pure termination flags (NOT combined)
+            self.time_out_buf,  # Truncation/timeout flags
+            self.extras,  # Info dict
         )
 
     def _post_physics_step(self, env_states: TensorState):
         self._episode_steps += 1
         self.common_step_counter += 1
 
-        # gym-style return values
+        # Compute termination and timeout separately for Gymnasium compatibility
+        self._terminated_buf[:] = self._terminated(env_states)
         self.time_out_buf[:] = self._time_out(env_states)
-        self.reset_buf[:] = torch.logical_or(self.time_out_buf, self._terminated(env_states))
+
+        # Keep reset_buf for backward compatibility (RSL-RL wrapper may use it)
+        self.reset_buf[:] = torch.logical_or(self.time_out_buf, self._terminated_buf)
         self.rew_buf[:] = self._reward(env_states)
+
+        # Compute "true" next observations BEFORE reset (for off-policy RL)
+        # This is the observation that would be returned if the env didn't auto-reset
+        true_obs_single, _ = self._compute_task_observations(env_states)
+        # Temporarily append to queue to compute obs with full history
+        self.obs_buf_queue.append(true_obs_single)
+        true_next_obs_with_history = self.obs_buf.clone()
+        # Remove the temporary observation
+        self.obs_buf_queue.pop()
 
         # reset envs
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_idx) > 0:
             self.reset(env_ids=reset_env_idx)
+            # Get updated states after reset
+            env_states = self.handler.get_states()
 
         self.commands_manager.resample(self)
 
@@ -352,6 +376,10 @@ class LeggedRobotTask(AgentTask):
         if priv_single is not None and self.priv_obs_buf_queue.maxlen > 0:
             self.priv_obs_buf_queue.append(priv_single)
         ####### Compute observations after resets ########
+
+        # Store true next obs for off-policy algorithms (TD3, SAC)
+        # This is needed for proper truncation handling in replay buffers
+        self.extras["observations"] = {"raw": {"obs": true_next_obs_with_history}}
 
         # copy to the history buffer
         for key, history in self.history_buffer.items():
@@ -432,3 +460,34 @@ class LeggedRobotTask(AgentTask):
     def max_episode_steps(self):
         """Maximum episode length in steps."""
         return math.ceil(self.cfg.episode_length_s / self.step_dt)
+
+    @property
+    def observation_space(self):
+        """Observation space for the policy (includes history)."""
+        if self._observation_space is None:
+            import gymnasium as gym
+            import numpy as np
+
+            obs_dim = self.obs_buf.shape[-1]
+            self._observation_space = gym.spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(obs_dim,),
+                dtype=np.float32,
+            )
+        return self._observation_space
+
+    @property
+    def action_space(self):
+        """Action space (normalized to [-1, 1])."""
+        if self._action_space is None:
+            import gymnasium as gym
+            import numpy as np
+
+            self._action_space = gym.spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(self.num_actions,),
+                dtype=np.float32,
+            )
+        return self._action_space
