@@ -200,6 +200,10 @@ class TaskRerunWrapper:
         if hasattr(self.env, "close"):
             self.env.close()
 
+    def __len__(self) -> int:
+        """Return number of environments."""
+        return self.env.num_envs if hasattr(self.env, "num_envs") else 1
+
     def __getattr__(self, name):
         """Proxy all other attributes to the wrapped environment."""
         return getattr(self.env, name)
