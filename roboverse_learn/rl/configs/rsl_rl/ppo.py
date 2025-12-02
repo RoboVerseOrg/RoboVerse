@@ -2,12 +2,15 @@ from typing import Tuple
 
 from metasim.utils import configclass
 
-from ..base import BaseRLConfig
+from roboverse_learn.rl.configs.base import BaseRLConfig, SimBackend
 
 
 @configclass
-class BasePPOConfig(BaseRLConfig):
-    """Common PPO configuration shared across PPO-based algorithms."""
+class RslRlPPOConfig(BaseRLConfig):
+    """RSL-RL PPO-specific configuration."""
+
+    # Override base experiment defaults
+    exp_name: str = "rsl_rl_ppo"
 
     # RSL-RL style runner settings
     num_steps_per_env: int = 24
@@ -32,3 +35,9 @@ class BasePPOConfig(BaseRLConfig):
     max_grad_norm: float = 1.0
     schedule: str = "adaptive"
     use_clipped_value_loss: bool = True
+
+    # Logging
+    wandb_project: str = "rsl_rl_ppo"
+
+
+__all__ = ["RslRlPPOConfig"]

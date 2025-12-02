@@ -1,12 +1,12 @@
-from typing import Literal, Optional
+from typing import Optional
 
 from metasim.utils import configclass
 
-from .ppo_base import BasePPOConfig
+from roboverse_learn.rl.configs.base import BaseRLConfig, SimBackend
 
 
 @configclass
-class CleanRLPPOConfig(BasePPOConfig):
+class CleanRLPPOConfig(BaseRLConfig):
     """CleanRL PPO configuration adapted for RoboVerse."""
 
     # Experiment
@@ -14,8 +14,7 @@ class CleanRLPPOConfig(BasePPOConfig):
 
     # Tracking / logging flags (CleanRL-style)
     track: bool = False
-    wandb_project_name: str = "cleanRL"
-    wandb_entity: Optional[str] = None
+    wandb_project: str = "cleanRL"
     capture_video: bool = False
     save_model: bool = False
     upload_model: bool = False
@@ -24,15 +23,17 @@ class CleanRLPPOConfig(BasePPOConfig):
     # Task & Environment overrides
     task: str = "stand"
     robot: str = "h1"
-    sim: Literal["isaaclab", "isaacgym", "isaacsim", "mujoco", "genesis", "mjx"] = "mjx"
+    sim: SimBackend = "mjx"
     headless: bool = False
     device: str = "cuda"
 
     # Algorithm-specific arguments (CleanRL naming)
     total_timesteps: int = 10000000
+    learning_rate: float = 3e-4
     num_envs: int = 2048
     num_steps: int = 64
     anneal_lr: bool = True
+    gamma: float = 0.99
     gae_lambda: float = 0.95
     num_minibatches: int = 128
     update_epochs: int = 5

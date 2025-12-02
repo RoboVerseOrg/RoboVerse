@@ -28,7 +28,7 @@ from gymnasium import make_vec
 import metasim  # noqa: F401
 
 from roboverse_learn.rl.episode_tracker import EpisodeTracker
-from roboverse_learn.rl.configs.algorithms.clean_ppo import CleanRLPPOConfig
+from roboverse_learn.rl.configs.clean_rl.ppo import CleanRLPPOConfig
 
 
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         import wandb
 
         wandb.init(
-            project=args.wandb_project_name,
+            project=args.wandb_project,
             entity=args.wandb_entity,
             sync_tensorboard=True,
             config=vars(args),

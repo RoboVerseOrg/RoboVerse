@@ -3,6 +3,16 @@ from typing import Literal, Optional
 from metasim.utils import configclass
 
 
+SimBackend = Literal[
+    "isaacgym",
+    "isaacsim",
+    "isaaclab",
+    "mujoco",
+    "genesis",
+    "mjx",
+]
+
+
 @configclass
 class BaseRLConfig:
     """Base configuration for all RL algorithms in RoboVerse."""
@@ -19,14 +29,7 @@ class BaseRLConfig:
     # Task & Environment
     task: str = "walk_g1_dof29"
     robot: str = "g1_dof29"
-    sim: Literal[
-        "isaacgym",
-        "isaacsim",
-        "isaaclab",
-        "mujoco",
-        "genesis",
-        "mjx",
-    ] = "isaacgym"
+    sim: SimBackend = "isaacgym"
     num_envs: int = 4096
     headless: bool = True
 

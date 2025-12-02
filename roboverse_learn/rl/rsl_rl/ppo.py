@@ -16,7 +16,7 @@ from rsl_rl.runners import OnPolicyRunner
 
 rootutils.setup_root(__file__, pythonpath=True)
 
-from roboverse_learn.rl.configs.algorithms.rsl_ppo import RslRlPPOConfig
+from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
 from metasim.task.registry import get_task_class
 
