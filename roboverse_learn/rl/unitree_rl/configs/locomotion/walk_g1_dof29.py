@@ -3,11 +3,7 @@ import math
 from metasim.utils import configclass
 
 from roboverse_learn.rl.unitree_rl.configs.cfg_base import BaseEnvCfg
-from roboverse_learn.rl.unitree_rl.configs.algorithm import (
-    RslRlOnPolicyRunnerCfg,
-    RslRlPpoActorCriticCfg,
-    RslRlPpoAlgorithmCfg,
-)
+from roboverse_learn.rl.configs.rsl_rl.algorithm import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 import roboverse_learn.rl.unitree_rl.helper.curriculum_utils as curr_funs
 from metasim.queries import ContactForces
 from roboverse_learn.rl.unitree_rl.configs.cfg_queries import LidarPointCloud

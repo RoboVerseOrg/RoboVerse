@@ -57,7 +57,7 @@ def evaluate(args: RslRlPPOConfig):
     if not args.resume:
         raise ValueError("Please provide --resume (timestamp/log dir) for evaluation.")
 
-    # Convert resume string to full log directory path (same as unitree_rl/main.py)
+    # Convert resume string to full log directory path (legacy unitree_rl runner convention)
     log_dir = (
         args.resume
         if os.path.isdir(args.resume)
