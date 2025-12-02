@@ -26,8 +26,6 @@ def make_roboverse_env(args: RslRlPPOConfig):
     task_cls = get_task_class(args.task)
 
     # Load environment configuration from task (like MasterRunner does)
-    env_cfg_cls = getattr(task_cls, "env_cfg_cls", None)
-    env_cfg = env_cfg_cls() if env_cfg_cls is not None else None
 
     scenario = task_cls.scenario.update(
         robots=[args.robot],
@@ -39,7 +37,7 @@ def make_roboverse_env(args: RslRlPPOConfig):
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
     # Pass env_cfg to task constructor
-    env = task_cls(scenario=scenario, device=device, env_cfg=env_cfg)
+    env = task_cls(scenario=scenario, device=device)
     return env
 
 

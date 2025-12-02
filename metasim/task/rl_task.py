@@ -36,6 +36,10 @@ class RLTaskEnv(BaseTaskEnv):
         self.robot = scenario.robots[0]
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
+        # Observation buffers for RSL-RL compatibility
+        self._obs_buf = None
+        self._priv_obs_buf = None
+
         # convert list state to tensor state for reset acceleration
         self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states(), self.device)
         # first reset
@@ -113,7 +117,16 @@ class RLTaskEnv(BaseTaskEnv):
         states = self.handler.get_states()
         first_obs = self._observation(states).to(self.device)
         self._raw_observation_cache = first_obs.clone()
-        info = {"privileged_observation": self._privileged_observation(states)}
+        priv_obs = self._privileged_observation(states)
+
+        # Update observation buffers for RSL-RL compatibility
+        self._obs_buf = first_obs
+        if isinstance(priv_obs, torch.Tensor):
+            self._priv_obs_buf = priv_obs.to(self.device)
+        else:
+            self._priv_obs_buf = first_obs
+
+        info = {"privileged_observation": priv_obs}
         return first_obs, info
 
     def step(
@@ -137,6 +150,13 @@ class RLTaskEnv(BaseTaskEnv):
         reward = self._reward(states)
         terminated = self._terminated(states).bool().to(self.device)
         time_out = self._time_out(states).bool().to(self.device)
+
+        # Cache observations for RSL-RL compatibility
+        self._obs_buf = obs
+        if isinstance(priv_obs, torch.Tensor):
+            self._priv_obs_buf = priv_obs.to(self.device)
+        else:
+            self._priv_obs_buf = obs
 
         episode_done = terminated | time_out
         info = {
@@ -194,3 +214,38 @@ class RLTaskEnv(BaseTaskEnv):
     def _prepare_states(self, env_states, env_ids) -> torch.Tensor:
         """Prepare for the states before reset(do domain randomization)."""
         return env_states
+
+    # -------------------------------------------------------------------------
+    # RSL-RL compatibility properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def obs_buf(self) -> torch.Tensor:
+        """Cached observation buffer for RSL-RL compatibility.
+
+        This property enables RLTaskEnv-based environments to work with
+        RSL-RL's OnPolicyRunner without needing a wrapper.
+        """
+        if self._obs_buf is None:
+            # Lazy initialization on first access
+            states = self.handler.get_states()
+            self._obs_buf = self._observation(states).to(self.device)
+        return self._obs_buf
+
+    @property
+    def priv_obs_buf(self) -> torch.Tensor:
+        """Cached privileged observation buffer for RSL-RL compatibility.
+
+        Returns privileged observations if available, otherwise returns
+        the same as obs_buf (symmetric actor-critic).
+        """
+        if self._priv_obs_buf is None:
+            # Lazy initialization on first access
+            states = self.handler.get_states()
+            priv_obs = self._privileged_observation(states)
+            if isinstance(priv_obs, torch.Tensor):
+                self._priv_obs_buf = priv_obs.to(self.device)
+            else:
+                # Fallback to symmetric observations
+                self._priv_obs_buf = self.obs_buf
+        return self._priv_obs_buf
