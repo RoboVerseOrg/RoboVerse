@@ -1,6 +1,6 @@
 # PPO
 
-RoboVerse provides two PPO implementations with different features and use cases:
+RoboVerse provides three PPO implementations with different features and use cases:
 
 ## 1. Stable-Baselines3 PPO (Recommended for Beginners)
 
@@ -37,11 +37,28 @@ python roboverse_learn/rl/clean_rl/ppo.py --task reach_origin --robot franka --s
 
 ### Configuration
 
-Check the file header in `roboverse_learn/rl/clean_rl/ppo.py` for available configuration options including:
+Configuration defaults live in `roboverse_learn/rl/configs/clean_rl/ppo.py` (parsed with `tyro`). Use `--help` for all options, including:
 - Task selection (`--task`)
 - Robot type (`--robot`)
 - Simulator backend (`--sim`) 
 - Training hyperparameters (`--num_envs`, `--learning_rate`, etc.)
+
+## 3. RSL-RL PPO (OnPolicyRunner)
+
+Based on [rsl_rl](https://github.com/leggedrobotics/rsl_rl) for high-throughput on-policy training with asymmetric observations.
+
+### Usage
+
+```bash
+# RSL-RL PPO for Unitree G1 walking
+python -m roboverse_learn.rl.rsl_rl.ppo --task walk_g1_dof29 --robot g1 --sim isaacgym --num-envs 4096
+```
+
+### Configuration
+
+- Install dependency: `pip install rsl_rl`
+- CLI defaults: `roboverse_learn/rl/configs/rsl_rl/ppo.py` (tyro). Run with `--help` to see environment, training, and PPO hyperparameters (`--num-steps-per-env`, `--max-iterations`, `--clip-param`, etc.).
+- Outputs: checkpoints, TensorBoard logs, and final scripted policy are saved under `models/{exp_name}/{task}/` by default (override with `--model-dir`).
 
 ## Quick Start Examples
 
