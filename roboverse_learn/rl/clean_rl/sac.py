@@ -7,6 +7,11 @@ import random
 import time
 from typing import Literal
 
+try:
+    import isaacgym  # noqa: F401
+except ImportError:
+    pass
+
 import gymnasium as gym
 import numpy as np
 import rootutils
@@ -18,10 +23,6 @@ import tyro
 from torch.utils.tensorboard import SummaryWriter
 
 # RoboVerse imports
-try:
-    import isaacgym  # noqa: F401
-except ImportError:
-    pass
 
 rootutils.setup_root(__file__, pythonpath=True)
 from gymnasium import make_vec
