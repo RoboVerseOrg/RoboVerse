@@ -49,4 +49,4 @@ class BaseRLConfig:
         import os
 
         if self.model_dir is None:
-            self.model_dir = os.path.join("models", self.exp_name, self.task)
+            self.model_dir = os.path.join("outputs", self.exp_name, self.task)
