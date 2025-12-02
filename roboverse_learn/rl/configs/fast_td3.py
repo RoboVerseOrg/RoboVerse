@@ -1,15 +1,32 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 
 from metasim.utils import configclass
 
-from roboverse_learn.rl.configs.base import BaseRLConfig, SimBackend
+SimBackend = Literal[
+    "isaacgym",
+    "isaacsim",
+    "isaaclab",
+    "mujoco",
+    "genesis",
+    "mjx",
+]
 
 
 @configclass
-class FastTD3Config(BaseRLConfig):
+class FastTD3Config:
     """FastTD3 training configuration (Python equivalent of YAML configs)."""
+
+    # Experiment
+    exp_name: str = "get_started_fttd3"
+    seed: int = 1
+    torch_deterministic: bool = True
+
+    # Device
+    cuda: bool = True
+    device: str = "cuda:0"
+    device_rank: int = 0
 
     # Environment
     sim: SimBackend = "isaacgym"
@@ -18,12 +35,6 @@ class FastTD3Config(BaseRLConfig):
     decimation: int = 10
     train_or_eval: str = "train"
     headless: bool = True
-
-    # Seeds & Device (override BaseRLConfig defaults where needed)
-    seed: int = 1
-    cuda: bool = True
-    torch_deterministic: bool = True
-    device_rank: int = 0
 
     # Rollout & Timesteps
     num_envs: int = 1024
@@ -71,16 +82,26 @@ class FastTD3Config(BaseRLConfig):
 
     # Logging & Checkpointing
     wandb_project: str = "get_started_fttd3"
-    exp_name: str = "get_started_fttd3"
     use_wandb: bool = False
+    wandb_entity: Optional[str] = None
     checkpoint_path: Optional[str] = None
     eval_interval: int = 700
     save_interval: int = 700
     video_width: int = 1024
     video_height: int = 1024
+    max_iterations: int = 50000
+
+    # Model directory
+    model_dir: Optional[str] = None
 
     # Extra fields used by some task-specific configs
     state_file_path: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        import os
+
+        if self.model_dir is None:
+            self.model_dir = os.path.join("outputs", self.exp_name, self.task)
 
 
 __all__ = ["FastTD3Config"]

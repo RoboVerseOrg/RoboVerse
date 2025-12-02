@@ -31,7 +31,7 @@ class BaseRLConfig:
     robot: str = "g1_dof29"
     sim: SimBackend = "isaacgym"
     num_envs: int = 4096
-    headless: bool = True
+    headless: bool = False
 
     # Training
     max_iterations: int = 50000

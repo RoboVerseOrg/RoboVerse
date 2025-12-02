@@ -2,7 +2,7 @@ from typing import Optional
 
 from metasim.utils import configclass
 
-from roboverse_learn.rl.configs.base import BaseRLConfig, SimBackend
+from roboverse_learn.rl.configs.clean_rl.base import BaseRLConfig, SimBackend
 
 
 @configclass
