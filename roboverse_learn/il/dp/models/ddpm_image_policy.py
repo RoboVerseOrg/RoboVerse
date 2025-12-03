@@ -101,6 +101,10 @@ class DiffusionDenoisingImagePolicy(BaseImagePolicy):
         # Set diffusion steps.
         scheduler.set_timesteps(self.num_inference_steps)
 
+        # Ensure timesteps are on the same device as trajectory
+        device = trajectory.device
+        scheduler.timesteps = scheduler.timesteps.to(device=device)
+
         step_kwargs = dict(self.scheduler_step_kwargs)
         step_kwargs.update(kwargs)
 
@@ -109,7 +113,7 @@ class DiffusionDenoisingImagePolicy(BaseImagePolicy):
             trajectory[condition_mask] = condition_data[condition_mask]
 
             # 2. Predict model output.
-            t = t.to(device=trajectory.device)
+           # t = t.to(device=trajectory.device)
             model_output = model(trajectory, t, local_cond=local_cond, global_cond=global_cond)
 
             # 3. Compute previous sample x_t -> x_{t-1}.
