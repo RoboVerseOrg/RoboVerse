@@ -32,6 +32,8 @@ python -m roboverse_learn.rl.fast_td3.evaluate_lift \
     --traj_dir eval_trajs
 ```
 
+BUG: Success rate more than 100%
+
 This generates:
 - **States file**: `eval_states/pick_place.approach_grasp_simple_franka_lift_states_*.pkl` (stable grasp states)
 - **Trajectories**: First-half trajectories in `eval_trajs/`
@@ -49,6 +51,8 @@ Make sure `track.yaml` has the correct `state_file_path` pointing to the states 
 ```yaml
 state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl"
 ```
+
+BUG: state_file_path is hard-coded
 
 ### Stage 4: Evaluate Track
 
