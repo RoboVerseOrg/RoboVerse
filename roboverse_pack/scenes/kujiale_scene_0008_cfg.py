@@ -12,8 +12,8 @@ class KujialeScene0008Cfg(SceneCfg):
     name: str = "kujiale_0008"
     usd_path: str = "third_party/InteriorAgent/kujiale_0008/008.usda"
     positions: list[tuple[float, float, float]] = [
-        (-7.2, -1.5, 0.000),
+        (-7.2, -1.5, -0.05),
     ]  # XXX: only positions are randomized for now
-    default_position: tuple[float, float, float] = (-7.2, -1.5, 0.000)
+    default_position: tuple[float, float, float] = (-7.2, -1.5, -0.05)
     quat: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)

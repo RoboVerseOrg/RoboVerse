@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from copy import deepcopy
 from typing import Literal
 
 try:
@@ -16,6 +17,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 # Now import local packages after root is set up
 import imageio as iio
+import json
+import pickle
 import numpy as np
 import torch
 import tyro
@@ -40,7 +43,10 @@ from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
-from metasim.utils.state import TensorState
+from metasim.utils.math import quat_from_euler_xyz, quat_mul
+from metasim.utils.save_util import save_demo
+from metasim.utils.state import TensorState, state_tensor_to_nested
+from metasim.utils.tensor_util import tensor_to_cpu
 
 logging.addLevelName(5, "TRACE")
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -53,7 +59,26 @@ class Args:
     task: str = "put_banana"
     robot: str = "vega"
     scene: str | None = None
-    render: RenderCfg = RenderCfg()
+    render: RenderCfg = RenderCfg(mode="raytracing")
+
+    # Scene selection options
+    scene_names: tuple[str, ...] = (
+        "kujiale_scene_0003",
+        "kujiale_scene_0004",
+        "kujiale_scene_0008",
+        "kujiale_scene_0009",
+        "kujiale_scene_0020",
+        "kujiale_scene_0021",
+        "kujiale_scene_0022",
+        "kujiale_scene_0024",
+        "kujiale_scene_0025",
+        "kujiale_scene_0031",
+        "kujiale_scene_0032",
+        "kujiale_scene_0033",
+    )
+    """Ordered list of available scenes; index via `scene_index`"""
+    scene_index: int = 3
+    """Index into scene_names specifying which scene to load"""
 
     sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
         "isaacsim"
@@ -67,6 +92,10 @@ class Args:
 
     save_image_dir: str | None = None
     save_video_path: str | None = "test_output/test_replay.mp4"
+    save_demo_dir: str | None = "test_output/demos"
+    """Directory to save demo format states. If None, don't save demo format"""
+    load_demo_dir: str | None = "test_output/demos/failed/demo_0000"
+    """Directory to load saved demo states from. If None, use trajectory file"""
 
     # Scene randomization options
     enable_scene: bool = True
@@ -90,6 +119,15 @@ class Args:
     """Number of material variants to generate (each uses different seed)"""
 
     def __post_init__(self):
+        if len(self.scene_names) == 0:
+            raise ValueError("scene_names must contain at least one scene identifier.")
+        if self.scene_index < 0:
+            self.scene_index %= len(self.scene_names)
+        elif self.scene_index >= len(self.scene_names):
+            log.warning(
+                f"scene_index {self.scene_index} out of range for {len(self.scene_names)} scenes; using modulo."
+            )
+            self.scene_index %= len(self.scene_names)
         log.info(f"Args: {self}")
 
 
@@ -103,6 +141,120 @@ def _suffix_path(p: str | None, suffix: str) -> str | None:
     if ext:
         return f"{base}_{suffix}{ext}"
     return f"{p}_{suffix}"
+
+
+def load_demo_states(demo_dir: str, handler, device: torch.device):
+    """Load states from saved demo directory.
+    
+    Args:
+        demo_dir: Directory containing saved demo (with states.pkl or metadata.pkl)
+        handler: Simulation handler
+        device: Device to load tensors on
+    
+    Returns:
+        List of state dicts that can be used with handler.set_states()
+    """
+    log.info(f"Loading states from saved demo: {demo_dir}")
+    
+    # Try to load from states.pkl (original state dicts) first
+    states_path = os.path.join(demo_dir, "states.pkl")
+    if os.path.exists(states_path):
+        log.info(f"Loading original states from: {states_path}")
+        with open(states_path, "rb") as f:
+            demo_data = pickle.load(f)
+        
+        # Convert to tensor format and move to device
+        all_states = []
+        for state_dict in demo_data:
+            # Convert nested dict to tensor format
+            state_tensor = {}
+            if "robots" in state_dict:
+                state_tensor["robots"] = {}
+                for robot_name, robot_state in state_dict["robots"].items():
+                    state_tensor["robots"][robot_name] = {}
+                    for key, value in robot_state.items():
+                        if isinstance(value, torch.Tensor):
+                            state_tensor["robots"][robot_name][key] = value.to(device)
+                        elif isinstance(value, (list, np.ndarray)):
+                            state_tensor["robots"][robot_name][key] = torch.tensor(value, device=device)
+                        else:
+                            state_tensor["robots"][robot_name][key] = value
+            
+            if "objects" in state_dict:
+                state_tensor["objects"] = {}
+                for obj_name, obj_state in state_dict["objects"].items():
+                    state_tensor["objects"][obj_name] = {}
+                    for key, value in obj_state.items():
+                        if isinstance(value, torch.Tensor):
+                            state_tensor["objects"][obj_name][key] = value.to(device)
+                        elif isinstance(value, (list, np.ndarray)):
+                            state_tensor["objects"][obj_name][key] = torch.tensor(value, device=device)
+                        else:
+                            state_tensor["objects"][obj_name][key] = value
+            
+            all_states.append(state_tensor)
+        
+        log.info(f"Loaded {len(all_states)} states from states.pkl")
+        return all_states
+    
+    # Fallback: try to reconstruct from metadata.pkl
+    metadata_path = os.path.join(demo_dir, "metadata.pkl")
+    if os.path.exists(metadata_path):
+        log.warning("states.pkl not found, attempting to reconstruct from metadata.pkl")
+        log.warning("Note: Reconstruction may be incomplete. Use states.pkl for full state data.")
+        with open(metadata_path, "rb") as f:
+            metadata = pickle.load(f)
+        
+        # Load RGB video to get number of frames
+        rgb_path = os.path.join(demo_dir, "rgb.mp4")
+        if os.path.exists(rgb_path):
+            rgb_frames = iio.mimread(rgb_path)
+            num_frames = len(rgb_frames)
+        else:
+            # Fallback to metadata length
+            num_frames = len(metadata.get("joint_qpos", []))
+        
+        log.info(f"Found {num_frames} frames in saved demo")
+        
+        # Get robot name from handler (assuming single robot)
+        robot_name = handler.robots[0].name if hasattr(handler, 'robots') and len(handler.robots) > 0 else "robot"
+        
+        # Reconstruct states from metadata (simplified)
+        all_states = []
+        for t in range(num_frames):
+            state_dict = {
+                "robots": {},
+                "objects": {},
+            }
+            
+            # Reconstruct robot state from metadata
+            if "joint_qpos" in metadata and t < len(metadata["joint_qpos"]):
+                robot_state = {}
+                
+                # Get joint positions
+                joint_qpos = metadata["joint_qpos"][t]
+                # Note: This is simplified - actual joint names would be needed
+                robot_state["dof_pos"] = {
+                    f"joint_{i}": torch.tensor(joint_qpos[i], device=device) 
+                    for i in range(len(joint_qpos))
+                }
+                
+                # Get root state (pos, rot, vel, ang_vel)
+                if "robot_root_state" in metadata and t < len(metadata["robot_root_state"]):
+                    root_state = metadata["robot_root_state"][t]
+                    robot_state["pos"] = torch.tensor(root_state[0:3], device=device)
+                    robot_state["rot"] = torch.tensor(root_state[3:7], device=device)
+                    robot_state["vel"] = torch.tensor(root_state[7:10], device=device)
+                    robot_state["ang_vel"] = torch.tensor(root_state[10:13], device=device)
+                
+                state_dict["robots"][robot_name] = robot_state
+            
+            all_states.append(state_dict)
+        
+        log.info(f"Reconstructed {len(all_states)} states from metadata")
+        return all_states
+    
+    raise FileNotFoundError(f"Neither states.pkl nor metadata.pkl found in {demo_dir}")
 
 
 class SceneRandomizationManager:
@@ -344,6 +496,10 @@ def replay_single_variant(env, scenario, all_states, variant_id: int, args) -> s
     saver = ObsSaver(image_dir=image_dir, video_path=video_path)
     log.info(f"Video will be saved to: {video_path}")
 
+    # Collect demo data if saving demo format
+    demo_data = []
+    save_demo_format = args.save_demo_dir is not None
+
     # Use states from first episode
     episode_states = all_states[0]
     total = len(episode_states)
@@ -353,25 +509,111 @@ def replay_single_variant(env, scenario, all_states, variant_id: int, args) -> s
     max_frames = min(60, total)
     log.info(f"Replaying {max_frames} states from episode 0 (total available: {total})")
 
+    # Track success status
+    success_logged = False
+
     # Replay states
     for step in range(max_frames):
         log.debug(f"[STATE] Step {step}/{total - 1}")
 
         # Get state dict for this step
         state_dict = episode_states[step]
+        
+        # Create a copy of state_dict to avoid modifying the original
+        state_dict_copy = {}
+        if "objects" in state_dict:
+            state_dict_copy["objects"] = {}
+            # Handle wall/nwall name compatibility: map "wall" to "nwall" if needed
+            # Find the actual wall name in scenario
+            wall_name_in_scenario = next(
+                (obj.name for obj in env.scenario.objects if obj.name in ("wall", "nwall")),
+                None,
+            )
+            
+            # Copy objects, skipping traj_marker objects
+            for obj_name, obj_state in state_dict["objects"].items():
+                # Skip trajectory markers
+                if obj_name.startswith("traj_marker_"):
+                    continue
+                
+                # Apply offset to whale (object) position and rotation
+                if obj_name == "object":
+                    obj_state_copy = {}
+                    device = env.device
+                    
+                    if "pos" in obj_state:
+                        # Apply position offset: (0.14467, -0.04838, -0.08847)
+                        pos_offset = torch.tensor([0.14467, -0.04838, -0.08847], device=device)
+                        if isinstance(obj_state["pos"], torch.Tensor):
+                            current_pos = obj_state["pos"].to(device)
+                        else:
+                            current_pos = torch.tensor(obj_state["pos"], device=device)
+                        obj_state_copy["pos"] = current_pos + pos_offset
+                    else:
+                        obj_state_copy["pos"] = obj_state.get("pos")
+                    
+                    if "rot" in obj_state:
+                        # Apply rotation offset: Euler angles (90°, -4°, 0°) -> quaternion
+                        # Convert degrees to radians: X=90°, Y=-4°, Z=0°
+                        euler_offset_rad = torch.tensor([
+                            90.0 * np.pi / 180.0,  # X rotation (roll)
+                            -4.0 * np.pi / 180.0,  # Y rotation (pitch)
+                            0.0                    # Z rotation (yaw)
+                        ], device=device)
+                        rot_offset_quat = quat_from_euler_xyz(
+                            euler_offset_rad[0:1], euler_offset_rad[1:2], euler_offset_rad[2:3]
+                        ).squeeze(0)  # (4,)
+                        
+                        if isinstance(obj_state["rot"], torch.Tensor):
+                            current_rot = obj_state["rot"].to(device)
+                        else:
+                            current_rot = torch.tensor(obj_state["rot"], device=device)
+                        
+                        # Ensure quaternions are in (w, x, y, z) format and have correct shape
+                        # quat_mul expects (..., 4) shape
+                        current_rot_expanded = current_rot.unsqueeze(0) if current_rot.dim() == 1 else current_rot  # (1, 4) or (N, 4)
+                        rot_offset_expanded = rot_offset_quat.unsqueeze(0)  # (1, 4)
+                        new_rot = quat_mul(rot_offset_expanded, current_rot_expanded)  # (1, 4) or (N, 4)
+                        # Squeeze if needed to match original shape
+                        if current_rot.dim() == 1:
+                            new_rot = new_rot.squeeze(0)  # (4,)
+                        obj_state_copy["rot"] = new_rot
+                    else:
+                        obj_state_copy["rot"] = obj_state.get("rot")
+                    
+                    state_dict_copy["objects"][obj_name] = obj_state_copy
+                # Handle wall/nwall name mapping
+                elif obj_name == "wall" and wall_name_in_scenario == "nwall":
+                    state_dict_copy["objects"]["nwall"] = obj_state
+                elif obj_name == "nwall" and wall_name_in_scenario == "wall":
+                    state_dict_copy["objects"]["wall"] = obj_state
+                else:
+                    state_dict_copy["objects"][obj_name] = obj_state
+        
+        if "robots" in state_dict:
+            state_dict_copy["robots"] = state_dict["robots"]
 
-        # Set the state in the handler
-        env.handler.set_states([state_dict] * num_envs)
+        # Set the state in the handler (without traj_marker objects)
+        env.handler.set_states([state_dict_copy] * num_envs)
 
         env.handler.refresh_render()
         obs = env.handler.get_states()
         saver.add(obs)
 
+        # Collect demo data if saving demo format
+        if save_demo_format:
+            obs_nested = state_tensor_to_nested(env.handler, obs)
+            demo_data.append(deepcopy(tensor_to_cpu(obs_nested[0])))
+
         # Check success
         try:
             success = env.checker.check(env.handler)
-            if success.any():
-                log.info(f"[STATE] Env {success.nonzero().squeeze(-1).tolist()} succeeded at step {step}!")
+            if success.any() and not success_logged:
+                success_envs = success.nonzero().squeeze(-1).tolist()
+                if isinstance(success_envs, int):
+                    success_envs = [success_envs]
+                log.info(f"[SUCCESS] Task completed at step {step} (envs: {success_envs})")
+                success_logged = True
             if success.all():
                 break
         except Exception as e:
@@ -382,6 +624,38 @@ def replay_single_variant(env, scenario, all_states, variant_id: int, args) -> s
     saver.save()
     log.info(f"✓ Variant {variant_id + 1} completed")
     log.info(f"  Video saved: {video_path}")
+
+    # Save demo format if enabled
+    if save_demo_format:
+        # Determine success status
+        success_status = "success" if success_logged else "failed"
+
+        # Create save directory following collect_demo.py format
+        # Format: {save_demo_dir}/{status}/demo_{variant_id:04d}
+        save_dir = os.path.join(args.save_demo_dir, success_status, f"demo_{variant_id:04d}")
+
+        os.makedirs(save_dir, exist_ok=True)
+        log.info(f"Saving demo for variant {variant_id + 1} to: {save_dir}")
+
+        # Get robot config and task description
+        robot_cfg = scenario.robots[0]
+        task_desc = getattr(env, "task_desc", "")
+
+        # Save demo
+        save_demo(save_dir, demo_data, robot_cfg, task_desc)
+        log.info(f"Demo for variant {variant_id + 1} saved to: {save_dir}")
+
+        # Also save original state dicts for easy reloading
+        states_path = os.path.join(save_dir, "states.pkl")
+        with open(states_path, "wb") as f:
+            pickle.dump(demo_data, f)
+        log.info(f"Original states saved to: {states_path}")
+
+        # Also save status file
+        status_path = os.path.join(save_dir, "status.txt")
+        with open(status_path, "w") as f:
+            f.write(success_status)
+        log.info(f"Status ({success_status}) saved to: {status_path}")
 
     return video_path
 
@@ -400,7 +674,12 @@ def main():
     # Step 1: Create environment (ONCE!)
     # ========================================
     task_cls = get_task_class(args.task)
-    camera = PinholeCameraCfg(pos=(1.1, -1.5, 2.0), look_at=(0.0, 0.0, 0.8), width=2048, height=2048)
+    camera = PinholeCameraCfg(pos=(1.8, -0.8, 1.8), look_at=(0.0, 0.0, 0.5), width=1024, height=1024)
+    
+    # Select scene
+    scene_names = list(args.scene_names)
+    selected_scene = args.scene if args.scene is not None else scene_names[args.scene_index % len(scene_names)]
+    log.info(f"Selected scene: {selected_scene}")
 
     # Setup lighting for enclosed scene
     lights = None
@@ -448,12 +727,51 @@ def main():
                 radius=0.6,
                 pos=(2.0, -2.0, args.wall_height - 1.0),
             ),
+            # Bright light above table at z=2.0
+            DiskLightCfg(
+                name="table_light",
+                intensity=20000,  # Bright light: 30K
+                color=(1.0, 1.0, 1.0),
+                radius=1.0,
+                pos=(0.0, 0.0, 2.0),  # Above table at z=2.0
+                rot=(0.7071, 0.0, 0.0, 0.7071),  # 45° downward
+            ),
+            # Bright light behind robot at z=2.0 (2m behind robot)
+            DiskLightCfg(
+                name="robot_back_light",
+                intensity=20000,  # Bright light: 30K
+                color=(1.0, 1.0, 1.0),
+                radius=1.0,
+                pos=(0.0, -2.0, 2.0),  # 2m behind robot at z=2.0
+                rot=(0.7071, 0.0, 0.0, 0.7071),  # 45° downward
+            ),
         ]
-        log.info("  ✓ Added 5 lights (1 DiskLight + 4 SphereLights)")
+        log.info("  ✓ Added 7 lights (3 DiskLights + 4 SphereLights)")
+    else:
+        # Always add bright lights above table and behind robot at z=2.0, even if scene randomization is disabled
+        lights = [
+            DiskLightCfg(
+                name="table_light",
+                intensity=20000,  # Bright light: 30K
+                color=(1.0, 1.0, 1.0),
+                radius=1.0,
+                pos=(0.0, 0.0, 2.0),  # Above table at z=2.0
+                rot=(0.7071, 0.0, 0.0, 0.7071),  # 45° downward
+            ),
+            DiskLightCfg(
+                name="robot_back_light",
+                intensity=20000,  # Bright light: 30K
+                color=(1.0, 1.0, 1.0),
+                radius=1.0,
+                pos=(0.0, -2.0, 2.0),  # 2m behind robot at z=2.0
+                rot=(0.7071, 0.0, 0.0, 0.7071),  # 45° downward
+            ),
+        ]
+        log.info("  ✓ Added table light and robot back light at z=2.0")
 
     scenario = task_cls.scenario.update(
         robots=[args.robot],
-        scene=args.scene,
+        scene=selected_scene,
         cameras=[camera],
         lights=lights,
         render=args.render,
@@ -477,20 +795,35 @@ def main():
     # ========================================
     # Step 3: Load trajectory (ONCE!)
     # ========================================
-    traj_filepath = "/home/balen/murphy/isaaclab_rv/2/RoboVerse/eval_trajs/trackgrasphandrelative_vega_eval_20251126_133029_v2.pkl"
-    assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
-    t0 = time.time()
-    init_states, all_actions, all_states = get_traj(traj_filepath, scenario.robots[0], env.handler)
-    log.trace(f"Time to load data: {time.time() - t0:.2f}s")
+    # Hardcode: Use saved demo states if specified, otherwise use trajectory file
+    if args.load_demo_dir is not None and os.path.exists(args.load_demo_dir):
+        log.info(f"Loading states from saved demo: {args.load_demo_dir}")
+        t0 = time.time()
+        # Load states from saved demo
+        demo_states = load_demo_states(args.load_demo_dir, env.handler, device)
+        # Wrap in episode format (single episode)
+        all_states = [demo_states]
+        all_actions = None
+        init_states = None
+        log.trace(f"Time to load data: {time.time() - t0:.2f}s")
+        log.info(f"Loaded {len(all_states)} episodes with states from saved demo")
+        log.info(f"Episode 0 has {len(all_states[0])} states")
+    else:
+        # Use original trajectory file
+        traj_filepath = "/home/balen/murphy/isaaclab_rv/2/RoboVerse/eval_trajs/trackgrasphandrelative_vega_eval_20251126_133029_v2.pkl"
+        assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
+        t0 = time.time()
+        init_states, all_actions, all_states = get_traj(traj_filepath, scenario.robots[0], env.handler)
+        log.trace(f"Time to load data: {time.time() - t0:.2f}s")
 
-    # Check if states are available
-    if all_states is None or len(all_states) == 0:
-        log.error("No states found in trajectory file. Please ensure the trajectory was saved with --save-states")
-        env.close()
-        return
+        # Check if states are available
+        if all_states is None or len(all_states) == 0:
+            log.error("No states found in trajectory file. Please ensure the trajectory was saved with --save-states")
+            env.close()
+            return
 
-    log.info(f"Loaded {len(all_states)} episodes with states")
-    log.info(f"Episode 0 has {len(all_states[0])} states")
+        log.info(f"Loaded {len(all_states)} episodes with states")
+        log.info(f"Episode 0 has {len(all_states[0])} states")
 
     # Adjust object heights if using tabletop workspace
     if args.enable_scene and args.scene_type == "tabletop_workspace":
@@ -543,6 +876,7 @@ def main():
     log.info("\n" + "=" * 70)
     log.info("ALL VARIANTS COMPLETED")
     log.info("=" * 70)
+    log.info(f"Scene: {selected_scene}")
     log.info(f"Total variants: {args.num_variants}")
     log.info("\nGenerated videos:")
     for video in saved_videos:

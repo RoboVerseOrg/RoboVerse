@@ -17,13 +17,13 @@ from metasim.scenario.render import RenderCfg
 class Args:
     render: RenderCfg = field(default_factory=RenderCfg)
     """Renderer options"""
-    task: str = "pick_butter"
+    task: str = "put_banana"
     """Task name"""
-    robot: str = "franka"
+    robot: str = "vega"
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaacsim"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -33,7 +33,7 @@ class Args:
     """Target number of successful demos to collect"""
     retry_num: int = 0
     """Number of retries for a failed demo"""
-    headless: bool = True
+    headless: bool = False
     """Run in headless mode"""
     table: bool = True
     """Try to add a table"""
@@ -56,20 +56,32 @@ class Args:
     renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
     ## Domain randomization options
-    enable_randomization: bool = False
+    enable_randomization: bool = True
     """Enable domain randomization during demo collection"""
     randomize_materials: bool = True
     """Enable material randomization (when randomization is enabled)"""
-    randomize_lights: bool = False
+    randomize_lights: bool = True
     """Enable light randomization (when randomization is enabled)"""
     randomize_cameras: bool = True
     """Enable camera randomization (when randomization is enabled)"""
     randomize_physics: bool = True
     """Enable physics (mass/friction/pose) randomization using ObjectRandomizer"""
+    randomize_zed_camera: bool = False
+    """Apply bounded randomization to zed_rgb_camera's mount offset"""
+    zed_cam_vertical_delta: float = 0.1
+    """Max vertical offset (m) for zed_rgb_camera mount"""
+    zed_cam_lateral_delta: float = 0.02
+    """Max lateral (left/right) offset (m) for zed_rgb_camera mount"""
+    zed_cam_forward_delta: float = 0.0
+    """Max forward/backward offset (m) for zed_rgb_camera mount"""
     randomization_frequency: Literal["per_demo", "per_episode"] = "per_demo"
     """When to apply randomization: per_demo (once at start) or per_episode (every episode)"""
     randomization_seed: int | None = None
     """Seed for reproducible randomization. If None, uses random seed"""
+    traj_filepath: str | None = (
+        "/home/balen/murphy/isaaclab_rv/2/RoboVerse/eval_trajs/trackgrasphandrelative_vega_eval_20251126_133029_v2.pkl"
+    )
+    """Path to trajectory file. If None, uses env.traj_filepath"""
 
     def __post_init__(self):
         assert self.run_all or self.run_unfinished or self.run_failed, (
@@ -120,6 +132,7 @@ import torch
 from tqdm.rich import tqdm_rich as tqdm
 
 from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.lights import SphereLightCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 from metasim.task.registry import get_task_class
@@ -142,6 +155,17 @@ try:
         ObjectPresets,
         ObjectRandomizer,
     )
+    from metasim.randomization.camera_randomizer import CameraPositionRandomCfg, CameraRandomCfg
+    from metasim.randomization.scene_randomizer import (
+        SceneRandomizer,
+        SceneRandomCfg,
+        ManualGeometryCfg,
+        EnvironmentLayerCfg,
+        WorkspaceLayerCfg,
+        USDAssetPoolCfg,
+    )
+    from metasim.randomization.presets.scene_presets import ScenePresets
+    from metasim.randomization.presets.scene_presets import SceneUSDCollections
 
     RANDOMIZATION_AVAILABLE = True
 except ImportError as e:
@@ -183,6 +207,7 @@ class DomainRandomizationManager:
         self.scenario = scenario
         self.handler = handler
         self.randomizers = []
+        self.scene_randomizer = None
         self._demo_count = 0
 
         # Early validation
@@ -210,6 +235,9 @@ class DomainRandomizationManager:
         seed = self.args.randomization_seed
         self._setup_reproducibility(seed)
 
+        # Setup scene randomizer first (table + room) - must be before other randomizers
+        self._setup_scene_randomizer(seed)
+
         # Setup each randomization type symmetrically
         if self.args.randomize_materials:
             self._setup_material_randomizers(seed)
@@ -234,25 +262,150 @@ class DomainRandomizationManager:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed(seed)
 
+    def _setup_scene_randomizer(self, seed: int | None):
+        """Setup scene randomizer with custom room and optional manual table."""
+        log.info("  Setting up SceneRandomizer (custom room + optional workspace table)")
+
+        # Room (environment layer) - manually create to adjust floor position
+        room_size = 5.0
+        wall_height = 4.0
+        wall_thickness = 0.1
+        half_room = room_size / 2.0
+        half_thickness = wall_thickness / 2.0
+        
+        # Floor position: move down 0.05m (from 0.005 to -0.045)
+        floor_position = (0.0, 0.0, -0.045)
+        
+        environment_layer = EnvironmentLayerCfg(
+            elements=[
+                # Floor (moved down 0.05m)
+                ManualGeometryCfg(
+                    name="floor",
+                    geometry_type="cube",
+                    size=(room_size, room_size, wall_thickness),
+                    position=floor_position,
+                    default_material="roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl",
+                ),
+                # Front wall (positive Y)
+                ManualGeometryCfg(
+                    name="wall_front",
+                    geometry_type="cube",
+                    size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
+                    position=(0.0, half_room + half_thickness, wall_height / 2),
+                    default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                ),
+                # Back wall (negative Y)
+                ManualGeometryCfg(
+                    name="wall_back",
+                    geometry_type="cube",
+                    size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
+                    position=(0.0, -half_room - half_thickness, wall_height / 2),
+                    default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                ),
+                # Left wall (negative X)
+                ManualGeometryCfg(
+                    name="wall_left",
+                    geometry_type="cube",
+                    size=(wall_thickness, room_size, wall_height),
+                    position=(-half_room - half_thickness, 0.0, wall_height / 2),
+                    default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                ),
+                # Right wall (positive X)
+                ManualGeometryCfg(
+                    name="wall_right",
+                    geometry_type="cube",
+                    size=(wall_thickness, room_size, wall_height),
+                    position=(half_room + half_thickness, 0.0, wall_height / 2),
+                    default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                ),
+                # Ceiling
+                ManualGeometryCfg(
+                    name="ceiling",
+                    geometry_type="cube",
+                    size=(room_size, room_size, wall_thickness),
+                    position=(0.0, 0.0, wall_height + wall_thickness / 2),
+                    default_material="roboverse_data/materials/arnold/Architecture/Roof_Tiles.mdl",
+                ),
+            ],
+        )
+
+        workspace_layer = self._create_workspace_table_layer() if self.args.table else None
+
+        scene_cfg = SceneRandomCfg(
+            workspace_layer=workspace_layer,
+            environment_layer=environment_layer,
+            only_if_no_scene=False,  # Explicitly set to False to always create scene
+            auto_flush_visuals=True,  # Auto flush visual updates
+        )
+
+        self.scene_randomizer = SceneRandomizer(scene_cfg, seed=seed)
+        self.scene_randomizer.bind_handler(self.handler)
+        table_state = "with USD pool table" if workspace_layer is not None else "without table"
+        log.info(f"    Added SceneRandomizer (room, floor -0.05m, {table_state})")
+        log.info(
+            f"    SceneRandomizer config: only_if_no_scene={scene_cfg.only_if_no_scene}, "
+            f"auto_flush_visuals={scene_cfg.auto_flush_visuals}"
+        )
+
+    def _create_workspace_table_layer(self) -> WorkspaceLayerCfg | None:
+        """Create a workspace layer using USD pool table assets."""
+        # Use USD Table785 assets from SceneUSDCollections
+        table_paths, table_configs = SceneUSDCollections.table785(return_configs=True)
+        log.info(f"    Workspace: Table785 USD pool ({len(table_paths)} tables available)")
+
+        workspace_element = USDAssetPoolCfg(
+            name="table",
+            usd_paths=table_paths,
+            per_path_overrides=table_configs,
+            selection_strategy="random",  # Random selection for domain randomization
+        )
+        return WorkspaceLayerCfg(elements=[workspace_element])
+
     def _setup_material_randomizers(self, seed: int | None):
-        """Setup material randomizers for all objects."""
+        """Setup material randomizers for scene geometry (walls, floor, ceiling) only.
+        
+        Note: Task objects' materials are NOT randomized (texture stays fixed).
+        """
+        # Skip material randomization for task objects (keep their textures fixed)
         objects = getattr(self.scenario, "objects", [])
-        if not objects:
-            log.info("  No objects found for material randomization")
-            return
+        if objects:
+            log.info(f"  Skipping material randomization for {len(objects)} task objects (textures stay fixed)")
 
-        log.info(f"  Setting up material randomizers for {len(objects)} objects")
-        for obj in objects:
-            obj_name = obj.name
-            config = self._get_material_config(obj_name)
+        # Setup material randomizers for scene geometry (walls, floor, ceiling) only
+        # These are created by SceneRandomizer as manual geometry
+        log.info("  Setting up material randomizers for scene geometry (walls, floor, ceiling)")
+        
+        # Floor
+        floor_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
+            seed=seed + 101 if seed is not None else None,
+        )
+        floor_mat.bind_handler(self.handler)
+        self.randomizers.append(floor_mat)
+        log.info("    Added MaterialRandomizer for floor")
 
-            randomizer = MaterialRandomizer(config, seed=seed)
-            randomizer.bind_handler(self.handler)
-            self.randomizers.append(randomizer)
-            log.info(f"    Added MaterialRandomizer for {obj_name}")
+        # Walls (all 4 share same seed for consistency)
+        wall_seed = seed + 102 if seed is not None else None
+        for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
+            wall_mat = MaterialRandomizer(
+                MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
+                seed=wall_seed,  # Same seed for all walls
+            )
+            wall_mat.bind_handler(self.handler)
+            self.randomizers.append(wall_mat)
+            log.info(f"    Added MaterialRandomizer for {wall_name}")
+
+        # Ceiling
+        ceiling_mat = MaterialRandomizer(
+            MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
+            seed=seed + 103 if seed is not None else None,
+        )
+        ceiling_mat.bind_handler(self.handler)
+        self.randomizers.append(ceiling_mat)
+        log.info("    Added MaterialRandomizer for ceiling")
 
     def _setup_light_randomizers(self, seed: int | None):
-        """Setup light randomizers for all lights."""
+        """Setup light randomizers for all lights except fixed lights."""
         from metasim.scenario.lights import DiskLightCfg, DomeLightCfg, SphereLightCfg
 
         lights = getattr(self.scenario, "lights", [])
@@ -260,9 +413,17 @@ class DomainRandomizationManager:
             log.info("  No lights found for light randomization")
             return
 
+        # Fixed lights that should not be randomized
+        fixed_light_names = {"fixed_ceiling_light"}
+
         log.info(f"  Setting up light randomizers for {len(lights)} lights")
         for light in lights:
             light_name = getattr(light, "name", f"light_{len(self.randomizers)}")
+            
+            # Skip fixed lights
+            if light_name in fixed_light_names:
+                log.info(f"    Skipping LightRandomizer for '{light_name}' (fixed light, not randomized)")
+                continue
 
             if isinstance(light, DomeLightCfg):
                 config = LightPresets.dome_ambient(light_name)
@@ -287,12 +448,35 @@ class DomainRandomizationManager:
         log.info(f"  Setting up camera randomizers for {len(cameras)} cameras")
         for camera in cameras:
             camera_name = getattr(camera, "name", f"camera_{len(self.randomizers)}")
-            config = CameraPresets.surveillance_camera(camera_name)
+            if camera_name == "zed_rgb_camera":
+                if not self.args.randomize_zed_camera:
+                    log.info("    Skipping CameraRandomizer for 'zed_rgb_camera' (locked)")
+                    continue
+
+                position_cfg = CameraPositionRandomCfg(
+                    delta_range=(
+                        (-self.args.zed_cam_forward_delta, self.args.zed_cam_forward_delta),
+                        (-self.args.zed_cam_lateral_delta, self.args.zed_cam_lateral_delta),
+                        (-self.args.zed_cam_vertical_delta, self.args.zed_cam_vertical_delta),
+                    ),
+                    use_delta=True,
+                    distribution="uniform",
+                    enabled=True,
+                )
+                config = CameraRandomCfg(camera_name=camera_name, position=position_cfg)
+                log.info(
+                    "    Added bounded CameraRandomizer for 'zed_rgb_camera' "
+                    f"(Δx≤{self.args.zed_cam_forward_delta:.3f}m, "
+                    f"Δy≤{self.args.zed_cam_lateral_delta:.3f}m, "
+                    f"Δz≤{self.args.zed_cam_vertical_delta:.3f}m)"
+                )
+            else:
+                config = CameraPresets.surveillance_camera(camera_name)
+                log.info(f"    Added CameraRandomizer preset for '{camera_name}'")
 
             randomizer = CameraRandomizer(config, seed=seed)
             randomizer.bind_handler(self.handler)
             self.randomizers.append(randomizer)
-            log.info(f"    Added CameraRandomizer for {camera_name}")
 
     def _get_material_config(self, obj_name: str):
         """Get appropriate material configuration based on object type."""
@@ -347,14 +531,30 @@ class DomainRandomizationManager:
         else:
             return ObjectPresets.physics_only(obj_name)
 
-    def randomize_for_demo(self, demo_idx: int):
+    def randomize_for_demo(self, demo_idx: int, seed: int | None = None):
         """Apply randomization for a new demo."""
         if not self._should_randomize(demo_idx):
             return
 
-        log_randomization_header("DOMAIN RANDOMIZATION", f"Demo {demo_idx}")
+        # Use provided seed or fall back to args.randomization_seed
+        if seed is not None:
+            self._setup_reproducibility(seed)
+            log_randomization_header("DOMAIN RANDOMIZATION", f"Demo {demo_idx} (seed={seed})")
+        else:
+            log_randomization_header("DOMAIN RANDOMIZATION", f"Demo {demo_idx}")
 
-        # Apply all randomizers and collect statistics
+        # Apply scene randomizer first (creates room)
+        if self.scene_randomizer:
+            log.info("  Calling SceneRandomizer to create room...")
+            try:
+                self.scene_randomizer()
+                log.info("  ✓ SceneRandomizer applied successfully (room created)")
+            except Exception as e:
+                log.error(f"  ✗ SceneRandomizer failed: {e}")
+                import traceback
+                log.error(traceback.format_exc())
+
+        # Apply all other randomizers and collect statistics
         stats = self._apply_all_randomizers()
 
         # Log summary
@@ -413,24 +613,59 @@ class DomainRandomizationManager:
             log.info("No randomizers were applied")
 
 
-def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
+def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg, single_actions=None, max_frames: int = 70):
+    """
+    Get actions for current step.
+    If single_actions is provided, use it for all environments (hardcoded single trajectory).
+    Otherwise, use all_actions[demo_idx] for each environment.
+    Limited to max_frames frames.
+    """
     action_idxs = env._episode_steps
 
     actions = []
     for env_id, (demo_idx, action_idx) in enumerate(zip(demo_idxs, action_idxs)):
-        if action_idx < len(all_actions[demo_idx]):
-            action = all_actions[demo_idx][action_idx]
+        # Limit to max_frames
+        if action_idx >= max_frames:
+            # Use last action if exceeded max_frames
+            if single_actions is not None:
+                action = single_actions[min(max_frames - 1, len(single_actions) - 1)]
+            else:
+                action = all_actions[demo_idx][min(max_frames - 1, len(all_actions[demo_idx]) - 1)]
+        elif single_actions is not None:
+            # Use hardcoded single trajectory
+            if action_idx < len(single_actions):
+                action = single_actions[action_idx]
+            else:
+                action = single_actions[-1]
         else:
-            action = all_actions[demo_idx][-1]
+            # Use original logic with multiple trajectories
+            if action_idx < len(all_actions[demo_idx]):
+                action = all_actions[demo_idx][action_idx]
+            else:
+                action = all_actions[demo_idx][-1]
 
         actions.append(action)
 
     return actions
 
 
-def get_run_out(all_actions, env, demo_idxs: list[int]) -> list[bool]:
+def get_run_out(all_actions, env, demo_idxs: list[int], single_actions=None, max_frames: int = 70) -> list[bool]:
+    """
+    Check if actions have run out.
+    If single_actions is provided, use it for all environments (hardcoded single trajectory).
+    Otherwise, use all_actions[demo_idx] for each environment.
+    Limited to max_frames frames.
+    """
     action_idxs = env._episode_steps
-    run_out = [action_idx >= len(all_actions[demo_idx]) for demo_idx, action_idx in zip(demo_idxs, action_idxs)]
+    if single_actions is not None:
+        # Use hardcoded single trajectory, limit to max_frames
+        run_out = [action_idx >= min(len(single_actions), max_frames) for action_idx in action_idxs]
+    else:
+        # Use original logic with multiple trajectories, limit to max_frames
+        run_out = [
+            action_idx >= min(len(all_actions[demo_idx]), max_frames)
+            for demo_idx, action_idx in zip(demo_idxs, action_idxs)
+        ]
     return run_out
 
 
@@ -543,6 +778,16 @@ def force_reset_to_state(env, state, env_id):
     env.reset(states=[state], env_ids=[env_id])
     # Pass expected state for validation
     ensure_clean_state(env.handler, expected_state=state)
+    # Reset episode counter AFTER stabilization to ensure demo starts from action 0
+    if hasattr(env, "_episode_steps"):
+        env._episode_steps[env_id] = 0
+
+
+def reset_to_task_initial_state(env, env_id):
+    """Reset environment to task's initial state (not using trajectory initial state)."""
+    env.reset(env_ids=[env_id])
+    # Wait for environment to stabilize
+    ensure_clean_state(env.handler)
     # Reset episode counter AFTER stabilization to ensure demo starts from action 0
     if hasattr(env, "_episode_steps"):
         env._episode_steps[env_id] = 0
@@ -709,31 +954,62 @@ def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
 
-    if args.task == "stack_cube":
-        dp_camera = True
-    elif args.task == "close_box":
-        dp_camera = False
-    else:
-        dp_camera = True
+    # Configure Zed RGB camera with mount (same as replay_demo.py)
+    from scipy.spatial.transform import Rotation as R
+    
+    fx = 365.5782165527344
+    fy = 365.5782165527344
+    cx = 494.15985107421875
+    cy = 301.70770263671875
+    img_width = 960
+    img_height = 600
+    focal_length_mm = 2.2112011909484863
+    focal_length_cm = focal_length_mm / 10.0
+    horizontal_aperture_cm = img_width * focal_length_cm / fx
+    
+    quat_xyzw = R.from_euler("xyz", [0, 0, 0], degrees=True).as_quat()
+    quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  # convert to wxyz
+    translation_from_torso_l3 = (0.01742, 0.0302, 0.75528)  # z increased by 0.3m to raise camera view
 
-    if dp_camera:
-        # import warnings
-        # warnings.warn("Using dp camera position!")
-        dp_pos = (1.0, 0.0, 0.75)
-    else:
-        dp_pos = (1.5, 0.0, 1.5)
-
-    camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
+    camera = PinholeCameraCfg(
+        name="zed_rgb_camera",
+        width=img_width,
+        height=img_height,
+        data_types=["rgb"],
+        focal_length=focal_length_cm,
+        horizontal_aperture=horizontal_aperture_cm,
+        mount_to=args.robot,
+        mount_link="torso_l3",
+        mount_pos=translation_from_torso_l3,
+        mount_quat=quat,
+    )
+    
+    # Add fixed light at (0, 0, 2.5) with intensity 10000 (always present, not randomized)
+    fixed_light = SphereLightCfg(
+        name="fixed_ceiling_light",
+        intensity=10000.0,
+        color=(1.0, 1.0, 1.0),
+        radius=0.5,
+        pos=(0.0, 0.0, 2.5),
+        normalize=False,  # Don't normalize intensity
+    )
+    
+    # Get existing lights from scenario (if any) and add fixed light
+    existing_lights = list(getattr(task_cls.scenario, "lights", [])) if hasattr(task_cls.scenario, "lights") and task_cls.scenario.lights else []
+    all_lights = existing_lights + [fixed_light]
+    
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
         cameras=[camera],
+        lights=all_lights,
         render=args.render,
         simulator=args.sim,
         renderer=args.renderer,
         num_envs=args.num_envs,
         headless=args.headless,
     )
+    log.info(f"Added fixed light 'fixed_ceiling_light' at (0, 0, 2.5) with intensity 10000 (not randomized)")
     robot = get_robot(args.robot)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = task_cls(scenario, device=device)
@@ -741,21 +1017,36 @@ def main():
     # Initialize domain randomization manager
     randomization_manager = DomainRandomizationManager(args, scenario, env.handler)
     ## Data
-    assert os.path.exists(env.traj_filepath), f"Trajectory file does not exist: {env.traj_filepath}"
-    init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
+    # Use specified trajectory filepath or fall back to env.traj_filepath
+    traj_filepath = args.traj_filepath if args.traj_filepath is not None else env.traj_filepath
+    assert traj_filepath is not None, "Trajectory filepath must be provided via args.traj_filepath or env.traj_filepath"
+    assert os.path.exists(traj_filepath), f"Trajectory file does not exist: {traj_filepath}"
+    log.info(f"Loading trajectory from: {traj_filepath}")
+    init_states, all_actions, all_states = get_traj(traj_filepath, robot, env.handler)
 
-    tot_demo = len(all_actions)
-    if args.split == "train":
-        init_states = init_states[: int(tot_demo * 0.9)]
-        all_actions = all_actions[: int(tot_demo * 0.9)]
-        all_states = all_states[: int(tot_demo * 0.9)]
-    elif args.split == "val" or args.split == "test":
-        init_states = init_states[int(tot_demo * 0.9) :]
-        all_actions = all_actions[int(tot_demo * 0.9) :]
-        all_states = all_states[int(tot_demo * 0.9) :]
-
-    n_demo = len(all_actions)
-    log.info(f"Collecting from {args.split} split, {n_demo} out of {tot_demo} demos")
+    # Hardcode: Use only the first trajectory (demo 0) for actions
+    hardcoded_demo_idx = 0
+    max_frames = 70  # Limit to first 70 frames
+    log.info(f"Hardcoded: Using only demo {hardcoded_demo_idx} from trajectory file")
+    log.info(f"Total demos in file: {len(all_actions)}, will reuse demo {hardcoded_demo_idx} with different DR")
+    log.info(f"Limiting replay to first {max_frames} frames")
+    
+    # Use only the first demo's actions (initial state will come from task, not trajectory)
+    single_actions = all_actions[hardcoded_demo_idx]
+    single_states = all_states[hardcoded_demo_idx] if all_states else None
+    
+    # Note: We no longer use trajectory's initial state for reset.
+    # Instead, we use task's initial state via env.reset() without states parameter.
+    log.info("Using task's initial state for reset (not trajectory initial state)")
+    
+    # Log trajectory length info
+    if single_actions:
+        original_length = len(single_actions)
+        effective_length = min(original_length, max_frames)
+        log.info(f"Trajectory length: {original_length} frames, will replay {effective_length} frames")
+    
+    n_demo = 1  # Only one demo, but will be reused
+    log.info(f"Will collect {args.num_demo_success} demos by reusing demo {hardcoded_demo_idx} with different domain randomization")
 
     ########################################################
     ## Main
@@ -798,21 +1089,29 @@ def main():
     demo_indexer = DemoIndexer(
         save_root_dir=save_root_dir,
         start_idx=args.demo_start_idx,
-        end_idx=max_demo,
+        end_idx=args.num_demo_success,  # Will create demos up to num_demo_success
         pbar=pbar,
     )
+    
+    # Hardcode: Always use demo 0 from trajectory, but create new demo indices for saving
     demo_idxs = []
-    for demo_idx in range(env.handler.num_envs):
+    for env_id in range(env.handler.num_envs):
         demo_idxs.append(demo_indexer.next_idx)
         demo_indexer.move_on()
-    log.info(f"Initialize with demo idxs: {demo_idxs}")
+    log.info(f"Initialize with demo idxs: {demo_idxs} (using trajectory demo {hardcoded_demo_idx})")
 
-    ## Apply initial randomization
-    for env_id, demo_idx in enumerate(demo_idxs):
-        randomization_manager.randomize_for_demo(demo_idx)
+    # Track continuous demo index for randomization seed
+    continuous_demo_idx = 0
 
-    ## Reset to initial states
-    obs, extras = env.reset(states=[init_states[demo_idx] for demo_idx in demo_idxs])
+    ## Apply initial randomization with seed based on continuous_demo_idx
+    base_seed = args.randomization_seed if args.randomization_seed is not None else 42
+    current_seed = base_seed + continuous_demo_idx
+    log.info(f"Applying randomization with seed {current_seed} (base={base_seed}, offset={continuous_demo_idx})")
+    randomization_manager.randomize_for_demo(continuous_demo_idx, seed=current_seed)
+
+    ## Reset to task's initial state (not using trajectory initial state)
+    log.info("Resetting to task's initial state (not using trajectory initial state)")
+    obs, extras = env.reset()
 
     ## Wait for environment to stabilize after reset (before counting demo steps)
     # For initial setup, we can't validate individual states easily, so just ensure stability
@@ -841,16 +1140,17 @@ def main():
             log.info(f"Reached target number of successful demos ({args.num_demo_success}).")
             stop_flag = True
 
-        if demo_indexer.next_idx >= max_demo:
-            log.warning(f"Reached maximum demo index ({max_demo}).")
+        if demo_indexer.next_idx >= args.num_demo_success:
+            log.info(f"Reached target number of demos ({args.num_demo_success}).")
             stop_flag = True
             break
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
-        actions = get_actions(all_actions, env, demo_idxs, robot)
+        max_frames = 70  # Limit to first 70 frames
+        actions = get_actions(all_actions, env, demo_idxs, robot, single_actions=single_actions, max_frames=max_frames)
         obs, reward, success, time_out, extras = env.step(actions)
         obs = state_tensor_to_nested(env.handler, obs)
-        run_out = get_run_out(all_actions, env, demo_idxs)
+        run_out = get_run_out(all_actions, env, demo_idxs, single_actions=single_actions, max_frames=max_frames)
 
         for env_id in range(env.handler.num_envs):
             if finished[env_id]:
@@ -877,13 +1177,17 @@ def main():
                 collector.save(demo_idx, status="success")
                 collector.delete(demo_idx)
 
-                if (not stop_flag) and (demo_indexer.next_idx < max_demo):
+                if (not stop_flag) and (demo_indexer.next_idx < args.num_demo_success):
                     new_demo_idx = demo_indexer.next_idx
                     demo_idxs[env_id] = new_demo_idx
-                    log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx}")
+                    continuous_demo_idx = new_demo_idx  # Update continuous index for seed
+                    log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx} (reusing trajectory demo {hardcoded_demo_idx})")
 
-                    randomization_manager.randomize_for_demo(new_demo_idx)
-                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+                    # Apply new randomization with different seed
+                    current_seed = base_seed + continuous_demo_idx
+                    log.info(f"Applying randomization with seed {current_seed} for demo {new_demo_idx}")
+                    randomization_manager.randomize_for_demo(new_demo_idx, seed=current_seed)
+                    reset_to_task_initial_state(env, env_id)  # Use task's initial state
 
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)
@@ -905,8 +1209,11 @@ def main():
 
             if failure_count[env_id] < try_num:
                 log.info(f"Demo {demo_idx} failed {failure_count[env_id]} times, retrying...")
-                randomization_manager.randomize_for_demo(demo_idx)
-                force_reset_to_state(env, init_states[demo_idx], env_id)
+                # Apply new randomization with different seed (use demo_idx as offset)
+                current_seed = base_seed + demo_idx + failure_count[env_id] * 1000  # Add large offset for retries
+                log.info(f"Applying randomization with seed {current_seed} for retry")
+                randomization_manager.randomize_for_demo(demo_idx, seed=current_seed)
+                reset_to_task_initial_state(env, env_id)  # Use task's initial state
 
                 obs = env.handler.get_states()
                 obs = state_tensor_to_nested(env.handler, obs)
@@ -918,11 +1225,15 @@ def main():
                 # pbar.update(1)
                 pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
 
-                if demo_indexer.next_idx < max_demo:
+                if demo_indexer.next_idx < args.num_demo_success:
                     new_demo_idx = demo_indexer.next_idx
                     demo_idxs[env_id] = new_demo_idx
-                    randomization_manager.randomize_for_demo(new_demo_idx)
-                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+                    continuous_demo_idx = new_demo_idx  # Update continuous index for seed
+                    # Apply new randomization with different seed
+                    current_seed = base_seed + continuous_demo_idx
+                    log.info(f"Applying randomization with seed {current_seed} for demo {new_demo_idx}")
+                    randomization_manager.randomize_for_demo(new_demo_idx, seed=current_seed)
+                    reset_to_task_initial_state(env, env_id)  # Use task's initial state
 
                     obs = env.handler.get_states()
                     obs = state_tensor_to_nested(env.handler, obs)

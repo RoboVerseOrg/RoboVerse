@@ -12,13 +12,13 @@
         izz="0.000311" />
     </inertial>
     <visual>
-      <origin xyz="0.144673 -0.048381 -0.088471" rpy="1.5708 0 0" />
+      <origin xyz="0 0 0" rpy="1.5708 0 0" />
       <geometry>
         <mesh filename="whale_doll.glb" />
       </geometry>
     </visual>
     <collision>
-      <origin xyz="0.144673 -0.048381 -0.088471" rpy="1.5708 0 0" />
+      <origin xyz="0 0 0" rpy="1.5708 0 0" />
       <material name="whale_material" />
       <geometry>
         <mesh filename="collision_meshes/whale_doll_convex_00.obj" />

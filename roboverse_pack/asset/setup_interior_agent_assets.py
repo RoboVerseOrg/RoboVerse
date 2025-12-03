@@ -78,8 +78,8 @@ def main() -> None:
     for line in LICENSE_NOTICE.splitlines():
         logger.info(line)
 
-    download_roboverse_usd()
-    download_interior_agent()
+    # download_roboverse_usd()
+    # download_interior_agent()
     copy_usd_assets()
 
 

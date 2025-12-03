@@ -55,7 +55,7 @@ class TrackGraspHandRelative(TrajectoryTrackingTaskBase):
             ),
             PrimitiveCubeCfg(
                 name="wall",
-                size=(0.8, 0.1, 0.3),
+                size=(0.8, 0.1, 0.2),
                 mass=1000.0,
                 physics=PhysicStateType.RIGIDBODY,
                 color=(0.7, 0.7, 0.7),

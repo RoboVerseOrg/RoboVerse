@@ -5,7 +5,8 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.lights import DiskLightCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 
@@ -31,104 +32,24 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="/home/balen/murphy/isaaclab_rv/2/RoboVerse/roboverse_pack/whale_doll/whale_doll.usd",
                 urdf_path="roboverse_pack/whale_doll/whale_doll.urdf",
-                default_position=(0.104252, -0.076198, 0.846706),
-                default_orientation=(0.454115, 0.132146, 0.231502, -0.850132),
             ),
-            PrimitiveCubeCfg(
-                name="wall",
-                size=(0.8, 0.1, 0.3),
-                mass=1000.0,
-                physics=PhysicStateType.RIGIDBODY,
-                color=(0.7, 0.7, 0.7),
-                # fix_base_link=True,
-                default_position=(0.532921, -0.217400, 0.946513),
-                default_orientation=(1, 0.0, 0.0, 0.0),
-            ),
-            RigidObjCfg(
-                name="table",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                enabled_gravity=False,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
-                fix_base_link=True,
-                default_position=(0.560000, -0.250000, 0.399868),
-                default_orientation=(1.000000, -0.000000, -0.000000, 0.000000),
-            ),
-            # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
-            RigidObjCfg(
-                name="traj_marker_0",
-                urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
-                mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                scale=0.1,
-                physics=PhysicStateType.XFORM,
-                enabled_gravity=False,
-                collision_enabled=False,
-                fix_base_link=True,
-                default_position=(0.300000, -0.460000, 1.020000),
-                default_orientation=(1.000000, 0.000000, 0.000000, 0.000000),
-            ),
-            RigidObjCfg(
-                name="traj_marker_1",
-                urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
-                mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                scale=0.1,
-                physics=PhysicStateType.XFORM,
-                enabled_gravity=False,
-                collision_enabled=False,
-                fix_base_link=True,
-                default_position=(0.300000, -0.320000, 1.220000),
-                default_orientation=(1.000000, 0.000000, 0.000000, 0.000000),
-            ),
-            RigidObjCfg(
-                name="traj_marker_2",
-                urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
-                mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                scale=0.1,
-                physics=PhysicStateType.XFORM,
-                enabled_gravity=False,
-                collision_enabled=False,
-                fix_base_link=True,
-                default_position=(0.300000, -0.190000, 1.220000),
-                default_orientation=(0.998750, 0.000000, 0.049979, 0.000000),
-            ),
-            RigidObjCfg(
-                name="traj_marker_3",
-                urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
-                mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                scale=0.1,
-                physics=PhysicStateType.XFORM,
-                enabled_gravity=False,
-                collision_enabled=False,
-                fix_base_link=True,
-                default_position=(0.300000, -0.070000, 1.220000),
-                default_orientation=(1.000000, 0.000000, 0.000000, 0.000000),
-            ),
-            RigidObjCfg(
-                name="traj_marker_4",
-                urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
-                mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
-                usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                scale=0.1,
-                physics=PhysicStateType.XFORM,
-                enabled_gravity=False,
-                collision_enabled=False,
-                fix_base_link=True,
-                default_position=(0.300000, 0.000000, 1.080000),
-                default_orientation=(0.984726, 0.000000, 0.174108, 0.000000),
-            ),
-
         ],
         robots=["vega"],
+        lights=[
+            DiskLightCfg(
+                name="overhead_light",
+                intensity=10000.0,
+                color=(1.0, 1.0, 1.0),
+                radius=1.0,
+                pos=(0.0, 0.0, 2.0),  # 原点上方 2m
+                rot=(0.7071, 0.0, 0.0, 0.7071),  # 45° 向下照射
+            ),
+        ],
         sim_params=SimParamCfg(
             dt=0.005,
         ),
         decimation=4,
+        scene="kujiale_scene_0008",
     )
 
 
@@ -141,39 +62,10 @@ class PutBananaTask(EmbodiedGenBaseTask):
                         "pos": torch.tensor([0.104252, -0.076198, 0.846706]),
                         "rot": torch.tensor([0.454115, 0.132146, 0.231502, -0.850132]),
                     },
-                    "wall": {
-                        "pos": torch.tensor([0.532921, -0.217400, 0.946513]),
-                        "rot": torch.tensor([0.999490, -0.000045, 0.001448, -0.031900]),
-                    },
-                    "table": {
-                        "pos": torch.tensor([0.560000, -0.250000, 0.399868]),
-                        "rot": torch.tensor([1.000000, -0.000000, -0.000000, 0.000000]),
-                    },
-                    # Trajectory waypoints (world coordinates)
-                    "traj_marker_0": {
-                        "pos": torch.tensor([0.300000, -0.460000, 1.020000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_1": {
-                        "pos": torch.tensor([0.300000, -0.320000, 1.220000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_2": {
-                        "pos": torch.tensor([0.300000, -0.190000, 1.220000]),
-                        "rot": torch.tensor([0.998750, 0.000000, 0.049979, 0.000000]),
-                    },
-                    "traj_marker_3": {
-                        "pos": torch.tensor([0.300000, -0.070000, 1.220000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_4": {
-                        "pos": torch.tensor([0.300000, 0.000000, 1.080000]),
-                        "rot": torch.tensor([0.984726, 0.000000, 0.174108, 0.000000]),
-                    },
                 },
                 "robots": {
                     "vega": {
-                        "pos": torch.tensor([-0.353636, -0.230209, 0.000511]),
+                        "pos": torch.tensor([-0.353636, -0.230209, 0.00511]),
                         "rot": torch.tensor([1.000201, 0.000000, -0.000000, -0.000000]),
                         "dof_pos": {
                             # From saved_poses_20251126_101518.py

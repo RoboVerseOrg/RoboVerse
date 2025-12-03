@@ -59,7 +59,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
                 color=(0.2, 0.2, 0.7),
             ),
             PrimitiveCubeCfg(
-                name="wall",
+                name="nwall",
                 size=(0.8, 0.1, 0.3),
                 mass=1000.0,
                 physics=PhysicStateType.RIGIDBODY,

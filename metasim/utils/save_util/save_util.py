@@ -85,9 +85,7 @@ def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc="
         ])
         metadata["robot_root_state"].append(root_state_flat.tolist())
 
-    # Full EE state only (no separate pos/quat/gripper fields)
-    ee_states = get_ee_state_from_list(demo, robot_config, tensorize=True)  # (T, 8)
-    metadata["ee_state"] = ee_states.detach().cpu().tolist()
+
     metadata["task_desc"] = task_desc
 
     if rgb_frames:

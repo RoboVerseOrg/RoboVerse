@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<robot name="table">
+   <link name="table">
+      <visual>
+         <origin xyz="0 0 0" rpy="1.5708 0.0 0.0"/>
+         <geometry>
+            <mesh filename="mesh/table.obj" scale="1.0 1.0 1.0"/>
+         </geometry>
+      </visual>
+      <collision>
+         <origin xyz="0 0 0" rpy="1.5708 0.0 0.0"/>
+         <geometry>
+            <mesh filename="mesh/table_collision.obj" scale="1.0 1.0 1.0"/>
+         </geometry>
+         <gazebo>
+            <mu1>0.60</mu1>
+            <mu2>0.50</mu2>
+         </gazebo>
+      </collision>
+      <inertial>
+         <mass value="20.0000"/>
+         <origin xyz="0 0 0"/>
+         <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      </inertial>
+      <extra_info>
+         <scale>1.736570</scale>
+         <version>v0.1.5</version>
+         <category>table</category>
+         <description>rectangular wooden table with four sturdy legs</description>
+         <min_height>0.7</min_height>
+         <max_height>0.8</max_height>
+         <real_height>0.75</real_height>
+         <min_mass>15.0</min_mass>
+         <max_mass>25.0</max_mass>
+         <generate_time>20251005070623</generate_time>
+         <gs_model>mesh/table_gs.ply</gs_model>
+      </extra_info>
+   </link>
+   <custom_data>
+      <quality>
+         <MeshGeoChecker>YES</MeshGeoChecker>
+         <ImageSegChecker>YES</ImageSegChecker>
+         <ImageAestheticChecker>4.976998567581177</ImageAestheticChecker>
+         <overall>YES</overall>
+      </quality>
+   </custom_data>
+</robot>

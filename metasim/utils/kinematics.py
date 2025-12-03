@@ -298,8 +298,8 @@ def get_ee_state_from_list(env_states, robot_config, tensorize: bool = False, us
     - else:            [pos(3), quat(4), grip(1)]
     """
     robot_name = robot_config.name
-    ee_body_name = robot_config.ee_body_name
-    ee_joint_names = robot_config.ee_joint_names
+    # ee_body_name = robot_config.ee_body_name
+    # ee_joint_names = robot_config.ee_joint_names
 
     gripper_open_q = torch.as_tensor(robot_config.gripper_open_q, dtype=torch.float32).view(-1)
     gripper_close_q = torch.as_tensor(robot_config.gripper_close_q, dtype=torch.float32).view(-1)
