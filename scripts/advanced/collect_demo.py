@@ -701,7 +701,7 @@ def main():
 
     if args.task in {"stack_cube", "pick_cube", "pick_butter"}:
         dp_pos = (1.0, 0.0, 0.75)
-    elif args.task in {"close_box"} :
+    elif args.task in {"close_box"}:
         dp_pos = (0, 0, 0)
     else:
         dp_pos = (1.0, 0.0, 0.75)
