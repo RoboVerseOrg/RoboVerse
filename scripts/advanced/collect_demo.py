@@ -700,20 +700,22 @@ def main():
     task_cls = get_task_class(args.task)
 
     if args.task in {"stack_cube", "pick_cube", "pick_butter"}:
-        dp_camera = True
-    else:
-        dp_camera = args.task != "close_box"
-
-    is_libero_dataset = "libero_90" in args.task
-
-    if is_libero_dataset:
-        dp_pos = (2.0, 0.0, 2)
-    elif dp_camera:
-        # import warnings
-        # warnings.warn("Using dp camera position!")
         dp_pos = (1.0, 0.0, 0.75)
+    elif args.task in {"close_box"} :
+        dp_pos = (0, 0, 0)
     else:
-        dp_pos = (1.5, 0.0, 1.5)
+        dp_pos = (1.0, 0.0, 0.75)
+
+    # is_libero_dataset = "libero_90" in args.task
+
+    # if is_libero_dataset:
+    #     dp_pos = (2.0, 0.0, 2)
+    # elif dp_camera:
+    #     # import warnings
+    #     # warnings.warn("Using dp camera position!")
+    #     dp_pos = (1.0, 0.0, 0.75)
+    # else:
+    #     dp_pos = (1.5, 0.0, 1.5)
 
     # libero specific camera position
     # dp_pos = (0.8, -0, 1.6)
@@ -771,7 +773,7 @@ def main():
     ## Setup
     # Get task description from environment
     task_desc = getattr(env, "task_desc", "")
-    collector = DemoCollector(env.handler, robot, task_desc)
+    collector = DemoCollector(env.handler, robot, task_desc, demo_start_idx=args.demo_start_idx)
     # pbar = tqdm(total=max_demo - args.demo_start_idx, desc="Collecting demos")
     pbar = tqdm(total=args.num_demo_success, desc="Collecting successful demos")
 
@@ -830,13 +832,17 @@ def main():
     stop_flag = False
 
     while not all(finished):
+        if stop_flag:
+            pass
+
         if tot_success >= args.num_demo_success:
-            log.info(f"Reached target number of successful demos ({args.num_demo_success}). Stopping collection.")
-            break
+            log.info(f"Reached target number of successful demos ({args.num_demo_success}).")
+            stop_flag = True
 
         if demo_indexer.next_idx >= max_demo:
-            log.warning(f"Reached maximum demo index ({max_demo}). Stopping collection.")
-            break
+            if not stop_flag:
+                log.warning(f"Reached maximum demo index ({max_demo}), finishing in-flight demos.")
+            stop_flag = True
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)
