@@ -230,7 +230,7 @@ class PickPlaceTrack(PickPlaceBase):
 
     def __init__(self, scenario, device=None):
         self.state_file_path = (
-            "eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl"
+            "eval_states/pick_place.approach_grasp_simple_franka_lift_states_100states_20251126_170312.pkl"
         )
         self._loaded_states = None
 

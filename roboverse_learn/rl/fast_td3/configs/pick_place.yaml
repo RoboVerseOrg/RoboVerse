@@ -4,7 +4,7 @@
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
-sim: "isaacsim"
+sim: "isaacgym"
 robots: ["franka"]
 task: "pick_place.approach_grasp_simple"
 decimation: 4

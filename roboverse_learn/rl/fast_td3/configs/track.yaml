@@ -5,7 +5,7 @@
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
-sim: "isaacsim"
+sim: "isaacgym"
 robots: ["franka"]
 task: "pick_place.track"
 decimation: 4
@@ -14,7 +14,7 @@ headless: True
 
 # State file path for track task (pkl file path for grasp states)
 # If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl"
+state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_states_100states_20251126_170312.pkl"
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
