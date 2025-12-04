@@ -6,7 +6,7 @@ import torch
 
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers import DetectedChecker, RelativeBboxDetector
-from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 
@@ -21,7 +21,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
     The scene contains multiple objects on the table to make it more realistic and challenging.
     """
 
-    max_episode_steps = 25000
+    max_episode_steps = 250000
 
     scenario = ScenarioCfg(
         objects=[
@@ -32,6 +32,8 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
+                default_position=torch.tensor([0.4, -0.2, 0.4]),
+                default_orientation=torch.tensor([1.0, 0.0, 0.0, 0.0]),
             ),
             RigidObjCfg(
                 name="banana",
@@ -57,13 +59,13 @@ class PutBananaTask(EmbodiedGenBaseTask):
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.xml",
             ),
-            RigidObjCfg(
-                name="lamp",
+            ArticulationObjCfg(
+                name="box",
                 scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/usd/lamp.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/result/lamp.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/mjcf/lamp.xml",
+                fix_base_link=True,
+                usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+                urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+                mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
             ),
             RigidObjCfg(
                 name="remote_control",
@@ -117,7 +119,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "banana": {
-                        "pos": torch.tensor([0.28, -0.58, 0.825]),  # Starting position on table (left)
+                        "pos": torch.tensor([0.3, -0.28, 0.82]),  # Starting position on table (left)
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "mug": {
@@ -125,19 +127,20 @@ class PutBananaTask(EmbodiedGenBaseTask):
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "book": {
-                        "pos": torch.tensor([0.3, -0.28, 0.82]),  # Book on table
+                        "pos": torch.tensor([0.68, -0.34, 0.825]),  # Book on table
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
-                    "lamp": {
-                        "pos": torch.tensor([0.68, 0.10, 1.05]),  # Lamp on table
-                        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    "box": {
+                        "pos": torch.tensor([0.58, -0.05, 0.90]),  # box on table
+                        "rot": torch.tensor([0.0, 0.7071, 0.0, 0.7071]),
+                        "dof_pos": {"box_joint": 2.0},
                     },
                     "remote_control": {
                         "pos": torch.tensor([0.68, -0.54, 0.811]),  # Remote on table
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "rubiks_cube": {
-                        "pos": torch.tensor([0.68, -0.34, 0.83]),  # Rubik's cube on table
+                        "pos": torch.tensor([0.28, -0.58, 0.83]),  # Rubik's cube on table
                         "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     },
                     "vase": {

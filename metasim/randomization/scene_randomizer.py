@@ -268,17 +268,9 @@ class SceneRandomizer(BaseRandomizerType):
         self._created_prims: dict[str, list[str]] = {}
         self._loaded_usds: dict[str, str] = {}  # {prim_path: usd_path}
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize USD Stage.
+        self._sub_init()
 
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Get Registry (use _actual_handler for Hybrid support)
-        self.registry = ObjectRegistry.get_instance(self._actual_handler)
-
+    def _sub_init(self):
         # Initialize USD
         try:
             import omni.isaac.core.utils.prims as prim_utils

@@ -40,7 +40,7 @@ class Args:
     render: RenderCfg = RenderCfg()
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "mujoco"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "sapien3"
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
@@ -51,20 +51,21 @@ class Args:
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
     no_gnd: bool = False
 
-    ## Viser Visualization
+    ## Visualization
     enable_viser: bool = True  # Enable real-time Viser 3D visualization
+    enable_rerun: bool = False  # Enable real-time Rerun 3D visualization
     viser_port: int = 8080  # Port for Viser server
 
     ## Display
     display_camera: bool = True  # Whether to display camera view in real-time
-    display_width: int = 1200  # Display window width (adjusted for dual camera split-screen)
-    display_height: int = 600  # Display window height
+    display_width: int = 2000  # Display window width (adjusted for dual camera split-screen)
+    display_height: int = 1200  # Display window height
 
     ## Trajectory saving
     save_traj: bool = True  # Whether to save trajectory
     traj_dir: str = "teleop_trajs"  # Directory to save trajectories
     save_states: bool = True  # Whether to save full states (not just actions)
-    save_every_n_steps: int = 5  # Save every N steps (1=save all, 2=save every other step, etc.)
+    save_every_n_steps: int = 10  # Save every N steps (1=save all, 2=save every other step, etc.)
 
     ## Step timing
     min_step_time: float = 0.001  # Minimum time per step in seconds (controls operation speed)
@@ -76,12 +77,14 @@ class Args:
 args = tyro.cli(Args)
 
 
-def extract_state_dict(obs, scenario):
+def extract_state_dict(obs, scenario, joint_orders: dict[str, list[str]] | None = None):
     """Extract state dictionary from TensorState observation.
 
     Args:
         obs: TensorState observation
         scenario: Scenario configuration to get joint names
+        joint_orders: Optional mapping from object/robot name to joint order list. This is required
+            for articulated objects that don't expose actuators in the config (e.g., RLBench assets).
 
     Returns:
         Dictionary containing positions, rotations, and joint positions for all objects and robots
@@ -91,6 +94,20 @@ def extract_state_dict(obs, scenario):
     # Create lookup dicts for configurations
     obj_cfg_dict = {obj.name: obj for obj in scenario.objects}
     robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
+    joint_orders = joint_orders or {}
+
+    def _build_dof_pos(names: list[str] | None, joint_pos_tensor):
+        if not names:
+            return None
+        joint_values = None
+        if joint_pos_tensor is not None:
+            joint_values = joint_pos_tensor[0].cpu().numpy()
+        dof_pos = {}
+        for idx, name in enumerate(names):
+            value = joint_values[idx] if joint_values is not None and idx < len(joint_values) else 0.0
+            dof_pos[name] = float(value)
+        # ensure deterministic ordering (dictionary order)
+        return {key: dof_pos[key] for key in sorted(dof_pos.keys())}
 
     # Extract object states
     for obj_name, obj_state in obs.objects.items():
@@ -103,13 +120,17 @@ def extract_state_dict(obs, scenario):
         }
 
         # Add joint positions if the object has joints
-        if obj_state.joint_pos is not None and obj_name in obj_cfg_dict:
+        joint_names = joint_orders.get(obj_name)
+        if joint_names:
+            joint_names = sorted(joint_names)
+        if not joint_names and obj_name in obj_cfg_dict:
             obj_cfg = obj_cfg_dict[obj_name]
-            if hasattr(obj_cfg, "actuators") and obj_cfg.actuators is not None:
-                # Joint names are sorted alphabetically (standard in handlers)
+            if hasattr(obj_cfg, "actuators") and obj_cfg.actuators:
                 joint_names = sorted(obj_cfg.actuators.keys())
-                joint_positions = obj_state.joint_pos[0].cpu().numpy()
-                state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
+
+        dof_pos = _build_dof_pos(joint_names, obj_state.joint_pos)
+        if dof_pos:
+            state_entry["dof_pos"] = dof_pos
 
         state_dict[obj_name] = state_entry
 
@@ -124,13 +145,17 @@ def extract_state_dict(obs, scenario):
         }
 
         # Add joint positions for robot
-        if robot_name in robot_cfg_dict:
+        joint_names = joint_orders.get(robot_name)
+        if joint_names:
+            joint_names = sorted(joint_names)
+        if not joint_names and robot_name in robot_cfg_dict:
             robot_cfg = robot_cfg_dict[robot_name]
             if robot_cfg.actuators is not None:
-                # Joint names are sorted alphabetically (standard in handlers)
                 joint_names = sorted(robot_cfg.actuators.keys())
-                joint_positions = robot_state.joint_pos[0].cpu().numpy()
-                state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
+
+        dof_pos = _build_dof_pos(joint_names, robot_state.joint_pos)
+        if dof_pos:
+            state_entry["dof_pos"] = dof_pos
 
         state_dict[robot_name] = state_entry
 
@@ -140,8 +165,8 @@ def extract_state_dict(obs, scenario):
 def main():
     task_cls = get_task_class(args.task)
     # Create two cameras with different viewpoints
-    camera1 = PinholeCameraCfg(name="camera_1", pos=(2.0, -2.0, 2.0), look_at=(0.0, 0.0, 0.0))
-    camera2 = PinholeCameraCfg(name="camera_2", pos=(2.5, -1.2, 2.5), look_at=(0.0, 0.0, 0.0))
+    camera1 = PinholeCameraCfg(name="camera_1", pos=(2.0, -2.0, 2.0), look_at=(0.0, 0.0, 0.0), width=512, height=512)
+    camera2 = PinholeCameraCfg(name="camera_2", pos=(2.5, -1.2, 2.5), look_at=(0.0, 0.0, 0.0), width=512, height=512)
     scenario = task_cls.scenario.update(
         robots=[args.robot],
         scene=args.scene,
@@ -151,8 +176,8 @@ def main():
         renderer=args.renderer,
         num_envs=args.num_envs,
         headless=args.headless,
+        decimation=2,
     )
-
     # HACK specific to isaacsim
     if args.sim == "isaacsim":
         scenario.update(decimation=2)
@@ -171,12 +196,22 @@ def main():
     device = torch.device("cpu")
     env = task_cls(scenario, device=device)
 
-    # Optionally wrap with Viser visualization
-    if args.enable_viser:
-        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    # Optionally wrap with visualization
+    if args.enable_viser or args.enable_rerun:
+        from metasim.utils.viz_task_wrapper import TaskVizWrapper
 
-        env = TaskViserWrapper(env, port=args.viser_port)
-        log.info(f"Viser visualization enabled on port {args.viser_port}")
+        env = TaskVizWrapper(
+            env,
+            use_rerun=args.enable_rerun,
+            use_viser=args.enable_viser,
+            rerun_app_name="Teleop Keyboard",
+            viser_port=args.viser_port,
+            update_freq=1,
+        )
+        if args.enable_viser:
+            log.info(f"Viser visualization enabled on port {args.viser_port}")
+        if args.enable_rerun:
+            log.info("Rerun visualization enabled")
 
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
@@ -185,6 +220,14 @@ def main():
     obs, extras = env.reset()
     toc = time.time()
     log.trace(f"Time to reset: {toc - tic:.2f}s")
+
+    def get_joint_orders() -> dict[str, list[str]]:
+        """Fetch current joint order mapping from handler (robots + articulated objs)."""
+        handler = getattr(env, "handler", None)
+        if handler is None:
+            return {}
+        joint_map = getattr(handler, "object_joint_order", None)
+        return joint_map if joint_map is not None else {}
 
     # Initialize trajectory recording - support multiple episodes
     all_episodes = []  # List of completed trajectories
@@ -195,7 +238,7 @@ def main():
 
     if args.save_traj:
         # Record initial state for first episode
-        current_episode_init_state = extract_state_dict(obs, scenario)
+        current_episode_init_state = extract_state_dict(obs, scenario, joint_orders=get_joint_orders())
         log.info(f"Episode {episode_count}: Initial state recorded")
 
     # Setup IK Solver
@@ -221,6 +264,8 @@ def main():
         "x": False,
         "space": False,
         "r": False,  # Reset key (discard current episode)
+        "b": False,  # Save checkpoint
+        "n": False,  # Restore checkpoint
     }
 
     # Episode control flags
@@ -228,9 +273,12 @@ def main():
     complete_requested = False  # Complete current episode like timeout (C key)
     save_to_file_requested = False  # Save all episodes to file (S key)
 
+    # Checkpoint system
+    checkpoint = None  # Stores: {"state": state_dict, "actions": list, "states": list, "init_state": dict}
+
     def on_key_press(key):
         """Handle key press events"""
-        nonlocal running, space_pressed, reset_requested, complete_requested, save_to_file_requested
+        nonlocal running, space_pressed, reset_requested, complete_requested, save_to_file_requested, checkpoint
         try:
             key_name = key.char.lower() if hasattr(key, "char") and key.char else str(key).split(".")[-1]
             if key_name in key_states:
@@ -243,6 +291,12 @@ def main():
             if key_name == "v":
                 complete_requested = True
                 log.info("Complete requested (save current episode and reset)")
+            if key_name == "b":
+                # Save checkpoint - will be handled in main loop
+                log.info("Checkpoint save requested (B key)")
+            if key_name == "n":
+                # Restore checkpoint - will be handled in main loop
+                log.info("Checkpoint restore requested (N key)")
         except AttributeError:
             # Handle special keys (ESC, etc.)
             if str(key) == "Key.esc":
@@ -326,6 +380,7 @@ def main():
     log.info("  Rotation: Q/W (roll), A/S (pitch), Z/X (yaw)")
     log.info("  Gripper: SPACE (close/open)")
     log.info("  Episode: V (complete & save), R (reset & discard)")
+    log.info("  Checkpoint: B (save checkpoint), N (restore checkpoint)")
     log.info("  Exit: ESC (save all and quit)")
     log.info("=" * 60)
 
@@ -381,7 +436,7 @@ def main():
         curr_ee_quat_local = quat_mul(quat_inv(robot_quat), curr_ee_quat)
 
         if keyboard_client is not None:
-            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.0005, drot=0.01)
+            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.0002, drot=0.0003)
         else:
             # Handle keyboard input using pynput key states
             d_pos = [0.0, 0.0, 0.0]
@@ -390,35 +445,41 @@ def main():
 
             # Movement controls (pynput key mapping)
             if key_states["up"]:
-                d_pos[0] += 0.01  # Move +X
+                d_pos[0] += 0.008  # Move +X
             if key_states["down"]:
-                d_pos[0] -= 0.01  # Move -X
+                d_pos[0] -= 0.008  # Move -X
             if key_states["left"]:
-                d_pos[1] += 0.01  # Move +Y
+                d_pos[1] += 0.008  # Move +Y
             if key_states["right"]:
-                d_pos[1] -= 0.01  # Move -Y
+                d_pos[1] -= 0.008  # Move -Y
             if key_states["e"]:
-                d_pos[2] += 0.01  # Move +Z
+                d_pos[2] += 0.008  # Move +Z
             if key_states["d"]:
-                d_pos[2] -= 0.01  # Move -Z
+                d_pos[2] -= 0.008  # Move -Z
 
             # Rotation controls (pynput key mapping)
             if key_states["q"]:
-                d_rot_local[0] += 0.05  # Roll +
+                d_rot_local[0] += 0.03  # Roll +
             if key_states["w"]:
-                d_rot_local[0] -= 0.05  # Roll -
+                d_rot_local[0] -= 0.03  # Roll -
             if key_states["a"]:
-                d_rot_local[1] += 0.05  # Pitch +
+                d_rot_local[1] += 0.03  # Pitch +
             if key_states["s"]:
-                d_rot_local[1] -= 0.05  # Pitch -
+                d_rot_local[1] -= 0.03  # Pitch -
             if key_states["z"]:
-                d_rot_local[2] += 0.05  # Yaw +
+                d_rot_local[2] += 0.03  # Yaw +
             if key_states["x"]:
-                d_rot_local[2] -= 0.05  # Yaw -
+                d_rot_local[2] -= 0.03  # Yaw -
 
             # Gripper controls (space_pressed tracks key state)
             # Note: space_pressed=True means close gripper, False means open
             close_gripper = 1 if space_pressed else 0
+
+        # Check if there is any control command
+        has_control_command = (
+            any(abs(x) > 1e-6 for x in d_pos) or any(abs(x) > 1e-6 for x in d_rot_local) or close_gripper != 0
+        )
+
         d_pos_tensor = torch.tensor(d_pos, dtype=torch.float32, device=device)
         d_rot_tensor = torch.tensor(d_rot_local, dtype=torch.float32, device=device)
 
@@ -443,8 +504,8 @@ def main():
 
         obs, reward, success, time_out, extras = env.step(actions)
 
-        # Record trajectory data (with downsampling)
-        if args.save_traj and (step % args.save_every_n_steps == 0):
+        # Record trajectory data (with downsampling) - only if there was a control command
+        if args.save_traj and has_control_command and (step % args.save_every_n_steps == 0):
             # Extract robot action from action list
             # actions is a list of dicts: [{robot_name: {dof_pos_target: {...}}}]
             robot_action = actions[0][scenario.robots[0].name]
@@ -460,7 +521,7 @@ def main():
 
             # Record state if requested
             if args.save_states:
-                current_state = extract_state_dict(obs, scenario)
+                current_state = extract_state_dict(obs, scenario, joint_orders=get_joint_orders())
                 current_episode_states.append(current_state)
 
         # Check for episode completion
@@ -487,12 +548,117 @@ def main():
             episode_done = True
             # Don't save the episode, just reset
 
+        # Handle checkpoint save (B key)
+        if key_states.get("b", False):
+            # Save checkpoint with current trajectory state
+            # Note: Current step's action/state may or may not be recorded yet depending on save_every_n_steps
+            # The checkpoint saves the current environment state, which corresponds to the state AFTER
+            # executing all actions up to current step
+            checkpoint = {
+                "state": extract_state_dict(obs, scenario, joint_orders=get_joint_orders()),  # Current env state
+                "actions": current_episode_actions.copy(),  # All recorded actions up to now
+                "states": current_episode_states.copy()
+                if current_episode_states is not None
+                else None,  # All recorded states
+                "init_state": current_episode_init_state.copy() if current_episode_init_state is not None else None,
+                "step": step,  # Current step number
+            }
+            log.info(
+                f"Checkpoint saved at step {step}: {len(current_episode_actions)} actions, "
+                f"{len(current_episode_states) if current_episode_states else 0} states. "
+                f"Trajectory can be resumed from here."
+            )
+            # Reset key state to avoid repeated saves
+            key_states["b"] = False
+
+        # Handle checkpoint restore (N key)
+        if key_states.get("n", False) and checkpoint is not None:
+            log.info(f"Restoring checkpoint from step {checkpoint['step']}...")
+            # Restore trajectory data
+            current_episode_actions = checkpoint["actions"].copy()
+            current_episode_states = checkpoint["states"].copy() if checkpoint["states"] is not None else None
+            current_episode_init_state = (
+                checkpoint["init_state"].copy() if checkpoint["init_state"] is not None else None
+            )
+
+            # Restore environment state
+            checkpoint_state = checkpoint["state"]
+            joint_orders = get_joint_orders()
+            # Convert state dict to format expected by env.reset
+            # Format: {"objects": {...}, "robots": {...}}
+            reset_state = {"objects": {}, "robots": {}}
+
+            # Separate objects and robots
+            obj_cfg_dict = {obj.name: obj for obj in scenario.objects}
+            robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
+
+            for name, state_data in checkpoint_state.items():
+                state_entry = {
+                    "pos": torch.tensor(state_data["pos"], dtype=torch.float32),
+                    "rot": torch.tensor(state_data["rot"], dtype=torch.float32),
+                }
+                if "dof_pos" in state_data:
+                    ordered_items = sorted(state_data["dof_pos"].items())
+                    state_entry["dof_pos"] = {
+                        k: torch.tensor(v, dtype=torch.float32) if isinstance(v, (int, float)) else v
+                        for k, v in ordered_items
+                    }
+                elif name in joint_orders:
+                    ordered_joint_names = sorted(joint_orders[name])
+                    state_entry["dof_pos"] = {
+                        joint_name: torch.tensor(0.0, dtype=torch.float32) for joint_name in ordered_joint_names
+                    }
+                    log.warning(
+                        f"Checkpoint missing dof_pos for articulated entity '{name}'. "
+                        "Using zeros as fallback; consider resaving checkpoint."
+                    )
+
+                # Categorize as object or robot
+                if name in obj_cfg_dict:
+                    reset_state["objects"][name] = state_entry
+                elif name in robot_cfg_dict:
+                    reset_state["robots"][name] = state_entry
+
+            # Reset environment to checkpoint state
+            obs, extras = env.reset(states=[reset_state], env_ids=[0])
+            step = checkpoint["step"]
+
+            # Verify trajectory continuity
+            # Expected number of recorded actions: steps that are multiples of save_every_n_steps
+            # For step N, we record at steps 0, save_every_n_steps, 2*save_every_n_steps, ..., up to floor(N/save_every_n_steps)*save_every_n_steps
+            if args.save_traj:
+                expected_actions = (step // args.save_every_n_steps) + 1
+                actual_actions = len(current_episode_actions)
+                if actual_actions != expected_actions:
+                    log.warning(
+                        f"Trajectory length check: step {step}, expected {expected_actions} actions "
+                        f"(assuming recording at steps 0, {args.save_every_n_steps}, "
+                        f"{2 * args.save_every_n_steps}, ...), but found {actual_actions} actions. "
+                        f"This is normal if checkpoint was saved at a non-recording step."
+                    )
+                else:
+                    log.debug(f"Trajectory continuity verified: {actual_actions} actions match expected count.")
+
+            log.info(
+                f"Checkpoint restored! Resumed from step {step} with {len(current_episode_actions)} actions, "
+                f"{len(current_episode_states) if current_episode_states else 0} states. "
+                f"Next step will be {step + 1}, trajectory will continue appending from here."
+            )
+            # Reset key state
+            key_states["n"] = False
+            # Continue to next iteration - step will be incremented at end of loop
+            # Trajectory recording will continue from next step, appending to existing trajectory
+            continue  # Skip the rest of the loop to avoid processing actions this step
+        elif key_states.get("n", False) and checkpoint is None:
+            log.warning("No checkpoint available to restore! Press B first to save a checkpoint.")
+            key_states["n"] = False
+
         # Reset environment if episode is done
         if episode_done:
             reset_episode()
             obs, extras = env.reset()
             if args.save_traj:
-                current_episode_init_state = extract_state_dict(obs, scenario)
+                current_episode_init_state = extract_state_dict(obs, scenario, joint_orders=get_joint_orders())
                 log.info(f"Episode {episode_count}: Started (total episodes collected: {len(all_episodes)})")
             step = 0
             reset_requested = False

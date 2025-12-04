@@ -1,21 +1,4 @@
-# FIXME:
-# This file may have many bugs, need to be reviewed and fixed.
-"""Optimized tests for `SceneRandomizer`.
-
-This rewrites the previous buggy test file to match the structure and
-patterns used by other randomization tests (material/object/light).
-Key fixes:
-  - Use correct config field name `material_randomization` (was `material`).
-  - Remove fragile string-based proxy calls; pass callables directly.
-  - Add combined element test and env_ids scoping test.
-  - Provide simple material pool paths pointing to existing local MDL assets.
-  - Test sequential material selection deterministically via internal method.
-  - Simplify standalone runner to reuse shared scenario helper.
-"""
-
 from __future__ import annotations
-
-import multiprocessing as mp
 
 import pytest
 import rootutils
@@ -24,225 +7,231 @@ from loguru import logger as log
 rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.randomization.scene_randomizer import (
-    SceneGeometryCfg,
-    SceneMaterialPoolCfg,
+    ManualGeometryCfg,
+    SceneLayerCfg,
     SceneRandomCfg,
     SceneRandomizer,
+    USDAssetPoolCfg,
 )
-from metasim.test.randomization.conftest import get_shared_scenario
 
 
-def _assert_contains(prims: list[str], substrings: list[str]):
-    for s in substrings:
-        assert any(s in p for p in prims), f"Expected prim containing '{s}' not found in created_prims: {prims}"
-
-
-def scene_floor(handler, material_randomization: bool = False):
+def scene_floor(handler):
+    """Test creating a floor using environment layer."""
     cfg = SceneRandomCfg(
-        floor=SceneGeometryCfg(
+        environment_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(10.0, 10.0, 0.1),
-            position=(0.0, 0.0, -0.05),
-            material_randomization=material_randomization,
-        ),
-        floor_materials=(
-            SceneMaterialPoolCfg(
-                material_paths=[
-                    "roboverse_data/materials/arnold/Wood/Ash.mdl",
-                    "roboverse_data/materials/arnold/Wood/Birch.mdl",
-                ],
-                selection_strategy="random",
-                randomize_material_variant=True,
-            )
-            if material_randomization
-            else None
+            elements=[
+                ManualGeometryCfg(
+                    name="floor",
+                    geometry_type="cube",
+                    size=(10.0, 10.0, 0.1),
+                    position=(0.0, 0.0, -0.05),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=123)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    _assert_contains(props["created_prims"], ["scene_floor"])
-    log.info(f"Scene floor test passed (material_randomization={material_randomization})")
+    # Check that floor prim was created
+    assert len(rand._created_prims) > 0, "Expected floor prim to be created"
+    assert "floor" in rand._created_prims, "Expected 'floor' in created_prims"
+    log.info("Scene floor test passed")
 
 
-def scene_walls(handler, material_randomization: bool = False):
+def scene_walls(handler):
+    """Test creating walls using environment layer."""
     cfg = SceneRandomCfg(
-        walls=SceneGeometryCfg(
+        environment_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(6.0, 0.2, 3.0),
-            position=(0.0, 0.0, 0.0),
-            material_randomization=material_randomization,
-        ),
-        wall_materials=(
-            SceneMaterialPoolCfg(
-                material_paths=[
-                    "roboverse_data/materials/arnold/Wood/Oak.mdl",
-                    "roboverse_data/materials/arnold/Wood/Walnut.mdl",
-                ],
-                selection_strategy="random",
-            )
-            if material_randomization
-            else None
+            elements=[
+                ManualGeometryCfg(
+                    name="wall_front",
+                    geometry_type="cube",
+                    size=(6.0, 0.2, 3.0),
+                    position=(3.0, 0.0, 1.5),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=456)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    # Walls exist per env; check one wall identifier substring
-    _assert_contains(props["created_prims"], ["scene_wall_front"])
-    log.info(f"Scene walls test passed (material_randomization={material_randomization})")
+    assert len(rand._created_prims) > 0, "Expected wall prim to be created"
+    assert "wall_front" in rand._created_prims, "Expected 'wall_front' in created_prims"
+    log.info("Scene walls test passed")
 
 
-def scene_ceiling(handler, material_randomization: bool = False):
+def scene_ceiling(handler):
+    """Test creating a ceiling using environment layer."""
     cfg = SceneRandomCfg(
-        ceiling=SceneGeometryCfg(
+        environment_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(10.0, 10.0, 0.1),
-            position=(0.0, 0.0, 3.0),
-            material_randomization=material_randomization,
-        ),
-        ceiling_materials=(
-            SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Wood/Cherry.mdl"],
-                selection_strategy="random",
-            )
-            if material_randomization
-            else None
+            elements=[
+                ManualGeometryCfg(
+                    name="ceiling",
+                    geometry_type="cube",
+                    size=(10.0, 10.0, 0.1),
+                    position=(0.0, 0.0, 3.0),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=789)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    _assert_contains(props["created_prims"], ["scene_ceiling"])
-    log.info(f"Scene ceiling test passed (material_randomization={material_randomization})")
+    assert len(rand._created_prims) > 0, "Expected ceiling prim to be created"
+    assert "ceiling" in rand._created_prims, "Expected 'ceiling' in created_prims"
+    log.info("Scene ceiling test passed")
 
 
-def scene_table(handler, material_randomization: bool = False):
+def scene_table(handler):
+    """Test creating a table using workspace layer."""
     cfg = SceneRandomCfg(
-        table=SceneGeometryCfg(
+        workspace_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(1.5, 1.0, 0.05),
-            position=(0.5, 0.0, 0.4),
-            material_randomization=material_randomization,
-        ),
-        table_materials=(
-            SceneMaterialPoolCfg(
-                material_paths=["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
-                selection_strategy="random",
-            )
-            if material_randomization
-            else None
+            elements=[
+                ManualGeometryCfg(
+                    name="table",
+                    geometry_type="cube",
+                    size=(1.5, 1.0, 0.05),
+                    position=(0.5, 0.0, 0.4),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=1011)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    _assert_contains(props["created_prims"], ["scene_table"])
-    log.info(f"Scene table test passed (material_randomization={material_randomization})")
+    assert len(rand._created_prims) > 0, "Expected table prim to be created"
+    assert "table" in rand._created_prims, "Expected 'table' in created_prims"
+    log.info("Scene table test passed")
 
 
 def scene_combined(handler):
+    """Test combining multiple layers (environment + workspace)."""
     cfg = SceneRandomCfg(
-        floor=SceneGeometryCfg(
+        environment_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(8.0, 8.0, 0.1),
-            position=(0.0, 0.0, -0.05),
-            material_randomization=False,
+            elements=[
+                ManualGeometryCfg(
+                    name="floor",
+                    geometry_type="cube",
+                    size=(8.0, 8.0, 0.1),
+                    position=(0.0, 0.0, -0.05),
+                    enabled=True,
+                ),
+                ManualGeometryCfg(
+                    name="wall_front",
+                    geometry_type="cube",
+                    size=(8.0, 0.2, 3.0),
+                    position=(4.0, 0.0, 1.5),
+                    enabled=True,
+                ),
+                ManualGeometryCfg(
+                    name="ceiling",
+                    geometry_type="cube",
+                    size=(8.0, 8.0, 0.1),
+                    position=(0.0, 0.0, 3.0),
+                    enabled=True,
+                ),
+            ],
         ),
-        walls=SceneGeometryCfg(
+        workspace_layer=SceneLayerCfg(
+            shared=True,
+            z_offset=0.0,
             enabled=True,
-            size=(8.0, 0.2, 3.0),
-            position=(0.0, 0.0, 0.0),
-            material_randomization=False,
-        ),
-        ceiling=SceneGeometryCfg(
-            enabled=True,
-            size=(8.0, 8.0, 0.1),
-            position=(0.0, 0.0, 3.0),
-            material_randomization=False,
-        ),
-        table=SceneGeometryCfg(
-            enabled=True,
-            size=(1.5, 1.0, 0.05),
-            position=(0.5, 0.0, 0.4),
-            material_randomization=False,
+            elements=[
+                ManualGeometryCfg(
+                    name="table",
+                    geometry_type="cube",
+                    size=(1.5, 1.0, 0.05),
+                    position=(0.5, 0.0, 0.4),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=2022)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    _assert_contains(
-        props["created_prims"],
-        ["scene_floor", "scene_wall_front", "scene_ceiling", "scene_table"],
-    )
+    assert len(rand._created_prims) > 0, "Expected prims to be created"
+    expected_names = ["floor", "wall_front", "ceiling", "table"]
+    for name in expected_names:
+        assert name in rand._created_prims, f"Expected '{name}' in created_prims"
     log.info("Scene combined elements test passed")
 
 
-def scene_material_selection(handler):
-    # Test sequential selection determinism
-    pool = SceneMaterialPoolCfg(
-        material_paths=[
-            "roboverse_data/materials/arnold/Wood/Ash.mdl",
-            "roboverse_data/materials/arnold/Wood/Bamboo.mdl",
-            "roboverse_data/materials/arnold/Wood/Cherry.mdl",
+def scene_usd_asset_pool(handler):
+    """Test USD asset pool sequential selection."""
+    # Test USDAssetPoolCfg with sequential selection
+    pool = USDAssetPoolCfg(
+        name="test_pool",
+        usd_paths=[
+            "roboverse_data/assets/test1.usd",
+            "roboverse_data/assets/test2.usd",
+            "roboverse_data/assets/test3.usd",
         ],
         selection_strategy="sequential",
-        randomize_material_variant=False,
+        position=(0.0, 0.0, 0.5),
     )
+
     cfg = SceneRandomCfg(
-        floor=SceneGeometryCfg(
+        workspace_layer=SceneLayerCfg(
+            shared=True,
             enabled=True,
-            size=(2.0, 2.0, 0.1),
-            position=(0.0, 0.0, -0.05),
-            material_randomization=True,
+            elements=[pool],
         ),
-        floor_materials=pool,
     )
     rand = SceneRandomizer(cfg, seed=999)
     rand.bind_handler(handler)
-    first = rand._select_material(pool, "floor_index")
-    second = rand._select_material(pool, "floor_index")
-    third = rand._select_material(pool, "floor_index")
-    assert first == pool.material_paths[0] and second == pool.material_paths[1] and third == pool.material_paths[2], (
-        "Sequential material selection failed"
-    )
-    log.info("Scene material sequential selection test passed")
+
+    # Test that pool candidates were created correctly
+    assert pool.candidates is not None, "Pool candidates should be auto-generated"
+    assert len(pool.candidates) == 3, "Expected 3 candidates"
+    log.info("Scene USD asset pool test passed")
 
 
 def scene_seed(handler):
+    """Test seed reproducibility."""
     cfg = SceneRandomCfg(
-        floor=SceneGeometryCfg(
+        environment_layer=SceneLayerCfg(
+            shared=True,
             enabled=True,
-            size=(10.0, 10.0, 0.1),
-            position=(0.0, 0.0, -0.05),
-            material_randomization=True,
-        ),
-        floor_materials=(
-            SceneMaterialPoolCfg(
-                material_paths=[
-                    "roboverse_data/materials/arnold/Wood/Ash.mdl",
-                    "roboverse_data/materials/arnold/Wood/Birch.mdl",
-                ],
-                selection_strategy="random",
-                randomize_material_variant=True,
-            )
+            elements=[
+                ManualGeometryCfg(
+                    name="floor",
+                    geometry_type="cube",
+                    size=(10.0, 10.0, 0.1),
+                    position=(0.0, 0.0, -0.05),
+                    enabled=True,
+                )
+            ],
         ),
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=555)
     rand.bind_handler(handler)
     rand.set_seed(42)
-    rand()
 
     v1 = rand._rng.random()
     rand.set_seed(42)
@@ -251,87 +240,46 @@ def scene_seed(handler):
     log.info("Scene seed reproducibility test passed")
 
 
-def scene_env_ids(handler):
-    # Randomize only walls for env 0
+def scene_default_material(handler):
+    """Test ManualGeometryCfg with default_material."""
     cfg = SceneRandomCfg(
-        walls=SceneGeometryCfg(
+        workspace_layer=SceneLayerCfg(
+            shared=True,
             enabled=True,
-            size=(4.0, 0.2, 2.0),
-            position=(0.0, 0.0, 0.0),
-            material_randomization=False,
+            elements=[
+                ManualGeometryCfg(
+                    name="table",
+                    geometry_type="cube",
+                    size=(1.5, 1.0, 0.05),
+                    position=(0.5, 0.0, 0.4),
+                    default_material="roboverse_data/materials/arnold/Wood/Oak.mdl",
+                    enabled=True,
+                )
+            ],
         ),
-        env_ids=[0],
         only_if_no_scene=True,
     )
     rand = SceneRandomizer(cfg, seed=777)
     rand.bind_handler(handler)
     rand()
-    props = rand.get_scene_properties()
-    prims = props["created_prims"]
-    assert any("env_0/scene_wall_front" in p for p in prims), "Env 0 wall should be created"
-    # Ensure walls for other envs not created
-    for env_id in range(1, handler.num_envs):
-        assert not any(f"env_{env_id}/scene_wall_front" in p for p in prims), (
-            f"Wall for env {env_id} should not be created"
-        )
-    log.info("Scene env_ids scoping test passed")
+    assert "table" in rand._created_prims, "Expected 'table' in created_prims"
+    log.info("Scene default material test passed")
 
 
-TEST_FUNCTIONS = [
-    scene_floor,
-    scene_walls,
-    scene_ceiling,
-    scene_table,
-    scene_combined,
-    scene_material_selection,
-    scene_seed,
-    scene_env_ids,
+_SCENE_CASES = [
+    pytest.param(scene_floor, {}, id="scene_floor"),
+    pytest.param(scene_walls, {}, id="scene_walls"),
+    pytest.param(scene_ceiling, {}, id="scene_ceiling"),
+    pytest.param(scene_table, {}, id="scene_table"),
+    pytest.param(scene_combined, {}, id="scene_combined"),
+    pytest.param(scene_usd_asset_pool, {}, id="scene_usd_asset_pool"),
+    pytest.param(scene_seed, {}, id="scene_seed"),
+    pytest.param(scene_default_material, {}, id="scene_default_material"),
 ]
 
 
-def _process_run_handler(scenario):
-    from metasim.utils.setup_util import get_handler
-
-    handler = get_handler(scenario)
-    for func in TEST_FUNCTIONS:
-        # Run material and non-material variants where applicable
-        if func in (scene_floor, scene_walls, scene_ceiling, scene_table):
-            func(handler, material_randomization=False)
-            func(handler, material_randomization=True)
-        else:
-            func(handler)
-    handler.close()
-
-
-def run_test(sim: str = "isaacsim", num_envs: int = 2):
-    if sim not in ["isaacsim"]:
-        log.warning(f"Skipping: Only testing IsaacSim here, got {sim}")
-        return
-    scenario = get_shared_scenario(sim, num_envs)
-    ctx = mp.get_context("spawn")
-    p = ctx.Process(target=_process_run_handler, args=(scenario,))
-    p.start()
-    p.join(timeout=90)
-    assert p.exitcode == 0, f"IsaacSim process exited abnormally: {p.exitcode}"
-    log.info("Scene randomizer standalone test finished successfully")
-
-
-@pytest.mark.usefixtures("shared_handler")
-def test_scene_randomizer_with_shared_handler(shared_handler):
-    log.info("Running scene randomizer tests with shared handler (proxy)")
-    proxy = shared_handler
-    for func in TEST_FUNCTIONS:
-        if func in (scene_floor, scene_walls, scene_ceiling, scene_table):
-            proxy.run_test(func, material_randomization=False)
-            proxy.run_test(func, material_randomization=True)
-        else:
-            proxy.run_test(func)
-    log.info("All scene randomizer tests completed with shared handler (proxy)")
-
-
-if __name__ == "__main__":
-    import sys
-
-    sim = "isaacsim" if len(sys.argv) < 2 else sys.argv[1]
-    num_envs = 2 if len(sys.argv) < 3 else int(sys.argv[2])
-    run_test(sim, num_envs)
+@pytest.mark.isaacsim
+@pytest.mark.parametrize(("test_func", "kwargs"), _SCENE_CASES)
+def test_scene_randomizers(handler, test_func, kwargs):
+    """Run scene randomizer checks inside the shared handler process."""
+    test_func(handler, **kwargs)

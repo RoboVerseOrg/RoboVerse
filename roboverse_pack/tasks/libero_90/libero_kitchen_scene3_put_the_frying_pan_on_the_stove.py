@@ -65,8 +65,7 @@ class LiberoKitchenScene3PutFryingPanOnStoveTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        # Scene configuration
-        scene="libero_kitchen_tabletop",
+        # Scene configuration,
     )
 
     # Task parameters
@@ -75,7 +74,7 @@ class LiberoKitchenScene3PutFryingPanOnStoveTask(Libero90BaseTask):
 
     # Workspace configuration
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)  # kitchen_table_offset
+    workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
     # Trajectory file path

@@ -186,6 +186,7 @@ class MujocoHandler(BaseSimHandler):
             self.robot_body_names.extend(robot_body_names)
 
         self._init_torque_control()
+        self._apply_default_joint_positions()
 
         if not self.headless:
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
@@ -274,6 +275,21 @@ class MujocoHandler(BaseSimHandler):
                 if len(pos) >= 3:
                     joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
 
+        # Apply scale to mesh elements (for visual meshes)
+        for mesh in mjcf_model.find_all("mesh"):
+            if hasattr(mesh, "scale") and mesh.scale is not None:
+                mesh_scale = list(mesh.scale)
+                if len(mesh_scale) >= 3:
+                    mesh.scale = [
+                        mesh_scale[0] * scale_x,
+                        mesh_scale[1] * scale_y,
+                        mesh_scale[2] * scale_z,
+                    ]
+                elif len(mesh_scale) == 1:
+                    # Uniform scale
+                    uniform_scale = max(scale_x, scale_y, scale_z)
+                    mesh.scale = [mesh_scale[0] * uniform_scale]
+
     def _set_framebuffer_size(self, mjcf_model, width, height):
         visual_elem = mjcf_model.visual
         global_elem = None
@@ -333,6 +349,21 @@ class MujocoHandler(BaseSimHandler):
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _apply_default_joint_positions(self) -> None:
+        """Set initial joint positions from robot/object configs if provided."""
+
+        # Robots
+        for robot_idx, robot in enumerate(self.robots):
+            if not getattr(robot, "default_joint_positions", None):
+                continue
+            prefix = self._mujoco_robot_names[robot_idx]
+            for joint_name, joint_pos in robot.default_joint_positions.items():
+                joint = self.physics.data.joint(f"{prefix}{joint_name}")
+                joint.qpos = joint_pos
+                joint.qvel = 0
+
+        self.physics.forward()
 
     def _add_default_ground(self, mjcf_model: mjcf.RootElement) -> None:
         """Add default ground plane."""
@@ -420,6 +451,16 @@ class MujocoHandler(BaseSimHandler):
                 self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
 
             obj_attached = mjcf_model.attach(obj_mjcf)
+
+            # Apply default position and orientation to the object's root body,
+            # matching the behavior of other backends (IsaacGym/IsaacSim/PyBullet).
+            if hasattr(obj, "default_position") and obj.default_position is not None:
+                obj_attached.pos = list(obj.default_position)
+            if hasattr(obj, "default_orientation") and obj.default_orientation is not None:
+                # MuJoCo expects quaternions in (w, x, y, z) order, which matches BaseObjCfg.
+                qw, qx, qy, qz = obj.default_orientation
+                obj_attached.quat = [qw, qx, qy, qz]
+
             if not obj.fix_base_link:
                 obj_attached.add("freejoint")
             self.object_body_names.append(obj_attached.full_identifier)

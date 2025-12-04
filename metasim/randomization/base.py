@@ -14,6 +14,9 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
 
+from .core.isaacsim_adapter import IsaacSimAdapter
+from .core.object_registry import ObjectRegistry
+
 if TYPE_CHECKING:
     from metasim.sim.base import BaseSimHandler
 
@@ -108,9 +111,11 @@ class BaseRandomizerType:
             )
         else:
             self._actual_handler = handler
-
+        # Initialize IsaacSimAdapter for USD operations
+        self.adapter = IsaacSimAdapter(self._actual_handler)
         # Initialize and populate ObjectRegistry (lazy, on first bind)
-        self._ensure_registry_initialized()
+        self.registry = ObjectRegistry.get_instance(self._actual_handler)
+        self._scan_and_register_handler_objects(self._actual_handler, self.registry)
 
     def _is_hybrid_handler(self, handler) -> bool:
         """Check if handler is a HybridSimHandler.
@@ -172,43 +177,15 @@ class BaseRandomizerType:
     # ObjectRegistry initialization (automatic, transparent to users)
     # -------------------------------------------------------------------------
 
-    def _ensure_registry_initialized(self):
-        """Ensure ObjectRegistry is initialized and populated.
-
-        This is called automatically on first bind_handler().
-        It scans Handler objects and registers them to ObjectRegistry.
-
-        Uses lazy scanning: if Registry exists but is empty, rescan.
-        """
-        from metasim.randomization.core.object_registry import ObjectRegistry
-
-        # Check if Registry already exists
-        try:
-            registry = ObjectRegistry.get_instance()
-            # Registry exists - check if it needs population
-            if len(registry.list_objects()) == 0:
-                # Registry is empty, need to scan objects
-                logger.debug("ObjectRegistry exists but empty, scanning objects...")
-                self._scan_and_register_handler_objects(registry)
-            return
-        except RuntimeError:
-            pass  # First time, need to initialize
-
-        # Initialize Registry
-        registry = ObjectRegistry(self._actual_handler)
-
-        # Scan and register Handler objects
-        self._scan_and_register_handler_objects(registry)
-
-    def _scan_and_register_handler_objects(self, registry):
+    @staticmethod
+    def _scan_and_register_handler_objects(handler: BaseSimHandler, registry: ObjectRegistry) -> None:
         """Scan Handler and register all existing objects.
 
         Args:
-            registry: ObjectRegistry instance
+            handler: BaseSimHandler
+            registry: ObjectRegistry instance to populate
         """
         from metasim.randomization.core.object_registry import ObjectMetadata
-
-        handler = self._actual_handler
 
         # Register robots
         if hasattr(handler, "scene") and hasattr(handler.scene, "articulations"):

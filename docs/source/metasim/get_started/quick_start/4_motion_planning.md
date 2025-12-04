@@ -1,6 +1,6 @@
 # 4. Motion Planning
 In this tutorial, we will show you how to use MetaSim to plan a motion for a robot.
-Note here, we use the `curobo` package to plan the motion. If you haven't installed it, please refer to our [curobo installation guide](http://127.0.0.1:8000/metasim/get_started/advanced_installation/curobo.html).
+Note here, we use the `curobo` package to plan the motion. If you haven't installed it, please refer to our [curobo installation guide](https://roboverse.wiki/metasim/get_started/advanced_installation/curobo).
 
 ## Common Usage
 
