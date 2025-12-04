@@ -1,5 +1,4 @@
-"""
-Unified Domain Randomization Manager for Demo Collection and Policy Evaluation.
+"""Unified Domain Randomization Manager for Demo Collection and Policy Evaluation.
 
 This module provides a centralized DR system that can be used by:
 - collect_demo.py (demo data collection)
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
 # Try to import randomization components
 try:
     from .camera_randomizer import (
-        CameraIntrinsicsRandomCfg,
         CameraPositionRandomCfg,
         CameraRandomCfg,
         CameraRandomizer,
@@ -41,6 +39,8 @@ try:
         LightRandomizer,
     )
     from .material_randomizer import MaterialRandomizer
+    from .presets.material_presets import MaterialPresets
+    from .presets.scene_presets import ScenePresets, SceneUSDCollections
     from .scene_randomizer import (
         EnvironmentLayerCfg,
         ManualGeometryCfg,
@@ -50,9 +50,6 @@ try:
         USDAssetPoolCfg,
         WorkspaceLayerCfg,
     )
-    from .presets.camera_presets import CameraProperties
-    from .presets.material_presets import MaterialPresets
-    from .presets.scene_presets import ScenePresets, SceneUSDCollections
 
     RANDOMIZATION_AVAILABLE = True
 except ImportError as e:
@@ -63,7 +60,7 @@ except ImportError as e:
 @dataclass
 class DRConfig:
     """Domain Randomization configuration.
-    
+
     Attributes:
         level: Randomization level (0=None, 1=Scene+Material, 2=+Light, 3=+Camera)
         scene_mode: Scene mode (0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD)
@@ -77,7 +74,7 @@ class DRConfig:
 
 class DomainRandomizationManager:
     """Unified Domain Randomization Manager.
-    
+
     Can be used for both demo collection and policy evaluation.
     """
 
@@ -90,7 +87,7 @@ class DomainRandomizationManager:
         render_cfg=None,
     ):
         """Initialize DR Manager.
-        
+
         Args:
             config: DR configuration
             scenario: Scenario configuration
@@ -349,11 +346,11 @@ class DomainRandomizationManager:
 
         # Determine intensity ranges based on render mode
         if self.render_cfg and hasattr(self.render_cfg, "mode") and self.render_cfg.mode == "pathtracing":
-            main_range = (22000.0, 40000.0)
-            corner_range = (10000.0, 18000.0)
+            main_range = (18000.0, 45000.0)
+            corner_range = (8000.0, 20000.0)
         else:
-            main_range = (16000.0, 30000.0)
-            corner_range = (6000.0, 12000.0)
+            main_range = (12000.0, 35000.0)
+            corner_range = (5000.0, 15000.0)
 
         for i, light in enumerate(lights):
             light_name = getattr(light, "name", f"light_{i}")
@@ -365,7 +362,7 @@ class DomainRandomizationManager:
                         light_name=light_name,
                         intensity=LightIntensityRandomCfg(intensity_range=main_range, enabled=True),
                         color=LightColorRandomCfg(
-                            temperature_range=(3000.0, 6000.0), use_temperature=True, enabled=True
+                            temperature_range=(2800.0, 6500.0), use_temperature=True, enabled=True
                         ),
                         orientation=LightOrientationRandomCfg(
                             angle_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),
@@ -383,7 +380,7 @@ class DomainRandomizationManager:
                         light_name=light_name,
                         intensity=LightIntensityRandomCfg(intensity_range=corner_range, enabled=True),
                         color=LightColorRandomCfg(
-                            temperature_range=(2700.0, 5500.0), use_temperature=True, enabled=True
+                            temperature_range=(2500.0, 6000.0), use_temperature=True, enabled=True
                         ),
                         position=LightPositionRandomCfg(
                             position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),
@@ -421,19 +418,15 @@ class DomainRandomizationManager:
         for camera in cameras:
             camera_name = getattr(camera, "name", "camera")
 
-            # Orbit camera configuration (no roll to keep camera horizontal)
-            # Z range kept positive to ensure camera stays above table (no upward view)
+            # Conservative camera randomization to avoid clipping
+            # - Small position deltas (±5cm XY, +10cm Z)
+            # - look_at stays fixed on workspace center
+            # - No FOV randomization to maintain consistent perspective
             cam_config = CameraRandomCfg(
                 camera_name=camera_name,
                 position=CameraPositionRandomCfg(
-                    delta_range=((-0.1, 0.1), (-0.1, 0.1), (0.0, 0.2)),  # Z: only upward movement
+                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (0.0, 0.1)),
                     use_delta=True,
-                    distribution="uniform",
-                    enabled=True,
-                ),
-                intrinsics=CameraIntrinsicsRandomCfg(
-                    fov_range=CameraProperties.FOV_NORMAL,
-                    use_fov=True,
                     distribution="uniform",
                     enabled=True,
                 ),
@@ -484,14 +477,10 @@ class DomainRandomizationManager:
                 for light_rand in self.randomizers["light"]:
                     light_rand()
                 if self.randomizers["light"]:
-                    log.info(f"  Applied LightRandomizers ({len(self.randomizers['light'])})")
+                    log.info(f"  Applied LightRandomizers ({len(self.randomizers['light'])} lights)")
 
-            # Level 3+: Camera
-            if self.config.level >= 3:
-                for cam_rand in self.randomizers["camera"]:
-                    cam_rand()
-                if self.randomizers["camera"]:
-                    log.info(f"  Applied CameraRandomizers ({len(self.randomizers['camera'])})")
+            # Level 3+: Camera randomization is handled separately in apply_camera_randomization()
+            # after update_camera_look_at() adjusts the baseline camera position
 
         finally:
             # Disable global defer and flush once
@@ -508,6 +497,9 @@ class DomainRandomizationManager:
 
         Adjusts both camera position and look-at point to maintain the same relative
         viewing angle but account for the table's height.
+
+        IMPORTANT: After calling this, you should call apply_camera_randomization()
+        to apply camera randomization based on the new baseline position.
         """
         if not self.randomizers.get("scene"):
             return
@@ -531,11 +523,36 @@ class DomainRandomizationManager:
             z_offset = target_look_at_z - orig_look_at_z
 
             # Apply same offset to both position and look_at
-            camera.pos = (orig["pos"][0], orig["pos"][1], orig_pos_z + z_offset)
-            camera.look_at = (orig["look_at"][0], orig["look_at"][1], target_look_at_z)
+            new_pos = (orig["pos"][0], orig["pos"][1], orig_pos_z + z_offset)
+            new_look_at = (orig["look_at"][0], orig["look_at"][1], target_look_at_z)
+
+            camera.pos = new_pos
+            camera.look_at = new_look_at
+
+            # Update the stored original positions for camera randomizer
+            # This is the NEW baseline for camera randomization
+            if self.config.level >= 3 and camera.name in self.randomizers.get("camera_originals", {}):
+                # Update camera randomizer's original position reference
+                for cam_rand in self.randomizers.get("camera", []):
+                    if cam_rand.cfg.camera_name == camera.name:
+                        cam_rand._original_positions[camera.name] = new_pos
 
         if hasattr(self.handler, "_update_camera_pose"):
             self.handler._update_camera_pose()
+
+    def apply_camera_randomization(self):
+        """Apply camera randomization after camera baseline has been adjusted.
+
+        This should be called AFTER update_camera_look_at() to ensure camera
+        randomization is based on the adjusted baseline position (accounting for
+        table height changes).
+        """
+        if self.config.level < 3 or not self.randomizers.get("camera"):
+            return
+
+        for cam_rand in self.randomizers["camera"]:
+            cam_rand()
+        log.info(f"  Applied CameraRandomizers ({len(self.randomizers['camera'])} cameras)")
 
     def update_positions_to_table(self, demo_idx: int, env_id: int = 0):
         """Update object positions to align with current table after scene switch.
@@ -544,10 +561,14 @@ class DomainRandomizationManager:
         The entire system is translated such that the original ground level aligns with the table surface.
         """
         if not self.randomizers.get("scene"):
+            log.warning("[update_positions_to_table] Skipped: No scene randomizer")
             return
 
         # Get current state
         if demo_idx >= len(self.init_states):
+            log.warning(
+                f"[update_positions_to_table] Skipped: demo_idx {demo_idx} >= len(init_states) {len(self.init_states)}"
+            )
             return
 
         init_state = self.init_states[demo_idx]
@@ -555,7 +576,7 @@ class DomainRandomizationManager:
         # Get this demo's original positions (stored in __init__)
         demo_key = f"demo_{demo_idx}"
         if demo_key not in self.original_positions:
-            log.warning(f"No original positions found for demo {demo_idx}")
+            log.warning(f"[update_positions_to_table] No original positions found for demo {demo_idx}")
             return
 
         demo_original_positions = self.original_positions[demo_key]
@@ -563,9 +584,11 @@ class DomainRandomizationManager:
         # Get table bounds
         table_bounds = self.randomizers["scene"].get_table_bounds(env_id=env_id)
         if not table_bounds or abs(table_bounds.get("height", 0)) > 100:
+            log.warning(f"[update_positions_to_table] Skipped: Invalid table_bounds {table_bounds}")
             return
 
         table_height = table_bounds["height"]
+        log.info(f"[update_positions_to_table] Demo {demo_idx}: Table height = {table_height:.3f}m")
         table_center_x = (table_bounds["x_min"] + table_bounds["x_max"]) / 2
         table_center_y = (table_bounds["y_min"] + table_bounds["y_max"]) / 2
 
@@ -588,16 +611,49 @@ class DomainRandomizationManager:
         # All objects and robots maintain their relative height from this plane
         z_offset = table_height - ground_level
 
+        log.info(
+            f"[update_positions_to_table] Offsets: X={offset_x:.3f}, Y={offset_y:.3f}, Z={z_offset:.3f} (ground_level={ground_level:.3f})"
+        )
+
         # Apply same offset to everything (rigid body translation)
         for obj_name, obj_state in init_state["objects"].items():
             orig = demo_original_positions[f"obj_{obj_name}"]
-            obj_state["pos"][0] = orig["x"] + offset_x
-            obj_state["pos"][1] = orig["y"] + offset_y
-            obj_state["pos"][2] = orig["z"] + z_offset
+            old_pos = (
+                obj_state["pos"].clone()
+                if hasattr(obj_state["pos"], "clone")
+                else obj_state["pos"].copy()
+                if hasattr(obj_state["pos"], "copy")
+                else list(obj_state["pos"])
+            )
+
+            # Create new position tensor with offsets
+            new_pos = torch.tensor(
+                [orig["x"] + offset_x, orig["y"] + offset_y, orig["z"] + z_offset],
+                dtype=obj_state["pos"].dtype,
+                device=obj_state["pos"].device,
+            )
+
+            # Replace the entire tensor (in-place modification doesn't work for all tensor types)
+            obj_state["pos"] = new_pos
+            log.info(f"[update_positions_to_table]   Object '{obj_name}': {old_pos} -> {obj_state['pos']}")
 
         for robot_name, robot_state in init_state["robots"].items():
             orig = demo_original_positions[f"robot_{robot_name}"]
-            robot_state["pos"][0] = orig["x"] + offset_x
-            robot_state["pos"][1] = orig["y"] + offset_y
-            robot_state["pos"][2] = orig["z"] + z_offset
+            old_pos = (
+                robot_state["pos"].clone()
+                if hasattr(robot_state["pos"], "clone")
+                else robot_state["pos"].copy()
+                if hasattr(robot_state["pos"], "copy")
+                else list(robot_state["pos"])
+            )
 
+            # Create new position tensor with offsets
+            new_pos = torch.tensor(
+                [orig["x"] + offset_x, orig["y"] + offset_y, orig["z"] + z_offset],
+                dtype=robot_state["pos"].dtype,
+                device=robot_state["pos"].device,
+            )
+
+            # Replace the entire tensor
+            robot_state["pos"] = new_pos
+            log.info(f"[update_positions_to_table]   Robot '{robot_name}': {old_pos} -> {robot_state['pos']}")
