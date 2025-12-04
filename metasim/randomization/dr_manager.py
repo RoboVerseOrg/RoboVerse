@@ -137,10 +137,8 @@ class DomainRandomizationManager:
         if not self._validate_setup():
             return
 
-        log.info("=" * 50)
-        log.info("DOMAIN RANDOMIZATION SETUP: Initializing randomizers")
         self._setup_randomizers()
-        log.info(f"Setup complete: Randomizers ready (Level {config.level}, Mode {config.scene_mode})")
+        log.info(f"Domain Randomization initialized (Level {config.level}, Mode {config.scene_mode})")
 
     def _validate_setup(self) -> bool:
         """Validate if randomization can be set up."""
@@ -183,7 +181,6 @@ class DomainRandomizationManager:
     def _setup_reproducibility(self, seed: int | None):
         """Setup global reproducibility if seed is provided."""
         if seed is not None:
-            log.info(f"Setting up reproducible randomization with seed: {seed}")
             torch.manual_seed(seed)
             import random
 
@@ -288,23 +285,17 @@ class DomainRandomizationManager:
         if level == 0:
             return
 
-        log.info("\nMaterial Randomization")
-        log.info("-" * 50)
-
         # Dynamic Objects (Manual geometry only)
         if mode == 0:
-            # Manual table
             table_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
                 seed=seed + 2 if seed is not None else None,
             )
             table_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(table_mat)
-            log.info("  Dynamic Object: table (Manual)")
 
         # Manual environment (mode < 2 and level >= 1)
         if mode < 2 and level >= 1:
-            # Floor
             floor_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
                 seed=seed + 101 if seed is not None else None,
@@ -312,7 +303,6 @@ class DomainRandomizationManager:
             floor_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(floor_mat)
 
-            # Walls
             wall_seed = seed + 102 if seed is not None else None
             for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
                 wall_mat = MaterialRandomizer(
@@ -322,7 +312,6 @@ class DomainRandomizationManager:
                 wall_mat.bind_handler(self.handler)
                 self.randomizers["material_dynamic"].append(wall_mat)
 
-            # Ceiling
             ceiling_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
                 seed=seed + 103 if seed is not None else None,
@@ -330,18 +319,12 @@ class DomainRandomizationManager:
             ceiling_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(ceiling_mat)
 
-            log.info("  Dynamic Objects: floor + 4 walls + ceiling")
-
     def _setup_light_randomizers(self, seed: int | None):
         """Setup light randomizers (Level 2+)."""
         from metasim.scenario.lights import DiskLightCfg, DomeLightCfg, SphereLightCfg
 
-        log.info("\nLight Randomization")
-        log.info("-" * 50)
-
         lights = getattr(self.scenario, "lights", [])
         if not lights:
-            log.info("  No lights found")
             return
 
         # Determine intensity ranges based on render mode
@@ -398,30 +381,20 @@ class DomainRandomizationManager:
                 config = LightPresets.dome_ambient(light_name)
                 light_rand = LightRandomizer(config, seed=seed + 4 + i if seed else None)
             else:
-                log.warning(f"  Unknown light type: {light_name}")
                 continue
 
             light_rand.bind_handler(self.handler)
             self.randomizers["light"].append(light_rand)
-            log.info(f"  Light: {light_name}")
 
     def _setup_camera_randomizers(self, seed: int | None):
         """Setup camera randomizers (Level 3+)."""
-        log.info("\nCamera Randomization")
-        log.info("-" * 50)
-
         cameras = getattr(self.scenario, "cameras", [])
         if not cameras:
-            log.info("  No cameras found")
             return
 
         for camera in cameras:
             camera_name = getattr(camera, "name", "camera")
 
-            # Conservative camera randomization to avoid clipping
-            # - Small position deltas (±5cm XY, +10cm Z)
-            # - look_at stays fixed on workspace center
-            # - No FOV randomization to maintain consistent perspective
             cam_config = CameraRandomCfg(
                 camera_name=camera_name,
                 position=CameraPositionRandomCfg(
@@ -435,7 +408,7 @@ class DomainRandomizationManager:
             cam_rand = CameraRandomizer(cam_config, seed=seed + 10 if seed is not None else None)
             cam_rand.bind_handler(self.handler)
             self.randomizers["camera"].append(cam_rand)
-            log.info(f"  Camera: {camera_name}")
+            self.randomizers.setdefault("camera_originals", {})[camera_name] = camera.pos
 
     def apply_randomization(self, demo_idx: int = 0, is_initial: bool = False):
         """Apply randomization with global deferred visual flush.
@@ -446,9 +419,6 @@ class DomainRandomizationManager:
         """
         if self.config.level == 0 or not self.randomizers:
             return
-
-        log.info("=" * 50)
-        log.info(f"DOMAIN RANDOMIZATION: Demo {demo_idx}")
 
         # Enable global defer flag
         if self.handler:
@@ -463,24 +433,16 @@ class DomainRandomizationManager:
                     scene_rand.cfg.auto_flush_visuals = False
                     scene_rand()
                     scene_rand.cfg.auto_flush_visuals = original_auto_flush
-                    log.info("  Applied SceneRandomizer")
 
             # Level 1+: Material randomization (environment only)
             if self.config.level >= 1:
                 for mat_rand in self.randomizers["material_dynamic"]:
                     mat_rand()
-                if self.randomizers["material_dynamic"]:
-                    log.info(f"  Applied MaterialRandomizers ({len(self.randomizers['material_dynamic'])})")
 
             # Level 2+: Lighting
             if self.config.level >= 2:
                 for light_rand in self.randomizers["light"]:
                     light_rand()
-                if self.randomizers["light"]:
-                    log.info(f"  Applied LightRandomizers ({len(self.randomizers['light'])} lights)")
-
-            # Level 3+: Camera randomization is handled separately in apply_camera_randomization()
-            # after update_camera_look_at() adjusts the baseline camera position
 
         finally:
             # Disable global defer and flush once
@@ -493,14 +455,7 @@ class DomainRandomizationManager:
                         log.debug(f"Failed to flush visual updates: {e}")
 
     def update_camera_look_at(self, env_id: int = 0):
-        """Update camera position and look_at to focus on table after scene switch.
-
-        Adjusts both camera position and look-at point to maintain the same relative
-        viewing angle but account for the table's height.
-
-        IMPORTANT: After calling this, you should call apply_camera_randomization()
-        to apply camera randomization based on the new baseline position.
-        """
+        """Update camera position and look_at to focus on table after scene switch."""
         if not self.randomizers.get("scene"):
             return
 
@@ -509,8 +464,6 @@ class DomainRandomizationManager:
             return
 
         table_height = table_bounds["height"]
-
-        # Use original camera positions stored in __init__ (before any randomization)
         clearance = 0.05
         target_look_at_z = table_height + clearance
 
@@ -519,20 +472,15 @@ class DomainRandomizationManager:
             orig_look_at_z = orig["look_at"][2]
             orig_pos_z = orig["pos"][2]
 
-            # Compute Z offset needed
             z_offset = target_look_at_z - orig_look_at_z
-
-            # Apply same offset to both position and look_at
             new_pos = (orig["pos"][0], orig["pos"][1], orig_pos_z + z_offset)
             new_look_at = (orig["look_at"][0], orig["look_at"][1], target_look_at_z)
 
             camera.pos = new_pos
             camera.look_at = new_look_at
 
-            # Update the stored original positions for camera randomizer
-            # This is the NEW baseline for camera randomization
+            # Update camera randomizer's baseline position
             if self.config.level >= 3 and camera.name in self.randomizers.get("camera_originals", {}):
-                # Update camera randomizer's original position reference
                 for cam_rand in self.randomizers.get("camera", []):
                     if cam_rand.cfg.camera_name == camera.name:
                         cam_rand._original_positions[camera.name] = new_pos
@@ -541,54 +489,33 @@ class DomainRandomizationManager:
             self.handler._update_camera_pose()
 
     def apply_camera_randomization(self):
-        """Apply camera randomization after camera baseline has been adjusted.
-
-        This should be called AFTER update_camera_look_at() to ensure camera
-        randomization is based on the adjusted baseline position (accounting for
-        table height changes).
-        """
+        """Apply camera randomization after camera baseline has been adjusted."""
         if self.config.level < 3 or not self.randomizers.get("camera"):
             return
 
         for cam_rand in self.randomizers["camera"]:
             cam_rand()
-        log.info(f"  Applied CameraRandomizers ({len(self.randomizers['camera'])} cameras)")
 
     def update_positions_to_table(self, demo_idx: int, env_id: int = 0):
-        """Update object positions to align with current table after scene switch.
-
-        Maintains relative positions of all objects and robots (rigid body translation).
-        The entire system is translated such that the original ground level aligns with the table surface.
-        """
+        """Update object positions to align with current table after scene switch."""
         if not self.randomizers.get("scene"):
-            log.warning("[update_positions_to_table] Skipped: No scene randomizer")
             return
 
-        # Get current state
         if demo_idx >= len(self.init_states):
-            log.warning(
-                f"[update_positions_to_table] Skipped: demo_idx {demo_idx} >= len(init_states) {len(self.init_states)}"
-            )
             return
 
         init_state = self.init_states[demo_idx]
-
-        # Get this demo's original positions (stored in __init__)
         demo_key = f"demo_{demo_idx}"
         if demo_key not in self.original_positions:
-            log.warning(f"[update_positions_to_table] No original positions found for demo {demo_idx}")
             return
 
         demo_original_positions = self.original_positions[demo_key]
 
-        # Get table bounds
         table_bounds = self.randomizers["scene"].get_table_bounds(env_id=env_id)
         if not table_bounds or abs(table_bounds.get("height", 0)) > 100:
-            log.warning(f"[update_positions_to_table] Skipped: Invalid table_bounds {table_bounds}")
             return
 
         table_height = table_bounds["height"]
-        log.info(f"[update_positions_to_table] Demo {demo_idx}: Table height = {table_height:.3f}m")
         table_center_x = (table_bounds["x_min"] + table_bounds["x_max"]) / 2
         table_center_y = (table_bounds["y_min"] + table_bounds["y_max"]) / 2
 
