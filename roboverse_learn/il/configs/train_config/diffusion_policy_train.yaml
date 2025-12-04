@@ -1,0 +1,54 @@
+training_params:
+  device: "cuda:0"
+  seed: 42
+  debug: False
+  resume: False
+  # optimization
+  lr_scheduler: cosine
+  lr_warmup_steps: 500
+  num_epochs: 1000
+  gradient_accumulate_every: 1
+  # EMA destroys performance when used with BatchNorm
+  # replace BatchNorm with GroupNorm.
+  use_ema: True
+  freeze_encoder: False
+  # training loop control
+  # in epochs
+  rollout_every: 50
+  checkpoint_every: 50
+  val_every: 5
+  sample_every: 5
+  # steps per epoch
+  max_train_steps: 250
+  max_val_steps: 250
+  # misc
+  tqdm_interval_sec: 1.0
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4
+  betas: [0.95, 0.999]
+  eps: 1.0e-8
+  weight_decay: 1.0e-6
+
+dataloader:
+  batch_size: 32
+  num_workers: 0
+  shuffle: True
+  pin_memory: True
+  persistent_workers: False
+
+val_dataloader:
+  batch_size: 32
+  num_workers: 0
+  shuffle: False
+  pin_memory: True
+  persistent_workers: False
+
+ema:
+  _target_: roboverse_learn.il.dp.models.diffusion.ema_model.EMAModel
+  update_after_step: 0
+  inv_gamma: 1.0
+  power: 0.75
+  min_value: 0.0
+  max_value: 0.9999

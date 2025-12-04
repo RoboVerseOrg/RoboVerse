@@ -6,7 +6,7 @@ import torch
 import h5py
 import json
 from torch.utils.data import TensorDataset, DataLoader
-from roboverse_learn.il.utils.common.replay_buffer import ReplayBuffer
+from roboverse_learn.il.utils.replay_buffer import ReplayBuffer
 
 import IPython
 e = IPython.embed

@@ -1,9 +1,0 @@
-_target_: dp.datasets.robot_image_dataset.RobotImageDataset
-zarr_path: data_policy/useless.zarr
-horizon: ${horizon}
-pad_before: ${eval:'${n_obs_steps}-1'}
-pad_after: ${eval:'${n_action_steps}-1'}
-seed: 42
-val_ratio: 0.02
-batch_size: 32
-max_train_episodes: null

@@ -26,7 +26,7 @@ from metasim.randomization import DomainRandomizationManager, DRConfig
 
 from openpi_client import image_tools, websocket_client_policy
 
-from roboverse_learn.il.dp.runner.base_policy import ActionCfg, BasePolicyCfg, ObsCfg
+from roboverse_learn.il.runner.base_policy import ActionCfg, BasePolicyCfg, ObsCfg
 
 
 @configclass

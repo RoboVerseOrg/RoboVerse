@@ -31,7 +31,7 @@ from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
 from metasim.randomization import DomainRandomizationManager, DRConfig
-from roboverse_learn.il.dp.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
+from roboverse_learn.il.runner.base_policy import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
 
 
 @configclass
