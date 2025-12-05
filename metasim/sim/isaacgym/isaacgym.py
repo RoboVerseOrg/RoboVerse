@@ -31,7 +31,6 @@ from metasim.scenario.objects import (
 # FIXME: fix this
 # from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg
 # NOTE domain randomization for robots
-# please refer to roboverse_learn.rl.unitree_rl.config.cfg_randomizer for material and mass randomization for isaacgym and isaacsim
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
