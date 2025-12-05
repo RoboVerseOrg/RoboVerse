@@ -28,11 +28,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
       # Precise check: actor's permission on current repo (must be >= write)
       - name: Check actor permission on this repo
         id: perm
