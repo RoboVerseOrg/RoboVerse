@@ -406,6 +406,7 @@ jobs:
         JOB_STATUS: ${{ job.status }}
       with:
         script: |
+          const core = require('@actions/core');
           const fs = require('fs');
 
           const status = process.env.JOB_STATUS;          // success / failure / cancelled
