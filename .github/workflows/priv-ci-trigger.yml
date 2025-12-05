@@ -1,0 +1,94 @@
+name: Privileged CI trigger via comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  promote:
+    # Only process:
+    # 1) Comments on PRs
+    # 2) Comment body starts with /priv-ci
+    # (Permission check is done in a later step via API for better accuracy)
+    if: >
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/priv-ci')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # Need to push ci/pr-* branch to main repo
+      pull-requests: write   # Need to comment on PR
+      issues: write          # gh pr comment uses issue comments API
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Precise check: actor's permission on current repo (must be >= write)
+      - name: Check actor permission on this repo
+        id: perm
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          perm=$(gh api \
+            repos/$REPO/collaborators/$ACTOR/permission \
+            --jq .permission 2>/dev/null || echo "none")
+
+          echo "permission=$perm" >> "$GITHUB_OUTPUT"
+          echo "Actor: $ACTOR, permission: $perm"
+
+      - name: Stop if actor has no push permission
+        if: |
+          steps.perm.outputs.permission == 'read'   ||
+          steps.perm.outputs.permission == 'triage' ||
+          steps.perm.outputs.permission == 'none'
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "User $ACTOR doesn't have push permission, skipping privileged CI."
+          exit 0
+
+      - name: Promote this PR to ci/pr-* branch
+        if: |
+          steps.perm.outputs.permission == 'write'    ||
+          steps.perm.outputs.permission == 'maintain' ||
+          steps.perm.outputs.permission == 'admin'
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          BRANCH="ci/pr-${PR_NUMBER}"
+
+          # Checkout code based on PR head (whether from fork or this repo)
+          if ! gh pr checkout "$PR_NUMBER"; then
+            gh pr comment "$PR_NUMBER" --body "❌ Failed to checkout PR #$PR_NUMBER. The branch may have been deleted or is inaccessible."
+            exit 1
+          fi
+
+          # Push a ci/pr-* branch to main repo (this push will trigger your MetaSim CI)
+          if ! git push origin HEAD:"$BRANCH"; then
+            gh pr comment "$PR_NUMBER" --body "❌ Failed to push to branch \`$BRANCH\`. Please check repository permissions."
+            exit 1
+          fi
+
+      - name: Comment start on PR
+        if: |
+          steps.perm.outputs.permission == 'write'    ||
+          steps.perm.outputs.permission == 'maintain' ||
+          steps.perm.outputs.permission == 'admin'
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          BRANCH="ci/pr-${PR_NUMBER}"
+          gh pr comment "$PR_NUMBER" --body \
+            "🔐 Privileged CI started on branch \`$BRANCH\` by @${ACTOR}. Result will be reported here when finished."

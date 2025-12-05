@@ -4,6 +4,15 @@ on:
   workflow_dispatch:
   merge_group:
     types: [checks_requested]
+  pull_request:
+    types:
+      - auto_merge_enabled
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - ci/pr-**
 
 env:
   REGION: us-west-2
@@ -18,6 +27,10 @@ env:
 
 jobs:
   pre-merge-tests:
+    permissions:
+      contents: write       # Need write access to delete ci/pr-* branches
+      pull-requests: write
+      issues: write         # Post status comment back to PR
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 720
     steps:
@@ -362,4 +375,121 @@ jobs:
         if [ ! -z "$INSTANCE_ID" ]; then
             echo "Terminating EC2 instance $INSTANCE_ID..."
             aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
+        fi
+
+    - name: Prepare test logs for upload
+      if: always()
+      run: |
+        # Copy test logs from CODEBUILD_SRC_DIR to workspace root for artifact upload
+        if [ -d "$CODEBUILD_SRC_DIR" ]; then
+          cp -v $CODEBUILD_SRC_DIR/pytest-*.log . 2>/dev/null || echo "No pytest logs found"
+          cp -v $CODEBUILD_SRC_DIR/test_exit_codes.txt . 2>/dev/null || echo "No exit codes file found"
+        else
+          echo "CODEBUILD_SRC_DIR not set, files should already be in workspace"
+        fi
+
+    - name: Upload test logs as artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: |
+          pytest-*.log
+          test_exit_codes.txt
+        if-no-files-found: warn
+        retention-days: 7
+
+    - name: Comment result to PR
+      if: always()
+      uses: actions/github-script@v7
+      env:
+        JOB_STATUS: ${{ job.status }}
+      with:
+        script: |
+          const core = require('@actions/core');
+          const fs = require('fs');
+
+          const status = process.env.JOB_STATUS;          // success / failure / cancelled
+          const ref = context.ref;                        // refs/heads/ci/pr-123 or merge_group scenario
+
+          // only reply comments to branches ci/pr-* branches, skip commenting in merge_group runs
+          const match = ref.match(/^refs\/heads\/ci\/pr-(\d+)$/);
+          if (!match) {
+            core.info(`Ref ${ref} is not a ci/pr-* branch, skip PR comment.`);
+            return;
+          }
+
+          const prNumber = Number(match[1]);
+
+          let emoji, msg;
+          if (status === 'success') {
+            emoji = '✅';
+            msg = `Privileged CI passed on branch \`${ref.split('/').pop()}\`.`;
+          } else if (status === 'cancelled') {
+            emoji = '⚪️';
+            msg = `Privileged CI was cancelled on branch \`${ref.split('/').pop()}\`.`;
+          } else {
+            emoji = '❌';
+            msg = `Privileged CI failed on branch \`${ref.split('/').pop()}\`.`;
+          }
+
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}#artifacts`;
+
+          // Read test exit codes if available (copied to workspace by previous step)
+          let testSummary = '';
+          try {
+            const exitCodesPath = 'test_exit_codes.txt';
+            if (fs.existsSync(exitCodesPath)) {
+              const exitCodesContent = fs.readFileSync(exitCodesPath, 'utf8');
+              const exitCodes = {};
+              exitCodesContent.split('\n').forEach(line => {
+                const [key, value] = line.split('=');
+                if (key && value) exitCodes[key.trim()] = parseInt(value.trim());
+              });
+
+              const testSuites = [
+                { name: 'General', code: exitCodes['GENERAL_TEST_EXIT_CODE'] },
+                { name: 'MuJoCo', code: exitCodes['MUJOCO_TEST_EXIT_CODE'] },
+                { name: 'Sapien3', code: exitCodes['SAPIEN3_TEST_EXIT_CODE'] },
+                { name: 'IsaacSim', code: exitCodes['ISAACSIM_TEST_EXIT_CODE'] },
+                { name: 'IsaacGym', code: exitCodes['ISAACGYM_TEST_EXIT_CODE'] }
+              ];
+
+              testSummary = '\n\n**Test Suite Results:**\n';
+              testSuites.forEach(suite => {
+                const icon = (suite.code === 0 || suite.code === undefined) ? '✅' : '❌';
+                testSummary += `- ${icon} ${suite.name} tests\n`;
+              });
+
+              testSummary += `\n📦 [Download test logs](${artifactUrl})`;
+            }
+          } catch (error) {
+            core.warning(`Failed to read test exit codes: ${error.message}`);
+          }
+
+          const body = `${emoji} ${msg}${testSummary}\n\n🔗 [View full details](${runUrl})`;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: prNumber,
+            body
+          });
+    - name: Clean up ci/pr-* branch
+      if: always()
+      run: |
+        REF="${GITHUB_REF}"
+
+        # Only delete if we're running on a ci/pr-* branch
+        if [[ "$REF" =~ ^refs/heads/ci/pr-[0-9]+$ ]]; then
+          BRANCH="${REF#refs/heads/}"
+          echo "Cleaning up temporary branch: $BRANCH"
+
+          # Delete the branch from remote (ignore errors if already deleted)
+          git push origin --delete "$BRANCH" 2>/dev/null || echo "Branch $BRANCH already deleted or not found"
+
+          echo "✓ Cleanup complete"
+        else
+          echo "Not a ci/pr-* branch (ref: $REF), skipping cleanup"
         fi
