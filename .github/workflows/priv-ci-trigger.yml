@@ -21,12 +21,24 @@ jobs:
       issues: write          # gh pr comment uses issue comments API
 
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Use a PAT with workflow scope so the push can trigger Pre-Merge CI
+      GH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+      PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
 
     steps:
+      - name: Ensure PAT can trigger downstream workflows
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ -z "${PRIV_CI_PUSH_TOKEN}" ]; then
+            gh pr comment "$PR_NUMBER" --body "❌ Cannot run /priv-ci because secret \`PRIV_CI_PUSH_TOKEN\` is missing. Pushes made with \`GITHUB_TOKEN\` cannot start Pre-Merge CI. Please add a PAT with repo + workflow scope."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
 
       # Precise check: actor's permission on current repo (must be >= write)
       - name: Check actor permission on this repo
