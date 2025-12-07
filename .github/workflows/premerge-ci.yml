@@ -33,6 +33,8 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+    env:
+      PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
     outputs:
       run_direct: ${{ steps.decide.outputs.run_direct }}
       pr_number: ${{ steps.decide.outputs.pr_number }}
@@ -127,7 +129,7 @@ jobs:
         if: >
           github.event_name == 'pull_request_target' &&
           steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          (secrets.PRIV_CI_PUSH_TOKEN == '' || secrets.PRIV_CI_PUSH_TOKEN == null)
+          (env.PRIV_CI_PUSH_TOKEN == '' || env.PRIV_CI_PUSH_TOKEN == null)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
@@ -141,8 +143,8 @@ jobs:
         if: >
           github.event_name == 'pull_request_target' &&
           steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          secrets.PRIV_CI_PUSH_TOKEN != '' &&
-          secrets.PRIV_CI_PUSH_TOKEN != null
+          env.PRIV_CI_PUSH_TOKEN != '' &&
+          env.PRIV_CI_PUSH_TOKEN != null
         env:
           ACTOR: ${{ github.actor }}
           REPO: ${{ github.repository }}
