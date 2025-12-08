@@ -59,6 +59,7 @@ if __name__ == "__main__":
         simulator=args.sim,
         headless=args.headless,
         num_envs=args.num_envs,
+        env_spacing=5.0,
     )
 
     # add cameras

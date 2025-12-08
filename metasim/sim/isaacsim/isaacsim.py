@@ -154,15 +154,21 @@ class IsaacsimHandler(BaseSimHandler):
         )
 
     def _update_camera_pose(self) -> None:
+        env_origins = getattr(self.scene, "env_origins", None)
+        if env_origins is None:
+            env_origins = torch.zeros((self.num_envs, 3), device=self.device)
+        else:
+            env_origins = env_origins.to(self.device)
+
         for camera in self.cameras:
             if isinstance(camera, PinholeCameraCfg):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
-                    position_tensor = torch.tensor(camera.pos, device=self.device).unsqueeze(0)
-                    position_tensor = position_tensor.repeat(self.num_envs, 1)
-                    camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
-                    camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
+                    position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
+                    camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
+                    position_tensor = position_tensor + env_origins
+                    camera_lookat_tensor = camera_lookat_tensor + env_origins
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
                     # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
             else:
