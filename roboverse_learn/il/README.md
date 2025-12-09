@@ -37,7 +37,7 @@ bash roboverse_learn/il/il_setup.sh
 | `fm_unet` | Flow Matching | UNet | `model_config/fm_unet_model.yaml` | [6] |
 | `score_unet` | Score-Based Model | UNet | `model_config/score_model.yaml` | [3], [4] |
 
-### References
+**References**
 
 1. Ho, Jonathan, Ajay Jain, and Pieter Abbeel. "Denoising Diffusion Probabilistic Models." (2020).  
 2. Song, Jiaming, Chenlin Meng, and Stefano Ermon. "Denoising Diffusion Implicit Models." (2021).  
@@ -46,3 +46,14 @@ bash roboverse_learn/il/il_setup.sh
 5. Peebles, William, and Jun-Yan Zhu. "DiT: Diffusion Models with Transformers." (2023).  
 6. Lipman, Yaron, et al. "Flow Matching for Generative Modeling." (2023).  
 7. Gao, Dechen, et al. "VITA: Vision-to-Action Flow Matching Policy." (2025).
+
+### 1-NFE Generation
+
+We also include multiple classic 1-NFE (1 number of function evaluations) generation methods for FM, including MeanFlow [1, 2], Improved MeanFlow (iMF) [3], and Consistency Flow Matching (CFM) [4].
+
+**References**
+
+[1] Geng, Zhengyang, et al. "Mean flows for one-step generative modeling." arXiv preprint arXiv:2505.13447 (2025).
+[2] Sheng, Juyi, et al. "MP1: MeanFlow Tames Policy Learning in 1-step for Robotic Manipulation." arXiv preprint arXiv:2507.10543 (2025).
+[3] Geng, Zhengyang, et al. "Improved Mean Flows: On the Challenges of Fastforward Generative Models." arXiv preprint arXiv:2512.02012 (2025).
+[4] Yang, Ling, et al. "Consistency flow matching: Defining straight flows with velocity consistency." arXiv preprint arXiv:2407.02398 (2024).
