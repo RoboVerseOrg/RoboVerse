@@ -8,10 +8,10 @@ from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
 from roboverse_learn.il.base.base_image_policy import BaseImagePolicy
 
-from roboverse_learn.il.dp.models.diffusion.flow_net import SimpleFlowNet
-from roboverse_learn.il.dp.models.diffusion.action_ae import CNNActionEncoder, SimpleActionDecoder
+from roboverse_learn.il.utils.models.flow_net import SimpleFlowNet
+from roboverse_learn.il.vita.policies.action_ae import CNNActionEncoder, SimpleActionDecoder
 from roboverse_learn.il.dp.models.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from roboverse_learn.il.utils.flow_matchers import TorchFlowMatcher
+from roboverse_learn.il.utils.flow.flow_matchers import TorchFlowMatcher
 
 
 class VITAImagePolicy(BaseImagePolicy):

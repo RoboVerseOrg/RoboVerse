@@ -2,13 +2,9 @@ import torch
 import numpy as np
 import torchcfm.conditional_flow_matching as cfm
 
-
-class BaseFlowMatcher():
-    def compute_loss(self, model, target, **kwargs):
-        raise NotImplementedError
-
-    def sample(self, model, shape, device, num_steps, return_traces=False, **kwargs):
-        raise NotImplementedError
+from roboverse_learn.il.utils.flow.base_flow_matcher import BaseFlowMatcher
+from roboverse_learn.il.utils.flow.mean_flow_matcher import MeanFlowMatcher
+from roboverse_learn.il.utils.flow.consistency_flow_matcher import ConsistencyFlowMatcher
 
 
 class TorchFlowMatcher(BaseFlowMatcher):
@@ -101,3 +97,36 @@ class SchrodingerBridgeConditionalFlowMatcher(TorchFlowMatcher):
 class ExactOptimalTransportConditionalFlowMatcher(TorchFlowMatcher):
     def __init__(self, num_sampling_steps=6, **kwargs):
         super().__init__(cfm.ExactOptimalTransportConditionalFlowMatcher(**kwargs), num_sampling_steps)
+
+
+class MeanFlowConditionalFlowMatcher(TorchFlowMatcher):
+    '''
+    Implementation of MeanFlow, a 1-step flow matching method.
+    [1] Geng, Zhengyang, et al. "Mean flows for one-step generative modeling." arXiv preprint arXiv:2505.13447 (2025).
+    Used dispersive losses:
+    [2] Sheng, Juyi, et al. "MP1: MeanFlow Tames Policy Learning in 1-step for Robotic Manipulation." arXiv preprint arXiv:2507.10543 (2025).
+    '''
+    def __init__(self, num_sampling_steps=1, **kwargs):
+        if num_sampling_steps != 1:
+            print("Warning: MeanFlow is designed for 1-NFE generation.")
+        super().__init__(MeanFlowMatcher(**kwargs), num_sampling_steps)
+
+
+class ImprovedMeanFlowConditionalFlowMatcher(TorchFlowMatcher):
+    '''
+    Implementation of Improved MeanFlow, a 1-step flow matching method.
+    [1] Geng, Zhengyang, et al. "Improved Mean Flows: On the Challenges of Fastforward Generative Models." arXiv preprint arXiv:2512.02012 (2025).
+    '''
+    def __init__(self, num_sampling_steps=1, **kwargs):
+        # Overwrite use_imf to True
+        kwargs['use_imf'] = True
+        if num_sampling_steps != 1:
+            print("Warning: Improved MeanFlow is designed for 1-NFE generation.")
+        super().__init__(MeanFlowMatcher(**kwargs), num_sampling_steps)
+
+
+class ConsistencyFlowMatcher(TorchFlowMatcher):
+    def __init__(self, num_sampling_steps=1, **kwargs):
+        if num_sampling_steps != 1:
+            print("Warning: ConsistencyFlow is designed for 1-NFE generation.")
+        super().__init__(ConsistencyFlowMatcher(**kwargs), num_sampling_steps)

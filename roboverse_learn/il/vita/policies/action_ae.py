@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from roboverse_learn.il.dp.models.diffusion.layers import Mlp
+from roboverse_learn.il.utils.models.layers import Mlp
 
 
 def weights_init_encoder(m):

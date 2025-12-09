@@ -14,7 +14,7 @@ import numpy as np
 import torch
 import tqdm
 import wandb
-from roboverse_learn.il.dp.models.diffusion.ema_model import EMAModel
+from roboverse_learn.il.utils.ema_model import EMAModel
 from loguru import logger as log
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.cameras import PinholeCameraCfg

@@ -46,7 +46,7 @@ val_dataloader:
   persistent_workers: False
 
 ema:
-  _target_: roboverse_learn.il.dp.models.diffusion.ema_model.EMAModel
+  _target_: roboverse_learn.il.utils.ema_model.EMAModel
   update_after_step: 0
   inv_gamma: 1.0
   power: 0.75

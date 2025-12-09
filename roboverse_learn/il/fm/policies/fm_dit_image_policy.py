@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from einops import reduce
 
-from roboverse_learn.il.dp.models.diffusion.flow_net import FlowTransformer
+from roboverse_learn.il.utils.models.flow_net import FlowTransformer
 from roboverse_learn.il.dp.models.diffusion.mask_generator import LowdimMaskGenerator
 from roboverse_learn.il.dp.models.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from roboverse_learn.il.utils.normalizer import LinearNormalizer

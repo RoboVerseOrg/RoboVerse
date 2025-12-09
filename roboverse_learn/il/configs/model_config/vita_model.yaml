@@ -31,9 +31,12 @@ latent_dim: 512
 
 # Flow matcher parameters
 flow_matcher:
-  _target_: roboverse_learn.il.utils.flow_matchers.ExactOptimalTransportConditionalFlowMatcher
+  _target_: roboverse_learn.il.utils.flow.flow_matchers.ExactOptimalTransportConditionalFlowMatcher
   sigma: 0.0
   num_sampling_steps: 6
+  # MeanFlow
+  #   _target_: roboverse_learn.il.utils.flow.flow_matchers.MeanFlowMatcher
+  #   use_imf: true # Whether to use iMF (Improved MeanFlow)
 
 # Flow network parameters
 flow_net:

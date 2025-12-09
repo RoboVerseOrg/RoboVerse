@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, Optional
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from roboverse_learn.il.dp.models.diffusion.flow_net import FlowTransformer
+from roboverse_learn.il.utils.models.flow_net import FlowTransformer
 from roboverse_learn.il.dp.models.vision.multi_image_obs_encoder import MultiImageObsEncoder
 import torch
 

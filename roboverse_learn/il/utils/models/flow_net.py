@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from roboverse_learn.il.dp.models.diffusion.positional_embedding import RotaryPosEmb, SinusoidalPosEmb
-from roboverse_learn.il.dp.models.diffusion.layers import Mlp
+from roboverse_learn.il.utils.models.layers import Mlp
 
 
 class Attention(nn.Module):
