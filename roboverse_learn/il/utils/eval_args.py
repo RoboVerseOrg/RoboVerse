@@ -26,8 +26,6 @@ class Args:
     """Low end of the task id range"""
     task_id_range_high: int = 1000
     """High end of the task id range"""
-    algo: str = "diffusion_policy"
-    """Algorithm to use"""
     subset: str = "pickcube_l0"
     """Subset your ckpt trained on"""
     action_set_steps: int = 1

@@ -8,12 +8,14 @@ Example:
 
 ```bash
 # From the repo root
-cd roboverse_learn/il/dp   # or fm/, vita/ depending on the policy
+cd roboverse_learn/il/policies/dp   # or fm/, vita/ depending on the policy
 pip install -r requirements.txt
 cd ../../..
 
-# Run policy training and evaluation (example: diffusion policy, DiT backbone)
-bash roboverse_learn/il/il_run.sh --task_name_set close_box --algo_choose ddpm_dit
+# Run policy training and evaluation
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit # Example: DDPM + DiT
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name vita     # Example: VITA
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name fm_dit   # Example: FM + DiT
 ```
 
 We keep each policy as self-contained as possible (code, dependencies, docs) and only share the minimum common abstractions.
@@ -29,13 +31,13 @@ bash roboverse_learn/il/il_setup.sh
 
 | Name | Policy | Backbone | Model Config | Ref |
 | --- | --- | --- | --- | --- |
-| `ddpm_dit` | Diffusion Policy (DDPM) | DiT | `model_config/ddpm_dit_model.yaml` | [1], [5] |
-| `fm_dit` | Flow Matching | DiT | `model_config/fm_dit_model.yaml` | [6], [5] |
-| `vita` | VITA Policy | MLP | `model_config/vita_model.yaml` | [7] |
-| `ddpm_unet` | Diffusion Policy (DDPM) | UNet | `model_config/ddpm_model.yaml` | [1], [4] |
-| `ddim_unet` | Diffusion Policy (DDIM) | UNet | `model_config/ddim_model.yaml` | [2], [4] |
-| `fm_unet` | Flow Matching | UNet | `model_config/fm_unet_model.yaml` | [6] |
-| `score_unet` | Score-Based Model | UNet | `model_config/score_model.yaml` | [3], [4] |
+| `ddpm_dit` | Diffusion Policy (DDPM) | DiT | `model_config/ddpm_dit.yaml` | [1], [5] |
+| `fm_dit` | Flow Matching | DiT | `model_config/fm_dit.yaml` | [6], [5] |
+| `vita` | VITA Policy | MLP | `model_config/vita.yaml` | [7] |
+| `ddpm_unet` | Diffusion Policy (DDPM) | UNet | `model_config/ddpm.yaml` | [1], [4] |
+| `ddim_unet` | Diffusion Policy (DDIM) | UNet | `model_config/ddim.yaml` | [2], [4] |
+| `fm_unet` | Flow Matching | UNet | `model_config/fm_unet.yaml` | [6] |
+| `score_unet` | Score-Based Model | UNet | `model_config/score.yaml` | [3], [4] |
 
 **References**
 

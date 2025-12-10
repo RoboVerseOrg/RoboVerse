@@ -1,7 +1,7 @@
 from typing import Dict
 
 import torch
-import torch.nn
+
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 
 

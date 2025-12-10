@@ -32,6 +32,7 @@ checkpoints
 slurm.sh
 data_policy/
 outputs/
+il_outputs/
 eval_outputs/
 tmp/
 results/

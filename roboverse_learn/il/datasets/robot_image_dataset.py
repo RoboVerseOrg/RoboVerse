@@ -12,9 +12,8 @@ from roboverse_learn.il.utils.sampler import (
     downsample_mask,
     get_val_mask,
 )
-from roboverse_learn.il.base.base_dataset import BaseImageDataset
+from roboverse_learn.il.datasets.base_dataset import BaseImageDataset
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
-from termcolor import cprint
 
 
 class RobotImageDataset(BaseImageDataset):
