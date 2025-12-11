@@ -12,14 +12,15 @@ import torch
 from loguru import logger as log
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
+from metasim.utils.math import matrix_from_quat
 from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
 
 
-@register_task("pick_place.approach_grasp_simple", "pick_place_approach_grasp_simple")
-class PickPlaceApproachGraspSimple(PickPlaceBase):
+@register_task("pick_place.approach_grasp_banana", "pick_place_approach_grasp_banana")
+class PickPlaceApproachGraspBanana(PickPlaceBase):
     """Simple Approach and Grasp task with gripper control.
 
     This task focuses on:
@@ -50,20 +51,61 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
 
     scenario = ScenarioCfg(
         objects=[
-            PrimitiveCubeCfg(
-                name="object",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
-                physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
-            ),
-            PrimitiveCubeCfg(
+            RigidObjCfg(
                 name="table",
-                size=(0.2, 0.3, 0.4),
-                mass=10.0,
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                color=(0.8, 0.6, 0.4),
-                fix_base_link=True,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
+            ),
+            RigidObjCfg(
+                name="object",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
+            ),
+            RigidObjCfg(
+                name="lamp",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/usd/0a4489b1a2875c82a580f8b62d346e08.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/0a4489b1a2875c82a580f8b62d346e08.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/mjcf/0a4489b1a2875c82a580f8b62d346e08.xml",
+            ),
+            RigidObjCfg(
+                name="basket",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/usd/663158968e3f5900af1f6e7cecef24c7.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/663158968e3f5900af1f6e7cecef24c7.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/mjcf/663158968e3f5900af1f6e7cecef24c7.xml",
+            ),
+            RigidObjCfg(
+                name="bowl",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/usd/0f296af3df66565c9e1a7c2bc7b35d72.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/0f296af3df66565c9e1a7c2bc7b35d72.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
+            ),
+            RigidObjCfg(
+                name="screw_driver",
+                scale=(1.5, 1.5, 1.5),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+            ),
+            RigidObjCfg(
+                name="spoon",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/usd/2f1c3077a8d954e58fc0bf75cf35e849.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/2f1c3077a8d954e58fc0bf75cf35e849.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/mjcf/2f1c3077a8d954e58fc0bf75cf35e849.xml",
             ),
             # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
             RigidObjCfg(
@@ -146,10 +188,12 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         self.reward_functions = [
             self._reward_gripper_approach,
             self._reward_grasp,
+            self._reward_gripper_downward_alignment,
         ]
         self.reward_weights = [
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["gripper_approach"],
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["grasp_reward"],
+            0.1,  # weight for keeping the gripper pointing downward
         ]
 
         # Get config values
@@ -347,53 +391,83 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         # Use cached grasp state (computed in step method)
         return self.object_grasped.float()
 
+    def _reward_gripper_downward_alignment(self, env_states) -> torch.Tensor:
+        """Encourage the gripper tool frame to face downward (z-axis aligned with world -Z)."""
+        _, gripper_quat = self._get_ee_state(env_states)
+        gripper_rot = matrix_from_quat(gripper_quat)  # (B, 3, 3)
+        gripper_z_world = gripper_rot[:, :, 2]  # gripper local z-axis in world frame
+
+        down = torch.tensor([0.0, 0.0, -1.0], device=self.device, dtype=gripper_z_world.dtype)
+        alignment = (gripper_z_world * down).sum(dim=-1).clamp(-1.0, 1.0)  # cosine of angle to -Z
+        # Map cosine (1 best, -1 worst) to [0,1] reward
+        return (alignment + 1.0) / 2.0
+
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""
         init = [
             {
                 "objects": {
-                    "object": {
-                        "pos": torch.tensor([0.654277, -0.345737, 0.020000]),
-                        "rot": torch.tensor([0.706448, -0.031607, 0.706347, 0.031698]),
-                    },
                     "table": {
-                        "pos": torch.tensor([0.499529, 0.253941, 0.200000]),
-                        "rot": torch.tensor([0.999067, -0.000006, 0.000009, 0.043198]),
+                        "pos": torch.tensor([0.400000, -0.200000, 0.400000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
-                    # Trajectory waypoints (world coordinates)
+                    "lamp": {
+                        "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "basket": {
+                        "pos": torch.tensor([0.220000, 0.200000, 0.955000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "bowl": {
+                        "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    },
+                    "screw_driver": {
+                        "pos": torch.tensor([0.530000, -0.410000, 0.811000]),
+                        "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
+                    },
+                    "spoon": {
+                        "pos": torch.tensor([0.530000, -0.690000, 0.850000]),
+                        "rot": torch.tensor([0.961352, -0.120799, 0.030845, 0.245473]),
+                    },
+                    "object": {
+                        "pos": torch.tensor([0.280000, -0.280000, 0.825000]),
+                        "rot": torch.tensor([0.889292, -0.000000, 0.000001, -0.457338]),
+                    },
                     "traj_marker_0": {
-                        "pos": torch.tensor([0.610000, -0.280000, 0.150000]),
+                        "pos": torch.tensor([0.260000, -0.240000, 0.850000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_1": {
-                        "pos": torch.tensor([0.600000, -0.190000, 0.220000]),
+                        "pos": torch.tensor([0.270000, -0.190000, 0.970000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_2": {
-                        "pos": torch.tensor([0.560000, -0.110000, 0.360000]),
-                        "rot": torch.tensor([0.998750, 0.000000, 0.049979, -0.000000]),
-                    },
-                    "traj_marker_3": {
-                        "pos": torch.tensor([0.530000, 0.010000, 0.470000]),
+                        "pos": torch.tensor([0.260000, -0.140000, 1.160000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
+                    "traj_marker_3": {
+                        "pos": torch.tensor([0.250000, -0.030000, 1.240000]),
+                        "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
+                    },
                     "traj_marker_4": {
-                        "pos": torch.tensor([0.510000, 0.130000, 0.460000]),
-                        "rot": torch.tensor([0.984726, 0.000000, 0.174108, -0.000000]),
+                        "pos": torch.tensor([0.310000, 0.190000, 1.160000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                 },
                 "robots": {
                     "franka": {
-                        "pos": torch.tensor([-0.025, -0.160, 0.018054]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        "pos": torch.tensor([0.800000, -0.800000, 0.780000]),
+                        "rot": torch.tensor([0.475731, -0.000000, -0.000001, 0.879590]),
                         "dof_pos": {
-                            "panda_finger_joint1": 0.04,
-                            "panda_finger_joint2": 0.04,
-                            "panda_joint1": 0.0,
+                            "panda_finger_joint1": 0.040000,
+                            "panda_finger_joint2": 0.040000,
+                            "panda_joint1": 0.000000,
                             "panda_joint2": -0.785398,
-                            "panda_joint3": 0.0,
+                            "panda_joint3": 0.000000,
                             "panda_joint4": -2.356194,
-                            "panda_joint5": 0.0,
+                            "panda_joint5": 0.000000,
                             "panda_joint6": 1.570796,
                             "panda_joint7": 0.785398,
                         },

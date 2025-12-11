@@ -6,7 +6,7 @@
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.approach_grasp_simple"
+task: "pick_place.approach_grasp_screwdriver"
 decimation: 4
 train_or_eval: "train"
 headless: True

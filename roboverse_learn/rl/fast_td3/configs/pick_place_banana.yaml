@@ -1,20 +1,15 @@
-# Configuration for FastTD3 Training - Track Task
-# Stage 3: Track task - for training trajectory tracking
-# Starts from saved grasp states, only trains trajectory tracking
+# Base Configuration for FastTD3 Training
+# Default configuration with IsaacGym simulator and H1 humanoid robot
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track"
+task: "pick_place.approach_grasp_banana"
 decimation: 4
 train_or_eval: "train"
 headless: True
-
-# State file path for track task (pkl file path for grasp states)
-# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_states_100states_20251126_170312.pkl"
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -46,7 +41,6 @@ tau: 0.1
 # -------------------------------------------------------------------------------
 policy_frequency: 2
 num_updates: 5
-
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -83,8 +77,8 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track"
-exp_name: "pick_place_track"
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3"
 use_wandb: false
 checkpoint_path: null
 eval_interval: 5000
