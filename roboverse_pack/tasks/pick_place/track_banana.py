@@ -9,13 +9,15 @@ from __future__ import annotations
 import os
 import pickle
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import torch
+import yaml
 from loguru import logger as log
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
@@ -129,7 +131,7 @@ DEFAULT_CONFIG_TRACK["reward_config"]["scales"].update({
     "tracking_progress": 150.0,
     "rotation_tracking": 2.0,
 })
-# 移除不需要的奖励
+# Remove unused rewards
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].pop("gripper_approach", None)
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].pop("gripper_close", None)
 # Disable randomization for exact state reproduction
@@ -138,8 +140,8 @@ DEFAULT_CONFIG_TRACK["randomization"]["robot_pos_noise"] = 0.0
 DEFAULT_CONFIG_TRACK["randomization"]["joint_noise_range"] = 0.0
 
 
-@register_task("pick_place.track", "pick_place_track")
-class PickPlaceTrack(PickPlaceBase):
+@register_task("pick_place.track_banana", "pick_place_track_banana")
+class PickPlaceTrackBanana(PickPlaceBase):
     """Trajectory tracking task from grasp states.
 
     Assumes object is already grasped, only learns trajectory following.
@@ -148,22 +150,63 @@ class PickPlaceTrack(PickPlaceBase):
 
     scenario = ScenarioCfg(
         objects=[
-            PrimitiveCubeCfg(
-                name="object",
-                size=(0.04, 0.04, 0.04),
-                mass=0.02,
-                physics=PhysicStateType.RIGIDBODY,
-                color=(1.0, 0.0, 0.0),
-            ),
-            PrimitiveCubeCfg(
+            RigidObjCfg(
                 name="table",
-                size=(0.2, 0.3, 0.4),
-                mass=10.0,
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                color=(0.8, 0.6, 0.4),
-                fix_base_link=True,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
             ),
-            # Trajectory waypoint markers
+            RigidObjCfg(
+                name="lamp",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/usd/0a4489b1a2875c82a580f8b62d346e08.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/0a4489b1a2875c82a580f8b62d346e08.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/mjcf/0a4489b1a2875c82a580f8b62d346e08.xml",
+            ),
+            RigidObjCfg(
+                name="basket",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/usd/663158968e3f5900af1f6e7cecef24c7.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/663158968e3f5900af1f6e7cecef24c7.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/mjcf/663158968e3f5900af1f6e7cecef24c7.xml",
+            ),
+            RigidObjCfg(
+                name="bowl",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/usd/0f296af3df66565c9e1a7c2bc7b35d72.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/0f296af3df66565c9e1a7c2bc7b35d72.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
+            ),
+            RigidObjCfg(
+                name="object",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
+            ),
+            RigidObjCfg(
+                name="screw_driver",
+                scale=(1.5, 1.5, 1.5),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+            ),
+            RigidObjCfg(
+                name="spoon",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/usd/2f1c3077a8d954e58fc0bf75cf35e849.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/2f1c3077a8d954e58fc0bf75cf35e849.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/mjcf/2f1c3077a8d954e58fc0bf75cf35e849.xml",
+            ),
+            # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
             RigidObjCfg(
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
@@ -229,9 +272,23 @@ class PickPlaceTrack(PickPlaceBase):
     max_episode_steps = 200
 
     def __init__(self, scenario, device=None):
-        self.state_file_path = (
-            "eval_states/pick_place.approach_grasp_simple_franka_lift_states_100states_20251126_170312.pkl"
-        )
+        # Start from current file and walk upward to find RoboVerse root
+        root = Path(__file__).resolve()
+        while root != root.parent:
+            if (root / "roboverse_learn").exists():
+                roboverseroot = root
+                break
+            root = root.parent
+        else:
+            raise RuntimeError("Could not locate RoboVerse root directory")
+
+        # Now construct full path to the YAML
+        config_path = roboverseroot / "roboverse_learn" / "rl" / "fast_td3" / "configs" / "track_banana.yaml"
+
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f)
+
+        self.state_file_path = cfg["state_file_path"]
         self._loaded_states = None
 
         if device is None:
@@ -354,9 +411,13 @@ class PickPlaceTrack(PickPlaceBase):
 
     def step(self, actions):
         """Step with delta control, keeping gripper closed."""
+        current_joint_pos = self.handler.get_states(mode="tensor").robots[self.robot_name].joint_pos
         delta_actions = actions * self._action_scale
-        new_actions = self._last_action + delta_actions
+        new_actions = current_joint_pos + delta_actions
         real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
+        
+        # delta_actions = actions * self._action_scale
+        # new_actions = self._last_action + delta_actions
 
         gripper_value_closed = torch.tensor(0.0, device=self.device, dtype=real_actions.dtype)
         real_actions[:, 0] = gripper_value_closed
