@@ -64,6 +64,10 @@ class IsaacSimAdapter:
         self.UsdShade = UsdShade
         self.stage = omni.usd.get_context().get_stage()
 
+        # Material cache for efficient reuse
+        # Key: (mdl_path, material_name), Value: mtl_prim_path
+        self._material_cache = {}
+
     # -------------------------------------------------------------------------
     # Transform Operations
     # -------------------------------------------------------------------------
@@ -198,6 +202,15 @@ class IsaacSimAdapter:
     # Material Operations
     # -------------------------------------------------------------------------
 
+    def clear_material_cache(self):
+        """Clear material cache.
+
+        Useful when switching scenes or resetting the simulation to force
+        recreation of materials.
+        """
+        self._material_cache.clear()
+        logger.debug("Material cache cleared")
+
     def apply_mdl_material(
         self,
         prim_path: str,
@@ -258,29 +271,46 @@ class IsaacSimAdapter:
         # For articulations/complex objects, apply to all child meshes
         self._ensure_uv_for_prim_recursive(prim)
 
-        # Material naming:
-        # - mdl_basename: Name from MDL file (e.g., "Plywood")
-        # - material_name: Variant within MDL (optional, e.g., "Plywood::Oak")
-        # - mtl_prim_name: Unique prim name to avoid conflicts
+        # Material caching for efficiency:
+        # Key: (mdl_path, material_name) - based on material content, not prim
+        # This enables sharing materials across multiple objects/environments
         mdl_basename = os.path.basename(mdl_path).removesuffix(".mdl")
-        prim_basename = prim_path.split("/")[-1]
-        mtl_prim_unique = f"{mdl_basename}_{prim_basename}_{id(prim_path)}"  # Fully unique
+        actual_mdl_name = material_name if material_name else mdl_basename
+        cache_key = (mdl_path, actual_mdl_name)
 
-        _, mtl_prim_path = get_material_prim_path(mtl_prim_unique)
+        # Check cache first
+        if cache_key in self._material_cache:
+            # Reuse existing material
+            mtl_prim_path = self._material_cache[cache_key]
+            logger.debug(f"Reusing cached material: {mtl_prim_path} for {prim_path}")
+        else:
+            # Create new material with semantic name (based on material, not prim)
+            # This allows natural sharing if same material is requested
+            if material_name:
+                mtl_prim_unique = f"{mdl_basename}_{material_name}"
+            else:
+                mtl_prim_unique = mdl_basename
 
-        # Create material prim if needed
-        if not self.stage.GetPrimAtPath(mtl_prim_path).IsValid():
-            # mtl_name should be the actual material name in MDL file
-            actual_mdl_name = material_name if material_name else mdl_basename
-            success, _ = omni.kit.commands.execute(
-                "CreateMdlMaterialPrim",
-                mtl_url=mdl_path,
-                mtl_name=actual_mdl_name,  # Use MDL internal name
-                mtl_path=mtl_prim_path,  # But create at unique path
-                select_new_prim=False,
-            )
-            if not success:
-                raise RuntimeError(f"Failed to create material from {mdl_path}")
+            _, mtl_prim_path = get_material_prim_path(mtl_prim_unique)
+
+            # Create material prim if it doesn't exist
+            # (could exist from previous session or manual creation)
+            if not self.stage.GetPrimAtPath(mtl_prim_path).IsValid():
+                success, _ = omni.kit.commands.execute(
+                    "CreateMdlMaterialPrim",
+                    mtl_url=mdl_path,
+                    mtl_name=actual_mdl_name,  # Use MDL internal name
+                    mtl_path=mtl_prim_path,  # But create at semantic path
+                    select_new_prim=False,
+                )
+                if not success:
+                    raise RuntimeError(f"Failed to create material from {mdl_path}")
+                logger.debug(f"Created new material: {mtl_prim_path}")
+            else:
+                logger.debug(f"Material already exists: {mtl_prim_path}, will reuse")
+
+            # Cache for future use
+            self._material_cache[cache_key] = mtl_prim_path
 
         # Ensure double-sided rendering
         if prim.IsA(UsdGeom.Mesh):
@@ -547,6 +577,33 @@ class IsaacSimAdapter:
             raise ValueError(f"Prim at {prim_path} does not have intensity attribute (not a light?)")
 
         intensity_attr.Set(float(intensity))
+
+    def get_light_color(self, prim_path: str) -> tuple[float, float, float]:
+        """Get light color.
+
+        Args:
+            prim_path: USD prim path to light
+
+        Returns:
+            RGB color tuple (0-1 range)
+
+        Raises:
+            ValueError: If prim path is invalid or not a light
+        """
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if not prim or not prim.IsValid():
+            raise ValueError(f"Invalid prim path: {prim_path}")
+
+        color_attr = prim.GetAttribute("inputs:color")
+        if not color_attr:
+            raise ValueError(f"Prim at {prim_path} does not have color attribute (not a light?)")
+
+        color = color_attr.Get()
+        if color is None:
+            # Default to white if not set
+            return (1.0, 1.0, 1.0)
+
+        return (float(color[0]), float(color[1]), float(color[2]))
 
     def set_light_color(self, prim_path: str, color: tuple[float, float, float]):
         """Set light color.

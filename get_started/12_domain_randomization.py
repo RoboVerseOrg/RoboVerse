@@ -57,8 +57,10 @@ from loguru import logger as log
 from rich.logging import RichHandler
 
 from metasim.randomization import (
+    CameraIntrinsicsRandomCfg,
+    CameraPositionRandomCfg,
     # Randomizers
-    CameraPresets,
+    CameraRandomCfg,
     CameraRandomizer,
     # Scene Configuration
     EnvironmentLayerCfg,
@@ -121,18 +123,39 @@ def create_env(args):
             radius=1.2,
             pos=(0.0, 0.0, 2.8),
             rot=(0.7071, 0.0, 0.0, 0.7071),
+            shared=False,  # Per-environment lights
         ),
         SphereLightCfg(
-            name="ceiling_ne", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, 1.0, 2.5)
+            name="ceiling_ne",
+            intensity=ceiling_corners,
+            color=(1.0, 1.0, 1.0),
+            radius=0.6,
+            pos=(1.0, 1.0, 2.5),
+            shared=False,  # Per-environment lights
         ),
         SphereLightCfg(
-            name="ceiling_nw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, 1.0, 2.5)
+            name="ceiling_nw",
+            intensity=ceiling_corners,
+            color=(1.0, 1.0, 1.0),
+            radius=0.6,
+            pos=(-1.0, 1.0, 2.5),
+            shared=False,  # Per-environment lights
         ),
         SphereLightCfg(
-            name="ceiling_sw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, -1.0, 2.5)
+            name="ceiling_sw",
+            intensity=ceiling_corners,
+            color=(1.0, 1.0, 1.0),
+            radius=0.6,
+            pos=(-1.0, -1.0, 2.5),
+            shared=False,  # Per-environment lights
         ),
         SphereLightCfg(
-            name="ceiling_se", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, -1.0, 2.5)
+            name="ceiling_se",
+            intensity=ceiling_corners,
+            color=(1.0, 1.0, 1.0),
+            radius=0.6,
+            pos=(1.0, -1.0, 2.5),
+            shared=False,  # Per-environment lights
         ),
     ]
 
@@ -147,6 +170,7 @@ def create_env(args):
         renderer=args.renderer,
         render=render_cfg,
         num_envs=args.num_envs,
+        env_spacing=args.env_spacing,
         headless=args.headless,
     )
 
@@ -178,6 +202,7 @@ def initialize_randomizers(handler, args):
 
     randomizers = {
         "scene": None,
+        "scene_env_ids": None,  # Store env_ids for SceneRandomizer
         "object_physics": [],
         "material_static": [],  # Materials for Static Objects
         "material_dynamic": [],  # Materials for Dynamic Objects
@@ -195,7 +220,7 @@ def initialize_randomizers(handler, args):
     if mode >= 2:
         # USD Scene
         scene_paths, scene_configs = SceneUSDCollections.kujiale_scenes(return_configs=True)
-        log.info(f"Environment: Kujiale USD ({len(scene_paths)} scenes)")
+        log.info(f"Environment: Kujiale USD ({len(scene_paths)} scenes, per-env)")
 
         env_element = USDAssetPoolCfg(
             name="kujiale_scene",
@@ -203,20 +228,35 @@ def initialize_randomizers(handler, args):
             per_path_overrides=scene_configs,
             selection_strategy="random" if level >= 1 else "sequential",
         )
-        environment_layer = EnvironmentLayerCfg(elements=[env_element])
+        environment_layer = EnvironmentLayerCfg(
+            elements=[env_element],
+            shared=False,  # Per-env
+            per_env=False,  # All envs get the same USD scene
+            env_ids=None,  # Apply to all envs
+        )
     else:
         # Manual Scene - Complete room
-        log.info("Environment: Manual geometry (10m x 10m x 5m)")
+        log.info("Environment: Manual geometry (10m x 10m x 5m, per-env, all envs)")
         base_cfg = ScenePresets.empty_room(
             room_size=10.0,
             wall_height=5.0,
         )
         environment_layer = base_cfg.environment_layer
+        environment_layer.shared = False  # Per-env
+        environment_layer.per_env = True  # Each env gets different material (via MaterialRandomizer)
+        environment_layer.env_ids = None  # Apply to all envs
 
     if mode >= 1:
         # USD Table
         table_paths, table_configs = SceneUSDCollections.table785(return_configs=True)
+
+        # Calculate first half of environments dynamically
+        num_envs = handler.num_envs
+        first_half_envs = list(range(num_envs // 2))
+
         log.info(f"Workspace: Table785 USD ({len(table_paths)} tables)")
+        log.info(f"  - env_ids: {first_half_envs} (first half of {num_envs} environments)")
+        log.info("  - per_env: False (all envs get the same table)")
 
         workspace_element = USDAssetPoolCfg(
             name="table",
@@ -224,10 +264,15 @@ def initialize_randomizers(handler, args):
             per_path_overrides=table_configs,
             selection_strategy="random" if level >= 1 else "sequential",
         )
-        workspace_layer = WorkspaceLayerCfg(elements=[workspace_element])
+        workspace_layer = WorkspaceLayerCfg(
+            elements=[workspace_element],
+            shared=False,  # Per-env
+            per_env=False,  # All envs get the same table
+            env_ids=first_half_envs,  # Only apply to first half of envs
+        )
     else:
         # Manual Table (with default Plywood, MaterialRandomizer will randomize in level 1+)
-        log.info("Workspace: Manual table (Plywood default, randomized in level 1+)")
+        log.info("Workspace: Manual table (Plywood default, randomized in level 1+, per-env, all envs)")
         workspace_layer = WorkspaceLayerCfg(
             elements=[
                 ManualGeometryCfg(
@@ -237,13 +282,16 @@ def initialize_randomizers(handler, args):
                     position=(0.0, 0.0, 0.7 - 0.05),  # 0.65m (table surface at 0.7m)
                     default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl",
                 )
-            ]
+            ],
+            shared=False,  # Per-env
+            per_env=False,  # Manual geometry, material randomization via MaterialRandomizer
+            env_ids=None,  # Apply to all envs
         )
 
     if mode >= 3:
         # Desktop Objects
         object_paths, object_configs = SceneUSDCollections.desktop_supplies(return_configs=True)
-        log.info(f"Objects: Desktop supplies ({len(object_paths)} items, placing 3)")
+        log.info(f"Objects: Desktop supplies ({len(object_paths)} items, placing 3, per-env, all envs)")
 
         objects_layer = ObjectsLayerCfg(
             elements=[
@@ -254,7 +302,10 @@ def initialize_randomizers(handler, args):
                     selection_strategy="random" if level >= 1 else "sequential",
                 )
                 for i in range(3)
-            ]
+            ],
+            shared=False,  # Per-env
+            per_env=False,  # All envs get the same objects
+            env_ids=None,  # Apply to all envs
         )
     else:
         objects_layer = None
@@ -264,13 +315,15 @@ def initialize_randomizers(handler, args):
         environment_layer=environment_layer,
         workspace_layer=workspace_layer,
         objects_layer=objects_layer,
+        env_ids=None,  # Default env_ids for all layers (can be overridden by layer.env_ids)
     )
 
     scene_rand = SceneRandomizer(scene_cfg, seed=args.seed)
     scene_rand.bind_handler(handler)
     randomizers["scene"] = scene_rand
 
-    log.info("SceneRandomizer created (manages Dynamic Objects lifecycle)")
+    # No longer need scene_env_ids, as each layer has its own env_ids
+    log.info("SceneRandomizer created (layers have independent env_ids)")
 
     # =========================================================================
     # STEP 2: Material Randomization (NEW: Works for ALL objects)
@@ -280,56 +333,51 @@ def initialize_randomizers(handler, args):
     log.info("-" * 70)
 
     # Static Object material
-    box_mat = MaterialRandomizer(
-        MaterialPresets.mdl_family_object("box_base", family=("wood", "plastic")),
-        seed=args.seed + 1,
-    )
+    box_mat_cfg = MaterialPresets.mdl_family_object("box_base", family=("wood", "plastic"))
+    box_mat_cfg.mdl.per_env = True  # Each environment gets different material
+    box_mat = MaterialRandomizer(box_mat_cfg, seed=args.seed + 1)
     box_mat.bind_handler(handler)
     randomizers["material_static"].append(box_mat)
-    log.info("Static Object: box_base (wood/plastic/metal/ceramic materials)")
+    log.info("Static Object: box_base (wood/plastic/metal/ceramic materials, per_env=True)")
 
     # Dynamic Object materials (NEW FEATURE!)
     # Note: Only for Mode 0 (manual table)
     # Mode 1+ use USD tables with their own materials
     if mode == 0:
-        table_mat = MaterialRandomizer(
-            MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
-            seed=args.seed + 2,
-        )
+        table_mat_cfg = MaterialPresets.mdl_family_object("table", family=("wood", "metal"))
+        table_mat_cfg.mdl.per_env = True  # Each environment gets different material
+        table_mat = MaterialRandomizer(table_mat_cfg, seed=args.seed + 2)
         table_mat.bind_handler(handler)
         randomizers["material_dynamic"].append(table_mat)
-        log.info("Dynamic Object: table (Manual, wood/metal materials)")
+        log.info("Dynamic Object: table (Manual, wood/metal materials, per_env=True)")
 
     # Manual geometry materials (floor, walls, ceiling)
     # Only for modes with manual environment (mode < 2) and level >= 1
     if mode < 2 and level >= 1:
         # Floor
-        floor_mat = MaterialRandomizer(
-            MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
-            seed=args.seed + 101,
-        )
+        floor_mat_cfg = MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone"))
+        floor_mat_cfg.mdl.per_env = True  # Each environment gets different material
+        floor_mat = MaterialRandomizer(floor_mat_cfg, seed=args.seed + 101)
         floor_mat.bind_handler(handler)
         randomizers["material_dynamic"].append(floor_mat)
 
         # Walls (all 4 share same seed for consistency)
         wall_seed = args.seed + 102
         for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
-            wall_mat = MaterialRandomizer(
-                MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
-                seed=wall_seed,  # Same seed for all walls
-            )
+            wall_mat_cfg = MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture"))
+            wall_mat_cfg.mdl.per_env = True  # Each environment gets different material
+            wall_mat = MaterialRandomizer(wall_mat_cfg, seed=wall_seed)  # Same seed for all walls
             wall_mat.bind_handler(handler)
             randomizers["material_dynamic"].append(wall_mat)
 
         # Ceiling
-        ceiling_mat = MaterialRandomizer(
-            MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
-            seed=args.seed + 103,
-        )
+        ceiling_mat_cfg = MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board"))
+        ceiling_mat_cfg.mdl.per_env = True  # Each environment gets different material
+        ceiling_mat = MaterialRandomizer(ceiling_mat_cfg, seed=args.seed + 103)
         ceiling_mat.bind_handler(handler)
         randomizers["material_dynamic"].append(ceiling_mat)
 
-        log.info("Dynamic Objects: floor + 4 walls + ceiling (manual geometry materials)")
+        log.info("Dynamic Objects: floor + 4 walls + ceiling (manual geometry materials, per_env=True)")
 
     # =========================================================================
     # STEP 3: Physics Randomization (ObjectRandomizer - Static Objects only)
@@ -342,8 +390,8 @@ def initialize_randomizers(handler, args):
         ObjectPresets.heavy_object("box_base"),
         seed=args.seed + 3,
     )
-    box_physics.cfg.pose.rotation_range = (0, 0)  # Disable rotation for stability
-    box_physics.cfg.pose.position_range = [(0, 0), (0, 0), (0, 0)]  # Disable position jitter
+    box_physics.cfg.pose.rotation_delta_range = (0, 0)  # Disable rotation for stability
+    box_physics.cfg.pose.position_delta_range = [(0, 0), (0, 0), (0, 0)]  # Disable position jitter
     box_physics.bind_handler(handler)
     box_physics()  # Apply once at start
     randomizers["object_physics"].append(box_physics)
@@ -375,13 +423,22 @@ def initialize_randomizers(handler, args):
     main_light = LightRandomizer(
         LightRandomCfg(
             light_name="ceiling_main",
-            intensity=LightIntensityRandomCfg(intensity_range=main_range, enabled=True),
-            color=LightColorRandomCfg(temperature_range=(3000.0, 6000.0), use_temperature=True, enabled=True),
+            intensity=LightIntensityRandomCfg(
+                intensity_delta_range=main_range, use_delta=True, enabled=True, per_env=True
+            ),
+            color=LightColorRandomCfg(
+                temperature_delta_range=(3000.0, 6000.0),
+                use_temperature=True,
+                use_delta=True,
+                enabled=True,
+                per_env=True,
+            ),
             orientation=LightOrientationRandomCfg(
-                angle_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),  # Small angle variations
-                relative_to_origin=True,
+                angle_delta_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),  # Small angle variations
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
+                per_env=True,
             ),
         ),
         seed=args.seed + 4,
@@ -394,13 +451,22 @@ def initialize_randomizers(handler, args):
         corner_light = LightRandomizer(
             LightRandomCfg(
                 light_name=light_name,
-                intensity=LightIntensityRandomCfg(intensity_range=corner_range, enabled=True),
-                color=LightColorRandomCfg(temperature_range=(2700.0, 5500.0), use_temperature=True, enabled=True),
+                intensity=LightIntensityRandomCfg(
+                    intensity_delta_range=corner_range, use_delta=True, enabled=True, per_env=True
+                ),
+                color=LightColorRandomCfg(
+                    temperature_delta_range=(2700.0, 5500.0),
+                    use_temperature=True,
+                    use_delta=True,
+                    enabled=True,
+                    per_env=True,
+                ),
                 position=LightPositionRandomCfg(
-                    position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),  # Small position jitter
-                    relative_to_origin=True,
+                    position_delta_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),  # Small position jitter
+                    use_delta=True,
                     distribution="uniform",
                     enabled=True,
+                    per_env=True,
                 ),
             ),
             seed=args.seed + 5 + i,
@@ -417,13 +483,63 @@ def initialize_randomizers(handler, args):
     log.info("\n[STEP 5] Camera Randomization (CameraRandomizer)")
     log.info("-" * 70)
 
-    camera_rand = CameraRandomizer(
-        CameraPresets.orbit_camera("main_camera"),
+    # Split environments into two groups for different camera randomization
+    num_envs = handler.num_envs
+    half = num_envs // 2
+    first_half_envs = list(range(half))  # e.g., [0, 1] for 4 envs
+    second_half_envs = list(range(half, num_envs))  # e.g., [2, 3] for 4 envs
+
+    # Group 1: First half - Small orbit movements (conservative)
+    camera_rand_group1 = CameraRandomizer(
+        CameraRandomCfg(
+            camera_name="main_camera",
+            position=CameraPositionRandomCfg(
+                position_delta_range=((-0.3, 0.3), (-0.3, 0.3), (-0.2, 0.2)),  # Small delta
+                use_delta=True,
+                distribution="uniform",
+                enabled=True,
+                per_env=False,  # Same random value for all envs in this group
+            ),
+            intrinsics=CameraIntrinsicsRandomCfg(
+                fov_range=(45, 60),  # Narrow FOV range
+                use_fov=True,
+                distribution="uniform",
+                enabled=True,
+                per_env=False,  # Same FOV for all envs in this group
+            ),
+            env_ids=first_half_envs,  # Only apply to first half
+        ),
         seed=args.seed + 10,
     )
-    camera_rand.bind_handler(handler)
-    randomizers["camera"].append(camera_rand)
-    log.info("Camera: orbit preset (circles around table center)")
+    camera_rand_group1.bind_handler(handler)
+    randomizers["camera"].append(camera_rand_group1)
+    log.info(f"Camera Group 1 (envs {first_half_envs}): Small orbit (±0.3m), FOV 45-60°, consistent within group")
+
+    # Group 2: Second half - Large orbit movements (aggressive)
+    camera_rand_group2 = CameraRandomizer(
+        CameraRandomCfg(
+            camera_name="main_camera",
+            position=CameraPositionRandomCfg(
+                position_delta_range=((-1.0, 1.0), (-1.0, 1.0), (-0.5, 0.5)),  # Large delta
+                use_delta=True,
+                distribution="uniform",
+                enabled=True,
+                per_env=False,  # Same random value for all envs in this group
+            ),
+            intrinsics=CameraIntrinsicsRandomCfg(
+                fov_range=(60, 90),  # Wide FOV range
+                use_fov=True,
+                distribution="uniform",
+                enabled=True,
+                per_env=False,  # Same FOV for all envs in this group
+            ),
+            env_ids=second_half_envs,  # Only apply to second half
+        ),
+        seed=args.seed + 11,
+    )
+    camera_rand_group2.bind_handler(handler)
+    randomizers["camera"].append(camera_rand_group2)
+    log.info(f"Camera Group 2 (envs {second_half_envs}): Large orbit (±1.0m), FOV 60-90°, consistent within group")
 
     log.info("\n" + "=" * 70)
     log.info("All Randomizers Initialized")
@@ -472,7 +588,7 @@ def apply_randomization(randomizers, level, handler=None, is_initial=False):
                 scene_rand = randomizers["scene"]
                 original_auto_flush = scene_rand.cfg.auto_flush_visuals
                 scene_rand.cfg.auto_flush_visuals = False
-                scene_rand()
+                scene_rand()  # Each layer uses its own env_ids
                 scene_rand.cfg.auto_flush_visuals = original_auto_flush
 
         # Level 1+: Material randomization
@@ -524,80 +640,140 @@ def run_replay(env, randomizers, init_state, all_actions, args):
     apply_randomization(randomizers, args.level, env.handler, is_initial=True)
 
     # Store original positions for later updates
+    # get_states() returns LOCAL coordinates (already subtracted env_origins)
+    # For multi-env, we only need env_0's local coords as the reference template
+
     original_positions = {}
     for obj_name, obj_state in init_state["objects"].items():
+        # obj_state["pos"] is a tensor: [num_envs, 3] for multi-env, [3,] for single-env
+        # We use env_0's local coordinates as the reference
+        pos = obj_state["pos"]
+        if pos.ndim == 1:
+            # Single environment: pos is [3,]
+            pos_env0 = pos
+        else:
+            # Multi-environment: pos is [num_envs, 3], get env_0
+            pos_env0 = pos[0]
+
         original_positions[f"obj_{obj_name}"] = {
-            "x": float(obj_state["pos"][0]),
-            "y": float(obj_state["pos"][1]),
-            "z": float(obj_state["pos"][2]),
+            "x": float(pos_env0[0]),
+            "y": float(pos_env0[1]),
+            "z": float(pos_env0[2]),
         }
+
     for robot_name, robot_state in init_state["robots"].items():
+        pos = robot_state["pos"]
+        if pos.ndim == 1:
+            pos_env0 = pos
+        else:
+            pos_env0 = pos[0]
+
         original_positions[f"robot_{robot_name}"] = {
-            "x": float(robot_state["pos"][0]),
-            "y": float(robot_state["pos"][1]),
-            "z": float(robot_state["pos"][2]),
+            "x": float(pos_env0[0]),
+            "y": float(pos_env0[1]),
+            "z": float(pos_env0[2]),
         }
 
     # Update positions to match table (center + height)
     def update_positions_to_table():
+        """
+        Simple approach: Adjust only Z height to match table surface.
+
+        Key insights:
+        - get_states() returns LOCAL coordinates (already subtracted env_origins)
+        - set_states() expects LOCAL coordinates (will add env_origins automatically)
+        - get_table_bounds() returns WORLD coordinates
+
+        So we only need to:
+        1. Convert table bounds from world to local (subtract env_origin_0)
+        2. Adjust Z in local coordinates
+        3. set_states() will handle the rest
+        """
         if not randomizers["scene"]:
             return
 
+        # Get table bounds from env_0 (world coordinates)
         table_bounds = randomizers["scene"].get_table_bounds(env_id=0)
         if not table_bounds or abs(table_bounds.get("height", 0)) > 100:
             return
 
-        table_height = table_bounds["height"]
-        table_center_x = (table_bounds["x_min"] + table_bounds["x_max"]) / 2
-        table_center_y = (table_bounds["y_min"] + table_bounds["y_max"]) / 2
+        # Convert world table height to local coordinates
+        env_origin_0 = env.handler.scene.env_origins[0].cpu().numpy()
+        table_height_local = table_bounds["height"] - env_origin_0[2]
 
-        # Compute system center (robot + objects)
-        all_x = [original_positions[k]["x"] for k in original_positions]
-        all_y = [original_positions[k]["y"] for k in original_positions]
-        system_center_x = sum(all_x) / len(all_x)
-        system_center_y = sum(all_y) / len(all_y)
-
-        # Compute offset to align system to table center
-        offset_x = table_center_x - system_center_x
-        offset_y = table_center_y - system_center_y
-
-        log.info(
-            f"Adjusting positions: table center ({table_center_x:.2f}, {table_center_y:.2f}), height {table_height:.3f}"
-        )
-
-        # Compute original Z average
+        # Compute Z average from original positions (already in local coords)
         all_z = [original_positions[k]["z"] for k in original_positions]
         avg_z = sum(all_z) / len(all_z)
 
-        # Apply offset (rigid body translation - preserves ALL relative positions)
+        log.info(f"Adjusting Z to table surface: {table_height_local:.3f}m (local coords)")
+
+        # Directly modify init_state (which is already in local coords)
+        # Handle both single-env ([3,]) and multi-env ([num_envs, 3]) cases
         for obj_name, obj_state in init_state["objects"].items():
             orig = original_positions[f"obj_{obj_name}"]
-            obj_state["pos"][0] = orig["x"] + offset_x  # XY: center alignment
-            obj_state["pos"][1] = orig["y"] + offset_y
-            obj_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05  # Z: preserve relative + clearance
+            new_z = table_height_local + (orig["z"] - avg_z) + 0.05
+            if obj_state["pos"].ndim == 1:
+                # Single environment
+                obj_state["pos"][2] = new_z
+            else:
+                # Multi-environment: broadcast to all envs
+                obj_state["pos"][:, 2] = new_z
 
         for robot_name, robot_state in init_state["robots"].items():
             orig = original_positions[f"robot_{robot_name}"]
-            robot_state["pos"][0] = orig["x"] + offset_x
-            robot_state["pos"][1] = orig["y"] + offset_y
-            robot_state["pos"][2] = table_height + (orig["z"] - avg_z) + 0.05
+            new_z = table_height_local + (orig["z"] - avg_z) + 0.05
+            if robot_state["pos"].ndim == 1:
+                # Single environment
+                robot_state["pos"][2] = new_z
+            else:
+                # Multi-environment: broadcast to all envs
+                robot_state["pos"][:, 2] = new_z
 
+        # Set states (will add env_origins automatically)
         env.handler.set_states([init_state] * env.scenario.num_envs)
 
     # Initial position update
     update_positions_to_table()
 
-    # Update camera look_at
-    if randomizers["scene"]:
-        table_bounds = randomizers["scene"].get_table_bounds(env_id=0)
-        if table_bounds:
-            for camera in env.handler.cameras:
-                if camera.name == "main_camera":
-                    camera.look_at = (0.0, 0.0, table_bounds["height"] + 0.05)
-            if hasattr(env.handler, "_update_camera_pose"):
-                env.handler._update_camera_pose()
-
+    # Reset environment first (this may update camera using default look_at)
     obs, _ = env.reset(states=[init_state] * args.num_envs)
+
+    # Update camera look_at AFTER reset: each environment can have different table height
+    if randomizers["scene"]:
+        # Collect table heights for each environment
+        table_heights = []
+        for env_id in range(env.scenario.num_envs):
+            table_bounds = randomizers["scene"].get_table_bounds(env_id=env_id)
+            if table_bounds and abs(table_bounds.get("height", 0)) < 100:
+                table_heights.append(table_bounds["height"])
+            else:
+                # Fallback to default height
+                table_heights.append(0.75)
+
+        # Directly set camera poses for each environment (bypass _update_camera_pose)
+        for camera in env.handler.cameras:
+            if camera.name == "main_camera":
+                camera_inst = env.handler.scene.sensors[camera.name]
+
+                # Base camera position (local coordinates)
+                base_pos = torch.tensor(camera.pos, device=env.handler.device)
+
+                # Per-environment look_at (local Z varies by table height)
+                look_at_list = []
+                for env_id, table_height in enumerate(table_heights):
+                    look_at_list.append([0.0, 0.0, table_height + 0.05])
+
+                base_lookat = torch.tensor(look_at_list, device=env.handler.device)
+
+                # Add env_origins to get world coordinates
+                position_tensor = base_pos.unsqueeze(0) + env.handler.scene.env_origins
+                camera_lookat_tensor = base_lookat + env.handler.scene.env_origins
+
+                camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
+
+                log.info(
+                    "Camera look_at per env: " + ", ".join([f"env_{i}: Z={h:.3f}" for i, h in enumerate(table_heights)])
+                )
 
     step = 0
     while step < len(all_actions[0]):
@@ -637,6 +813,7 @@ def main():
         robot: str = "franka"
         scene: str | None = None
         num_envs: int = 1
+        env_spacing: float = 5.0
         headless: bool = False
         seed: int = 42
         scene_mode: Literal[0, 1, 2, 3] = 3

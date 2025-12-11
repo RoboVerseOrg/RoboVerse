@@ -243,15 +243,25 @@ class BaseRandomizerType:
         # Register lights
         if hasattr(handler, "lights"):
             for light in handler.lights:
-                prim_path = f"/World/{light.name}"
+                # Detect if light is shared or per-env based on path pattern
+                # Shared lights: /World/light_name
+                # Per-env lights: /World/envs/env_X/light_name
+                shared = getattr(light, "shared", True)  # Default to True for backward compatibility
+
+                if shared:
+                    prim_path = f"/World/{light.name}"
+                    prim_paths = [prim_path]
+                else:
+                    # Per-env lights
+                    prim_paths = [f"/World/envs/env_{i}/{light.name}" for i in range(handler.num_envs)]
 
                 registry.register(
                     ObjectMetadata(
                         name=light.name,
                         category="light",
                         lifecycle="static",
-                        prim_paths=[prim_path],
-                        shared=True,
+                        prim_paths=prim_paths,
+                        shared=shared,
                         has_physics=False,
                     )
                 )

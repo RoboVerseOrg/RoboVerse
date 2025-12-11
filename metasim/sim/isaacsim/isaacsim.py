@@ -159,10 +159,14 @@ class IsaacsimHandler(BaseSimHandler):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
-                    position_tensor = torch.tensor(camera.pos, device=self.device).unsqueeze(0)
-                    position_tensor = position_tensor.repeat(self.num_envs, 1)
-                    camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
-                    camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
+                    # FIX: Add env_origins offset so each environment has camera at correct world position
+                    base_pos = torch.tensor(camera.pos, device=self.device)
+                    base_lookat = torch.tensor(camera.look_at, device=self.device)
+
+                    # Each environment's camera should be offset by env_origins
+                    position_tensor = base_pos.unsqueeze(0) + self.scene.env_origins
+                    camera_lookat_tensor = base_lookat.unsqueeze(0) + self.scene.env_origins
+
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
                     # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
             else:
@@ -1130,16 +1134,60 @@ class IsaacsimHandler(BaseSimHandler):
                 translation=(0, 0, 10),
             )
 
-    def _add_distant_light(self, light_cfg, light_index: int) -> None:
-        """Add a distant light to the scene based on configuration."""
-        import isaaclab.sim as sim_utils
+    def _spawn_light_with_shared(
+        self,
+        light_cfg,
+        base_name: str,
+        isaac_light_cfg,
+        light_type: str,
+        orientation=None,
+        translation=None,
+    ) -> list[str]:
+        """Helper function to spawn lights with shared/per-env support and register to ObjectRegistry.
+
+        Args:
+            light_cfg: The light configuration object (must have 'shared' attribute)
+            base_name: Base name for the light (e.g., "distant_light_0")
+            isaac_light_cfg: Isaac Lab light configuration object
+            light_type: Type of light for logging (e.g., "distant", "cylinder")
+            orientation: Light orientation quaternion
+            translation: Light position
+
+        Returns:
+            List of prim paths created
+        """
         from isaaclab.sim.spawners import spawn_light
 
-        # Use configured name if available, otherwise fall back to index-based naming
-        light_name = (
-            f"/World/{light_cfg.name}"
+        prim_paths = []
+
+        if light_cfg.shared:
+            # Shared: one light for all environments
+            light_path = f"/World/{base_name}"
+            spawn_light(light_path, isaac_light_cfg, orientation=orientation, translation=translation)
+            prim_paths.append(light_path)
+            log.debug(f"Added shared {light_type} light: {light_path}")
+        else:
+            # Per-env: one light per environment
+            for env_id in range(self.num_envs):
+                light_path = f"/World/envs/env_{env_id}/{base_name}"
+                spawn_light(light_path, isaac_light_cfg, orientation=orientation, translation=translation)
+                prim_paths.append(light_path)
+            log.debug(f"Added per-env {light_type} lights for {self.num_envs} environments")
+
+        return prim_paths
+
+    def _add_distant_light(self, light_cfg, light_index: int) -> None:
+        """Add a distant light to the scene based on configuration.
+
+        Supports both shared (global) and per-environment lighting.
+        """
+        import isaaclab.sim as sim_utils
+
+        # Determine base name
+        base_name = (
+            light_cfg.name
             if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
-            else f"/World/DistantLight_{light_index}"
+            else f"distant_light_{light_index}"
         )
 
         # Create Isaac Lab distant light configuration
@@ -1149,31 +1197,28 @@ class IsaacsimHandler(BaseSimHandler):
             color=light_cfg.color,
         )
 
-        # Use the quaternion from light configuration
-        orientation = light_cfg.quat
-
-        spawn_light(
-            light_name,
-            isaac_light_cfg,
-            orientation=orientation,
-            translation=(0, 0, 10),  # Distant lights don't need specific translation
-        )
-
-        log.debug(
-            f"Added distant light {light_name} with intensity {light_cfg.intensity}, "
-            f"polar={light_cfg.polar}°, azimuth={light_cfg.azimuth}°"
+        # Use helper to spawn and register
+        self._spawn_light_with_shared(
+            light_cfg=light_cfg,
+            base_name=base_name,
+            isaac_light_cfg=isaac_light_cfg,
+            light_type="distant",
+            orientation=light_cfg.quat,
+            translation=(0, 0, 10),
         )
 
     def _add_cylinder_light(self, light_cfg, light_index: int) -> None:
-        """Add a cylinder light to the scene based on configuration."""
-        import isaaclab.sim as sim_utils
-        from isaaclab.sim.spawners import spawn_light
+        """Add a cylinder light to the scene based on configuration.
 
-        # Use configured name if available, otherwise fall back to index-based naming
-        light_name = (
-            f"/World/{light_cfg.name}"
+        Supports both shared (global) and per-environment lighting.
+        """
+        import isaaclab.sim as sim_utils
+
+        # Determine base name
+        base_name = (
+            light_cfg.name
             if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
-            else f"/World/CylinderLight_{light_index}"
+            else f"cylinder_light_{light_index}"
         )
 
         # Create Isaac Lab cylinder light configuration
@@ -1181,28 +1226,29 @@ class IsaacsimHandler(BaseSimHandler):
             intensity=light_cfg.intensity, radius=light_cfg.radius, length=light_cfg.length, color=light_cfg.color
         )
 
-        spawn_light(
-            light_name,
-            isaac_light_cfg,
+        # Use helper to spawn and register
+        self._spawn_light_with_shared(
+            light_cfg=light_cfg,
+            base_name=base_name,
+            isaac_light_cfg=isaac_light_cfg,
+            light_type="cylinder",
             orientation=light_cfg.rot,
             translation=light_cfg.pos,
         )
 
-        log.debug(
-            f"Added cylinder light {light_name} with intensity {light_cfg.intensity}, "
-            f"radius={light_cfg.radius}, length={light_cfg.length}"
-        )
-
     def _add_dome_light(self, light_cfg, light_index: int) -> None:
-        """Add a dome light to the scene based on configuration."""
-        import isaaclab.sim as sim_utils
-        from isaaclab.sim.spawners import spawn_light
+        """Add a dome light to the scene based on configuration.
 
-        # Use configured name if available, otherwise fall back to index-based naming
-        light_name = (
-            f"/World/{light_cfg.name}"
+        Supports both shared (global) and per-environment lighting.
+        Note: Per-env dome lights are rare and may have performance impact.
+        """
+        import isaaclab.sim as sim_utils
+
+        # Determine base name
+        base_name = (
+            light_cfg.name
             if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
-            else f"/World/DomeLight_{light_index}"
+            else f"dome_light_{light_index}"
         )
 
         # Create Isaac Lab dome light configuration
@@ -1215,25 +1261,35 @@ class IsaacsimHandler(BaseSimHandler):
         if light_cfg.texture_file is not None:
             isaac_light_cfg.texture_file = light_cfg.texture_file
 
-        spawn_light(
-            light_name,
-            isaac_light_cfg,
+        # Warn if using per-env dome light (unusual use case)
+        if not light_cfg.shared:
+            log.warning(
+                f"Creating per-environment dome light '{base_name}'. "
+                "This is unusual and may have significant performance impact."
+            )
+
+        # Use helper to spawn and register
+        self._spawn_light_with_shared(
+            light_cfg=light_cfg,
+            base_name=base_name,
+            isaac_light_cfg=isaac_light_cfg,
+            light_type="dome",
             orientation=(1.0, 0.0, 0.0, 0.0),
-            translation=(0, 0, 0),  # Dome lights are typically at origin
+            translation=(0, 0, 0),
         )
 
-        log.debug(f"Added dome light {light_name} with intensity {light_cfg.intensity}")
-
     def _add_sphere_light(self, light_cfg, light_index: int) -> None:
-        """Add a sphere light to the scene based on configuration."""
-        import isaaclab.sim as sim_utils
-        from isaaclab.sim.spawners import spawn_light
+        """Add a sphere light to the scene based on configuration.
 
-        # Use configured name if available, otherwise fall back to index-based naming
-        light_name = (
-            f"/World/{light_cfg.name}"
+        Supports both shared (global) and per-environment lighting.
+        """
+        import isaaclab.sim as sim_utils
+
+        # Determine base name
+        base_name = (
+            light_cfg.name
             if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
-            else f"/World/SphereLight_{light_index}"
+            else f"sphere_light_{light_index}"
         )
 
         # Create Isaac Lab sphere light configuration
@@ -1244,28 +1300,28 @@ class IsaacsimHandler(BaseSimHandler):
             normalize=light_cfg.normalize,
         )
 
-        spawn_light(
-            light_name,
-            isaac_light_cfg,
+        # Use helper to spawn and register
+        self._spawn_light_with_shared(
+            light_cfg=light_cfg,
+            base_name=base_name,
+            isaac_light_cfg=isaac_light_cfg,
+            light_type="sphere",
             orientation=(1.0, 0.0, 0.0, 0.0),
             translation=light_cfg.pos,
         )
 
-        log.debug(
-            f"Added sphere light {light_name} with intensity {light_cfg.intensity}, "
-            f"radius={light_cfg.radius} at {light_cfg.pos}"
-        )
-
     def _add_disk_light(self, light_cfg, light_index: int) -> None:
-        """Add a disk light to the scene based on configuration."""
-        import isaaclab.sim as sim_utils
-        from isaaclab.sim.spawners import spawn_light
+        """Add a disk light to the scene based on configuration.
 
-        # Use configured name if available, otherwise fall back to index-based naming
-        light_name = (
-            f"/World/{light_cfg.name}"
+        Supports both shared (global) and per-environment lighting.
+        """
+        import isaaclab.sim as sim_utils
+
+        # Determine base name
+        base_name = (
+            light_cfg.name
             if hasattr(light_cfg, "name") and light_cfg.name and light_cfg.name != "light"
-            else f"/World/DiskLight_{light_index}"
+            else f"disk_light_{light_index}"
         )
 
         # Create Isaac Lab disk light configuration
@@ -1276,16 +1332,14 @@ class IsaacsimHandler(BaseSimHandler):
             normalize=light_cfg.normalize,
         )
 
-        spawn_light(
-            light_name,
-            isaac_light_cfg,
+        # Use helper to spawn and register
+        self._spawn_light_with_shared(
+            light_cfg=light_cfg,
+            base_name=base_name,
+            isaac_light_cfg=isaac_light_cfg,
+            light_type="disk",
             orientation=light_cfg.rot,
             translation=light_cfg.pos,
-        )
-
-        log.debug(
-            f"Added disk light {light_name} with intensity {light_cfg.intensity}, "
-            f"radius={light_cfg.radius} at {light_cfg.pos}"
         )
 
     # def _load_ground(self) -> None:

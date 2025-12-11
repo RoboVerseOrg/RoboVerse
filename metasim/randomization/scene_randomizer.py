@@ -184,12 +184,20 @@ class SceneLayerCfg:
     Attributes:
         elements: List of scene elements (Manual Geometry or USD Assets)
         shared: Whether elements are shared across all environments
+        per_env: Whether each environment gets different randomization values.
+                 Only effective when shared=False.
+                 - For USD pools: Each env_id gets a different random USD selection
+                 - For Manual Geometry: No effect (use MaterialRandomizer for material randomization)
+                 - True: Each env_id gets different values (default: False)
+        env_ids: Environment IDs to apply this layer to (None = use parent's env_ids or all envs)
         z_offset: Z-axis offset to apply to all elements
         enabled: Whether this layer is active
     """
 
     elements: list[ManualGeometryCfg | USDAssetCfg | USDAssetPoolCfg] = dataclasses.field(default_factory=list)
     shared: bool = True
+    per_env: bool = False
+    env_ids: list[int] | None = None
     z_offset: float = 0.0
     enabled: bool = True
 
@@ -210,6 +218,8 @@ class SceneRandomCfg:
         objects_layer: Objects layer (distractors)
         auto_flush_visuals: Auto flush visual updates after material changes
         only_if_no_scene: Only create scene if none exists
+        env_ids: Default environment IDs to randomize (None = all environments).
+                 Can be overridden at call time.
     """
 
     environment_layer: SceneLayerCfg | None = None
@@ -217,6 +227,7 @@ class SceneRandomCfg:
     objects_layer: SceneLayerCfg | None = None
     auto_flush_visuals: bool = True
     only_if_no_scene: bool = False
+    env_ids: list[int] | None = None
 
 
 # =============================================================================
@@ -285,11 +296,36 @@ class SceneRandomizer(BaseRandomizerType):
         self.prim_utils = prim_utils
         self.stage = prim_utils.get_current_stage()
 
+        # Will be set in bind_handler
+        self.adapter = None
+
+    def bind_handler(self, handler):
+        """Bind handler (provides access to simulation stage).
+
+        Note: We do NOT use env_origins for manual offset calculation.
+        The /World/envs/env_X/ Xform nodes in USD already contain the coordinate
+        transformations, and child prims automatically inherit them.
+
+        Args:
+            handler: Simulation handler
+        """
+        super().bind_handler(handler)
+
+        # Get num_envs for logging
+        num_envs = handler.num_envs if hasattr(handler, "num_envs") else 1
+        logger.info(f"SceneRandomizer: Bound to handler with {num_envs} environments")
+
+        # Initialize adapter for material randomization
+        from metasim.randomization.core.isaacsim_adapter import IsaacSimAdapter
+
+        self.adapter = IsaacSimAdapter(handler)
+
     def __call__(self, env_ids: list[int] | None = None):
         """Execute scene randomization.
 
         Args:
-            env_ids: Environment IDs to randomize (None = all environments)
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
         """
         if not self._actual_handler:
             raise RuntimeError("Handler not bound. Call bind_handler() first.")
@@ -298,8 +334,13 @@ class SceneRandomizer(BaseRandomizerType):
         if self.cfg.only_if_no_scene and self._check_scene_exists():
             return
 
-        # Get target environment IDs
-        target_env_ids = env_ids if env_ids is not None else list(range(self._actual_handler.num_envs))
+        # Use provided env_ids, or fall back to config, or all environments
+        if env_ids is None:
+            env_ids = self.cfg.env_ids
+        if env_ids is None:
+            env_ids = list(range(self._actual_handler.num_envs))
+
+        target_env_ids = env_ids
 
         # Process layers
         if self.cfg.environment_layer and self.cfg.environment_layer.enabled:
@@ -324,15 +365,21 @@ class SceneRandomizer(BaseRandomizerType):
         self,
         layer_cfg: SceneLayerCfg,
         layer_name: str,
-        env_ids: list[int],
+        parent_env_ids: list[int],
     ):
         """Process a scene layer.
 
         Args:
             layer_cfg: Layer configuration
             layer_name: Layer name (environment, workspace, objects)
-            env_ids: Environment IDs to process
+            parent_env_ids: Environment IDs from parent (SceneRandomizer.__call__)
         """
+        # Layer's env_ids takes priority over parent's
+        if layer_cfg.env_ids is not None:
+            env_ids = layer_cfg.env_ids
+        else:
+            env_ids = parent_env_ids
+
         for element in layer_cfg.elements:
             if not element.enabled:
                 continue
@@ -362,6 +409,10 @@ class SceneRandomizer(BaseRandomizerType):
             layer_name: Layer name
             layer_cfg: Layer configuration
             env_ids: Environment IDs
+
+        Note:
+            per_env parameter has no effect on Manual Geometry.
+            Material randomization should be handled by MaterialRandomizer.
         """
         if layer_cfg.shared:
             # Shared: create one prim for all environments
@@ -409,6 +460,10 @@ class SceneRandomizer(BaseRandomizerType):
         pos = list(element.position)
         pos[2] += z_offset
 
+        # Note: We do NOT manually add env_origins offset here!
+        # The /World/envs/env_X/ Xform node already has the coordinate transformation.
+        # Any child prims will automatically inherit this transform from the USD hierarchy.
+
         # Create geometry based on type
         if element.geometry_type == "cube":
             geom = UsdGeom.Cube.Define(self.stage, prim_path)
@@ -454,6 +509,7 @@ class SceneRandomizer(BaseRandomizerType):
             UsdPhysics.CollisionAPI.Apply(geom.GetPrim())
 
         # Apply default material if specified (once, not randomized)
+        # For material randomization, use MaterialRandomizer separately
         if element.default_material:
             try:
                 if not hasattr(self, "adapter"):
@@ -490,8 +546,31 @@ class SceneRandomizer(BaseRandomizerType):
             logger.error(f"USD pool '{element.name}' has no candidates")
             return
 
+        if layer_cfg.shared:
+            # Shared: select once and apply to all environments
+            asset_cfg = self._select_from_usd_pool(element)
+            self._process_usd_asset(asset_cfg, layer_name, layer_cfg, env_ids, override_name=element.name)
+        elif layer_cfg.per_env:
+            # Per-env mode: each environment gets different selection
+            for env_id in env_ids:
+                asset_cfg = self._select_from_usd_pool(element)
+                self._process_usd_asset(asset_cfg, layer_name, layer_cfg, [env_id], override_name=element.name)
+        else:
+            # Per-env but same selection: select once, apply to specified env_ids
+            asset_cfg = self._select_from_usd_pool(element)
+            self._process_usd_asset(asset_cfg, layer_name, layer_cfg, env_ids, override_name=element.name)
+
+    def _select_from_usd_pool(self, element: USDAssetPoolCfg):
+        """Select one USD asset from pool based on strategy.
+
+        Args:
+            element: USD asset pool configuration
+
+        Returns:
+            Selected USDAssetCfg
+        """
         if element.selection_strategy == "random":
-            asset_cfg = self.rng.choice(element.candidates)
+            return self.rng.choice(element.candidates)
         else:  # sequential
             if not hasattr(self, "_usd_pool_indices"):
                 self._usd_pool_indices = {}
@@ -500,10 +579,7 @@ class SceneRandomizer(BaseRandomizerType):
                 self._usd_pool_indices[pool_key] = 0
             idx = self._usd_pool_indices[pool_key] % len(element.candidates)
             self._usd_pool_indices[pool_key] += 1
-            asset_cfg = element.candidates[idx]
-
-        # Process the selected USD asset (use pool name for consistent prim_path)
-        self._process_usd_asset(asset_cfg, layer_name, layer_cfg, env_ids, override_name=element.name)
+            return element.candidates[idx]
 
     def _process_usd_asset(
         self,
@@ -632,6 +708,11 @@ class SceneRandomizer(BaseRandomizerType):
             except Exception as e:
                 logger.error(f"Failed to load converted USD: {e}")
                 return
+
+        # CRITICAL: Disable instancing for this prim to ensure per-env independence
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if prim and prim.IsValid():
+            prim.SetInstanceable(False)
         else:
             # USD: Use reference (absolute path)
             usd_path_abs = os.path.abspath(usd_to_load)
@@ -653,6 +734,11 @@ class SceneRandomizer(BaseRandomizerType):
                 # Use absolute path and don't specify defaultPrim (USD will auto-find)
                 ref_prim.GetReferences().AddReference(usd_path_abs)
 
+        # CRITICAL: Disable instancing for this prim to ensure per-env independence
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if prim and prim.IsValid():
+            prim.SetInstanceable(False)
+
         # Set transform
         prim = self.stage.GetPrimAtPath(prim_path)
         if prim and prim.IsValid():
@@ -665,6 +751,9 @@ class SceneRandomizer(BaseRandomizerType):
                 # Update existing ops (preserve precision)
                 pos = list(element.position)
                 pos[2] += z_offset
+
+                # Note: We do NOT manually add env_origins offset here!
+                # The /World/envs/env_X/ Xform node already has the coordinate transformation.
 
                 for op in existing_ops:
                     op_name = op.GetOpName()
@@ -688,6 +777,10 @@ class SceneRandomizer(BaseRandomizerType):
                 xform.ClearXformOpOrder()
                 pos = list(element.position)
                 pos[2] += z_offset
+
+                # Note: We do NOT manually add env_origins offset here!
+                # The /World/envs/env_X/ Xform node already has the coordinate transformation.
+
                 xform.AddTranslateOp().Set(Gf.Vec3d(*pos))
                 if element.rotation != (1.0, 0.0, 0.0, 0.0):
                     xform.AddOrientOp().Set(
@@ -961,7 +1054,7 @@ class SceneRandomizer(BaseRandomizerType):
                     simulation_app=None,  # Already running
                     exit_close=False,
                     force_usd_conversion=True,
-                    make_instanceable=True,
+                    make_instanceable=False,  # CRITICAL: False to allow per-env randomization!
                 )
 
                 converter.convert(str(urdf_path), str(usd_output))

@@ -90,12 +90,16 @@ class PhysicalMaterialCfg:
         restitution_range: Restitution (bounciness) range (min, max)
         distribution: Random sampling distribution
         enabled: Whether to apply physical material randomization
+        per_env: Whether to generate different random values for each environment
+                 True: each env gets different properties (diverse materials)
+                 False: all envs get same properties (consistent material)
     """
 
     friction_range: tuple[float, float] | None = None
     restitution_range: tuple[float, float] | None = None
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
     enabled: bool = True
+    per_env: bool = False  # Default: same properties for all envs
 
 
 @configclass
@@ -109,6 +113,9 @@ class PBRMaterialCfg:
         diffuse_color_range: RGB color ranges
         distribution: Random sampling distribution
         enabled: Whether to apply PBR randomization
+        per_env: Whether to generate different random values for each environment
+                 True: each env gets different properties (diverse materials)
+                 False: all envs get same properties (consistent material)
     """
 
     roughness_range: tuple[float, float] | None = None
@@ -117,6 +124,7 @@ class PBRMaterialCfg:
     diffuse_color_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
     enabled: bool = True
+    per_env: bool = False  # Default: same properties for all envs
 
 
 @configclass
@@ -131,6 +139,9 @@ class MDLMaterialCfg:
         enabled: Whether to apply MDL randomization
         auto_download: Auto-download missing MDL files
         validate_paths: Validate file existence at init
+        per_env: Whether to select different MDL for each environment
+                 True: each env gets different material (diverse materials)
+                 False: all envs get same material (consistent material)
     """
 
     mdl_paths: list[str] = dataclasses.field(default_factory=list)
@@ -140,6 +151,7 @@ class MDLMaterialCfg:
     enabled: bool = True
     auto_download: bool = True
     validate_paths: bool = True
+    per_env: bool = False  # Default: same material for all envs
 
     def __post_init__(self):
         if self.enabled and not self.mdl_paths:
@@ -233,21 +245,25 @@ class MaterialRandomizer(BaseRandomizerType):
         # Torch generator for tensor operations
         self._torch_generator: torch.Generator | None = None
 
-    def __call__(self):
+    def __call__(self, env_ids: list[int] | None = None):
         """Execute material randomization.
+
+        Args:
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
 
         Note: MDL and PBR are mutually exclusive. If both are enabled,
         MDL takes priority (as it's more realistic).
         """
         # Visual material: MDL takes priority over PBR
         if self.cfg.mdl and self.cfg.mdl.enabled:
-            self.randomize_mdl_material()
+            self.randomize_mdl_material(env_ids=env_ids)
         elif self.cfg.pbr and self.cfg.pbr.enabled:
-            self.randomize_pbr_material()
+            self.randomize_pbr_material(env_ids=env_ids)
 
         # Physical material (can coexist with visual materials)
         if self.cfg.physical and self.cfg.physical.enabled:
-            self.randomize_physical_material()
+            self.randomize_physical_material(env_ids=env_ids)
 
         # Flush visual updates for instant switching
         self._flush_visual_updates()
@@ -256,12 +272,21 @@ class MaterialRandomizer(BaseRandomizerType):
     # MDL Material Randomization
     # -------------------------------------------------------------------------
 
-    def randomize_mdl_material(self):
-        """Apply MDL material randomization."""
+    def randomize_mdl_material(self, env_ids: list[int] | None = None):
+        """Apply MDL material randomization.
+
+        Args:
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
+        """
         if not self.cfg.mdl or not self.cfg.mdl.mdl_paths:
             return
 
-        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
+        # Use provided env_ids, or fall back to config, or all environments
+        if env_ids is None:
+            env_ids = self.cfg.env_ids
+        if env_ids is None:
+            env_ids = list(range(self._actual_handler.num_envs))
 
         # Get prim paths from Registry (supports both Static and Dynamic objects)
         try:
@@ -272,12 +297,40 @@ class MaterialRandomizer(BaseRandomizerType):
 
         # Apply material to each prim
         applied_prims = []
-        for prim_path in prim_paths:
-            # Select MDL
+
+        if self.cfg.mdl.per_env:
+            # Mode A: Different material for each environment (diverse materials)
+            for prim_path in prim_paths:
+                # Select MDL for this environment
+                mdl_path = self._select_mdl_path()
+                mdl_path = os.path.abspath(mdl_path)
+
+                # Select material variant for this environment
+                material_name = None
+                if self.cfg.mdl.randomize_material_variant and "::" not in mdl_path:
+                    materials = list_materials_in_mdl(mdl_path)
+                    if len(materials) > 1:
+                        material_name = self.rng.choice(materials)
+                elif "::" in mdl_path:
+                    mdl_path, material_name = mdl_path.split("::", 1)
+
+                # Apply MDL (Adapter handles download automatically)
+                try:
+                    self.adapter.apply_mdl_material(
+                        prim_path, mdl_path, material_name, auto_download=self.cfg.mdl.auto_download
+                    )
+                    applied_prims.append(prim_path)
+                except Exception as e:
+                    logger.warning(f"Failed to apply MDL to {prim_path}: {e}")
+
+            self._mark_visual_dirty()
+        else:
+            # Mode B: Same material for all environments (consistent material)
+            # Select MDL once
             mdl_path = self._select_mdl_path()
             mdl_path = os.path.abspath(mdl_path)
 
-            # Select material variant
+            # Select material variant once
             material_name = None
             if self.cfg.mdl.randomize_material_variant and "::" not in mdl_path:
                 materials = list_materials_in_mdl(mdl_path)
@@ -286,14 +339,15 @@ class MaterialRandomizer(BaseRandomizerType):
             elif "::" in mdl_path:
                 mdl_path, material_name = mdl_path.split("::", 1)
 
-            # Apply MDL (Adapter handles download automatically)
-            try:
-                self.adapter.apply_mdl_material(
-                    prim_path, mdl_path, material_name, auto_download=self.cfg.mdl.auto_download
-                )
-                applied_prims.append(prim_path)  # Track successful applications
-            except Exception as e:
-                logger.warning(f"Failed to apply MDL to {prim_path}: {e}")
+            # Apply same material to all prims
+            for prim_path in prim_paths:
+                try:
+                    self.adapter.apply_mdl_material(
+                        prim_path, mdl_path, material_name, auto_download=self.cfg.mdl.auto_download
+                    )
+                    applied_prims.append(prim_path)
+                except Exception as e:
+                    logger.warning(f"Failed to apply MDL to {prim_path}: {e}")
 
             self._mark_visual_dirty()
 
@@ -321,12 +375,21 @@ class MaterialRandomizer(BaseRandomizerType):
     # PBR Material Randomization
     # -------------------------------------------------------------------------
 
-    def randomize_pbr_material(self):
-        """Apply PBR material randomization."""
+    def randomize_pbr_material(self, env_ids: list[int] | None = None):
+        """Apply PBR material randomization.
+
+        Args:
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
+        """
         if not self.cfg.pbr:
             return
 
-        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
+        # Use provided env_ids, or fall back to config, or all environments
+        if env_ids is None:
+            env_ids = self.cfg.env_ids
+        if env_ids is None:
+            env_ids = list(range(self._actual_handler.num_envs))
 
         # Get prim paths from Registry
         try:
@@ -335,26 +398,66 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error(f"MaterialRandomizer: {e}")
             return
 
-        # Generate PBR config
-        pbr_config = {}
+        if self.cfg.pbr.per_env:
+            # Mode A: Different properties for each environment (diverse materials)
+            for prim_path in prim_paths:
+                # Generate PBR config for this environment
+                pbr_config = {}
 
-        if self.cfg.pbr.roughness_range:
-            pbr_config["roughness"] = self._generate_random_value(
-                self.cfg.pbr.roughness_range, self.cfg.pbr.distribution
-            )
+                if self.cfg.pbr.roughness_range:
+                    pbr_config["roughness"] = self._generate_random_value(
+                        self.cfg.pbr.roughness_range, self.cfg.pbr.distribution
+                    )
 
-        if self.cfg.pbr.metallic_range:
-            pbr_config["metallic"] = self._generate_random_value(self.cfg.pbr.metallic_range, self.cfg.pbr.distribution)
+                if self.cfg.pbr.metallic_range:
+                    pbr_config["metallic"] = self._generate_random_value(
+                        self.cfg.pbr.metallic_range, self.cfg.pbr.distribution
+                    )
 
-        if self.cfg.pbr.specular_range:
-            pbr_config["specular"] = self._generate_random_value(self.cfg.pbr.specular_range, self.cfg.pbr.distribution)
+                if self.cfg.pbr.specular_range:
+                    pbr_config["specular"] = self._generate_random_value(
+                        self.cfg.pbr.specular_range, self.cfg.pbr.distribution
+                    )
+
+                if self.cfg.pbr.diffuse_color_range:
+                    pbr_config["diffuse_color"] = tuple(
+                        self._generate_random_value(r, self.cfg.pbr.distribution)
+                        for r in self.cfg.pbr.diffuse_color_range
+                    )
+
+                # Apply to this prim
+                try:
+                    self.adapter.apply_pbr_material(prim_path, pbr_config)
+                except Exception as e:
+                    logger.warning(f"Failed to apply PBR to {prim_path}: {e}")
+
+                self._mark_visual_dirty()
+        else:
+            # Mode B: Same properties for all environments (consistent material)
+            # Generate PBR config once
+            pbr_config = {}
+
+            if self.cfg.pbr.roughness_range:
+                pbr_config["roughness"] = self._generate_random_value(
+                    self.cfg.pbr.roughness_range, self.cfg.pbr.distribution
+                )
+
+            if self.cfg.pbr.metallic_range:
+                pbr_config["metallic"] = self._generate_random_value(
+                    self.cfg.pbr.metallic_range, self.cfg.pbr.distribution
+                )
+
+            if self.cfg.pbr.specular_range:
+                pbr_config["specular"] = self._generate_random_value(
+                    self.cfg.pbr.specular_range, self.cfg.pbr.distribution
+                )
 
         if self.cfg.pbr.diffuse_color_range:
             pbr_config["diffuse_color"] = tuple(
                 self._generate_random_value(r, self.cfg.pbr.distribution) for r in self.cfg.pbr.diffuse_color_range
             )
 
-        # Apply PBR to each prim
+            # Apply same config to all prims
         for prim_path in prim_paths:
             try:
                 self.adapter.apply_pbr_material(prim_path, pbr_config)
@@ -367,8 +470,12 @@ class MaterialRandomizer(BaseRandomizerType):
     # Physical Material Randomization
     # -------------------------------------------------------------------------
 
-    def randomize_physical_material(self):
+    def randomize_physical_material(self, env_ids: list[int] | None = None):
         """Apply physical material randomization.
+
+        Args:
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
 
         Note: This only works for Static Objects with physics.
         Dynamic Objects (pure visual) will skip physics randomization.
@@ -400,16 +507,29 @@ class MaterialRandomizer(BaseRandomizerType):
             logger.error("Handler does not have scene attribute (not IsaacSim?)")
             return
 
-        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
+        # Use provided env_ids, or fall back to config, or all environments
+        if env_ids is None:
+            env_ids = self.cfg.env_ids
+        if env_ids is None:
+            env_ids = list(range(self._actual_handler.num_envs))
+
         # Convert env_ids to tensor for IsaacLab API (device will be matched per-operation)
         env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32)
         num_envs = env_ids_tensor.shape[0]
 
         # Randomize friction
         if self.cfg.physical.friction_range:
-            new_friction = self._generate_random_tensor(
-                num_envs, self.cfg.physical.friction_range, self.cfg.physical.distribution
-            )
+            if self.cfg.physical.per_env:
+                # Mode A: Different friction for each environment
+                new_friction = self._generate_random_tensor(
+                    num_envs, self.cfg.physical.friction_range, self.cfg.physical.distribution
+                )
+            else:
+                # Mode B: Same friction for all environments
+                friction_value = self._generate_random_value(
+                    self.cfg.physical.friction_range, self.cfg.physical.distribution
+                )
+                new_friction = torch.full((num_envs,), friction_value, dtype=torch.float32)
 
             try:
                 # Get current material properties
@@ -432,9 +552,17 @@ class MaterialRandomizer(BaseRandomizerType):
 
         # Randomize restitution
         if self.cfg.physical.restitution_range:
-            new_restitution = self._generate_random_tensor(
-                num_envs, self.cfg.physical.restitution_range, self.cfg.physical.distribution
-            )
+            if self.cfg.physical.per_env:
+                # Mode A: Different restitution for each environment
+                new_restitution = self._generate_random_tensor(
+                    num_envs, self.cfg.physical.restitution_range, self.cfg.physical.distribution
+                )
+            else:
+                # Mode B: Same restitution for all environments
+                restitution_value = self._generate_random_value(
+                    self.cfg.physical.restitution_range, self.cfg.physical.distribution
+                )
+                new_restitution = torch.full((num_envs,), restitution_value, dtype=torch.float32)
 
             try:
                 # Get current material properties

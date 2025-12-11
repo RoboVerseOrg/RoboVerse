@@ -65,11 +65,19 @@ class DRConfig:
         level: Randomization level (0=None, 1=Scene+Material, 2=+Light, 3=+Camera)
         scene_mode: Scene mode (0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD)
         randomization_seed: Seed for reproducibility. If None, uses random seed
+        environment_shared: Whether environment layer (floor/walls/ceiling) is shared across envs
+        workspace_shared: Whether workspace layer (tables) is shared across envs
+        objects_shared: Whether objects layer (decorations) is shared across envs
     """
 
     level: Literal[0, 1, 2, 3] = 0
     scene_mode: Literal[0, 1, 2, 3] = 0
     randomization_seed: int | None = None
+
+    # Shared configuration for each layer
+    environment_shared: bool = True  # Default: shared (save memory, floor/walls are large)
+    workspace_shared: bool = False  # Default: per-env (most important for diversity)
+    objects_shared: bool = False  # Default: per-env (small objects, low memory cost)
 
 
 class DomainRandomizationManager:
@@ -203,25 +211,32 @@ class DomainRandomizationManager:
         if mode >= 2:
             # USD Scene
             scene_paths, scene_configs = SceneUSDCollections.kujiale_scenes(return_configs=True)
-            log.info(f"Environment: Kujiale USD ({len(scene_paths)} scenes)")
+            shared_status = "shared" if self.config.environment_shared else "per-env"
+            log.info(f"Environment: Kujiale USD ({len(scene_paths)} scenes, {shared_status})")
             env_element = USDAssetPoolCfg(
                 name="kujiale_scene",
                 usd_paths=scene_paths,
                 per_path_overrides=scene_configs,
                 selection_strategy="random" if level >= 1 else "sequential",
             )
-            environment_layer = EnvironmentLayerCfg(elements=[env_element])
+            environment_layer = EnvironmentLayerCfg(
+                elements=[env_element],
+                shared=self.config.environment_shared,  # Apply shared config
+            )
         else:
             # Manual Scene
-            log.info("Environment: Manual geometry (10m x 10m x 5m)")
+            shared_status = "shared" if self.config.environment_shared else "per-env"
+            log.info(f"Environment: Manual geometry (10m x 10m x 5m, {shared_status})")
             base_cfg = ScenePresets.empty_room(room_size=10.0, wall_height=5.0)
             environment_layer = base_cfg.environment_layer
+            environment_layer.shared = self.config.environment_shared  # Apply shared config
 
         # Workspace Layer
         if mode >= 1:
             # USD Table
             table_paths, table_configs = SceneUSDCollections.table785(return_configs=True)
-            log.info(f"Workspace: Table785 USD ({len(table_paths)} tables)")
+            shared_status = "shared" if self.config.workspace_shared else "per-env"
+            log.info(f"Workspace: Table785 USD ({len(table_paths)} tables, {shared_status})")
             workspace_element = USDAssetPoolCfg(
                 name="table",
                 usd_paths=table_paths,
@@ -229,10 +244,14 @@ class DomainRandomizationManager:
                 selection_strategy="random" if level >= 1 else "sequential",
                 add_collision=True,
             )
-            workspace_layer = WorkspaceLayerCfg(elements=[workspace_element])
+            workspace_layer = WorkspaceLayerCfg(
+                elements=[workspace_element],
+                shared=self.config.workspace_shared,  # Apply shared config
+            )
         else:
             # Manual Table
-            log.info("Workspace: Manual table (Plywood default, randomized in level 1+)")
+            shared_status = "shared" if self.config.workspace_shared else "per-env"
+            log.info(f"Workspace: Manual table (Plywood default, randomized in level 1+, {shared_status})")
             workspace_layer = WorkspaceLayerCfg(
                 elements=[
                     ManualGeometryCfg(
@@ -243,13 +262,15 @@ class DomainRandomizationManager:
                         default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl",
                         add_collision=True,
                     )
-                ]
+                ],
+                shared=self.config.workspace_shared,  # Apply shared config
             )
 
         # Objects Layer
         if mode >= 3:
             object_paths, object_configs = SceneUSDCollections.desktop_supplies(return_configs=True)
-            log.info(f"Objects: Desktop supplies ({len(object_paths)} items, placing 3)")
+            shared_status = "shared" if self.config.objects_shared else "per-env"
+            log.info(f"Objects: Desktop supplies ({len(object_paths)} items, placing 3, {shared_status})")
             objects_layer = ObjectsLayerCfg(
                 elements=[
                     USDAssetPoolCfg(
@@ -260,7 +281,8 @@ class DomainRandomizationManager:
                         add_collision=True,
                     )
                     for i in range(3)
-                ]
+                ],
+                shared=self.config.objects_shared,  # Apply shared config
             )
         else:
             objects_layer = None
@@ -287,35 +309,32 @@ class DomainRandomizationManager:
 
         # Dynamic Objects (Manual geometry only)
         if mode == 0:
-            table_mat = MaterialRandomizer(
-                MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
-                seed=seed + 2 if seed is not None else None,
-            )
+            # Manual mode: table is global, per_env doesn't matter but set for consistency
+            table_cfg = MaterialPresets.mdl_family_object("table", family=("wood", "metal"))
+            table_cfg.mdl.per_env = True  # Enable per-env diversity
+            table_mat = MaterialRandomizer(table_cfg, seed=seed + 2 if seed is not None else None)
             table_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(table_mat)
 
         # Manual environment (mode < 2 and level >= 1)
         if mode < 2 and level >= 1:
-            floor_mat = MaterialRandomizer(
-                MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
-                seed=seed + 101 if seed is not None else None,
-            )
+            floor_cfg = MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone"))
+            floor_cfg.mdl.per_env = True  # Enable per-env diversity
+            floor_mat = MaterialRandomizer(floor_cfg, seed=seed + 101 if seed is not None else None)
             floor_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(floor_mat)
 
             wall_seed = seed + 102 if seed is not None else None
             for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
-                wall_mat = MaterialRandomizer(
-                    MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
-                    seed=wall_seed,
-                )
+                wall_cfg = MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture"))
+                wall_cfg.mdl.per_env = True  # Enable per-env diversity
+                wall_mat = MaterialRandomizer(wall_cfg, seed=wall_seed)
                 wall_mat.bind_handler(self.handler)
                 self.randomizers["material_dynamic"].append(wall_mat)
 
-            ceiling_mat = MaterialRandomizer(
-                MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
-                seed=seed + 103 if seed is not None else None,
-            )
+            ceiling_cfg = MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board"))
+            ceiling_cfg.mdl.per_env = True  # Enable per-env diversity
+            ceiling_mat = MaterialRandomizer(ceiling_cfg, seed=seed + 103 if seed is not None else None)
             ceiling_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(ceiling_mat)
 
@@ -343,13 +362,18 @@ class DomainRandomizationManager:
                 light_rand = LightRandomizer(
                     LightRandomCfg(
                         light_name=light_name,
-                        intensity=LightIntensityRandomCfg(intensity_range=main_range, enabled=True),
+                        intensity=LightIntensityRandomCfg(
+                            intensity_delta_range=main_range, use_delta=True, enabled=True
+                        ),
                         color=LightColorRandomCfg(
-                            temperature_range=(2800.0, 6500.0), use_temperature=True, enabled=True
+                            temperature_delta_range=(2800.0, 6500.0),
+                            use_temperature=True,
+                            use_delta=True,
+                            enabled=True,
                         ),
                         orientation=LightOrientationRandomCfg(
-                            angle_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),
-                            relative_to_origin=True,
+                            angle_delta_range=((-15.0, 15.0), (-15.0, 15.0), (-15.0, 15.0)),
+                            use_delta=True,
                             distribution="uniform",
                             enabled=True,
                         ),
@@ -361,13 +385,18 @@ class DomainRandomizationManager:
                 light_rand = LightRandomizer(
                     LightRandomCfg(
                         light_name=light_name,
-                        intensity=LightIntensityRandomCfg(intensity_range=corner_range, enabled=True),
+                        intensity=LightIntensityRandomCfg(
+                            intensity_delta_range=corner_range, use_delta=True, enabled=True
+                        ),
                         color=LightColorRandomCfg(
-                            temperature_range=(2500.0, 6000.0), use_temperature=True, enabled=True
+                            temperature_delta_range=(2500.0, 6000.0),
+                            use_temperature=True,
+                            use_delta=True,
+                            enabled=True,
                         ),
                         position=LightPositionRandomCfg(
-                            position_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),
-                            relative_to_origin=True,
+                            position_delta_range=((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3)),
+                            use_delta=True,
                             distribution="uniform",
                             enabled=True,
                         ),
@@ -398,10 +427,11 @@ class DomainRandomizationManager:
             cam_config = CameraRandomCfg(
                 camera_name=camera_name,
                 position=CameraPositionRandomCfg(
-                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (0.0, 0.1)),
+                    position_delta_range=((-0.05, 0.05), (-0.05, 0.05), (0.0, 0.1)),
                     use_delta=True,
                     distribution="uniform",
                     enabled=True,
+                    per_env=True,  # Cameras exist per-env, so this is meaningful
                 ),
             )
 

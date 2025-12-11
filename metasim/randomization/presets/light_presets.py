@@ -131,8 +131,8 @@ class LightPresets:
                 enabled=True,
             ),
             orientation=LightOrientationRandomCfg(
-                angle_range=LightOrientationRanges.LARGE,
-                relative_to_origin=True,
+                angle_delta_range=LightOrientationRanges.LARGE,
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -156,8 +156,8 @@ class LightPresets:
                 enabled=True,
             ),
             orientation=LightOrientationRandomCfg(
-                angle_range=LightOrientationRanges.MEDIUM,
-                relative_to_origin=True,
+                angle_delta_range=LightOrientationRanges.MEDIUM,
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -177,8 +177,8 @@ class LightPresets:
             ),
             color=LightColorRandomCfg(color_range=LightColorRanges.NATURAL, distribution="uniform", enabled=True),
             orientation=LightOrientationRandomCfg(
-                angle_range=LightOrientationRanges.MEDIUM,
-                relative_to_origin=True,
+                angle_delta_range=LightOrientationRanges.MEDIUM,
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -204,8 +204,8 @@ class LightPresets:
                 enabled=True,
             ),
             position=LightPositionRandomCfg(
-                position_range=LightPositionRanges.MEDIUM_OFFSET,
-                relative_to_origin=True,
+                position_delta_range=LightPositionRanges.MEDIUM_OFFSET,
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -230,8 +230,8 @@ class LightPresets:
                 enabled=True,
             ),
             position=LightPositionRandomCfg(
-                position_range=LightPositionRanges.SMALL_OFFSET,
-                relative_to_origin=True,
+                position_delta_range=LightPositionRanges.SMALL_OFFSET,
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -278,8 +278,8 @@ class LightPresets:
                 enabled=True,
             ),
             position=LightPositionRandomCfg(
-                position_range=LightPositionRanges.SMALL_OFFSET,  # Small offsets to avoid walls
-                relative_to_origin=True,
+                position_delta_range=LightPositionRanges.SMALL_OFFSET,  # Small offsets to avoid walls
+                use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -339,7 +339,7 @@ class LightPresets:
         return LightRandomCfg(
             light_name=light_name,
             position=LightPositionRandomCfg(
-                position_range=position_range, relative_to_origin=False, distribution="uniform", enabled=True
+                position_range=position_range, use_delta=False, distribution="uniform", enabled=True
             ),
         )
 

@@ -91,13 +91,13 @@ class CameraPresets:
         return CameraRandomCfg(
             camera_name=camera_name,
             position=CameraPositionRandomCfg(
-                delta_range=CameraProperties.DELTA_SMALL,
+                position_delta_range=CameraProperties.DELTA_SMALL,
                 use_delta=True,
                 distribution="uniform",
                 enabled=True,
             ),
             orientation=CameraOrientationRandomCfg(
-                rotation_delta=CameraProperties.ROTATION_DELTA_SMALL,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_SMALL,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -142,7 +142,7 @@ class CameraPresets:
         return CameraRandomCfg(
             camera_name=camera_name,
             position=CameraPositionRandomCfg(
-                delta_range=CameraProperties.DELTA_LARGE,
+                position_delta_range=CameraProperties.DELTA_LARGE,
                 use_delta=True,
                 distribution="uniform",
                 enabled=True,
@@ -165,7 +165,7 @@ class CameraPresets:
             ),
             orientation=CameraOrientationRandomCfg(
                 # Precise small adjustments
-                rotation_delta=CameraProperties.ROTATION_DELTA_TINY,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_TINY,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -199,7 +199,7 @@ class CameraPresets:
             ),
             orientation=CameraOrientationRandomCfg(
                 # Medium rotation adjustments
-                rotation_delta=CameraProperties.ROTATION_DELTA_MEDIUM,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_MEDIUM,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -225,7 +225,7 @@ class CameraPresets:
             ),
             orientation=CameraOrientationRandomCfg(
                 # Flying camera movements
-                rotation_delta=CameraProperties.ROTATION_DELTA_LARGE,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_LARGE,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -250,7 +250,7 @@ class CameraPresets:
             ),
             orientation=CameraOrientationRandomCfg(
                 # Dramatic camera movements
-                rotation_delta=CameraProperties.ROTATION_DELTA_LARGE,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_LARGE,
                 distribution="uniform",
                 enabled=True,
             ),
@@ -278,7 +278,7 @@ class CameraPresets:
             ),
             orientation=CameraOrientationRandomCfg(
                 # Precise inspection movements
-                rotation_delta=CameraProperties.ROTATION_DELTA_TINY,
+                rotation_delta_range=CameraProperties.ROTATION_DELTA_TINY,
                 distribution="gaussian",
                 enabled=True,
             ),

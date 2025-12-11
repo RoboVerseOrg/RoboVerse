@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 
 import torch
-from loguru import logger as log
 
 from metasim.utils import configclass
 from metasim.utils.math import quat_from_euler_xyz
@@ -21,8 +20,14 @@ class BaseLightCfg:
     """Intensity of the light"""
     color: tuple[float, float, float] = (1.0, 1.0, 1.0)
     """Color of the light"""
-    is_global: bool = False
-    """Whether the light is a global light that is not copied to each environment"""
+    shared: bool = True
+    """Whether the light is shared across all environments (True) or per-environment (False).
+
+    - True: One light prim for all environments (/World/light_name)
+    - False: One light prim per environment (/World/envs/env_X/light_name)
+
+    Default: True (global lighting, better performance)
+    """
 
 
 @configclass
@@ -33,8 +38,8 @@ class DistantLightCfg(BaseLightCfg):
     """Polar angle of the light (in degrees). Default is 0, which means the light is pointing towards Z- direction."""
     azimuth: float = 0.0
     """Azimuth angle of the light (in degrees). Default is 0."""
-    is_global: bool = True
-    """Whether the light is a global light that is not copied to each environment. For distant light, it must be global."""
+    shared: bool = True
+    """Distant lights are typically global. Can be set to False for per-env lighting (performance impact)."""
 
     @property
     def quat(self) -> tuple[float, float, float, float]:
@@ -43,12 +48,6 @@ class DistantLightCfg(BaseLightCfg):
         pitch = torch.tensor(0.0)
         yaw = torch.tensor(self.azimuth / 180.0 * math.pi)
         return tuple(quat_from_euler_xyz(roll, pitch, yaw).squeeze(0).tolist())
-
-    def __post_init__(self):
-        """Post-initialization hook to check if the light is global."""
-        if not self.is_global:
-            log.warning("Distant light must be global, overriding the value.")
-            self.is_global = True
 
 
 @configclass
@@ -63,6 +62,8 @@ class CylinderLightCfg(BaseLightCfg):
     """Position of the cylinder (in m). Default is (0.0, 0.0, 0.0)."""
     rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     """Orientation of the cylinder. Default is (1.0, 0.0, 0.0, 0.0)."""
+    shared: bool = True
+    """Whether the light is shared across all environments. Default is True."""
 
 
 @configclass
@@ -71,14 +72,8 @@ class DomeLightCfg(BaseLightCfg):
 
     texture_file: str | None = None
     """Path to HDR texture file for environment lighting. If None, uses uniform color."""
-    is_global: bool = True
-    """Whether the light is a global light that is not copied to each environment. For dome light, it should be global."""
-
-    def __post_init__(self):
-        """Post-initialization hook to check if the light is global."""
-        if not self.is_global:
-            log.warning("Dome light should be global, overriding the value.")
-            self.is_global = True
+    shared: bool = True
+    """Dome lights are typically global. Can be set to False for per-env lighting (performance impact)."""
 
 
 @configclass
@@ -91,6 +86,8 @@ class SphereLightCfg(BaseLightCfg):
     """Position of the sphere light (in m). Default is (0.0, 0.0, 0.0)."""
     normalize: bool = True
     """Whether to normalize the light intensity based on the sphere area."""
+    shared: bool = True
+    """Whether the light is shared across all environments. Default is True."""
 
 
 @configclass
@@ -105,3 +102,5 @@ class DiskLightCfg(BaseLightCfg):
     """Orientation of the disk. Default is (1.0, 0.0, 0.0, 0.0) (pointing down)."""
     normalize: bool = True
     """Whether to normalize the light intensity based on the disk area."""
+    shared: bool = True
+    """Whether the light is shared across all environments. Default is True."""

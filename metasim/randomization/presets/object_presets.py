@@ -11,11 +11,10 @@ class ObjectPresets:
     @staticmethod
     def physics_only(
         obj_name: str,
-        mass_range: tuple[float, float] | None = None,
-        friction_range: tuple[float, float] | None = None,
-        restitution_range: tuple[float, float] | None = None,
+        mass_delta_range: tuple[float, float] | None = None,
+        friction_delta_range: tuple[float, float] | None = None,
+        restitution_delta_range: tuple[float, float] | None = None,
         distribution: str = "uniform",
-        operation: str = "scale",
         body_name: str | None = None,
         env_ids: list[int] | None = None,
     ) -> ObjectRandomCfg:
@@ -23,11 +22,10 @@ class ObjectPresets:
 
         Args:
             obj_name: Name of the object to randomize
-            mass_range: Range for mass randomization (kg). None to disable.
-            friction_range: Range for friction randomization. None to disable.
-            restitution_range: Range for restitution randomization. None to disable.
+            mass_delta_range: Delta range for mass randomization (kg). None to disable.
+            friction_delta_range: Delta range for friction randomization. None to disable.
+            restitution_delta_range: Delta range for restitution randomization. None to disable.
             distribution: Distribution type ("uniform", "log_uniform", "gaussian")
-            operation: Operation type ("add", "scale", "abs")
             body_name: Specific body name or None for all bodies
             env_ids: Environment IDs or None for all environments
         """
@@ -37,11 +35,12 @@ class ObjectPresets:
             env_ids=env_ids,
             physics=PhysicsRandomCfg(
                 enabled=True,
-                mass_range=mass_range,
-                friction_range=friction_range,
-                restitution_range=restitution_range,
+                mass_delta_range=mass_delta_range,
+                friction_delta_range=friction_delta_range,
+                restitution_delta_range=restitution_delta_range,
                 distribution=distribution,
-                operation=operation,
+                use_delta=True,
+                use_scale=True,
             ),
             pose=PoseRandomCfg(enabled=False),
         )
@@ -49,11 +48,10 @@ class ObjectPresets:
     @staticmethod
     def pose_only(
         obj_name: str,
-        position_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None,
-        rotation_range: tuple[float, float] | None = None,
+        position_delta_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None,
+        rotation_delta_range: tuple[float, float] | None = None,
         rotation_axes: tuple[bool, bool, bool] = (True, True, True),
         distribution: str = "uniform",
-        operation: str = "add",
         keep_on_ground: bool = True,
         env_ids: list[int] | None = None,
     ) -> ObjectRandomCfg:
@@ -61,11 +59,10 @@ class ObjectPresets:
 
         Args:
             obj_name: Name of the object to randomize
-            position_range: Range for position randomization [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
-            rotation_range: Range for rotation randomization in degrees (min, max)
+            position_delta_range: Delta range for position randomization [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
+            rotation_delta_range: Delta range for rotation randomization in degrees (min, max)
             rotation_axes: Which axes to randomize rotation around (x, y, z)
             distribution: Distribution type ("uniform", "gaussian")
-            operation: Operation type ("add", "abs")
             keep_on_ground: Whether to keep object on ground (z >= 0)
             env_ids: Environment IDs or None for all environments
         """
@@ -75,28 +72,26 @@ class ObjectPresets:
             physics=PhysicsRandomCfg(enabled=False),
             pose=PoseRandomCfg(
                 enabled=True,
-                position_range=position_range,
-                rotation_range=rotation_range,
+                position_delta_range=position_delta_range,
+                rotation_delta_range=rotation_delta_range,
                 rotation_axes=rotation_axes,
                 distribution=distribution,
-                operation=operation,
                 keep_on_ground=keep_on_ground,
+                use_delta=True,
             ),
         )
 
     @staticmethod
     def combined(
         obj_name: str,
-        mass_range: tuple[float, float] | None = None,
-        friction_range: tuple[float, float] | None = None,
-        restitution_range: tuple[float, float] | None = None,
-        position_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None,
-        rotation_range: tuple[float, float] | None = None,
+        mass_delta_range: tuple[float, float] | None = None,
+        friction_delta_range: tuple[float, float] | None = None,
+        restitution_delta_range: tuple[float, float] | None = None,
+        position_delta_range: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] | None = None,
+        rotation_delta_range: tuple[float, float] | None = None,
         rotation_axes: tuple[bool, bool, bool] = (True, True, True),
         physics_distribution: str = "uniform",
-        physics_operation: str = "scale",
         pose_distribution: str = "uniform",
-        pose_operation: str = "add",
         keep_on_ground: bool = True,
         body_name: str | None = None,
         env_ids: list[int] | None = None,
@@ -105,22 +100,20 @@ class ObjectPresets:
 
         Args:
             obj_name: Name of the object to randomize
-            mass_range: Range for mass randomization (kg). None to disable.
-            friction_range: Range for friction randomization. None to disable.
-            restitution_range: Range for restitution randomization. None to disable.
-            position_range: Range for position randomization [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
-            rotation_range: Range for rotation randomization in degrees (min, max)
+            mass_delta_range: Delta range for mass randomization (kg). None to disable.
+            friction_delta_range: Delta range for friction randomization. None to disable.
+            restitution_delta_range: Delta range for restitution randomization. None to disable.
+            position_delta_range: Delta range for position randomization [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
+            rotation_delta_range: Delta range for rotation randomization in degrees (min, max)
             rotation_axes: Which axes to randomize rotation around (x, y, z)
             physics_distribution: Distribution type for physics ("uniform", "log_uniform", "gaussian")
-            physics_operation: Operation type for physics ("add", "scale", "abs")
             pose_distribution: Distribution type for pose ("uniform", "gaussian")
-            pose_operation: Operation type for pose ("add", "abs")
             keep_on_ground: Whether to keep object on ground (z >= 0)
             body_name: Specific body name or None for all bodies
             env_ids: Environment IDs or None for all environments
         """
-        physics_enabled = any([mass_range, friction_range, restitution_range])
-        pose_enabled = any([position_range, rotation_range])
+        physics_enabled = any([mass_delta_range, friction_delta_range, restitution_delta_range])
+        pose_enabled = any([position_delta_range, rotation_delta_range])
 
         return ObjectRandomCfg(
             obj_name=obj_name,
@@ -128,20 +121,21 @@ class ObjectPresets:
             env_ids=env_ids,
             physics=PhysicsRandomCfg(
                 enabled=physics_enabled,
-                mass_range=mass_range,
-                friction_range=friction_range,
-                restitution_range=restitution_range,
+                mass_delta_range=mass_delta_range,
+                friction_delta_range=friction_delta_range,
+                restitution_delta_range=restitution_delta_range,
                 distribution=physics_distribution,
-                operation=physics_operation,
+                use_delta=True,
+                use_scale=True,
             ),
             pose=PoseRandomCfg(
                 enabled=pose_enabled,
-                position_range=position_range,
-                rotation_range=rotation_range,
+                position_delta_range=position_delta_range,
+                rotation_delta_range=rotation_delta_range,
                 rotation_axes=rotation_axes,
                 distribution=pose_distribution,
-                operation=pose_operation,
                 keep_on_ground=keep_on_ground,
+                use_delta=True,
             ),
         )
 
@@ -152,10 +146,10 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.8, 1.2),  # ±20% mass variation
-            friction_range=(0.7, 1.3),  # ±30% friction variation
-            position_range=[(-0.05, 0.05), (-0.05, 0.05), (0.0, 0.02)],  # Small position jitter
-            rotation_range=(-10, 10),  # ±10 degree rotation
+            mass_delta_range=(0.8, 1.2),  # ±20% mass variation
+            friction_delta_range=(0.7, 1.3),  # ±30% friction variation
+            position_delta_range=[(-0.05, 0.05), (-0.05, 0.05), (0.0, 0.02)],  # Small position jitter
+            rotation_delta_range=(-10, 10),  # ±10 degree rotation
             physics_distribution="gaussian",
             pose_distribution="gaussian",
         )
@@ -166,11 +160,11 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.5, 2.0),  # 2x-4x mass variation
-            friction_range=(0.5, 1.5),  # ±50% friction variation
-            restitution_range=(0.1, 0.3),  # Low bounce for heavy objects
-            position_range=[(-0.02, 0.02), (-0.02, 0.02), (0.0, 0.01)],  # Minimal position jitter
-            rotation_range=(-5, 5),  # ±5 degree rotation
+            mass_delta_range=(0.5, 2.0),  # 2x-4x mass variation
+            friction_delta_range=(0.5, 1.5),  # ±50% friction variation
+            restitution_delta_range=(0.1, 0.3),  # Low bounce for heavy objects
+            position_delta_range=[(-0.02, 0.02), (-0.02, 0.02), (0.0, 0.01)],  # Minimal position jitter
+            rotation_delta_range=(-5, 5),  # ±5 degree rotation
             physics_distribution="log_uniform",
             pose_distribution="uniform",
         )
@@ -181,11 +175,11 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.6, 1.4),  # ±40% mass variation
-            friction_range=(0.3, 0.8),  # Lower friction for bounciness
-            restitution_range=(0.6, 0.9),  # High bounce
-            position_range=[(-0.1, 0.1), (-0.1, 0.1), (0.0, 0.05)],  # More position variation
-            rotation_range=(-20, 20),  # ±20 degree rotation
+            mass_delta_range=(0.6, 1.4),  # ±40% mass variation
+            friction_delta_range=(0.3, 0.8),  # Lower friction for bounciness
+            restitution_delta_range=(0.6, 0.9),  # High bounce
+            position_delta_range=[(-0.1, 0.1), (-0.1, 0.1), (0.0, 0.05)],  # More position variation
+            rotation_delta_range=(-20, 20),  # ±20 degree rotation
             physics_distribution="uniform",
             pose_distribution="uniform",
         )
@@ -196,10 +190,10 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.7, 1.3),  # ±30% mass variation for payload simulation
-            friction_range=(0.8, 1.2),  # ±20% friction variation
-            position_range=[(-0.01, 0.01), (-0.01, 0.01), (0.0, 0.0)],  # Minimal base movement
-            rotation_range=(-2, 2),  # ±2 degree rotation (base alignment errors)
+            mass_delta_range=(0.7, 1.3),  # ±30% mass variation for payload simulation
+            friction_delta_range=(0.8, 1.2),  # ±20% friction variation
+            position_delta_range=[(-0.01, 0.01), (-0.01, 0.01), (0.0, 0.0)],  # Minimal base movement
+            rotation_delta_range=(-2, 2),  # ±2 degree rotation (base alignment errors)
             rotation_axes=(False, False, True),  # Only Z-axis rotation
             physics_distribution="gaussian",
             pose_distribution="gaussian",
@@ -211,10 +205,10 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.5, 1.5),  # Varied mass for grasping challenge
-            friction_range=(0.4, 1.6),  # Wide friction range for grip variation
-            position_range=[(-0.15, 0.15), (-0.15, 0.15), (0.0, 0.1)],  # Varied starting positions
-            rotation_range=(-45, 45),  # ±45 degree rotation for orientation challenge
+            mass_delta_range=(0.5, 1.5),  # Varied mass for grasping challenge
+            friction_delta_range=(0.4, 1.6),  # Wide friction range for grip variation
+            position_delta_range=[(-0.15, 0.15), (-0.15, 0.15), (0.0, 0.1)],  # Varied starting positions
+            rotation_delta_range=(-45, 45),  # ±45 degree rotation for orientation challenge
             physics_distribution="log_uniform",
             pose_distribution="uniform",
             keep_on_ground=True,
@@ -226,10 +220,10 @@ class ObjectPresets:
         return ObjectPresets.combined(
             obj_name=obj_name,
             env_ids=env_ids,
-            mass_range=(0.8, 1.2),  # ±20% mass variation
-            friction_range=(0.9, 1.1),  # ±10% friction variation (tools should be predictable)
-            position_range=[(-0.03, 0.03), (-0.03, 0.03), (0.0, 0.01)],  # Small position variation
-            rotation_range=(-15, 15),  # ±15 degree rotation
+            mass_delta_range=(0.8, 1.2),  # ±20% mass variation
+            friction_delta_range=(0.9, 1.1),  # ±10% friction variation (tools should be predictable)
+            position_delta_range=[(-0.03, 0.03), (-0.03, 0.03), (0.0, 0.01)],  # Small position variation
+            rotation_delta_range=(-15, 15),  # ±15 degree rotation
             physics_distribution="gaussian",
             pose_distribution="gaussian",
         )

@@ -35,19 +35,31 @@ class PhysicsRandomCfg:
 
     Attributes:
         enabled: Whether to enable physics randomization
-        mass_range: Mass randomization range (kg)
-        friction_range: Friction coefficient range
-        restitution_range: Restitution (bounciness) range
+        mass_range: Absolute mass range (kg)
+        mass_delta_range: Relative mass delta range (kg offset or scale factor)
+        friction_range: Absolute friction coefficient range
+        friction_delta_range: Relative friction delta range (offset or scale factor)
+        restitution_range: Absolute restitution (bounciness) range
+        restitution_delta_range: Relative restitution delta range (offset or scale factor)
         distribution: Random sampling distribution
-        operation: Operation to apply (add, scale, abs)
+        use_delta: Use delta (relative) mode instead of absolute
+        use_scale: For delta mode, use multiplicative scale instead of additive offset (only for mass)
+        per_env: Whether to generate different random values for each environment
+                 True: each env gets different physics properties
+                 False: all envs get same physics properties
     """
 
     enabled: bool = False
     mass_range: tuple[float, float] | None = None
+    mass_delta_range: tuple[float, float] | None = None
     friction_range: tuple[float, float] | None = None
+    friction_delta_range: tuple[float, float] | None = None
     restitution_range: tuple[float, float] | None = None
+    restitution_delta_range: tuple[float, float] | None = None
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform"
-    operation: Literal["add", "scale", "abs"] = "scale"
+    use_delta: bool = True  # Default: use delta (relative to original)
+    use_scale: bool = False  # Default: additive offset, not multiplicative scale
+    per_env: bool = False  # Default: same physics for all envs
 
 
 @configclass
@@ -56,21 +68,29 @@ class PoseRandomCfg:
 
     Attributes:
         enabled: Whether to enable pose randomization
-        position_range: Position range per axis [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
-        rotation_range: Rotation range in degrees (min, max)
+        position_range: Absolute position range per axis [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
+        position_delta_range: Relative position delta range per axis
+        rotation_range: Absolute rotation range in degrees (min, max)
+        rotation_delta_range: Relative rotation delta range in degrees (min, max)
         rotation_axes: Which axes to randomize rotation around (x, y, z)
         distribution: Random sampling distribution
-        operation: Operation to apply (add, abs)
+        use_delta: Use delta (relative) mode instead of absolute
         keep_on_ground: Keep object z >= 0
+        per_env: Whether to generate different random values for each environment
+                 True: each env gets different pose
+                 False: all envs get same pose
     """
 
     enabled: bool = False
     position_range: list[tuple[float, float]] | None = None
+    position_delta_range: list[tuple[float, float]] | None = None
     rotation_range: tuple[float, float] | None = None
+    rotation_delta_range: tuple[float, float] | None = None
     rotation_axes: tuple[bool, bool, bool] = (True, True, True)
     distribution: Literal["uniform", "gaussian"] = "uniform"
-    operation: Literal["add", "abs"] = "add"
+    use_delta: bool = True  # Default: use delta (relative to original)
     keep_on_ground: bool = True
+    per_env: bool = False  # Default: same pose for all envs
 
 
 @configclass
@@ -156,8 +176,18 @@ class ObjectRandomizer(BaseRandomizerType):
         self.registry: ObjectRegistry | None = None
         self.adapter: IsaacSimAdapter | None = None
 
-    def __call__(self):
-        """Execute object randomization with intelligent handling."""
+        # Store original poses for consistent delta-based randomization
+        self._original_poses: dict[str, dict] = {}  # {obj_name: {"pos": tensor, "rot": tensor}}
+        # Store original physics properties
+        self._original_physics: dict[str, dict] = {}  # {obj_name: {"mass": tensor}}
+
+    def __call__(self, env_ids: list[int] | None = None):
+        """Execute object randomization with intelligent handling.
+
+        Args:
+            env_ids: Environment IDs to randomize. If None, uses self.cfg.env_ids.
+                     If both are None, randomizes all environments.
+        """
         # Get object metadata from Registry
         obj_meta = self.registry.get(self.cfg.obj_name)
         if not obj_meta:
@@ -165,7 +195,11 @@ class ObjectRandomizer(BaseRandomizerType):
                 f"Object '{self.cfg.obj_name}' not found in registry. Available objects: {self.registry.list_objects()}"
             )
 
-        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
+        # Use provided env_ids, or fall back to config, or all environments
+        if env_ids is None:
+            env_ids = self.cfg.env_ids
+        if env_ids is None:
+            env_ids = list(range(self._actual_handler.num_envs))
 
         # Physics randomization (only for Static Objects with physics)
         if self.cfg.physics.enabled:
@@ -221,50 +255,141 @@ class ObjectRandomizer(BaseRandomizerType):
         num_envs = env_ids.shape[0]
 
         # Randomize mass
-        if self.cfg.physics.mass_range:
-            # Get all masses, then index by env_ids (match device)
+        if self.cfg.physics.mass_delta_range or self.cfg.physics.mass_range:
+            # Save original mass on first call
+            if self.cfg.obj_name not in self._original_physics:
+                all_masses = obj_inst.root_physx_view.get_masses()
+                self._original_physics[self.cfg.obj_name] = {
+                    "mass": all_masses.clone()  # Clone to avoid reference issues
+                }
+
+            # Get original and current masses
+            original_mass = self._original_physics[self.cfg.obj_name]["mass"]
             all_masses = obj_inst.root_physx_view.get_masses()
             env_ids_mass = env_ids.to(all_masses.device)
-            new_mass = current_mass = all_masses
-            num_links = current_mass.shape[1] if len(current_mass.shape) > 1 else 1
+            new_mass = all_masses
+            num_links = original_mass.shape[1] if len(original_mass.shape) > 1 else 1
             shape = (num_envs, num_links)
 
-            rand_values = self._generate_random_tensor(
-                shape, self.cfg.physics.distribution, self.cfg.physics.mass_range
-            )
-            rand_values = rand_values.to(current_mass.device)
-
-            if self.cfg.physics.operation == "add":
-                new_mass[env_ids_mass] = current_mass[env_ids_mass] + rand_values
-            elif self.cfg.physics.operation == "scale":
-                new_mass[env_ids_mass] = current_mass[env_ids_mass] * rand_values
-            elif self.cfg.physics.operation == "abs":
-                new_mass[env_ids_mass] = rand_values
+            if self.cfg.physics.per_env:
+                # Mode A: Different mass for each environment
+                rand_values = self._generate_random_tensor(
+                    shape,
+                    self.cfg.physics.distribution,
+                    (self.cfg.physics.mass_delta_range if self.cfg.physics.use_delta else self.cfg.physics.mass_range),
+                )
             else:
-                raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
+                # Mode B: Same mass for all environments
+                if num_links > 1:
+                    single_values = self._generate_random_tensor(
+                        (1, num_links),
+                        self.cfg.physics.distribution,
+                        (
+                            self.cfg.physics.mass_delta_range
+                            if self.cfg.physics.use_delta
+                            else self.cfg.physics.mass_range
+                        ),
+                    )
+                    rand_values = single_values.repeat(num_envs, 1)
+                else:
+                    single_value = self._generate_random_value(
+                        self.cfg.physics.mass_range, self.cfg.physics.distribution
+                    )
+                    rand_values = torch.full(shape, single_value, dtype=torch.float32)
+
+            rand_values = rand_values.to(original_mass.device)
+
+            # Apply based on mode
+            if self.cfg.physics.use_delta:
+                if self.cfg.physics.use_scale:
+                    # Multiplicative scale
+                    new_mass[env_ids_mass] = original_mass[env_ids_mass] * rand_values
+                else:
+                    # Additive offset
+                    new_mass[env_ids_mass] = original_mass[env_ids_mass] + rand_values
+            else:
+                # Absolute mode
+                new_mass[env_ids_mass] = rand_values
 
             # Set masses with indices parameter (use device-matched tensor)
             obj_inst.root_physx_view.set_masses(new_mass, indices=env_ids_mass)
 
         # Randomize friction
-        if self.cfg.physics.friction_range:
-            rand_friction = self._generate_random_tensor(
-                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.friction_range
-            )
+        if self.cfg.physics.friction_delta_range or self.cfg.physics.friction_range:
+            # Save original friction on first call
+            if self.cfg.obj_name not in self._original_physics:
+                self._original_physics[self.cfg.obj_name] = {}
+
+            if "friction" not in self._original_physics[self.cfg.obj_name]:
+                try:
+                    materials = obj_inst.root_physx_view.get_material_properties()
+                    # Store static friction (index 0)
+                    if len(materials.shape) == 3:
+                        original_friction = materials[:, :, 0].clone()
+                    else:
+                        original_friction = materials[:, 0].clone()
+                    self._original_physics[self.cfg.obj_name]["friction"] = original_friction
+                except Exception as e:
+                    logger.error(f"Failed to get original friction: {e}")
+                    return
+
+            original_friction = self._original_physics[self.cfg.obj_name]["friction"]
+
+            if self.cfg.physics.per_env:
+                # Mode A: Different friction for each environment
+                rand_friction = self._generate_random_tensor(
+                    (num_envs,),
+                    self.cfg.physics.distribution,
+                    (
+                        self.cfg.physics.friction_delta_range
+                        if self.cfg.physics.use_delta
+                        else self.cfg.physics.friction_range
+                    ),
+                )
+            else:
+                # Mode B: Same friction for all environments
+                friction_value = self._generate_random_value(
+                    (
+                        self.cfg.physics.friction_delta_range
+                        if self.cfg.physics.use_delta
+                        else self.cfg.physics.friction_range
+                    ),
+                    self.cfg.physics.distribution,
+                )
+                rand_friction = torch.full((num_envs,), friction_value, dtype=torch.float32)
+
+            rand_friction = rand_friction.to(original_friction.device)
 
             try:
                 # Get current material properties
                 materials = obj_inst.root_physx_view.get_material_properties()
 
+                # Calculate new friction based on mode
+                if self.cfg.physics.use_delta:
+                    # Delta mode
+                    if len(materials.shape) == 3:
+                        new_friction = original_friction[env_ids] + rand_friction.unsqueeze(1)
+                    else:
+                        new_friction = original_friction[env_ids] + rand_friction
+                else:
+                    # Absolute mode
+                    if len(materials.shape) == 3:
+                        new_friction = rand_friction.unsqueeze(1).expand(-1, materials.shape[1])
+                    else:
+                        new_friction = rand_friction
+
+                # Clamp to valid range [0, ∞), practical max ~2.0
+                new_friction = torch.clamp(new_friction, min=0.0, max=2.0)
+
                 # Update friction (index 0=static, 1=dynamic, 2=restitution)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 0] = rand_friction.unsqueeze(1).to(materials.device)
-                    materials[env_ids, :, 1] = rand_friction.unsqueeze(1).to(materials.device)
+                    materials[env_ids, :, 0] = new_friction
+                    materials[env_ids, :, 1] = new_friction  # Same for dynamic friction
                 else:
                     # [num_envs, 3]
-                    materials[env_ids, 0] = rand_friction.to(materials.device)
-                    materials[env_ids, 1] = rand_friction.to(materials.device)
+                    materials[env_ids, 0] = new_friction
+                    materials[env_ids, 1] = new_friction
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids)
@@ -272,22 +397,79 @@ class ObjectRandomizer(BaseRandomizerType):
                 logger.error(f"Failed to set friction: {e}")
 
         # Randomize restitution
-        if self.cfg.physics.restitution_range:
-            rand_restitution = self._generate_random_tensor(
-                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.restitution_range
-            )
+        if self.cfg.physics.restitution_delta_range or self.cfg.physics.restitution_range:
+            # Save original restitution on first call
+            if self.cfg.obj_name not in self._original_physics:
+                self._original_physics[self.cfg.obj_name] = {}
+
+            if "restitution" not in self._original_physics[self.cfg.obj_name]:
+                try:
+                    materials = obj_inst.root_physx_view.get_material_properties()
+                    # Store restitution (index 2)
+                    if len(materials.shape) == 3:
+                        original_restitution = materials[:, :, 2].clone()
+                    else:
+                        original_restitution = materials[:, 2].clone()
+                    self._original_physics[self.cfg.obj_name]["restitution"] = original_restitution
+                except Exception as e:
+                    logger.error(f"Failed to get original restitution: {e}")
+                    return
+
+            original_restitution = self._original_physics[self.cfg.obj_name]["restitution"]
+
+            if self.cfg.physics.per_env:
+                # Mode A: Different restitution for each environment
+                rand_restitution = self._generate_random_tensor(
+                    (num_envs,),
+                    self.cfg.physics.distribution,
+                    (
+                        self.cfg.physics.restitution_delta_range
+                        if self.cfg.physics.use_delta
+                        else self.cfg.physics.restitution_range
+                    ),
+                )
+            else:
+                # Mode B: Same restitution for all environments
+                restitution_value = self._generate_random_value(
+                    (
+                        self.cfg.physics.restitution_delta_range
+                        if self.cfg.physics.use_delta
+                        else self.cfg.physics.restitution_range
+                    ),
+                    self.cfg.physics.distribution,
+                )
+                rand_restitution = torch.full((num_envs,), restitution_value, dtype=torch.float32)
+
+            rand_restitution = rand_restitution.to(original_restitution.device)
 
             try:
                 # Get current material properties
                 materials = obj_inst.root_physx_view.get_material_properties()
 
+                # Calculate new restitution based on mode
+                if self.cfg.physics.use_delta:
+                    # Delta mode
+                    if len(materials.shape) == 3:
+                        new_restitution = original_restitution[env_ids] + rand_restitution.unsqueeze(1)
+                    else:
+                        new_restitution = original_restitution[env_ids] + rand_restitution
+                else:
+                    # Absolute mode
+                    if len(materials.shape) == 3:
+                        new_restitution = rand_restitution.unsqueeze(1).expand(-1, materials.shape[1])
+                    else:
+                        new_restitution = rand_restitution
+
+                # Clamp to valid range [0, 1]
+                new_restitution = torch.clamp(new_restitution, min=0.0, max=1.0)
+
                 # Update restitution (index 2)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 2] = rand_restitution.unsqueeze(1).to(materials.device)
+                    materials[env_ids, :, 2] = new_restitution
                 else:
                     # [num_envs, 3]
-                    materials[env_ids, 2] = rand_restitution.to(materials.device)
+                    materials[env_ids, 2] = new_restitution
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids)
@@ -319,24 +501,45 @@ class ObjectRandomizer(BaseRandomizerType):
 
         num_envs = env_ids.shape[0]
 
-        # Get current pose
-        root_state = obj_inst.data.root_state_w[env_ids]
-        current_pos = root_state[:, 0:3]
-        current_rot = root_state[:, 3:7]
+        # Save original pose on first call
+        if self.cfg.obj_name not in self._original_poses:
+            root_state = obj_inst.data.root_state_w
+            self._original_poses[self.cfg.obj_name] = {
+                "pos": root_state[:, 0:3].clone(),  # Clone to avoid reference issues
+                "rot": root_state[:, 3:7].clone(),
+            }
+
+        # Use original pose as base for delta operations
+        original_pos = self._original_poses[self.cfg.obj_name]["pos"][env_ids]
+        original_rot = self._original_poses[self.cfg.obj_name]["rot"][env_ids]
 
         # Randomize position
-        new_pos = current_pos.clone()
-        if self.cfg.pose.position_range:
-            for axis in range(3):
-                if axis < len(self.cfg.pose.position_range):
-                    rand_offset = self._generate_random_tensor(
-                        (num_envs,), self.cfg.pose.distribution, self.cfg.pose.position_range[axis]
-                    )
-                    rand_offset = rand_offset.to(current_pos.device)
+        new_pos = original_pos.clone()
+        if self.cfg.pose.position_delta_range or self.cfg.pose.position_range:
+            # Determine which range to use
+            active_position_range = (
+                self.cfg.pose.position_delta_range if self.cfg.pose.use_delta else self.cfg.pose.position_range
+            )
 
-                    if self.cfg.pose.operation == "add":
-                        new_pos[:, axis] += rand_offset
-                    else:  # abs
+            for axis in range(3):
+                if axis < len(active_position_range):
+                    if self.cfg.pose.per_env:
+                        # Mode A: Different for each env
+                        rand_offset = self._generate_random_tensor(
+                            (num_envs,), self.cfg.pose.distribution, active_position_range[axis]
+                        )
+                    else:
+                        # Mode B: Same for all envs
+                        offset_value = self._generate_random_value(
+                            active_position_range[axis], self.cfg.pose.distribution
+                        )
+                        rand_offset = torch.full((num_envs,), offset_value, dtype=torch.float32)
+
+                    rand_offset = rand_offset.to(original_pos.device)
+
+                    if self.cfg.pose.use_delta:
+                        new_pos[:, axis] = original_pos[:, axis] + rand_offset  # Based on original
+                    else:  # absolute
                         new_pos[:, axis] = rand_offset
 
             # Keep on ground if requested
@@ -344,37 +547,66 @@ class ObjectRandomizer(BaseRandomizerType):
                 new_pos[:, 2] = torch.clamp(new_pos[:, 2], min=0.0)
 
         # Randomize rotation
-        new_rot = current_rot.clone()
-        if self.cfg.pose.rotation_range:
+        new_rot = original_rot.clone()  # Start from original
+        if self.cfg.pose.rotation_delta_range or self.cfg.pose.rotation_range:
+            # Determine which range to use
+            active_rotation_range = (
+                self.cfg.pose.rotation_delta_range if self.cfg.pose.use_delta else self.cfg.pose.rotation_range
+            )
+
             # Generate random Euler angles for all enabled axes (batch)
-            roll = torch.zeros(num_envs, device=current_rot.device)
-            pitch = torch.zeros(num_envs, device=current_rot.device)
-            yaw = torch.zeros(num_envs, device=current_rot.device)
+            if self.cfg.pose.per_env:
+                # Mode A: Different rotation for each environment
+                roll = torch.zeros(num_envs, device=original_rot.device)
+                pitch = torch.zeros(num_envs, device=original_rot.device)
+                yaw = torch.zeros(num_envs, device=original_rot.device)
 
-            if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
-                roll = self._generate_random_tensor(
-                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
-                ) * (math.pi / 180.0)
-                roll = roll.to(current_rot.device)
+                if self.cfg.pose.rotation_axes[0]:  # roll (x-axis)
+                    roll = self._generate_random_tensor(
+                        (num_envs,), self.cfg.pose.distribution, active_rotation_range
+                    ) * (math.pi / 180.0)
+                    roll = roll.to(original_rot.device)
 
-            if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
-                pitch = self._generate_random_tensor(
-                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
-                ) * (math.pi / 180.0)
-                pitch = pitch.to(current_rot.device)
+                if self.cfg.pose.rotation_axes[1]:  # pitch (y-axis)
+                    pitch = self._generate_random_tensor(
+                        (num_envs,), self.cfg.pose.distribution, active_rotation_range
+                    ) * (math.pi / 180.0)
+                    pitch = pitch.to(original_rot.device)
 
-            if self.cfg.pose.rotation_axes[2]:  # yaw (z-axis)
-                yaw = self._generate_random_tensor(
-                    (num_envs,), self.cfg.pose.distribution, self.cfg.pose.rotation_range
-                ) * (math.pi / 180.0)
-                yaw = yaw.to(current_rot.device)
+                if self.cfg.pose.rotation_axes[2]:  # yaw (z-axis)
+                    yaw = self._generate_random_tensor(
+                        (num_envs,), self.cfg.pose.distribution, active_rotation_range
+                    ) * (math.pi / 180.0)
+                    yaw = yaw.to(original_rot.device)
+            else:
+                # Mode B: Same rotation for all environments
+                roll_val = 0.0
+                pitch_val = 0.0
+                yaw_val = 0.0
+
+                if self.cfg.pose.rotation_axes[0]:
+                    roll_val = self._generate_random_value(active_rotation_range, self.cfg.pose.distribution) * (
+                        math.pi / 180.0
+                    )
+                if self.cfg.pose.rotation_axes[1]:
+                    pitch_val = self._generate_random_value(active_rotation_range, self.cfg.pose.distribution) * (
+                        math.pi / 180.0
+                    )
+                if self.cfg.pose.rotation_axes[2]:
+                    yaw_val = self._generate_random_value(active_rotation_range, self.cfg.pose.distribution) * (
+                        math.pi / 180.0
+                    )
+
+                roll = torch.full((num_envs,), roll_val, device=original_rot.device)
+                pitch = torch.full((num_envs,), pitch_val, device=original_rot.device)
+                yaw = torch.full((num_envs,), yaw_val, device=original_rot.device)
 
             # Convert to quaternion (batch)
             rand_quat = self._euler_to_quaternion_batch(roll, pitch, yaw)
 
-            if self.cfg.pose.operation == "add":
-                new_rot = self._quaternion_multiply(current_rot, rand_quat)
-            else:  # abs
+            if self.cfg.pose.use_delta:
+                new_rot = self._quaternion_multiply(original_rot, rand_quat)  # Apply to original
+            else:  # absolute
                 new_rot = rand_quat
 
         # Set new pose
@@ -404,13 +636,17 @@ class ObjectRandomizer(BaseRandomizerType):
 
             # Randomize position
             new_pos = None
-            if self.cfg.pose.position_range:
-                if self.cfg.pose.operation == "add":
+            if self.cfg.pose.position_delta_range or self.cfg.pose.position_range:
+                if self.cfg.pose.use_delta:
                     new_pos = tuple(
                         current_pos[i] + self.rng.uniform(r[0], r[1])
-                        for i, r in enumerate(self.cfg.pose.position_range)
+                        for i, r in enumerate(
+                            self.cfg.pose.position_delta_range
+                            if self.cfg.pose.use_delta
+                            else self.cfg.pose.position_range
+                        )
                     )
-                else:  # abs
+                else:  # absolute
                     new_pos = tuple(self.rng.uniform(r[0], r[1]) for r in self.cfg.pose.position_range)
 
                 if self.cfg.pose.keep_on_ground:
@@ -418,11 +654,41 @@ class ObjectRandomizer(BaseRandomizerType):
 
             # Randomize rotation
             new_rot = None
-            if self.cfg.pose.rotation_range:
+            if self.cfg.pose.rotation_delta_range or self.cfg.pose.rotation_range:
                 # Generate random Euler angles
-                roll = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[0] else 0.0
-                pitch = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[1] else 0.0
-                yaw = self.rng.uniform(*self.cfg.pose.rotation_range) if self.cfg.pose.rotation_axes[2] else 0.0
+                roll = (
+                    self.rng.uniform(
+                        *(
+                            self.cfg.pose.rotation_delta_range
+                            if self.cfg.pose.use_delta
+                            else self.cfg.pose.rotation_range
+                        )
+                    )
+                    if self.cfg.pose.rotation_axes[0]
+                    else 0.0
+                )
+                pitch = (
+                    self.rng.uniform(
+                        *(
+                            self.cfg.pose.rotation_delta_range
+                            if self.cfg.pose.use_delta
+                            else self.cfg.pose.rotation_range
+                        )
+                    )
+                    if self.cfg.pose.rotation_axes[1]
+                    else 0.0
+                )
+                yaw = (
+                    self.rng.uniform(
+                        *(
+                            self.cfg.pose.rotation_delta_range
+                            if self.cfg.pose.use_delta
+                            else self.cfg.pose.rotation_range
+                        )
+                    )
+                    if self.cfg.pose.rotation_axes[2]
+                    else 0.0
+                )
 
                 # Convert to radians and then to quaternion
                 roll_rad = roll * (math.pi / 180.0)
@@ -431,7 +697,7 @@ class ObjectRandomizer(BaseRandomizerType):
 
                 new_rot = self._euler_to_quaternion(roll_rad, pitch_rad, yaw_rad)
 
-                if self.cfg.pose.operation == "add":
+                if self.cfg.pose.use_delta:
                     # Compose with current rotation
                     import torch
 
@@ -448,6 +714,29 @@ class ObjectRandomizer(BaseRandomizerType):
     # -------------------------------------------------------------------------
     # Helper Methods
     # -------------------------------------------------------------------------
+
+    def _generate_random_value(self, value_range: tuple[float, float], distribution: str) -> float:
+        """Generate a single random value.
+
+        Args:
+            value_range: Value range (min, max)
+            distribution: Distribution type
+
+        Returns:
+            Random value
+        """
+        if distribution == "uniform":
+            return self.rng.uniform(value_range[0], value_range[1])
+        elif distribution == "log_uniform":
+            log_min = math.log(value_range[0])
+            log_max = math.log(value_range[1])
+            return math.exp(self.rng.uniform(log_min, log_max))
+        elif distribution == "gaussian":
+            mean = (value_range[0] + value_range[1]) / 2
+            std = (value_range[1] - value_range[0]) / 6
+            return max(value_range[0], min(value_range[1], self.rng.gauss(mean, std)))
+        else:
+            raise ValueError(f"Unsupported distribution: {distribution}")
 
     def _generate_random_tensor(
         self, shape: tuple[int, ...], distribution: str, range_vals: tuple[float, float]
