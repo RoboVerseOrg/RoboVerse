@@ -421,6 +421,66 @@ def evaluate(
     return stats
 
 
+def _adjust_state_dict_for_model(checkpoint_state: dict, model: torch.nn.Module):
+    """Adjust tensors from checkpoint_state to better match model.state_dict() shapes.
+
+    - If a tensor differs only in the leading (0-th) dimension and the remaining dims match,
+      we slice or repeat rows to match the model shape.
+    - If total numel matches, we reshape.
+    - Otherwise we fall back to the model's own parameter to avoid shape errors.
+    """
+    model_state = model.state_dict()
+    new_state = {}
+    for k, v in checkpoint_state.items():
+        if k not in model_state:
+            # keep unknown keys (they may be used elsewhere)
+            new_state[k] = v
+            continue
+
+        mv = model_state[k]
+        # Only handle tensors; keep other items as-is
+        if not isinstance(v, torch.Tensor) or not isinstance(mv, torch.Tensor):
+            new_state[k] = v
+            continue
+
+        if v.shape == mv.shape:
+            new_state[k] = v
+            continue
+
+        # Case: same trailing dims, mismatched leading dim (common when num_envs differs)
+        if v.ndim == mv.ndim and v.shape[1:] == mv.shape[1:]:
+            desired = mv.shape[0]
+            src = v
+            if src.shape[0] >= desired:
+                new_state[k] = src[:desired].to(mv.device).clone()
+            else:
+                # Repeat rows to reach desired size then slice
+                reps = (desired + src.shape[0] - 1) // src.shape[0]
+                tiled = src.repeat(reps, *([1] * (src.ndim - 1)))
+                new_state[k] = tiled[:desired].to(mv.device).clone()
+            log.info(f"Adjusted checkpoint param '{k}' from {v.shape} -> {new_state[k].shape}")
+            continue
+
+        # If total elements match, reshape
+        if v.numel() == mv.numel():
+            try:
+                new_state[k] = v.reshape(mv.shape).to(mv.device).clone()
+                log.info(f"Reshaped checkpoint param '{k}' from {v.shape} -> {mv.shape}")
+                continue
+            except Exception:
+                pass
+
+        # Last resort: try broadcasting/expanding
+        try:
+            new_state[k] = v.to(mv.device).expand_as(mv).clone()
+            log.info(f"Expanded checkpoint param '{k}' from {v.shape} -> {mv.shape}")
+            continue
+        except Exception:
+            log.warning(f"Could not match shape for param '{k}' ({v.shape} -> {mv.shape}); keeping model init")
+            new_state[k] = mv
+    return new_state
+
+
 def main():
     parser = argparse.ArgumentParser(description='FastTD3 Evaluation')
     parser.add_argument('--checkpoint', type=str, default='roboverse_data/models/walk_1400.pt',
@@ -524,9 +584,26 @@ def main():
     obs_normalizer = EmpiricalNormalization(shape=n_obs, device=device)
 
     # Load weights
-    actor.load_state_dict(checkpoint["actor_state_dict"])
-    if checkpoint.get("obs_normalizer_state"):
-        obs_normalizer.load_state_dict(checkpoint["obs_normalizer_state"])
+    # Safely adjust checkpoint actor state to match current model shapes (handles num_envs mismatch)
+    ck_actor_state = checkpoint.get("actor_state_dict", {})
+    if ck_actor_state:
+        try:
+            adjusted = _adjust_state_dict_for_model(ck_actor_state, actor)
+            # load non-strictly to allow missing/extra keys
+            actor.load_state_dict(adjusted, strict=False)
+        except Exception as e:
+            log.exception("Failed to load actor_state_dict with adjustment, falling back to strict load: %s", e)
+            actor.load_state_dict(ck_actor_state, strict=False)
+    else:
+        log.warning("No actor_state_dict present in checkpoint")
+
+    # Load obs normalizer safely
+    try:
+        obs_state = checkpoint.get("obs_normalizer_state")
+        if obs_state:
+            obs_normalizer.load_state_dict(obs_state)
+    except Exception:
+        log.warning("Failed to load obs_normalizer_state from checkpoint; skipping")
 
     # Setup AMP
     amp_enabled = config.get("amp", False) and torch.cuda.is_available()

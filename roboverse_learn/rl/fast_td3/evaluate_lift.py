@@ -332,6 +332,15 @@ def evaluate_lift_collection(
         else:
             obs = next_obs
 
+    # Treat each active env as an attempted episode, and count it as successful if it already
+    active_envs = (~done_masks).sum().item() if 'done_masks' in locals() else 0
+    successes_in_active = sum(
+        1 for i in range(num_eval_envs)
+        if 'done_masks' in locals() and not done_masks[i] and success_in_episode.get(i, False)
+    )
+    attempted_episodes = episodes_completed + active_envs
+    total_successful_episodes = successful_episodes_count + successes_in_active
+
     if len(collected_trajs) > 0:
         os.makedirs(traj_dir, exist_ok=True)
         os.makedirs(state_dir, exist_ok=True)
@@ -357,12 +366,14 @@ def evaluate_lift_collection(
         log.info(f"  - State count: {len(collected_states)}")
     else:
         log.warning("No successful trajectories collected")
+    # Success rate: fraction of attempted episodes (completed + in-progress when we stopped)
+    denom = max(attempted_episodes, 1)
+    success_rate = min(total_successful_episodes, denom) / denom
     stats = {
         "collected_count": len(collected_trajs),
         "target_count": target_count,
-        "episodes_completed": episodes_completed,
-        # success_rate = successful simulations / total simulations (episodes)
-        "success_rate": successful_episodes_count / episodes_completed if episodes_completed > 0 else 0.0,
+        "episodes_completed": attempted_episodes,
+        "success_rate": success_rate,
     }
 
     return stats
