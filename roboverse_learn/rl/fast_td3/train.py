@@ -172,7 +172,7 @@ def main() -> None:
     # Check if task class accepts state_file_path parameter (only track tasks do)
     init_signature = inspect.signature(task_cls.__init__)
     accepts_state_file_path = "state_file_path" in init_signature.parameters
-    
+
     # Pass state_file_path from config if task accepts it (for track tasks)
     state_file_path = cfg("state_file_path", None)
     if accepts_state_file_path and state_file_path is not None:
