@@ -1,19 +1,21 @@
-# Configuration for FastTD3 Training - Track Task
-# Stage 3: Track task - for training trajectory tracking
-# Starts from saved grasp states, only trains trajectory tracking
+# Configuration for FastTD3 Training - Track Task (Screwdriver)
+# Stage 3: Track task for screwdriver object - for training trajectory tracking
+# Starts from saved grasp states from approach_grasp_simple_screwdriver, only trains trajectory tracking
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track_screwdriver"
+task: "pick_place.track_screwdriver"  # Uses screwdriver-specific track task
 decimation: 4
 train_or_eval: "train"
 headless: False
 
 # State file path for track task (pkl file path for grasp states)
-# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
+# Note: This is for reference/documentation. The actual path is set in track_screwdriver.py __init__
+# After running evaluate_lift.py for the screwdriver task, update the state_file_path in track_screwdriver.py
+# to point to the generated states file (e.g., from eval_states/ directory)
 state_file_path: "eval_states/pick_place.approach_grasp_screwdriver_franka_lift_states_100states_20251210_154907.pkl"
 
 # -------------------------------------------------------------------------------
@@ -83,10 +85,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track"
-exp_name: "pick_place_track"
+wandb_project: "pick_place_track_screwdriver"
+exp_name: "pick_place_track_screwdriver"
 use_wandb: false
 checkpoint_path: null
+run_name: "pick_place.track_screwdriver"  # Unique run name for screwdriver track task
+model_dir: "models/track_screwdriver"  # Separate directory for track screwdriver checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024
