@@ -6,8 +6,8 @@ with specific mesh configurations and saved poses from object_layout.py.
 
 from __future__ import annotations
 
-import os
 import importlib.util
+import os
 
 import torch
 from loguru import logger as log
@@ -125,14 +125,16 @@ class PickPlaceApproachGraspSimpleSpoon(PickPlaceApproachGraspSimple):
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments.
-        
+
         Uses saved poses from object_layout.py. Loads spoon, table, basket, and trajectory markers
         from saved_poses_20251206_spoon_basket.py.
         """
         # Add path to saved poses
         saved_poses_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "get_started", "output", "saved_poses_20251206_spoon_basket.py"
+            "get_started",
+            "output",
+            "saved_poses_20251206_spoon_basket.py",
         )
         if os.path.exists(saved_poses_path):
             # Load saved poses dynamically
@@ -144,7 +146,7 @@ class PickPlaceApproachGraspSimpleSpoon(PickPlaceApproachGraspSimple):
             # Fallback to default poses if saved file not found
             log.warning(f"Saved poses file not found at {saved_poses_path}, using default poses")
             saved_poses = None
-        
+
         if saved_poses is not None:
             # Use saved poses from object_layout.py
             init = []
@@ -155,7 +157,9 @@ class PickPlaceApproachGraspSimpleSpoon(PickPlaceApproachGraspSimple):
                         "object": saved_poses["objects"]["spoon"],
                         "table": saved_poses["objects"]["table"],
                         # Basket for visualization (if present in saved poses)
-                        "basket": saved_poses["objects"].get("basket", saved_poses["objects"]["table"]),  # Fallback to table if basket not found
+                        "basket": saved_poses["objects"].get(
+                            "basket", saved_poses["objects"]["table"]
+                        ),  # Fallback to table if basket not found
                         # Include trajectory markers if present
                         "traj_marker_0": saved_poses["objects"]["traj_marker_0"],
                         "traj_marker_1": saved_poses["objects"]["traj_marker_1"],

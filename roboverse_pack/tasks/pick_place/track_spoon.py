@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import pickle
-import importlib.util
 from copy import deepcopy
 
 import numpy as np
@@ -139,7 +138,7 @@ DEFAULT_CONFIG_TRACK["randomization"]["robot_pos_noise"] = 0.0
 DEFAULT_CONFIG_TRACK["randomization"]["joint_noise_range"] = 0.0
 # Increase reach threshold for spoon (more lenient for higher waypoints)
 DEFAULT_CONFIG_TRACK["trajectory_tracking"]["reach_threshold"] = 0.08  # Increased from 0.05 to 0.08m
-    
+
 
 @register_task("pick_place.track_spoon", "pick_place_track_spoon")
 class PickPlaceTrackSpoon(PickPlaceBase):
@@ -308,38 +307,41 @@ class PickPlaceTrackSpoon(PickPlaceBase):
         # Load trajectory marker positions from saved poses file (spoon-specific enhancement)
         saved_poses_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "get_started", "output", "saved_poses_20251206_spoon_basket.py"
+            "get_started",
+            "output",
+            "saved_poses_20251206_spoon_basket.py",
         )
-        
+
         saved_traj_markers = None
         saved_table = None
         saved_basket = None
-        
+
         if os.path.exists(saved_poses_path):
             try:
                 import importlib.util
+
                 spec = importlib.util.spec_from_file_location("saved_poses", saved_poses_path)
                 saved_poses_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(saved_poses_module)
                 saved_poses = saved_poses_module.poses
-                
+
                 # Extract trajectory markers
                 saved_traj_markers = {}
                 for i in range(self.num_waypoints):
                     marker_name = f"traj_marker_{i}"
                     if marker_name in saved_poses["objects"]:
                         saved_traj_markers[marker_name] = saved_poses["objects"][marker_name]
-                
+
                 # Extract table and basket if present
                 if "table" in saved_poses["objects"]:
                     saved_table = saved_poses["objects"]["table"]
                 if "basket" in saved_poses["objects"]:
                     saved_basket = saved_poses["objects"]["basket"]
-                    
+
                 log.info(f"Loaded trajectory markers from {saved_poses_path}")
             except Exception as e:
                 log.warning(f"Failed to load saved poses from {saved_poses_path}: {e}")
-        
+
         # Default waypoint positions (fallback if saved poses not available)
         default_positions = [
             torch.tensor([0.610000, -0.280000, 0.150000], device=device),
@@ -359,7 +361,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
         for env_idx, initial_state in enumerate(initial_states):
             if "objects" not in initial_state:
                 initial_state["objects"] = {}
-            
+
             # Force gripper to be fully closed for proper grasping
             if "robots" in initial_state and robot_name in initial_state["robots"]:
                 robot_state = initial_state["robots"][robot_name]
@@ -370,17 +372,35 @@ class PickPlaceTrackSpoon(PickPlaceBase):
                         dof_pos["panda_finger_joint1"] = 0.0
                     if "panda_finger_joint2" in dof_pos:
                         dof_pos["panda_finger_joint2"] = 0.0
-                    log.debug(f"[Env {env_idx}] Forced gripper closed: finger1={dof_pos.get('panda_finger_joint1', 'N/A')}, finger2={dof_pos.get('panda_finger_joint2', 'N/A')}")
-            
+                    log.debug(
+                        f"[Env {env_idx}] Forced gripper closed: finger1={dof_pos.get('panda_finger_joint1', 'N/A')}, finger2={dof_pos.get('panda_finger_joint2', 'N/A')}"
+                    )
+
             # Update table position from saved poses if available
             if saved_table is not None and "table" in initial_state["objects"]:
-                initial_state["objects"]["table"]["pos"] = saved_table["pos"].to(device) if isinstance(saved_table["pos"], torch.Tensor) else torch.tensor(saved_table["pos"], device=device)
-                initial_state["objects"]["table"]["rot"] = saved_table["rot"].to(device) if isinstance(saved_table["rot"], torch.Tensor) else torch.tensor(saved_table["rot"], device=device)
-            
+                initial_state["objects"]["table"]["pos"] = (
+                    saved_table["pos"].to(device)
+                    if isinstance(saved_table["pos"], torch.Tensor)
+                    else torch.tensor(saved_table["pos"], device=device)
+                )
+                initial_state["objects"]["table"]["rot"] = (
+                    saved_table["rot"].to(device)
+                    if isinstance(saved_table["rot"], torch.Tensor)
+                    else torch.tensor(saved_table["rot"], device=device)
+                )
+
             # Add basket from saved poses if available
             if saved_basket is not None:
-                basket_pos = saved_basket["pos"].to(device) if isinstance(saved_basket["pos"], torch.Tensor) else torch.tensor(saved_basket["pos"], device=device)
-                basket_rot = saved_basket["rot"].to(device) if isinstance(saved_basket["rot"], torch.Tensor) else torch.tensor(saved_basket["rot"], device=device)
+                basket_pos = (
+                    saved_basket["pos"].to(device)
+                    if isinstance(saved_basket["pos"], torch.Tensor)
+                    else torch.tensor(saved_basket["pos"], device=device)
+                )
+                basket_rot = (
+                    saved_basket["rot"].to(device)
+                    if isinstance(saved_basket["rot"], torch.Tensor)
+                    else torch.tensor(saved_basket["rot"], device=device)
+                )
                 initial_state["objects"]["basket"] = {
                     "pos": basket_pos,
                     "rot": basket_rot,
@@ -393,8 +413,16 @@ class PickPlaceTrackSpoon(PickPlaceBase):
                     if saved_traj_markers is not None and marker_name in saved_traj_markers:
                         # Use saved marker position
                         marker_data = saved_traj_markers[marker_name]
-                        marker_pos = marker_data["pos"].to(device) if isinstance(marker_data["pos"], torch.Tensor) else torch.tensor(marker_data["pos"], device=device)
-                        marker_rot = marker_data["rot"].to(device) if isinstance(marker_data["rot"], torch.Tensor) else torch.tensor(marker_data["rot"], device=device)
+                        marker_pos = (
+                            marker_data["pos"].to(device)
+                            if isinstance(marker_data["pos"], torch.Tensor)
+                            else torch.tensor(marker_data["pos"], device=device)
+                        )
+                        marker_rot = (
+                            marker_data["rot"].to(device)
+                            if isinstance(marker_data["rot"], torch.Tensor)
+                            else torch.tensor(marker_data["rot"], device=device)
+                        )
                         initial_state["objects"][marker_name] = {
                             "pos": marker_pos,
                             "rot": marker_rot,
@@ -460,7 +488,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
         current_joint_pos = self.handler.get_states().robots[self.robot_name].joint_pos
         delta_actions = actions * self._action_scale
         new_actions = current_joint_pos + delta_actions
-        
+
         real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
 
         gripper_value_closed = torch.tensor(0.0, device=self.device, dtype=real_actions.dtype)
@@ -475,10 +503,10 @@ class PickPlaceTrackSpoon(PickPlaceBase):
         box_pos = updated_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(updated_states)
         gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
-        
+
         gripper_joint_pos = updated_states.robots[self.robot_name].joint_pos[:, :2]
         gripper_actually_closed = gripper_joint_pos.mean(dim=-1) < 0.02
-        
+
         is_grasping = (gripper_box_dist < self.grasp_check_distance) & gripper_actually_closed
         self.object_grasped = is_grasping
         newly_released = ~is_grasping
@@ -501,7 +529,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
 
     def _reward_trajectory_tracking(self, env_states) -> torch.Tensor:
         """Override reward calculation with increased progress reward for later waypoints.
-        
+
         This addresses the issue where agent gets stuck after waypoint 2 by:
         1. Increasing progress reward multiplier (from 0.1 to 0.3) for better guidance
         2. Adding adaptive scaling for later waypoints to encourage progress
@@ -515,22 +543,25 @@ class PickPlaceTrackSpoon(PickPlaceBase):
             distance = torch.norm(ee_pos - target_pos, dim=-1)
 
             # Progress reward with higher multiplier for better guidance
-            not_already_reached = ~self.waypoints_reached[torch.arange(self.num_envs, device=self.device), self.current_waypoint_idx]
+            not_already_reached = ~self.waypoints_reached[
+                torch.arange(self.num_envs, device=self.device), self.current_waypoint_idx
+            ]
             distance_reduction = self.prev_distance_to_waypoint - distance
-            
+
             # Adaptive progress reward: higher for later waypoints (2, 3, 4) to encourage progress
             # Waypoints 0-1: 0.2 (20%), Waypoints 2+: 0.4 (40%) to overcome larger distances
             # Create multiplier tensor matching num_envs shape
             progress_multiplier = torch.where(
                 self.current_waypoint_idx >= 2,
                 torch.full((self.num_envs,), 0.4, device=self.device),
-                torch.full((self.num_envs,), 0.2, device=self.device)
+                torch.full((self.num_envs,), 0.2, device=self.device),
             )
-            
-            progress_reward_component = torch.clamp(
-                distance_reduction * self.w_tracking_progress * progress_multiplier, 
-                min=0.0
-            ) * not_already_reached.float() * grasped_mask.float()
+
+            progress_reward_component = (
+                torch.clamp(distance_reduction * self.w_tracking_progress * progress_multiplier, min=0.0)
+                * not_already_reached.float()
+                * grasped_mask.float()
+            )
 
             # Distance-based reward (far + near) / 2
             distance_reward_far = 1 - torch.tanh(1.0 * distance)
@@ -546,6 +577,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
             rot_err = None
             if self.enable_rotation_tracking:
                 from metasim.utils.math import matrix_from_quat
+
                 box_quat = env_states.objects["object"].root_state[:, 3:7]
                 box_mat = matrix_from_quat(box_quat).reshape(self.num_envs, 9)
                 target_quat = self.waypoint_rotations[self.current_waypoint_idx]
@@ -558,7 +590,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
             newly_reached = reached & not_already_reached
             # Waypoint reached bonus (one-time large reward when reaching a waypoint)
             waypoint_reached_bonus = newly_reached.float() * self.w_tracking_progress
-            
+
             # Update prev_distance for next step
             self.prev_distance_to_waypoint[~newly_reached] = distance[~newly_reached]
 
@@ -606,9 +638,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
 
             # Combine all reward components
             tracking_reward = torch.where(
-                all_reached, 
-                maintain_reward, 
-                approach_reward + progress_reward_component + waypoint_reached_bonus
+                all_reached, maintain_reward, approach_reward + progress_reward_component + waypoint_reached_bonus
             )
 
         return tracking_reward

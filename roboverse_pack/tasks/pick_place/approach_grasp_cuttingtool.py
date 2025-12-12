@@ -6,8 +6,8 @@ with specific mesh configurations and saved poses from object_layout.py.
 
 from __future__ import annotations
 
-import os
 import importlib.util
+import os
 
 import torch
 from loguru import logger as log
@@ -127,7 +127,7 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
 
     def __init__(self, scenario, device=None):
         super().__init__(scenario, device)
-        
+
         # Grasp point offset for cuttingtool: point to the handle center instead of object center
         # Cutting tools typically have handles at one end. The offset is in the object's local frame.
         # Adjust these values based on your cuttingtool mesh:
@@ -139,41 +139,43 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
 
     def _get_grasp_point(self, states):
         """Get the grasp point for the cuttingtool (handle center) instead of object center.
-        
+
         Args:
             states: Environment states
-            
+
         Returns:
             grasp_point: (B, 3) grasp point in world coordinates (handle center)
         """
         # Get object center position and rotation
         box_pos = states.objects["object"].root_state[:, 0:3]  # (B, 3) - center of object
         box_quat = states.objects["object"].root_state[:, 3:7]  # (B, 4) wxyz - object orientation
-        
+
         # Move offset to correct device and expand to batch size
-        offset_local = self.grasp_point_offset_local.to(box_pos.device).unsqueeze(0).expand(box_pos.shape[0], -1)  # (B, 3)
-        
+        offset_local = (
+            self.grasp_point_offset_local.to(box_pos.device).unsqueeze(0).expand(box_pos.shape[0], -1)
+        )  # (B, 3)
+
         # Transform grasp point offset from object local frame to world frame
         # quat_apply rotates a vector by a quaternion
         # This accounts for the object's rotation in the world
         offset_world = quat_apply(box_quat, offset_local)  # (B, 3)
-        
+
         # Add offset to object center to get grasp point (handle position)
         grasp_point = box_pos + offset_world  # (B, 3)
-        
+
         return grasp_point
 
     def step(self, actions):
         """Step with delta control and simple gripper control, using handle center as grasp point."""
         current_states = self.handler.get_states(mode="tensor")
-        
+
         # Use grasp point (handle center) instead of object center
         grasp_point = self._get_grasp_point(current_states)  # (B, 3)
         gripper_pos, _ = self._get_ee_state(current_states)
-        
+
         # Calculate 3D Euclidean distance between gripper and grasp point (handle)
         gripper_box_dist = torch.norm(gripper_pos - grasp_point, dim=-1)
-        
+
         # Apply delta control
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
@@ -246,14 +248,16 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments.
-        
+
         Uses saved poses from object_layout.py. Loads cutting_tools, table, basket, and trajectory markers
         from saved_poses_20251210_cuttingtool.py.
         """
         # Add path to saved poses
         saved_poses_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "get_started", "output", "saved_poses_20251210_cuttingtool.py"
+            "get_started",
+            "output",
+            "saved_poses_20251210_cuttingtool.py",
         )
         if os.path.exists(saved_poses_path):
             # Load saved poses dynamically
@@ -265,7 +269,7 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
             # Fallback to default poses if saved file not found
             log.warning(f"Saved poses file not found at {saved_poses_path}, using default poses")
             saved_poses = None
-        
+
         if saved_poses is not None:
             # Use saved poses from object_layout.py
             init = []
@@ -276,7 +280,9 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
                         "object": saved_poses["objects"]["cutting_tools"],
                         "table": saved_poses["objects"]["table"],
                         # Basket for visualization (if present in saved poses)
-                        "basket": saved_poses["objects"].get("basket", saved_poses["objects"]["table"]),  # Fallback to table if basket not found
+                        "basket": saved_poses["objects"].get(
+                            "basket", saved_poses["objects"]["table"]
+                        ),  # Fallback to table if basket not found
                         # Include trajectory markers if present
                         "traj_marker_0": saved_poses["objects"]["traj_marker_0"],
                         "traj_marker_1": saved_poses["objects"]["traj_marker_1"],
@@ -346,4 +352,3 @@ class PickPlaceApproachGraspSimpleCuttingTool(PickPlaceApproachGraspSimple):
             ]
 
         return init
-

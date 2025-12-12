@@ -48,6 +48,7 @@ Guidelines for modifications:
 * Yuyang Li
 * Zhigen Zhao
 * Hanchu Zhou
+* Boqi Zhao
 
 ## Acknowledgements
 

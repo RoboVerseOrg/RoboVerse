@@ -6,9 +6,8 @@ with specific mesh configurations and saved poses from object_layout.py.
 
 from __future__ import annotations
 
-import os
 import importlib.util
-from copy import deepcopy
+import os
 
 import torch
 from loguru import logger as log
@@ -17,7 +16,7 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
-from metasim.utils.math import matrix_from_quat, quat_apply
+from metasim.utils.math import quat_apply
 from roboverse_pack.tasks.pick_place.approach_grasp import PickPlaceApproachGraspSimple
 from roboverse_pack.tasks.pick_place.base import PickPlaceBase
 
@@ -128,7 +127,7 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
 
     def __init__(self, scenario, device=None):
         super().__init__(scenario, device)
-        
+
         # Grasp point offset for bowl: point to the rim/edge instead of center
         # Bowl coordinate frame: (x, y) at center of bowl, z is height (vertical)
         # The bowl's origin is at the center/bottom, but we want to grasp at the rim
@@ -139,57 +138,59 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
         # Offset format: [x, y, z] in object's local frame
         # [0.099, 0.0, 0.1] = 9.9cm radius in x (matches edge at z=0.1m), 0 in y, 10cm upward in z
         self.grasp_point_offset_local = torch.tensor([0.099, 0.0, 0.1])  # [x, y, z] in object frame
-        
+
         # Note: gripper orientation reward is now inherited from base class (approach_grasp.py)
         # No need to override reward functions here
-    
+
     def _get_grasp_point(self, states):
         """Get the grasp point for the bowl (rim/edge) instead of center.
-        
+
         Bowl coordinate frame convention:
         - (x, y) plane is at the center of the bowl
         - z-axis is the height of the bowl (vertical, pointing up)
         - Origin is at the center/bottom of the bowl
-        
+
         The offset [0.099, 0.0, 0.1] points to the rim edge:
         - 0.099m in x direction (radius from center, matches actual edge radius at z=0.1m)
         - 0.0m in y direction (grasping at a specific point on rim)
         - 0.1m in z direction (upward, at 10cm height from bottom)
-        
+
         Args:
             states: Environment states
-            
+
         Returns:
             grasp_point: (B, 3) grasp point in world coordinates (rim of bowl)
         """
         # Get object center position and rotation
         box_pos = states.objects["object"].root_state[:, 0:3]  # (B, 3) - center of bowl
         box_quat = states.objects["object"].root_state[:, 3:7]  # (B, 4) wxyz - bowl orientation
-        
+
         # Move offset to correct device and expand to batch size
-        offset_local = self.grasp_point_offset_local.to(box_pos.device).unsqueeze(0).expand(box_pos.shape[0], -1)  # (B, 3)
-        
+        offset_local = (
+            self.grasp_point_offset_local.to(box_pos.device).unsqueeze(0).expand(box_pos.shape[0], -1)
+        )  # (B, 3)
+
         # Transform grasp point offset from object local frame to world frame
         # quat_apply rotates a vector by a quaternion
         # This accounts for the bowl's rotation in the world
         offset_world = quat_apply(box_quat, offset_local)  # (B, 3)
-        
+
         # Add offset to object center to get grasp point (rim position)
         grasp_point = box_pos + offset_world  # (B, 3)
-        
+
         return grasp_point
-    
+
     def step(self, actions):
         """Step with delta control and simple gripper control, using bowl rim as grasp point."""
         current_states = self.handler.get_states(mode="tensor")
-        
+
         # Use grasp point (bowl rim) instead of object center
         grasp_point = self._get_grasp_point(current_states)  # (B, 3)
         gripper_pos, _ = self._get_ee_state(current_states)
-        
+
         # Calculate 3D Euclidean distance between gripper and grasp point (rim)
         gripper_box_dist = torch.norm(gripper_pos - grasp_point, dim=-1)
-        
+
         # Calculate z-axis distance (vertical distance)
         delta = gripper_pos - grasp_point
         dist_z = torch.abs(delta[:, 2])
@@ -242,7 +243,7 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
         info["stage"] = torch.full((self.num_envs,), 1, dtype=torch.long, device=self.device)
 
         return obs, reward, terminated, time_out, info
-    
+
     def _compute_grasp_state(self, states):
         """Compute if object is grasped, using bowl rim as grasp point."""
         # Use grasp point (bowl rim) instead of object center
@@ -265,7 +266,7 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
         is_grasping = stable_grasp
 
         return is_grasping
-    
+
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
         """Reward for gripper approaching the bowl rim."""
         # Use grasp point (bowl rim) instead of object center
@@ -279,14 +280,16 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments.
-        
+
         Uses saved poses from object_layout.py. Loads bowl, table, basket, and trajectory markers
         from saved_poses_20251208_bowl_basket.py.
         """
         # Add path to saved poses
         saved_poses_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "get_started", "output", "saved_poses_20251208_bowl_basket.py"
+            "get_started",
+            "output",
+            "saved_poses_20251208_bowl_basket.py",
         )
         if os.path.exists(saved_poses_path):
             # Load saved poses dynamically
@@ -298,7 +301,7 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
             # Fallback to default poses if saved file not found
             log.warning(f"Saved poses file not found at {saved_poses_path}, using default poses")
             saved_poses = None
-        
+
         if saved_poses is not None:
             # Use saved poses, mapping bowl to "object"
             init = []
@@ -309,7 +312,9 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
                         "object": saved_poses["objects"]["bowl"],
                         "table": saved_poses["objects"]["table"],
                         # Basket for visualization (if present in saved poses)
-                        "basket": saved_poses["objects"].get("basket", saved_poses["objects"]["table"]),  # Fallback to table if basket not found
+                        "basket": saved_poses["objects"].get(
+                            "basket", saved_poses["objects"]["table"]
+                        ),  # Fallback to table if basket not found
                         # Include trajectory markers if present
                         "traj_marker_0": saved_poses["objects"]["traj_marker_0"],
                         "traj_marker_1": saved_poses["objects"]["traj_marker_1"],
@@ -379,4 +384,3 @@ class PickPlaceApproachGraspSimpleBowl(PickPlaceApproachGraspSimple):
             ]
 
         return init
-
