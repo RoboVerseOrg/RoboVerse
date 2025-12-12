@@ -26,7 +26,7 @@ Evaluate the trained model and collect stable grasp states and first-half trajec
 
 ```bash
 python -m roboverse_learn.rl.fast_td3.evaluate_lift \
-    --checkpoint models/pick_place.approach_grasp_simple_65000.pt \
+    --checkpoint models/spoon_basket/pick_place.approach_grasp_simple_spoon_basket_1065000.pt \
     --target_count 100 \
     --state_dir eval_states \
     --traj_dir eval_trajs
