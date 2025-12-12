@@ -1,12 +1,13 @@
-"""Stage 1: Simple Approach and Grasp task with gripper control.
+"""Stage 1: Simple Approach and Grasp task for banana object.
 
-This task focuses on learning to approach the object, grasp it with gripper, and lift it.
-Simple gripper control: close when near the object.
+This task inherits from PickPlaceApproachGraspSimple and customizes it for the banana object
+with specific mesh configurations and saved poses from object_layout.py.
 """
 
 from __future__ import annotations
 
-from copy import deepcopy
+import os
+import importlib.util
 
 import torch
 from loguru import logger as log
@@ -15,39 +16,17 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
-from metasim.utils.math import matrix_from_quat
-from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
+from roboverse_pack.tasks.pick_place.approach_grasp import PickPlaceApproachGraspSimple
 
 
-@register_task("pick_place.approach_grasp_banana", "pick_place_approach_grasp_banana")
-class PickPlaceApproachGraspBanana(PickPlaceBase):
-    """Simple Approach and Grasp task with gripper control.
+@register_task("pick_place.approach_grasp_simple_banana", "pick_place_approach_grasp_simple_banana")
+class PickPlaceApproachGraspSimpleBanana(PickPlaceApproachGraspSimple):
+    """Simple Approach and Grasp task for banana object.
 
-    This task focuses on:
-    - Approaching the object
-    - Grasping the object with simple gripper control (close when near)
-
-    Success condition: Object is grasped (reward given when entering grasp state).
-    Episode terminates if object is released.
+    This task inherits from PickPlaceApproachGraspSimple and customizes:
+    - Scenario: Uses banana mesh, table mesh, and basket from EmbodiedGenData
+    - Initial states: Loads poses from saved_poses_20251206_banana_basket.py
     """
-
-    GRASP_DISTANCE_THRESHOLD = 0.02  # Distance threshold for both grasp check and gripper closing
-    GRASP_HISTORY_WINDOW = 5  # Number of frames to check for stable grasp
-
-    # Joint2 lift parameters (for franka: panda_joint2)
-    JOINT2_LIFT_OFFSET = 0.5  # Amount to lift joint2 when grasped (positive = lift up)
-    JOINT2_LIFT_KP = 0.2  # Proportional gain for joint2 lift control
-    JOINT2_LIFT_MAX_DELTA = 0.3  # Maximum change per step
-
-    DEFAULT_CONFIG_SIMPLE = deepcopy(DEFAULT_CONFIG)
-    DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"].update({
-        "gripper_approach": 0.5,
-        "grasp_reward": 4.0,
-    })
-    DEFAULT_CONFIG_SIMPLE["grasp_config"] = {
-        "grasp_check_distance": GRASP_DISTANCE_THRESHOLD,
-        "gripper_close_distance": GRASP_DISTANCE_THRESHOLD,
-    }
 
     scenario = ScenarioCfg(
         objects=[
@@ -58,14 +37,6 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
-            ),
-            RigidObjCfg(
-                name="object",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
             ),
             RigidObjCfg(
                 name="lamp",
@@ -92,12 +63,21 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
             ),
             RigidObjCfg(
-                name="screw_driver",
-                scale=(1.5, 1.5, 1.5),
+                name="cutting_tools",
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/usd/c5810e7c2c785fe3940372b205090bad.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
+            ),
+            # Use actual banana mesh from EmbodiedGenData (matches object_layout.py)
+            RigidObjCfg(
+                name="object",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
             ),
             RigidObjCfg(
                 name="spoon",
@@ -172,309 +152,129 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
     )
     max_episode_steps = 200
 
-    def __init__(self, scenario, device=None):
-        # Placeholders needed during super().__init__ (reset may be called there)
-        self.object_grasped = None
-        self.gripper_joint_indices = [0, 1]  # panda_finger_joint1, panda_finger_joint2
-        self._grasp_notified = None
-        self._distance_history = None  # History buffer for stable grasp check
-        self.joint2_name = "panda_joint2"
-        self.joint2_index = None
-        self.initial_joint_pos = None
-
-        super().__init__(scenario, device)
-
-        # Override reward functions for this task
-        self.reward_functions = [
-            self._reward_gripper_approach,
-            self._reward_grasp,
-            self._reward_gripper_downward_alignment,
-        ]
-        self.reward_weights = [
-            self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["gripper_approach"],
-            self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["grasp_reward"],
-            0.1,  # weight for keeping the gripper pointing downward
-        ]
-
-        # Get config values
-        grasp_config = self.DEFAULT_CONFIG_SIMPLE["grasp_config"]
-        self.grasp_check_distance = grasp_config["grasp_check_distance"]
-        self.gripper_close_distance = grasp_config["gripper_close_distance"]
-
-        # Initialize tracking buffers
-        self.object_grasped = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        self._grasp_notified = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        self._distance_history = torch.full(
-            (self.num_envs, self.GRASP_HISTORY_WINDOW),
-            float("inf"),
-            device=self.device,
-        )
-
-        # Find joint2 index
-        joint_names = self.handler.get_joint_names(self.robot_name, sort=True)
-        if self.joint2_name in joint_names:
-            self.joint2_index = joint_names.index(self.joint2_name)
-        else:
-            log.warning(f"Joint {self.joint2_name} not found, joint2 lift disabled")
-
-    def reset(self, env_ids=None):
-        """Reset environment and tracking variables."""
-        obs, info = super().reset(env_ids=env_ids)
-
-        if env_ids is None:
-            env_ids_tensor = torch.arange(self.num_envs, device=self.device)
-        else:
-            env_ids_tensor = (
-                torch.tensor(env_ids, device=self.device) if not isinstance(env_ids, torch.Tensor) else env_ids
-            )
-
-        # Reset grasp tracking
-        self.object_grasped[env_ids_tensor] = False
-        if self._grasp_notified is None or self._grasp_notified.shape[0] != self.num_envs:
-            self._grasp_notified = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-            self._distance_history = torch.full(
-                (self.num_envs, self.GRASP_HISTORY_WINDOW),
-                float("inf"),
-                device=self.device,
-            )
-        else:
-            self._grasp_notified[env_ids_tensor] = False
-            self._distance_history[env_ids_tensor] = float("inf")
-
-        # Store initial joint positions if not already stored
-        if self.initial_joint_pos is None:
-            states = self.handler.get_states(mode="tensor")
-            self.initial_joint_pos = states.robots[self.robot_name].joint_pos.clone()
-
-        return obs, info
-
-    def step(self, actions):
-        """Step with delta control and simple gripper control."""
-        current_states = self.handler.get_states(mode="tensor")
-        box_pos = current_states.objects["object"].root_state[:, 0:3]
-        gripper_pos, _ = self._get_ee_state(current_states)
-        gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
-
-        # Apply delta control
-        delta_actions = actions * self._action_scale
-        new_actions = self._last_action + delta_actions
-        real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
-
-        # Simple gripper control: close when near object
-        real_actions = self._apply_simple_gripper_control(real_actions, gripper_box_dist)
-
-        # Apply joint2 lift control if grasped
-        if self.object_grasped is not None and self.object_grasped.any() and self.joint2_index is not None:
-            real_actions = self._apply_joint2_lift_control(real_actions, current_states)
-
-        # Bypass PickPlaceBase.step to avoid its gripper control logic
-        # Call RLTaskEnv.step directly
-        # Note: reward functions will be called inside super().step()
-        # and they will compute newly_grasped by comparing current state with self.object_grasped
-        obs, reward, terminated, time_out, info = super(PickPlaceBase, self).step(real_actions)
-        self._last_action = real_actions
-
-        # Update grasp state after step (for next step's comparison)
-        updated_states = self.handler.get_states(mode="tensor")
-        old_grasped = self.object_grasped.clone()
-        self.object_grasped = self._compute_grasp_state(updated_states)
-
-        newly_grasped = self.object_grasped & (~old_grasped)
-        newly_released = (~self.object_grasped) & old_grasped
-
-        if newly_grasped.any() and newly_grasped[0]:
-            log.info(f"[Env 0] Object grasped! Distance: {gripper_box_dist[0].item():.4f}m")
-            self._grasp_notified[newly_grasped] = True
-
-        if newly_released.any() and newly_released[0]:
-            log.info(f"[Env 0] Object released! Distance: {gripper_box_dist[0].item():.4f}m")
-            self._grasp_notified[newly_released] = False
-
-        # Terminate episode if object is released
-        terminated = terminated | newly_released
-
-        # Track lift state: check if joint2 has been lifted significantly
-        lift_active = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        if self.joint2_index is not None and self.initial_joint_pos is not None:
-            current_joint2 = updated_states.robots[self.robot_name].joint_pos[:, self.joint2_index]
-            initial_joint2 = self.initial_joint_pos[:, self.joint2_index]
-            # Lift is active if joint2 has moved up significantly (more than 0.1 radians)
-            lift_active = (current_joint2 - initial_joint2) > 0.1
-
-        info["grasp_success"] = self.object_grasped
-        info["lift_active"] = lift_active
-        info["stage"] = torch.full((self.num_envs,), 1, dtype=torch.long, device=self.device)
-
-        return obs, reward, terminated, time_out, info
-
-    def _apply_simple_gripper_control(self, actions, gripper_box_dist):
-        """Simple gripper control: close when near object."""
-        # Close gripper when close to object
-        gripper_close = gripper_box_dist < self.gripper_close_distance
-        gripper_value_close = torch.tensor(0.0, device=self.device, dtype=actions.dtype)  # Closed
-        gripper_value_open = torch.tensor(0.04, device=self.device, dtype=actions.dtype)  # Open
-
-        # Set gripper joints
-        for gripper_idx in self.gripper_joint_indices:
-            actions[:, gripper_idx] = torch.where(
-                gripper_close,
-                gripper_value_close,
-                gripper_value_open,
-            )
-
-        return actions
-
-    def _apply_joint2_lift_control(self, actions, current_states):
-        """Apply joint2 lift control when object is grasped."""
-        if self.initial_joint_pos is None:
-            self.initial_joint_pos = current_states.robots[self.robot_name].joint_pos.clone()
-
-        joint_pos = current_states.robots[self.robot_name].joint_pos
-        joint2_idx = self.joint2_index
-
-        # Target position: initial position + lift offset (positive offset lifts up)
-        target_lift = self.initial_joint_pos[:, joint2_idx] + self.JOINT2_LIFT_OFFSET
-        joint_error = target_lift - joint_pos[:, joint2_idx]
-
-        # Apply proportional control with max delta limit
-        desired = joint_pos[:, joint2_idx] + self.JOINT2_LIFT_KP * joint_error
-        delta = torch.clamp(
-            desired - joint_pos[:, joint2_idx],
-            -self.JOINT2_LIFT_MAX_DELTA,
-            self.JOINT2_LIFT_MAX_DELTA,
-        )
-        joint2_value = torch.clamp(
-            joint_pos[:, joint2_idx] + delta,
-            self._action_low[joint2_idx],
-            self._action_high[joint2_idx],
-        )
-
-        # Apply lift control only to environments where object is grasped
-        actions[self.object_grasped, joint2_idx] = joint2_value[self.object_grasped]
-
-        return actions
-
-    def _compute_grasp_state(self, states):
-        """Compute if object is grasped (requires 5 stable frames based on distance only)."""
-        box_pos = states.objects["object"].root_state[:, 0:3]
-        gripper_pos, _ = self._get_ee_state(states)
-        gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
-
-        # Update rolling distance history
-        if self._distance_history is None or self._distance_history.shape[0] != self.num_envs:
-            self._distance_history = torch.full(
-                (self.num_envs, self.GRASP_HISTORY_WINDOW),
-                float("inf"),
-                device=self.device,
-            )
-        self._distance_history = torch.roll(self._distance_history, shifts=-1, dims=1)
-        self._distance_history[:, -1] = gripper_box_dist
-
-        # Object is grasped if distance has been stable (close) for 5 frames
-        stable_grasp = (self._distance_history < self.grasp_check_distance).all(dim=1)
-        is_grasping = stable_grasp
-
-        return is_grasping
-
-    def _reward_gripper_approach(self, env_states) -> torch.Tensor:
-        """Reward for gripper approaching the box."""
-        box_pos = env_states.objects["object"].root_state[:, 0:3]
-        gripper_pos, _ = self._get_ee_state(env_states)
-        gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
-
-        approach_reward_far = 1 - torch.tanh(gripper_box_dist)
-        approach_reward_near = 1 - torch.tanh(gripper_box_dist * 10)
-        return approach_reward_far + approach_reward_near
-
-    def _reward_grasp(self, env_states) -> torch.Tensor:
-        """Reward for maintaining grasp state (continuous reward while grasped)."""
-        # Use cached grasp state (computed in step method)
-        return self.object_grasped.float()
-
-    def _reward_gripper_downward_alignment(self, env_states) -> torch.Tensor:
-        """Encourage the gripper tool frame to face downward (z-axis aligned with world -Z)."""
-        _, gripper_quat = self._get_ee_state(env_states)
-        gripper_rot = matrix_from_quat(gripper_quat)  # (B, 3, 3)
-        gripper_z_world = gripper_rot[:, :, 2]  # gripper local z-axis in world frame
-
-        down = torch.tensor([0.0, 0.0, -1.0], device=self.device, dtype=gripper_z_world.dtype)
-        alignment = (gripper_z_world * down).sum(dim=-1).clamp(-1.0, 1.0)  # cosine of angle to -Z
-        # Map cosine (1 best, -1 worst) to [0,1] reward
-        return (alignment + 1.0) / 2.0
-
     def _get_initial_states(self) -> list[dict] | None:
-        """Get initial states for all environments."""
-        init = [
-            {
-                "objects": {
-                    "table": {
-                        "pos": torch.tensor([0.400000, -0.200000, 0.400000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+        """Get initial states for all environments.
+        
+        Uses saved poses from object_layout.py. Loads banana, table, basket, and trajectory markers
+        from saved_poses_20251206_banana_basket.py.
+        """
+        # Add path to saved poses
+        saved_poses_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "get_started", "output", "saved_poses_20251206_banana_basket.py"
+        )
+        if os.path.exists(saved_poses_path):
+            # Load saved poses dynamically
+            spec = importlib.util.spec_from_file_location("saved_poses", saved_poses_path)
+            saved_poses_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(saved_poses_module)
+            saved_poses = saved_poses_module.poses
+        else:
+            # Fallback to default poses if saved file not found
+            log.warning(f"Saved poses file not found at {saved_poses_path}, using default poses")
+            saved_poses = None
+        
+        if saved_poses is not None:
+            # Use saved poses from object_layout.py
+            init = []
+            for _ in range(self.num_envs):
+                env_state = {
+                    "objects": {
+                        # Banana as the object to pick
+                        "object": saved_poses["objects"].get("banana", saved_poses["objects"].get("object")),
+                        "table": saved_poses["objects"]["table"],
+                        "lamp": saved_poses["objects"].get("lamp"),
+                        "basket": saved_poses["objects"].get("basket"),
+                        "bowl": saved_poses["objects"].get("bowl"),
+                        "cutting_tools": saved_poses["objects"].get("cutting_tools"),
+                        "spoon": saved_poses["objects"].get("spoon"),
+                        # Include trajectory markers if present
+                        "traj_marker_0": saved_poses["objects"].get("traj_marker_0"),
+                        "traj_marker_1": saved_poses["objects"].get("traj_marker_1"),
+                        "traj_marker_2": saved_poses["objects"].get("traj_marker_2"),
+                        "traj_marker_3": saved_poses["objects"].get("traj_marker_3"),
+                        "traj_marker_4": saved_poses["objects"].get("traj_marker_4"),
                     },
-                    "lamp": {
-                        "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                    "robots": {
+                        "franka": saved_poses["robots"]["franka"],
                     },
-                    "basket": {
-                        "pos": torch.tensor([0.220000, 0.200000, 0.955000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "bowl": {
-                        "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "screw_driver": {
-                        "pos": torch.tensor([0.530000, -0.410000, 0.811000]),
-                        "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
-                    },
-                    "spoon": {
-                        "pos": torch.tensor([0.530000, -0.690000, 0.850000]),
-                        "rot": torch.tensor([0.961352, -0.120799, 0.030845, 0.245473]),
-                    },
-                    "object": {
-                        "pos": torch.tensor([0.280000, -0.280000, 0.825000]),
-                        "rot": torch.tensor([0.889292, -0.000000, 0.000001, -0.457338]),
-                    },
-                    "traj_marker_0": {
-                        "pos": torch.tensor([0.260000, -0.240000, 0.850000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_1": {
-                        "pos": torch.tensor([0.270000, -0.190000, 0.970000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_2": {
-                        "pos": torch.tensor([0.260000, -0.140000, 1.160000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                    "traj_marker_3": {
-                        "pos": torch.tensor([0.250000, -0.030000, 1.240000]),
-                        "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
-                    },
-                    "traj_marker_4": {
-                        "pos": torch.tensor([0.310000, 0.190000, 1.160000]),
-                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                    },
-                },
-                "robots": {
-                    "franka": {
-                        "pos": torch.tensor([0.800000, -0.800000, 0.780000]),
-                        "rot": torch.tensor([0.475731, -0.000000, -0.000001, 0.879590]),
-                        "dof_pos": {
-                            "panda_finger_joint1": 0.040000,
-                            "panda_finger_joint2": 0.040000,
-                            "panda_joint1": 0.000000,
-                            "panda_joint2": -0.785398,
-                            "panda_joint3": 0.000000,
-                            "panda_joint4": -2.356194,
-                            "panda_joint5": 0.000000,
-                            "panda_joint6": 1.570796,
-                            "panda_joint7": 0.785398,
+                }
+                # Remove None values
+                env_state["objects"] = {k: v for k, v in env_state["objects"].items() if v is not None}
+                init.append(env_state)
+        else:
+            # Default poses (fallback) - using poses from original approach_grasp_banana.py
+            init = [
+                {
+                    "objects": {
+                        "table": {
+                            "pos": torch.tensor([0.400000, -0.200000, 0.400000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "lamp": {
+                            "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "basket": {
+                            "pos": torch.tensor([0.220000, 0.200000, 0.955000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "bowl": {
+                            "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "cutting_tools": {
+                            "pos": torch.tensor([0.530000, -0.410000, 0.811000]),
+                            "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
+                        },
+                        "object": {
+                            "pos": torch.tensor([0.280000, -0.280000, 0.825000]),
+                            "rot": torch.tensor([0.889292, -0.000000, 0.000001, -0.457338]),
+                        },
+                        "spoon": {
+                            "pos": torch.tensor([0.530000, -0.690000, 0.850000]),
+                            "rot": torch.tensor([0.961352, -0.120799, 0.030845, 0.245473]),
+                        },
+                        "traj_marker_0": {
+                            "pos": torch.tensor([0.260000, -0.240000, 0.850000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "traj_marker_1": {
+                            "pos": torch.tensor([0.270000, -0.190000, 0.970000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "traj_marker_2": {
+                            "pos": torch.tensor([0.260000, -0.140000, 1.160000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "traj_marker_3": {
+                            "pos": torch.tensor([0.250000, -0.030000, 1.240000]),
+                            "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
+                        },
+                        "traj_marker_4": {
+                            "pos": torch.tensor([0.310000, 0.190000, 1.160000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                     },
-                },
-            }
-            for _ in range(self.num_envs)
-        ]
+                    "robots": {
+                        "franka": {
+                            "pos": torch.tensor([0.800000, -0.800000, 0.780000]),
+                            "rot": torch.tensor([0.475731, -0.000000, -0.000001, 0.879590]),
+                            "dof_pos": {
+                                "panda_finger_joint1": 0.040000,
+                                "panda_finger_joint2": 0.040000,
+                                "panda_joint1": 0.000000,
+                                "panda_joint2": -0.785398,
+                                "panda_joint3": 0.000000,
+                                "panda_joint4": -2.356194,
+                                "panda_joint5": 0.000000,
+                                "panda_joint6": 1.570796,
+                                "panda_joint7": 0.785398,
+                            },
+                        },
+                    },
+                }
+                for _ in range(self.num_envs)
+            ]
 
         return init
