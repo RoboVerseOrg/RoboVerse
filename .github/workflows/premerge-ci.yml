@@ -4,6 +4,15 @@ on:
   workflow_dispatch:
   merge_group:
     types: [checks_requested]
+  pull_request_target:
+    types:
+      - auto_merge_enabled
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - ci/pr-**
 
 env:
   REGION: us-west-2
@@ -17,349 +26,661 @@ env:
   ECR_REPOSITORY: "roboverse-dev"
 
 jobs:
+  prepare-or-promote:
+    name: prepare-or-promote
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
+    outputs:
+      run_direct: ${{ steps.decide.outputs.run_direct }}
+      pr_number: ${{ steps.decide.outputs.pr_number }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: Route CI flow
+        id: decide
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          BASE_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          RUN_DIRECT="false"
+          PR_NUM="${PR_NUMBER}"
+          REASON=""
+
+          case "$GITHUB_EVENT_NAME" in
+            merge_group)
+              BASE_REPO_NAME="${BASE_REPO}"
+              HAS_FORK="false"
+              PRS=$(jq -r '.merge_group.pull_requests[].number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+
+              if [ -z "$PRS" ]; then
+                echo "No pull requests listed in merge_group payload; defaulting to same-repo."
+              fi
+
+              for PR in $PRS; do
+                HEAD_REPO_NAME=$(gh api "repos/${BASE_REPO_NAME}/pulls/${PR}" --jq '.head.repo.full_name' 2>/dev/null || echo "")
+                BASE_REPO_FROM_PR=$(gh api "repos/${BASE_REPO_NAME}/pulls/${PR}" --jq '.base.repo.full_name' 2>/dev/null || echo "$BASE_REPO_NAME")
+
+                if [ -z "$HEAD_REPO_NAME" ]; then
+                  echo "Warning: could not determine head repo for PR #$PR; assuming same-repo."
+                  continue
+                fi
+
+                if [ "$HEAD_REPO_NAME" != "$BASE_REPO_FROM_PR" ]; then
+                  HAS_FORK="true"
+                  echo "Detected fork PR #$PR (head repo: $HEAD_REPO_NAME, base repo: $BASE_REPO_FROM_PR)"
+                else
+                  echo "PR #$PR is same-repo (head repo: $HEAD_REPO_NAME)"
+                fi
+              done
+
+              if [ "$HAS_FORK" = "true" ]; then
+                RUN_DIRECT="false"
+                REASON="merge_group_contains_fork"
+              else
+                RUN_DIRECT="true"
+                REASON="merge_group_same_repo_only"
+              fi
+              ;;
+            push)
+              if [[ "$GITHUB_REF" =~ ^refs/heads/ci/pr- ]]; then
+                RUN_DIRECT="true"
+                REASON="ci/pr-* push"
+                PR_NUM="${GITHUB_REF#refs/heads/ci/pr-}"
+              else
+                REASON="unsupported push ref"
+              fi
+              ;;
+            workflow_dispatch)
+              RUN_DIRECT="true"
+              REASON="manual dispatch"
+              ;;
+            pull_request_target)
+              if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+                REASON="same-repo PR, no promotion needed"
+              else
+                REASON="fork PR requires promotion"
+              fi
+              ;;
+            *)
+              REASON="unsupported event"
+              ;;
+          esac
+
+          echo "run_direct=${RUN_DIRECT}" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
+          echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
+
+      - name: Log routing decision
+        run: |
+          echo "run_direct: ${{ steps.decide.outputs.run_direct }}"
+          echo "pr_number: ${{ steps.decide.outputs.pr_number }}"
+          echo "reason: ${{ steps.decide.outputs.reason }}"
+
+      - name: Ensure promotion token exists
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          (env.PRIV_CI_PUSH_TOKEN == '' || env.PRIV_CI_PUSH_TOKEN == null)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "🔒 Privileged CI promotion skipped: secret \`PRIV_CI_PUSH_TOKEN\` is not configured."
+          echo "Missing PRIV_CI_PUSH_TOKEN; exiting router after notifying PR."
+          exit 0
+
+      - name: Check actor permission
+        id: perm
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          env.PRIV_CI_PUSH_TOKEN != '' &&
+          env.PRIV_CI_PUSH_TOKEN != null
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          perm=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq .permission 2>/dev/null || echo "none")
+          echo "permission=$perm" >> "$GITHUB_OUTPUT"
+          echo "Actor: $ACTOR, permission: $perm"
+
+      - name: Skip promotion without push access
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          steps.perm.outputs.permission != '' &&
+          (steps.perm.outputs.permission == 'read' || steps.perm.outputs.permission == 'triage' || steps.perm.outputs.permission == 'none')
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "🔒 Privileged CI promotion skipped: @${ACTOR} does not have push permission on ${REPO}."
+          echo "Insufficient permission; exiting router after notifying PR."
+          exit 0
+
+      - name: Checkout repository for promotion
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
+
+      - name: Promote fork PR to ci/pr-* branch
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
+        env:
+          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="ci/pr-${PR_NUMBER}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          gh pr checkout "$PR_NUMBER"
+          git push origin HEAD:"$BRANCH"
+
+      - name: Comment promotion result
+        if: >
+          github.event_name == 'pull_request_target' &&
+          steps.decide.outputs.reason == 'fork PR requires promotion' &&
+          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
+        env:
+          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="ci/pr-${PR_NUMBER}"
+          gh pr comment "$PR_NUMBER" --body "🔐 Privileged CI has been promoted to branch \`${BRANCH}\`. Tests will run from that branch."
+
   pre-merge-tests:
+    needs: prepare-or-promote
+    if: needs.prepare-or-promote.outputs.run_direct == 'true'
+    permissions:
+      contents: write       # Need write access to delete ci/pr-* branches
+      pull-requests: write
+      issues: write         # Post status comment back to PR
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 720
     steps:
-      # change to the source code directory
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - run: aws --version
-    ############# Prebuild ############
-    - name: pre_build
-      env:
-        SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-      run: |
-        # Get AWS account ID
-        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
-        if [ -z "$AWS_ACCOUNT_ID" ]; then
-          echo "Error: Failed to get AWS account ID"
-          exit 1
-        fi
+        # change to the source code directory
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - run: aws --version
+      ############# Prebuild ############
+      - name: pre_build
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Get AWS account ID
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+          if [ -z "$AWS_ACCOUNT_ID" ]; then
+            echo "Error: Failed to get AWS account ID"
+            exit 1
+          fi
 
-        echo "Preparing S3 bucket..."
-        CACHE_BUCKET="${CACHE_BUCKET_PREFIX}-${AWS_ACCOUNT_ID}"
-        aws s3api head-bucket --bucket $CACHE_BUCKET || \
-          aws s3 mb s3://$CACHE_BUCKET --region $REGION
+          echo "Preparing S3 bucket..."
+          CACHE_BUCKET="${CACHE_BUCKET_PREFIX}-${AWS_ACCOUNT_ID}"
+          aws s3api head-bucket --bucket $CACHE_BUCKET || \
+            aws s3 mb s3://$CACHE_BUCKET --region $REGION
 
-        # Configure S3 bucket lifecycle rule for cache expiration
-        aws s3api put-bucket-lifecycle-configuration \
-          --bucket $CACHE_BUCKET \
-          --lifecycle-configuration '{
-            "Rules": [
-              {
-                "ID": "ExpireBuildKitCache",
-                "Status": "Enabled",
-                "Filter": {
-                  "Prefix": ""
-                },
-                "Expiration": {
-                  "Days": 14
+          # Configure S3 bucket lifecycle rule for cache expiration
+          aws s3api put-bucket-lifecycle-configuration \
+            --bucket $CACHE_BUCKET \
+            --lifecycle-configuration '{
+              "Rules": [
+                {
+                  "ID": "ExpireBuildKitCache",
+                  "Status": "Enabled",
+                  "Filter": {
+                    "Prefix": ""
+                  },
+                  "Expiration": {
+                    "Days": 14
+                  }
                 }
-              }
-            ]
-          }'
-        echo "CACHE_BUCKET=$CACHE_BUCKET" >> $GITHUB_ENV
+              ]
+            }'
+          echo "CACHE_BUCKET=$CACHE_BUCKET" >> $GITHUB_ENV
 
 
-        echo "Launching EC2 instance to run tests..."
-        INSTANCE_ID=$(aws ec2 run-instances \
-          --image-id ami-0b7f5f52689b2c0d0 \
-          --instance-type $INSTANCE_TYPE \
-          --region $REGION \
-          --key-name $KEY_NAME \
-          --security-group-ids sg-03f9110d8d39282ad \
-          --subnet-id subnet-0c56793ce29caa78b \
-          --iam-instance-profile Name="RoboverseCi" \
-          --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":500}}]' \
-          --output text \
-          --query 'Instances[0].InstanceId')
-        echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
+          echo "Launching EC2 instance to run tests..."
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ami-0b7f5f52689b2c0d0 \
+            --instance-type $INSTANCE_TYPE \
+            --region $REGION \
+            --key-name $KEY_NAME \
+            --security-group-ids sg-03f9110d8d39282ad \
+            --subnet-id subnet-0c56793ce29caa78b \
+            --iam-instance-profile Name="RoboverseCi" \
+            --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":500}}]' \
+            --output text \
+            --query 'Instances[0].InstanceId')
+          echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
 
-        # Create ECR repository if it doesn't exist
-        aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
-          aws ecr create-repository --repository-name $ECR_REPOSITORY
-          echo "Waiting for instance $INSTANCE_ID to be running..."
-          aws ec2 wait instance-running \
-            --instance-ids $INSTANCE_ID \
-            --region $REGION
+          # Create ECR repository if it doesn't exist
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
+            aws ecr create-repository --repository-name $ECR_REPOSITORY
+            echo "Waiting for instance $INSTANCE_ID to be running..."
+            aws ec2 wait instance-running \
+              --instance-ids $INSTANCE_ID \
+              --region $REGION
 
-        echo "Getting instance IP address..."
-        EC2_INSTANCE_IP=$(aws ec2 describe-instances \
-          --region $REGION \
-          --filters "Name=instance-state-name,Values=running" "Name=instance-id,Values=$INSTANCE_ID" \
-          --query 'Reservations[*].Instances[*].[PrivateIpAddress]' \
-          --output text)
-        echo "EC2_INSTANCE_IP=$EC2_INSTANCE_IP" >> $GITHUB_ENV
+          echo "Getting instance IP address..."
+          EC2_INSTANCE_IP=$(aws ec2 describe-instances \
+            --region $REGION \
+            --filters "Name=instance-state-name,Values=running" "Name=instance-id,Values=$INSTANCE_ID" \
+            --query 'Reservations[*].Instances[*].[PrivateIpAddress]' \
+            --output text)
+          echo "EC2_INSTANCE_IP=$EC2_INSTANCE_IP" >> $GITHUB_ENV
 
-        echo "Setting up SSH configuration..."
-        mkdir -p ~/.ssh
-        aws ec2 describe-key-pairs \
-          --include-public-key \
-          --key-name $KEY_NAME \
-          --query 'KeyPairs[0].PublicKey' \
-          --output text > ~/.ssh/id_rsa.pub
-        echo "$SSH_KEY" > ~/.ssh/id_rsa
-        chmod 400 ~/.ssh/id_*
-        echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
+          echo "Setting up SSH configuration..."
+          mkdir -p ~/.ssh
+          aws ec2 describe-key-pairs \
+            --include-public-key \
+            --key-name $KEY_NAME \
+            --query 'KeyPairs[0].PublicKey' \
+            --output text > ~/.ssh/id_rsa.pub
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 400 ~/.ssh/id_*
+          echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
 
-        echo "Sending SSH public key to instance..."
-        aws ec2-instance-connect send-ssh-public-key \
-          --instance-id $INSTANCE_ID \
-          --availability-zone $AZ \
-          --ssh-public-key file://~/.ssh/id_rsa.pub \
-          --instance-os-user $EC2_USER_NAME
+          echo "Sending SSH public key to instance..."
+          aws ec2-instance-connect send-ssh-public-key \
+            --instance-id $INSTANCE_ID \
+            --availability-zone $AZ \
+            --ssh-public-key file://~/.ssh/id_rsa.pub \
+            --instance-os-user $EC2_USER_NAME
 
-    ############# Build #############
-    - name: build
-      run: |
-        echo "====Copying source code...===="
-        wait_time=$RETRY_WAIT_TIME
-        SRC_DIR=$(basename $GITHUB_WORKSPACE)
-        echo ""====Check environment variables..."===="
-        echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-        echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
-        echo "EC2_USER_NAME=$EC2_USER_NAME"
-        echo "SRC_DIR=$SRC_DIR"
-        echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
-        echo "MAX_RETRIES=$MAX_RETRIES"
-        echo "====Repo file check...===="
-        ls ./
+      ############# Build #############
+      - name: build
+        run: |
+          echo "====Copying source code...===="
+          wait_time=$RETRY_WAIT_TIME
+          SRC_DIR=$(basename $GITHUB_WORKSPACE)
+          echo ""====Check environment variables..."===="
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
+          echo "EC2_USER_NAME=$EC2_USER_NAME"
+          echo "SRC_DIR=$SRC_DIR"
+          echo "RETRY_WAIT_TIME=$RETRY_WAIT_TIME"
+          echo "MAX_RETRIES=$MAX_RETRIES"
+          echo "====Repo file check...===="
+          ls ./
 
-        # ==== before buildx build ====
-        DOCKERFILE_HASH=$(sha256sum Dockerfile | cut -c1-16)
-        IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:df-$DOCKERFILE_HASH"
-        echo "IMAGE_URI=$IMAGE_URI"
+          # ==== before buildx build ====
+          DOCKERFILE_HASH=$(sha256sum Dockerfile | cut -c1-16)
+          IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:df-$DOCKERFILE_HASH"
+          echo "IMAGE_URI=$IMAGE_URI"
 
-        retry_count=0
+          retry_count=0
 
-        # change to parent directory t
-        cd ..
+          # change to parent directory t
+          cd ..
 
-        while [ $retry_count -lt $MAX_RETRIES ]; do
-          if [ $retry_count -gt 0 ]; then
-            wait_time=$((wait_time * 2))
-            echo "Retry attempt $((retry_count + 1))/$MAX_RETRIES. Waiting $wait_time seconds..."
-            sleep $wait_time
+          while [ $retry_count -lt $MAX_RETRIES ]; do
+            if [ $retry_count -gt 0 ]; then
+              wait_time=$((wait_time * 2))
+              echo "Retry attempt $((retry_count + 1))/$MAX_RETRIES. Waiting $wait_time seconds..."
+              sleep $wait_time
+            fi
+
+            if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR $EC2_USER_NAME@$EC2_INSTANCE_IP:~; then
+              echo "SCP command succeeded"
+              break
+            fi
+
+            retry_count=$((retry_count + 1))
+          done
+
+          if [ $retry_count -eq $MAX_RETRIES ]; then
+            echo "SCP command failed after $MAX_RETRIES attempts"
+            exit 1
           fi
 
-          if scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r $SRC_DIR $EC2_USER_NAME@$EC2_INSTANCE_IP:~; then
-            echo "SCP command succeeded"
-            break
+          # login
+          ECR_LOGIN_TOKEN=$(aws ecr get-login-password --region $REGION)
+
+          echo "====Running tests on EC2 instance...===="
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+
+            set -euo pipefail
+
+            # Login to ECR using token from CodeBuild
+            echo \"$ECR_LOGIN_TOKEN\" | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+            # Configure BuildKit environment
+            export DOCKER_BUILDKIT=1
+            export BUILDKIT_INLINE_CACHE=1
+
+            docker buildx create --name metasim-builder --driver docker-container \
+              --driver-opt env.AWS_REGION=$REGION \
+              --driver-opt env.AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+              --driver-opt env.AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+              --bootstrap
+            docker buildx use metasim-builder
+
+            cd \"\$HOME/${SRC_DIR}\"
+
+            # docker build
+            if docker pull "$IMAGE_URI" 2>/dev/null ; then
+              echo "Image $IMAGE_URI already exists. Skipping build."
+            else
+              echo "===Starting docker build.==="
+              docker buildx build --progress=plain --platform linux/amd64 \
+              -t "$IMAGE_URI" \
+              --cache-from type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
+              --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
+              --build-arg DOCKER_UID=1000 \
+              --build-arg DOCKER_GID=1000 \
+              --build-arg DOCKER_USER=$EC2_USER_NAME \
+              -f Dockerfile \
+              --load .
+
+              docker push "$IMAGE_URI"
+            fi
+
+            # begin run test
+            GENERAL_TEST_EXIT_CODE=0
+            MUJOCO_TEST_EXIT_CODE=0
+            SAPIEN3_TEST_EXIT_CODE=0
+            ISAACSIM_TEST_EXIT_CODE=0
+            ISAACGYM_TEST_EXIT_CODE=0
+            # run all test
+            # Run general tests (no simulator required)
+            docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+            --name metasim-autotest \
+            --user 1000:1000 --privileged \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+            -v /usr/local/cuda:/usr/local/cuda \
+            -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+            "$IMAGE_URI" \
+            -c "bash -lc 'set -o pipefail; \
+            /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k general -vv \
+            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-general.log'" \
+            || GENERAL_TEST_EXIT_CODE=$?
+
+            docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+            --name metasim-autotest \
+            --user 1000:1000 --privileged \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+            -v /usr/local/cuda:/usr/local/cuda \
+            -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+            "$IMAGE_URI" \
+            -c "bash -lc 'set -o pipefail; \
+            /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco -vv \
+            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-mujoco.log'" \
+            || MUJOCO_TEST_EXIT_CODE=$?
+
+            docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+            --name metasim-autotest \
+            --user 1000:1000 --privileged \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+            -v /usr/local/cuda:/usr/local/cuda \
+            -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+            "$IMAGE_URI" \
+            -c "bash -lc 'set -o pipefail; \
+            /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3 -vv \
+            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log'" \
+            || SAPIEN3_TEST_EXIT_CODE=$?
+
+            docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+            --name metasim-autotest \
+            --user 1000:1000 --privileged \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+            -v /usr/local/cuda:/usr/local/cuda \
+            -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+            "$IMAGE_URI" \
+            -c "bash -lc 'set -o pipefail; \
+            /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k isaacsim -vv \
+            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacsim.log'" \
+            || ISAACSIM_TEST_EXIT_CODE=$?
+
+            docker run --rm --entrypoint bash --runtime=nvidia --network=host \
+            --name metasim-autotest \
+            --user 1000:1000 --privileged \
+            -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
+            -v /usr/local/cuda:/usr/local/cuda \
+            -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
+            "$IMAGE_URI" \
+            -c "bash -lc 'set -o pipefail; \
+            /home/$EC2_USER_NAME/conda/envs/metasim_isaacgym/bin/python3 /home/$EC2_USER_NAME/RoboVerse/metasim/test/isaacgym_entry.py -k isaacgym -vv \
+            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacgym.log'" \
+            || ISAACGYM_TEST_EXIT_CODE=$?
+
+            # TODO check if test_exit_code necessary
+            touch ~/$SRC_DIR/test_exit_codes.txt
+            {
+              echo \"GENERAL_TEST_EXIT_CODE=\$GENERAL_TEST_EXIT_CODE\"
+              echo \"MUJOCO_TEST_EXIT_CODE=\$MUJOCO_TEST_EXIT_CODE\"
+              echo \"SAPIEN3_TEST_EXIT_CODE=\$SAPIEN3_TEST_EXIT_CODE\"
+              echo \"ISAACSIM_TEST_EXIT_CODE=\$ISAACSIM_TEST_EXIT_CODE\"
+              echo \"ISAACGYM_TEST_EXIT_CODE=\$ISAACGYM_TEST_EXIT_CODE\"
+            } > ~/${SRC_DIR}/test_exit_codes.txt
+          " || { echo "Test execution failed"; exit 1; }
+
+          echo "===Copying test reports...==="
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_codes.txt $CODEBUILD_SRC_DIR/
+
+          source $CODEBUILD_SRC_DIR/test_exit_codes.txt
+
+          echo "General test exit code: ${GENERAL_TEST_EXIT_CODE}"
+          echo "Mujoco test exit code: ${MUJOCO_TEST_EXIT_CODE}"
+          echo "Sapien3 test exit code: ${SAPIEN3_TEST_EXIT_CODE}"
+          echo "IsaacSim test exit code: ${ISAACSIM_TEST_EXIT_CODE}"
+          echo "IsaacGym test exit code: ${ISAACGYM_TEST_EXIT_CODE}"
+
+          EXIT_CODE=0
+
+          if [ "${GENERAL_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "=== General tests failed. Fetching logs... ==="
+            scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-general.log \
+              $CODEBUILD_SRC_DIR/ || true
+            echo "===== General pytest log ====="
+            cat $CODEBUILD_SRC_DIR/pytest-general.log || true
+            EXIT_CODE=1
           fi
 
-          retry_count=$((retry_count + 1))
-        done
+          if [ "${MUJOCO_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "=== Mujoco tests failed. Fetching logs... ==="
+            scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-mujoco.log \
+              $CODEBUILD_SRC_DIR/ || true
+            echo "===== Mujoco pytest log ====="
+            cat $CODEBUILD_SRC_DIR/pytest-mujoco.log || true
+            EXIT_CODE=1
+          fi
 
-        if [ $retry_count -eq $MAX_RETRIES ]; then
-          echo "SCP command failed after $MAX_RETRIES attempts"
-          exit 1
-        fi
+          if [ "${SAPIEN3_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "=== Sapien3 tests failed. Fetching logs... ==="
+            scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-sapien3.log \
+              $CODEBUILD_SRC_DIR/ || true
+            echo "===== Sapien3 pytest log ====="
+            cat $CODEBUILD_SRC_DIR/pytest-sapien3.log || true
+            EXIT_CODE=1
+          fi
 
-        # login
-        ECR_LOGIN_TOKEN=$(aws ecr get-login-password --region $REGION)
+          if [ "${ISAACSIM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "=== IsaacSim tests failed. Fetching logs... ==="
+            scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacsim.log \
+              $CODEBUILD_SRC_DIR/ || true
+            echo "===== IsaacSim pytest log ====="
+            cat $CODEBUILD_SRC_DIR/pytest-isaacsim.log || true
+            EXIT_CODE=1
+          fi
 
-        echo "====Running tests on EC2 instance...===="
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP "
+          if [ "${ISAACGYM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "=== IsaacGym tests failed. Fetching logs... ==="
+            scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacgym.log \
+              $CODEBUILD_SRC_DIR/ || true
+            echo "===== IsaacGym pytest log ====="
+            cat $CODEBUILD_SRC_DIR/pytest-isaacgym.log || true
+            EXIT_CODE=1
+          fi
 
-          set -euo pipefail
-
-          # Login to ECR using token from CodeBuild
-          echo \"$ECR_LOGIN_TOKEN\" | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
-
-          # Configure BuildKit environment
-          export DOCKER_BUILDKIT=1
-          export BUILDKIT_INLINE_CACHE=1
-
-          docker buildx create --name metasim-builder --driver docker-container \
-            --driver-opt env.AWS_REGION=$REGION \
-            --driver-opt env.AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-            --driver-opt env.AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-            --bootstrap
-          docker buildx use metasim-builder
-
-          cd \"\$HOME/${SRC_DIR}\"
-
-          # docker build
-          if docker pull "$IMAGE_URI" 2>/dev/null ; then
-            echo "Image $IMAGE_URI already exists. Skipping build."
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "Tests failed with exit code $EXIT_CODE"
+            exit 1
           else
-            echo "===Starting docker build.==="
-            docker buildx build --progress=plain --platform linux/amd64 \
-            -t "$IMAGE_URI" \
-            --cache-from type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
-            --cache-to   type=registry,ref=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:cache,mode=max \
-            --build-arg DOCKER_UID=1000 \
-            --build-arg DOCKER_GID=1000 \
-            --build-arg DOCKER_USER=$EC2_USER_NAME \
-            -f Dockerfile \
-            --load .
-
-            docker push "$IMAGE_URI"
+            echo "===All tests passed!==="
           fi
 
-          # begin run test
-          GENERAL_TEST_EXIT_CODE=0
-          MUJOCO_TEST_EXIT_CODE=0
-          SAPIEN3_TEST_EXIT_CODE=0
-          ISAACSIM_TEST_EXIT_CODE=0
-          ISAACGYM_TEST_EXIT_CODE=0
-          # run all test
-          # Run general tests (no simulator required)
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "bash -lc 'set -o pipefail; \
-          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k general -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-general.log'" \
-          || GENERAL_TEST_EXIT_CODE=$?
+      ########### Postbuild #########
+      - name: post_build
+        if: always()  # always try to terminate the instance
+        run: |
+          echo "Cleaning up resources..."
+          if [ ! -z "$INSTANCE_ID" ]; then
+              echo "Terminating EC2 instance $INSTANCE_ID..."
+              aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
+          fi
 
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "bash -lc 'set -o pipefail; \
-          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-mujoco.log'" \
-          || MUJOCO_TEST_EXIT_CODE=$?
+      - name: Prepare test logs for upload
+        if: always()
+        run: |
+          # Copy test logs from CODEBUILD_SRC_DIR to workspace root for artifact upload
+          if [ -d "$CODEBUILD_SRC_DIR" ]; then
+            cp -v $CODEBUILD_SRC_DIR/pytest-*.log . 2>/dev/null || echo "No pytest logs found"
+            cp -v $CODEBUILD_SRC_DIR/test_exit_codes.txt . 2>/dev/null || echo "No exit codes file found"
+          else
+            echo "CODEBUILD_SRC_DIR not set, files should already be in workspace"
+          fi
 
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "bash -lc 'set -o pipefail; \
-          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3 -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log'" \
-          || SAPIEN3_TEST_EXIT_CODE=$?
+      - name: Upload test logs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            pytest-*.log
+            test_exit_codes.txt
+          if-no-files-found: warn
+          retention-days: 7
 
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "bash -lc 'set -o pipefail; \
-          /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k isaacsim -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacsim.log'" \
-          || ISAACSIM_TEST_EXIT_CODE=$?
+      - name: Comment result to PR
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const fs = require('fs');
 
-          docker run --rm --entrypoint bash --runtime=nvidia --network=host \
-          --name metasim-autotest \
-          --user 1000:1000 --privileged \
-          -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
-          -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
-          -v /usr/local/cuda:/usr/local/cuda \
-          -v "$(pwd)":/home/$EC2_USER_NAME/RoboVerse \
-          "$IMAGE_URI" \
-          -c "bash -lc 'set -o pipefail; \
-          /home/$EC2_USER_NAME/conda/envs/metasim_isaacgym/bin/python3 /home/$EC2_USER_NAME/RoboVerse/metasim/test/isaacgym_entry.py -k isaacgym -vv \
-          | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacgym.log'" \
-          || ISAACGYM_TEST_EXIT_CODE=$?
+            const status = process.env.JOB_STATUS;          // success / failure / cancelled
+            const ref = context.ref;                        // refs/heads/ci/pr-123 or merge_group scenario
 
-          # TODO check if test_exit_code necessary
-          touch ~/$SRC_DIR/test_exit_codes.txt
-          {
-            echo \"GENERAL_TEST_EXIT_CODE=\$GENERAL_TEST_EXIT_CODE\"
-            echo \"MUJOCO_TEST_EXIT_CODE=\$MUJOCO_TEST_EXIT_CODE\"
-            echo \"SAPIEN3_TEST_EXIT_CODE=\$SAPIEN3_TEST_EXIT_CODE\"
-            echo \"ISAACSIM_TEST_EXIT_CODE=\$ISAACSIM_TEST_EXIT_CODE\"
-            echo \"ISAACGYM_TEST_EXIT_CODE=\$ISAACGYM_TEST_EXIT_CODE\"
-          } > ~/${SRC_DIR}/test_exit_codes.txt
-        " || { echo "Test execution failed"; exit 1; }
+            // only reply comments to branches ci/pr-* branches, skip commenting in merge_group runs
+            const match = ref.match(/^refs\/heads\/ci\/pr-(\d+)$/);
+            if (!match) {
+              core.info(`Ref ${ref} is not a ci/pr-* branch, skip PR comment.`);
+              return;
+            }
 
-        echo "===Copying test reports...==="
-        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/test_exit_codes.txt $CODEBUILD_SRC_DIR/
+            const prNumber = Number(match[1]);
 
-        source $CODEBUILD_SRC_DIR/test_exit_codes.txt
+            let emoji, msg;
+            if (status === 'success') {
+              emoji = '✅';
+              msg = `Privileged CI passed on branch \`${ref.split('/').pop()}\`.`;
+            } else if (status === 'cancelled') {
+              emoji = '⚪️';
+              msg = `Privileged CI was cancelled on branch \`${ref.split('/').pop()}\`.`;
+            } else {
+              emoji = '❌';
+              msg = `Privileged CI failed on branch \`${ref.split('/').pop()}\`.`;
+            }
 
-        echo "General test exit code: ${GENERAL_TEST_EXIT_CODE}"
-        echo "Mujoco test exit code: ${MUJOCO_TEST_EXIT_CODE}"
-        echo "Sapien3 test exit code: ${SAPIEN3_TEST_EXIT_CODE}"
-        echo "IsaacSim test exit code: ${ISAACSIM_TEST_EXIT_CODE}"
-        echo "IsaacGym test exit code: ${ISAACGYM_TEST_EXIT_CODE}"
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}#artifacts`;
 
-        EXIT_CODE=0
+            // Read test exit codes if available (copied to workspace by previous step)
+            let testSummary = '';
+            try {
+              const exitCodesPath = 'test_exit_codes.txt';
+              if (fs.existsSync(exitCodesPath)) {
+                const exitCodesContent = fs.readFileSync(exitCodesPath, 'utf8');
+                const exitCodes = {};
+                exitCodesContent.split('\n').forEach(line => {
+                  const [key, value] = line.split('=');
+                  if (key && value) exitCodes[key.trim()] = parseInt(value.trim());
+                });
 
-        if [ "${GENERAL_TEST_EXIT_CODE:-0}" -ne 0 ]; then
-          echo "=== General tests failed. Fetching logs... ==="
-          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-general.log \
-            $CODEBUILD_SRC_DIR/ || true
-          echo "===== General pytest log ====="
-          cat $CODEBUILD_SRC_DIR/pytest-general.log || true
-          EXIT_CODE=1
-        fi
+                const testSuites = [
+                  { name: 'General', code: exitCodes['GENERAL_TEST_EXIT_CODE'] },
+                  { name: 'MuJoCo', code: exitCodes['MUJOCO_TEST_EXIT_CODE'] },
+                  { name: 'Sapien3', code: exitCodes['SAPIEN3_TEST_EXIT_CODE'] },
+                  { name: 'IsaacSim', code: exitCodes['ISAACSIM_TEST_EXIT_CODE'] },
+                  { name: 'IsaacGym', code: exitCodes['ISAACGYM_TEST_EXIT_CODE'] }
+                ];
 
-        if [ "${MUJOCO_TEST_EXIT_CODE:-0}" -ne 0 ]; then
-          echo "=== Mujoco tests failed. Fetching logs... ==="
-          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-mujoco.log \
-            $CODEBUILD_SRC_DIR/ || true
-          echo "===== Mujoco pytest log ====="
-          cat $CODEBUILD_SRC_DIR/pytest-mujoco.log || true
-          EXIT_CODE=1
-        fi
+                testSummary = '\n\n**Test Suite Results:**\n';
+                testSuites.forEach(suite => {
+                  const icon = (suite.code === 0 || suite.code === undefined) ? '✅' : '❌';
+                  testSummary += `- ${icon} ${suite.name} tests\n`;
+                });
 
-        if [ "${SAPIEN3_TEST_EXIT_CODE:-0}" -ne 0 ]; then
-          echo "=== Sapien3 tests failed. Fetching logs... ==="
-          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-sapien3.log \
-            $CODEBUILD_SRC_DIR/ || true
-          echo "===== Sapien3 pytest log ====="
-          cat $CODEBUILD_SRC_DIR/pytest-sapien3.log || true
-          EXIT_CODE=1
-        fi
+                testSummary += `\n📦 [Download test logs](${artifactUrl})`;
+              }
+            } catch (error) {
+              core.warning(`Failed to read test exit codes: ${error.message}`);
+            }
 
-        if [ "${ISAACSIM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
-          echo "=== IsaacSim tests failed. Fetching logs... ==="
-          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacsim.log \
-            $CODEBUILD_SRC_DIR/ || true
-          echo "===== IsaacSim pytest log ====="
-          cat $CODEBUILD_SRC_DIR/pytest-isaacsim.log || true
-          EXIT_CODE=1
-        fi
+            const body = `${emoji} ${msg}${testSummary}\n\n🔗 [View full details](${runUrl})`;
 
-        if [ "${ISAACGYM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
-          echo "=== IsaacGym tests failed. Fetching logs... ==="
-          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacgym.log \
-            $CODEBUILD_SRC_DIR/ || true
-          echo "===== IsaacGym pytest log ====="
-          cat $CODEBUILD_SRC_DIR/pytest-isaacgym.log || true
-          EXIT_CODE=1
-        fi
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
+      - name: Clean up ci/pr-* branch
+        if: always()
+        run: |
+          REF="${GITHUB_REF}"
+          # Only delete if we're running on a ci/pr-* branch
+          if [[ "$REF" =~ ^refs/heads/ci/pr-[0-9]+$ ]]; then
+            BRANCH="${REF#refs/heads/}"
+            echo "Cleaning up temporary branch: $BRANCH"
+            # Delete the branch from remote (ignore errors if already deleted)
+            git push origin --delete "$BRANCH" 2>/dev/null || echo "Branch $BRANCH already deleted or not found"
+            echo "✓ Cleanup complete"
+          else
+            echo "Not a ci/pr-* branch (ref: $REF), skipping cleanup"
+          fi
 
-        if [ "$EXIT_CODE" -ne 0 ]; then
-          echo "Tests failed with exit code $EXIT_CODE"
-          exit 1
-        else
-          echo "===All tests passed!==="
-        fi
-
-    ########### Postbuild #########
-    - name: post_build
-      if: always()  # always try to terminate the instance
-      run: |
-        echo "Cleaning up resources..."
-        if [ ! -z "$INSTANCE_ID" ]; then
-            echo "Terminating EC2 instance $INSTANCE_ID..."
-            aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
-        fi
+  fork-merge-group-placeholder:
+    needs: prepare-or-promote
+    if: needs.prepare-or-promote.outputs.reason == 'merge_group_contains_fork'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip privileged tests for fork merge group
+        run: |
+          echo "merge_group contains fork PR(s)."
+          echo "Skipping MetaSim EC2 tests on merge_group and relying on ci/pr-* runs for privileged CI."
