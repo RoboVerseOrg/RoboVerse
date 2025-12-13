@@ -24,7 +24,6 @@ all_joint_names = {
 
 @register_task("calvin.base_table_B")
 class BaseCalvinTableTask_B(BaseCalvinTableTask):
-  
     def __init__(self, *args, **kwargs):
         self.scenario.objects = [
             ArticulationObjCfg(
@@ -35,7 +34,6 @@ class BaseCalvinTableTask_B(BaseCalvinTableTask):
                 fix_base_link=True,
                 urdf_path="roboverse_data/assets/calvin/calvin_table_B/urdf/calvin_table_B.urdf",
                 extra_resources=[
-                  
                     "roboverse_data/assets/calvin/calvin_table_B/textures/dark_wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_B/textures/dark_wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_B/textures/dark_wood.png",
@@ -45,7 +43,6 @@ class BaseCalvinTableTask_B(BaseCalvinTableTask):
                     "roboverse_data/assets/calvin/calvin_table_B/textures/wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_B/textures/wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_B/textures/wood.png",
-                    
                     "roboverse_data/assets/calvin/calvin_table_B/meshes/base_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_B/meshes/drawer_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_B/meshes/plank_link.mtl",

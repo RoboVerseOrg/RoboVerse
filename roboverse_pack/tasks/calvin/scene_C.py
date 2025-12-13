@@ -24,7 +24,6 @@ all_joint_names = {
 
 @register_task("calvin.base_table_C")
 class BaseCalvinTableTask_C(BaseCalvinTableTask):
-   
     def __init__(self, *args, **kwargs):
         self.scenario.objects = [
             ArticulationObjCfg(
@@ -92,6 +91,4 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
         ]
         super().__init__(*args, **kwargs)
 
-    traj_filepath = (
-        "roboverse_data/trajs/calvin/calvin_traj_ann/env_C_out/task_100_v2.pkl"
-    )
+    traj_filepath = "roboverse_data/trajs/calvin/calvin_traj_ann/env_C_out/task_100_v2.pkl"
