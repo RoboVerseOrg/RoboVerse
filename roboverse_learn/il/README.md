@@ -10,7 +10,7 @@ Example:
 # From the repo root
 cd roboverse_learn/il/policies/dp   # or fm/, vita/ depending on the policy
 pip install -r requirements.txt
-cd ../../..
+cd ../../../..
 
 # Run policy training and evaluation
 bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit # Example: DDPM + DiT

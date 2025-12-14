@@ -3,8 +3,8 @@
 
 task_name_set="close_box" # Tasks, e.g., close_box, stack_cube, pick_cube
 policy_name="ddpm_dit"    # IL policy, opts: ddpm_unet, ddpm_dit, ddim_unet, fm_unet, fm_dit, vita, act, score
-sim_set="mujoco"          # Simulator, e.g., mujoco, isaacsim
-demo_num=90              # Number of demonstrations to collect, train, and eval
+sim_set="isaacsim"          # Simulator, e.g., mujoco, isaacsim
+demo_num=100              # Number of demonstrations to collect, train, and eval
 
 # Training/eval control
 train_enable=True

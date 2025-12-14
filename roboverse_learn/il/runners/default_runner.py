@@ -493,7 +493,7 @@ class DefaultRunner(BaseRunner):
             raise ValueError(
                 "No checkpoint found, please provide a valid checkpoint path."
             )
-        args.checkpoint_path = checkpoint
+        args.checkpoint_path = pathlib.Path(checkpoint)
         ckpt_name = args.checkpoint_path.name + "_" + time_str
         ckpt_name = f"{args.task}/{self.policy_name}/{args.robot}/{ckpt_name}"
 
