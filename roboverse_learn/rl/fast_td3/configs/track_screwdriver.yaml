@@ -1,13 +1,13 @@
-# Configuration for FastTD3 Training - Track Task
-# Stage 3: Track task - for training trajectory tracking
-# Starts from saved grasp states, only trains trajectory tracking
+# Configuration for FastTD3 Training - Track Task (Screwdriver)
+# Stage 3: Track task for screwdriver object - for training trajectory tracking
+# Starts from saved grasp states from approach_grasp_simple_screwdriver, only trains trajectory tracking
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track_screwdriver"
+task: "pick_place.track_screwdriver"  # Uses screwdriver-specific track task
 decimation: 4
 train_or_eval: "train"
 headless: False
@@ -83,10 +83,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track"
-exp_name: "pick_place_track"
+wandb_project: "pick_place_track_screwdriver"
+exp_name: "pick_place_track_screwdriver"
 use_wandb: false
 checkpoint_path: null
+run_name: "pick_place.track_screwdriver"  # Unique run name for screwdriver track task
+model_dir: "models/track_screwdriver"  # Separate directory for track screwdriver checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024

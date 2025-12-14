@@ -419,6 +419,9 @@ class PickPlaceTrackBanana(PickPlaceBase):
         # delta_actions = actions * self._action_scale
         # new_actions = self._last_action + delta_actions
 
+        # delta_actions = actions * self._action_scale
+        # new_actions = self._last_action + delta_actions
+
         gripper_value_closed = torch.tensor(0.0, device=self.device, dtype=real_actions.dtype)
         real_actions[:, 0] = gripper_value_closed
         real_actions[:, 1] = gripper_value_closed

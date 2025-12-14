@@ -58,11 +58,11 @@ import torch
 
 torch.set_float32_matmul_precision("high")
 
+import inspect
 import numpy as np
 import torch
 import torch.nn.functional as F
 import tqdm
-import wandb
 from loguru import logger as log
 from tensordict import TensorDict
 from torch import optim
@@ -137,11 +137,14 @@ def main() -> None:
 
     scaler = GradScaler(enabled=amp_enabled and amp_dtype == torch.float16)
 
-    if cfg("use_wandb") and cfg("train_or_eval") == "train":
-        wandb.init(
-            project=cfg("wandb_project", "fttd3_training"),
-            save_code=True,
-        )
+    # Import wandb if enabled
+    if cfg("use_wandb"):
+        import wandb
+        if cfg("train_or_eval") == "train":
+            wandb.init(
+                project=cfg("wandb_project", "fttd3_training"),
+                save_code=True,
+            )
 
     random.seed(cfg("seed"))
     np.random.seed(cfg("seed"))
@@ -166,9 +169,23 @@ def main() -> None:
     scenario = task_cls.scenario.update(
         robots=cfg("robots"), simulator=cfg("sim"), num_envs=cfg("num_envs"), headless=cfg("headless"), cameras=[]
     )
-    envs = task_cls(scenario, device=device)
-    from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
-    envs = TaskViserWrapper(envs)
+    # Check if task class accepts state_file_path parameter (only track tasks do)
+    init_signature = inspect.signature(task_cls.__init__)
+    accepts_state_file_path = "state_file_path" in init_signature.parameters
+
+    # Pass state_file_path from config if task accepts it (for track tasks)
+    state_file_path = cfg("state_file_path", None)
+    if accepts_state_file_path and state_file_path is not None:
+        envs = task_cls(scenario, device=device, state_file_path=state_file_path)
+    else:
+        envs = task_cls(scenario, device=device)
+    # Only use viser wrapper if not headless and viser is available
+    if not cfg("headless"):
+        try:
+            from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+            envs = TaskViserWrapper(envs)
+        except ImportError:
+            log.warning("Viser not available, skipping visualization wrapper")
     eval_envs = envs
 
     # ---------------- derive shapes ------------------------------------
@@ -299,7 +316,11 @@ def main() -> None:
         scenario_render = scenario.update(
             robots=robots, simulator=simulator, num_envs=num_envs, headless=headless, cameras=cameras
         )
-        env = task_cls(scenario_render, device=device)
+        # Pass state_file_path from config if task accepts it (for track tasks)
+        if accepts_state_file_path and state_file_path is not None:
+            env = task_cls(scenario_render, device=device, state_file_path=state_file_path)
+        else:
+            env = task_cls(scenario_render, device=device)
 
         obs_normalizer.eval()
         obs, info = env.reset()

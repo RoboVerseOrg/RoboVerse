@@ -1,5 +1,5 @@
-# Base Configuration for FastTD3 Training
-# Default configuration with IsaacGym simulator and H1 humanoid robot
+# Base Configuration for FastTD3 Training - Banana
+# Default configuration with IsaacGym simulator and Franka robot
 
 # -------------------------------------------------------------------------------
 # Environment
@@ -9,7 +9,7 @@ robots: ["franka"]
 task: "pick_place.approach_grasp_banana"
 decimation: 4
 train_or_eval: "train"
-headless: True
+headless: False
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -78,9 +78,11 @@ measure_burnin: 3
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
 wandb_project: "get_started_fttd3"
-exp_name: "get_started_fttd3"
+exp_name: "get_started_fttd3_banana"
 use_wandb: false
 checkpoint_path: null
+run_name: "pick_place.approach_grasp_simple_banana"  # Unique run name
+model_dir: "models/banana"  # Separate directory for banana checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024

@@ -88,6 +88,7 @@ class USDAssetCfg:
         rotation: Orientation quaternion (w, x, y, z)
         scale: Scale factor (x, y, z)
         auto_download: Enable automatic asset download
+        add_collision: Whether to add static collision (prevents penetration without physics)
         enabled: Whether this element is active
 
     Note: Scene objects are always pure visual (physics disabled)
@@ -99,6 +100,7 @@ class USDAssetCfg:
     rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     auto_download: bool = True
+    add_collision: bool = False
     enabled: bool = True
 
     def __post_init__(self):
@@ -121,6 +123,7 @@ class USDAssetPoolCfg:
         scale: Default scale for all USDs
         selection_strategy: Selection strategy (random, sequential)
         auto_download: Enable automatic download
+        add_collision: Whether to add static collision (prevents penetration without physics)
         enabled: Whether this pool is active
     """
 
@@ -132,6 +135,7 @@ class USDAssetPoolCfg:
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     selection_strategy: Literal["random", "sequential"] = "random"
     auto_download: bool = True
+    add_collision: bool = False
     enabled: bool = True
     candidates: list[USDAssetCfg] | None = None  # Will be auto-generated
 
@@ -149,6 +153,7 @@ class USDAssetPoolCfg:
                 "rotation": self.rotation,
                 "scale": self.scale,
                 "auto_download": self.auto_download,
+                "add_collision": self.add_collision,
                 "enabled": self.enabled,
             }
 
@@ -159,7 +164,7 @@ class USDAssetPoolCfg:
                 override = self.per_path_overrides.get(path) or self.per_path_overrides.get(Path(path).name)
                 if override:
                     # Only update valid USDAssetCfg fields
-                    valid_keys = {"position", "rotation", "scale", "auto_download", "enabled"}
+                    valid_keys = {"position", "rotation", "scale", "auto_download", "add_collision", "enabled"}
                     for k, v in override.items():
                         if k in valid_keys:
                             cfg_kwargs[k] = v
@@ -692,8 +697,8 @@ class SceneRandomizer(BaseRandomizerType):
                     )
                 xform.AddScaleOp().Set(Gf.Vec3d(*element.scale))
 
-            # Disable physics (all scene objects are pure visual)
-            self._disable_physics_for_prim(prim)
+            # Disable physics (remove RigidBodyAPI, optionally keep CollisionAPI)
+            self._disable_physics_for_prim(prim, keep_collision=element.add_collision)
 
     def _delete_usd(self, prim_path: str):
         """Delete USD prim.
@@ -709,24 +714,39 @@ class SceneRandomizer(BaseRandomizerType):
         if prim_utils.is_prim_path_valid(prim_path):
             prim_utils.delete_prim(prim_path)
 
-    def _disable_physics_for_prim(self, prim):
+    def _disable_physics_for_prim(self, prim, keep_collision: bool = False, is_root: bool = True):
         """Recursively disable physics for a prim.
 
         Args:
             prim: USD prim
+            keep_collision: If True, apply CollisionAPI to root prim (for static collision)
+            is_root: Whether this is the root prim of the USD asset
         """
         from pxr import UsdPhysics
 
-        # Recursive processing
-        for descendant in prim.GetAllChildren():
-            self._disable_physics_for_prim(descendant)
-
-        # Remove physics APIs
+        # Always remove RigidBodyAPI (we don't want dynamic physics)
         if prim.HasAPI(UsdPhysics.RigidBodyAPI):
             prim.RemoveAPI(UsdPhysics.RigidBodyAPI)
 
-        if prim.HasAPI(UsdPhysics.CollisionAPI):
-            prim.RemoveAPI(UsdPhysics.CollisionAPI)
+        # For root prim: apply or remove CollisionAPI based on keep_collision
+        if is_root:
+            if keep_collision:
+                # Apply CollisionAPI to the root prim
+                # PhysX will use the visual geometry for collision
+                if not prim.HasAPI(UsdPhysics.CollisionAPI):
+                    UsdPhysics.CollisionAPI.Apply(prim)
+            else:
+                # Remove CollisionAPI if exists
+                if prim.HasAPI(UsdPhysics.CollisionAPI):
+                    prim.RemoveAPI(UsdPhysics.CollisionAPI)
+        else:
+            # For non-root prims: always remove CollisionAPI to avoid conflicts
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                prim.RemoveAPI(UsdPhysics.CollisionAPI)
+
+        # Recursively process all children (no longer root)
+        for child in prim.GetAllChildren():
+            self._disable_physics_for_prim(child, keep_collision=keep_collision, is_root=False)
 
     # -------------------------------------------------------------------------
     # URDF Conversion

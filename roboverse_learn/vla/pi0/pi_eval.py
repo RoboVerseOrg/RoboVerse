@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -16,13 +16,17 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from gymnasium import make_vec
 from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.ik_solver import process_gripper_command, setup_ik_solver
+from metasim.utils.demo_util import get_traj
+from metasim.utils.setup_util import get_robot
+from metasim.randomization import DomainRandomizationManager, DRConfig
 
 from openpi_client import image_tools, websocket_client_policy
 
-from roboverse_learn.il.dp.runner.base_policy import ActionCfg, BasePolicyCfg, ObsCfg
+from roboverse_learn.il.configs.base_config import ActionCfg, BasePolicyCfg, ObsCfg
 
 
 @configclass
@@ -52,7 +56,7 @@ class PiPolicyRunner:
         image_size: int = 224,
         gripper_threshold: float = 0.02,
         device: str = "cuda",
-        actions_per_call: Optional[int] = None,
+        actions_per_call: int | None = None,
     ):
         if num_envs != 1:
             raise ValueError("pi_eval currently supports num_envs == 1")
@@ -73,7 +77,7 @@ class PiPolicyRunner:
         self.reorder_idx = None
         self.inverse_reorder_idx = None
 
-        self.cached_actions: Optional[np.ndarray] = None
+        self.cached_actions: np.ndarray | None = None
         self.cache_index: int = 0
         self.cache_remaining: int = 0
 
@@ -90,7 +94,6 @@ class PiPolicyRunner:
         rs = obs.robots[self.robot_name]
         joint_pos = rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)
         joint_pos = joint_pos.to(torch.float32)
-        # curr_robot_q = joint_pos[:, self.inverse_reorder_idx]
         return joint_pos
 
     def _build_state_vector(self, joint_pos_alpha: torch.Tensor) -> np.ndarray:
@@ -153,12 +156,12 @@ class PiPolicyRunner:
         return actions
 
 
-
     def _request_action_chunk(self, policy_obs: Dict[str, Any]) -> None:
         response = self.client.infer(policy_obs)
         chunk = np.asarray(response["actions"], dtype=np.float32)
         if chunk.ndim != 2:
             raise ValueError(f"Expected action chunk with ndim=2, got {chunk.shape}")
+
         self.cached_actions = chunk
         self.cache_index = 0
         total = len(chunk)
@@ -192,8 +195,36 @@ class PiPolicyRunner:
             pass
 
 
-def evaluate_episode(env, runner: PiPolicyRunner, max_steps: int, episode: int, output_dir: str) -> Dict[str, Any]:
-    obs, info = env.reset()
+def evaluate_episode(
+    env,
+    runner: PiPolicyRunner,
+    max_steps: int,
+    episode: int,
+    output_dir: str,
+    randomization_manager=None,
+    demo_idx: int = 0,
+    init_states=None,
+) -> Dict[str, Any]:
+    """Evaluate a single episode."""
+
+    # Apply domain randomization before reset
+    if randomization_manager is not None:
+        randomization_manager.apply_randomization(demo_idx=demo_idx, is_initial=(episode == 1))
+        randomization_manager.update_positions_to_table(demo_idx=demo_idx, env_id=0)
+        randomization_manager.update_camera_look_at(env_id=0)
+        randomization_manager.apply_camera_randomization()
+
+    # Reset environment
+    if randomization_manager is not None and init_states is not None:
+        from roboverse_learn.il.act.act_eval_runner import ensure_clean_state
+        # Use task_env.reset() directly to pass states parameter
+        obs, info = env.task_env.reset(states=[init_states[demo_idx]])
+        ensure_clean_state(env.task_env.handler, expected_state=init_states[demo_idx])
+        if hasattr(env, "_episode_steps"):
+            env._episode_steps[0] = 0
+    else:
+        obs, info = env.reset()
+
     runner.reset()
 
     stats: Dict[str, Any] = {
@@ -249,6 +280,27 @@ def parse_args() -> argparse.Namespace:
                         help="Threshold on finger joint values to treat the gripper as open")
     parser.add_argument("--actions-per-call", type=int, default=0,
                         help="Number of cached actions to use before requesting a new chunk (0 = consume entire chunk)")
+    # Domain Randomization options
+    parser.add_argument(
+        "--level",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3],
+        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"
+    )
+    parser.add_argument(
+        "--scene_mode",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3],
+        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"
+    )
+    parser.add_argument(
+        "--randomization_seed",
+        type=int,
+        default=None,
+        help="Seed for reproducible randomization. If None, uses random seed"
+    )
     return parser.parse_args()
 
 
@@ -259,10 +311,68 @@ def main() -> bool:
         print("CUDA not available, falling back to CPU")
         args.device = "cpu"
 
+    print(f"Pi Evaluation")
+    print(f"  Task: {args.task}")
+    print(f"  Robot: {args.robot}")
+    print(f"  Simulator: {args.sim}")
+    print(f"  DR Level: {args.level}, Scene Mode: {args.scene_mode}, Seed: {args.randomization_seed}")
+
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
+
+    # Camera configuration
+    if args.task in {"stack_cube", "pick_cube", "pick_butter"}:
+        dp_camera = True
+    else:
+        dp_camera = args.task != "close_box"
+
+    is_libero_dataset = "libero_90" in args.task
+
+    if is_libero_dataset:
+        dp_pos = (2.0, 0.0, 2)
+    elif dp_camera:
+        dp_pos = (1.0, 0.0, 0.75)
+    else:
+        dp_pos = (1.5, 0.0, 1.5)
+
+    camera = PinholeCameraCfg(
+        name="camera",
+        data_types=["rgb"],
+        width=256,
+        height=256,
+        pos=dp_pos,
+        look_at=(0.0, 0.0, 0.0),
+    )
+
+    # Lighting setup
+    render_mode = "raytracing"
+    ceiling_main = 12000.0
+    ceiling_corners = 5000.0
+
+    lights = [
+        DiskLightCfg(
+            name="ceiling_main",
+            intensity=ceiling_main,
+            color=(1.0, 1.0, 1.0),
+            radius=1.2,
+            pos=(0.0, 0.0, 2.8),
+            rot=(0.7071, 0.0, 0.0, 0.7071),
+        ),
+        SphereLightCfg(
+            name="ceiling_ne", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, 1.0, 2.5)
+        ),
+        SphereLightCfg(
+            name="ceiling_nw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, 1.0, 2.5)
+        ),
+        SphereLightCfg(
+            name="ceiling_sw", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(-1.0, -1.0, 2.5)
+        ),
+        SphereLightCfg(
+            name="ceiling_se", intensity=ceiling_corners, color=(1.0, 1.0, 1.0), radius=0.6, pos=(1.0, -1.0, 2.5)
+        ),
+    ]
 
     env = make_vec(
         f"RoboVerse/{args.task}",
@@ -270,14 +380,8 @@ def main() -> bool:
         robots=[args.robot],
         simulator=args.sim,
         headless=True,
-        cameras=[PinholeCameraCfg(
-            name="camera",
-            data_types=["rgb"],
-            width=256,
-            height=256,
-            pos=(1.5, 0.0, 1.5),
-            look_at=(0.0, 0.0, 0.0),
-        )],
+        cameras=[camera],
+        lights=lights,
         device=args.device,
     )
 
@@ -295,6 +399,32 @@ def main() -> bool:
         device=args.device,
     )
 
+    # Load trajectories for DR
+    traj_filepath = env.task_env.traj_filepath
+    robot_obj = get_robot(args.robot)
+    init_states, _, _ = get_traj(traj_filepath, robot_obj, env.task_env.handler)
+
+    # Initialize Domain Randomization
+    randomization_manager = None
+    if args.level > 0:
+        from dataclasses import dataclass as dc
+        @dc
+        class SimpleRenderCfg:
+            mode: str = render_mode
+
+        randomization_manager = DomainRandomizationManager(
+            config=DRConfig(
+                level=args.level,
+                scene_mode=args.scene_mode,
+                randomization_seed=args.randomization_seed,
+            ),
+            scenario=env.scenario,
+            handler=env.task_env.handler,
+            init_states=init_states,
+            render_cfg=SimpleRenderCfg(mode=render_mode)
+        )
+        print(f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}")
+
     start_time = time.time()
     aggregate = {
         "total_episodes": 0,
@@ -304,26 +434,54 @@ def main() -> bool:
     }
 
     for ep in range(args.num_episodes):
+        print(f"\n{'=' * 50}")
         print(f"Episode {ep + 1}/{args.num_episodes}")
-        result = evaluate_episode(env, runner, args.max_steps, ep + 1, args.output_dir)
+        print(f"{'=' * 50}")
+
+        demo_idx = ep % len(init_states) if randomization_manager is not None else 0
+
+        result = evaluate_episode(
+            env, runner, args.max_steps, ep + 1, args.output_dir,
+            randomization_manager=randomization_manager,
+            demo_idx=demo_idx,
+            init_states=init_states if randomization_manager is not None else None
+        )
+
         aggregate["total_episodes"] += 1
         aggregate["episode_results"].append(result)
         aggregate["total_rewards"].append(result["total_reward"])
         if result["success"]:
             aggregate["total_successes"] += 1
+
         sr = aggregate["total_successes"] / aggregate["total_episodes"]
-        print(f"  Success rate so far: {sr:.1%}")
+        print(f"  Steps: {result['steps']}")
+        print(f"  Success: {result['success']}")
+        print(f"  Reward: {result['total_reward']:.2f}")
+        print(f"  Success rate: {sr:.1%}")
 
     total_time = time.time() - start_time
     final_sr = aggregate["total_successes"] / max(1, aggregate["total_episodes"])
     final_reward = float(np.mean(aggregate["total_rewards"])) if aggregate["total_rewards"] else 0.0
-    print(f"\nEvaluation finished: success rate {final_sr:.1%}, avg reward {final_reward:.2f}, elapsed {total_time:.1f}s")
+
+    print(f"\n{'=' * 50}")
+    print("Evaluation Summary")
+    print(f"{'=' * 50}")
+    print(f"Success Rate: {final_sr:.1%} ({aggregate['total_successes']}/{aggregate['total_episodes']})")
+    print(f"Average Reward: {final_reward:.2f}")
+    print(f"Total Time: {total_time:.1f}s")
+    print(f"DR Level: {args.level}, Scene Mode: {args.scene_mode}, Seed: {args.randomization_seed}")
+    print(f"{'=' * 50}")
 
     os.makedirs(args.output_dir, exist_ok=True)
     ts = time.strftime("%Y%m%d_%H%M%S")
     report_path = os.path.join(args.output_dir, f"pi_eval_{args.task}_{ts}.json")
     with open(report_path, "w", encoding="utf-8") as f:
-        json.dump({"config": vars(args), "stats": aggregate, "timestamp": ts}, f, indent=2)
+        json.dump({
+            "config": vars(args),
+            "stats": aggregate,
+            "timestamp": ts,
+            "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed}
+        }, f, indent=2)
     print(f"Saved results to {report_path}")
 
     try:

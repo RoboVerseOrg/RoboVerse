@@ -12,14 +12,40 @@ import numpy as np
 import rootutils
 import torch
 import tyro
+import datetime
+from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 
 from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from roboverse_learn.rl.unitree_rl.helper import get_load_path, get_log_dir
 from metasim.task.registry import get_task_class
 
+def get_log_dir(robot_name: str, task_name: str, now=None) -> str:
+    """Get the log directory."""
+    if now is None:
+        now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
+    log_dir = f"./outputs/{robot_name}/{task_name}/{now}"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    log.info("Log directory: {}", log_dir)
+    return log_dir
+
+
+def get_load_path(load_root: str, checkpoint: int | str = None) -> str:
+    """Get the path to load the model from."""
+    if isinstance(checkpoint, int):
+        if checkpoint == -1:
+            models = [file for file in os.listdir(load_root) if "model" in file and file.endswith(".pt")]
+            models.sort(key=lambda m: f"{m!s:0>15}")
+            model = models[-1]
+            load_path = f"{load_root}/{model}"
+        else:
+            load_path = f"{load_root}/model_{checkpoint}.pt"
+    else:
+        load_path = f"{load_root}/{checkpoint}.pt"
+    log.info(f"Loading checkpoint {checkpoint} from {load_root}")
+    return load_path
 
 def make_roboverse_env(args: RslRlPPOConfig):
     """Create RoboVerse task environment"""
@@ -57,11 +83,11 @@ def evaluate(args: RslRlPPOConfig):
     if not args.resume:
         raise ValueError("Please provide --resume (timestamp/log dir) for evaluation.")
 
-    # Convert resume string to full log directory path (legacy unitree_rl runner convention)
+    # Convert resume string to full log directory path
     log_dir = (
         args.resume
         if os.path.isdir(args.resume)
-        else get_log_dir(task_name=args.task, now=args.resume)
+        else get_log_dir(robot_name=args.robot, task_name=args.task, now=args.resume)
     )
 
     # Use get_load_path helper to handle checkpoint loading logic

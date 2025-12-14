@@ -336,6 +336,21 @@ class PickPlaceBase(RLTaskEnv):
             target_pos = self.waypoint_positions[self.current_waypoint_idx]
             distance = torch.norm(ee_pos - target_pos, dim=-1)
 
+            # Progress reward: reward for reducing distance to waypoint
+            # This encourages the agent to make progress toward the current waypoint
+            # Only reward progress if we haven't reached this waypoint yet
+            not_already_reached = ~self.waypoints_reached[
+                torch.arange(self.num_envs, device=self.device), self.current_waypoint_idx
+            ]
+            distance_reduction = self.prev_distance_to_waypoint - distance
+            # Scale progress reward: 0.1 means progress reward is 10% of waypoint reached bonus
+            # This provides continuous guidance without overwhelming the sparse reward
+            progress_reward_component = (
+                torch.clamp(distance_reduction * self.w_tracking_progress * 0.1, min=0.0)
+                * not_already_reached.float()
+                * grasped_mask.float()
+            )
+
             # Distance-based reward (far + near) / 2
             distance_reward_far = 1 - torch.tanh(1.0 * distance)
             distance_reward_near = 1 - torch.tanh(10.0 * distance)
@@ -358,10 +373,13 @@ class PickPlaceBase(RLTaskEnv):
 
             # Both distance and rotation must be satisfied to consider as reached
             reached = distance_reached & rotation_reached
-            newly_reached = reached & (
-                ~self.waypoints_reached[torch.arange(self.num_envs, device=self.device), self.current_waypoint_idx]
-            )
-            progress_reward = newly_reached.float() * self.w_tracking_progress
+            newly_reached = reached & not_already_reached
+            # Waypoint reached bonus (one-time large reward when reaching a waypoint)
+            waypoint_reached_bonus = newly_reached.float() * self.w_tracking_progress
+
+            # Update prev_distance for next step (only if not newly reached,
+            # because if newly reached, we'll update it when advancing to next waypoint)
+            self.prev_distance_to_waypoint[~newly_reached] = distance[~newly_reached]
 
             if newly_reached.any():
                 if newly_reached[0]:
@@ -405,7 +423,10 @@ class PickPlaceBase(RLTaskEnv):
                     (1 - torch.tanh(1.0 * distance_to_last[completed_mask])) * self.w_tracking_approach,
                 )
 
-            tracking_reward = torch.where(all_reached, maintain_reward, approach_reward + progress_reward)
+            # Combine all reward components: approach reward + progress reward + waypoint reached bonus
+            tracking_reward = torch.where(
+                all_reached, maintain_reward, approach_reward + progress_reward_component + waypoint_reached_bonus
+            )
 
         return tracking_reward
 

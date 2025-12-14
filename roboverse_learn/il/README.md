@@ -1,0 +1,61 @@
+# RoboVerse Imitation Learning (IL) Policies
+
+## Example Usage
+
+Pick a policy folder and follow its README for setup and usage.
+
+Example:
+
+```bash
+# From the repo root
+cd roboverse_learn/il/policies/dp   # or fm/, vita/ depending on the policy
+pip install -r requirements.txt
+cd ../../../..
+
+# Run policy training and evaluation
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit # Example: DDPM + DiT
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name vita     # Example: VITA
+bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name fm_dit   # Example: FM + DiT
+```
+
+We keep each policy as self-contained as possible (code, dependencies, docs) and only share the minimum common abstractions.
+
+## Troubleshooting
+
+```bash
+# Fix potential package version issues
+bash roboverse_learn/il/il_setup.sh
+```
+
+## Supported Algorithms
+
+| Name | Policy | Backbone | Model Config | Ref |
+| --- | --- | --- | --- | --- |
+| `ddpm_dit` | Diffusion Policy (DDPM) | DiT | `model_config/ddpm_dit.yaml` | [1], [5] |
+| `fm_dit` | Flow Matching | DiT | `model_config/fm_dit.yaml` | [6], [5] |
+| `vita` | VITA Policy | MLP | `model_config/vita.yaml` | [7] |
+| `ddpm_unet` | Diffusion Policy (DDPM) | UNet | `model_config/ddpm.yaml` | [1], [4] |
+| `ddim_unet` | Diffusion Policy (DDIM) | UNet | `model_config/ddim.yaml` | [2], [4] |
+| `fm_unet` | Flow Matching | UNet | `model_config/fm_unet.yaml` | [6] |
+| `score_unet` | Score-Based Model | UNet | `model_config/score.yaml` | [3], [4] |
+
+**References**
+
+1. Ho, Jonathan, Ajay Jain, and Pieter Abbeel. "Denoising Diffusion Probabilistic Models." (2020).  
+2. Song, Jiaming, Chenlin Meng, and Stefano Ermon. "Denoising Diffusion Implicit Models." (2021).  
+3. Song, Yang, et al. "Score-Based Generative Modeling through Stochastic Differential Equations." (2021).  
+4. Chi, Cheng, et al. "Diffusion Policy: Diffusion Models for Robotic Manipulation." (2023).  
+5. Peebles, William, and Jun-Yan Zhu. "DiT: Diffusion Models with Transformers." (2023).  
+6. Lipman, Yaron, et al. "Flow Matching for Generative Modeling." (2023).  
+7. Gao, Dechen, et al. "VITA: Vision-to-Action Flow Matching Policy." (2025).
+
+### 1-NFE Generation
+
+We also include multiple classic 1-NFE (1 number of function evaluations) generation methods for FM, including MeanFlow [1, 2], Improved MeanFlow (iMF) [3], and Consistency Flow Matching (CFM) [4].
+
+**References**
+
+[1] Geng, Zhengyang, et al. "Mean flows for one-step generative modeling." arXiv preprint arXiv:2505.13447 (2025).
+[2] Sheng, Juyi, et al. "MP1: MeanFlow Tames Policy Learning in 1-step for Robotic Manipulation." arXiv preprint arXiv:2507.10543 (2025).
+[3] Geng, Zhengyang, et al. "Improved Mean Flows: On the Challenges of Fastforward Generative Models." arXiv preprint arXiv:2512.02012 (2025).
+[4] Yang, Ling, et al. "Consistency flow matching: Defining straight flows with velocity consistency." arXiv preprint arXiv:2407.02398 (2024).

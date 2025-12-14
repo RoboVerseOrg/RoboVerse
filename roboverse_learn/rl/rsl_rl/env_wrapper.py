@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Union
 import torch
 from tensordict import TensorDict
-from roboverse_pack.tasks.unitree_rl.base import AgentTask
+from roboverse_pack.tasks.humanoid.base import AgentTask
 
 
 class RslRlEnvWrapper:

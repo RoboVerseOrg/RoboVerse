@@ -1,6 +1,6 @@
-# Configuration for FastTD3 Training - Track Task
-# Stage 3: Track task - for training trajectory tracking
-# Starts from saved grasp states, only trains trajectory tracking
+# Configuration for FastTD3 Training - Track Task (Banana)
+# Stage 3: Track task for banana object - for training trajectory tracking
+# Starts from saved grasp states from approach_grasp_simple_banana, only trains trajectory tracking
 
 # -------------------------------------------------------------------------------
 # Environment
@@ -15,6 +15,7 @@ headless: False
 # State file path for track task (pkl file path for grasp states)
 # If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
 state_file_path: "eval_states/pick_place.approach_grasp_banana_franka_lift_states_100states_20251210_153518.pkl"
+
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -46,7 +47,6 @@ tau: 0.1
 # -------------------------------------------------------------------------------
 policy_frequency: 2
 num_updates: 5
-
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -83,10 +83,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track"
-exp_name: "pick_place_track"
+wandb_project: "pick_place_track_banana"
+exp_name: "pick_place_track_banana"
 use_wandb: false
 checkpoint_path: null
+run_name: "pick_place.track_banana"  # Unique run name for banana track task
+model_dir: "models/track_banana"  # Separate directory for track banana checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024
