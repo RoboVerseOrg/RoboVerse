@@ -9,10 +9,9 @@ python scripts/advanced/replay_demo.py --sim=isaacsim --task=close_box --num_env
 ```
 
 task could also be:
-- `PickCube`
-- `StackCube`
-- `CloseBox`
-- `BasketballInHoop`
+- `pick_cube`
+- `stack_cube`
+- `close_box`
 
 ## States replay
 
@@ -20,8 +19,7 @@ task could also be:
 python scripts/advanced/replay_demo.py --sim=isaacsim --task=close_box --num_envs 4 --object-states
 ```
 task could also be:
-- `CloseBox`
-- `BasketballInHoop`
+- `close_box`
 
 ## Varifies commands
 
@@ -30,7 +28,7 @@ task could also be:
 e.g.
 
 ```bash
-python scripts/advanced/replay_demo.py --sim=isaacsim --task=LiberoPickButter
+python scripts/advanced/replay_demo.py --sim=isaacsim --task=libero.pick_butter
 ```
 
 Simulator:
@@ -38,14 +36,9 @@ Simulator:
 - `mujoco`
 
 Task:
-- `LiberoPickAlphabetSoup`
-- `LiberoPickBbqSauce`
-- `LiberoPickChocolatePudding`
-- `LiberoPickCreamCheese`
-- `LiberoPickMilk`
-- `LiberoPickOrangeJuice`
-- `LiberoPickSaladDressing`
-- `LiberoPickTomatoSauce`
+- `libero.kitchen_scene1_open_bottom_drawer`
+- `libero.kitchen_scene1_open_top_drawer`
+- `libero.kitchen_scene1_put_the_black_bowl_on_the_plate`
 
 ### Humanoid
 
