@@ -416,4 +416,3 @@ class PickPlaceApproachGraspSimpleSpoon2(PickPlaceApproachGraspSimpleSpoon):
             ]
 
         return init
-
