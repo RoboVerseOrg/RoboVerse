@@ -3,9 +3,9 @@ from __future__ import annotations
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.task.registry import register_task
 from metasim.utils.math import quat_from_euler_np
-
+from metasim.utils.demo_util import get_traj
 from .base_table import BaseCalvinTableTask
-
+import torch
 all_joint_names = {
     "franka": [
         "panda_finger_joint1",
@@ -24,6 +24,7 @@ all_joint_names = {
 
 @register_task("calvin.base_table_A")
 class BaseCalvinTableTask_A(BaseCalvinTableTask):
+
     def __init__(self, *args, **kwargs):
         self.scenario.objects = [
             ArticulationObjCfg(
@@ -34,6 +35,7 @@ class BaseCalvinTableTask_A(BaseCalvinTableTask):
                 fix_base_link=True,
                 urdf_path="roboverse_data/assets/calvin/calvin_table_A/urdf/calvin_table_A.urdf",
                 extra_resources=[
+            
                     "roboverse_data/assets/calvin/calvin_table_A/textures/dark_wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_A/textures/dark_wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_A/textures/dark_wood.png",
@@ -43,6 +45,7 @@ class BaseCalvinTableTask_A(BaseCalvinTableTask):
                     "roboverse_data/assets/calvin/calvin_table_A/textures/wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_A/textures/wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_A/textures/wood.png",
+                   
                     "roboverse_data/assets/calvin/calvin_table_A/meshes/base_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_A/meshes/drawer_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_A/meshes/plank_link.mtl",
@@ -89,4 +92,6 @@ class BaseCalvinTableTask_A(BaseCalvinTableTask):
         ]
         super().__init__(*args, **kwargs)
 
-    traj_filepath = "roboverse_data/trajs/calvin/calvin_traj_ann/env_A_out/task_0_v2.pkl"
+    traj_filepath = (
+        "roboverse_data/trajs/calvin/calvin_traj_ann/env_A_out/task_0_v2.pkl"
+    )
