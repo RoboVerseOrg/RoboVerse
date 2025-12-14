@@ -1,12 +1,12 @@
-# Base Configuration for FastTD3 Training - Spoon
-# Default configuration with IsaacGym simulator and H1 humanoid robot
+# Base Configuration for FastTD3 Training - Spoon Scene 2
+# Configuration for spoon grasping task with second scene layout
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.approach_grasp_simple_spoon"
+task: "pick_place.approach_grasp_simple_spoon2"
 decimation: 4
 train_or_eval: "train"
 headless: False
@@ -78,12 +78,13 @@ measure_burnin: 3
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
 wandb_project: "get_started_fttd3"
-exp_name: "get_started_fttd3_spoon"
+exp_name: "get_started_fttd3_spoon2"
 use_wandb: false
 checkpoint_path: null
-run_name: "pick_place.approach_grasp_simple_spoon"  # Unique run name
-model_dir: "models/spoon"  # Separate directory for basket layout
+run_name: "pick_place.approach_grasp_simple_spoon2"  # Unique run name for scene 2
+model_dir: "models/spoon2"  # Separate directory for scene 2 checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024
 video_height: 1024
+
