@@ -24,7 +24,6 @@ all_joint_names = {
 
 @register_task("calvin.base_table_C")
 class BaseCalvinTableTask_C(BaseCalvinTableTask):
-   
     def __init__(self, *args, **kwargs):
         self.scenario.objects = [
             ArticulationObjCfg(
@@ -35,7 +34,6 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
                 fix_base_link=True,
                 urdf_path="roboverse_data/assets/calvin/calvin_table_C/urdf/calvin_table_C.urdf",
                 extra_resources=[
-                  
                     "roboverse_data/assets/calvin/calvin_table_C/textures/dark_wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_C/textures/dark_wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_C/textures/dark_wood.png",
@@ -45,7 +43,6 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
                     "roboverse_data/assets/calvin/calvin_table_C/textures/wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_C/textures/wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_C/textures/wood.png",
-             
                     "roboverse_data/assets/calvin/calvin_table_C/meshes/base_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_C/meshes/drawer_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_C/meshes/plank_link.mtl",
@@ -80,6 +77,4 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
         ]
         super().__init__(*args, **kwargs)
 
-    traj_filepath = (
-        "roboverse_data/trajs/calvin/calvin_traj_ann/env_C_out/task_100_v2.pkl"
-    )
+    traj_filepath = "roboverse_data/trajs/calvin/calvin_traj_ann/env_C_out/task_100_v2.pkl"
