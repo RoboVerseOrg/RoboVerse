@@ -92,13 +92,21 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
             ),
             RigidObjCfg(
-                name="screw_driver",
-                scale=(1.5, 1.5, 1.5),
+                name="cutting_tools",
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/usd/c5810e7c2c785fe3940372b205090bad.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
             ),
+            # RigidObjCfg(
+            #     name="screw_driver",
+            #     scale=(1.5, 1.5, 1.5),
+            #     physics=PhysicStateType.RIGIDBODY,
+            #     usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
+            #     urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
+            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+            # ),
             RigidObjCfg(
                 name="spoon",
                 scale=(1, 1, 1),
@@ -193,7 +201,7 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
         self.reward_weights = [
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["gripper_approach"],
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["grasp_reward"],
-            0.1,  # weight for keeping the gripper pointing downward
+            0.0,  # weight for keeping the gripper pointing downward
         ]
 
         # Get config values
@@ -412,54 +420,54 @@ class PickPlaceApproachGraspBanana(PickPlaceBase):
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "lamp": {
-                        "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
+                        "pos": torch.tensor([0.610000, 0.200000, 1.050000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "basket": {
-                        "pos": torch.tensor([0.220000, 0.200000, 0.955000]),
+                        "pos": torch.tensor([0.610000, -0.300000, 0.825000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "bowl": {
-                        "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
+                        "pos": torch.tensor([0.350000, 0.250000, 0.863000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
-                    "screw_driver": {
-                        "pos": torch.tensor([0.530000, -0.410000, 0.811000]),
-                        "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
+                    "cutting_tools": {
+                        "pos": torch.tensor([0.180000, -0.070000, 0.820000]),
+                        "rot": torch.tensor([0.930507, 0.000000, -0.000000, 0.366273]),
                     },
                     "spoon": {
                         "pos": torch.tensor([0.530000, -0.690000, 0.850000]),
                         "rot": torch.tensor([0.961352, -0.120799, 0.030845, 0.245473]),
                     },
                     "object": {
-                        "pos": torch.tensor([0.280000, -0.280000, 0.825000]),
-                        "rot": torch.tensor([0.889292, -0.000000, 0.000001, -0.457338]),
+                        "pos": torch.tensor([0.280000, -0.580000, 0.825000]),
+                        "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_0": {
-                        "pos": torch.tensor([0.260000, -0.240000, 0.850000]),
+                        "pos": torch.tensor([0.280000, -0.540000, 0.850000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_1": {
-                        "pos": torch.tensor([0.270000, -0.190000, 0.970000]),
+                        "pos": torch.tensor([0.320000, -0.490000, 0.910000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_2": {
-                        "pos": torch.tensor([0.260000, -0.140000, 1.160000]),
+                        "pos": torch.tensor([0.330000, -0.430000, 1.110000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                     "traj_marker_3": {
-                        "pos": torch.tensor([0.250000, -0.030000, 1.240000]),
+                        "pos": torch.tensor([0.360000, -0.350000, 1.210000]),
                         "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
                     },
                     "traj_marker_4": {
-                        "pos": torch.tensor([0.310000, 0.190000, 1.160000]),
+                        "pos": torch.tensor([0.600000, -0.310000, 1.190000]),
                         "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                     },
                 },
                 "robots": {
                     "franka": {
                         "pos": torch.tensor([0.800000, -0.800000, 0.780000]),
-                        "rot": torch.tensor([0.475731, -0.000000, -0.000001, 0.879590]),
+                        "rot": torch.tensor([0.581682, -0.000000, -0.000001, 0.813415]),
                         "dof_pos": {
                             "panda_finger_joint1": 0.040000,
                             "panda_finger_joint2": 0.040000,
