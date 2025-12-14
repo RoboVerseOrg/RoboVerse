@@ -24,6 +24,8 @@ all_joint_names = {
 
 @register_task("calvin.base_table_D")
 class BaseCalvinTableTask_C(BaseCalvinTableTask):
+    
+
     def __init__(self, *args, **kwargs):
         self.scenario.objects = [
             ArticulationObjCfg(
@@ -34,15 +36,7 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
                 fix_base_link=True,
                 urdf_path="roboverse_data/assets/calvin/calvin_table_D/urdf/calvin_table_D.urdf",
                 extra_resources=[
-                    # dark_wood__black_handle.png
-                    # dark_wood__gray_handle.png
-                    # dark_wood.png
-                    # light_wood__black_handle.png
-                    # light_wood__gray_handle.png
-                    # light_wood.png
-                    # wood__black_handle.png
-                    # wood__gray_handle.png
-                    # wood.png
+                 
                     "roboverse_data/assets/calvin/calvin_table_D/textures/dark_wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_D/textures/dark_wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_D/textures/dark_wood.png",
@@ -52,11 +46,7 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
                     "roboverse_data/assets/calvin/calvin_table_D/textures/wood__black_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_D/textures/wood__gray_handle.png",
                     "roboverse_data/assets/calvin/calvin_table_D/textures/wood.png",
-                    # base_link.mtl
-                    # drawer_link.mtl
-                    # plank_link.mtl
-                    # slide_link.mtl
-                    # switch_link.mtl
+                    
                     "roboverse_data/assets/calvin/calvin_table_D/meshes/base_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_D/meshes/drawer_link.mtl",
                     "roboverse_data/assets/calvin/calvin_table_D/meshes/plank_link.mtl",
@@ -91,4 +81,4 @@ class BaseCalvinTableTask_C(BaseCalvinTableTask):
         ]
         super().__init__(*args, **kwargs)
 
-    traj_filepath = "roboverse_data/trajs/calvin/calvin_traj_ann/env_D_out/task_100_v2.pkl"
+    traj_filepath =  "roboverse_data/trajs/calvin/calvin_traj_ann/env_D_out/task_100_v2.pkl"
