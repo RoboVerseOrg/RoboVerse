@@ -45,7 +45,6 @@ genesis = [
 ]
 robosplatter = [
    "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git@v0.1.2",
-   "pyquaternion",
    "setuptools==59.5.0"
 ]
 
