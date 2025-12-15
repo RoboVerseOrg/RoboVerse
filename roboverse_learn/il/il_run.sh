@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --demo_num 100 --sim_set mujoco --dr_level_eval 2
+# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --dr_level_eval 2 -- train_enable False
 
 task_name_set="close_box" # Tasks, e.g., close_box, stack_cube, pick_cube
 policy_name="ddpm_dit"    # IL policy, opts: ddpm_unet, ddpm_dit, ddim_unet, fm_unet, fm_dit, vita, act, score
@@ -7,7 +7,7 @@ sim_set="isaacsim"          # Simulator, e.g., mujoco, isaacsim
 demo_num=100              # Number of demonstrations to collect, train, and eval
 
 # Training/eval control
-train_enable=False
+train_enable=True
 eval_enable=True
 
 # Training parameters
@@ -22,7 +22,7 @@ eval_max_step=300
 
 # Domain Randomization Level
 dr_level_collect=0
-dr_level_eval=2
+dr_level_eval=0
 
 # Parse parameters
 while [[ $# -gt 0 ]]; do
