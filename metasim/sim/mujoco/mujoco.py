@@ -62,9 +62,12 @@ except (ImportError, AttributeError):
     log.warning("Mujoco Viewer not available. Please check your OPENGL environment.")
     pass
 
+from metasim.utils.gs_util import alpha_blend_rgba
+
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -283,6 +286,21 @@ class MujocoHandler(BaseSimHandler):
                 pos = list(joint.pos)
                 if len(pos) >= 3:
                     joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        # Apply scale to mesh elements (for visual meshes)
+        for mesh in mjcf_model.find_all("mesh"):
+            if hasattr(mesh, "scale") and mesh.scale is not None:
+                mesh_scale = list(mesh.scale)
+                if len(mesh_scale) >= 3:
+                    mesh.scale = [
+                        mesh_scale[0] * scale_x,
+                        mesh_scale[1] * scale_y,
+                        mesh_scale[2] * scale_z,
+                    ]
+                elif len(mesh_scale) == 1:
+                    # Uniform scale
+                    uniform_scale = max(scale_x, scale_y, scale_z)
+                    mesh.scale = [mesh_scale[0] * uniform_scale]
 
     def _set_framebuffer_size(self, mjcf_model, width, height):
         visual_elem = mjcf_model.visual
@@ -682,10 +700,82 @@ class MujocoHandler(BaseSimHandler):
             else:
                 camera_id = f"{camera.name}_custom"
 
+            rgb = None
             depth = None
+            if "rgb" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:  # optional but safer
+                        # match renderer size to camera if needed
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+                        # mirror state and render
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+                        rgb_np = self.renderer.render()
+                    rgb = torch.from_numpy(rgb_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    # Ensure numpy array -> torch tensor with shape (1, H, W, C)
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+                else:
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
 
+            if "depth" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:
+                        # Ensure renderer matches the camera size
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+
+                        # Keep native model/data in sync with dm_control physics
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+
+                        # --- Cross-version depth rendering for mujoco.Renderer ---
+                        if hasattr(self.renderer, "enable_depth_rendering"):
+                            # Newer MuJoCo (>= 3.2/3.3): enable depth mode, render(), then disable.
+                            self.renderer.enable_depth_rendering()
+                            depth_np = self.renderer.render()
+                            self.renderer.disable_depth_rendering()
+                        elif hasattr(mujoco, "RenderMode"):
+                            # Some 3.x builds expose RenderMode enum on mujoco
+                            depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
+                        else:
+                            # Very old fallback: some builds returned (rgb, depth) as a tuple.
+                            # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
+                            maybe = self.renderer.render()
+                            if isinstance(maybe, tuple) and len(maybe) == 2:
+                                _, depth_np = maybe
+                            else:
+                                raise RuntimeError("Depth rendering not supported by this mujoco.Renderer build.")
+                    depth = torch.from_numpy(depth_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+                else:
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+
+            # Additional GS background rendering and blending (if enabled)
             if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
-                from metasim.utils.gs_util import alpha_blend_rgba
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
 
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
@@ -698,7 +788,7 @@ class MujocoHandler(BaseSimHandler):
                     image_width=camera.width,
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 # Get semantic segmentation (geom IDs and object IDs)
@@ -711,102 +801,25 @@ class MujocoHandler(BaseSimHandler):
                 seg_mask = np.where(foreground_mask, 255, 0).astype(np.uint8)
 
                 if "rgb" in camera.data_types:
-                    # Get MuJoCo simulation rendering
-                    sim_rgb = self.physics.render(
-                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False, segmentation=False
-                    )
                     # Blend RGB: foreground objects over GS background
-                    sim_color = (sim_rgb * 255).astype(np.uint8) if sim_rgb.max() <= 1.0 else sim_rgb.astype(np.uint8)
+                    sim_color = (rgb_np * 255).astype(np.uint8) if rgb_np.max() <= 1.0 else rgb_np.astype(np.uint8)
                     foreground = np.concatenate([sim_color, seg_mask[..., None]], axis=-1)
                     background = gs_result.rgb.squeeze(0)
                     blended_rgb = alpha_blend_rgba(foreground, background)
-                    rgb = torch.from_numpy(np.array(blended_rgb.copy()))
+                    rgb = torch.from_numpy(np.ascontiguousarray(blended_rgb.copy())).unsqueeze(0)
 
                 if "depth" in camera.data_types:
-                    sim_depth = self.physics.render(
-                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True, segmentation=False
-                    )
                     # Compose depth: use simulation depth for foreground, GS depth for background
                     bg_depth = gs_result.depth.squeeze(0)
                     if bg_depth.ndim == 3 and bg_depth.shape[-1] == 1:
                         bg_depth = bg_depth[..., 0]
-                    depth_comp = np.where(foreground_mask, sim_depth, bg_depth)
-                    depth = torch.from_numpy(depth_comp.copy())
-
-            else:
-                if "rgb" in camera.data_types:
+                    depth_comp = np.where(foreground_mask, depth_np, bg_depth)
                     if sys.platform == "darwin":
-                        with self._mj_lock:  # optional but safer
-                            # match renderer size to camera if needed
-                            if self.renderer is None or (self.renderer.width, self.renderer.height) != (
-                                camera.width,
-                                camera.height,
-                            ):
-                                self.renderer = mujoco.Renderer(
-                                    self._mj_model, width=camera.width, height=camera.height
-                                )
-                            # mirror state and render
-                            self._mirror_state_to_native()
-                            self.renderer.update_scene(self._mj_data, camera=camera_id)
-                            rgb_np = self.renderer.render()
-                        rgb = torch.from_numpy(rgb_np.copy()).unsqueeze(0)
-                    elif sys.platform == "win32":
-                        rgb_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=False
-                        )
-                        # Ensure numpy array -> torch tensor with shape (1, H, W, C)
-                        rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+                        depth = torch.from_numpy(depth_comp.copy()).unsqueeze(0)
                     else:
-                        rgb_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=False
-                        )
-                        rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
-                if "depth" in camera.data_types:
-                    if sys.platform == "darwin":
-                        with self._mj_lock:
-                            # Ensure renderer matches the camera size
-                            if self.renderer is None or (self.renderer.width, self.renderer.height) != (
-                                camera.width,
-                                camera.height,
-                            ):
-                                self.renderer = mujoco.Renderer(
-                                    self._mj_model, width=camera.width, height=camera.height
-                                )
+                        depth = torch.from_numpy(np.ascontiguousarray(depth_comp.copy())).unsqueeze(0)
 
-                            # Keep native model/data in sync with dm_control physics
-                            self._mirror_state_to_native()
-                            self.renderer.update_scene(self._mj_data, camera=camera_id)
-
-                            # --- Cross-version depth rendering for mujoco.Renderer ---
-                            if hasattr(self.renderer, "enable_depth_rendering"):
-                                # Newer MuJoCo (>= 3.2/3.3): enable depth mode, render(), then disable.
-                                self.renderer.enable_depth_rendering()
-                                depth_np = self.renderer.render()
-                                self.renderer.disable_depth_rendering()
-                            elif hasattr(mujoco, "RenderMode"):
-                                # Some 3.x builds expose RenderMode enum on mujoco
-                                depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
-                            else:
-                                # Very old fallback: some builds returned (rgb, depth) as a tuple.
-                                # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
-                                maybe = self.renderer.render()
-                                if isinstance(maybe, tuple) and len(maybe) == 2:
-                                    _, depth_np = maybe
-                                else:
-                                    raise RuntimeError("Depth rendering not supported by this mujoco.Renderer build.")
-                        depth = torch.from_numpy(depth_np.copy()).unsqueeze(0)
-                    elif sys.platform == "win32":
-                        depth_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=True
-                        )
-                        depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
-                    else:
-                        depth_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=True
-                        )
-                        depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
-                state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
-
+            state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
             camera_states[camera.name] = state
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)

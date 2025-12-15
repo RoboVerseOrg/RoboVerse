@@ -51,12 +51,12 @@ class ObsSaver:
         image = (image * 255).astype(np.uint8)
         self.images.append(image)
 
-    def save(self):
+    def save(self, fps: int = 30):
         """Save the images or videos."""
         if self.video_path is not None and self.images:
             log.info(f"Saving video of {len(self.images)} frames to {self.video_path}")
             os.makedirs(os.path.dirname(self.video_path), exist_ok=True)
-            iio.mimsave(self.video_path, self.images, fps=30)
+            iio.mimsave(self.video_path, self.images, fps=fps)
 
 
 try:
