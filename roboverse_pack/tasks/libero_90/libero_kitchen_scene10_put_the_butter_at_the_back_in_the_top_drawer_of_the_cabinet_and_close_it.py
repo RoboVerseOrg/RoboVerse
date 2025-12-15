@@ -78,14 +78,13 @@ class LiberoKitchenScene10PutButterInTopDrawerAndCloseTask(Libero90BaseTask):
             ),
         ],
         robots=["franka"],
-        scene="libero_kitchen_tabletop",
     )
 
     max_episode_steps = 250
     task_desc = "Put the butter at the back in the top drawer of the cabinet and close it (scene10)"
 
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it_traj_v2.pkl"

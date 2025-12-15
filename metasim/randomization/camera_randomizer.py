@@ -197,17 +197,6 @@ class CameraRandomizer(BaseRandomizerType):
         self.adapter: IsaacSimAdapter | None = None
         self._original_positions: dict[str, tuple] = {}
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize Adapter.
-
-        Args:
-            handler: SimHandler instance (automatically uses render_handler for Hybrid)
-        """
-        super().bind_handler(handler)
-
-        # Initialize IsaacSimAdapter for USD operations
-        self.adapter = IsaacSimAdapter(self._actual_handler)
-
     def __call__(self):
         """Execute camera randomization."""
         # Find camera in Handler
@@ -307,7 +296,8 @@ class CameraRandomizer(BaseRandomizerType):
             return
 
         try:
-            from omni.isaac.lab.utils import math
+            # from omni.isaac.lab.utils import math
+            from metasim.utils.math import quat_from_euler_xyz, quat_mul
 
             # Get current orientation
             current_rot = camera_inst.data.quat_w_world
@@ -329,7 +319,7 @@ class CameraRandomizer(BaseRandomizerType):
             yaw_rad = math.radians(yaw_delta)
 
             # Create delta rotation quaternion
-            delta_rotation = math.quat_from_euler_xyz(
+            delta_rotation = quat_from_euler_xyz(
                 torch.tensor([roll_rad], device=self._actual_handler.device),
                 torch.tensor([pitch_rad], device=self._actual_handler.device),
                 torch.tensor([yaw_rad], device=self._actual_handler.device),
@@ -337,7 +327,7 @@ class CameraRandomizer(BaseRandomizerType):
             delta_rotation = delta_rotation.repeat(self._actual_handler.num_envs, 1)
 
             # Apply rotation delta
-            new_rot = math.quat_mul(delta_rotation, current_rot)
+            new_rot = quat_mul(delta_rotation, current_rot)
 
             # Set new orientation
             camera_inst.set_world_poses(orientations=new_rot, convention="world")

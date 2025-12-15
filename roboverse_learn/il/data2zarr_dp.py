@@ -75,7 +75,39 @@ def main():
     downsample_ratio = args.downsample_ratio
 
     print("Metadata load dir:", load_dir)
-    save_dir = f"data_policy/{task_name}_{num}.zarr"
+
+    # Scan success folder to find all existing demo indices
+    success_dir = os.path.join(load_dir)
+    demo_indices = []
+
+    if os.path.exists(success_dir) and os.path.isdir(success_dir):
+        for item in os.listdir(success_dir):
+            if item.startswith("demo_") and os.path.isdir(os.path.join(success_dir, item)):
+                try:
+                    demo_idx = int(item.split("_")[1])
+                    demo_dir = os.path.join(success_dir, item)
+                    # Check if metadata.json exists
+                    if os.path.isfile(os.path.join(demo_dir, "metadata.json")):
+                        demo_indices.append(demo_idx)
+                except (ValueError, IndexError):
+                    continue
+
+        demo_indices.sort()
+        print(f"Found {len(demo_indices)} demos in success folder: {demo_indices[:10]}{'...' if len(demo_indices) > 10 else ''}")
+
+        # Use actual number of demos if requested number is not enough
+        if len(demo_indices) < num:
+            print(f"Requested {num} demos but only {len(demo_indices)} available. Using all available demos.")
+            num = len(demo_indices)
+        else:
+            # Use first num demos
+            demo_indices = demo_indices[:num]
+    else:
+        # Fallback to old behavior if success folder doesn't exist
+        print(f"Success folder not found at {success_dir}, falling back to sequential processing")
+        demo_indices = list(range(num))
+
+    save_dir = f"data_policy/{task_name}_{len(demo_indices)}.zarr"
     print("ZARR save dir:", save_dir)
 
     if os.path.exists(save_dir):
@@ -96,28 +128,25 @@ def main():
     episode_ends_arrays = []
     total_count = 0
     current_batch = 0
-    # current_demo_index = 0
 
     if args.joint_pos_padding > 0 and args.observation_space == "ee" and args.action_space == "ee":
         logging.warning("Padding is not supported for ee observation and action spaces.")
 
-    for current_ep in tqdm(range(num), desc=f"Processing {num} MetaData"):
-        demo_id = str(current_ep).zfill(4)
-        demo_dir = os.path.join(load_dir, f"demo_{demo_id}")
-        # current_ep += 1
+    for current_ep, demo_idx in enumerate(tqdm(demo_indices, desc=f"Processing {len(demo_indices)} MetaData")):
+        demo_id = str(demo_idx).zfill(4)
+        # Try success folder first, then fallback to root load_dir
+        demo_dir = os.path.join(success_dir, f"demo_{demo_id}")
+        if not os.path.isdir(demo_dir):
+            demo_dir = os.path.join(load_dir, f"demo_{demo_id}")
 
         if not os.path.isdir(demo_dir):
-            print(f"Skipping episode {current_ep} as directory {demo_dir} does not exist.")
+            print(f"Skipping episode {demo_idx} as directory {demo_dir} does not exist.")
             continue
-        else:
-            demo_id = str(current_ep).zfill(4)
-            demo_dir = os.path.join(load_dir, f"demo_{demo_id}")
-            # current_demo_index += 1
 
          # Check metadata.json
         metadata_path = os.path.join(demo_dir, "metadata.json")
         if not os.path.isfile(metadata_path):
-          print(f"Skipping episode {current_ep} as metadata.json does not exist.")
+          print(f"Skipping episode {demo_idx} as metadata.json does not exist.")
           continue
         else:
             with open(os.path.join(demo_dir, "metadata.json"), encoding="utf-8") as f:
@@ -212,7 +241,7 @@ def main():
         episode_ends_arrays.append(total_count)
 
         # Write to ZARR if batch is full or if this is the last episode
-        if (current_ep + 1) % batch_size == 0 or (current_ep + 1) == num:
+        if (current_ep + 1) % batch_size == 0 or (current_ep + 1) == len(demo_indices):
             # Convert arrays to NumPy and format head_camera
             head_camera_arrays = np.array(head_camera_arrays)
             head_camera_arrays = np.moveaxis(head_camera_arrays, -1, 1)  # NHWC -> NCHW
@@ -278,7 +307,7 @@ def main():
         "delta_ee": args.delta_ee,
         "joint_pos_padding": args.joint_pos_padding,
         "task_name": args.task_name,
-        "num_episodes": args.expert_data_num,
+        "num_episodes": len(demo_indices),
         "downsample_ratio": args.downsample_ratio,
     }
 

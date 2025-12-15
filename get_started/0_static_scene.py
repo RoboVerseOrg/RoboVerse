@@ -127,7 +127,7 @@ if __name__ == "__main__":
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 "sphere": {
-                    "pos": torch.tensor([0.4, -0.6, 0.05]),
+                    "pos": torch.tensor([0.4, -0.6, 0.1]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 "bbq_sauce": {

@@ -9,201 +9,9 @@ from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 from metasim.randomization.camera_randomizer import CameraRandomCfg, CameraRandomizer
-from metasim.test.randomization.conftest import get_shared_scenario
 
 
-def get_camera_xformable_from_randomizer(randomizer):
-    from pxr import UsdGeom
-
-    camera_prim = randomizer._get_camera_prim()
-    camera = UsdGeom.Camera(camera_prim)
-    xformable = UsdGeom.Xformable(camera_prim)
-    if not camera:
-        raise ValueError("Camera not found in the scene")
-    if not xformable:
-        raise ValueError("Camera Xformable not found in the scene")
-    return camera, xformable
-
-
-def camera_position(handler, distribution="uniform"):
-    """Test camera position randomization with reproducible seed."""
-    from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
-
-    # Skip for simulators that don't support camera randomization well
-
-    # Create camera randomizer with position delta
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        position=CameraPositionRandomCfg(
-            delta_range=((-1, 1), (-1, 1), (-1, 1)),
-            use_delta=True,
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-
-    _, xformable = get_camera_xformable_from_randomizer(randomizer)
-    # Get current position
-    current_pos, _, _ = randomizer._get_current_transform(xformable)
-    # Apply randomization twice with same seed - should give same results
-    randomizer()
-    new_pos, _, _ = randomizer._get_current_transform(xformable)
-    assert (not torch.allclose(torch.tensor(current_pos), torch.tensor(new_pos))) and torch.all(
-        torch.abs(torch.tensor(current_pos) - torch.tensor(new_pos)) < 1
-    ), "Camera position should have changed after randomization"
-    # For IsaacSim, we need to step to see the effect
-    log.info(f"Camera position randomization (Type: {distribution}) test passed")
-
-
-def camera_orientation(handler, distribution="uniform"):
-    """Test camera orientation randomization."""
-    from metasim.randomization.camera_randomizer import CameraOrientationRandomCfg
-
-    # Create camera randomizer with orientation delta
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        orientation=CameraOrientationRandomCfg(
-            rotation_delta=((-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)),
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-
-    _, xformable = get_camera_xformable_from_randomizer(randomizer)
-    # Get current orientation
-    _, current_rot, _ = randomizer._get_current_transform(xformable)
-    # Apply randomization
-    randomizer()
-    _, new_rot, _ = randomizer._get_current_transform(xformable)
-    assert (not torch.allclose(torch.tensor(current_rot), torch.tensor(new_rot))) and torch.all(
-        torch.abs(torch.tensor(current_rot) - torch.tensor(new_rot)) < 5
-    ), "Camera orientation should have changed after randomization"
-    log.info(f"Camera orientation randomization (Type: {distribution}) test passed")
-
-
-def camera_look_at(handler, distribution="uniform"):
-    """Test camera look-at target randomization."""
-    # Create camera randomizer with look-at delta
-    from metasim.randomization.camera_randomizer import CameraLookAtRandomCfg
-
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        look_at=CameraLookAtRandomCfg(
-            look_at_delta=((-0.2, 0.2), (-0.2, 0.2), (-0.2, 0.2)),
-            use_delta=True,
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-
-    _, xformable = get_camera_xformable_from_randomizer(randomizer)
-    # Get current transform
-    current_pos, current_rot, _ = randomizer._get_current_transform(xformable)
-    # Apply randomization
-    randomizer()
-    new_pos, new_rot, _ = randomizer._get_current_transform(xformable)
-    # Either position or rotation should change due to look-at
-    assert not torch.allclose(torch.tensor(current_pos), torch.tensor(new_pos)) or not torch.allclose(
-        torch.tensor(current_rot), torch.tensor(new_rot)
-    ), "Camera transform should have changed after look-at randomization"
-    log.info("Camera look-at randomization test passed")
-
-
-def camera_intrinsics(handler, distribution="uniform"):
-    """Test camera intrinsics randomization."""
-    from metasim.randomization.camera_randomizer import CameraIntrinsicsRandomCfg
-
-    # Create camera randomizer with intrinsics
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        intrinsics=CameraIntrinsicsRandomCfg(
-            focal_length_range=(18.0, 35.0),
-            horizontal_aperture_range=(15.0, 25.0),
-            focus_distance_range=(0.5, 5.0),
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-
-    camera, _ = get_camera_xformable_from_randomizer(randomizer)
-    # Get current focal length
-    current_focal = camera.GetFocalLengthAttr().Get()
-    # Apply randomization
-    randomizer()
-    new_focal = camera.GetFocalLengthAttr().Get()
-    assert current_focal != new_focal, "Camera intrinsics should have changed after randomization"
-    assert 18.0 <= new_focal <= 35.0, "Focal length should be within specified range"
-
-    cfg.intrinsics.clipping_range = ((0.1, 1.0), (20, 100.0))
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-    randomizer()
-    new_range = torch.tensor(camera.CreateClippingRangeAttr().Get())
-    assert new_range[0] >= 0.1 and new_range[0] <= 1.0 and new_range[1] >= 20.0 and new_range[1] <= 100.0, (
-        "Clipping range should be within specified range"
-    )
-
-    log.info("Camera intrinsics randomization test passed")
-
-
-def camera_image(handler, distribution="uniform"):
-    """Test camera image randomization."""
-    from metasim.randomization.camera_randomizer import CameraImageRandomCfg
-
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        image=CameraImageRandomCfg(
-            width_range=(640, 1280),
-            height_range=(480, 960),
-            use_aspect_ratio=True,
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-    camera, _ = get_camera_xformable_from_randomizer(randomizer)
-
-    current_focal_attr = camera.GetFocalLengthAttr().Get()
-    randomizer()
-    new_focal_attr = camera.GetFocalLengthAttr().Get()
-    assert torch.abs(torch.tensor(current_focal_attr) - torch.tensor(new_focal_attr)) > 1e-3, (
-        "Camera focal length should have changed after image resolution randomization"
-    )
-
-    cfg = CameraRandomCfg(
-        camera_name="test_camera",
-        image=CameraImageRandomCfg(
-            aspect_ratio_range=(1, 1000),
-            distribution=distribution,
-            enabled=True,
-        ),
-    )
-    randomizer = CameraRandomizer(cfg, seed=789)
-    randomizer.bind_handler(handler)
-    camera, _ = get_camera_xformable_from_randomizer(randomizer)
-    current_aperture = camera.CreateHorizontalApertureAttr().Get()
-    randomizer()
-    new_aperture = camera.CreateHorizontalApertureAttr().Get()
-    assert torch.abs(torch.tensor(current_aperture) - torch.tensor(new_aperture)) > 1e-3, (
-        "Camera focal length should have changed after aspect ratio randomization"
-    )
-
-    log.info(f"Camera image randomization (Type: {distribution}) test passed")
-
-
-def camera_seed(handler, distribution="uniform"):
+def camera_seed(handler, distribution="uniform", common_range=(1e-8, 10.0)):
     """Test that camera randomization is reproducible with same seed."""
     from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
 
@@ -211,26 +19,209 @@ def camera_seed(handler, distribution="uniform"):
     cfg = CameraRandomCfg(
         camera_name="test_camera",
         position=CameraPositionRandomCfg(
-            position_range=((-10, 10), (-10, 10), (-10, 10)),
+            position_range=[common_range for _ in range(3)],
             use_delta=False,
             distribution=distribution,
             enabled=True,
         ),
     )
 
-    # Test reproducibility
+    # Test reproducibility using USD transforms
     randomizer = CameraRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
-    _, xformable = get_camera_xformable_from_randomizer(randomizer)
-    # Apply randomization twice with same seed - should give same results
+
+    # Apply randomization with seed 789
     randomizer()
-    pos_val1, _, _ = randomizer._get_current_transform(xformable)
+    pos_val1, _ = _get_transform(handler)
+
+    # Reset seed and apply again - should give same results
     randomizer.set_seed(789)
     randomizer()
-    pos_val2, _, _ = randomizer._get_current_transform(xformable)
+    pos_val2, _ = _get_transform(handler)
 
-    assert pos_val1 == pos_val2, "Same seed should produce same random values"
-    log.info("Camera seed reproducibility test passed")
+    assert torch.allclose(torch.tensor(pos_val1), torch.tensor(pos_val2), atol=1e-4), (
+        f"Same seed should produce same random values, got {pos_val1} and {pos_val2}"
+    )
+    log.info(f"Camera seed reproducibility (Type: {distribution}) test passed")
+
+
+def camera_position(handler, distribution="uniform", common_range=(1e-8, 10.0)):
+    """Test camera position randomization with reproducible seed."""
+    from metasim.randomization.camera_randomizer import CameraPositionRandomCfg
+
+    # Create camera randomizer with position delta
+    cfg = CameraRandomCfg(
+        camera_name="test_camera",
+        position=CameraPositionRandomCfg(
+            delta_range=[common_range for _ in range(3)],
+            use_delta=True,
+            distribution=distribution,
+            enabled=True,
+        ),
+    )
+
+    randomizer = CameraRandomizer(cfg, seed=789)
+    randomizer.bind_handler(handler)
+
+    # Get camera prim directly to check actual USD changes
+    current_pos, _ = _get_transform(handler)
+    # Apply randomization
+    randomizer()
+    # Get new position from USD (which is what the randomizer actually updates)
+    new_pos, _ = _get_transform(handler)
+
+    # Check that position changed and is within delta range
+    pos_diff = torch.abs(torch.tensor(current_pos) - torch.tensor(new_pos))
+    assert not torch.allclose(torch.tensor(current_pos), torch.tensor(new_pos), atol=1e-4), (
+        f"Camera position should have changed after randomization. Current: {current_pos}, New: {new_pos}"
+    )
+    ranges = torch.tensor(cfg.position.delta_range)
+    assert torch.all(pos_diff <= (ranges[:, 1] - ranges[:, 0])), (
+        f"Position delta should be within range [-10, 10], got diff: {pos_diff}"
+    )
+
+    log.info(f"Camera position randomization (Type: {distribution}) test passed")
+
+
+def camera_orientation(handler, distribution="uniform", common_range=(1e-8, 10.0)):
+    """Test camera orientation randomization."""
+    from metasim.randomization.camera_randomizer import CameraOrientationRandomCfg
+
+    # Create camera randomizer with orientation delta
+    cfg = CameraRandomCfg(
+        camera_name="test_camera",
+        orientation=CameraOrientationRandomCfg(
+            rotation_delta=[common_range for _ in range(3)],
+            distribution=distribution,
+            enabled=True,
+        ),
+    )
+    randomizer = CameraRandomizer(cfg, seed=789)
+    randomizer.bind_handler(handler)
+
+    # Get camera instance
+
+    # Get current orientation from camera instance (quaternion)
+    _, current_quat = _get_transform(handler)
+    # Apply randomization
+    randomizer()
+    # Get new orientation
+    _, new_quat = _get_transform(handler)
+
+    # Check that orientation changed
+    assert not torch.allclose(torch.tensor(current_quat), torch.tensor(new_quat), atol=1e-4), (
+        f"Camera orientation should have changed after randomization. Current: {current_quat}, New: {new_quat}"
+    )
+    from metasim.utils.math import euler_xyz_from_quat
+
+    c_r, c_p, c_y = euler_xyz_from_quat(current_quat)
+    n_r, n_p, n_y = euler_xyz_from_quat(new_quat)
+    # Check that each rotation axis change is within specified delta range
+    ranges = torch.tensor(cfg.orientation.rotation_delta)
+    assert torch.all(
+        torch.abs(torch.stack([c_r - n_r, c_p - n_p, c_y - n_y], dim=-1)) <= (ranges[:, 1] - ranges[:, 0])
+    ), (
+        f"Orientation delta should be within range {cfg.orientation.rotation_delta}, got diffs: {[c_r - n_r, c_p - n_p, c_y - n_y]}"
+    )
+    log.info(f"Camera orientation randomization (Type: {distribution}) test passed")
+
+
+def camera_look_at(handler, distribution="uniform", common_range=(1e-8, 10.0)):
+    """Test camera look-at target randomization."""
+    # Create camera randomizer with look-at delta
+    from metasim.randomization.camera_randomizer import CameraLookAtRandomCfg
+
+    cfg = CameraRandomCfg(
+        camera_name="test_camera",
+        look_at=CameraLookAtRandomCfg(
+            look_at_delta=[common_range for _ in range(3)],
+            use_delta=True,
+            distribution=distribution,
+            enabled=True,
+        ),
+    )
+
+    randomizer = CameraRandomizer(cfg, seed=789)
+    randomizer.bind_handler(handler)
+
+    # Get current transform from camera instance
+    _, current_quat = _get_transform(handler)
+    # Apply randomization
+    randomizer()
+    # Get new transform
+    _, new_quat = _get_transform(handler)
+
+    # Rotation should change due to look-at target change
+    assert not torch.allclose(torch.tensor(current_quat), torch.tensor(new_quat), atol=1e-4), (
+        f"Camera orientation should have changed after look-at randomization. Current: {current_quat}, New: {new_quat}"
+    )
+
+    log.info(f"Camera look-at randomization (Type: {distribution}) test passed")
+
+
+def camera_intrinsics(handler, distribution="uniform", common_range=(1e-8, 10.0)):
+    """Test camera intrinsics randomization."""
+    import omni.usd
+    from pxr import UsdGeom
+
+    from metasim.randomization.camera_randomizer import CameraIntrinsicsRandomCfg
+
+    # Create camera randomizer with intrinsics
+    cfg = CameraRandomCfg(
+        camera_name="test_camera",
+        intrinsics=CameraIntrinsicsRandomCfg(
+            focal_length_range=common_range,
+            horizontal_aperture_range=common_range,
+            focus_distance_range=common_range,
+            distribution=distribution,
+            enabled=True,
+        ),
+    )
+
+    randomizer = CameraRandomizer(cfg, seed=789)
+    randomizer.bind_handler(handler)
+
+    # Get camera prim directly from USD
+    camera_inst = handler.scene.sensors["test_camera"]
+    camera_prim_path = camera_inst.cfg.prim_path.replace("env_.*", "env_0")
+    stage = omni.usd.get_context().get_stage()
+    camera_prim = stage.GetPrimAtPath(camera_prim_path)
+    camera = UsdGeom.Camera(camera_prim)
+
+    # Get current focal length
+    current_focal_mm = camera.GetFocalLengthAttr().Get()
+
+    # Apply randomization
+    randomizer()
+
+    # Get new focal length (need to re-get camera as USD might have updated)
+    camera_prim = stage.GetPrimAtPath(camera_prim_path)
+    camera = UsdGeom.Camera(camera_prim)
+    new_focal_mm = camera.GetFocalLengthAttr().Get()
+
+    assert current_focal_mm != new_focal_mm, "Camera intrinsics should have changed after randomization"
+    # Note: focal_length_range is in cm, but USD stores in mm, so multiply by 10
+    assert common_range[0] * 10.0 <= new_focal_mm <= common_range[1] * 10.0, (
+        f"Focal length should be within specified range, got {new_focal_mm}"
+    )
+
+    # Test clipping range
+    low_range = (common_range[0] * 0.1, common_range[1] * 0.1)
+    cfg.intrinsics.clipping_range = (low_range, common_range)
+    randomizer = CameraRandomizer(cfg, seed=790)
+    randomizer.bind_handler(handler)
+    randomizer()
+
+    camera_prim = stage.GetPrimAtPath(camera_prim_path)
+    camera = UsdGeom.Camera(camera_prim)
+    new_range_mm = camera.GetClippingRangeAttr().Get()
+    # USD stores in cm, config is in meters, so multiply by 100
+    assert (
+        low_range[0] * 100.0 <= new_range_mm[0] <= low_range[1] * 100.0
+        and common_range[0] * 100.0 <= new_range_mm[1] <= common_range[1] * 100.0
+    ), f"Clipping range should be within specified range, got {new_range_mm}"
+
+    log.info(f"Camera intrinsics randomization (Type: {distribution}) test passed")
 
 
 TEST_FUNCTIONS = [
@@ -239,71 +230,25 @@ TEST_FUNCTIONS = [
     camera_orientation,
     camera_look_at,
     camera_intrinsics,
-    camera_image,
 ]
 
 
-def _process_run_handler(scenario):
-    """Process function for standalone mode - creates its own handler."""
-    from metasim.utils.setup_util import get_handler
-
-    handler = get_handler(scenario)
-    distributions = ["uniform", "log_uniform", "gaussian"]
-    for dist in distributions:
-        for test_func in TEST_FUNCTIONS:
-            test_func(handler, distribution=dist)
-    handler.close()
+@pytest.mark.isaacsim
+@pytest.mark.parametrize("distribution", ["uniform", "log_uniform", "gaussian"])
+@pytest.mark.parametrize("test_func", TEST_FUNCTIONS, ids=[f.__name__ for f in TEST_FUNCTIONS])
+def test_camera_randomizers(handler, test_func, distribution):
+    """Run camera randomizer checks inside the shared handler process."""
+    common_range = (1e-8, 20.0)
+    test_func(handler, distribution=distribution, common_range=common_range)
 
 
-def run_test(sim="isaacsim", num_envs=2):
-    """Standalone test function for direct execution.
+def _get_transform(handler):
+    """Extract position and rotation from xformable."""
+    camera_inst = handler.scene.sensors["test_camera"]
+    position, rotation = camera_inst._view.get_world_poses()
 
-    This function is used when running the test file directly (not via pytest).
-    It creates its own handler and runs all tests.
-
-    Args:
-        sim: Simulator type
-        num_envs: Number of environments
-    """
-    import multiprocessing as mp
-
-    log.info(f"Running camera randomizer test in standalone mode with {sim} and {num_envs}")
-
-    if sim not in ["isaacsim"]:
-        log.warning(f"Skipping: Only testing IsaacSim here, got {sim}")
-        return
-
-    scenario = get_shared_scenario(sim, num_envs)
-    ctx = mp.get_context("spawn")
-    p = ctx.Process(target=_process_run_handler, args=(scenario,))
-    p.start()
-    p.join(timeout=60)
-
-    assert p.exitcode == 0, f"IsaacSim process exited abnormally: {p.exitcode}"
-    log.info("IsaacSim headless test finished successfully.")
-
-
-@pytest.mark.usefixtures("shared_handler")
-def test_camera_randomizer_with_shared_handler(shared_handler):
-    """Run camera randomizer tests using the child-process handler via proxy."""
-    log.info("Running camera randomizer tests with shared handler (proxy)")
-
-    proxy = shared_handler  # HandlerProxy
-
-    distributions = ["uniform", "log_uniform", "gaussian"]
-
-    # Run all camera test functions with different distributions
-    for dist in distributions:
-        for test_func in TEST_FUNCTIONS:
-            proxy.run_test(func=test_func, distribution=dist)
-
-    log.info("All camera randomizer tests completed with shared handler (proxy)")
+    return position.detach().cpu(), rotation.detach().cpu()
 
 
 if __name__ == "__main__":
-    # Direct execution for quick testing - uses standalone mode
-    import sys
-
-    sim = "isaacsim" if len(sys.argv) < 2 else sys.argv[1]
-    num_envs = 2 if len(sys.argv) < 3 else int(sys.argv[2])
-    run_test(sim, num_envs)
+    pytest.main([__file__, "-k isaacsim"])

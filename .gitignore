@@ -4,6 +4,8 @@
 **/.vscode/
 # Don't ignore the top-level .vscode directory as it is
 # used to configure VS Code settings
+*.rrd
+# rerun recording files
 !.vscode/
 .vscode/.history
 .hydra/

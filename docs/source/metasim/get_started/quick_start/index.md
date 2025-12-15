@@ -21,4 +21,5 @@ guide
 14_real_asset
 15_gs_background
 16_embodiedgen_layout
+17_rerun_visualization
 ```

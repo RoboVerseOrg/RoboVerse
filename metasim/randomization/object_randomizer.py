@@ -156,29 +156,6 @@ class ObjectRandomizer(BaseRandomizerType):
         self.registry: ObjectRegistry | None = None
         self.adapter: IsaacSimAdapter | None = None
 
-    def bind_handler(self, handler):
-        """Bind handler and initialize Registry + Adapter.
-
-        For Hybrid simulation:
-        - _actual_handler is physics_handler (for physics operations)
-        - But Registry and Adapter come from render_handler (where objects are registered)
-
-        Args:
-            handler: SimHandler instance
-        """
-        super().bind_handler(handler)
-
-        # Special handling for Hybrid
-        if self._is_hybrid_handler(handler):
-            # Registry is in render_handler (where all objects are registered)
-            self.registry = ObjectRegistry.get_instance(handler.render_handler)
-            # Adapter also uses render_handler (for USD operations)
-            self.adapter = IsaacSimAdapter(handler.render_handler)
-        else:
-            # Non-Hybrid: use _actual_handler
-            self.registry = ObjectRegistry.get_instance(self._actual_handler)
-            self.adapter = IsaacSimAdapter(self._actual_handler)
-
     def __call__(self):
         """Execute object randomization with intelligent handling."""
         # Get object metadata from Registry
@@ -248,9 +225,9 @@ class ObjectRandomizer(BaseRandomizerType):
             # Get all masses, then index by env_ids (match device)
             all_masses = obj_inst.root_physx_view.get_masses()
             env_ids_mass = env_ids.to(all_masses.device)
-            current_mass = all_masses[env_ids_mass] if len(all_masses.shape) > 0 else all_masses
+            new_mass = current_mass = all_masses
             num_links = current_mass.shape[1] if len(current_mass.shape) > 1 else 1
-            shape = (num_envs,) if num_links == 1 else (num_envs, num_links)
+            shape = (num_envs, num_links)
 
             rand_values = self._generate_random_tensor(
                 shape, self.cfg.physics.distribution, self.cfg.physics.mass_range
@@ -258,11 +235,11 @@ class ObjectRandomizer(BaseRandomizerType):
             rand_values = rand_values.to(current_mass.device)
 
             if self.cfg.physics.operation == "add":
-                new_mass = current_mass + rand_values
+                new_mass[env_ids_mass] = current_mass[env_ids_mass] + rand_values
             elif self.cfg.physics.operation == "scale":
-                new_mass = current_mass * rand_values
+                new_mass[env_ids_mass] = current_mass[env_ids_mass] * rand_values
             elif self.cfg.physics.operation == "abs":
-                new_mass = rand_values
+                new_mass[env_ids_mass] = rand_values
             else:
                 raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
 
@@ -274,7 +251,6 @@ class ObjectRandomizer(BaseRandomizerType):
             rand_friction = self._generate_random_tensor(
                 (num_envs,), self.cfg.physics.distribution, self.cfg.physics.friction_range
             )
-            rand_friction = rand_friction.to(self._actual_handler.device)
 
             try:
                 # Get current material properties
@@ -283,24 +259,23 @@ class ObjectRandomizer(BaseRandomizerType):
                 # Update friction (index 0=static, 1=dynamic, 2=restitution)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 0] = rand_friction.unsqueeze(1)
-                    materials[env_ids, :, 1] = rand_friction.unsqueeze(1)
+                    materials[env_ids, :, 0] = rand_friction.unsqueeze(1).to(materials.device)
+                    materials[env_ids, :, 1] = rand_friction.unsqueeze(1).to(materials.device)
                 else:
                     # [num_envs, 3]
-                    materials[env_ids, 0] = rand_friction
-                    materials[env_ids, 1] = rand_friction
+                    materials[env_ids, 0] = rand_friction.to(materials.device)
+                    materials[env_ids, 1] = rand_friction.to(materials.device)
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids)
             except Exception as e:
-                logger.warning(f"Failed to set friction: {e}")
+                logger.error(f"Failed to set friction: {e}")
 
         # Randomize restitution
         if self.cfg.physics.restitution_range:
             rand_restitution = self._generate_random_tensor(
                 (num_envs,), self.cfg.physics.distribution, self.cfg.physics.restitution_range
             )
-            rand_restitution = rand_restitution.to(self._actual_handler.device)
 
             try:
                 # Get current material properties
@@ -309,10 +284,10 @@ class ObjectRandomizer(BaseRandomizerType):
                 # Update restitution (index 2)
                 if len(materials.shape) == 3:
                     # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 2] = rand_restitution.unsqueeze(1)
+                    materials[env_ids, :, 2] = rand_restitution.unsqueeze(1).to(materials.device)
                 else:
                     # [num_envs, 3]
-                    materials[env_ids, 2] = rand_restitution
+                    materials[env_ids, 2] = rand_restitution.to(materials.device)
 
                 # Set back
                 obj_inst.root_physx_view.set_material_properties(materials, env_ids)

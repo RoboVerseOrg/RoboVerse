@@ -67,8 +67,7 @@ class LiberoKitchenScene9PutTheFryingPanUnderTheCabinetShelfTask(Libero90BaseTas
             ),
         ],
         robots=["franka"],
-        # Scene configuration
-        scene="libero_kitchen_tabletop",
+        # Scene configuration,
     )
 
     # Task parameters
@@ -77,7 +76,7 @@ class LiberoKitchenScene9PutTheFryingPanUnderTheCabinetShelfTask(Libero90BaseTas
 
     # Workspace configuration
     workspace_name = ("kitchen_table",)
-    workspace_offset = ((0.0, 0, 0.90),)
+    workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.05),)
 
     # Trajectory file path
