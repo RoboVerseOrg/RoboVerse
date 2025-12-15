@@ -415,7 +415,7 @@ class PickPlaceTrackBanana(PickPlaceBase):
         delta_actions = actions * self._action_scale
         new_actions = current_joint_pos + delta_actions
         real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
-        
+
         # delta_actions = actions * self._action_scale
         # new_actions = self._last_action + delta_actions
 
