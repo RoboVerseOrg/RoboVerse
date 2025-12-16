@@ -97,5 +97,4 @@ eval_interval: 5000
 # save_interval: 5000
 video_width: 1024
 video_height: 1024
-save_interval: 15000    # Save every 10k steps (set to 0 to disable)
 model_dir: "models_pick_hu2"     # Directory to save checkpoints (default: "models")
