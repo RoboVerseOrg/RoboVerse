@@ -408,25 +408,20 @@ class PickPlaceTrackKnife(PickPlaceBase):
         return approach_reward_far + approach_reward_near
 
     def get_geometric_center(self, current_states):
-        """正向验证：根据局部偏移计算世界坐标
-        [W, X, Y, Z] 格式版本
-        """
-        # 1. 提取四元数 (格式: w, x, y, z)
-        # 修正点：索引 0 是 w
+       
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
 
-        # 2. 正向旋转 q (w, x, y, z)
-        # 虚部直接用 x, y, z
+       
         q_vec = torch.stack([x, y, z], dim=1)
         # w = w.unsqueeze(1)
 
-        # 扩展 offset (如果输入不是 batch 需要 unsqueeze，如果是 batch 则直接用)
+        
         v = self.local_offset.unsqueeze(0)
 
-        # 3. 应用旋转: q * v * q_inv
+        
         t = 2.0 * torch.cross(q_vec, v, dim=1)
 
         final_vec = v + w.view(-1, 1) * t + torch.cross(q_vec, t, dim=-1)

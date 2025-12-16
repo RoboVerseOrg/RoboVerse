@@ -406,10 +406,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         return self.object_grasped.float()
 
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
-        """计算夹爪姿态奖励：
-        1. Z轴对齐：夹爪竖直向下 (指向 -Z)。
-        2. 平面旋转对齐 (Yaw)：让夹爪正确地抓取物体的长边。
-        """
+        
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
@@ -417,88 +414,51 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
 
         bw, bx, by, bz = box_quat[:, 0], box_quat[:, 1], box_quat[:, 2], box_quat[:, 3]
 
-        # -------------------------------------------------------------------------
-        # --- 2. Z 轴对齐奖励 (Z-Axis Alignment) ---
-        # -------------------------------------------------------------------------
-        # 目标：让夹爪 Local Z 轴 (进给方向) 指向 World -Z (竖直向下)
-
-        # 计算旋转矩阵 R 的第三列 R[:3, 2] 的 Z 分量 (R33)
-        # R33 公式: 1 - 2(x^2 + y^2)
+       
         gripper_z_axis_z_component = 1.0 - 2.0 * (torch.square(x) + torch.square(y))
 
-        # 我们希望 Z 分量接近 -1 (向下)。
-        # 归一化公式: (-(-1) + 1) / 2 = 1.0 (完美向下), (-1 + 1) / 2 = 0.0 (向上)
+      
         reward_z_down = (-gripper_z_axis_z_component + 1.0) / 2.0
 
-        # 可选：平方让奖励对角度误差更敏感 (Ex: 误差小的时候奖励下降得不那么多，或者反之，看你需要)
+       
         reward_z_down = torch.square(reward_z_down)
 
-        # -------------------------------------------------------------------------
-        # --- 3. 平面旋转奖励 (Yaw Alignment) ---
-        # -------------------------------------------------------------------------
-        # 目标：解决 "X和Y是否反了" 的问题。
-        # 假设：刀柄 (物体) 的长轴是 Object 的 X 轴。
-
-        # 计算物体的 X 轴向量 (Local X in World Frame)
+       
         box_x_axis = torch.stack([1 - 2 * (by**2 + bz**2), 2 * (bx * by + bw * bz), 2 * (bx * bz - bw * by)], dim=-1)
 
-        # === [模式 A：标准抓取] ===
-        # 逻辑：让夹爪的 X 轴 (法线) 平行于 刀柄 X 轴。
-        # 几何结果：夹爪的 Y 轴 (手指连线) 会 垂直 于刀柄。-> 此时手指正好跨过刀柄捏住它。
-        # 推荐使用此模式。
-
-        # 计算夹爪 X 轴向量 (Rotation Matrix Column 1)
+       
         # gripper_axis_to_align = torch.stack([
         #     1 - 2 * (y**2 + z**2),
         #     2 * (x*y + w*z),
         #     2 * (x*z - w*y)
         # ], dim=-1)
 
-        # === [模式 B：特殊 URDF 或 抓两端] (如果你觉得真的反了，解开下面注释使用这个) ===
-        # 逻辑：让夹爪的 Y 轴 (手指连线) 平行于 刀柄 X 轴。
-        # 几何结果：手指会去夹刀柄的两个端点 (即手指连线与刀柄重合)。
-
-        # 计算夹爪 Y 轴向量 (Rotation Matrix Column 2)
+       
         gripper_axis_to_align = torch.stack([2 * (x * y - w * z), 1 - 2 * (x**2 + z**2), 2 * (y * z + w * x)], dim=-1)
 
-        # -------------------------------------------------------------------------
-        # --- 4. 计算点积与最终奖励 ---
-        # -------------------------------------------------------------------------
-
-        # 计算点积：cos(theta)
+        
         dot_prod = torch.sum(gripper_axis_to_align * box_x_axis, dim=-1)
 
-        # 取绝对值：因为夹爪旋转 180 度 (前后翻转) 也是合法的抓取姿态
+       
         reward_align = torch.abs(dot_prod)
 
-        # (可选) 增加一个阈值，比如 Z 轴如果不向下，根本不给旋转奖励
-        # 这样可以防止机器人在空中乱转骗分
-        # mask = (reward_z_down > 0.8).float()
-        # reward_align = reward_align * mask
-
-        # 组合奖励
+      
         total_reward = reward_z_down * reward_align
 
         return total_reward
 
     def calculate_local_offset(self):
-        """逆向：计算 Target 在 Root 坐标系下的局部偏移
-        [W, X, Y, Z] 格式版本
-        """
-        # 1. 计算世界坐标差
+       
         diff_world = self.target_pos - self.object_pos
 
-        # 2. 提取四元数 (格式: w, x, y, z)
-        # 修正点：索引 0 是 w
+        
         w, x, y, z = self.object_rot[:, 0], self.object_rot[:, 1], self.object_rot[:, 2], self.object_rot[:, 3]
 
-        # 3. 构造逆旋转 (共轭四元数: [w, -x, -y, -z])
-        # w 不变，虚部取反
+       
         q_vec_inv = torch.stack([-x, -y, -z], dim=1)
         w = w.unsqueeze(1)
 
-        # 4. 应用旋转: q_inv * diff * q
-        # t = 2 * cross(q_vec, v)
+       
         t = 2.0 * torch.cross(q_vec_inv, diff_world, dim=1)
 
         # result = v + w*t + cross(q_vec, t)
@@ -507,25 +467,20 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         return local_offset
 
     def get_geometric_center(self, current_states):
-        """正向验证：根据局部偏移计算世界坐标
-        [W, X, Y, Z] 格式版本
-        """
-        # 1. 提取四元数 (格式: w, x, y, z)
-        # 修正点：索引 0 是 w
+        
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
 
-        # 2. 正向旋转 q (w, x, y, z)
-        # 虚部直接用 x, y, z
+       
         q_vec = torch.stack([x, y, z], dim=1)
         w = w.unsqueeze(1)
 
-        # 扩展 offset (如果输入不是 batch 需要 unsqueeze，如果是 batch 则直接用)
+      
         v = self.local_offset.unsqueeze(0)
 
-        # 3. 应用旋转: q * v * q_inv
+        
         t = 2.0 * torch.cross(q_vec, v, dim=1)
         final_vec = v + w * t + torch.cross(q_vec, t, dim=1)
 
