@@ -406,6 +406,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         return self.object_grasped.float()
 
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
+        """Reward for maintaining gripper orientation."""
 
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
@@ -439,6 +440,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         return total_reward
 
     def calculate_local_offset(self):
+        '''Calculate local offset from object to target position.'''
 
         diff_world = self.target_pos - self.object_pos
 
@@ -455,6 +457,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         return local_offset
 
     def get_geometric_center(self, current_states):
+        '''Get geometric center of the object.'''
 
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]

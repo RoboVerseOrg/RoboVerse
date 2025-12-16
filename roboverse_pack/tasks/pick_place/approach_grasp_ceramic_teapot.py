@@ -416,10 +416,8 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         return self.object_grasped.float()
 
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
-        """Calculate gripper orientation reward:
-        1. Z-axis Alignment: Gripper points vertically downwards (-Z).
-        2. Planar Rotation Alignment (Yaw): Align the gripper's Yaw with the box's long edge.
-        """
+        """Calculate gripper orientation reward"""
+
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
@@ -427,38 +425,19 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
 
         bw, bx, by, bz = box_quat[:, 0], box_quat[:, 1], box_quat[:, 2], box_quat[:, 3]
 
-        # -------------------------------------------------------------------------
-        # --- 2. Z-Axis Alignment Reward ---
-        # -------------------------------------------------------------------------
-        # Goal: Align the gripper's Local Z-axis (approach direction) with World -Z (vertically downwards).
-
-        # Calculate the Z component of the rotation matrix R's third column, R[:3, 2] (specifically R33).
-        # Formula for R33: 1 - 2(x^2 + y^2)
+       
         gripper_z_axis_z_component = 1.0 - 2.0 * (torch.square(x) + torch.square(y))
 
-        # We want the Z component to approach -1 (pointing downwards).
-        # Normalization formula: (-(-1) + 1) / 2 = 1.0 (perfectly downwards), (-1 + 1) / 2 = 0.0 (upwards)
+        
         reward_z_down = (-gripper_z_axis_z_component + 1.0) / 2.0
 
-        # Optional: Square the value to make the reward more sensitive to angular error.
-        # (e.g., the reward drops less significantly when the error is small, or vice versa, depending on your needs)
+       
         reward_z_down = torch.square(reward_z_down)
 
-        # -------------------------------------------------------------------------
-        # --- 3. Planar Rotation Reward (Yaw Alignment) ---
-        # -------------------------------------------------------------------------
-        # Goal: Resolve the "X vs. Y axis reversal" issue.
-        # Assumption: The long axis of the knife handle (object) is the Object's X-axis.
-
-        # Calculate the object's X-axis vector (Local X expressed in World Frame).
+        
         box_x_axis = torch.stack([1 - 2 * (by**2 + bz**2), 2 * (bx * by + bw * bz), 2 * (bx * bz - bw * by)], dim=-1)
 
-        # === [Mode A: Standard Grasp] ===
-        # Logic: Align the Gripper's X-axis (Normal) parallel to the Handle's X-axis.
-        # Geometric Result: The Gripper's Y-axis (connecting line of fingers) becomes perpendicular to the handle.
-        #                   -> The fingers will properly straddle the handle to pinch it.
-
-        # Calculate Gripper X-axis vector (Rotation Matrix: First Column / Index 0)
+       
 
         # gripper_axis_to_align = torch.stack([
         #     1 - 2 * (y**2 + z**2),
@@ -466,28 +445,16 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         #     2 * (x*z - w*y)
         # ], dim=-1)
 
-        # === [Mode B: Special URDF or Grasp Ends] (If you find the axis is truly reversed, uncomment below to use this) ===
-        # Logic: Align the Gripper's Y-axis (line connecting fingers) parallel to the Handle's X-axis.
-        # Geometric Result: The fingers will attempt to grasp the two ends of the handle (i.e., the finger line aligns with the handle).
-
-        # Calculate Gripper Y-axis vector (Rotation Matrix: Second Column / Index 1)
+        
         gripper_axis_to_align = torch.stack([2 * (x * y - w * z), 1 - 2 * (x**2 + z**2), 2 * (y * z + w * x)], dim=-1)
 
-        # -------------------------------------------------------------------------
-        # --- 4. Calculate Dot Product & Final Reward ---
-        # -------------------------------------------------------------------------
-
-        # Calculate dot product: cos(theta)
+       
+        
         dot_prod = torch.sum(gripper_axis_to_align * box_x_axis, dim=-1)
 
         reward_align = torch.abs(dot_prod)
 
-        # Optional: Add a threshold to prevent rotation reward when Z-axis is not aligned.
-        # This can help avoid random rotations in the air.
-        # mask = (reward_z_down > 0.8).float()
-        # reward_align = reward_align * mask
-
-        # Combine rewards
+       
         total_reward = reward_z_down * reward_align
 
         return total_reward
