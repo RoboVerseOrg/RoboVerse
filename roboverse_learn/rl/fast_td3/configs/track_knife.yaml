@@ -93,4 +93,3 @@ video_width: 1024
 video_height: 1024
 save_interval: 10000    # Save every 10k steps (set to 0 to disable)
 model_dir: "models_track_knife"     # Directory to save checkpoints (default: "models")
-

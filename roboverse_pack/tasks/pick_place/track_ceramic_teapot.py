@@ -15,11 +15,12 @@ import torch
 from loguru import logger as log
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
-from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
 from metasim.utils.math import matrix_from_quat
+from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
+
 
 def load_states_from_pkl(pkl_path: str):
     """Load state list from pkl file."""
@@ -138,6 +139,7 @@ DEFAULT_CONFIG_TRACK["randomization"]["robot_pos_noise"] = 0.0
 DEFAULT_CONFIG_TRACK["randomization"]["joint_noise_range"] = 0.0
 DEFAULT_CONFIG_TRACK["trajectory_tracking"]["num_waypoints"] = 3
 
+
 @register_task("pick_place.track_hu", "pick_place_track_hu")
 class PickPlaceTrackHu(PickPlaceBase):
     """Trajectory tracking task from grasp states.
@@ -161,7 +163,6 @@ class PickPlaceTrackHu(PickPlaceBase):
                 name="bowl",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                
                 usd_path="roboverse_data/EmbodiedGenData/all_asset/bowl/usd/bowl.usd",
                 urdf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/bowl.urdf",
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/mjcf/bowl.xml",
@@ -248,12 +249,10 @@ class PickPlaceTrackHu(PickPlaceBase):
     max_episode_steps = 200
 
     def __init__(self, scenario, device=None):
-        self.state_file_path = (
-            "/usr1/home/s125mdg56_03/RoboVerse/eval_states/pick_place.approach_grasp_hu_franka_lift_states_122states_20251214_150655.pkl"
-        )
+        self.state_file_path = "/usr1/home/s125mdg56_03/RoboVerse/eval_states/pick_place.approach_grasp_hu_franka_lift_states_122states_20251214_150655.pkl"
         self._loaded_states = None
         self._action_scale = 0.04
-        
+
         if device is None:
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self._device = device
@@ -261,8 +260,8 @@ class PickPlaceTrackHu(PickPlaceBase):
         self.object_grasped = None
 
         super().__init__(scenario, device)
-        self.local_offset = torch.tensor([-0.00233746, -0.10298071,  0.03644049], device=device)
-        
+        self.local_offset = torch.tensor([-0.00233746, -0.10298071, 0.03644049], device=device)
+
         self.object_grasped = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
         self.reward_functions = [
             self._reward_trajectory_tracking,
@@ -279,7 +278,6 @@ class PickPlaceTrackHu(PickPlaceBase):
 
     def _get_initial_states(self) -> list[dict] | None:
         """Load initial states from pkl file."""
-
         # import ipdb; ipdb.set_trace()
         if self._loaded_states is not None:
             return self._loaded_states
@@ -301,7 +299,7 @@ class PickPlaceTrackHu(PickPlaceBase):
             remainder = self.num_envs % len(initial_states)
             initial_states = initial_states * k + initial_states[:remainder]
 
-        initial_states = initial_states[:self.num_envs]
+        initial_states = initial_states[: self.num_envs]
 
         # Default waypoint positions
         default_positions = [
@@ -327,7 +325,7 @@ class PickPlaceTrackHu(PickPlaceBase):
                 # import ipdb; ipdb.set_trace()
                 marker_name = f"traj_marker_{i}"
                 # if marker_name not in initial_state["objects"]:
-                    # import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 if i < len(default_positions):
                     initial_state["objects"][marker_name] = {
                         "pos": default_positions[i].clone(),
@@ -339,7 +337,6 @@ class PickPlaceTrackHu(PickPlaceBase):
         log.info(f"Loaded {len(initial_states)} initial states from {self.state_file_path}")
         return initial_states
 
-    
     def step(self, actions):
         """Step with delta control, keeping gripper closed."""
         # print(actions[0])
@@ -359,9 +356,9 @@ class PickPlaceTrackHu(PickPlaceBase):
         self._last_action = real_actions.clone()
 
         updated_states = self.handler.get_states(mode="tensor")
-        
+
         if self.local_offset is not None:
-            box_pos = self.get_geometric_center(updated_states)   
+            box_pos = self.get_geometric_center(updated_states)
         else:
             box_pos = updated_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(updated_states)
@@ -369,7 +366,7 @@ class PickPlaceTrackHu(PickPlaceBase):
         gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
         # print(gripper_box_dist)
         # print(self.local_offset)
-        is_grasping = gripper_box_dist < self.grasp_check_distance 
+        is_grasping = gripper_box_dist < self.grasp_check_distance
 
         self.object_grasped = is_grasping
         newly_released = ~is_grasping
@@ -387,9 +384,9 @@ class PickPlaceTrackHu(PickPlaceBase):
     def _reward_gripper_close(self, env_states) -> torch.Tensor:
         """Reward for closing gripper when close to box."""
         if self.local_offset is not None:
-            box_pos = self.get_geometric_center(env_states)   
+            box_pos = self.get_geometric_center(env_states)
         else:
-            box_pos = env_states.objects["object"].root_state[:, 0:3]       
+            box_pos = env_states.objects["object"].root_state[:, 0:3]
 
         gripper_pos, _ = self._get_ee_state(env_states)
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
@@ -400,9 +397,9 @@ class PickPlaceTrackHu(PickPlaceBase):
     def _reward_gripper_approach(self, env_states) -> torch.Tensor:
         """Reward for gripper approaching the box."""
         if self.local_offset is not None:
-            box_pos = self.get_geometric_center(env_states)   
+            box_pos = self.get_geometric_center(env_states)
         else:
-            box_pos = env_states.objects["object"].root_state[:, 0:3]   
+            box_pos = env_states.objects["object"].root_state[:, 0:3]
         gripper_pos, _ = self._get_ee_state(env_states)
         gripper_box_dist = torch.norm(box_pos - gripper_pos, dim=-1)
 
@@ -411,8 +408,7 @@ class PickPlaceTrackHu(PickPlaceBase):
         return approach_reward_far + approach_reward_near
 
     def get_geometric_center(self, current_states):
-        """ 
-        正向验证：根据局部偏移计算世界坐标 
+        """正向验证：根据局部偏移计算世界坐标
         [W, X, Y, Z] 格式版本
         """
         # 1. 提取四元数 (格式: w, x, y, z)
@@ -421,20 +417,20 @@ class PickPlaceTrackHu(PickPlaceBase):
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
-        
+
         # 2. 正向旋转 q (w, x, y, z)
         # 虚部直接用 x, y, z
-        q_vec = torch.stack([x, y, z], dim=1) 
+        q_vec = torch.stack([x, y, z], dim=1)
         # w = w.unsqueeze(1)
-        
+
         # 扩展 offset (如果输入不是 batch 需要 unsqueeze，如果是 batch 则直接用)
         v = self.local_offset.unsqueeze(0)
-        
+
         # 3. 应用旋转: q * v * q_inv
         t = 2.0 * torch.cross(q_vec, v, dim=1)
-        
-        final_vec =v + w.view(-1, 1) * t + torch.cross(q_vec, t, dim=-1)
-        
+
+        final_vec = v + w.view(-1, 1) * t + torch.cross(q_vec, t, dim=-1)
+
         return root_pos + final_vec
 
     def _observation(self, env_states) -> torch.Tensor:

@@ -12,11 +12,13 @@ import torch
 from loguru import logger as log
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
+
 from .functions import *
+
 
 @register_task("pick_place.approach_grasp_knife", "pick_place_approach_grasp_knife")
 class PickPlaceApproachGraspKnife(PickPlaceBase):
@@ -37,12 +39,12 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
     JOINT2_LIFT_OFFSET = 0.5  # Amount to lift joint2 when grasped (positive = lift up)
     JOINT2_LIFT_KP = 0.2  # Proportional gain for joint2 lift control
     JOINT2_LIFT_MAX_DELTA = 0.3  # Maximum change per step
- 
+
     DEFAULT_CONFIG_SIMPLE = deepcopy(DEFAULT_CONFIG)
     DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"].update({
         "gripper_approach": 0.5,
         "grasp_reward": 4.0,
-        "gripper_orientation":0.5,
+        "gripper_orientation": 0.5,
     })
     DEFAULT_CONFIG_SIMPLE["grasp_config"] = {
         "grasp_check_distance": GRASP_DISTANCE_THRESHOLD,
@@ -51,8 +53,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
 
     scenario = ScenarioCfg(
         objects=[
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
-            
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
@@ -62,8 +63,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/table/mjcf/table.xml",
                 fix_base_link=True,
             ),
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
-            
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="bowl",
                 scale=(1, 1, 1),
@@ -72,8 +72,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
                 urdf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/bowl.urdf",
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/mjcf/bowl.xml",
             ),
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
-            
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="object",
                 scale=(1, 1, 1),
@@ -83,8 +82,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
                 urdf_path="roboverse_data/EmbodiedGenData/all_asset/knife/knife.urdf",
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/knife/knife.xml",
             ),
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
-            
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="plate",
                 scale=(1, 1, 1),
@@ -103,7 +101,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
             # ),
             RigidObjCfg(
                 name="object0",
-                 urdf_path="roboverse_pack/tasks/pick_place/marker/axis_marker.urdf",
+                urdf_path="roboverse_pack/tasks/pick_place/marker/axis_marker.urdf",
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/axis_marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/axis_marker.usd",
                 scale=1.0,
@@ -188,14 +186,12 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         # self.local_offset = torch.tensor([-0.1091152, -0.02266935, -0.00410238])
         # self.local_offset = torch.tensor([0,0,0])
         # self.object_pos = torch.tensor([0.201373, -0.330642, 0.779824]).unsqueeze(0)
-        # self.object_rot = torch.tensor([-0.398238, 0.035423, -0.027580, -0.916183]).unsqueeze(0) 
+        # self.object_rot = torch.tensor([-0.398238, 0.035423, -0.027580, -0.916183]).unsqueeze(0)
         # self.target_pos = torch.tensor([0.118386, -0.429724, 0.780205]).unsqueeze(0)
         self.local_offset = torch.tensor([-0.01538026, 0.1282216, -0.00245847]).to(device)
-        
-        
+
         super().__init__(scenario, device)
-        
-        
+
         # Override reward functions for this task
         self.reward_functions = [
             self._reward_gripper_approach,
@@ -228,8 +224,6 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
             self.joint2_index = joint_names.index(self.joint2_name)
         else:
             log.warning(f"Joint {self.joint2_name} not found, joint2 lift disabled")
-    
-    
 
     def reset(self, env_ids=None):
         """Reset environment and tracking variables."""
@@ -270,7 +264,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         box_pos = self.get_geometric_center(current_states)
         gripper_pos, _ = self._get_ee_state(current_states)
         gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
-        
+
         # Apply delta control
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
@@ -289,7 +283,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         # and they will compute newly_grasped by comparing current state with self.object_grasped
         obs, reward, terminated, time_out, info = super(PickPlaceBase, self).step(real_actions)
         self._last_action = real_actions
-        
+
         # Update grasp state after step (for next step's comparison)
         updated_states = self.handler.get_states(mode="tensor")
         old_grasped = self.object_grasped.clone()
@@ -374,7 +368,7 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         """Compute if object is grasped (requires 5 stable frames based on distance only)."""
         # box_pos = states.objects["object"].root_state[:, 0:3]
         box_pos = self.get_geometric_center(states)
-        
+
         gripper_pos, _ = self._get_ee_state(states)
         gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
 
@@ -411,21 +405,15 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         # Use cached grasp state (computed in step method)
         return self.object_grasped.float()
 
-        
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
-        """
-        计算夹爪姿态奖励：
+        """计算夹爪姿态奖励：
         1. Z轴对齐：夹爪竖直向下 (指向 -Z)。
         2. 平面旋转对齐 (Yaw)：让夹爪正确地抓取物体的长边。
         """
-        
-        
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
-       
         w, x, y, z = gripper_quat[:, 0], gripper_quat[:, 1], gripper_quat[:, 2], gripper_quat[:, 3]
-        
 
         bw, bx, by, bz = box_quat[:, 0], box_quat[:, 1], box_quat[:, 2], box_quat[:, 3]
 
@@ -433,66 +421,56 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         # --- 2. Z 轴对齐奖励 (Z-Axis Alignment) ---
         # -------------------------------------------------------------------------
         # 目标：让夹爪 Local Z 轴 (进给方向) 指向 World -Z (竖直向下)
-        
+
         # 计算旋转矩阵 R 的第三列 R[:3, 2] 的 Z 分量 (R33)
         # R33 公式: 1 - 2(x^2 + y^2)
         gripper_z_axis_z_component = 1.0 - 2.0 * (torch.square(x) + torch.square(y))
-        
+
         # 我们希望 Z 分量接近 -1 (向下)。
         # 归一化公式: (-(-1) + 1) / 2 = 1.0 (完美向下), (-1 + 1) / 2 = 0.0 (向上)
         reward_z_down = (-gripper_z_axis_z_component + 1.0) / 2.0
-        
+
         # 可选：平方让奖励对角度误差更敏感 (Ex: 误差小的时候奖励下降得不那么多，或者反之，看你需要)
         reward_z_down = torch.square(reward_z_down)
-
 
         # -------------------------------------------------------------------------
         # --- 3. 平面旋转奖励 (Yaw Alignment) ---
         # -------------------------------------------------------------------------
         # 目标：解决 "X和Y是否反了" 的问题。
         # 假设：刀柄 (物体) 的长轴是 Object 的 X 轴。
-        
+
         # 计算物体的 X 轴向量 (Local X in World Frame)
-        box_x_axis = torch.stack([
-            1 - 2 * (by**2 + bz**2),
-            2 * (bx*by + bw*bz),
-            2 * (bx*bz - bw*by)
-        ], dim=-1)
+        box_x_axis = torch.stack([1 - 2 * (by**2 + bz**2), 2 * (bx * by + bw * bz), 2 * (bx * bz - bw * by)], dim=-1)
 
         # === [模式 A：标准抓取] ===
         # 逻辑：让夹爪的 X 轴 (法线) 平行于 刀柄 X 轴。
         # 几何结果：夹爪的 Y 轴 (手指连线) 会 垂直 于刀柄。-> 此时手指正好跨过刀柄捏住它。
         # 推荐使用此模式。
-        
+
         # 计算夹爪 X 轴向量 (Rotation Matrix Column 1)
         # gripper_axis_to_align = torch.stack([
         #     1 - 2 * (y**2 + z**2),
         #     2 * (x*y + w*z),
         #     2 * (x*z - w*y)
         # ], dim=-1)
-        
+
         # === [模式 B：特殊 URDF 或 抓两端] (如果你觉得真的反了，解开下面注释使用这个) ===
         # 逻辑：让夹爪的 Y 轴 (手指连线) 平行于 刀柄 X 轴。
         # 几何结果：手指会去夹刀柄的两个端点 (即手指连线与刀柄重合)。
-        
+
         # 计算夹爪 Y 轴向量 (Rotation Matrix Column 2)
-        gripper_axis_to_align = torch.stack([
-            2 * (x*y - w*z),
-            1 - 2 * (x**2 + z**2),
-            2 * (y*z + w*x)
-        ], dim=-1)
-        
+        gripper_axis_to_align = torch.stack([2 * (x * y - w * z), 1 - 2 * (x**2 + z**2), 2 * (y * z + w * x)], dim=-1)
 
         # -------------------------------------------------------------------------
         # --- 4. 计算点积与最终奖励 ---
         # -------------------------------------------------------------------------
-        
+
         # 计算点积：cos(theta)
         dot_prod = torch.sum(gripper_axis_to_align * box_x_axis, dim=-1)
-        
+
         # 取绝对值：因为夹爪旋转 180 度 (前后翻转) 也是合法的抓取姿态
         reward_align = torch.abs(dot_prod)
-        
+
         # (可选) 增加一个阈值，比如 Z 轴如果不向下，根本不给旋转奖励
         # 这样可以防止机器人在空中乱转骗分
         # mask = (reward_z_down > 0.8).float()
@@ -502,35 +480,34 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         total_reward = reward_z_down * reward_align
 
         return total_reward
+
     def calculate_local_offset(self):
-        """ 
-        逆向：计算 Target 在 Root 坐标系下的局部偏移 
+        """逆向：计算 Target 在 Root 坐标系下的局部偏移
         [W, X, Y, Z] 格式版本
         """
         # 1. 计算世界坐标差
         diff_world = self.target_pos - self.object_pos
-        
+
         # 2. 提取四元数 (格式: w, x, y, z)
         # 修正点：索引 0 是 w
         w, x, y, z = self.object_rot[:, 0], self.object_rot[:, 1], self.object_rot[:, 2], self.object_rot[:, 3]
-        
+
         # 3. 构造逆旋转 (共轭四元数: [w, -x, -y, -z])
         # w 不变，虚部取反
-        q_vec_inv = torch.stack([-x, -y, -z], dim=1) 
+        q_vec_inv = torch.stack([-x, -y, -z], dim=1)
         w = w.unsqueeze(1)
-        
+
         # 4. 应用旋转: q_inv * diff * q
         # t = 2 * cross(q_vec, v)
         t = 2.0 * torch.cross(q_vec_inv, diff_world, dim=1)
-        
+
         # result = v + w*t + cross(q_vec, t)
         local_offset = diff_world + w * t + torch.cross(q_vec_inv, t, dim=1)
-        
+
         return local_offset
 
     def get_geometric_center(self, current_states):
-        """ 
-        正向验证：根据局部偏移计算世界坐标 
+        """正向验证：根据局部偏移计算世界坐标
         [W, X, Y, Z] 格式版本
         """
         # 1. 提取四元数 (格式: w, x, y, z)
@@ -539,19 +516,19 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
-        
+
         # 2. 正向旋转 q (w, x, y, z)
         # 虚部直接用 x, y, z
-        q_vec = torch.stack([x, y, z], dim=1) 
+        q_vec = torch.stack([x, y, z], dim=1)
         w = w.unsqueeze(1)
-        
+
         # 扩展 offset (如果输入不是 batch 需要 unsqueeze，如果是 batch 则直接用)
         v = self.local_offset.unsqueeze(0)
-        
+
         # 3. 应用旋转: q * v * q_inv
         t = 2.0 * torch.cross(q_vec, v, dim=1)
         final_vec = v + w * t + torch.cross(q_vec, t, dim=1)
-        
+
         return root_pos + final_vec
 
     def _prepare_states(self, states, env_ids):
@@ -589,14 +566,12 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
         zero_vel = torch.zeros(self.num_envs, 3, device=self.device)
         zero_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         states.objects["object"].root_state = torch.cat([box_pos, box_quat, zero_vel, zero_ang_vel], dim=-1)
-        
+
         # import ipdb; ipdb.set_trace()
 
         obj_box_pos = self.get_geometric_center(states)
         # # import ipdb; ipdb.set_trace()
         states.objects["object0"].root_state = torch.cat([obj_box_pos, box_quat, zero_vel, zero_ang_vel], dim=-1)
-
-
 
         # Handle trajectory markers
         for i in range(self.num_waypoints):
@@ -628,7 +603,6 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
 
         return states
 
-
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""
         init = [
@@ -637,27 +611,26 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
                     "table": {
                         "pos": torch.tensor([-0.000000, 0.000000, 0.376990]),
                         "rot": torch.tensor([1.000000, -0.000000, 0.000000, 0.000000]),
-                        },
+                    },
                     "bowl": {
-                            "pos": torch.tensor([-0.491991, 0.194712, 0.828524]),
-                            "rot": torch.tensor([-0.774328, -0.006966, 0.006029, 0.632717]),
-                        },
+                        "pos": torch.tensor([-0.491991, 0.194712, 0.828524]),
+                        "rot": torch.tensor([-0.774328, -0.006966, 0.006029, 0.632717]),
+                    },
                     "object": {
-                            "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
-                            "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
-                        },
+                        "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
+                        "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
+                    },
                     "object0": {
-                            "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
-                            "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
-                        },
+                        "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
+                        "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
+                    },
                     "plate": {
-                            "pos": torch.tensor([0.000060, 0.000040, 0.774218]),
-                            "rot": torch.tensor([-0.980610, -0.002716, -0.002327, 0.195939]),
-                        },
-                    
+                        "pos": torch.tensor([0.000060, 0.000040, 0.774218]),
+                        "rot": torch.tensor([-0.980610, -0.002716, -0.002327, 0.195939]),
+                    },
                     "traj_marker_0": {
-                             "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
-                            "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
+                        "pos": torch.tensor([0.027866, -0.379829, 0.768413]),
+                        "rot": torch.tensor([-0.818808, -0.009771, -0.020791, -0.573607]),
                     },
                     "traj_marker_1": {
                         "pos": torch.tensor([-0.045492, -0.285306, 0.941898]),
@@ -678,17 +651,8 @@ class PickPlaceApproachGraspKnife(PickPlaceBase):
                 },
                 "robots": {
                     "franka": {
-                        "pos": torch.tensor([
-                            -0.6733999252319336,
-                            2.3283064365386963e-10,
-                            0.7760999798774719
-                        ]),
-                        "rot": torch.tensor([
-                            -1.0,
-                            1.489094958451176e-10,
-                            8.78133399329073e-10,
-                            8.47253794900027e-11
-                        ]),
+                        "pos": torch.tensor([-0.6733999252319336, 2.3283064365386963e-10, 0.7760999798774719]),
+                        "rot": torch.tensor([-1.0, 1.489094958451176e-10, 8.78133399329073e-10, 8.47253794900027e-11]),
                         "dof_pos": {
                             "panda_joint1": 0.0,
                             "panda_joint2": -0.785398,

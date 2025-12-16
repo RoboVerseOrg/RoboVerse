@@ -12,11 +12,13 @@ import torch
 from loguru import logger as log
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
+
 from .functions import *
+
 
 @register_task("pick_place.approach_grasp_hu", "pick_place_approach_grasp_hu")
 class PickPlaceApproachGraspHu(PickPlaceBase):
@@ -37,12 +39,12 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
     JOINT2_LIFT_OFFSET = 0.5  # Amount to lift joint2 when grasped (positive = lift up)
     JOINT2_LIFT_KP = 0.2  # Proportional gain for joint2 lift control
     JOINT2_LIFT_MAX_DELTA = 0.3  # Maximum change per step
- 
+
     DEFAULT_CONFIG_SIMPLE = deepcopy(DEFAULT_CONFIG)
     DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"].update({
         "gripper_approach": 0.5,
         "grasp_reward": 4.0,
-        "gripper_orientation":0.5,
+        "gripper_orientation": 0.5,
     })
     DEFAULT_CONFIG_SIMPLE["grasp_config"] = {
         "grasp_check_distance": GRASP_DISTANCE_THRESHOLD,
@@ -51,7 +53,7 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
 
     scenario = ScenarioCfg(
         objects=[
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
@@ -61,8 +63,7 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/table/mjcf/table.xml",
                 fix_base_link=True,
             ),
-            #path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
-            
+            # path https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0001/asset3d
             RigidObjCfg(
                 name="bowl",
                 scale=(1, 1, 1),
@@ -71,7 +72,7 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
                 urdf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/bowl.urdf",
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/bowl/mjcf/bowl.xml",
             ),
-            #https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0002/asset3d
+            # https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/example_layouts/task_0002/asset3d
             RigidObjCfg(
                 name="object",
                 scale=(1, 1, 1),
@@ -89,7 +90,6 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
                 urdf_path="roboverse_data/EmbodiedGenData/all_asset/plate/plate.urdf",
                 mjcf_path="roboverse_data/EmbodiedGenData/all_asset/plate/mjcf/plate.xml",
             ),
-            
             # RigidObjCfg(
             #     name="object0",
             #      urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
@@ -101,7 +101,6 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
             #     collision_enabled=False,
             #     fix_base_link=True,
             # ),
-            
             RigidObjCfg(
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/axis_marker.urdf",
@@ -175,12 +174,10 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         self.joint2_name = "panda_joint2"
         self.joint2_index = None
         self.initial_joint_pos = None
-        self.local_offset = torch.tensor([-0.00233746, -0.10298071,  0.03644049])
-        
-        
+        self.local_offset = torch.tensor([-0.00233746, -0.10298071, 0.03644049])
+
         super().__init__(scenario, device)
-        
-        
+
         # Override reward functions for this task
         self.reward_functions = [
             self._reward_gripper_approach,
@@ -213,34 +210,31 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
             self.joint2_index = joint_names.index(self.joint2_name)
         else:
             log.warning(f"Joint {self.joint2_name} not found, joint2 lift disabled")
-    
+
     def get_geometric_center(self, current_states):
-        """
-        Calculate the geometric center of the object in world coordinates.
-        """
+        """Calculate the geometric center of the object in world coordinates."""
         # w, x, y, z
-        
+
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         local_offset = self.local_offset.to(self.device)
 
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
-        
-        
+
         v = local_offset.unsqueeze(0).expand(root_pos.shape[0], -1)
-        
-        q_vec = torch.stack([x, y, z], dim=1) # [N, 3]
-        
+
+        q_vec = torch.stack([x, y, z], dim=1)  # [N, 3]
+
         # cross(q_xyz, v)
         t = torch.cross(q_vec, v, dim=1)
-        
+
         # cross(q_xyz, t) + w * t
-      
+
         final_vec = v + 2.0 * torch.cross(q_vec, t, dim=1) + 2.0 * w.unsqueeze(1) * t
-        
+
         center_pos = root_pos + final_vec
-        
-        return center_pos 
+
+        return center_pos
 
     def reset(self, env_ids=None):
         """Reset environment and tracking variables."""
@@ -384,7 +378,7 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         """Compute if object is grasped (requires 5 stable frames based on distance only)."""
         # box_pos = states.objects["object"].root_state[:, 0:3]
         box_pos = self.get_geometric_center(states)
-        
+
         gripper_pos, _ = self._get_ee_state(states)
         gripper_box_dist = torch.norm(gripper_pos - box_pos, dim=-1)
 
@@ -421,21 +415,15 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         # Use cached grasp state (computed in step method)
         return self.object_grasped.float()
 
-        
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
-        """
-        Calculate gripper orientation reward:
+        """Calculate gripper orientation reward:
         1. Z-axis Alignment: Gripper points vertically downwards (-Z).
         2. Planar Rotation Alignment (Yaw): Align the gripper's Yaw with the box's long edge.
         """
-        
-        
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
-       
         w, x, y, z = gripper_quat[:, 0], gripper_quat[:, 1], gripper_quat[:, 2], gripper_quat[:, 3]
-        
 
         bw, bx, by, bz = box_quat[:, 0], box_quat[:, 1], box_quat[:, 2], box_quat[:, 3]
 
@@ -443,71 +431,57 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         # --- 2. Z-Axis Alignment Reward ---
         # -------------------------------------------------------------------------
         # Goal: Align the gripper's Local Z-axis (approach direction) with World -Z (vertically downwards).
-        
+
         # Calculate the Z component of the rotation matrix R's third column, R[:3, 2] (specifically R33).
         # Formula for R33: 1 - 2(x^2 + y^2)
         gripper_z_axis_z_component = 1.0 - 2.0 * (torch.square(x) + torch.square(y))
-        
+
         # We want the Z component to approach -1 (pointing downwards).
         # Normalization formula: (-(-1) + 1) / 2 = 1.0 (perfectly downwards), (-1 + 1) / 2 = 0.0 (upwards)
         reward_z_down = (-gripper_z_axis_z_component + 1.0) / 2.0
-        
-       
+
         # Optional: Square the value to make the reward more sensitive to angular error.
         # (e.g., the reward drops less significantly when the error is small, or vice versa, depending on your needs)
         reward_z_down = torch.square(reward_z_down)
 
-
-       # -------------------------------------------------------------------------
+        # -------------------------------------------------------------------------
         # --- 3. Planar Rotation Reward (Yaw Alignment) ---
         # -------------------------------------------------------------------------
         # Goal: Resolve the "X vs. Y axis reversal" issue.
         # Assumption: The long axis of the knife handle (object) is the Object's X-axis.
-        
+
         # Calculate the object's X-axis vector (Local X expressed in World Frame).
-        box_x_axis = torch.stack([
-            1 - 2 * (by**2 + bz**2),
-            2 * (bx*by + bw*bz),
-            2 * (bx*bz - bw*by)
-        ], dim=-1)
+        box_x_axis = torch.stack([1 - 2 * (by**2 + bz**2), 2 * (bx * by + bw * bz), 2 * (bx * bz - bw * by)], dim=-1)
 
         # === [Mode A: Standard Grasp] ===
         # Logic: Align the Gripper's X-axis (Normal) parallel to the Handle's X-axis.
         # Geometric Result: The Gripper's Y-axis (connecting line of fingers) becomes perpendicular to the handle.
         #                   -> The fingers will properly straddle the handle to pinch it.
-       
-        
+
         # Calculate Gripper X-axis vector (Rotation Matrix: First Column / Index 0)
-        
-       
+
         # gripper_axis_to_align = torch.stack([
         #     1 - 2 * (y**2 + z**2),
         #     2 * (x*y + w*z),
         #     2 * (x*z - w*y)
         # ], dim=-1)
-        
+
         # === [Mode B: Special URDF or Grasp Ends] (If you find the axis is truly reversed, uncomment below to use this) ===
         # Logic: Align the Gripper's Y-axis (line connecting fingers) parallel to the Handle's X-axis.
         # Geometric Result: The fingers will attempt to grasp the two ends of the handle (i.e., the finger line aligns with the handle).
-        
+
         # Calculate Gripper Y-axis vector (Rotation Matrix: Second Column / Index 1)
-        gripper_axis_to_align = torch.stack([
-            2 * (x*y - w*z),
-            1 - 2 * (x**2 + z**2),
-            2 * (y*z + w*x)
-        ], dim=-1)
-        
+        gripper_axis_to_align = torch.stack([2 * (x * y - w * z), 1 - 2 * (x**2 + z**2), 2 * (y * z + w * x)], dim=-1)
 
         # -------------------------------------------------------------------------
         # --- 4. Calculate Dot Product & Final Reward ---
         # -------------------------------------------------------------------------
-        
+
         # Calculate dot product: cos(theta)
         dot_prod = torch.sum(gripper_axis_to_align * box_x_axis, dim=-1)
-        
-        
+
         reward_align = torch.abs(dot_prod)
-        
+
         # Optional: Add a threshold to prevent rotation reward when Z-axis is not aligned.
         # This can help avoid random rotations in the air.
         # mask = (reward_z_down > 0.8).float()
@@ -517,7 +491,6 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         total_reward = reward_z_down * reward_align
 
         return total_reward
-    
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""
@@ -527,24 +500,22 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
                     "table": {
                         "pos": torch.tensor([-0.000000, 0.000000, 0.376990]),
                         "rot": torch.tensor([1.000000, -0.000000, 0.000000, 0.000000]),
-                        },
+                    },
                     "bowl": {
-                            "pos": torch.tensor([-0.491991, 0.194712, 0.828524]),
-                            "rot": torch.tensor([-0.774328, -0.006966, 0.006029, 0.632717]),
-                        },
+                        "pos": torch.tensor([-0.491991, 0.194712, 0.828524]),
+                        "rot": torch.tensor([-0.774328, -0.006966, 0.006029, 0.632717]),
+                    },
                     "object": {
-                        
-                            "pos": torch.tensor([-0.000850, -0.357659, 0.873023]),
-                            "rot": torch.tensor([-0.835106, -0.002912, -0.008612, 0.550015]),
-                        },
+                        "pos": torch.tensor([-0.000850, -0.357659, 0.873023]),
+                        "rot": torch.tensor([-0.835106, -0.002912, -0.008612, 0.550015]),
+                    },
                     "plate": {
-                            "pos": torch.tensor([0.000060, 0.000040, 0.774218]),
-                            "rot": torch.tensor([-0.980610, -0.002716, -0.002327, 0.195939]),
-                        },
-                    
+                        "pos": torch.tensor([0.000060, 0.000040, 0.774218]),
+                        "rot": torch.tensor([-0.980610, -0.002716, -0.002327, 0.195939]),
+                    },
                     "traj_marker_0": {
-                            "pos": torch.tensor([-0.025781, -0.526361, 0.873023]),
-                            "rot": torch.tensor([-0.835106, -0.002912, -0.008612, 0.550015]),
+                        "pos": torch.tensor([-0.025781, -0.526361, 0.873023]),
+                        "rot": torch.tensor([-0.835106, -0.002912, -0.008612, 0.550015]),
                     },
                     "traj_marker_1": {
                         "pos": torch.tensor([-0.045492, -0.285306, 0.941898]),
@@ -565,17 +536,8 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
                 },
                 "robots": {
                     "franka": {
-                        "pos": torch.tensor([
-                            -0.6733999252319336,
-                            2.3283064365386963e-10,
-                            0.7760999798774719
-                        ]),
-                        "rot": torch.tensor([
-                            -1.0,
-                            1.489094958451176e-10,
-                            8.78133399329073e-10,
-                            8.47253794900027e-11
-                        ]),
+                        "pos": torch.tensor([-0.6733999252319336, 2.3283064365386963e-10, 0.7760999798774719]),
+                        "rot": torch.tensor([-1.0, 1.489094958451176e-10, 8.78133399329073e-10, 8.47253794900027e-11]),
                         "dof_pos": {
                             "panda_joint1": 0.0,
                             "panda_joint2": -0.785398,

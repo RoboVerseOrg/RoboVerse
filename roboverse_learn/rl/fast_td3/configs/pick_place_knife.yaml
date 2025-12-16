@@ -6,9 +6,9 @@
 # -------------------------------------------------------------------------------
 
 # isaac gym setting
-# asset_options.vhacd_enabled = True 
-# asset_options.vhacd_params.resolution = 500000  # 
-# asset_options.vhacd_params.max_convex_hulls = 64 # 
+# asset_options.vhacd_enabled = True
+# asset_options.vhacd_params.resolution = 500000  #
+# asset_options.vhacd_params.max_convex_hulls = 64 #
 # asset_options.vhacd_params.max_num_vertices_per_ch = 64
 # asset_options.thickness = 0.001
 
@@ -98,4 +98,3 @@ video_width: 1024
 video_height: 1024
 save_interval: 15000    # Save every 10k steps (set to 0 to disable)
 model_dir: "models_pick_knife"     # Directory to save checkpoints (default: "models")
-
