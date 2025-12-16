@@ -408,8 +408,7 @@ class PickPlaceTrackHu(PickPlaceBase):
         return approach_reward_far + approach_reward_near
 
     def get_geometric_center(self, current_states):
-        '''Get the geometric center of the object in the world frame.'''
-
+        """Get the geometric center of the object in the world frame."""
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)

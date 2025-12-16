@@ -417,7 +417,6 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
 
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
         """Calculate gripper orientation reward"""
-
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
@@ -425,19 +424,13 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
 
         bw, bx, by, bz = box_quat[:, 0], box_quat[:, 1], box_quat[:, 2], box_quat[:, 3]
 
-       
         gripper_z_axis_z_component = 1.0 - 2.0 * (torch.square(x) + torch.square(y))
 
-        
         reward_z_down = (-gripper_z_axis_z_component + 1.0) / 2.0
 
-       
         reward_z_down = torch.square(reward_z_down)
 
-        
         box_x_axis = torch.stack([1 - 2 * (by**2 + bz**2), 2 * (bx * by + bw * bz), 2 * (bx * bz - bw * by)], dim=-1)
-
-       
 
         # gripper_axis_to_align = torch.stack([
         #     1 - 2 * (y**2 + z**2),
@@ -445,16 +438,12 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         #     2 * (x*z - w*y)
         # ], dim=-1)
 
-        
         gripper_axis_to_align = torch.stack([2 * (x * y - w * z), 1 - 2 * (x**2 + z**2), 2 * (y * z + w * x)], dim=-1)
 
-       
-        
         dot_prod = torch.sum(gripper_axis_to_align * box_x_axis, dim=-1)
 
         reward_align = torch.abs(dot_prod)
 
-       
         total_reward = reward_z_down * reward_align
 
         return total_reward
