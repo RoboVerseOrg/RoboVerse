@@ -416,7 +416,7 @@ class PickPlaceApproachGraspHu(PickPlaceBase):
         return self.object_grasped.float()
 
     def _reward_gripper_orientation(self, env_states) -> torch.Tensor:
-        """Calculate gripper orientation reward"""
+        """Calculate gripper orientation reward."""
         _, gripper_quat = self._get_ee_state(env_states)
         box_quat = env_states.objects["object"].root_state[:, 3:7]
 
