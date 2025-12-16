@@ -190,3 +190,115 @@ Then run training as usual:
 ```bash
 python roboverse_learn/rl/fast_td3/train.py --config your_config.yaml
 ```
+
+## V-HACD (Volumetric Hierarchical Approximate Convex Decomposition)
+
+Add the following code in RoboVerse/metasim/sim/isaacgym/isaacgym.py
+
+
+```python
+# eg RigidObjCfg after line 395
+asset_options.vhacd_enabled = True 
+asset_options.vhacd_params.resolution = 500000  # 
+asset_options.vhacd_params.max_convex_hulls = 64 # 
+asset_options.vhacd_params.max_num_vertices_per_ch = 64
+asset_options.thickness = 0.001
+
+```
+
+
+
+## Reconstruct Local Offset from World Coordinates
+
+This script implements calculate the local offset between the desired grasp position and the object center.
+
+### Logic Overview
+* **Quaternion Format**: `[w, x, y, z]`
+
+## Implementation Code
+
+```python
+import torch
+
+def calculate_local_offset(root_pos, root_rot, target_pos):
+    """ 
+    Inverse: Calculate local offset of Target in Root coordinate system
+    [W, X, Y, Z] format version
+    """
+    # 1. Calculate world coordinate difference
+    diff_world = target_pos - root_pos
+    
+    # 2. Extract quaternion (format: w, x, y, z)
+    # Correction: Index 0 is w
+    w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
+    
+    # 3. Construct inverse rotation (conjugate quaternion: [w, -x, -y, -z])
+    # w remains unchanged, vector part is negated
+    q_vec_inv = torch.stack([-x, -y, -z], dim=1) 
+    w = w.unsqueeze(1)
+    
+    # 4. Apply rotation: q_inv * diff * q
+    # t = 2 * cross(q_vec, v)
+    t = 2.0 * torch.cross(q_vec_inv, diff_world, dim=1)
+    
+    # result = v + w*t + cross(q_vec, t)
+    local_offset = diff_world + w * t + torch.cross(q_vec_inv, t, dim=1)
+    
+    return local_offset
+
+def get_world_pos(root_pos, root_rot, local_offset):
+    """ 
+    Forward verification: Calculate world coordinates based on local offset
+    [W, X, Y, Z] format version
+    """
+    # 1. Extract quaternion (format: w, x, y, z)
+    # Correction: Index 0 is w
+    w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
+    
+    # 2. Forward rotation q (w, x, y, z)
+    # Vector part uses x, y, z directly
+    q_vec = torch.stack([x, y, z], dim=1) 
+    w = w.unsqueeze(1)
+    
+    # Input vector v
+    v = local_offset
+    
+    # 3. Apply rotation: q * v * q_inv
+    t = 2.0 * torch.cross(q_vec, v, dim=1)
+    final_vec = v + w * t + torch.cross(q_vec, t, dim=1)
+    
+    return root_pos + final_vec
+
+# --- Example Usage & Verification ---
+
+if __name__ == "__main__":
+    # Root Position (e.g., Knife Handle)
+    knife_pos = torch.tensor([0.201373, -0.330642, 0.779824]).unsqueeze(0)
+
+    # Root Rotation (Quaternion [w, x, y, z])
+    # Assuming the data [-0.398, ...] corresponds to wxyz
+    knife_rot = torch.tensor([-0.398238, 0.035423, -0.027580, -0.916183]).unsqueeze(0) 
+
+    # Target Position (World Space)
+    target_pos = torch.tensor([0.118386, -0.429724, 0.780205]).unsqueeze(0)
+
+    print("-" * 20)
+    print(f"Original Target Pos: {target_pos}")
+
+    # 1. Calculate local offset
+    local_offset = calculate_local_offset(knife_pos, knife_rot, target_pos)
+    print(f"Calculated Local Offset: {local_offset}")
+
+    # 2. Reconstruct world position from local offset
+    reconstructed_pos = get_world_pos(knife_pos, knife_rot, local_offset)
+    print(f"Reconstructed World Pos: {reconstructed_pos}")
+
+    # 3. Verify error
+    error = (reconstructed_pos - target_pos).abs().max().item()
+    print(f"Max Error: {error}")
+
+    if error < 1e-6:
+        print("Test PASSED: Round-trip transformation successful.")
+    else:
+        print("Test FAILED: Error too large.")
+    print("-" * 20)
