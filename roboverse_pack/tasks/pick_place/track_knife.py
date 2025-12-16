@@ -408,20 +408,17 @@ class PickPlaceTrackKnife(PickPlaceBase):
         return approach_reward_far + approach_reward_near
 
     def get_geometric_center(self, current_states):
-       
+
         root_pos = current_states.objects["object"].root_state[:, 0:3]
         root_rot = current_states.objects["object"].root_state[:, 3:7]
         # local_offset = self.local_offset.to(self.device)
         w, x, y, z = root_rot[:, 0], root_rot[:, 1], root_rot[:, 2], root_rot[:, 3]
 
-       
         q_vec = torch.stack([x, y, z], dim=1)
         # w = w.unsqueeze(1)
 
-        
         v = self.local_offset.unsqueeze(0)
 
-        
         t = 2.0 * torch.cross(q_vec, v, dim=1)
 
         final_vec = v + w.view(-1, 1) * t + torch.cross(q_vec, t, dim=-1)
