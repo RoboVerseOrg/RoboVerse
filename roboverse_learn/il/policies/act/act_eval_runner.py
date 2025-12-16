@@ -387,7 +387,7 @@ def main():
         max_timesteps = int(max_timesteps * 1)
 
     ckpt_name = args.ckpt_path.split("/")[-1]
-    os.makedirs(f"il_outputs/{args.algo}/{args.task}/{ckpt_name}", exist_ok=True)
+    os.makedirs(f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}", exist_ok=True)
 
     ## cuRobo controller (commented out - not needed for ACT joint control)
     # *_, robot_ik = get_curobo_models(scenario.robots[0])
@@ -508,12 +508,12 @@ def main():
 
                 step += 1
 
-            images_to_video(image_list, f"il_outputs/{args.algo}/{args.task}/{ckpt_name}/{i}.mp4")
+            images_to_video(image_list, f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}/{i}.mp4")
 
     success_rate = TotalSuccess / num_eval
     print("Success Rate: ", success_rate)
 
-    result_dir = f"il_outputs/{args.algo}/{args.task}/{ckpt_name}"
+    result_dir = f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}"
     result_file = os.path.join(result_dir, "success_rate.txt")
     with open(result_file, "w") as f:
         f.write(f"Success Rate: {success_rate:.4f}\n")

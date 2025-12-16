@@ -59,7 +59,7 @@ def main(args):
     else:
         raise NotImplementedError
 
-    ckpt_dir = f"info/outputs/ACT/{datetime.now().strftime('%Y.%m.%d')}/{datetime.now().strftime('%H.%M.%S')}_{task_name}_{num_episodes}"
+    ckpt_dir = f"il_outputs/act/{task_name}"
 
     # Load metadata from dataset directory
     metadata_path = os.path.join(dataset_dir, 'metadata.json')

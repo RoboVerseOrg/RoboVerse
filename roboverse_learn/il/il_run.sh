@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --dr_level_eval 2 -- train_enable False
+# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --dr_level_eval 2 --train_enable False
 
 task_name_set="close_box" # Tasks, e.g., close_box, stack_cube, pick_cube
 policy_name="ddpm_dit"    # IL policy, opts: ddpm_unet, ddpm_dit, ddim_unet, fm_unet, fm_dit, vita, act, score
@@ -76,13 +76,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Collect demo
-echo "=== Running collect_demo.sh ==="
-sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/collect_demo.sh
-sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/collect_demo.sh
-sed -i "s/^num_demo_success=.*/num_demo_success=$demo_num/" ./roboverse_learn/il/collect_demo.sh
-sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/collect_demo.sh
-sed -i "s/^random_level=.*/random_level=$dr_level_collect/" ./roboverse_learn/il/collect_demo.sh
-bash ./roboverse_learn/il/collect_demo.sh
+# echo "=== Running collect_demo.sh ==="
+# sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/collect_demo.sh
+# sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/collect_demo.sh
+# sed -i "s/^num_demo_success=.*/num_demo_success=$demo_num/" ./roboverse_learn/il/collect_demo.sh
+# sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/collect_demo.sh
+# sed -i "s/^random_level=.*/random_level=$dr_level_collect/" ./roboverse_learn/il/collect_demo.sh
+# bash ./roboverse_learn/il/collect_demo.sh
 
 # Map policy_name to model config
 config_name="default_runner"
@@ -90,12 +90,13 @@ main_script="./roboverse_learn/il/train.py"
 
 # if policy_name is ACT
 if [ "${policy_name}" = "act" ]; then
-    echo "=== Running ACT training ==="
+    echo "=== Running ACT training and evaluation==="
     sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^train_enable=.*/train_enable=$train_enable/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^eval_enable=.*/eval_enable=$eval_enable/" ./roboverse_learn/il/policies/act/act_run.sh
+    sed -i "s/^collect_level=.*/collect_level=$dr_level_collect/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^eval_level=.*/eval_level=$dr_level_eval/" ./roboverse_learn/il/policies/act/act_run.sh
     bash ./roboverse_learn/il/policies/act/act_run.sh
     echo "=== Completed all data collection, training, and evaluation ==="
