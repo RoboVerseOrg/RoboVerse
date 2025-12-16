@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --demo_num 100 --sim_set mujoco
+# Usage: bash roboverse_learn/il/il_run.sh --task_name_set close_box --policy_name ddpm_dit --dr_level_eval 2 -- train_enable False
 
 task_name_set="close_box" # Tasks, e.g., close_box, stack_cube, pick_cube
 policy_name="ddpm_dit"    # IL policy, opts: ddpm_unet, ddpm_dit, ddim_unet, fm_unet, fm_dit, vita, act, score
@@ -11,7 +11,6 @@ train_enable=True
 eval_enable=True
 
 # Training parameters
-level=0
 num_epochs=100
 seed=42
 gpu=0
@@ -20,6 +19,10 @@ act_space=joint_pos
 delta_ee=0
 eval_num_envs=1
 eval_max_step=300
+
+# Domain Randomization Level
+dr_level_collect=0
+dr_level_eval=0
 
 # Parse parameters
 while [[ $# -gt 0 ]]; do
@@ -48,6 +51,14 @@ while [[ $# -gt 0 ]]; do
             eval_enable="$2"
             shift 2
             ;;
+        --dr_level_collect)
+            dr_level_collect="$2"
+            shift 2
+            ;;
+        --dr_level_eval)
+            dr_level_eval="$2"
+            shift 2
+            ;;
         --num_epochs)
             num_epochs="$2"
             shift 2
@@ -70,6 +81,7 @@ sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/
 sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/collect_demo.sh
 sed -i "s/^num_demo_success=.*/num_demo_success=$demo_num/" ./roboverse_learn/il/collect_demo.sh
 sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/collect_demo.sh
+sed -i "s/^random_level=.*/random_level=$dr_level_collect/" ./roboverse_learn/il/collect_demo.sh
 bash ./roboverse_learn/il/collect_demo.sh
 
 # Map policy_name to model config
@@ -82,6 +94,9 @@ if [ "${policy_name}" = "act" ]; then
     sed -i "s/^task_name_set=.*/task_name_set=$task_name_set/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^sim_set=.*/sim_set=$sim_set/" ./roboverse_learn/il/policies/act/act_run.sh
     sed -i "s/^expert_data_num=.*/expert_data_num=$demo_num/" ./roboverse_learn/il/policies/act/act_run.sh
+    sed -i "s/^train_enable=.*/train_enable=$train_enable/" ./roboverse_learn/il/policies/act/act_run.sh
+    sed -i "s/^eval_enable=.*/eval_enable=$eval_enable/" ./roboverse_learn/il/policies/act/act_run.sh
+    sed -i "s/^eval_level=.*/eval_level=$dr_level_eval/" ./roboverse_learn/il/policies/act/act_run.sh
     bash ./roboverse_learn/il/policies/act/act_run.sh
     echo "=== Completed all data collection, training, and evaluation ==="
     exit 0
@@ -104,7 +119,7 @@ fi
 export policy_name="${policy_name}"
 python ${main_script} --config-name=${config_name}.yaml \
 task_name=${task_name_set} \
-"dataset_config.zarr_path=./data_policy/${task_name_set}FrankaL${level}_${extra}_${demo_num}.zarr" \
+"dataset_config.zarr_path=./data_policy/${task_name_set}FrankaL${dr_level_collect}_${extra}_${demo_num}.zarr" \
 train_config.training_params.seed=${seed} \
 train_config.training_params.num_epochs=${num_epochs} \
 train_config.training_params.device=${gpu} \
@@ -115,6 +130,7 @@ eval_config.eval_args.task=${task_name_set} \
 eval_config.eval_args.max_step=${eval_max_step} \
 eval_config.eval_args.num_envs=${eval_num_envs} \
 eval_config.eval_args.sim=${sim_set} \
+eval_config.eval_args.level=${dr_level_eval} \
 +eval_config.eval_args.max_demo=${demo_num} \
 train_enable=${train_enable} \
 eval_enable=${eval_enable} \

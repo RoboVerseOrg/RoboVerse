@@ -26,6 +26,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
+from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 # Apply IGL compatibility patch
@@ -49,6 +50,7 @@ except Exception:
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -288,13 +290,10 @@ class GenesisHandler(BaseSimHandler):
                 depth_t = torch.as_tensor(depth)
 
             # GS background blending
-            if (
-                self.scenario.gs_scene is not None
-                and self.scenario.gs_scene.with_gs_background
-                and ROBO_SPLATTER_AVAILABLE
-            ):
-                from metasim.utils.gs_util import alpha_blend_rgba
-
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
                 # Get camera parameters
                 Ks, c2w = self._get_camera_params(camera)
 
@@ -306,7 +305,7 @@ class GenesisHandler(BaseSimHandler):
                     image_width=int(camera.width),
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 # Create foreground mask from segmentation
