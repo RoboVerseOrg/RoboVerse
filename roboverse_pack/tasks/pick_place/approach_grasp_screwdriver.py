@@ -15,7 +15,11 @@ from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.approach_grasp import PickPlaceApproachGraspSimple
 
 
-@register_task("pick_place.approach_grasp_simple_screwdriver", "pick_place.approach_grasp_screwdriver", "pick_place_approach_grasp_simple_screwdriver")
+@register_task(
+    "pick_place.approach_grasp_simple_screwdriver",
+    "pick_place.approach_grasp_screwdriver",
+    "pick_place_approach_grasp_simple_screwdriver",
+)
 class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
     """Simple Approach and Grasp task for screwdriver object.
 
