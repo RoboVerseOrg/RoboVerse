@@ -22,12 +22,15 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, DictEnvState
+
+# Optional: RoboSplatter imports for GS background rendering
+from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import convert_quat
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
-# Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -353,6 +356,7 @@ class SinglePybulletHandler(BaseSimHandler):
         super().launch()
         self._build_pybullet()
         if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+            assert ROBO_SPLATTER_AVAILABLE, "RoboSplatter is not available. GS background rendering will be disabled."
             self._build_gs_background()
         self.already_disconnect = False
 
@@ -457,7 +461,9 @@ class SinglePybulletHandler(BaseSimHandler):
             segmentation_mask = np.reshape(img_arr[4], (height, width))
 
             if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
-                from metasim.utils.gs_util import alpha_blend_rgba
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
 
                 # Extract camera parameters from PyBullet
                 Ks, c2w = self._get_camera_params(view_matrix, projection_matrix, width, height)
@@ -470,7 +476,7 @@ class SinglePybulletHandler(BaseSimHandler):
                     image_width=width,
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 # Create foreground mask: exclude background (-1) and ground plane

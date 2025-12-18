@@ -21,11 +21,13 @@ Guidelines for modifications:
 ## Contributors
 
 * Bangjun Wang
+* Boqi Zhao
 * Chaoyi Xu
 * Chengyang Zhao
 * Dechen Gao
 * Di Fan
 * Dylan Goetting
+* Hanchu Zhou
 * Haoran Lu
 * Haozhe Chen
 * Haozhe Lou

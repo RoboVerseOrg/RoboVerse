@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import pickle
 import xml.etree.ElementTree as ET
 
 import gymnasium as gym
+import torch
 
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.robot import BaseActuatorCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
+from metasim.types import Termination
+from metasim.utils.demo_util import get_traj
 from metasim.utils.ik_solver import setup_ik_solver
 from metasim.utils.tensor_util import array_to_tensor
 from roboverse_pack.robots.franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
@@ -93,20 +95,144 @@ class BaseCalvinTableTask(BaseTaskEnv):
         else:
             raise NotImplementedError
 
+    @staticmethod
+    def _get_joint_names_from_urdf(urdf_path: str):
+        try:
+            tree = ET.parse(urdf_path)
+            root = tree.getroot()
+            joint_names = []
+            for joint in root.findall("joint"):
+                if joint.get("type") != "fixed":
+                    joint_names.append(joint.get("name"))
+            return joint_names
+        except (ET.ParseError, FileNotFoundError):
+            return []
+
+    def _get_initial_states(self):
+
+        init_states, all_actions, all_states = get_traj(self.traj_filepath, self.scenario.robots[0], self.handler)
+
+        # self.done_states = all_states[:][-1]
+        self.global_init_states = init_states
+
+        self.global_done_states = [traj[-1] for traj in all_states]
+
+        """Return per-env initial states (override in subclasses)."""
+        return init_states
+
+    def _is_state_equal(self, s1, s2, atol=1e-4):
+
+        if set(s1.keys()) != set(s2.keys()):
+            return False
+
+        def compare_entity(e1, e2):
+
+            if not torch.allclose(e1["pos"].cpu(), e2["pos"].cpu(), atol=atol):
+                return False
+
+            if not torch.allclose(e1["rot"].cpu(), e2["rot"].cpu(), atol=atol):
+                return False
+
+            if "dof_pos" in e1:
+                dof1 = e1["dof_pos"]
+                dof2 = e2.get("dof_pos", {})
+
+                if len(dof1) != len(dof2):
+                    return False
+
+                for joint_name, val1 in dof1.items():
+                    if joint_name not in dof2:
+                        return False
+
+                    val2 = dof2[joint_name]
+
+                    if isinstance(val1, torch.Tensor):
+                        val1 = val1.item()
+                    if isinstance(val2, torch.Tensor):
+                        val2 = val2.item()
+
+                    if abs(val1 - val2) > atol:
+                        return False
+
+            return True
+
+        objs1 = s1.get("objects", {})
+        objs2 = s2.get("objects", {})
+        if set(objs1.keys()) != set(objs2.keys()):
+            return False
+
+        for name in objs1:
+            if not compare_entity(objs1[name], objs2[name]):
+                return False
+
+        robots1 = s1.get("robots", {})
+        robots2 = s2.get("robots", {})
+        if set(robots1.keys()) != set(robots2.keys()):
+            return False
+
+        for name in robots1:
+            if not compare_entity(robots1[name], robots2[name]):
+                return False
+
+        return True
+
+    def reset(self, states, env_ids=None):
+
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+
+        if hasattr(env_ids, "cpu"):
+            env_ids = env_ids.cpu().numpy()
+
+        if not hasattr(self, "done_states") or self.done_states is None:
+            self.done_states = [None] * self.num_envs
+
+        incoming_done_states = []
+
+        for s in states:
+            found_idx = -1
+            for i, global_s in enumerate(self.global_init_states):
+                # import ipdb; ipdb.set_trace()
+                if self._is_state_equal(s, global_s):
+                    found_idx = i
+                    break
+
+            if found_idx != -1:
+                incoming_done_states.append(self.global_done_states[found_idx])
+            else:
+                # print("Warning: State not found in global cache!")
+                incoming_done_states.append(None)
+
+        for i, env_id in enumerate(env_ids):
+            self.done_states[env_id] = incoming_done_states[i]
+
+        return super().reset(states=states, env_ids=env_ids)
+
     def step(self, action):
         try:
             if isinstance(action, list) and action and isinstance(action[0], dict):
                 robot_name = self.scenario.robots[0].name
+                extracted_actions = [env_act[robot_name] for env_act in action]
+                import torch
 
-            # Check if the robot's name is a key in the dictionary.
-            if robot_name in action[0]:
-                action = action[0][robot_name]
-        except:
+                if isinstance(extracted_actions[0], torch.Tensor):
+                    action = torch.stack(extracted_actions)
+                else:
+                    action = torch.tensor(extracted_actions, device=self.device)
+            elif isinstance(action, dict):
+                robot_name = self.scenario.robots[0].name
+                if robot_name in action:
+                    action = action[robot_name]
+
+        except Exception as e:
             pass
 
         if self.scenario.robots[0].control_type == "joint_position":
             assert action.shape[-1] == 9, f"Expected action shape (9,), got {action.shape}"
-            return super().step(action)
+
+            obs, reward, success, time_out, extras = super().step(action)
+
+            return obs, reward, success, time_out, extras
 
         elif self.scenario.robots[0].control_type == "ee_pose":
             action = array_to_tensor(action, device=self.device).float()
@@ -127,38 +253,95 @@ class BaseCalvinTableTask(BaseTaskEnv):
                 return_dict=False,
             )
 
-            return super().step(actions)
+            obs, reward, success, time_out, extras = super().step(actions)
+
+            return obs, reward, success, time_out, extras
 
         else:
             raise NotImplementedError
 
-    @staticmethod
-    def _get_joint_names_from_urdf(urdf_path: str):
-        try:
-            tree = ET.parse(urdf_path)
-            root = tree.getroot()
-            joint_names = []
-            for joint in root.findall("joint"):
-                if joint.get("type") != "fixed":
-                    joint_names.append(joint.get("name"))
-            return joint_names
-        except (ET.ParseError, FileNotFoundError):
-            return []
+    def _terminated(self, env_states) -> Termination:
 
-    def _get_initial_states(self):
-        path = self.traj_filepath
-        if path.endswith(".pkl"):
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-        init_state = data["franka"][0]["reset_state"]
+        success = self.check_state_tolerance(env_states)
 
-        """Return per-env initial states (override in subclasses)."""
-        return init_state
+        return success
 
-    def _action_space(self):
-        if self.scenario.robots[0].control_type == "joint_position":
-            return gym.spaces.Box(low=-1.0, high=1.0, shape=(9,), dtype=float)
-        elif self.scenario.robots[0].control_type == "ee_pose":
-            return gym.spaces.Box(low=-1.0, high=1.0, shape=(8,), dtype=float)
-        else:
-            raise NotImplementedError
+    def check_state_tolerance(self, current_state, pos_tol=0.05, rot_tol=0.1, joint_tol=0.1, verbose=False):
+
+        num_envs = self.num_envs
+        device = self.device
+
+        all_success = torch.ones(num_envs, dtype=torch.bool, device=device)
+
+        ref_target_dict = self.done_states[0]
+
+        if "objects" in ref_target_dict:
+            for obj_name in ref_target_dict["objects"].keys():
+                obj_state = current_state.objects[obj_name].root_state
+                curr_pos = obj_state[:, :3]  # (num_envs, 3)
+                curr_rot = obj_state[:, 3:7]  # (num_envs, 4)
+                target_pos_list = [s["objects"][obj_name]["pos"] for s in self.done_states]
+                target_rot_list = [s["objects"][obj_name]["rot"] for s in self.done_states]
+                target_pos = torch.stack(target_pos_list).to(device)  # (num_envs, 3)
+                target_rot = torch.stack(target_rot_list).to(device)  # (num_envs, 4)
+
+                pos_err = torch.norm(curr_pos - target_pos, dim=1)  # (num_envs,)
+                quat_dot = torch.sum(curr_rot * target_rot, dim=1).abs()
+                quat_dot = torch.clamp(quat_dot, 0.0, 1.0)
+                rot_err = 2.0 * torch.acos(quat_dot)  # (num_envs,)
+
+                obj_success = (pos_err < pos_tol) & (rot_err < rot_tol)
+                all_success = all_success & obj_success
+
+                if verbose:
+                    failed_indices = torch.nonzero(~obj_success).flatten()
+                    if len(failed_indices) > 0:
+                        idx = failed_indices[0]
+                        # print(f"[Env {idx}] Obj '{obj_name}' Fail: PosErr={pos_err[idx]:.3f}, RotErr={rot_err[idx]:.3f}")
+
+        franka_joint_order = [
+            "panda_finger_joint1",
+            "panda_finger_joint2",
+            "panda_joint1",
+            "panda_joint2",
+            "panda_joint3",
+            "panda_joint4",
+            "panda_joint5",
+            "panda_joint6",
+            "panda_joint7",
+        ]
+
+        if "robots" in ref_target_dict:
+            for robot_name in ref_target_dict["robots"].keys():
+                curr_joints = current_state.robots[robot_name].joint_pos
+                target_joints_list = []
+                joints_to_check_indices = []
+                target_vals_batch = []
+                ref_dof_dict = ref_target_dict["robots"][robot_name]["dof_pos"]
+
+                for col_idx, joint_name in enumerate(franka_joint_order):
+                    if joint_name in ref_dof_dict:
+                        joints_to_check_indices.append(col_idx)
+
+                if not joints_to_check_indices:
+                    continue
+
+                for env_i in range(num_envs):
+                    env_target_dict = self.done_states[env_i]["robots"][robot_name]["dof_pos"]
+                    row_vals = [env_target_dict[franka_joint_order[idx]] for idx in joints_to_check_indices]
+                    target_vals_batch.append(row_vals)
+
+                target_joints = torch.tensor(target_vals_batch, device=device, dtype=torch.float32)  # (num_envs, k)
+                curr_joints_subset = curr_joints[:, joints_to_check_indices]  # (num_envs, k)
+                joint_diff = torch.abs(curr_joints_subset - target_joints)
+                max_joint_err, _ = torch.max(joint_diff, dim=1)  # (num_envs,)
+                robot_success = max_joint_err < joint_tol
+                all_success = all_success & robot_success
+
+                if verbose:
+                    failed_indices = torch.nonzero(~robot_success).flatten()
+                    if len(failed_indices) > 0:
+                        idx = failed_indices[0]
+                        # print(f"[Env {idx}] Robot '{robot_name}' Fail: MaxJointErr={max_joint_err[idx]:.3f}")
+
+        return all_success

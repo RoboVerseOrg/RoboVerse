@@ -42,6 +42,7 @@ class Args:
     headless: bool = False
     device: str = "cuda"
     enable_viser: bool = False  # Enable real-time 3D visualization with Viser
+    enable_rerun: bool = False  # Enable real-time 3D visualization with Rerun
 
 
 args = tyro.cli(Args)
@@ -148,11 +149,18 @@ def train_ppo():
         device=args.device,
     )
 
-    # Optionally wrap with Viser visualization
-    if args.enable_viser:
-        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    # Optionally wrap with visualization
+    if args.enable_viser or args.enable_rerun:
+        from metasim.utils.viz_task_wrapper import TaskVizWrapper
 
-        env = TaskViserWrapper(env)
+        env = TaskVizWrapper(
+            env,
+            use_rerun=args.enable_rerun,
+            use_viser=args.enable_viser,
+            rerun_app_name="PPO Training",
+            viser_port=8080,
+            update_freq=10,
+        )
 
     # Create VecEnv wrapper for SB3
     env = VecEnvWrapper(env)
@@ -195,11 +203,18 @@ def train_ppo():
         device=args.device,
     )
 
-    # Optionally wrap inference environment with Viser visualization
-    if args.enable_viser:
-        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    # Optionally wrap inference environment with visualization
+    if args.enable_viser or args.enable_rerun:
+        from metasim.utils.viz_task_wrapper import TaskVizWrapper
 
-        env_inference = TaskViserWrapper(env_inference)
+        env_inference = TaskVizWrapper(
+            env_inference,
+            use_rerun=args.enable_rerun,
+            use_viser=args.enable_viser,
+            rerun_app_name="PPO Inference",
+            viser_port=8080,
+            update_freq=1,
+        )
 
     env_inference = VecEnvWrapper(env_inference)
 

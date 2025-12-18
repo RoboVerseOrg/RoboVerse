@@ -183,6 +183,11 @@ def evaluate_lift_collection(
         current_episode_init_state[i] = None
 
     episodes_completed = 0
+    # Track how many episodes produced at least one successful lift
+    successful_episodes_count = 0
+    # Per-env flag indicating whether the current episode already had a success
+    success_in_episode = {i: False for i in range(num_eval_envs)}
+
     current_returns = torch.zeros(num_eval_envs, device=device)
     current_lengths = torch.zeros(num_eval_envs, device=device)
     done_masks = torch.zeros(num_eval_envs, dtype=torch.bool, device=device)
@@ -263,6 +268,11 @@ def evaluate_lift_collection(
                         collected_trajs.append(traj_data_serializable)
                         collected_states.append(state_data_serializable)
 
+                        # Mark episode as successful (count at most once per episode)
+                        if not success_in_episode[i]:
+                            success_in_episode[i] = True
+                            successful_episodes_count += 1
+
                         log.info(
                             f"[Env {i}] Collected trajectory {len(collected_trajs)} "
                             f"(lift maintained {lift_frame_count[i]} frames, total steps: {len(current_episode_actions[i])})"
@@ -300,6 +310,8 @@ def evaluate_lift_collection(
                     current_episode_init_state[i] = None
                     current_returns[i] = 0
                     current_lengths[i] = 0
+                    # reset per-episode success flag for next episode
+                    success_in_episode[i] = False
 
             done_masks = torch.logical_or(done_masks, dones)
 
@@ -315,8 +327,19 @@ def evaluate_lift_collection(
                 current_episode_actions[i] = []
                 current_episode_states[i] = []
                 current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
+                # reset per-episode success flag after full reset
+                success_in_episode[i] = False
         else:
             obs = next_obs
+
+    # Treat each active env as an attempted episode, and count it as successful if it already
+    active_envs = (~done_masks).sum().item() if 'done_masks' in locals() else 0
+    successes_in_active = sum(
+        1 for i in range(num_eval_envs)
+        if 'done_masks' in locals() and not done_masks[i] and success_in_episode.get(i, False)
+    )
+    attempted_episodes = episodes_completed + active_envs
+    total_successful_episodes = successful_episodes_count + successes_in_active
 
     if len(collected_trajs) > 0:
         os.makedirs(traj_dir, exist_ok=True)
@@ -343,11 +366,14 @@ def evaluate_lift_collection(
         log.info(f"  - State count: {len(collected_states)}")
     else:
         log.warning("No successful trajectories collected")
+    # Success rate: fraction of attempted episodes (completed + in-progress when we stopped)
+    denom = max(attempted_episodes, 1)
+    success_rate = min(total_successful_episodes, denom) / denom
     stats = {
         "collected_count": len(collected_trajs),
         "target_count": target_count,
-        "episodes_completed": episodes_completed,
-        "success_rate": len(collected_trajs) / episodes_completed if episodes_completed > 0 else 0.0,
+        "episodes_completed": attempted_episodes,
+        "success_rate": success_rate,
     }
 
     return stats

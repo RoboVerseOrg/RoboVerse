@@ -225,7 +225,7 @@ def main():
             obs = env.handler.get_states()
 
             ## XXX: hack
-            success = env.checker.check(env.handler)
+            success = env.checker.check(env.handler, obs)
             if success.any():
                 log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
             if success.all():

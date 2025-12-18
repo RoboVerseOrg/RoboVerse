@@ -15,8 +15,7 @@ The task is split into two stages:
 Train the first stage to learn approach and grasp:
 
 ```bash
-cd roboverse_learn/rl/fast_td3
-python train.py --config pick_place.yaml
+python -m roboverse_learn.rl.fast_td3.train --config pick_place.yaml
 ```
 
 This will generate checkpoints in the output directory. Note the checkpoint path for the next step.
@@ -26,8 +25,8 @@ This will generate checkpoints in the output directory. Note the checkpoint path
 Evaluate the trained model and collect stable grasp states and first-half trajectories:
 
 ```bash
-python evaluate_lift.py \
-    --checkpoint models/pick_place.approach_grasp_simple_1210000.pt \
+python -m roboverse_learn.rl.fast_td3.evaluate_lift \
+    --checkpoint models/pick_place.approach_grasp_simple_65000.pt \
     --target_count 100 \
     --state_dir eval_states \
     --traj_dir eval_trajs
@@ -42,7 +41,7 @@ This generates:
 Load the collected states as initial states for track training:
 
 ```bash
-python train.py --config track.yaml
+python -m roboverse_learn.rl.fast_td3.train --config track.yaml
 ```
 
 Make sure `track.yaml` has the correct `state_file_path` pointing to the states file from Stage 2:
@@ -56,7 +55,7 @@ state_file_path: "eval_states/pick_place.approach_grasp_simple_franka_lift_state
 Evaluate the track task to get second-half trajectories:
 
 ```bash
-python evaluate.py --checkpoint models/pick_place.track_*.pt
+python -m roboverse_learn.rl.fast_td3.evaluate --checkpoint models/pick_place.track_*.pt
 ```
 
 ### Stage 5: Merge Trajectories

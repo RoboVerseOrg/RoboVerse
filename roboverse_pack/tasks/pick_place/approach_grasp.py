@@ -15,6 +15,7 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.registry import register_task
+from metasim.utils.math import matrix_from_quat
 from roboverse_pack.tasks.pick_place.base import DEFAULT_CONFIG, PickPlaceBase
 
 
@@ -42,6 +43,7 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
     DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"].update({
         "gripper_approach": 0.5,
         "grasp_reward": 4.0,
+        "gripper_downward_alignment": 0.1,
     })
     DEFAULT_CONFIG_SIMPLE["grasp_config"] = {
         "grasp_check_distance": GRASP_DISTANCE_THRESHOLD,
@@ -146,10 +148,12 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         self.reward_functions = [
             self._reward_gripper_approach,
             self._reward_grasp,
+            self._reward_gripper_downward_alignment,
         ]
         self.reward_weights = [
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["gripper_approach"],
             self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["grasp_reward"],
+            self.DEFAULT_CONFIG_SIMPLE["reward_config"]["scales"]["gripper_downward_alignment"],
         ]
 
         # Get config values
@@ -346,6 +350,17 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         """Reward for maintaining grasp state (continuous reward while grasped)."""
         # Use cached grasp state (computed in step method)
         return self.object_grasped.float()
+
+    def _reward_gripper_downward_alignment(self, env_states) -> torch.Tensor:
+        """Encourage the gripper tool frame to face downward (z-axis aligned with world -Z)."""
+        _, gripper_quat = self._get_ee_state(env_states)
+        gripper_rot = matrix_from_quat(gripper_quat)  # (B, 3, 3)
+        gripper_z_world = gripper_rot[:, :, 2]  # gripper local z-axis in world frame
+
+        down = torch.tensor([0.0, 0.0, -1.0], device=self.device, dtype=gripper_z_world.dtype)
+        alignment = (gripper_z_world * down).sum(dim=-1).clamp(-1.0, 1.0)  # cosine of angle to -Z
+        # Map cosine (1 best, -1 worst) to [0,1] reward
+        return (alignment + 1.0) / 2.0
 
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments."""

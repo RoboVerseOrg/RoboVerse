@@ -36,7 +36,7 @@ import imageio.v2 as iio
 
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
-from roboverse_pack.tasks.pick_place.track import convert_state_dict_to_initial_state
+from roboverse_pack.tasks.pick_place.track_banana import convert_state_dict_to_initial_state
 
 
 def load_states_from_pkl(pkl_path: str):
