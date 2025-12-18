@@ -115,7 +115,7 @@ class ScoreMatchingUnetImagePolicy(BaseImagePolicy):
             # dx = [-1/2 * beta(t) * x - beta(t) * score] dt + sqrt(beta(t)) * dW
             # x_{t-1} = x_t + 0.5 * beta_t * x_t + beta_t * score + sqrt(beta_t) * noise (npte dt < 0)
             drift = 0.5 * beta_t * trajectory + beta_t * score
-            
+
             noise = torch.randn_like(trajectory) if t > 0 else torch.zeros_like(trajectory)
             diffusion = torch.sqrt(beta_t) * noise
 
