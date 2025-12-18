@@ -175,41 +175,10 @@ class TaskViserWrapper:
         if self.env:
             self.env.close()
 
-    # Delegate other methods to wrapped environment
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to wrapped environment."""
-        return getattr(self.env, name)
-
     def __len__(self) -> int:
         """Return number of environments."""
         return self.env.num_envs if hasattr(self.env, "num_envs") else 1
 
-    @property
-    def num_envs(self) -> int:
-        """Number of environments."""
-        return self.env.num_envs if hasattr(self.env, "num_envs") else 1
-
-    @property
-    def num_actions(self) -> int:
-        """Number of actions."""
-        return self.env.num_actions if hasattr(self.env, "num_actions") else 0
-
-    @property
-    def num_obs(self) -> int:
-        """Number of observations."""
-        return self.env.num_obs if hasattr(self.env, "num_obs") else 0
-
-    @property
-    def max_episode_steps(self) -> int:
-        """Maximum episode steps."""
-        return self.env.max_episode_steps if hasattr(self.env, "max_episode_steps") else 1000
-
-    @property
-    def action_space(self):
-        """Action space."""
-        return self.env.action_space if hasattr(self.env, "action_space") else None
-
-    @property
-    def observation_space(self):
-        """Observation space."""
-        return self.env.observation_space if hasattr(self.env, "observation_space") else None
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to wrapped environment."""
+        return getattr(self.env, name)

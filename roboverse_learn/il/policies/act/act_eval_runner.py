@@ -358,7 +358,7 @@ def main():
 
         import pickle
 
-        from roboverse_learn.il.policies.act import ACTPolicy
+        from roboverse_learn.il.policies.act.policy import ACTPolicy
 
         ckpt_path = os.path.join(args.ckpt_path, act_ckpt_name)
         policy = ACTPolicy(policy_config)

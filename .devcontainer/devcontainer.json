@@ -1,8 +1,21 @@
 {
-  "name": "RoboVerse DevContainer",
-  "image": "ubuntu:20.04",
-  "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind"
-  ],
-  "postCreateCommand": "apt update && apt install -y git openssh-client && git config --global user.name 'Boqi Zhao' && git config --global user.email 'your_email@example.com'"
+    "name": "RoboVerse Development Container",
+    "privileged": true,
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "metasim",
+    "workspaceFolder": "/home/${localEnv:USER}/RoboVerse",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",  // for vscode user
+                "anysphere.cursorpyright",   // for cursor user
+                "charliermarsh.ruff"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": { "bash": { "path": "/bin/bash" } }
+            }
+        }
+    }
 }

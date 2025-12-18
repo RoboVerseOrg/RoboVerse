@@ -51,8 +51,9 @@ class Args:
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"
     no_gnd: bool = False
 
-    ## Viser Visualization
+    ## Visualization
     enable_viser: bool = True  # Enable real-time Viser 3D visualization
+    enable_rerun: bool = False  # Enable real-time Rerun 3D visualization
     viser_port: int = 8080  # Port for Viser server
 
     ## Display
@@ -195,12 +196,22 @@ def main():
     device = torch.device("cpu")
     env = task_cls(scenario, device=device)
 
-    # Optionally wrap with Viser visualization
-    if args.enable_viser:
-        from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+    # Optionally wrap with visualization
+    if args.enable_viser or args.enable_rerun:
+        from metasim.utils.viz_task_wrapper import TaskVizWrapper
 
-        env = TaskViserWrapper(env, port=args.viser_port)
-        log.info(f"Viser visualization enabled on port {args.viser_port}")
+        env = TaskVizWrapper(
+            env,
+            use_rerun=args.enable_rerun,
+            use_viser=args.enable_viser,
+            rerun_app_name="Teleop Keyboard",
+            viser_port=args.viser_port,
+            update_freq=1,
+        )
+        if args.enable_viser:
+            log.info(f"Viser visualization enabled on port {args.viser_port}")
+        if args.enable_rerun:
+            log.info("Rerun visualization enabled")
 
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
