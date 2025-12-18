@@ -129,7 +129,7 @@ DEFAULT_CONFIG_TRACK = deepcopy(DEFAULT_CONFIG)
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].update({
     "tracking_approach": 4.0,
     "tracking_progress": 150.0,
-    "rotation_tracking": 2.0,
+    "rotation_tracking": 0.0,
 })
 # Remove unused rewards
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].pop("gripper_approach", None)
@@ -183,20 +183,21 @@ class PickPlaceTrackBanana(PickPlaceBase):
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
             ),
             RigidObjCfg(
+                name="cutting_tools",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/usd/c5810e7c2c785fe3940372b205090bad.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
+            ),
+            # Use actual banana mesh from EmbodiedGenData (matches object_layout.py)
+            RigidObjCfg(
                 name="object",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
-            ),
-            RigidObjCfg(
-                name="screw_driver",
-                scale=(1.5, 1.5, 1.5),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
             ),
             RigidObjCfg(
                 name="spoon",
@@ -306,7 +307,7 @@ class PickPlaceTrackBanana(PickPlaceBase):
         ]
         self.reward_weights = [
             1.0,
-            1.0,  # rotation_tracking weight is already applied inside the function
+            0.0,  # rotation_tracking weight is already applied inside the function
         ]
 
     def _prepare_states(self, states, env_ids):

@@ -140,8 +140,8 @@ DEFAULT_CONFIG_TRACK["randomization"]["robot_pos_noise"] = 0.0
 DEFAULT_CONFIG_TRACK["randomization"]["joint_noise_range"] = 0.0
 
 
-@register_task("pick_place.track_screwdriver", "pick_place_track_screwdriver")
-class PickPlaceTrackScrewDriver(PickPlaceBase):
+@register_task("pick_place.track_banana2", "pick_place_track_banana2")
+class PickPlaceTrackBanana2(PickPlaceBase):
     """Trajectory tracking task from grasp states.
 
     Assumes object is already grasped, only learns trajectory following.
@@ -190,13 +190,14 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
             ),
+            # Use actual banana mesh from EmbodiedGenData (matches object_layout.py)
             RigidObjCfg(
                 name="object",
-                scale=(1.5, 1.5, 1.5),
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
             ),
             RigidObjCfg(
                 name="spoon",
@@ -283,7 +284,7 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
             raise RuntimeError("Could not locate RoboVerse root directory")
 
         # Now construct full path to the YAML
-        config_path = roboverseroot / "roboverse_learn" / "rl" / "fast_td3" / "configs" / "track_screwdriver.yaml"
+        config_path = roboverseroot / "roboverse_learn" / "rl" / "fast_td3" / "configs" / "track_banana.yaml"
 
         with open(config_path) as f:
             cfg = yaml.safe_load(f)
@@ -308,7 +309,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
             1.0,
             0.0,  # rotation_tracking weight is already applied inside the function
         ]
-        self.grasp_check_distance = 0.25
 
     def _prepare_states(self, states, env_ids):
         """Override to disable randomization for track task."""
@@ -416,6 +416,10 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
         delta_actions = actions * self._action_scale
         new_actions = current_joint_pos + delta_actions
         real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
+        
+        # delta_actions = actions * self._action_scale
+        # new_actions = self._last_action + delta_actions
+
         # delta_actions = actions * self._action_scale
         # new_actions = self._last_action + delta_actions
 

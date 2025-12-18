@@ -1,21 +1,15 @@
-# Configuration for FastTD3 Training - Track Task (Banana)
-# Stage 3: Track task for banana object - for training trajectory tracking
-# Starts from saved grasp states from approach_grasp_simple_banana, only trains trajectory tracking
+# Base Configuration for FastTD3 Training - Banana
+# Default configuration with IsaacGym simulator and Franka robot
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track_banana"
+task: "pick_place.approach_grasp_simple_banana2"
 decimation: 4
 train_or_eval: "train"
-headless: False
-
-# State file path for track task (pkl file path for grasp states)
-# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_banana_franka_lift_states_100states_20251210_153518.pkl"
-
+headless: True
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -62,7 +56,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 2000.0
+v_max: 600.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4
@@ -83,12 +77,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track_banana"
-exp_name: "pick_place_track_banana"
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3_banana"
 use_wandb: false
 checkpoint_path: null
-run_name: "pick_place.track_banana"  # Unique run name for banana track task
-model_dir: "models/track_banana"  # Separate directory for track banana checkpoints
+run_name: "pick_place.approach_grasp_simple_banana2"  # Unique run name
+model_dir: "models/banana2"  # Separate directory for banana checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024

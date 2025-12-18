@@ -19,7 +19,7 @@ from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.approach_grasp import PickPlaceApproachGraspSimple
 
 
-@register_task("pick_place.approach_grasp_simple_banana", "pick_place_approach_grasp_simple_banana")
+@register_task("pick_place.approach_grasp_simple_banana", "pick_place.approach_grasp_simple_banana", "pick_place.approach_grasp_banana")
 class PickPlaceApproachGraspSimpleBanana(PickPlaceApproachGraspSimple):
     """Simple Approach and Grasp task for banana object.
 

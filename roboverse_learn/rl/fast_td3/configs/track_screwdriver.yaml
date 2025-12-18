@@ -62,7 +62,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 600.0
+v_max: 2000.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4

@@ -7,14 +7,14 @@
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track_banana"
+task: "pick_place.track_banana2"
 decimation: 4
 train_or_eval: "train"
 headless: False
 
 # State file path for track task (pkl file path for grasp states)
 # If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_banana_franka_lift_states_100states_20251210_153518.pkl"
+state_file_path: "eval_states/pick_place.approach_grasp_simple_banana2_franka_lift_states_103states_20251217_213149.pkl"
 
 
 # -------------------------------------------------------------------------------
@@ -83,12 +83,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track_banana"
-exp_name: "pick_place_track_banana"
+wandb_project: "pick_place_track_banana2"
+exp_name: "pick_place_track_banana2"
 use_wandb: false
 checkpoint_path: null
-run_name: "pick_place.track_banana"  # Unique run name for banana track task
-model_dir: "models/track_banana"  # Separate directory for track banana checkpoints
+run_name: "pick_place.track_banana2"  # Unique run name for banana track task
+model_dir: "models/track_banana2"  # Separate directory for track banana checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024

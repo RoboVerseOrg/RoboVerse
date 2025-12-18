@@ -1,6 +1,6 @@
-"""Stage 1: Simple Approach and Grasp task for screwdriver object.
+"""Stage 1: Simple Approach and Grasp task for banana object.
 
-This task inherits from PickPlaceApproachGraspSimple and customizes it for the screwdriver object
+This task inherits from PickPlaceApproachGraspSimple and customizes it for the banana object
 with specific mesh configurations and saved poses from object_layout.py.
 """
 
@@ -19,17 +19,18 @@ from metasim.task.registry import register_task
 from roboverse_pack.tasks.pick_place.approach_grasp import PickPlaceApproachGraspSimple
 
 
-@register_task("pick_place.approach_grasp_simple_screwdriver", "pick_place.approach_grasp_screwdriver", "pick_place_approach_grasp_simple_screwdriver")
-class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
-    """Simple Approach and Grasp task for screwdriver object.
+@register_task("pick_place.approach_grasp_simple_banana2", "pick_place.approach_grasp_simple_banana2", "pick_place.approach_grasp_banana2")
+class PickPlaceApproachGraspSimpleBanana2(PickPlaceApproachGraspSimple):
+    """Simple Approach and Grasp task for banana object.
 
     This task inherits from PickPlaceApproachGraspSimple and customizes:
-    - Scenario: Uses screwdriver mesh, table mesh, and basket from EmbodiedGenData
-    - Initial states: Loads poses from saved_poses_20251206_screwdriver_basket.py
+    - Scenario: Uses banana mesh, table mesh, and basket from EmbodiedGenData
+    - Initial states: Loads poses from saved_poses_20251206_banana_basket.py
     """
 
     scenario = ScenarioCfg(
         objects=[
+            # EmbodiedGen Assets - Put Banana in Mug Scene
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
@@ -37,22 +38,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
-            ),
-            RigidObjCfg(
-                name="lamp",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/usd/0a4489b1a2875c82a580f8b62d346e08.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/0a4489b1a2875c82a580f8b62d346e08.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/mjcf/0a4489b1a2875c82a580f8b62d346e08.xml",
-            ),
-            RigidObjCfg(
-                name="basket",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/usd/663158968e3f5900af1f6e7cecef24c7.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/663158968e3f5900af1f6e7cecef24c7.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/mjcf/663158968e3f5900af1f6e7cecef24c7.xml",
             ),
             RigidObjCfg(
                 name="bowl",
@@ -70,10 +55,9 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
             ),
-            # Use actual screwdriver mesh from EmbodiedGenData (matches object_layout.py)
             RigidObjCfg(
-                name="object",
-                scale=(1.5, 1.5, 1.5),
+                name="screw_driver",
+                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
@@ -87,7 +71,30 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/2f1c3077a8d954e58fc0bf75cf35e849.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/mjcf/2f1c3077a8d954e58fc0bf75cf35e849.xml",
             ),
-            # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
+            RigidObjCfg(
+                name="object",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
+            ),
+            RigidObjCfg(
+                name="mug",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.xml",
+            ),
+            RigidObjCfg(
+                name="book",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/usd/book.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.xml",
+            ),
             RigidObjCfg(
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
@@ -97,7 +104,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_1",
@@ -108,7 +114,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_2",
@@ -119,7 +124,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_3",
@@ -130,7 +134,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_4",
@@ -141,7 +144,6 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
         ],
         robots=["franka"],
@@ -155,15 +157,15 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
     def _get_initial_states(self) -> list[dict] | None:
         """Get initial states for all environments.
 
-        Uses saved poses from object_layout.py. Loads screwdriver, table, basket, and trajectory markers
-        from saved_poses_20251206_screwdriver_basket.py.
+        Uses saved poses from object_layout.py. Loads banana, table, basket, and trajectory markers
+        from saved_poses_20251206_banana_basket.py.
         """
         # Add path to saved poses
         saved_poses_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
             "get_started",
             "output",
-            "saved_poses_20251206_screwdriver_basket.py",
+            "saved_poses_20251206_banana_basket.py",
         )
         if os.path.exists(saved_poses_path):
             # Load saved poses dynamically
@@ -182,11 +184,8 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
             for _ in range(self.num_envs):
                 env_state = {
                     "objects": {
-                        # Screwdriver as the object to pick
-                        "object": saved_poses["objects"].get(
-                            "screwdriver",
-                            saved_poses["objects"].get("screw_driver", saved_poses["objects"].get("object")),
-                        ),
+                        # Banana as the object to pick
+                        "object": saved_poses["objects"].get("banana", saved_poses["objects"].get("object")),
                         "table": saved_poses["objects"]["table"],
                         "lamp": saved_poses["objects"].get("lamp"),
                         "basket": saved_poses["objects"].get("basket"),
@@ -208,7 +207,7 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                 env_state["objects"] = {k: v for k, v in env_state["objects"].items() if v is not None}
                 init.append(env_state)
         else:
-            # Default poses (fallback) - using poses from original approach_grasp_screwdriver.py
+            # Default poses (fallback) - using poses from original approach_grasp_banana.py
             init = [
                 {
                     "objects": {
@@ -216,55 +215,59 @@ class PickPlaceApproachGraspSimpleScrewDriver(PickPlaceApproachGraspSimple):
                             "pos": torch.tensor([0.400000, -0.200000, 0.400000]),
                             "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
-                        "lamp": {
-                            "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
-                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                        },
-                        "basket": {
-                            "pos": torch.tensor([0.240000, -0.440000, 0.925000]),
-                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                        },
                         "bowl": {
-                            "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
+                            "pos": torch.tensor([0.600000, 0.310000, 0.863000]),
                             "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                         "cutting_tools": {
-                            "pos": torch.tensor([0.230000, 0.090000, 0.820000]),
+                            "pos": torch.tensor([0.340000, 0.250000, 0.820000]),
                             "rot": torch.tensor([0.930507, 0.000000, -0.000000, 0.366273]),
                         },
-                        "object": {
-                            "pos": torch.tensor([0.590000, -0.360000, 0.811000]),
-                            "rot": torch.tensor([-0.824810, -0.390085, -0.023230, 0.408623]),
+                        "screw_driver": {
+                            "pos": torch.tensor([0.190000, 0.100000, 0.811000]),
+                            "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
                         },
                         "spoon": {
-                            "pos": torch.tensor([0.470000, -0.710000, 0.830000]),
-                            "rot": torch.tensor([0.928125, -0.061844, -0.058501, -0.362397]),
+                            "pos": torch.tensor([0.350000, 0.270000, 0.860000]),
+                            "rot": torch.tensor([0.952675, -0.005654, 0.187418, 0.239269]),
+                        },
+                        "object": {
+                            "pos": torch.tensor([0.570000, -0.200000, 0.795000]),
+                            "rot": torch.tensor([0.644470, -0.113948, 0.110352, 0.747993]),
+                        },
+                        "mug": {
+                            "pos": torch.tensor([0.310000, 0.070000, 0.863000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                        },
+                        "book": {
+                            "pos": torch.tensor([0.210000, -0.480000, 0.820000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                         "traj_marker_0": {
-                            "pos": torch.tensor([0.600000, -0.330000, 0.840000]),
+                            "pos": torch.tensor([0.580000, -0.220000, 0.850000]),
                             "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                         "traj_marker_1": {
-                            "pos": torch.tensor([0.560000, -0.400000, 1.010000]),
+                            "pos": torch.tensor([0.540000, -0.230000, 0.950000]),
                             "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                         "traj_marker_2": {
-                            "pos": torch.tensor([0.530000, -0.400000, 1.140000]),
-                            "rot": torch.tensor([0.962425, -0.271547, 0.000000, 0.000000]),
+                            "pos": torch.tensor([0.440000, -0.310000, 0.970000]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                         "traj_marker_3": {
-                            "pos": torch.tensor([0.430000, -0.340000, 1.160000]),
+                            "pos": torch.tensor([0.310000, -0.380000, 0.950000]),
                             "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
                         },
                         "traj_marker_4": {
-                            "pos": torch.tensor([0.260000, -0.400000, 1.170000]),
+                            "pos": torch.tensor([0.240000, -0.480000, 0.900000]),
                             "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                         },
                     },
                     "robots": {
                         "franka": {
                             "pos": torch.tensor([0.800000, -0.800000, 0.780000]),
-                            "rot": torch.tensor([0.581682, -0.000000, -0.000001, 0.813414]),
+                            "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                             "dof_pos": {
                                 "panda_finger_joint1": 0.040000,
                                 "panda_finger_joint2": 0.040000,
