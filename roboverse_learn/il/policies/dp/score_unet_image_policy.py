@@ -102,20 +102,24 @@ class ScoreMatchingUnetImagePolicy(BaseImagePolicy):
         scheduler.set_timesteps(self.num_inference_steps)
 
         for t in scheduler.timesteps:
-            log.info(f"Using algorithm: Score Matching")
+           # log.info(f"Using algorithm: Score Matching")
 
             trajectory[condition_mask] = condition_data[condition_mask]
 
             score = model(trajectory, t, local_cond=local_cond, global_cond=global_cond)
 
-            beta_t = scheduler.betas[t] * self.num_inference_steps
-            # beta_t = torch.tensor(0.02, device=trajectory.device, dtype=trajectory.dtype)
+            step_idx = (t * (scheduler.config.num_train_timesteps // self.num_inference_steps)).long()
+            beta_t = scheduler.betas[step_idx].to(trajectory.device).view(-1, 1, 1)
 
+            # VP-SDE update formula:
+            # dx = [-1/2 * beta(t) * x - beta(t) * score] dt + sqrt(beta(t)) * dW
+            # x_{t-1} = x_t + 0.5 * beta_t * x_t + beta_t * score + sqrt(beta_t) * noise (npte dt < 0)
+            drift = 0.5 * beta_t * trajectory + beta_t * score
+            
             noise = torch.randn_like(trajectory) if t > 0 else torch.zeros_like(trajectory)
+            diffusion = torch.sqrt(beta_t) * noise
 
-            # Langevin dynamics update
-            # trajectory = trajectory + (beta_t / 2) * score + torch.sqrt(beta_t) * noise
-            trajectory = trajectory + (beta_t / 2) * score
+            trajectory = trajectory + drift + diffusion
 
         trajectory[condition_mask] = condition_data[condition_mask]
         return trajectory
@@ -220,12 +224,11 @@ class ScoreMatchingUnetImagePolicy(BaseImagePolicy):
 
         ## ||score + noise / sigma_t||^2, ideal score: noise / sigma_t
         # ideal - unstable
-        # sigma_t = (torch.sqrt(1 - self.noise_scheduler.alphas_cumprod[timesteps])).view(-1, 1, 1)
+        sigma_t = (torch.sqrt(1 - self.noise_scheduler.alphas_cumprod[timesteps])).view(-1, 1, 1)
         # practical - more stable
-        sigma_t = (1.0 / torch.sqrt(self.noise_scheduler.alphas_cumprod[timesteps])).view(-1, 1, 1)
-        target = -noise / sigma_t
+        # sigma_t = (1.0 / torch.sqrt(self.noise_scheduler.alphas_cumprod[timesteps])).view(-1, 1, 1)
 
-        loss = F.mse_loss(score, target, reduction="none")
+        loss = F.mse_loss(score * sigma_t, -noise, reduction="none")
         loss = loss * loss_mask.type(loss.dtype)
         loss = reduce(loss, "b ... -> b (...)", "mean")
         loss = loss.mean()
