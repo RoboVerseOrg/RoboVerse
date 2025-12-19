@@ -27,14 +27,21 @@ class ZarrEpisodicRoboVerseDataset(torch.utils.data.Dataset):
             keys=["head_camera", "state", "action"]
         )
 
+        # Construct indices for all possible (episode_id, start_ts) pairs
+        self.indices = []
+        for episode_id in self.episode_ids:
+            episode_slice = self.replay_buffer.get_episode_slice(episode_id)
+            episode_len = episode_slice.stop - episode_slice.start
+            for ts in range(episode_len):
+                self.indices.append((episode_id, ts))
+
 
     def __len__(self):
-        return len(self.episode_ids)
+        return len(self.indices)
 
     def __getitem__(self, index):
-        sample_full_episode = False # hardcode
-        # Get episode id from the index
-        episode_id = self.episode_ids[index]
+        # Get episode id and start_ts from the pre-calculated indices
+        episode_id, start_ts = self.indices[index]
 
         # Get the episode slice directly
         episode_slice = self.replay_buffer.get_episode_slice(episode_id)
@@ -44,11 +51,6 @@ class ZarrEpisodicRoboVerseDataset(torch.utils.data.Dataset):
         action_sequence = self.replay_buffer["action"][episode_slice]
         head_camera_sequence = self.replay_buffer["head_camera"][episode_slice]
 
-
-        if sample_full_episode:
-            start_ts = 0
-        else:
-            start_ts = np.random.choice(len(state_sequence))
         # Take the first frame as the starting point
         state = state_sequence[start_ts]
 

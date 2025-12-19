@@ -16,18 +16,18 @@ delta_ee=0 # 0 or 1 (only matters if act_space is ee, 0 means absolute 1 means d
 
 alg_name=ACT
 seed=42
-collect_level=2
+collect_level=3
 
 # ACT hyperparameters
 chunk_size=40
 kl_weight=10
 hidden_dim=512
 lr=1e-5
-batch_size=8
+batch_size=32
 dim_feedforward=3200
 
 # Domain Randomization parameters for evaluation
-eval_level=2
+eval_level=3
 eval_scene_mode=0     # 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD
 eval_seed=42          # Randomization seed (optional)
 
@@ -47,7 +47,8 @@ if [ "${train_enable}" = "True" ]; then
   --policy_class ${alg_name} --kl_weight ${kl_weight} --chunk_size ${chunk_size} \
   --hidden_dim ${hidden_dim} --batch_size ${batch_size} --dim_feedforward ${dim_feedforward} \
   --num_epochs ${num_epochs}  --lr ${lr} --state_dim 9 \
-  --seed ${seed}
+  --seed ${seed} \
+  --level ${collect_level}
 fi
 
 # Evaluation
@@ -55,6 +56,7 @@ if [ "${eval_enable}" = "True" ]; then
   echo "=== Evaluation ==="
   # # export TORCH_CUDA_ARCH_LIST="8.9"
   ckpt_path=$(cat ./roboverse_learn/il/policies/act/ckpt_dir_path.txt)
+
 
   python -m roboverse_learn.il.policies.act.act_eval_runner \
   --task ${task_name_set} \

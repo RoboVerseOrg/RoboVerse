@@ -341,7 +341,7 @@ def main():
         batch_size = 8
         dim_feedforward = 3200
         lr = 1e-5
-        act_ckpt_name = "policy_best.ckpt"
+        act_ckpt_name = "policy_last.ckpt"
         policy_config = {
             "lr": lr,
             "num_queries": args.chunk_size,
@@ -387,7 +387,7 @@ def main():
         max_timesteps = int(max_timesteps * 1)
 
     ckpt_name = args.ckpt_path.split("/")[-1]
-    os.makedirs(f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}_dr{args.level}", exist_ok=True)
+    os.makedirs(f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}", exist_ok=True)
 
     ## cuRobo controller (commented out - not needed for ACT joint control)
     # *_, robot_ik = get_curobo_models(scenario.robots[0])
@@ -437,7 +437,7 @@ def main():
 
         with torch.no_grad():
             while step < MaxStep:
-                log.debug(f"Step {step}")
+                # log.debug(f"Step {step}")
                 robot_joint_limits = scenario.robots[0].joint_limits
 
                 image_list.append(np.array(obs.cameras['camera'].rgb.cpu())[0])
@@ -495,8 +495,8 @@ def main():
                     TotalSuccess += 1
                     SuccessOnce[0] = True
                     print(f"Env {i} Success")
+                    break
 
-                log.debug(f"TotalSuccess: {TotalSuccess}")
                 SuccessOnce = [SuccessOnce[i] or success[i] for i in range(num_envs)]
                 TimeOut = [TimeOut[i] or time_out[i] for i in range(num_envs)]
                 for TimeOutIndex in range(num_envs):
@@ -508,12 +508,13 @@ def main():
 
                 step += 1
 
-            images_to_video(image_list, f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}_dr{args.level}/{i}.mp4")
+            log.debug(f"TotalSuccess: {TotalSuccess} | Success Rate: {TotalSuccess / (i + 1):.4f}")
+            images_to_video(image_list, f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}/{i}.mp4")
 
     success_rate = TotalSuccess / num_eval
     print("Success Rate: ", success_rate)
 
-    result_dir = f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}_dr{args.level}"
+    result_dir = f"il_outputs/{args.algo}/{args.task}/eval/{ckpt_name}"
     result_file = os.path.join(result_dir, "success_rate.txt")
     with open(result_file, "w") as f:
         f.write(f"Success Rate: {success_rate:.4f}\n")
