@@ -23,17 +23,17 @@ from datetime import datetime
 class ACTRunner(BaseRunner):
     def __init__(self, cfg, output_dir=None):
         super().__init__(cfg, output_dir=output_dir)
-        
+
         # Determine device
         self.device = torch.device(cfg.get('device', 'cuda' if torch.cuda.is_available() else 'cpu'))
-        
+
         # Set seed
         set_seed(cfg['seed'])
-        
+
         # Policy configuration
         self.policy_class = cfg['policy_class']
         self.policy_config = cfg['policy_config']
-        
+
         # Initialize policy and optimizer
         self.policy = self._make_policy()
         self.policy.to(self.device)
@@ -70,7 +70,7 @@ class ACTRunner(BaseRunner):
         num_epochs = cfg['num_epochs']
         ckpt_dir = self.output_dir
         seed = cfg['seed']
-        
+
         # Load data
         train_dataloader, val_dataloader, stats, _ = load_data(
             cfg['dataset_dir'],
@@ -79,7 +79,7 @@ class ACTRunner(BaseRunner):
             cfg['batch_size'],
             cfg['batch_size']
         )
-        
+
         # Save dataset stats
         if not os.path.isdir(ckpt_dir):
             os.makedirs(ckpt_dir)
@@ -117,7 +117,7 @@ class ACTRunner(BaseRunner):
                 if epoch_val_loss < min_val_loss:
                     min_val_loss = epoch_val_loss
                     best_ckpt_info = (epoch, min_val_loss, deepcopy(self.policy.state_dict()))
-            
+
             print(f'Val loss:   {epoch_val_loss:.5f}')
             summary_string = ''
             for k, v in epoch_summary.items():
@@ -136,7 +136,7 @@ class ACTRunner(BaseRunner):
                 self.optimizer.step()
                 self.optimizer.zero_grad()
                 epoch_train_dicts.append(forward_dict)
-            
+
             epoch_train_summary = compute_dict_mean(epoch_train_dicts)
             train_history.append(epoch_train_summary)
             epoch_train_loss = epoch_train_summary['loss']
@@ -162,7 +162,7 @@ class ACTRunner(BaseRunner):
 
         # Save training curves
         plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed)
-        
+
         file_path = os.path.join("./roboverse_learn/il/policies/act", "ckpt_dir_path.txt")
         with open(file_path, 'w') as f:
             f.write(ckpt_dir)
@@ -192,7 +192,7 @@ def main(args):
     policy_class = args['policy_class']
     task_name = args['task_name']
     camera_names = args['camera_names']
-    
+
     # fixed parameters
     lr_backbone = 1e-5
     backbone = 'resnet18'
@@ -221,7 +221,7 @@ def main(args):
 
     level = args.get('level', 0)
     ckpt_dir = f"il_outputs/act/{task_name}/ckpt/level{level}"
-    
+
     # Load metadata from dataset directory
     dataset_dir = args['dataset_dir']
     metadata_path = os.path.join(dataset_dir, 'metadata.json')
@@ -247,12 +247,12 @@ def main(args):
         'batch_size': args['batch_size'],
         'device': args.get('device', 'cuda' if torch.cuda.is_available() else 'cpu')
     }
-    
-    # Convert to OmegaConf for compatibility with BaseRunner if needed, 
+
+    # Convert to OmegaConf for compatibility with BaseRunner if needed,
     # but BaseRunner doesn't strictly enforce OmegaConf type for simple access.
     # However, it's better practice to wrapping it if we were fully migrating.
     # For now, passing the dict is fine as long as we access with [] or .get()
-    
+
     runner = ACTRunner(config, output_dir=ckpt_dir)
     runner.train()
 
