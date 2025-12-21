@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene2_pick_up_the_butter_and_put_it_in_the_basket",
     "living_room_scene2_pick_up_the_butter_and_put_it_in_the_basket",
 )
-class LiberoLivingRoomScene2PickUpButterTask(Libero90BaseTask):
+class LiberoLivingRoomScene2PickUpTheButterAndPutItInTheBasketTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene10 put the chocolate pudding in the top drawer of the cabinet and close it task.
 
     Task Description:

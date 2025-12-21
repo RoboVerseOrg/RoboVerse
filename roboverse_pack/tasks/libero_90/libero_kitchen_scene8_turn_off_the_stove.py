@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene8_turn_off_the_stove",
     "kitchen_scene8_turn_off_the_stove",
 )
-class LiberoKitchenScene8TurnOffStoveTask(Libero90BaseTask):
+class LiberoKitchenScene8TurnOffTheStoveTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene8 turn off the stove task.
 
     Task Description:

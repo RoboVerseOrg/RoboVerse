@@ -14,7 +14,7 @@ from .libero_90_base import Libero90BaseTask
 @register_task(
     "libero_90.kitchen_scene2_open_the_top_drawer_of_the_cabinet", "kitchen_scene2_open_the_top_drawer_of_the_cabinet"
 )
-class LiberoKitchenScene2OpenTopDrawerTask(Libero90BaseTask):
+class LiberoKitchenScene2OpenTheTopDrawerOfTheCabinetTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene2 open the top drawer of the cabinet task.
 
     This task is transferred from:

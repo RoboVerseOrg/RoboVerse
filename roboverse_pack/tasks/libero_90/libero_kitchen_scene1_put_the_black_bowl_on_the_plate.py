@@ -16,7 +16,7 @@ from .libero_90_base import Libero90BaseTask
 @register_task(
     "libero_90.kitchen_scene1_put_the_black_bowl_on_the_plate", "kitchen_scene1_put_the_black_bowl_on_the_plate"
 )
-class LiberoKitchen1PutBowlOnPlateTask(Libero90BaseTask):
+class LiberoKitchen1PutTheBlackBowlOnThePlateTask(Libero90BaseTask):
     """Configuration for the Libero kitchen put the black bowl on the plate task.
 
     This task is transferred from:

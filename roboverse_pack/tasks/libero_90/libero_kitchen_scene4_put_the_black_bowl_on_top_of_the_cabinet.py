@@ -18,7 +18,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene4_put_the_black_bowl_on_top_of_the_cabinet",
     "kitchen_scene4_put_the_black_bowl_on_top_of_the_cabinet",
 )
-class LiberoKitchenScene4PutBlackBowlOnTopOfCabinetTask(Libero90BaseTask):
+class LiberoKitchenScene4PutBlackBowlOnTopOfTheCabinetTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene4 put the black bowl on top of the cabinet task.
 
     This task is transferred from:

@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene9_turn_on_the_stove",
     "kitchen_scene9_turn_on_the_stove",
 )
-class LiberoKitchenScene9TurnOnStoveTask(Libero90BaseTask):
+class LiberoKitchenScene9TurnOnTheStoveTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene9 turn on the stove task.
 
     Task Description:

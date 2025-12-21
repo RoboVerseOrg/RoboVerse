@@ -104,6 +104,7 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
         """Task success checker."""
         # get bowl/cabinet poses
         bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
+        plate_pos = states.objects["plate"].root_state[:, :3]
         cabinet_pos = states.objects["wooden_cabinet"].root_state[:, :3]  # (N,3)
         cabinet_quat = states.objects["wooden_cabinet"].root_state[:, 3:7]  # (N,4)
         top_idx = self.handler.get_joint_names("wooden_cabinet").index("top_level")

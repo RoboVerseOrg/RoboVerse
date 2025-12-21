@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene1_pick_up_the_alphabet_soup_and_put_it_in_the_basket",
     "living_room_scene1_pick_up_the_alphabet_soup_and_put_it_in_the_basket",
 )
-class LiberoLivingRoomScene1PickUpAlphabetSoupAndPutItInTheBasketTask(Libero90BaseTask):
+class LiberoLivingRoomScene1PickUpTheAlphabetSoupAndPutItInTheBasketTask(Libero90BaseTask):
     """Configuration for the Libero living room scene1 pick up the alphabet soup and put it in the basket task."""
 
     scenario = ScenarioCfg(

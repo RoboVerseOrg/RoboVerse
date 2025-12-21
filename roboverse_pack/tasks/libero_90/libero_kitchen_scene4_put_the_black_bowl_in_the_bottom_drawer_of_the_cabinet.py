@@ -33,7 +33,7 @@ def pose_to_mat(pos: torch.Tensor, quat: torch.Tensor | None = None) -> torch.Te
     "libero_90.kitchen_scene4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet",
     "kitchen_scene4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet",
 )
-class LiberoKitchenScene4PutBlackBowlInBottomDrawerTask(Libero90BaseTask):
+class LiberoKitchenScene4PutTheBlackBowlInTheBottomDrawerOfTheCabinetTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene4 put the black bowl in the bottom drawer of the cabinet task.
 
     This task is transferred from:

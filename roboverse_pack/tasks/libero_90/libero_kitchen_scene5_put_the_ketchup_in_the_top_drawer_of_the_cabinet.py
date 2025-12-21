@@ -33,7 +33,7 @@ def pose_to_mat(pos: torch.Tensor, quat: torch.Tensor | None = None) -> torch.Te
     "libero_90.kitchen_scene5_put_the_ketchup_in_the_top_drawer_of_the_cabinet",
     "kitchen_scene5_put_the_ketchup_in_the_top_drawer_of_the_cabinet",
 )
-class LiberoKitchenScene5PutKetchupInTopDrawerTask(Libero90BaseTask):
+class LiberoKitchenScene5PutTheKetchupInTheTopDrawerOfTheCabinetTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene5 put the ketchup in the top drawer of the cabinet task."""
 
     scenario = ScenarioCfg(

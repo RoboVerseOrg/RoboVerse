@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene3_turn_on_the_stove",
     "kitchen_scene3_turn_on_the_stove",
 )
-class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
+class LiberoKitchenScene3TurnOnTheStoveTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene3 turn on the stove task.
 
     This task is transferred from:
@@ -43,15 +43,15 @@ class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
             # Movable objects
             RigidObjCfg(
                 name="moka_pot",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/mjcf/moka_pot.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
             RigidObjCfg(
                 name="chefmate_8_frypan",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/mjcf/chefmate_8_frypan.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
@@ -59,8 +59,8 @@ class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
             ArticulationObjCfg(
                 name="flat_stove",
                 fix_base_link=True,
-                # usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/mjcf/flat_stove.xml",
             ),
         ],
@@ -82,11 +82,9 @@ class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success checker."""
-        # 假设 stove 的开关状态可以通过 states.objects["flat_stove"].joint_state 获取
-        # 这里 joint_state[:, knob_index] > threshold 代表已打开
-        # knob_index 和 threshold 需根据实际模型调
-        knob_index = 0  # 示例：第一个关节为旋钮
-        threshold = 0.5  # 示例：大于 0.5 视为打开
+        # knob_index and threshold need to be aligned with the actual stove model used
+        knob_index = 0
+        threshold = 0.5
         stove_joint_state = states.objects["flat_stove"].joint_pos[:, 0]  # (N,)
         is_on = (stove_joint_state > threshold).all(dim=-1)  # (N,)
         return is_on

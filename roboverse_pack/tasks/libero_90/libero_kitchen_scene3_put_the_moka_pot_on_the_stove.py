@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene3_put_the_moka_pot_on_the_stove",
     "kitchen_scene3_put_the_moka_pot_on_the_stove",
 )
-class LiberoKitchenScene3PutMokaPotOnStoveTask(Libero90BaseTask):
+class LiberoKitchenScene3PutTheMokaPotOnTheStoveTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene3 put the moka pot on the stove task.
 
     This task is transferred from:
@@ -43,15 +43,15 @@ class LiberoKitchenScene3PutMokaPotOnStoveTask(Libero90BaseTask):
             # Movable objects
             RigidObjCfg(
                 name="moka_pot",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/mjcf/moka_pot.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
             RigidObjCfg(
                 name="chefmate_8_frypan",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/mjcf/chefmate_8_frypan.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
@@ -59,8 +59,8 @@ class LiberoKitchenScene3PutMokaPotOnStoveTask(Libero90BaseTask):
             ArticulationObjCfg(
                 name="flat_stove",
                 fix_base_link=True,
-                # usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/mjcf/flat_stove.xml",
             ),
         ],

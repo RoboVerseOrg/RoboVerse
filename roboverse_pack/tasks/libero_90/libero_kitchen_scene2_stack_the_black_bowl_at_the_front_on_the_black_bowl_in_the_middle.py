@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle",
     "kitchen_scene2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle",
 )
-class LiberoKitchenScene2StackBowlFrontOnMiddleTask(Libero90BaseTask):
+class LiberoKitchenScene2StackTheBlackBowlAtTheFrontOnTheBlackBowlInTheMiddleTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene2 stack the black bowl at the front on the black bowl in the middle task.
 
     This task is transferred from:

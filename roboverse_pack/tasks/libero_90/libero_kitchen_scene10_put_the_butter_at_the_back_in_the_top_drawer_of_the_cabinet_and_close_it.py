@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it",
     "kitchen_scene10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it",
 )
-class LiberoKitchenScene10PutButterInTopDrawerAndCloseTask(Libero90BaseTask):
+class LiberoKitchenScene10PutTheButterAtTheBackInTheTopDrawerOfTheCabinetAndCloseItTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene10 put the butter at the back in the top drawer of the cabinet and close it task.
 
     Task Description:

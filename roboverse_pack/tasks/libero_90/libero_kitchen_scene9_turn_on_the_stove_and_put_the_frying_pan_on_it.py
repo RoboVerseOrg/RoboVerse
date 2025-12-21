@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene9_turn_on_the_stove_and_put_the_frying_pan_on_it",
     "kitchen_scene9_turn_on_the_stove_and_put_the_frying_pan_on_it",
 )
-class LiberoKitchenScene9TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
+class LiberoKitchenScene9TurnOnTheStoveAndPutTheFryingPanTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene9 turn on the stove and put the frying pan on it task.
 
     Task Description:

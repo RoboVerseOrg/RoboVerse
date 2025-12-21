@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene5_put_the_black_bowl_on_the_plate",
     "kitchen_scene5_put_the_black_bowl_on_the_plate",
 )
-class LiberoKitchenScene5PutBowlOnPlateTask(Libero90BaseTask):
+class LiberoKitchenScene5PutTheBlackBowlOnThePlateTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene5 put the black bowl on the plate task."""
 
     scenario = ScenarioCfg(

@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it",
     "kitchen_scene10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it",
 )
-class LiberoKitchenScene10CloseTopDrawerAndPutBowlOnTopTask(Libero90BaseTask):
+class LiberoKitchenScene10CloseTheTopDrawerOfTheCabinetAndPutTheBlackBowlOnTopOfItTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene10 close the top drawer of the cabinet and put the black bowl on top of it task.
 
     Task Description:

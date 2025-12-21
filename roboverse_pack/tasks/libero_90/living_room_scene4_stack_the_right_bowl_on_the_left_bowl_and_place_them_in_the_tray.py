@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene4_stack_the_right_bowl_on_the_left_bowl_and_place_them_in_the_tray",
     "living_room_scene4_stack_the_right_bowl_on_the_left_bowl_and_place_them_in_the_tray",
 )
-class LiberoLivingRoomScene4StackRightBowlOnLeftBowlTask(Libero90BaseTask):
+class LiberoLivingRoomScene4StackTheRightBowlOnTheLeftBowlAndPlaceThemInTheTrayTask(Libero90BaseTask):
     """Configuration for the Libero living room scene4 stack the right bowl on the left bowl and place them in the tray task.
 
     Task Description:

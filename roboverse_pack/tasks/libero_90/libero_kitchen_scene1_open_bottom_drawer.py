@@ -55,7 +55,7 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
             ArticulationObjCfg(
                 name="wooden_cabinet",
                 fix_base_link=True,
-                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/usd/wooden_cabinet.usda",
+                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/usd/wooden_cabinet.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/urdf/wooden_cabinet.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/wooden_cabinet/mjcf/wooden_cabinet.xml",
             ),
@@ -87,7 +87,7 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_bottom_drawer_of_the_cabinet_traj_v2.pkl"
     )
 
-    # # rewrite terminate
+    # rewrite terminate
     # def _terminated(self, states: TensorState) -> torch.Tensor:
     #     """No terminate condition yet. Will terminate when time is up."""
     #     return torch.tensor([False])

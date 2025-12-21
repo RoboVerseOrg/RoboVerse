@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene2_put_the_black_bowl_at_the_front_on_the_plate",
     "kitchen_scene2_put_the_black_bowl_at_the_front_on_the_plate",
 )
-class LiberoKitchenScene2PutBowlAtFrontOnPlateTask(Libero90BaseTask):
+class LiberoKitchenScene2PutTheBlackBowlAtTheFrontOnThePlateTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene2 put the black bowl at the front on the plate task.
 
     This task is transferred from:
