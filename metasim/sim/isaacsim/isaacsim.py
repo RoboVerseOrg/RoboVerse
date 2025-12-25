@@ -155,11 +155,21 @@ class IsaacsimHandler(BaseSimHandler):
         )
 
     def _update_camera_pose(self) -> None:
+        env_origins = getattr(self.scene, "env_origins", None)
+        if env_origins is None:
+            env_origins = torch.zeros((self.num_envs, 3), device=self.device)
+        else:
+            env_origins = env_origins.to(self.device)
+
         for camera in self.cameras:
             if isinstance(camera, PinholeCameraCfg):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
+                    position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
+                    camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
+                    position_tensor = position_tensor + env_origins
+                    camera_lookat_tensor = camera_lookat_tensor + env_origins
                     position_tensor = torch.tensor(camera.pos, device=self.device, dtype=torch.float32).unsqueeze(0)
                     position_tensor = position_tensor.repeat(self.num_envs, 1)
                     camera_lookat_tensor = torch.tensor(
@@ -205,7 +215,9 @@ class IsaacsimHandler(BaseSimHandler):
         # Initialize GS background if enabled
         self._build_gs_background()
         super().launch()
-        self.sim.reset()  # crucial for calling _initialize_callbacks in binded sensors
+        for sensor in self.scene.sensors.values():
+            if hasattr(sensor, "_initialize_callback"):
+                sensor._initialize_callback(None)
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
