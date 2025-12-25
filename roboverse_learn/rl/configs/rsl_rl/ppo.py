@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from datetime import datetime
 
 from metasim.utils import configclass
+from datetime import datetime
 
 SimBackend = Literal[
     "isaacgym",

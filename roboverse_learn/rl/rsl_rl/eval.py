@@ -25,7 +25,9 @@ def get_log_dir(robot_name: str, task_name: str, now=None) -> str:
     """Get the log directory."""
     if now is None:
         now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    log_dir = f"./outputs/{robot_name}/{task_name}/{now}"
+    # log_dir = f"./outputs/{robot_name}/{task_name}/{now}"
+    log_dir = f"./outputs/rsl_rl_ppo/{task_name}/{now}"
+
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
     log.info("Log directory: {}", log_dir)

@@ -357,7 +357,7 @@ class LeggedRobotTask(AgentTask):
         self.obs_buf_queue.append(true_obs_single)
         true_next_obs_with_history = self.obs_buf.clone()
         # Remove the temporary observation
-        self.obs_buf_queue.pop()
+        # self.obs_buf_queue.pop()
 
         # reset envs
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)

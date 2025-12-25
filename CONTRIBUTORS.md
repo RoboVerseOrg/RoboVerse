@@ -49,6 +49,8 @@ Guidelines for modifications:
 * Yutong Liang
 * Yuyang Li
 * Zhigen Zhao
+* Yi Zhang
+* Bei Wang
 
 ## Acknowledgements
 

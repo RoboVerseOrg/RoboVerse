@@ -226,3 +226,16 @@ def hash_names(names: str | tuple[str]) -> str:
     )
     hash_key = "_".join(sorted(names))
     return hash_key
+
+
+class Indexer:
+    """Utility that assigns consecutive slice ranges."""
+
+    def __init__(self):
+        self.i = 0
+
+    def take(self, n: int) -> slice:
+        """Return slice(i, i+n) and advance internal counter."""
+        s = slice(self.i, self.i + n)
+        self.i += n
+        return s

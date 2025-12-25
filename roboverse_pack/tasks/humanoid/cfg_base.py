@@ -107,6 +107,17 @@ class BaseEnvCfg:
                     "right_wrist_roll_joint": -0.15,
                 },
             },
+            "agibot_a2_dof12": {
+                "pos": [0.0, 0.0, 0.98],
+                "default_joint_pos": {
+                    ".*_hip_roll": 0.0,
+                    ".*_hip_yaw": 0.0,
+                    ".*_hip_pitch": -0.115,
+                    ".*_tarsus": 0.267,
+                    ".*_toe_pitch": -0.152,
+                    ".*_toe_roll": 0.0,
+                },
+            },
         }
 
     initial_states = InitialStates()

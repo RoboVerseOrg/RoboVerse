@@ -48,3 +48,4 @@ from .ur10e_cfg import Ur10ECfg
 from .vega_cfg import VegaCfg
 from .walker_cfg import WalkerCfg
 from .xhand_cfg import XhandRightCfg
+from .agibot_a2_cfg import AgibotA2Dof12Cfg
