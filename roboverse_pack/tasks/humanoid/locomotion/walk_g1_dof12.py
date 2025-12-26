@@ -219,7 +219,7 @@ class WalkG1Dof12Task(LeggedRobotTask):
     ) -> None:
         scenario_copy = copy.deepcopy(scenario or type(self).scenario)
         scenario_copy.__post_init__()
-        print(scenario_copy.gs_scene)
+
         if env_cfg is None:
             env_cfg = type(self).env_cfg_cls()
 
