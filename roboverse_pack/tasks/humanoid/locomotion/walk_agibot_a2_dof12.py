@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import math
+
 import torch
 
 from metasim.queries import ContactForces
@@ -13,19 +14,19 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from metasim.utils.math import euler_xyz_from_quat, quat_rotate_inverse
 from roboverse_pack.callback_funcs.humanoid import (
-    termination_funcs,
     reset_funcs,
-    step_funcs,
     reward_funcs,
+    step_funcs,
+    termination_funcs,
 )
-from roboverse_pack.utils.humanoid_utils import Indexer
 from roboverse_pack.randomization.humanoid import (
-    MaterialRandomizer,
     MassRandomizer,
+    MaterialRandomizer,
 )
-from roboverse_pack.utils.curriculum_utils import lin_vel_cmd_levels
-from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
 from roboverse_pack.tasks.humanoid.base import LeggedRobotTask
+from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
+from roboverse_pack.utils.curriculum_utils import lin_vel_cmd_levels
+from roboverse_pack.utils.humanoid_utils import Indexer
 
 
 @configclass
