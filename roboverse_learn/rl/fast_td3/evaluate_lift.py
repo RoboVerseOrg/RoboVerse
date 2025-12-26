@@ -165,11 +165,13 @@ def evaluate_lift_collection(
 
     lift_start_state = {}
     lift_frame_count = {}
+    lift_capture_recorded = {}
     in_lift_phase = {}
     recording_traj = {}
     for i in range(num_eval_envs):
         lift_start_state[i] = None
         lift_frame_count[i] = 0
+        lift_capture_recorded[i] = False
         in_lift_phase[i] = False
         recording_traj[i] = False
 
@@ -245,8 +247,9 @@ def evaluate_lift_collection(
 
             if grasp_success and lift_active and not in_lift_phase[i]:
                 in_lift_phase[i] = True
-                lift_start_state[i] = extract_state_dict(env, scenario, env_idx=i)
-                lift_frame_count[i] = 1
+                lift_start_state[i] = None
+                lift_frame_count[i] = 0
+                lift_capture_recorded[i] = False
                 recording_traj[i] = True
 
                 log.info(f"[Env {i}] Entered lift phase (grasp success and lift active)")
@@ -255,7 +258,12 @@ def evaluate_lift_collection(
                 if lift_active and grasp_success:
                     lift_frame_count[i] += 1
 
-                    if lift_frame_count[i] >= lift_stable_frames:
+                    if (not lift_capture_recorded[i]) and lift_frame_count[i] >= lift_stable_frames:
+                        # Capture the state after holding grasp for lift_stable_frames frames
+                        lift_start_state[i] = extract_state_dict(env, scenario, env_idx=i)
+                        lift_capture_recorded[i] = True
+
+                    if lift_capture_recorded[i] and lift_frame_count[i] >= lift_stable_frames * 2:
                         traj_data = {
                             "init_state": current_episode_init_state[i],
                             "actions": current_episode_actions[i],
@@ -280,6 +288,7 @@ def evaluate_lift_collection(
 
                         lift_start_state[i] = None
                         lift_frame_count[i] = 0
+                        lift_capture_recorded[i] = False
                         in_lift_phase[i] = False
                         recording_traj[i] = False
 
@@ -287,6 +296,7 @@ def evaluate_lift_collection(
                             done_masks[i] = True
                 else:
                     lift_frame_count[i] = 0
+                    lift_capture_recorded[i] = False
                     if not grasp_success:
                         in_lift_phase[i] = False
                         recording_traj[i] = False
@@ -303,6 +313,7 @@ def evaluate_lift_collection(
 
                     lift_start_state[i] = None
                     lift_frame_count[i] = 0
+                    lift_capture_recorded[i] = False
                     in_lift_phase[i] = False
                     recording_traj[i] = False
                     current_episode_actions[i] = []
@@ -322,6 +333,7 @@ def evaluate_lift_collection(
             for i in range(num_eval_envs):
                 lift_start_state[i] = None
                 lift_frame_count[i] = 0
+                lift_capture_recorded[i] = False
                 in_lift_phase[i] = False
                 recording_traj[i] = False
                 current_episode_actions[i] = []

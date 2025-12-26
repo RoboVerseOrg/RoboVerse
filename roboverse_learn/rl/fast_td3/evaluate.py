@@ -496,7 +496,7 @@ def main():
 
     parser.add_argument('--device_rank', type=int, default=0,
                        help='GPU device rank')
-    parser.add_argument('--num_envs', type=int, default=None,
+    parser.add_argument('--num_envs', type=int, default=5,
                        help='Number of parallel environments (default: from checkpoint config)')
     parser.add_argument('--headless', action='store_true',
                        help='Run in headless mode')

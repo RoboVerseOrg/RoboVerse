@@ -1,20 +1,15 @@
-# Configuration for FastTD3 Training - Track Task (Screwdriver)
-# Stage 3: Track task for screwdriver object - for training trajectory tracking
-# Starts from saved grasp states from approach_grasp_simple_screwdriver, only trains trajectory tracking
+# Base Configuration for FastTD3 Training - Cutting Tool
+# Default configuration with IsaacGym simulator and Franka robot
 
 # -------------------------------------------------------------------------------
 # Environment
 # -------------------------------------------------------------------------------
 sim: "isaacgym"
 robots: ["franka"]
-task: "pick_place.track_screwdriver"  # Uses screwdriver-specific track task
+task: "pick_place.approach_grasp_simple_cuttingtool2"
 decimation: 4
 train_or_eval: "train"
 headless: False
-
-# State file path for track task (pkl file path for grasp states)
-# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_screwdriver_franka_lift_states_100states_20251210_154907.pkl"
 
 # -------------------------------------------------------------------------------
 # Seeds & Device
@@ -46,7 +41,6 @@ tau: 0.1
 # -------------------------------------------------------------------------------
 policy_frequency: 2
 num_updates: 5
-
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -62,7 +56,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 2000.0
+v_max: 600.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4
@@ -83,12 +77,12 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track_screwdriver"
-exp_name: "pick_place_track_screwdriver"
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3_cuttingtool2"
 use_wandb: false
 checkpoint_path: null
-run_name: "pick_place.track_screwdriver"  # Unique run name for screwdriver track task
-model_dir: "models/track_screwdriver"  # Separate directory for track screwdriver checkpoints
+run_name: "pick_place.approach_grasp_simple_cuttingtool2"  # Unique run name
+model_dir: "models/cuttingtool2"  # Separate directory for cuttingtool2 checkpoints
 eval_interval: 5000
 save_interval: 5000
 video_width: 1024

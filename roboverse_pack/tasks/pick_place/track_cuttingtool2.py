@@ -140,8 +140,8 @@ DEFAULT_CONFIG_TRACK["randomization"]["robot_pos_noise"] = 0.0
 DEFAULT_CONFIG_TRACK["randomization"]["joint_noise_range"] = 0.0
 
 
-@register_task("pick_place.track_screwdriver", "pick_place_track_screwdriver")
-class PickPlaceTrackScrewDriver(PickPlaceBase):
+@register_task("pick_place.track_cuttingtool2", "pick_place_track_cuttingtool2")
+class PickPlaceTrackCuttingTool2(PickPlaceBase):
     """Trajectory tracking task from grasp states.
 
     Assumes object is already grasped, only learns trajectory following.
@@ -150,6 +150,7 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
 
     scenario = ScenarioCfg(
         objects=[
+            # EmbodiedGen Assets - Put Banana in Mug Scene
             RigidObjCfg(
                 name="table",
                 scale=(1, 1, 1),
@@ -157,14 +158,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
-            ),
-            RigidObjCfg(
-                name="lamp",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/usd/0a4489b1a2875c82a580f8b62d346e08.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/0a4489b1a2875c82a580f8b62d346e08.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/mjcf/0a4489b1a2875c82a580f8b62d346e08.xml",
             ),
             RigidObjCfg(
                 name="basket",
@@ -175,28 +168,12 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/mjcf/663158968e3f5900af1f6e7cecef24c7.xml",
             ),
             RigidObjCfg(
-                name="bowl",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/usd/0f296af3df66565c9e1a7c2bc7b35d72.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/0f296af3df66565c9e1a7c2bc7b35d72.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
-            ),
-            RigidObjCfg(
-                name="cutting_tools",
+                name="object",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/usd/c5810e7c2c785fe3940372b205090bad.usd",
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
-            ),
-            RigidObjCfg(
-                name="object",
-                scale=(1.5, 1.5, 1.5),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
             ),
             RigidObjCfg(
                 name="spoon",
@@ -206,7 +183,31 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/2f1c3077a8d954e58fc0bf75cf35e849.urdf",
                 mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/mjcf/2f1c3077a8d954e58fc0bf75cf35e849.xml",
             ),
-            # Visualization: Trajectory waypoints (5 spheres showing trajectory path)
+            RigidObjCfg(
+                name="mug",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.xml",
+            ),
+            RigidObjCfg(
+                name="book",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/usd/book.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.xml",
+            ),
+            RigidObjCfg(
+                name="remote_control",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/usd/remote_control.usd",
+                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/result/remote_control.urdf",
+                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/mjcf/remote_control.xml",
+            ),
+            # Trajectory markers
             RigidObjCfg(
                 name="traj_marker_0",
                 urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
@@ -216,7 +217,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_1",
@@ -227,7 +227,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_2",
@@ -238,7 +237,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_3",
@@ -249,7 +247,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
             RigidObjCfg(
                 name="traj_marker_4",
@@ -260,7 +257,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
                 physics=PhysicStateType.XFORM,
                 enabled_gravity=False,
                 collision_enabled=False,
-                fix_base_link=True,
             ),
         ],
         robots=["franka"],
@@ -283,7 +279,7 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
             raise RuntimeError("Could not locate RoboVerse root directory")
 
         # Now construct full path to the YAML
-        config_path = roboverseroot / "roboverse_learn" / "rl" / "fast_td3" / "configs" / "track_screwdriver.yaml"
+        config_path = roboverseroot / "roboverse_learn" / "rl" / "fast_td3" / "configs" / "track_banana.yaml"
 
         with open(config_path) as f:
             cfg = yaml.safe_load(f)
@@ -308,7 +304,6 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
             1.0,
             0.0,  # rotation_tracking weight is already applied inside the function
         ]
-        self.grasp_check_distance = 0.25
 
     def _prepare_states(self, states, env_ids):
         """Override to disable randomization for track task."""
@@ -416,6 +411,10 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
         delta_actions = actions * self._action_scale
         new_actions = current_joint_pos + delta_actions
         real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
+
+        # delta_actions = actions * self._action_scale
+        # new_actions = self._last_action + delta_actions
+
         # delta_actions = actions * self._action_scale
         # new_actions = self._last_action + delta_actions
 

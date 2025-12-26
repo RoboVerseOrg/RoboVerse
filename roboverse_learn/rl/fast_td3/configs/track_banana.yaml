@@ -10,7 +10,7 @@ robots: ["franka"]
 task: "pick_place.track_banana"
 decimation: 4
 train_or_eval: "train"
-headless: False
+headless: True
 
 # State file path for track task (pkl file path for grasp states)
 # If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
@@ -62,7 +62,7 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 600.0
+v_max: 1500.0
 policy_noise: 0.001
 std_min: 0.001
 std_max: 0.4
