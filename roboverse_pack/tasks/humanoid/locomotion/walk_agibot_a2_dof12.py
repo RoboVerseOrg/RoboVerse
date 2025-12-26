@@ -31,6 +31,8 @@ from roboverse_pack.utils.humanoid_utils import Indexer
 
 @configclass
 class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
+    """Configuration for the 12-DOF A2 walking task."""
+
     episode_length_s = 20.0
     obs_len_history = 1
     priv_obs_len_history = 1
@@ -44,6 +46,8 @@ class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
 
     @configclass
     class RewardsScales:
+        """Reward weights for gait stability and efficiency."""
+
         track_lin_vel_xy = (1.0, {"std": math.sqrt(0.25)})
         track_ang_vel_z = (0.5, {"std": math.sqrt(0.25)})
         lin_vel_z = -2.0
