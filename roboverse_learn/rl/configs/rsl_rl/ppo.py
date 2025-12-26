@@ -97,8 +97,7 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
 
         if self.model_dir is None:
             name = self.exp_name or self.experiment_name
-            # self.model_dir = os.path.join("outputs", name, self.task)
-            self.model_dir = os.path.join("outputs", name, self.task,datetime.now().strftime("%Y%m%d_%H%M%S"))
+            self.model_dir = os.path.join("outputs", name, self.task, datetime.now().strftime("%Y%m%d_%H%M%S"))
 
         if self.obs_groups is None:
             self.obs_groups = {"policy": ["policy"], "critic": ["policy", "critic"]}

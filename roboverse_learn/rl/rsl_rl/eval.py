@@ -21,12 +21,11 @@ from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
 from metasim.task.registry import get_task_class
 
-def get_log_dir(robot_name: str, task_name: str, now=None) -> str:
+def get_log_dir(exp_name: str, task_name: str, now=None) -> str:
     """Get the log directory."""
     if now is None:
         now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    # log_dir = f"./outputs/{robot_name}/{task_name}/{now}"
-    log_dir = f"./outputs/rsl_rl_ppo/{task_name}/{now}"
+    log_dir = f"./outputs/{exp_name}/{task_name}/{now}"
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
@@ -89,7 +88,7 @@ def evaluate(args: RslRlPPOConfig):
     log_dir = (
         args.resume
         if os.path.isdir(args.resume)
-        else get_log_dir(robot_name=args.robot, task_name=args.task, now=args.resume)
+        else get_log_dir(exp_name=args.exp_name or args.experiment_name, task_name=args.task, now=args.resume)
     )
 
     # Use get_load_path helper to handle checkpoint loading logic
