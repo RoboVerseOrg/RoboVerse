@@ -111,6 +111,17 @@ def evaluate(args: RslRlPPOConfig):
 
     obs = wrapped_env.get_observations()
 
+    def _obs_to_device(obs: dict, device: torch.device) -> dict:
+        out = {}
+        for k, v in obs.items():
+            if isinstance(v, np.ndarray):
+                out[k] = torch.as_tensor(v, device=device)
+            elif torch.is_tensor(v):
+                out[k] = v.to(device)
+            else:
+                out[k] = torch.as_tensor(v, device=device)
+        return out
+
     # Resolve obs_groups (mimicking OnPolicyRunner.__init__)
     default_sets = ["critic"]
     args.obs_groups = resolve_obs_groups(obs, {}, default_sets)
@@ -130,10 +141,12 @@ def evaluate(args: RslRlPPOConfig):
         init_noise_std=policy_cfg.init_noise_std,
     ).to(device)
 
+    state_dict = checkpoint['model_state_dict']
+    state_dict = {k: v for k, v in state_dict.items() if 'critic' not in k}
     # Load the model weights
-    actor_critic.load_state_dict(checkpoint['model_state_dict'])
+    actor_critic.load_state_dict(state_dict, strict=False)
+    actor_critic.to(device)
     actor_critic.eval()
-
     # Create inference policy (just the actor part)
     policy = actor_critic.act_inference
 
@@ -145,7 +158,7 @@ def evaluate(args: RslRlPPOConfig):
     env.reset()
     obs, _, _, _, _ = env.step(torch.zeros(env.num_envs, env.num_actions, device=device))
     obs = wrapped_env.get_observations()
-
+    obs = _obs_to_device(obs, device)
     print(f"Starting evaluation for 1000000 steps...")
     for i in range(1000000):
         # set fixed command
@@ -154,6 +167,7 @@ def evaluate(args: RslRlPPOConfig):
         env.commands_manager.value[:, 2] = 0.0
         actions = policy(obs)
         obs, _, _, _ = wrapped_env.step(actions)
+        obs = _obs_to_device(obs, device)
 
         if (i + 1) % 1000 == 0:
             print(f"Step {i + 1}/1000000")
