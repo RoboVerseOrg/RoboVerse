@@ -774,7 +774,7 @@ class IsaacgymHandler(BaseSimHandler):
 
         # Apply GS background rendering if enabled
         # TODO: Render with batch parallelization for efficiency
-        if self.scenario.gs_scene.with_gs_background and self.gs_background is not None:
+        if self.gs_background is not None and self.scenario.gs_scene.with_gs_background:
             assert ROBO_SPLATTER_AVAILABLE, "RoboSplatter is not available. GS background rendering will be disabled."
             camera_states = self._apply_gs_background_rendering(camera_states, env_ids)
 
