@@ -34,16 +34,17 @@ class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
 
     @configclass
     class RewardsScales:
-        track_lin_vel_xy = (1.0, {"std": math.sqrt(0.25)})
-        track_ang_vel_z = (0.5, {"std": math.sqrt(0.25)})
+        track_lin_vel_xy = (2.0, {"std": math.sqrt(0.25)})
+        track_ang_vel_z = (1.0, {"std": math.sqrt(0.25)})
         lin_vel_z = -2.0
         ang_vel_xy = -0.05
         flat_orientation = -1.0
         base_height = (-100.0, {"target_height": 0.98})
-        joint_acc = -2.5e-8
+        joint_acc = -1e-7
         joint_vel = -0.001
-        action_rate = -0.01
+        action_rate = -0.2
         joint_pos_limits = -5.0
+        joint_effort_limits = (-0.5, {"soft_limit_factor": 0.95})
         is_alive = 0.3
         joint_deviation_legs = (
             -1.0,
@@ -56,7 +57,7 @@ class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
             {
                 "std": math.sqrt(0.05),
                 "tanh_mult": 2.0,
-                "target_height": 0.2,
+                "target_height": 0.18,
                 "body_names": (".*toe_roll.*"),
             },
         )

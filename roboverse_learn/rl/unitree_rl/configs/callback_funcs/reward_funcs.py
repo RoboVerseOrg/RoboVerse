@@ -106,6 +106,39 @@ def joint_pos_limits(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     return torch.sum(out_of_limits, dim=1)
 
 
+def joint_effort_limits(env: EnvTypes, env_states: TensorState, soft_limit_factor: float = 1.0) -> torch.Tensor:
+    """Penalize joint efforts if they cross the soft limits."""
+    robot_state = env_states.robots[env.name]
+
+    # Get joint effort target, compute if None or all zeros
+    if robot_state.joint_effort_target is None:
+        # Compute effort from actions if manual PD control is enabled
+        if hasattr(env, 'manual_pd_on') and env.manual_pd_on and hasattr(env, 'actions'):
+            processed_actions = (
+                (env.actions * env.action_scale + env.actions_offset).clip(-env.action_clip, env.action_clip)
+            )
+            joint_effort = env._compute_effort(processed_actions, env_states)
+        else:
+            # Fallback: return zeros if we can't compute effort
+            joint_effort = torch.zeros_like(robot_state.joint_pos)
+    elif torch.all(robot_state.joint_effort_target == 0):
+        # If all zeros, try to compute from actions
+        if hasattr(env, 'manual_pd_on') and env.manual_pd_on and hasattr(env, 'actions'):
+            processed_actions = (
+                (env.actions * env.action_scale + env.actions_offset).clip(-env.action_clip, env.action_clip)
+            )
+            joint_effort = env._compute_effort(processed_actions, env_states)
+        else:
+            joint_effort = robot_state.joint_effort_target
+    else:
+        joint_effort = robot_state.joint_effort_target
+
+    out_of_limits = (torch.abs(joint_effort) - env.torque_limits * soft_limit_factor).clip(
+        min=0.0
+    )
+    return torch.sum(out_of_limits, dim=1)
+
+
 def energy(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     """Sum |qdot|*|tau| across joints (\"energy\" usage)."""
     base = env_states.robots[env.name]
@@ -226,7 +259,7 @@ def feet_gait(
         reward += ~(is_stance ^ is_contact[:, i])
 
     if command_name == "base_velocity":
-        cmd_norm = torch.norm(env.commands_manager.value[:, :2], dim=1)
+        cmd_norm = torch.norm(env.commands_manager.value[:, :3], dim=1)  # 包括 lin_vel_x, lin_vel_y, ang_vel_yaw
         reward *= (cmd_norm > 0.1).float()
     return reward
 
