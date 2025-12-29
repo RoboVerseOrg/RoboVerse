@@ -174,7 +174,6 @@ class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
 
 
 @register_task(
-    "unitree_rl.walk_agibot_a2_dof12",
     "agibot_a2.walk_agibot_a2_dof12",
     "walk_agibot_a2_dof12",
 )
