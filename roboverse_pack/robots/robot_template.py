@@ -48,7 +48,7 @@ class RobotTemplateCfg(RobotCfg):
     actuators = {
         "joint1": BaseActuatorCfg(
             velocity_limit=2.0,      # Velocity limit (rad/s)
-            torque_limit=100.0,      # Torque limit (N⋅m)
+            effort_limit_sim=100.0,  # Torque (effort) limit (N⋅m)
             stiffness=1000.0,        # Stiffness coefficient
             damping=100.0,           # Damping coefficient
             fully_actuated=True,     # Whether fully actuated
@@ -56,7 +56,7 @@ class RobotTemplateCfg(RobotCfg):
         ),
         "gripper_joint": BaseActuatorCfg(
             velocity_limit=0.2,
-            torque_limit=10.0,
+            effort_limit_sim=10.0,
             stiffness=1000.0,
             damping=100.0,
             is_ee=True  # Mark as end effector

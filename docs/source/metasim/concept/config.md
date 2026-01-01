@@ -141,6 +141,6 @@ RobotCfg(
   enabled_gravity=True,
   control_type={"joint1": "position", "joint2": "effort"},
   actuators={"joint1": BaseActuatorCfg(stiffness=500, damping=10),
-             "joint2": BaseActuatorCfg(torque_limit=50)}
+             "joint2": BaseActuatorCfg(effort_limit_sim=50)}
 )
 ```

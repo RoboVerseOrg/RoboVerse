@@ -46,20 +46,20 @@ class InspireHandRightCfg(RobotCfg):
         # Thumb (2 actuated + 2 passive = 4 joints)
         "R_thumb_proximal_yaw_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
         "R_thumb_proximal_pitch_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
-        "R_thumb_intermediate_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
-        "R_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "R_thumb_intermediate_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
+        "R_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Index finger (1 actuated + 1 passive = 2 joints)
         "R_index_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
-        "R_index_intermediate_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "R_index_intermediate_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Middle finger (1 actuated + 1 passive = 2 joints)
         "R_middle_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
-        "R_middle_intermediate_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "R_middle_intermediate_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Ring finger (1 actuated + 1 passive = 2 joints)
         "R_ring_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
-        "R_ring_intermediate_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "R_ring_intermediate_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Pinky finger (1 actuated + 1 passive = 2 joints)
         "R_pinky_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=2.0),
-        "R_pinky_intermediate_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "R_pinky_intermediate_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
     }
 
     joint_limits: dict[str, tuple[float, float]] = {

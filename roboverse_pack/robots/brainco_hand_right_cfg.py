@@ -58,19 +58,19 @@ class BraincoHandRightCfg(RobotCfg):
         # Thumb (2 actuated + 1 passive = 3 joints)
         "right_thumb_metacarpal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
         "right_thumb_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "right_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "right_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Index finger (1 actuated + 1 passive = 2 joints)
         "right_index_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "right_index_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "right_index_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Middle finger (1 actuated + 1 passive = 2 joints)
         "right_middle_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "right_middle_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "right_middle_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Ring finger (1 actuated + 1 passive = 2 joints)
         "right_ring_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "right_ring_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "right_ring_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Pinky finger (1 actuated + 1 passive = 2 joints)
         "right_pinky_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "right_pinky_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "right_pinky_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
     }
 
     # Joint limits from MJCF (in radians)

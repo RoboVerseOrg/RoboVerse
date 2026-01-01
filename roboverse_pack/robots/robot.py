@@ -13,8 +13,8 @@ class BaseActuatorCfg:
     velocity_limit: float | None = None
     """Velocity limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
-    torque_limit: float | None = None
-    """Torque limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+    effort_limit_sim: float | None = None
+    """Torque (effort) limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator. Note that this corresponds to `effort_limit_sim` in Isaac Lab."""
 
     damping: float | None = None
     """Damping of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
@@ -92,7 +92,7 @@ class RobotCfg(ArticulationObjCfg):
     actuators = {
         "joint1": BaseActuatorCfg(
             velocity_limit=2.0,      # Velocity limit (rad/s)
-            torque_limit=100.0,      # Torque limit (N⋅m)
+            effort_limit_sim=100.0,  # Torque (effort) limit (N⋅m)
             stiffness=1000.0,        # Stiffness coefficient
             damping=100.0,           # Damping coefficient
             fully_actuated=True,     # Whether fully actuated
@@ -100,7 +100,7 @@ class RobotCfg(ArticulationObjCfg):
         ),
         "gripper_joint": BaseActuatorCfg(
             velocity_limit=0.2,
-            torque_limit=10.0,
+            effort_limit_sim=10.0,
             stiffness=1000.0,
             damping=100.0,
             is_ee=True  # Mark as end effector

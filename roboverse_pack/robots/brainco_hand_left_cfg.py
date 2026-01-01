@@ -58,19 +58,19 @@ class BraincoHandLeftCfg(RobotCfg):
         # Thumb (2 actuated + 1 passive = 3 joints)
         "left_thumb_metacarpal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
         "left_thumb_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "left_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "left_thumb_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Index finger (1 actuated + 1 passive = 2 joints)
         "left_index_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "left_index_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "left_index_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Middle finger (1 actuated + 1 passive = 2 joints)
         "left_middle_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "left_middle_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "left_middle_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Ring finger (1 actuated + 1 passive = 2 joints)
         "left_ring_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "left_ring_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "left_ring_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
         # Pinky finger (1 actuated + 1 passive = 2 joints)
         "left_pinky_proximal_joint": BaseActuatorCfg(stiffness=10.0, damping=1.0),
-        "left_pinky_distal_joint": BaseActuatorCfg(fully_actuated=False, torque_limit=0.0),  # Passive/coupled
+        "left_pinky_distal_joint": BaseActuatorCfg(fully_actuated=False, effort_limit_sim=0.0),  # Passive/coupled
     }
 
     # Joint limits from MJCF (in radians)
