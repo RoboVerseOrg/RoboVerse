@@ -657,7 +657,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._manual_pd_on.append(manual_pd)
 
         spawn_cfg = sim_utils.UsdFileCfg(
-            usd_path=robot.usd_path,
+            usd_path=os.path.abspath(robot.usd_path),
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=not robot.enabled_gravity,
