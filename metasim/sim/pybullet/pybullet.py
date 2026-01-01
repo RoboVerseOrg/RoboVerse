@@ -192,7 +192,7 @@ class SinglePybulletHandler(BaseSimHandler):
                             positionGain=joint_config.stiffness or PYBULLET_DEFAULT_POSITION_GAIN,
                             velocityGain=joint_config.damping or PYBULLET_DEFAULT_VELOCITY_GAIN,
                             maxVelocity=joint_config.velocity_limit or PYBULLET_DEFAULT_JOINT_MAX_VEL,
-                            force=joint_config.torque_limit or PYBULLET_DEFAULT_JOINT_MAX_TORQUE,
+                            force=joint_config.effort_limit_sim or PYBULLET_DEFAULT_JOINT_MAX_TORQUE,
                         )
 
                 if hasattr(object, "default_joint_positions"):

@@ -80,6 +80,7 @@ def saturate(x: torch.Tensor, lower: torch.Tensor, upper: torch.Tensor) -> torch
     return torch.max(torch.min(x, upper), lower)
 
 
+# same as isaaclab.utils.math.normalize
 @torch.jit.script
 def normalize(x: torch.Tensor, eps: float = 1e-9) -> torch.Tensor:
     """Normalizes a given input tensor to unit length.
@@ -142,6 +143,7 @@ Rotation
 """
 
 
+# same as isaaclab.utils.math.matrix_from_quat
 @torch.jit.script
 def matrix_from_quat(quaternions: torch.Tensor) -> torch.Tensor:
     """Convert rotations given as quaternions to rotation matrices.
@@ -222,6 +224,7 @@ def convert_quat(quat: torch.Tensor | np.ndarray, to: Literal["xyzw", "wxyz"] = 
             return quat.roll(1, dims=-1)
 
 
+# same as isaaclab.utils.math.quat_from_euler_xyz
 @torch.jit.script
 def quat_from_euler_xyz(roll: torch.Tensor, pitch: torch.Tensor, yaw: torch.Tensor) -> torch.Tensor:
     """Convert rotations given as Euler angles in radians to Quaternions.
@@ -462,6 +465,21 @@ def quat_unique(q: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
+def quat_conjugate(q: torch.Tensor) -> torch.Tensor:
+    """Computes the conjugate of a quaternion.
+
+    Args:
+        q: The quaternion orientation in (w, x, y, z). Shape is (..., 4).
+
+    Returns:
+        The conjugate quaternion in (w, x, y, z). Shape is (..., 4).
+    """
+    shape = q.shape
+    q = q.reshape(-1, 4)
+    return torch.cat((q[:, 0:1], -q[:, 1:]), dim=-1).view(shape)
+
+
+@torch.jit.script
 def quat_inv(q: torch.Tensor) -> torch.Tensor:
     """Compute the inverse of a quaternion.
 
@@ -475,6 +493,7 @@ def quat_inv(q: torch.Tensor) -> torch.Tensor:
     return q * scaling
 
 
+# same as isaaclab.utils.math.quat_mul
 @torch.jit.script
 def quat_mul(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     """Multiply two quaternions together.
@@ -533,6 +552,7 @@ def quat_box_minus(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     return scale.unsqueeze(-1) * im
 
 
+# same as isaaclab.utils.math.yaw_quat
 @torch.jit.script
 def yaw_quat(quat: torch.Tensor) -> torch.Tensor:
     """Extract the yaw component of a quaternion.
@@ -557,6 +577,7 @@ def yaw_quat(quat: torch.Tensor) -> torch.Tensor:
     return quat_yaw.view(shape)
 
 
+# same as isaaclab.utils.math.quat_apply
 @torch.jit.script
 def quat_apply(quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
     """Apply a quaternion rotation to a vector.
@@ -617,6 +638,7 @@ def quat_rotate(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     return a + b + c
 
 
+# same as isaaclab.utils.math.quat_rotate_inverse
 @torch.jit.script
 def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     """Rotate a vector by the inverse of a quaternion along the last dimension of q and v.
@@ -657,6 +679,7 @@ def quat_from_angle_axis(angle: torch.Tensor, axis: torch.Tensor) -> torch.Tenso
     return normalize(torch.cat([w, xyz], dim=-1))
 
 
+# same as isaaclab.utils.math.axis_angle_from_quat
 @torch.jit.script
 def axis_angle_from_quat(quat: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
     """Convert rotations given as quaternions to axis/angle.
@@ -797,6 +820,7 @@ def combine_frame_transforms(
 
 
 # @torch.jit.script
+# same as isaaclab.utils.math.subtract_frame_transforms
 def subtract_frame_transforms(
     t01: torch.Tensor, q01: torch.Tensor, t02: torch.Tensor | None = None, q02: torch.Tensor | None = None
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -1325,6 +1349,7 @@ def sample_triangle(lower: float, upper: float, size: int | tuple[int, ...], dev
     return (upper - lower) * r + lower
 
 
+# same as isaaclab.utils.math.sample_uniform
 def sample_uniform(
     lower: torch.Tensor | float, upper: torch.Tensor | float, size: int | tuple[int, ...], device: str
 ) -> torch.Tensor:
@@ -1346,6 +1371,7 @@ def sample_uniform(
     return torch.rand(*size, device=device) * (upper - lower) + lower
 
 
+# same as isaaclab.utils.math.sample_log_uniform
 def sample_log_uniform(
     lower: torch.Tensor | float, upper: torch.Tensor | float, size: int | tuple[int, ...], device: str
 ) -> torch.Tensor:
@@ -1377,6 +1403,7 @@ def sample_log_uniform(
     return torch.exp(sample_uniform(torch.log(lower), torch.log(upper), size, device))
 
 
+# same as isaaclab.utils.math.sample_gaussian
 def sample_gaussian(
     mean: torch.Tensor | float, std: torch.Tensor | float, size: int | tuple[int, ...], device: str
 ) -> torch.Tensor:

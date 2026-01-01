@@ -6,15 +6,22 @@ from metasim.scenario.objects import ArticulationObjCfg
 from metasim.utils import configclass
 
 
+# FIXME current design does not support specifying a group of actuators based on regex, which results in `Articulation._apply_actuator_model()` (in Isaac Lab) computing the joint torques one at a time in a loop (sequentially), which may be inefficient
 @configclass
 class BaseActuatorCfg:
     """Base configuration class for actuators."""
 
+    effort_limit_sim: float | None = None
+    """Torque (effort) limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator. Note that this corresponds to `effort_limit_sim` in Isaac Lab."""
+
     velocity_limit: float | None = None
     """Velocity limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 
-    torque_limit: float | None = None
-    """Torque limit of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
+    velocity_limit_sim: float | None = None
+    """Velocity limit of the actuator in the simulator. Note that `velocity_limit` does not take effect when passed to Isaac Sim. Please use this instead."""
+
+    armature: float | None = None
+    """Armature of the actuator. If not specified, use the default value specified for the whole robot instead."""
 
     damping: float | None = None
     """Damping of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""

@@ -103,7 +103,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         sim_config: SimulationCfg = SimulationCfg(
             device="cuda:0",
-            render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
+            render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
                 solver_type=self.scenario.sim_params.solver_type,
@@ -170,12 +170,6 @@ class IsaacsimHandler(BaseSimHandler):
                     camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
                     position_tensor = position_tensor + env_origins
                     camera_lookat_tensor = camera_lookat_tensor + env_origins
-                    position_tensor = torch.tensor(camera.pos, device=self.device, dtype=torch.float32).unsqueeze(0)
-                    position_tensor = position_tensor.repeat(self.num_envs, 1)
-                    camera_lookat_tensor = torch.tensor(
-                        camera.look_at, device=self.device, dtype=torch.float32
-                    ).unsqueeze(0)
-                    camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
                     # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
             else:
@@ -653,50 +647,66 @@ class IsaacsimHandler(BaseSimHandler):
         if self._physics_step_counter < 5:
             self._update_camera_pose()
 
-        self._physics_step_counter += 1
-
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
 
-        manual_pd = any(mode == "effort" for mode in robot.control_type.values())
+        control_type = getattr(robot, "control_type", None)
+        manual_pd = any(mode == "effort" for mode in control_type.values()) if control_type else False
         self._manual_pd_on.append(manual_pd)
-        cfg = ArticulationCfg(
-            spawn=sim_utils.UsdFileCfg(
-                usd_path=robot.usd_path,
-                activate_contact_sensors=True,
-                rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                    max_depenetration_velocity=getattr(
-                        robot, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
-                    )
+
+        spawn_cfg = sim_utils.UsdFileCfg(
+            usd_path=robot.usd_path,
+            activate_contact_sensors=True,
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=not robot.enabled_gravity,
+                retain_accelerations=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                max_depenetration_velocity=getattr(
+                    robot, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
                 ),
-                articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=robot.fix_base_link),
-                collision_props=sim_utils.CollisionPropertiesCfg(
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+                enabled_self_collisions=robot.enabled_self_collisions,
+                fix_root_link=robot.fix_base_link,
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=4,
+            ),
+            collision_props=getattr(
+                robot,
+                "collision_props",
+                sim_utils.CollisionPropertiesCfg(
                     contact_offset=getattr(robot, "contact_offset", self.scenario.sim_params.contact_offset),
                     rest_offset=getattr(robot, "rest_offset", self.scenario.sim_params.rest_offset),
                 ),
             ),
+        )
+        cfg = ArticulationCfg(
+            spawn=spawn_cfg,
             actuators={
                 jn: ImplicitActuatorCfg(
                     joint_names_expr=[jn],
+                    effort_limit_sim=actuator.effort_limit_sim,
+                    velocity_limit_sim=actuator.velocity_limit_sim,
                     stiffness=actuator.stiffness if not manual_pd else 0.0,
                     damping=actuator.damping if not manual_pd else 0.0,
-                    armature=getattr(robot, "armature", 0.01),
+                    armature=actuator.armature if actuator.armature is not None else getattr(robot, "armature", 0.01),
                 )
                 for jn, actuator in robot.actuators.items()
             },
         )
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
-        cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
-        cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
-        cfg.spawn.articulation_props.enabled_self_collisions = robot.enabled_self_collisions
         init_state = ArticulationCfg.InitialStateCfg(
-            pos=[0.0, 0.0, 0.0],
+            pos=getattr(robot, "default_pos", [0.0, 0.0, 0.0]),
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )
         cfg.init_state = init_state
+        # NOTE `velocity_limit` here won't take effect
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
@@ -1175,6 +1185,7 @@ class IsaacsimHandler(BaseSimHandler):
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/.*",
             history_length=3,
             update_period=0.005,
+            force_threshold=10.0,
             track_air_time=True,
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
