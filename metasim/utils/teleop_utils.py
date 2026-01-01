@@ -102,6 +102,7 @@ def process_kb_input(
 
     # cache pressed keys first rather query keyboard_client.is_pressed(key) every time to save computation
     pressed_keys = {key: keyboard_client.is_pressed(key) for key in key_to_action.keys()}
+
     for key, (target, value) in key_to_action.items():
         if pressed_keys.get(key):
             target += value

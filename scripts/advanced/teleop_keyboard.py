@@ -436,7 +436,7 @@ def main():
         curr_ee_quat_local = quat_mul(quat_inv(robot_quat), curr_ee_quat)
 
         if keyboard_client is not None:
-            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.0002, drot=0.0003)
+            d_pos, d_rot_local, close_gripper = process_kb_input(keyboard_client, dpos=0.02, drot=0.03)
         else:
             # Handle keyboard input using pynput key states
             d_pos = [0.0, 0.0, 0.0]
@@ -496,7 +496,7 @@ def main():
 
         # Process gripper command (convert boolean to float for consistency)
         gripper_widths = process_gripper_command(
-            torch.tensor(float(close_gripper), dtype=torch.float32, device=device), scenario.robots[0], device
+            torch.tensor(float(not close_gripper), dtype=torch.float32, device=device), scenario.robots[0], device
         )
 
         # Compose joint action
