@@ -465,6 +465,21 @@ def quat_unique(q: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
+def quat_conjugate(q: torch.Tensor) -> torch.Tensor:
+    """Computes the conjugate of a quaternion.
+
+    Args:
+        q: The quaternion orientation in (w, x, y, z). Shape is (..., 4).
+
+    Returns:
+        The conjugate quaternion in (w, x, y, z). Shape is (..., 4).
+    """
+    shape = q.shape
+    q = q.reshape(-1, 4)
+    return torch.cat((q[:, 0:1], -q[:, 1:]), dim=-1).view(shape)
+
+
+@torch.jit.script
 def quat_inv(q: torch.Tensor) -> torch.Tensor:
     """Compute the inverse of a quaternion.
 

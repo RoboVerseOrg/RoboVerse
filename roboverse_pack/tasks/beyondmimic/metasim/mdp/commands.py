@@ -12,12 +12,13 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from metasim.utils.math import (
     quat_apply,
+    quat_error_magnitude,
     quat_from_euler_xyz,
+    quat_inv,
     quat_mul,
     sample_uniform,
     yaw_quat,
 )
-from roboverse_pack.tasks.beyondmimic.metasim.utils.math import quat_error_magnitude, quat_inv
 from roboverse_pack.tasks.beyondmimic.metasim.utils.string import find_bodies
 
 if TYPE_CHECKING:

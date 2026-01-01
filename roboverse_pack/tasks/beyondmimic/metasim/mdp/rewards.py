@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import torch
 
 from metasim.types import TensorState
+from metasim.utils.math import quat_error_magnitude
 from roboverse_pack.tasks.beyondmimic.metasim.configs.cfg_queries import ContactForces
-from roboverse_pack.tasks.beyondmimic.metasim.utils.math import quat_error_magnitude
 from roboverse_pack.tasks.beyondmimic.metasim.utils.misc import get_body_indexes
 from roboverse_pack.tasks.beyondmimic.metasim.utils.string import get_indexes_hash
 
