@@ -26,17 +26,14 @@ jobs:
   pre-merge-tests:
     if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
     permissions:
-      contents: write       # Need write access to delete ci/pr-* branches
+      contents: read
       pull-requests: write
-      issues: write         # Post status comment back to PR
+      issues: write
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 720
     steps:
-        # change to the source code directory
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
       - run: aws --version
       ############# Prebuild ############
       - name: pre_build
@@ -398,3 +395,27 @@ jobs:
             test_exit_codes.txt
           if-no-files-found: warn
           retention-days: 7
+
+  workflow-integrity-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check for workflow changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+           set -euo pipefail
+           echo "Checking if .github/workflows/premerge-ci.yml is modified in PR #$PR_NUMBER..."
+           CHANGES=$(gh pr diff "$PR_NUMBER" --name-only)
+
+           if echo "$CHANGES" | grep -q "^.github/workflows/premerge-ci.yml$"; then
+             echo "❌ Critical workflow modification detected!"
+             echo "For security reasons, this workflow file cannot be modified via Pull Request."
+             echo "Please revert changes to .github/workflows/premerge-ci.yml to pass this check."
+             exit 1
+           fi
+
+           echo "✅ Workflow integrity verified (file not modified)."
