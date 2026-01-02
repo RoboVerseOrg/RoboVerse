@@ -10,9 +10,6 @@ on:
     branches:
       - main
       - develop
-  push:
-    branches:
-      - ci/pr-**
 
 env:
   REGION: us-west-2
@@ -26,158 +23,17 @@ env:
   ECR_REPOSITORY: "roboverse-dev"
 
 jobs:
-  prepare-or-promote:
-    name: prepare-or-promote
-    runs-on: ubuntu-latest
+  pre-merge-tests:
+    if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
       issues: write
-    env:
-      PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
-    outputs:
-      run_direct: ${{ steps.decide.outputs.run_direct }}
-      pr_number: ${{ steps.decide.outputs.pr_number }}
-      reason: ${{ steps.decide.outputs.reason }}
-    steps:
-      - name: Route CI flow
-        id: decide
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_REF: ${{ github.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
-          BASE_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-        run: |
-          RUN_DIRECT="false"
-          PR_NUM="${PR_NUMBER}"
-          REASON=""
-
-          case "$GITHUB_EVENT_NAME" in
-            merge_group)
-              BASE_REPO_NAME="${BASE_REPO}"
-              HAS_FORK="false"
-              PRS=$(jq -r '.merge_group.pull_requests[].number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-
-              if [ -z "$PRS" ]; then
-                echo "No pull requests listed in merge_group payload; defaulting to same-repo."
-              fi
-
-              for PR in $PRS; do
-                HEAD_REPO_NAME=$(gh api "repos/${BASE_REPO_NAME}/pulls/${PR}" --jq '.head.repo.full_name' 2>/dev/null || echo "")
-                BASE_REPO_FROM_PR=$(gh api "repos/${BASE_REPO_NAME}/pulls/${PR}" --jq '.base.repo.full_name' 2>/dev/null || echo "$BASE_REPO_NAME")
-
-                if [ -z "$HEAD_REPO_NAME" ]; then
-                  echo "Warning: could not determine head repo for PR #$PR; assuming same-repo."
-                  continue
-                fi
-
-                if [ "$HEAD_REPO_NAME" != "$BASE_REPO_FROM_PR" ]; then
-                  HAS_FORK="true"
-                  echo "Detected fork PR #$PR (head repo: $HEAD_REPO_NAME, base repo: $BASE_REPO_FROM_PR)"
-                else
-                  echo "PR #$PR is same-repo (head repo: $HEAD_REPO_NAME)"
-                fi
-              done
-
-              if [ "$HAS_FORK" = "true" ]; then
-                RUN_DIRECT="false"
-                REASON="merge_group_contains_fork"
-              else
-                RUN_DIRECT="true"
-                REASON="merge_group_same_repo_only"
-              fi
-              ;;
-            push)
-              if [[ "$GITHUB_REF" =~ ^refs/heads/ci/pr- ]]; then
-                RUN_DIRECT="true"
-                REASON="ci/pr-* push"
-                PR_NUM="${GITHUB_REF#refs/heads/ci/pr-}"
-              else
-                REASON="unsupported push ref"
-              fi
-              ;;
-            workflow_dispatch)
-              RUN_DIRECT="true"
-              REASON="manual dispatch"
-              ;;
-            pull_request_target)
-              if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
-                REASON="same-repo PR, no promotion needed"
-              else
-                REASON="fork PR requires promotion"
-              fi
-              ;;
-            *)
-              REASON="unsupported event"
-              ;;
-          esac
-
-          echo "run_direct=${RUN_DIRECT}" >> "$GITHUB_OUTPUT"
-          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
-          echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
-
-      - name: Check actor permission
-        id: perm
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          env.PRIV_CI_PUSH_TOKEN != '' &&
-          env.PRIV_CI_PUSH_TOKEN != null
-        env:
-          ACTOR: ${{ github.actor }}
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          perm=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq .permission 2>/dev/null || echo "none")
-          echo "permission=$perm" >> "$GITHUB_OUTPUT"
-          echo "Actor: $ACTOR, permission: $perm"
-
-      - name: Checkout repository for promotion
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
-
-      - name: Promote fork PR to ci/pr-* branch
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
-        env:
-          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
-        run: |
-          set -euo pipefail
-          BRANCH="ci/pr-${PR_NUMBER}"
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          gh pr checkout "$PR_NUMBER"
-          git push origin HEAD:"$BRANCH"
-
-
-  pre-merge-tests:
-    needs: prepare-or-promote
-    if: needs.prepare-or-promote.outputs.run_direct == 'true'
-    permissions:
-      contents: write       # Need write access to delete ci/pr-* branches
-      pull-requests: write
-      issues: write         # Post status comment back to PR
     runs-on: codebuild-EC2_Launcher2-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 720
     steps:
-        # change to the source code directory
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
       - run: aws --version
       ############# Prebuild ############
       - name: pre_build
@@ -540,182 +396,26 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-
-      - name: Report commit status to PR
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          JOB_STATUS: ${{ job.status }}
-          PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
-        with:
-          github-token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
-          script: |
-            const status = process.env.JOB_STATUS;
-            const ref = context.ref;
-
-            // Only report status for ci/pr-* branches
-            const match = ref.match(/^refs\/heads\/ci\/pr-(\d+)$/);
-            if (!match) {
-              core.info(`Ref ${ref} is not a ci/pr-* branch, skip status reporting.`);
-              return;
-            }
-
-            const prNumber = Number(match[1]);
-
-            // Get the PR's HEAD SHA
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-
-            const sha = pr.head.sha;
-            core.info(`Reporting status to PR #${prNumber} commit ${sha}`);
-
-            // Map job status to commit status state
-            let state, description;
-            if (status === 'success') {
-              state = 'success';
-              description = 'Privileged CI tests passed';
-            } else if (status === 'cancelled') {
-              state = 'error';
-              description = 'Privileged CI tests were cancelled';
-            } else {
-              state = 'failure';
-              description = 'Privileged CI tests failed';
-            }
-
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-
-            // Create commit status
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: state,
-              context: 'pre-merge-tests',
-              description: description,
-              target_url: runUrl
-            });
-
-            core.info(`✅ Reported status '${state}' to commit ${sha}`);
-
-      - name: Clean up ci/pr-* branch
-        if: always()
-        run: |
-          REF="${GITHUB_REF}"
-          # Only delete if we're running on a ci/pr-* branch
-          if [[ "$REF" =~ ^refs/heads/ci/pr-[0-9]+$ ]]; then
-            BRANCH="${REF#refs/heads/}"
-            echo "Cleaning up temporary branch: $BRANCH"
-            # Delete the branch from remote (ignore errors if already deleted)
-            git push origin --delete "$BRANCH" 2>/dev/null || echo "Branch $BRANCH already deleted or not found"
-            echo "✓ Cleanup complete"
-          else
-            echo "Not a ci/pr-* branch (ref: $REF), skipping cleanup"
-          fi
-
-  fork-merge-group-check:
-    needs: prepare-or-promote
-    if: needs.prepare-or-promote.outputs.reason == 'merge_group_contains_fork'
+  workflow-integrity-check:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
     permissions:
-      statuses: write
+      pull-requests: read
     steps:
-      - name: Check pre-merge-tests status for fork PRs
+      - name: Check for workflow changes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          set -euo pipefail
+           set -euo pipefail
+           echo "Checking if .github/workflows/premerge-ci.yml is modified in PR #$PR_NUMBER..."
+           CHANGES=$(gh pr diff "$PR_NUMBER" --name-only)
 
-          echo "merge_group contains fork PR(s). Checking pre-merge-tests commit statuses..."
+           if echo "$CHANGES" | grep -q "^.github/workflows/premerge-ci.yml$"; then
+             echo "❌ Critical workflow modification detected!"
+             echo "For security reasons, this workflow file cannot be modified via Pull Request."
+             echo "Please revert changes to .github/workflows/premerge-ci.yml to pass this check."
+             exit 1
+           fi
 
-          # Extract PR numbers from merge_group payload
-          PRS=$(jq -r '.merge_group.pull_requests[].number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-
-          if [ -z "$PRS" ]; then
-            echo "⚠️ Warning: No pull requests listed in merge_group payload."
-            echo "This is unexpected. Proceeding with caution (passing)."
-            exit 0
-          fi
-
-          ALL_PASSED=true
-          for PR in $PRS; do
-            # Check if this is a fork PR
-            PR_DATA=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" 2>/dev/null || echo "{}")
-            HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name // ""')
-            BASE_REPO=$(echo "$PR_DATA" | jq -r '.base.repo.full_name // ""')
-            HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha // ""')
-
-            if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
-              echo "PR #$PR is same-repo, skipping status check."
-              continue
-            fi
-
-            if [ -z "$HEAD_SHA" ]; then
-              echo "❌ Could not get HEAD SHA for PR #$PR."
-              ALL_PASSED=false
-              continue
-            fi
-
-            echo "PR #$PR is from fork ($HEAD_REPO). Checking commit status for $HEAD_SHA..."
-
-            # Get the combined status for the commit
-            STATUS_DATA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" 2>/dev/null || echo "{}")
-
-            # Find the pre-merge-tests status
-            PRIV_STATUS=$(echo "$STATUS_DATA" | jq -r '.statuses[] | select(.context == "pre-merge-tests") | .state' | head -1)
-
-            echo "  Commit: $HEAD_SHA"
-            echo "  pre-merge-tests status: ${PRIV_STATUS:-not found}"
-
-            if [ -z "$PRIV_STATUS" ]; then
-              echo "❌ No pre-merge-tests status found for PR #$PR. Please ensure the ci/pr-* run completed."
-              ALL_PASSED=false
-            elif [ "$PRIV_STATUS" = "pending" ]; then
-              echo "⏳ pre-merge-tests is still pending for PR #$PR. Please wait for completion."
-              ALL_PASSED=false
-            elif [ "$PRIV_STATUS" != "success" ]; then
-              echo "❌ pre-merge-tests status is '$PRIV_STATUS' for PR #$PR."
-              ALL_PASSED=false
-            else
-              echo "✅ pre-merge-tests passed for PR #$PR."
-            fi
-          done
-
-          if [ "$ALL_PASSED" = "true" ]; then
-            echo ""
-            echo "All fork PR privileged tests have passed. Merge queue check succeeded."
-            exit 0
-          else
-            echo ""
-            echo "One or more fork PR privileged tests have not passed. Failing merge queue check."
-            exit 1
-          fi
-
-      - name: Report pre-merge-tests status to merge group commit
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MERGE_GROUP_SHA: ${{ github.event.merge_group.head_sha }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          JOB_STATUS: ${{ job.status }}
-        run: |
-          if [ "$JOB_STATUS" = "success" ]; then
-            STATE="success"
-            DESCRIPTION="Fork PR privileged tests verified"
-          else
-            STATE="failure"
-            DESCRIPTION="Fork PR privileged tests failed"
-          fi
-
-          echo "Reporting pre-merge-tests status ($STATE) to merge group commit ${MERGE_GROUP_SHA}..."
-          gh api "repos/${{ github.repository }}/statuses/${MERGE_GROUP_SHA}" \
-            -X POST \
-            -f state=$STATE \
-            -f context=pre-merge-tests \
-            -f description="$DESCRIPTION" \
-            -f target_url="${RUN_URL}"
-          echo "✅ Successfully reported pre-merge-tests status."
+           echo "✅ Workflow integrity verified (file not modified)."
