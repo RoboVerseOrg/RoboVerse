@@ -23,7 +23,7 @@ env:
   ECR_REPOSITORY: "roboverse-dev"
 
 jobs:
-  pre-merge-tests:
+  pre-merge-tests-impl:
     if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -396,6 +396,26 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  pre-merge-tests:
+    if: always()
+    needs: [workflow-integrity-check, pre-merge-tests-impl]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            if [[ "${{ needs.workflow-integrity-check.result }}" != "success" ]]; then
+              echo "❌ Workflow integrity check failed."
+              exit 1
+            fi
+            echo "✅ Workflow integrity verified. Ready for merge queue."
+          elif [[ "${{ github.event_name }}" == "merge_group" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+             if [[ "${{ needs.pre-merge-tests-impl.result }}" != "success" ]]; then
+               echo "❌ Tests failed."
+               exit 1
+             fi
+             echo "✅ Tests passed."
+          fi
+
   workflow-integrity-check:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request_target'
@@ -409,7 +429,7 @@ jobs:
         run: |
            set -euo pipefail
            echo "Checking if .github/workflows/premerge-ci.yml is modified in PR #$PR_NUMBER..."
-           CHANGES=$(gh pr diff "$PR_NUMBER" --name-only)
+           CHANGES=$(gh pr diff "$PR_NUMBER" --name-only -R ${{ github.repository }})
 
            if echo "$CHANGES" | grep -q "^.github/workflows/premerge-ci.yml$"; then
              echo "❌ Critical workflow modification detected!"
