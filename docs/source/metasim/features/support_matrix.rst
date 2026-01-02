@@ -94,7 +94,7 @@ Robot Configuration
      -
      -
      -
-   * - ``torque_limit``
+   * - ``effort_limit_sim``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.effort_limit>`_
      -
      -
