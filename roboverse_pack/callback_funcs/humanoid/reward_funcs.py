@@ -112,7 +112,7 @@ def _get_indices(env: EnvTypes, sub_names: tuple[str] | str, all_names: list[str
 def joint_deviation_l1(env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str]) -> torch.Tensor:
     """Penalize joint positions that deviate from the default one."""
     indices = _get_indices(env, joint_names, env.sorted_joint_names)
-    # extract the used quantities (to enable type-hinting)
+    # extract the used quantities (to enable type-hinting).
     robot_state = env_states.robots[env.name]
     # compute out of limits constraints
     angle = robot_state.joint_pos[:, indices] - env.default_dof_pos[indices]
