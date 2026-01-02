@@ -119,25 +119,6 @@ jobs:
           echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
           echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
 
-      - name: Log routing decision
-        run: |
-          echo "run_direct: ${{ steps.decide.outputs.run_direct }}"
-          echo "pr_number: ${{ steps.decide.outputs.pr_number }}"
-          echo "reason: ${{ steps.decide.outputs.reason }}"
-
-      - name: Ensure promotion token exists
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          (env.PRIV_CI_PUSH_TOKEN == '' || env.PRIV_CI_PUSH_TOKEN == null)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
-        run: |
-          gh pr comment "$PR_NUMBER" --body "🔒 Privileged CI promotion skipped: secret \`PRIV_CI_PUSH_TOKEN\` is not configured."
-          echo "Missing PRIV_CI_PUSH_TOKEN; exiting router after notifying PR."
-          exit 0
-
       - name: Check actor permission
         id: perm
         if: >
@@ -153,22 +134,6 @@ jobs:
           perm=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq .permission 2>/dev/null || echo "none")
           echo "permission=$perm" >> "$GITHUB_OUTPUT"
           echo "Actor: $ACTOR, permission: $perm"
-
-      - name: Skip promotion without push access
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          steps.perm.outputs.permission != '' &&
-          (steps.perm.outputs.permission == 'read' || steps.perm.outputs.permission == 'triage' || steps.perm.outputs.permission == 'none')
-        env:
-          ACTOR: ${{ github.actor }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr comment "$PR_NUMBER" --body "🔒 Privileged CI promotion skipped: @${ACTOR} does not have push permission on ${REPO}."
-          echo "Insufficient permission; exiting router after notifying PR."
-          exit 0
 
       - name: Checkout repository for promotion
         if: >
@@ -188,7 +153,7 @@ jobs:
         env:
           PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
           REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
         run: |
           set -euo pipefail
           BRANCH="ci/pr-${PR_NUMBER}"
@@ -197,17 +162,6 @@ jobs:
           gh pr checkout "$PR_NUMBER"
           git push origin HEAD:"$BRANCH"
 
-      - name: Comment promotion result
-        if: >
-          github.event_name == 'pull_request_target' &&
-          steps.decide.outputs.reason == 'fork PR requires promotion' &&
-          (steps.perm.outputs.permission == 'write' || steps.perm.outputs.permission == 'maintain' || steps.perm.outputs.permission == 'admin')
-        env:
-          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BRANCH="ci/pr-${PR_NUMBER}"
-          gh pr comment "$PR_NUMBER" --body "🔐 Privileged CI has been promoted to branch \`${BRANCH}\`. Tests will run from that branch."
 
   pre-merge-tests:
     needs: prepare-or-promote
@@ -222,6 +176,8 @@ jobs:
         # change to the source code directory
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
       - run: aws --version
       ############# Prebuild ############
       - name: pre_build
@@ -279,10 +235,10 @@ jobs:
           # Create ECR repository if it doesn't exist
           aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
             aws ecr create-repository --repository-name $ECR_REPOSITORY
-            echo "Waiting for instance $INSTANCE_ID to be running..."
-            aws ec2 wait instance-running \
-              --instance-ids $INSTANCE_ID \
-              --region $REGION
+          echo "Waiting for instance $INSTANCE_ID to be running..."
+          aws ec2 wait instance-running \
+            --instance-ids $INSTANCE_ID \
+            --region $REGION
 
           echo "Getting instance IP address..."
           EC2_INSTANCE_IP=$(aws ec2 describe-instances \
@@ -301,7 +257,7 @@ jobs:
             --output text > ~/.ssh/id_rsa.pub
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_*
-          echo "Host $EC2_INSTANCE_IP\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" >> ~/.ssh/config
+          printf "Host %s\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" "$EC2_INSTANCE_IP" >> ~/.ssh/config
 
           echo "Sending SSH public key to instance..."
           aws ec2-instance-connect send-ssh-public-key \
@@ -316,7 +272,7 @@ jobs:
           echo "====Copying source code...===="
           wait_time=$RETRY_WAIT_TIME
           SRC_DIR=$(basename $GITHUB_WORKSPACE)
-          echo ""====Check environment variables..."===="
+          echo "====Check environment variables...===="
           echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
           echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
           echo "EC2_USER_NAME=$EC2_USER_NAME"
@@ -333,7 +289,7 @@ jobs:
 
           retry_count=0
 
-          # change to parent directory t
+          # change to parent directory to copy files
           cd ..
 
           while [ $retry_count -lt $MAX_RETRIES ]; do
@@ -557,7 +513,7 @@ jobs:
         if: always()  # always try to terminate the instance
         run: |
           echo "Cleaning up resources..."
-          if [ ! -z "$INSTANCE_ID" ]; then
+          if [ -n "$INSTANCE_ID" ]; then
               echo "Terminating EC2 instance $INSTANCE_ID..."
               aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $REGION || true
           fi
@@ -584,82 +540,66 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Comment result to PR
+
+      - name: Report commit status to PR
         if: always()
         uses: actions/github-script@v7
         env:
           JOB_STATUS: ${{ job.status }}
+          PRIV_CI_PUSH_TOKEN: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
         with:
+          github-token: ${{ secrets.PRIV_CI_PUSH_TOKEN }}
           script: |
-            const fs = require('fs');
+            const status = process.env.JOB_STATUS;
+            const ref = context.ref;
 
-            const status = process.env.JOB_STATUS;          // success / failure / cancelled
-            const ref = context.ref;                        // refs/heads/ci/pr-123 or merge_group scenario
-
-            // only reply comments to branches ci/pr-* branches, skip commenting in merge_group runs
+            // Only report status for ci/pr-* branches
             const match = ref.match(/^refs\/heads\/ci\/pr-(\d+)$/);
             if (!match) {
-              core.info(`Ref ${ref} is not a ci/pr-* branch, skip PR comment.`);
+              core.info(`Ref ${ref} is not a ci/pr-* branch, skip status reporting.`);
               return;
             }
 
             const prNumber = Number(match[1]);
 
-            let emoji, msg;
+            // Get the PR's HEAD SHA
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            const sha = pr.head.sha;
+            core.info(`Reporting status to PR #${prNumber} commit ${sha}`);
+
+            // Map job status to commit status state
+            let state, description;
             if (status === 'success') {
-              emoji = '✅';
-              msg = `Privileged CI passed on branch \`${ref.split('/').pop()}\`.`;
+              state = 'success';
+              description = 'Privileged CI tests passed';
             } else if (status === 'cancelled') {
-              emoji = '⚪️';
-              msg = `Privileged CI was cancelled on branch \`${ref.split('/').pop()}\`.`;
+              state = 'error';
+              description = 'Privileged CI tests were cancelled';
             } else {
-              emoji = '❌';
-              msg = `Privileged CI failed on branch \`${ref.split('/').pop()}\`.`;
+              state = 'failure';
+              description = 'Privileged CI tests failed';
             }
 
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}#artifacts`;
 
-            // Read test exit codes if available (copied to workspace by previous step)
-            let testSummary = '';
-            try {
-              const exitCodesPath = 'test_exit_codes.txt';
-              if (fs.existsSync(exitCodesPath)) {
-                const exitCodesContent = fs.readFileSync(exitCodesPath, 'utf8');
-                const exitCodes = {};
-                exitCodesContent.split('\n').forEach(line => {
-                  const [key, value] = line.split('=');
-                  if (key && value) exitCodes[key.trim()] = parseInt(value.trim());
-                });
-
-                const testSuites = [
-                  { name: 'General', code: exitCodes['GENERAL_TEST_EXIT_CODE'] },
-                  { name: 'MuJoCo', code: exitCodes['MUJOCO_TEST_EXIT_CODE'] },
-                  { name: 'Sapien3', code: exitCodes['SAPIEN3_TEST_EXIT_CODE'] },
-                  { name: 'IsaacSim', code: exitCodes['ISAACSIM_TEST_EXIT_CODE'] },
-                  { name: 'IsaacGym', code: exitCodes['ISAACGYM_TEST_EXIT_CODE'] }
-                ];
-
-                testSummary = '\n\n**Test Suite Results:**\n';
-                testSuites.forEach(suite => {
-                  const icon = (suite.code === 0 || suite.code === undefined) ? '✅' : '❌';
-                  testSummary += `- ${icon} ${suite.name} tests\n`;
-                });
-
-                testSummary += `\n📦 [Download test logs](${artifactUrl})`;
-              }
-            } catch (error) {
-              core.warning(`Failed to read test exit codes: ${error.message}`);
-            }
-
-            const body = `${emoji} ${msg}${testSummary}\n\n🔗 [View full details](${runUrl})`;
-
-            await github.rest.issues.createComment({
+            // Create commit status
+            await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              body
+              sha: sha,
+              state: state,
+              context: 'pre-merge-tests',
+              description: description,
+              target_url: runUrl
             });
+
+            core.info(`✅ Reported status '${state}' to commit ${sha}`);
+
       - name: Clean up ci/pr-* branch
         if: always()
         run: |
@@ -675,12 +615,107 @@ jobs:
             echo "Not a ci/pr-* branch (ref: $REF), skipping cleanup"
           fi
 
-  fork-merge-group-placeholder:
+  fork-merge-group-check:
     needs: prepare-or-promote
     if: needs.prepare-or-promote.outputs.reason == 'merge_group_contains_fork'
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     steps:
-      - name: Skip privileged tests for fork merge group
+      - name: Check pre-merge-tests status for fork PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
         run: |
-          echo "merge_group contains fork PR(s)."
-          echo "Skipping MetaSim EC2 tests on merge_group and relying on ci/pr-* runs for privileged CI."
+          set -euo pipefail
+
+          echo "merge_group contains fork PR(s). Checking pre-merge-tests commit statuses..."
+
+          # Extract PR numbers from merge_group payload
+          PRS=$(jq -r '.merge_group.pull_requests[].number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+
+          if [ -z "$PRS" ]; then
+            echo "⚠️ Warning: No pull requests listed in merge_group payload."
+            echo "This is unexpected. Proceeding with caution (passing)."
+            exit 0
+          fi
+
+          ALL_PASSED=true
+          for PR in $PRS; do
+            # Check if this is a fork PR
+            PR_DATA=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" 2>/dev/null || echo "{}")
+            HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name // ""')
+            BASE_REPO=$(echo "$PR_DATA" | jq -r '.base.repo.full_name // ""')
+            HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha // ""')
+
+            if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+              echo "PR #$PR is same-repo, skipping status check."
+              continue
+            fi
+
+            if [ -z "$HEAD_SHA" ]; then
+              echo "❌ Could not get HEAD SHA for PR #$PR."
+              ALL_PASSED=false
+              continue
+            fi
+
+            echo "PR #$PR is from fork ($HEAD_REPO). Checking commit status for $HEAD_SHA..."
+
+            # Get the combined status for the commit
+            STATUS_DATA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" 2>/dev/null || echo "{}")
+
+            # Find the pre-merge-tests status
+            PRIV_STATUS=$(echo "$STATUS_DATA" | jq -r '.statuses[] | select(.context == "pre-merge-tests") | .state' | head -1)
+
+            echo "  Commit: $HEAD_SHA"
+            echo "  pre-merge-tests status: ${PRIV_STATUS:-not found}"
+
+            if [ -z "$PRIV_STATUS" ]; then
+              echo "❌ No pre-merge-tests status found for PR #$PR. Please ensure the ci/pr-* run completed."
+              ALL_PASSED=false
+            elif [ "$PRIV_STATUS" = "pending" ]; then
+              echo "⏳ pre-merge-tests is still pending for PR #$PR. Please wait for completion."
+              ALL_PASSED=false
+            elif [ "$PRIV_STATUS" != "success" ]; then
+              echo "❌ pre-merge-tests status is '$PRIV_STATUS' for PR #$PR."
+              ALL_PASSED=false
+            else
+              echo "✅ pre-merge-tests passed for PR #$PR."
+            fi
+          done
+
+          if [ "$ALL_PASSED" = "true" ]; then
+            echo ""
+            echo "All fork PR privileged tests have passed. Merge queue check succeeded."
+            exit 0
+          else
+            echo ""
+            echo "One or more fork PR privileged tests have not passed. Failing merge queue check."
+            exit 1
+          fi
+
+      - name: Report pre-merge-tests status to merge group commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_GROUP_SHA: ${{ github.event.merge_group.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          if [ "$JOB_STATUS" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="Fork PR privileged tests verified"
+          else
+            STATE="failure"
+            DESCRIPTION="Fork PR privileged tests failed"
+          fi
+
+          echo "Reporting pre-merge-tests status ($STATE) to merge group commit ${MERGE_GROUP_SHA}..."
+          gh api "repos/${{ github.repository }}/statuses/${MERGE_GROUP_SHA}" \
+            -X POST \
+            -f state=$STATE \
+            -f context=pre-merge-tests \
+            -f description="$DESCRIPTION" \
+            -f target_url="${RUN_URL}"
+          echo "✅ Successfully reported pre-merge-tests status."
