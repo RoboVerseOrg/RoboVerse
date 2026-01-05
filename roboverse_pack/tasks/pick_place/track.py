@@ -1,0 +1,499 @@
+"""Franka gripper track task from eval trajectory.
+
+Adapted from grasp_test.py for Franka:
+- Removed all contact-related logic
+- Only track reward (no force/lift rewards)
+- Use gripper EE instead of hand
+- Gripper stays closed throughout episode
+"""
+
+from __future__ import annotations
+
+import copy
+import importlib.util
+import logging
+import pickle
+from pathlib import Path
+
+import torch
+
+from metasim.constants import PhysicStateType
+from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
+from metasim.task.registry import register_task
+from metasim.task.rl_task import RLTaskEnv
+from metasim.utils.math import quat_apply
+from roboverse_pack.tasks.pick_place.utils import Utils
+
+logger = logging.getLogger(__name__)
+
+# Repo root (…/Dynamic-Dexterous-Digital-Cousin-Benchmark)
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+@register_task("pick_place.track_eval", "track_eval")
+class GraspLiftFromEvalTaskFranka(RLTaskEnv):
+    """Franka gripper track task: init state from eval trajectory, gripper stays closed."""
+
+    # Default scenario (required by metasim.task.gym_registration wrappers)
+    # Use bbq_sauce asset as the tracked "object" to match eval conventions.
+    scenario = ScenarioCfg(
+        objects=[
+            RigidObjCfg(
+                name="object",
+                scale=(2, 2, 2),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
+            ),
+            RigidObjCfg(
+                name="basket",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/usd/basket.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/urdf/basket.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/mjcf/basket.xml",
+            ),
+            # Trajectory markers (visual waypoints)
+            *[
+                RigidObjCfg(
+                    name=f"traj_marker_{i}",
+                    urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
+                    mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
+                    usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
+                    scale=0.2,
+                    physics=PhysicStateType.RIGIDBODY,
+                    enabled_gravity=False,
+                    collision_enabled=False,
+                )
+                for i in range(5)
+            ],
+        ],
+        robots=["franka"],
+        sim_params=SimParamCfg(dt=0.005),
+        decimation=4,
+    )
+
+    # Which eval traj file to use as init-state source
+    EVAL_PKL_PATH = str(REPO_ROOT / "eval_trajs/approach_rand_franka_eval.pkl")
+    # Select which frame in each episode
+    FRAME_INDEX = -1  # last frame
+
+    # Names must match what was saved in eval pkl (evaluate.py)
+    EVAL_ROBOT_NAME = "franka"
+    EVAL_OBJECT_NAME = "object"
+
+    # Gripper control: keep closed throughout episode
+    GRIPPER_CLOSE_VALUE = 0.0  # Closed
+    GRIPPER_OPEN_VALUE = 0.04  # Open
+
+    # Marker layout template (saved from keyboard tool). We will align this template
+    # to each env's object init pose from eval pkl so marker relative layout stays consistent.
+    MARKER_POSE_PY_PATH = str(REPO_ROOT / "get_started/output/saved_poses_20260103_165527.py")
+    MARKER_REF_OBJECT_NAME = "bbq_sauce"  # object key inside the saved pose file
+    _cached_marker_template = None
+
+    @classmethod
+    def _load_eval_episodes(cls) -> list[dict]:
+        """Load episode list from eval pkl.
+
+        Expected pkl format (from `roboverse_learn/rl/fast_td3/evaluate.py`):
+        trajs = {robot_name: [ {init_state, actions, states(list[frame_state])}, ... ]}
+        Each episode is dict{init_state, actions, states(list[frame_state])}.
+        """
+        p = Path(cls.EVAL_PKL_PATH)
+        if not p.exists():
+            raise FileNotFoundError(f"EVAL_PKL_PATH not found: {cls.EVAL_PKL_PATH}")
+        with p.open("rb") as f:
+            data = pickle.load(f)
+        if cls.EVAL_ROBOT_NAME not in data:
+            raise KeyError(f"Robot '{cls.EVAL_ROBOT_NAME}' not in pkl. Keys: {list(data.keys())}")
+        episodes = data[cls.EVAL_ROBOT_NAME]
+        if not isinstance(episodes, list) or len(episodes) == 0:
+            raise ValueError("Eval pkl has empty episode list.")
+        return episodes
+
+    @classmethod
+    def _load_marker_template(cls) -> dict:
+        """Load marker template poses from a python file (generated by keyboard tool)."""
+        if cls._cached_marker_template is not None:
+            return cls._cached_marker_template
+
+        p = Path(cls.MARKER_POSE_PY_PATH)
+        if not p.exists():
+            raise FileNotFoundError(f"MARKER_POSE_PY_PATH not found: {cls.MARKER_POSE_PY_PATH}")
+
+        spec = importlib.util.spec_from_file_location("marker_pose_template", str(p))
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Failed to import marker template from: {p}")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+
+        poses = getattr(mod, "poses", None)
+        if not isinstance(poses, dict) or "objects" not in poses:
+            raise ValueError(f"Marker template file does not contain valid `poses`: {p}")
+
+        cls._cached_marker_template = poses
+        return poses
+
+    def _get_initial_states(self) -> list[dict] | None:
+        """Initial states: per-env state comes from eval pkl (env i -> episode i)."""
+        episodes = self._load_eval_episodes()
+        n_ep = len(episodes)
+
+        obj_name = self.object_name if hasattr(self, "object_name") else "object"
+        robot_name = "franka"
+
+        # Marker template: align saved marker layout to each env's object init pose.
+        tmpl = self._load_marker_template()
+        tmpl_objects = tmpl.get("objects", {}) or {}
+        # pick reference object in template
+        ref_obj_key = None
+        for k in (self.MARKER_REF_OBJECT_NAME, "object"):
+            if k in tmpl_objects:
+                ref_obj_key = k
+                break
+        if ref_obj_key is None:
+            raise KeyError(
+                f"Marker template missing reference object. Tried: {self.MARKER_REF_OBJECT_NAME!r}, 'object'. "
+                f"Available: {list(tmpl_objects.keys())}"
+            )
+
+        ref_obj_pos = torch.as_tensor(tmpl_objects[ref_obj_key]["pos"], dtype=torch.float32)
+        ref_obj_quat = torch.as_tensor(tmpl_objects[ref_obj_key]["rot"], dtype=torch.float32)
+        ref_obj_quat = ref_obj_quat / torch.norm(ref_obj_quat).clamp(min=1e-9)
+        ref_obj_quat_conj = Utils.quat_conjugate(ref_obj_quat)
+
+        # Precompute marker relative poses in ref-object frame
+        marker_rel: dict[str, tuple[torch.Tensor, torch.Tensor]] = {}
+        for mi in range(5):
+            mname = f"traj_marker_{mi}"
+            if mname not in tmpl_objects:
+                # fallback: put missing markers at ref object
+                mpos = ref_obj_pos.clone()
+                mquat = ref_obj_quat.clone()
+            else:
+                mpos = torch.as_tensor(tmpl_objects[mname]["pos"], dtype=torch.float32)
+                mquat = torch.as_tensor(tmpl_objects[mname]["rot"], dtype=torch.float32)
+                mquat = mquat / torch.norm(mquat).clamp(min=1e-9)
+
+            # position: into ref-object local frame
+            mpos_rel = quat_apply(ref_obj_quat_conj.unsqueeze(0), (mpos - ref_obj_pos).unsqueeze(0))[0]
+            # rotation: q_rel = q_ref^{-1} * q_marker
+            mquat_rel = Utils.quat_mul(ref_obj_quat_conj.unsqueeze(0), mquat.unsqueeze(0))[0]
+            mquat_rel = mquat_rel / torch.norm(mquat_rel).clamp(min=1e-9)
+            marker_rel[mname] = (mpos_rel, mquat_rel)
+
+        init_list: list[dict] = []
+        obj_pos_list: list[torch.Tensor] = []
+        obj_rot_list: list[torch.Tensor] = []
+
+        for env_i in range(int(self.num_envs)):
+            ep = episodes[int(env_i % n_ep)]
+            if not isinstance(ep, dict) or "states" not in ep:
+                raise ValueError("Eval pkl episode format error: missing 'states'.")
+            states = ep["states"]
+            if not isinstance(states, list) or len(states) == 0:
+                raise ValueError("Eval pkl episode has empty 'states'.")
+            frame = states[int(self.FRAME_INDEX)]
+            if not isinstance(frame, dict):
+                raise ValueError("Eval pkl selected frame is not a dict.")
+
+            if self.EVAL_OBJECT_NAME not in frame or self.EVAL_ROBOT_NAME not in frame:
+                raise KeyError(
+                    f"Eval frame missing '{self.EVAL_OBJECT_NAME}' or '{self.EVAL_ROBOT_NAME}'. Keys: {list(frame.keys())}"
+                )
+
+            obj = frame[self.EVAL_OBJECT_NAME]
+            rob = frame[self.EVAL_ROBOT_NAME]
+
+            obj_pos = torch.as_tensor(obj["pos"], dtype=torch.float32)
+            obj_rot = torch.as_tensor(obj["rot"], dtype=torch.float32)
+            obj_rot = obj_rot / torch.norm(obj_rot).clamp(min=1e-9)
+            obj_pos_list.append(obj_pos)
+            obj_rot_list.append(obj_rot)
+
+            robot_pos = torch.as_tensor(rob["pos"], dtype=torch.float32)
+            robot_rot = torch.as_tensor(rob["rot"], dtype=torch.float32)
+            dof_pos = dict(rob.get("dof_pos", {}) or {})
+
+            # Force gripper to closed position
+            dof_pos["panda_finger_joint1"] = self.GRIPPER_CLOSE_VALUE
+            dof_pos["panda_finger_joint2"] = self.GRIPPER_CLOSE_VALUE
+
+            init_one = {"objects": {}, "robots": {}}
+            init_one["objects"][obj_name] = {"pos": obj_pos, "rot": obj_rot}
+
+            # Markers: align template relative layout to this env's object pose
+            for mi in range(5):
+                mname = f"traj_marker_{mi}"
+                mpos_rel, mquat_rel = marker_rel[mname]
+                mpos = obj_pos + quat_apply(obj_rot.unsqueeze(0), mpos_rel.unsqueeze(0))[0]
+                mquat = Utils.quat_mul(obj_rot.unsqueeze(0), mquat_rel.unsqueeze(0))[0]
+                mquat = mquat / torch.norm(mquat).clamp(min=1e-9)
+                init_one["objects"][mname] = {"pos": mpos, "rot": mquat}
+
+            init_one["robots"][robot_name] = {"pos": robot_pos, "rot": robot_rot, "dof_pos": dof_pos}
+            init_list.append(copy.deepcopy(init_one))
+
+        # Cache per-env object init pose
+        self._pkl_object_init_pos = torch.stack(obj_pos_list, dim=0).to(self.device)  # (B,3)
+        self._pkl_object_init_quat = torch.stack(obj_rot_list, dim=0).to(self.device)  # (B,4)
+        return init_list
+
+    def __init__(self, scenario, device=None):
+        self.object_name = "object"
+        self.robot_name = "franka"
+        self._gripper_joint_indices = None
+        self._last_action = None
+        self._action_scale = 0.04
+
+        # Initialize waypoint tracking (simplified)
+        self.num_waypoints = 5
+        self.reach_threshold = 0.05
+        self.current_waypoint_idx = None
+        self.waypoint_positions = None
+        self.waypoint_rotations = None
+
+        super().__init__(scenario, device=device)
+
+        # Initialize waypoint tracking buffers
+        if self.waypoint_positions is None:
+            # Initialize from initial states
+            initial_states_list = self._get_initial_states()
+            if initial_states_list and len(initial_states_list) > 0:
+                first_env_state = initial_states_list[0]
+                waypoint_positions = []
+                waypoint_rotations = []
+                for i in range(self.num_waypoints):
+                    marker_name = f"traj_marker_{i}"
+                    if marker_name in first_env_state["objects"]:
+                        pos = first_env_state["objects"][marker_name]["pos"]
+                        rot = first_env_state["objects"][marker_name]["rot"]
+                        waypoint_positions.append(pos)
+                        waypoint_rotations.append(rot)
+                if waypoint_positions:
+                    self.waypoint_positions = torch.stack(waypoint_positions).to(self.device)
+                    self.waypoint_rotations = (
+                        torch.stack(waypoint_rotations).to(self.device) if waypoint_rotations else None
+                    )
+                else:
+                    # Fallback: use object position
+                    obj_pos = first_env_state["objects"][self.object_name]["pos"]
+                    self.waypoint_positions = obj_pos.unsqueeze(0).repeat(self.num_waypoints, 1).to(self.device)
+                    self.waypoint_rotations = None
+
+        if self.current_waypoint_idx is None:
+            self.current_waypoint_idx = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+
+        # Override reward functions: only tracking reward
+        self.reward_functions = [
+            self._reward_trajectory_tracking,
+        ]
+        self.reward_weights = [
+            1.0,
+        ]
+
+        # Initialize gripper joint indices
+        joint_names = self.handler.get_joint_names(self.robot_name, sort=True)
+        self._gripper_joint_indices = [i for i, name in enumerate(joint_names) if "finger" in name.lower()]
+
+    def step(self, actions):
+        """Step with gripper forced to closed position."""
+        if not isinstance(actions, torch.Tensor):
+            actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
+        if actions.ndim == 1:
+            actions = actions.unsqueeze(0)
+
+        # Apply delta control
+        if self._last_action is None:
+            states = self.handler.get_states()
+            self._last_action = states.robots[self.robot_name].joint_pos.clone()
+
+        delta_actions = actions * self._action_scale
+        new_actions = self._last_action + delta_actions
+        real_actions = torch.clamp(new_actions, self._action_low, self._action_high)
+
+        # Force gripper to closed position
+        if self._gripper_joint_indices and len(self._gripper_joint_indices) >= 2:
+            real_actions[:, self._gripper_joint_indices[0]] = self.GRIPPER_CLOSE_VALUE
+            real_actions[:, self._gripper_joint_indices[1]] = self.GRIPPER_CLOSE_VALUE
+        elif self._gripper_joint_indices and len(self._gripper_joint_indices) == 1:
+            real_actions[:, self._gripper_joint_indices[0]] = self.GRIPPER_CLOSE_VALUE
+
+        # Call parent step
+        obs, reward, terminated, time_out, info = super().step(real_actions)
+        self._last_action = real_actions.clone()
+
+        return obs, reward, terminated, time_out, info
+
+    def reset(self, env_ids=None):
+        """Reset environment."""
+        obs, info = super().reset(env_ids=env_ids)
+
+        if env_ids is None:
+            env_ids_tensor = torch.arange(self.num_envs, device=self.device)
+        else:
+            env_ids_tensor = (
+                torch.tensor(env_ids, device=self.device) if not isinstance(env_ids, torch.Tensor) else env_ids
+            )
+
+        # Reset waypoint tracking
+        if self.current_waypoint_idx is not None:
+            self.current_waypoint_idx[env_ids_tensor] = 0
+
+        # Reset last action
+        if self._last_action is None:
+            states = self.handler.get_states()
+            self._last_action = states.robots[self.robot_name].joint_pos.clone()
+        else:
+            states = self.handler.get_states()
+            self._last_action[env_ids_tensor] = states.robots[self.robot_name].joint_pos[env_ids_tensor].clone()
+
+        return obs, info
+
+    def _reward_trajectory_tracking(self, env_states) -> torch.Tensor:
+        """Simplified tracking reward: only position and rotation tracking, no contact gate."""
+        object_pos = env_states.objects[self.object_name].root_state[:, 0:3]
+        object_quat = env_states.objects[self.object_name].root_state[:, 3:7]
+        object_quat = object_quat / torch.norm(object_quat, dim=-1, keepdim=True).clamp(min=1e-9)
+
+        # Get current waypoint target
+        waypoint_idx = self.current_waypoint_idx.to(self.device)
+        waypoint_idx = torch.clamp(waypoint_idx, 0, self.num_waypoints - 1)
+
+        # Get target position and rotation from waypoints
+        # waypoint_positions is (num_waypoints, 3), need to index properly
+        env_indices = torch.arange(self.num_envs, device=self.device)
+        target_pos = self.waypoint_positions[waypoint_idx, :]  # (B, 3)
+        target_quat = getattr(self, "waypoint_rotations", None)
+        if target_quat is not None:
+            target_quat = target_quat[waypoint_idx, :]  # (B, 4)
+        else:
+            target_quat = None
+
+        # Position reward
+        pos_error = torch.norm(object_pos - target_pos, dim=-1)
+        pos_reward = torch.exp(-self.reach_threshold * 10.0 * pos_error)  # Scale for reasonable reward range
+
+        # Rotation reward (if waypoint rotations available)
+        if target_quat is not None:
+            target_quat = target_quat / torch.norm(target_quat, dim=-1, keepdim=True).clamp(min=1e-9)
+            diff_quat = Utils.quat_mul(target_quat, Utils.quat_conjugate(object_quat))
+            angle = Utils.quat_angle(diff_quat)
+            rot_reward = torch.exp(-5.0 * angle)
+        else:
+            rot_reward = torch.ones_like(pos_reward)
+
+        # Simple tracking reward: position + rotation (no contact gate)
+        tracking_reward = pos_reward + 0.5 * rot_reward
+
+        return tracking_reward
+
+    def _reward(self, env_states) -> torch.Tensor:
+        """Reward: only trajectory tracking."""
+        return self._reward_trajectory_tracking(env_states)
+
+    def _terminated(self, env_states) -> torch.Tensor:
+        """Terminate if object moves too far from target waypoint."""
+        object_pos = env_states.objects[self.object_name].root_state[:, 0:3]
+
+        waypoint_idx = self.current_waypoint_idx.to(self.device)
+        waypoint_idx = torch.clamp(waypoint_idx, 0, self.num_waypoints - 1)
+
+        target_pos = self.waypoint_positions[waypoint_idx, :]  # (B, 3)
+        dist_to_target = torch.norm(object_pos - target_pos, dim=-1)
+
+        # Terminate if too far from target
+        dist_fail = dist_to_target > (self.reach_threshold * 3.0)  # 3x threshold
+
+        return dist_fail
+
+    def _observation(self, env_states) -> torch.Tensor:
+        """Simplified observation: robot joints, object state, target waypoint."""
+        robot_state = env_states.robots[self.robot_name]
+        joint_pos = robot_state.joint_pos.to(self.device)
+        joint_vel = getattr(robot_state, "joint_vel", None)
+        if joint_vel is None:
+            joint_vel = torch.zeros_like(joint_pos)
+        else:
+            joint_vel = joint_vel.to(self.device)
+
+        obj_state = env_states.objects[self.object_name].root_state.to(self.device)
+        obj_pos = obj_state[:, 0:3]
+        obj_quat = obj_state[:, 3:7]
+        obj_quat = obj_quat / torch.norm(obj_quat, dim=-1, keepdim=True).clamp(min=1e-9)
+        obj_lin_vel = obj_state[:, 7:10]
+        obj_ang_vel = obj_state[:, 10:13]
+
+        # Get gripper EE pose (instead of hand)
+        gripper_pos, gripper_quat = self._get_ee_state(env_states)
+        gripper_pos = gripper_pos.to(self.device)
+        gripper_quat = gripper_quat.to(self.device)
+        gripper_quat = gripper_quat / torch.norm(gripper_quat, dim=-1, keepdim=True).clamp(min=1e-9)
+
+        # Get current waypoint target
+        waypoint_idx = self.current_waypoint_idx.to(self.device)
+        waypoint_idx = torch.clamp(waypoint_idx, 0, self.num_waypoints - 1)
+        target_pos = self.waypoint_positions[waypoint_idx, :]  # (B, 3)
+        target_quat = getattr(self, "waypoint_rotations", None)
+        if target_quat is not None:
+            target_quat = target_quat[waypoint_idx, :]  # (B, 4)
+        else:
+            target_quat = gripper_quat
+
+        # Relative position: gripper to object
+        gripper_to_obj = obj_pos - gripper_pos
+
+        # Relative position: object to target
+        obj_to_target = target_pos - obj_pos
+
+        # Time feature
+        t = (self._episode_steps.to(self.device, dtype=torch.float32) / float(self.max_episode_steps)).clamp(0.0, 1.0)
+        t = t.unsqueeze(-1)
+
+        obs_list = [
+            joint_pos,
+            joint_vel,
+            obj_pos,
+            Utils.quat_to_tan_norm(obj_quat),
+            obj_lin_vel,
+            obj_ang_vel,
+            gripper_pos,
+            Utils.quat_to_tan_norm(gripper_quat),
+            gripper_to_obj,
+            obj_to_target,
+            t,
+        ]
+
+        return torch.cat(obs_list, dim=-1)
+
+    def _get_ee_state(self, states):
+        """Return EE state using body queries.
+
+        Returns:
+            ee_pos_world: (B, 3) gripper position from body
+            ee_quat_world: (B, 4) gripper rotation quaternion (wxyz)
+        """
+        rs = states.robots[self.robot_name]
+        device = (rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)).device
+
+        body_state = (
+            rs.body_state
+            if isinstance(rs.body_state, torch.Tensor)
+            else torch.tensor(rs.body_state, device=device).float()
+        )
+
+        # Use panda_hand directly for EE position
+        hand_body_index = rs.body_names.index("panda_hand")
+        hand_pos = body_state[:, hand_body_index, 0:3]  # (B, 3)
+        hand_quat = body_state[:, hand_body_index, 3:7]  # (B, 4) wxyz
+
+        # Add offset from panda_hand to actual gripper center
+        offset_local = torch.tensor([0.0, 0.0, 0.1034], device=device, dtype=hand_pos.dtype)  # (3,)
+        offset_world = quat_apply(hand_quat, offset_local.expand(hand_pos.shape[0], -1))  # (B, 3)
+
+        ee_pos_world = hand_pos + offset_world  # (B, 3)
+        ee_quat_world = hand_quat  # (B, 4) wxyz
+
+        return ee_pos_world, ee_quat_world

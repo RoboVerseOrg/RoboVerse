@@ -14,7 +14,6 @@ import pygame
 import rootutils
 import torch
 import tyro
-from huggingface_hub import snapshot_download
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -360,16 +359,6 @@ if __name__ == "__main__":
 
     args = tyro.cli(Args)
 
-    # Download EmbodiedGen assets from huggingface dataset
-    data_dir = "roboverse_data/assets/EmbodiedGenData"
-    snapshot_download(
-        repo_id="HorizonRobotics/EmbodiedGenData",
-        repo_type="dataset",
-        local_dir=data_dir,
-        allow_patterns="demo_assets/*",
-        local_dir_use_symlinks=False,
-    )
-
     scenario = ScenarioCfg(
         robots=[args.robot],
         headless=args.headless,
@@ -377,118 +366,20 @@ if __name__ == "__main__":
         simulator=args.sim,
         cameras=[PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))],
         objects=[
-            # EmbodiedGen Assets - Put Banana in Mug Scene
             RigidObjCfg(
-                name="table",
+                name="bbq_sauce",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/usd/table.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/result/table.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/table/mjcf/table.xml",
+                usd_path="/home/priosin/murphy/rvl/Dynamic-Dexterous-Digital-Cousin-Benchmark/drill_2/drill_2_ref_with_render.usda",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
             ),
-            # RigidObjCfg(
-            #     name="lamp",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/usd/0a4489b1a2875c82a580f8b62d346e08.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/0a4489b1a2875c82a580f8b62d346e08.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/lighting_fixtures/1/mjcf/0a4489b1a2875c82a580f8b62d346e08.xml",
-            # ),
             RigidObjCfg(
                 name="basket",
-                scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/usd/663158968e3f5900af1f6e7cecef24c7.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/663158968e3f5900af1f6e7cecef24c7.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/basket/1/mjcf/663158968e3f5900af1f6e7cecef24c7.xml",
-            ),
-            # RigidObjCfg(
-            #     name="bowl",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/usd/0f296af3df66565c9e1a7c2bc7b35d72.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/0f296af3df66565c9e1a7c2bc7b35d72.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/bowl/1/mjcf/0f296af3df66565c9e1a7c2bc7b35d72.xml",
-            # ),
-            RigidObjCfg(
-                name="cutting_tools",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/usd/c5810e7c2c785fe3940372b205090bad.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/c5810e7c2c785fe3940372b205090bad.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/cutting_tools/1/mjcf/c5810e7c2c785fe3940372b205090bad.xml",
-            ),
-            # RigidObjCfg(
-            #     name="screw_driver",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/usd/ae51f060e3455e9f84a4fec81cc9284b.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/ae51f060e3455e9f84a4fec81cc9284b.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/screwdriver/1/mjcf/ae51f060e3455e9f84a4fec81cc9284b.xml",
-            # ),
-            RigidObjCfg(
-                name="spoon",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/usd/2f1c3077a8d954e58fc0bf75cf35e849.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/2f1c3077a8d954e58fc0bf75cf35e849.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/new_assets/spoon/1/mjcf/2f1c3077a8d954e58fc0bf75cf35e849.xml",
-            ),
-            # RigidObjCfg(
-            #     name="banana",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/usd/banana.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/result/banana.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/banana/mjcf/banana.xml",
-            # ),
-            RigidObjCfg(
-                name="mug",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/usd/mug.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/result/mug.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/mug/mjcf/mug.xml",
-            ),
-            RigidObjCfg(
-                name="book",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/usd/book.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/result/book.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/book/mjcf/book.xml",
-            ),
-            # RigidObjCfg(
-            #     name="lamp",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/usd/lamp.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/result/lamp.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/lamp/mjcf/lamp.xml",
-            # ),
-            # RigidObjCfg(
-            #     name="remote_control",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/usd/remote_control.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/result/remote_control.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/remote_control/mjcf/remote_control.xml",
-            # ),
-            # RigidObjCfg(
-            #     name="rubiks_cube",
-            #     scale=(1, 1, 1),
-            #     physics=PhysicStateType.RIGIDBODY,
-            #     usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/usd/rubik's_cube.usd",
-            #     urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/result/rubik's_cube.urdf",
-            #     mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/rubik's_cube/mjcf/rubik's_cube.xml",
-            # ),
-            RigidObjCfg(
-                name="vase",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/usd/vase.usd",
-                urdf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/result/vase.urdf",
-                mjcf_path="roboverse_data/assets/EmbodiedGenData/demo_assets/vase/mjcf/vase.xml",
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/usd/basket.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/urdf/basket.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/basket/mjcf/basket.xml",
             ),
             # Trajectory markers
             RigidObjCfg(
@@ -497,7 +388,7 @@ if __name__ == "__main__":
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
-                physics=PhysicStateType.XFORM,
+                physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=False,
                 collision_enabled=False,
             ),
@@ -507,7 +398,7 @@ if __name__ == "__main__":
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
-                physics=PhysicStateType.XFORM,
+                physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=False,
                 collision_enabled=False,
             ),
@@ -517,7 +408,7 @@ if __name__ == "__main__":
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
-                physics=PhysicStateType.XFORM,
+                physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=False,
                 collision_enabled=False,
             ),
@@ -527,7 +418,7 @@ if __name__ == "__main__":
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
-                physics=PhysicStateType.XFORM,
+                physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=False,
                 collision_enabled=False,
             ),
@@ -537,7 +428,7 @@ if __name__ == "__main__":
                 mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                 usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
                 scale=0.2,
-                physics=PhysicStateType.XFORM,
+                physics=PhysicStateType.RIGIDBODY,
                 enabled_gravity=False,
                 collision_enabled=False,
             ),
@@ -550,94 +441,51 @@ if __name__ == "__main__":
     init_states = [
         {
             "objects": {
-                "table": {
-                    "pos": torch.tensor([0.4, -0.2, 0.4]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "banana": {
-                    "pos": torch.tensor([0.28, -0.58, 0.825]),  # Starting position on table (left)
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "mug": {
-                    "pos": torch.tensor([0.68, -0.34, 0.863]),  # Target: mug on table (right)
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "book": {
-                    "pos": torch.tensor([0.3, -0.28, 0.82]),  # Book on table
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "remote_control": {
-                    "pos": torch.tensor([0.68, -0.54, 0.811]),  # Remote on table
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "rubiks_cube": {
-                    "pos": torch.tensor([0.48, -0.54, 0.83]),  # Rubik's cube on table
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "vase": {
-                    "pos": torch.tensor([0.30, 0.05, 0.95]),  # Vase on table
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                },
-                "lamp": {
-                    "pos": torch.tensor([0.680000, 0.310000, 1.050000]),
-                    "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
+                # Objects (poses aligned with get_started/output/saved_poses_20260103_125412.py)
+                "bbq_sauce": {
+                    "pos": torch.tensor([0.60155, -0.238381, 0.130646]),
+                    "rot": torch.tensor([0.285742, -0.003199, -0.009186, 0.958257]),
                 },
                 "basket": {
-                    "pos": torch.tensor([0.280000, 0.130000, 0.825000]),
-                    "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                },
-                "bowl": {
-                    "pos": torch.tensor([0.620000, -0.080000, 0.863000]),
-                    "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
-                },
-                "cutting_tools": {
-                    "pos": torch.tensor([0.640000, -0.320000, 0.820000]),
-                    "rot": torch.tensor([0.930507, 0.000000, -0.000000, 0.366273]),
-                },
-                "screw_driver": {
-                    "pos": torch.tensor([0.320000, -0.340000, 0.811000]),
-                    "rot": torch.tensor([-0.868588, -0.274057, -0.052298, 0.409518]),
-                },
-                "spoon": {
-                    "pos": torch.tensor([0.530000, -0.690000, 0.850000]),
-                    "rot": torch.tensor([0.961352, -0.120799, 0.030845, 0.245473]),
+                    "pos": torch.tensor([0.500239, -0.000000, -0.070055]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
                 # Trajectory markers - initial positions
                 "traj_marker_0": {
-                    "pos": torch.tensor([0.380000, -0.500000, 1.160000]),
+                    "pos": torch.tensor([0.601550, -0.238381, 0.280646]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_1": {
-                    "pos": torch.tensor([0.390000, -0.420000, 0.900000]),
+                    "pos": torch.tensor([0.576222, -0.178786, 0.192971]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_2": {
-                    "pos": torch.tensor([0.350000, -0.320000, 0.850000]),
+                    "pos": torch.tensor([0.550895, -0.119191, 0.105296]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_3": {
-                    "pos": torch.tensor([0.330000, -0.160000, 1.100000]),
-                    "rot": torch.tensor([0.601833, 0.798621, 0.000000, -0.000000]),
+                    "pos": torch.tensor([0.525567, -0.059596, 0.017621]),
+                    "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
                 "traj_marker_4": {
-                    "pos": torch.tensor([0.310000, 0.150000, 1.130000]),
+                    "pos": torch.tensor([0.500239, -0.000000, -0.070055]),
                     "rot": torch.tensor([1.000000, 0.000000, 0.000000, 0.000000]),
                 },
             },
             "robots": {
                 "franka": {
-                    "pos": torch.tensor([0.8, -0.8, 0.78]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    "pos": torch.tensor([0.00000, 0.000000, -0.030003]),
+                    "rot": torch.tensor([1.000000, -0.000000, -0.000000, -0.000000]),
                     "dof_pos": {
-                        "panda_joint1": 0.0,
-                        "panda_joint2": -0.785398,
-                        "panda_joint3": 0.0,
-                        "panda_joint4": -2.356194,
-                        "panda_joint5": 0.0,
-                        "panda_joint6": 1.570796,
+                        "panda_finger_joint1": 0.039977,
+                        "panda_finger_joint2": 0.039998,
+                        "panda_joint1": -0.320002,
+                        "panda_joint2": 0.414581,
+                        "panda_joint3": -0.060001,
+                        "panda_joint4": -1.776189,
+                        "panda_joint5": -0.000007,
+                        "panda_joint6": 2.170883,
                         "panda_joint7": 0.785398,
-                        "panda_finger_joint1": 0.04,
-                        "panda_finger_joint2": 0.04,
                     },
                 },
             },
@@ -795,7 +643,7 @@ if __name__ == "__main__":
                             states[env_idx]["robots"][selected_name]["rot"] = new_rot
 
                 handler.set_states(states)
-
+                handler.simulate()
         if step % 10 == 0:
             handler.refresh_render()
         step += 1

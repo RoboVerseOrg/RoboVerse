@@ -142,6 +142,9 @@ class RLTaskEnv(BaseTaskEnv):
             actions = actions.unsqueeze(0)
 
         real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
+        # Cache the *executed dof target* for logging/trajectory saving.
+        # Downstream tools (e.g. evaluate_settle150.py) must use target, not measured joint_pos.
+        self._last_action_target = real_actions.detach().clone()
         self.handler.set_dof_targets(real_actions)
         self.handler.simulate()
         states = self.handler.get_states()

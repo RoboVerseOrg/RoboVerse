@@ -21,6 +21,15 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
 
+import sys
+
+import rootutils
+
+# Ensure we always import the local RoboVerse + metasim first (avoid picking up external installs)
+REPO_ROOT = rootutils.setup_root(__file__, pythonpath=True)
+if str(REPO_ROOT) not in sys.path[:1]:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import tyro
 from loguru import logger as log
 from rich.logging import RichHandler
@@ -34,13 +43,13 @@ from metasim.scenario.render import RenderCfg
 class Args:
     render: RenderCfg = field(default_factory=RenderCfg)
     """Renderer options"""
-    task: str = "pick_butter"
+    task: str = "track_il"
     """Task name"""
     robot: str = "franka"
     """Robot name"""
     num_envs: int = 1
     """Number of parallel environments, find a proper number for best performance on your machine"""
-    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
+    sim: Literal["isaaclab", "isaacsim", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "isaacsim"
     """Simulator backend"""
     demo_start_idx: int | None = None
     """The index of the first demo to collect, None for all demos"""
@@ -48,7 +57,7 @@ class Args:
     """Target number of successful demos to collect"""
     retry_num: int = 0
     """Number of retries for a failed demo"""
-    headless: bool = True
+    headless: bool = False
     """Run in headless mode"""
     table: bool = True
     """Try to add a table"""
@@ -71,7 +80,7 @@ class Args:
     renderer: Literal["isaaclab", "mujoco", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3"] = "mujoco"
 
     # Domain randomization options
-    level: Literal[0, 1, 2, 3] = 0
+    level: Literal[0, 1, 2, 3] = 3
     """Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"""
     scene_mode: Literal[0, 1, 2, 3] = 0
     """Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"""
@@ -127,8 +136,6 @@ from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
 from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
-
-rootutils.setup_root(__file__, pythonpath=True)
 
 # Import randomization components
 try:
@@ -417,9 +424,9 @@ def main():
     if is_libero_dataset:
         dp_pos = (2.0, 0.0, 2)
     elif dp_camera:
-        dp_pos = (1.0, 0.0, 0.75)
+        dp_pos = (1.2, 0.0, 0.75)
     else:
-        dp_pos = (1.5, 0.0, 1.5)
+        dp_pos = (1.2, 0.0, 0.75)
 
     camera = PinholeCameraCfg(data_types=["rgb", "depth"], pos=dp_pos, look_at=(0.0, 0.0, 0.0))
 

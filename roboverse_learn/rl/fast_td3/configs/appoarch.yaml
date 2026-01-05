@@ -1,32 +1,26 @@
-# Configuration for FastTD3 Training - Track Task (Screwdriver)
-# Stage 3: Track task for screwdriver object - for training trajectory tracking
-# Starts from saved grasp states from approach_grasp_simple_screwdriver, only trains trajectory tracking
+# FastTD3 configuration for HandTraj task
 
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Environment
-# -------------------------------------------------------------------------------
-sim: "isaacgym"
+# ------------------------------------------------------------------------------
+sim: "isaacsim"
 robots: ["franka"]
-task: "pick_place.track_screwdriver"  # Uses screwdriver-specific track task
+task: "track"
 decimation: 4
 train_or_eval: "train"
-headless: False
+headless: false
 
-# State file path for track task (pkl file path for grasp states)
-# If null, uses default path or env var PICK_PLACE_TRACK_STATE_FILE
-state_file_path: "eval_states/pick_place.approach_grasp_screwdriver_franka_lift_states_100states_20251210_154907.pkl"
-
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Seeds & Device
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 seed: 1
 cuda: true
 torch_deterministic: true
 device_rank: 0
 
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Rollout & Timesteps
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 num_envs: 400
 num_eval_envs: 400
 total_timesteps: 2000000
@@ -42,11 +36,24 @@ gamma: 0.99
 tau: 0.1
 
 # -------------------------------------------------------------------------------
+# Elite(best trajectory) memory (optional)
+# -------------------------------------------------------------------------------
+# If enabled, keeps the best episode trajectory seen so far (by episode return) and
+# mixes its transitions into replay sampling so the best traj is never "forgotten"
+# when the circular replay buffer overwrites old data.
+elite_enable: true
+# Per-env ratio of elite samples mixed into each update batch (0.0~1.0).
+# Actual elite transitions per update = num_envs * round((batch_size/num_envs) * elite_sample_ratio)
+elite_sample_ratio: 0.05
+# Optional path to save the current best trajectory (TensorDict-like tensors).
+elite_save_path: "output/elite/best_traj.pt"
+elite_store_on_gpu: true
+
+# -------------------------------------------------------------------------------
 # Update Schedule
 # -------------------------------------------------------------------------------
 policy_frequency: 2
-num_updates: 5
-
+num_updates: 6
 # -------------------------------------------------------------------------------
 # Optimizer & Network
 # -------------------------------------------------------------------------------
@@ -62,9 +69,9 @@ num_atoms: 101
 # Value Distribution & Exploration
 # -------------------------------------------------------------------------------
 v_min: 0
-v_max: 600.0
+v_max: 300.0
 policy_noise: 0.001
-std_min: 0.001
+std_min: 0.01
 std_max: 0.4
 noise_clip: 0.5
 
@@ -83,13 +90,11 @@ measure_burnin: 3
 # -------------------------------------------------------------------------------
 # Logging & Checkpointing
 # -------------------------------------------------------------------------------
-wandb_project: "pick_place_track_screwdriver"
-exp_name: "pick_place_track_screwdriver"
+wandb_project: "get_started_fttd3"
+exp_name: "get_started_fttd3"
 use_wandb: false
-checkpoint_path: null
-run_name: "pick_place.track_screwdriver"  # Unique run name for screwdriver track task
-model_dir: "models/track_screwdriver"  # Separate directory for track screwdriver checkpoints
-eval_interval: 5000
-save_interval: 5000
+checkpoint_path: null #"/home/server/Desktop/projects/DDDC/models/2025.12.09_21.37.32/hand_traj_150000.pt" #"/home/server/Desktop/projects/DDDC/models/2025.12.09_16.40.45/hand_traj_60000.pt" # null  #"/home/server/Desktop/projects/DDDC/models/2025.12.09_00.31.21/hand_traj_360000.pt" #"/home/server/Desktop/projects/DDDC/models/2025.12.08_16.21.20/hand_traj_150000.pt"
+eval_interval: 3000
+save_interval: 3000
 video_width: 1024
 video_height: 1024

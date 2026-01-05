@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from metasim.scenario.robot import RobotCfg
-from metasim.types import Action, RobotAction
+from metasim.types import Action
 
 
 def convert_state_v2_to_v3(state: dict, robot: RobotCfg):
@@ -25,17 +25,39 @@ def convert_state_v2_to_v3(state: dict, robot: RobotCfg):
     return state_v3
 
 
-def convert_actions_v2_to_v3(actions_v2: list[RobotAction], robot: RobotCfg) -> list[Action]:
+def convert_actions_v2_to_v3(actions_v2, robot: RobotCfg):
     """Convert v2 action format to v3 action format.
 
-    Args:
-        actions_v2: The v2 actions.
-        robot: The robot cfg instance.
+    This repo has multiple "v2" producer styles:
+    - **episode-major**: all_actions is a list of episodes; each episode is a list of step actions.
+      Each step action is either:
+        - payload dict: {"dof_pos_target": {...}, ...}
+        - already-wrapped v3 dict: {robot.name: {"dof_pos_target": {...}, ...}}
+    - **legacy**: step action could be a 1-element list containing the payload dict.
 
-    Returns:
-        The converted v3 action.
+    v3 format expected by handlers is:
+      - all_actions_v3: list[episode]
+      - episode: list[step_action]
+      - step_action: {robot.name: payload_dict}
     """
-    return [[{robot.name: a} for a in action] for action in actions_v2]
+
+    def _wrap_step(step) -> Action:
+        # already v3
+        if isinstance(step, dict) and robot.name in step and isinstance(step.get(robot.name), dict):
+            return step  # type: ignore[return-value]
+
+        # common v2: payload dict
+        if isinstance(step, dict):
+            return {robot.name: step}
+
+        # legacy: [payload_dict]
+        if isinstance(step, (list, tuple)) and len(step) == 1 and isinstance(step[0], dict):
+            return {robot.name: step[0]}
+
+        raise ValueError(f"Unsupported v2 action step format for v3 conversion: {type(step)}")
+
+    # actions_v2 is list of episodes
+    return [[_wrap_step(step) for step in episode] for episode in actions_v2]
 
 
 def convert_traj_v2_to_v3(

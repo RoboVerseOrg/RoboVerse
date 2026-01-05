@@ -34,18 +34,18 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 @configclass
 class Args:
-    task: str = "put_banana"
+    task: str = "approach_il"
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
     ## Handlers
-    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "sapien3"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"] = "isaacsim"
     renderer: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3"] | None = None
 
     ## Others
     num_envs: int = 1
-    headless: bool = True
+    headless: bool = False
 
     ## IK Solver
     ik_solver: Literal["curobo", "pyroki"] = "pyroki"

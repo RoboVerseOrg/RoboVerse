@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 # Try to import randomization components
 try:
     from .camera_randomizer import (
+        CameraLookAtRandomCfg,
         CameraPositionRandomCfg,
         CameraRandomCfg,
         CameraRandomizer,
@@ -398,7 +399,15 @@ class DomainRandomizationManager:
             cam_config = CameraRandomCfg(
                 camera_name=camera_name,
                 position=CameraPositionRandomCfg(
-                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (0.0, 0.1)),
+                    # User-facing default for demo DR: ±5cm on xyz
+                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
+                    use_delta=True,
+                    distribution="uniform",
+                    enabled=True,
+                ),
+                # Keep look-at mode (orbit camera) and add ±5cm jitter on look_at xyz
+                look_at=CameraLookAtRandomCfg(
+                    look_at_delta=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
                     use_delta=True,
                     distribution="uniform",
                     enabled=True,
@@ -484,6 +493,10 @@ class DomainRandomizationManager:
                 for cam_rand in self.randomizers.get("camera", []):
                     if cam_rand.cfg.camera_name == camera.name:
                         cam_rand._original_positions[camera.name] = new_pos
+                        # Also update look-at baseline for delta-mode look_at jitter
+                        if not hasattr(cam_rand, "_original_look_at"):
+                            cam_rand._original_look_at = {}
+                        cam_rand._original_look_at[camera.name] = new_look_at
 
         if hasattr(self.handler, "_update_camera_pose"):
             self.handler._update_camera_pose()

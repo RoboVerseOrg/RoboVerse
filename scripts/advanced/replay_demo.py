@@ -60,6 +60,13 @@ class Args:
     save_video_path: str | None = "test_output/test_replay.mp4"
     stop_on_runout: bool = False
 
+    # Trajectory selection / replay controls
+    traj_filepath: str | None = None
+    demo_start_idx: int = 0
+    demo_count: int = 1
+    save_video_per_demo: bool = True
+    save_image_per_demo: bool = False
+
     def __post_init__(self):
         log.info(f"Args: {self}")
 
@@ -186,7 +193,12 @@ def main():
     env = task_cls(scenario, device=device)
     toc = time.time()
     log.trace(f"Time to launch: {toc - tic:.2f}s")
-    traj_filepath = env.traj_filepath
+    traj_filepath = args.traj_filepath or getattr(env, "traj_filepath", None)
+    if traj_filepath is None:
+        raise ValueError(
+            "Trajectory filepath is not set. Pass --traj-filepath /abs/path/to/xxx_v2.pkl "
+            "or use a task that defines env.traj_filepath (e.g. pick_place.track_il)."
+        )
     ## Data
     tic = time.time()
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
@@ -200,64 +212,90 @@ def main():
     ## Main
     ########################################################
 
-    obs_saver = ObsSaver(image_dir=args.save_image_dir, video_path=args.save_video_path)
     os.makedirs("test_output", exist_ok=True)
 
-    ## Reset before first step
-    tic = time.time()
-    obs, extras = env.reset()
-    toc = time.time()
-    log.trace(f"Time to reset: {toc - tic:.2f}s")
-    obs_saver.add(obs)
+    # Resolve replay demo indices.
+    demo_start = max(0, int(args.demo_start_idx))
+    demo_count = max(1, int(args.demo_count))
+    demo_end = min(demo_start + demo_count, len(all_actions) if all_actions is not None else len(init_states))
+    demo_indices = list(range(demo_start, demo_end))
+    if not demo_indices:
+        raise ValueError(f"No demos to replay: start={demo_start}, count={demo_count}, total={len(init_states)}")
 
-    ## Main loop
-    step = 0
-    while True:
-        log.debug(f"Step {step}")
+    # Replay each demo sequentially (recommended for IsaacSim).
+    for demo_i in demo_indices:
+        log.info(f"[replay_demo] Replaying demo {demo_i}/{len(init_states) - 1}")
+
+        # Slice one demo as a single-env batch so existing helper fns keep working.
+        demo_init_states = [init_states[demo_i]]
+        demo_actions = [all_actions[demo_i]] if all_actions is not None else None
+        demo_states = [all_states[demo_i]] if (args.object_states and all_states is not None) else None
+
+        # Per-demo saver (avoid OOM when demo_count is large).
+        image_dir = args.save_image_dir
+        video_path = args.save_video_path
+        if args.save_video_per_demo and video_path is not None:
+            root, ext = os.path.splitext(video_path)
+            if not ext:
+                ext = ".mp4"
+            video_path = f"{root}_demo{demo_i:04d}{ext}"
+        if args.save_image_per_demo and image_dir is not None:
+            image_dir = os.path.join(image_dir, f"demo{demo_i:04d}")
+        obs_saver = ObsSaver(image_dir=image_dir, video_path=video_path)
+
+        # Reset with the demo init state.
         tic = time.time()
-        if args.object_states:
-            ## TODO: merge states replay into env.step function
-            if all_states is None:
-                raise ValueError("All states are None, please check the trajectory file")
-            states = get_states(all_states, step, num_envs)
-            env.handler.set_states(states)
-            env.handler.refresh_render()
-            obs = env.handler.get_states()
-
-            ## XXX: hack
-            success = env.checker.check(env.handler, obs)
-            if success.any():
-                log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
-            if success.all():
-                break
-
-        else:
-            actions = get_actions(all_actions, step, num_envs, scenario.robots[0])
-            obs, reward, success, time_out, extras = env.step(actions)
-
-            if success.any():
-                log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
-
-            if time_out.any():
-                log.info(f"Env {time_out.nonzero().squeeze(-1).tolist()} timed out!")
-
-            if success.all() or time_out.all():
-                break
-
+        obs, extras = env.reset(states=demo_init_states, env_ids=list(range(num_envs)))
         toc = time.time()
-        log.trace(f"Time to step: {toc - tic:.2f}s")
-
-        tic = time.time()
+        log.trace(f"Time to reset: {toc - tic:.2f}s")
         obs_saver.add(obs)
-        toc = time.time()
-        log.trace(f"Time to save obs: {toc - tic:.2f}s")
-        step += 1
 
-        if args.stop_on_runout and get_runout(all_actions, step):
-            log.info("Run out of actions, stopping")
-            break
+        # Main loop for this demo
+        step = 0
+        while True:
+            log.debug(f"[replay_demo] demo={demo_i} step={step}")
+            tic = time.time()
+            if args.object_states:
+                if demo_states is None:
+                    raise ValueError("All states are None, please check the trajectory file")
+                states = get_states(demo_states, step, num_envs)
+                env.handler.set_states(states)
+                env.handler.refresh_render()
+                obs = env.handler.get_states()
 
-    obs_saver.save()
+                # NOTE: This branch is mainly for state-only replay; success checker is task-specific.
+                try:
+                    success = env.checker.check(env.handler, obs)
+                    if success.any():
+                        log.info(f"Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
+                    if success.all():
+                        break
+                except Exception:
+                    pass
+            else:
+                if demo_actions is None:
+                    raise ValueError("No actions found in the trajectory data")
+                actions = get_actions(demo_actions, step, num_envs, scenario.robots[0])
+                obs, reward, success, time_out, extras = env.step(actions)
+
+                if time_out.any():
+                    log.info(f"Env {time_out.nonzero().squeeze(-1).tolist()} timed out!")
+                    break
+
+            toc = time.time()
+            log.trace(f"Time to step: {toc - tic:.2f}s")
+
+            tic = time.time()
+            obs_saver.add(obs)
+            toc = time.time()
+            log.trace(f"Time to save obs: {toc - tic:.2f}s")
+            step += 1
+
+            if args.stop_on_runout and demo_actions is not None and get_runout(demo_actions, step):
+                log.info("Run out of actions, stopping this demo")
+                break
+
+        obs_saver.save()
     env.close()
     if args.sim == "isaacsim":
         env.handler.simulation_app.close()
