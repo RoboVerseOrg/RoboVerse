@@ -1,7 +1,6 @@
 import copy
 from typing import Dict
 
-import numba
 import numpy as np
 import torch
 from roboverse_learn.il.utils.normalize_util import get_image_range_normalizer
@@ -14,6 +13,26 @@ from roboverse_learn.il.utils.sampler import (
 )
 from roboverse_learn.il.datasets.base_dataset import BaseImageDataset
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
+
+#
+# Optional numba acceleration
+# - Numba can be unavailable or incompatible with the current NumPy version (e.g. NumPy>2.2).
+# - We fall back to pure-Python loops in that case (slower, but keeps training runnable).
+try:
+    import numba as _numba  # type: ignore
+
+    _NUMBA_AVAILABLE = True
+    prange = _numba.prange
+
+    def _jit(fn, *, parallel: bool):
+        return _numba.jit(fn, nopython=True, parallel=parallel)
+
+except Exception:  # pragma: no cover
+    _NUMBA_AVAILABLE = False
+    prange = range
+
+    def _jit(fn, *, parallel: bool):
+        return fn
 
 
 class RobotImageDataset(BaseImageDataset):
@@ -147,7 +166,7 @@ def _batch_sample_sequence(
     idx: np.ndarray,
     sequence_length: int,
 ):
-    for i in numba.prange(len(idx)):
+    for i in prange(len(idx)):
         buffer_start_idx, buffer_end_idx, sample_start_idx, sample_end_idx = indices[idx[i]]
         data[i, sample_start_idx:sample_end_idx] = input_arr[buffer_start_idx:buffer_end_idx]
         if sample_start_idx > 0:
@@ -156,8 +175,8 @@ def _batch_sample_sequence(
             data[i, sample_end_idx:] = data[i, sample_end_idx - 1]
 
 
-_batch_sample_sequence_sequential = numba.jit(_batch_sample_sequence, nopython=True, parallel=False)
-_batch_sample_sequence_parallel = numba.jit(_batch_sample_sequence, nopython=True, parallel=True)
+_batch_sample_sequence_sequential = _jit(_batch_sample_sequence, parallel=False)
+_batch_sample_sequence_parallel = _jit(_batch_sample_sequence, parallel=True)
 
 
 def batch_sample_sequence(

@@ -9,6 +9,21 @@ import numpy as np
 import zarr
 
 
+def _iter_kv(container):
+    """Iterate (key, value) pairs for dict-like containers.
+
+    Supports:
+    - built-in dict (has .items())
+    - zarr v2 Group (has .items())
+    - zarr v3 Group (has .keys() but no .items())
+    """
+    if hasattr(container, "items"):
+        return container.items()
+    if hasattr(container, "keys"):
+        return ((k, container[k]) for k in container.keys())
+    raise TypeError(f"Unsupported container type for key/value iteration: {type(container)!r}")
+
+
 def check_chunks_compatible(chunks: tuple, shape: tuple):
     assert len(shape) == len(chunks)
     for c in chunks:
@@ -92,7 +107,7 @@ class ReplayBuffer:
         assert "data" in root
         assert "meta" in root
         assert "episode_ends" in root["meta"]
-        for key, value in root["data"].items():
+        for key, value in _iter_kv(root["data"]):
             assert value.shape[0] == root["meta"]["episode_ends"][-1]
         self.root = root
 
@@ -139,7 +154,8 @@ class ReplayBuffer:
         Open a on-disk zarr directly (for dataset larger than memory).
         Slower.
         """
-        group = zarr.open(os.path.expanduser(zarr_path), mode)
+        # zarr v3 requires keyword args for mode
+        group = zarr.open(os.path.expanduser(zarr_path), mode=mode)
         return cls.create_from_group(group, **kwargs)
 
     # ============= copy constructors ===============
@@ -157,12 +173,14 @@ class ReplayBuffer:
         """
         Load to memory.
         """
-        src_root = zarr.group(src_store)
+        # zarr v3: opening a group defaults to mode='a', which fails for read-only stores.
+        # Use open_group(..., mode="r") for sources.
+        src_root = zarr.open_group(src_store, mode="r")
         root = None
         if store is None:
             # numpy backend
             meta = dict()
-            for key, value in src_root["meta"].items():
+            for key, value in _iter_kv(src_root["meta"]):
                 if len(value.shape) == 0:
                     meta[key] = np.array(value)
                 else:
@@ -235,7 +253,8 @@ class ReplayBuffer:
         if backend == "numpy":
             print("backend argument is deprecated!")
             store = None
-        group = zarr.open(os.path.expanduser(zarr_path), "r")
+        # zarr v3 requires keyword args for mode
+        group = zarr.open(os.path.expanduser(zarr_path), mode="r")
         return cls.copy_from_store(
             src_store=group.store,
             store=store,
@@ -269,12 +288,12 @@ class ReplayBuffer:
         else:
             meta_group = root.create_group("meta", overwrite=True)
             # save meta, no chunking
-            for key, value in self.root["meta"].items():
+            for key, value in _iter_kv(self.root["meta"]):
                 _ = meta_group.array(name=key, data=value, shape=value.shape, chunks=value.shape)
 
         # save data, chunk
         data_group = root.create_group("data", overwrite=True)
-        for key, value in self.root["data"].items():
+        for key, value in _iter_kv(self.root["data"]):
             cks = self._resolve_array_chunks(chunks=chunks, key=key, array=value)
             cpr = self._resolve_array_compressor(compressors=compressors, key=key, array=value)
             if isinstance(value, zarr.Array):
@@ -433,10 +452,12 @@ class ReplayBuffer:
         return self.data.keys()
 
     def values(self):
-        return self.data.values()
+        if hasattr(self.data, "values"):
+            return self.data.values()
+        return (self.data[k] for k in self.data.keys())
 
     def items(self):
-        return self.data.items()
+        return _iter_kv(self.data)
 
     def __getitem__(self, key):
         return self.data[key]

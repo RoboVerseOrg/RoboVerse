@@ -1,11 +1,23 @@
 from typing import Optional
 
-import numba
 import numpy as np
 from roboverse_learn.il.utils.replay_buffer import ReplayBuffer
 
 
-@numba.jit(nopython=True)
+# Optional numba acceleration (falls back gracefully if unavailable/incompatible)
+try:
+    import numba as _numba  # type: ignore
+
+    jit = _numba.jit
+except Exception:  # pragma: no cover
+    def jit(*_args, **_kwargs):
+        def _decorator(fn):
+            return fn
+
+        return _decorator
+
+
+@jit(nopython=True)
 def create_indices(
     episode_ends: np.ndarray,
     sequence_length: int,

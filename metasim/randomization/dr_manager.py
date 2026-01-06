@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 # Try to import randomization components
 try:
     from .camera_randomizer import (
-        CameraLookAtRandomCfg,
         CameraPositionRandomCfg,
         CameraRandomCfg,
         CameraRandomizer,
@@ -240,7 +239,7 @@ class DomainRandomizationManager:
                         name="table",
                         geometry_type="cube",
                         size=(1.8, 1.8, 0.1),
-                        position=(0.0, 0.0, 0.7 - 0.05),
+                        position=(0.0, 0.0, 0.75),
                         default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl",
                         add_collision=True,
                     )
@@ -399,15 +398,7 @@ class DomainRandomizationManager:
             cam_config = CameraRandomCfg(
                 camera_name=camera_name,
                 position=CameraPositionRandomCfg(
-                    # User-facing default for demo DR: ±5cm on xyz
-                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
-                    use_delta=True,
-                    distribution="uniform",
-                    enabled=True,
-                ),
-                # Keep look-at mode (orbit camera) and add ±5cm jitter on look_at xyz
-                look_at=CameraLookAtRandomCfg(
-                    look_at_delta=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
+                    delta_range=((-0.05, 0.05), (-0.05, 0.05), (0.0, 0.1)),
                     use_delta=True,
                     distribution="uniform",
                     enabled=True,
@@ -493,10 +484,6 @@ class DomainRandomizationManager:
                 for cam_rand in self.randomizers.get("camera", []):
                     if cam_rand.cfg.camera_name == camera.name:
                         cam_rand._original_positions[camera.name] = new_pos
-                        # Also update look-at baseline for delta-mode look_at jitter
-                        if not hasattr(cam_rand, "_original_look_at"):
-                            cam_rand._original_look_at = {}
-                        cam_rand._original_look_at[camera.name] = new_look_at
 
         if hasattr(self.handler, "_update_camera_pose"):
             self.handler._update_camera_pose()
@@ -549,7 +536,9 @@ class DomainRandomizationManager:
 
         # The reference plane (ground) moves to table surface
         # All objects and robots maintain their relative height from this plane
-        z_offset = table_height - ground_level
+        # For scene_mode=0: table was raised by 5cm, so reduce z_offset by 5cm to compensate
+        z_offset_adjustment = -0.07 if getattr(self.config, "scene_mode", 0) == 0 else 0.0
+        z_offset = table_height - ground_level + z_offset_adjustment
 
         log.info(
             f"[update_positions_to_table] Offsets: X={offset_x:.3f}, Y={offset_y:.3f}, Z={z_offset:.3f} (ground_level={ground_level:.3f})"

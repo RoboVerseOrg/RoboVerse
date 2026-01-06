@@ -368,9 +368,9 @@ if __name__ == "__main__":
         objects=[
             RigidObjCfg(
                 name="bbq_sauce",
-                scale=(1, 1, 1),
+                scale=(40, 40, 40),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="/home/priosin/murphy/rvl/Dynamic-Dexterous-Digital-Cousin-Benchmark/drill_2/drill_2_ref_with_render.usda",
+                usd_path="/home/priosin/murphy/rvl/Dynamic-Dexterous-Digital-Cousin-Benchmark/drill_2/drill_2_ref.usda",
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
             ),

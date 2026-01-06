@@ -17,11 +17,10 @@ Scene Modes:
 
 from __future__ import annotations
 
+import sys
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Literal
-
-import sys
 
 import rootutils
 
