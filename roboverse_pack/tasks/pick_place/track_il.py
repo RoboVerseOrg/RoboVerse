@@ -55,7 +55,7 @@ class TrackILTaskFranka(BaseTaskEnv):
                     urdf_path="roboverse_pack/tasks/pick_place/marker/marker.urdf",
                     mjcf_path="roboverse_pack/tasks/pick_place/marker/marker.xml",
                     usd_path="roboverse_pack/tasks/pick_place/marker/marker.usd",
-                    scale=0.2,
+                    scale=0.001,
                     physics=PhysicStateType.RIGIDBODY,
                     enabled_gravity=False,
                     collision_enabled=False,

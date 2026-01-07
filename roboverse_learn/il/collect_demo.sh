@@ -10,9 +10,9 @@ num_envs=1              # Number of parallel environments
 demo_start_idx=0        # Index of the first demo to collect
 sim_set=isaacsim
 cust_name=test
-num_demo_success=30
+num_demo_success=400
 
-expert_data_num=100
+expert_data_num=400
 
 obs_space=joint_pos
 act_space=joint_pos
