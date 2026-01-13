@@ -20,7 +20,6 @@ from roboverse_pack.callback_funcs.humanoid import (
     step_funcs,
     termination_funcs,
 )
-from roboverse_pack.queries.lidar import LidarPointCloud
 from roboverse_pack.randomization.humanoid import (
     MassRandomizer,
     MaterialRandomizer,
@@ -113,9 +112,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         },
     )
 
-    callbacks_query = {
-        "contact_forces": ContactForces(history_length=3)
-    }
+    callbacks_query = {"contact_forces": ContactForces(history_length=3)}
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(
             obj_name="g1_dof29",
