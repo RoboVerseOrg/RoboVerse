@@ -886,16 +886,26 @@ class IsaacsimHandler(BaseSimHandler):
             except Exception as e:
                 log.warning(f"Failed to download terrain material {mdl_path}: {e}")
 
+        num_envs = self._num_envs
+        env_spacing = float(self.scenario.env_spacing)
+
+        num_cols = math.ceil(math.sqrt(num_envs))
+        num_rows = math.ceil(num_envs / num_cols)
+
+        # make each tile at least env_spacing (add a margin so robot never touches tile boundary)
+        tile = 1.25 * env_spacing
+
         plane_gen_cfg = TerrainGeneratorCfg(
-            size=(100.0, 100.0),  # ground size (in total)
+            size=(tile, tile),
+            num_rows=num_rows,
+            num_cols=num_cols,
             horizontal_scale=0.1,
-            vertical_scale=0.0,
+            vertical_scale=0.005,
             slope_threshold=None,
             use_cache=False,
             sub_terrains={
                 "flat": mesh_cfg.MeshPlaneTerrainCfg(
                     proportion=1.0,
-                    size=(10.0, 10.0),
                 ),
             },
         )
