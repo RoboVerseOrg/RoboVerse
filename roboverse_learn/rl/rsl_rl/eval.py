@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import random
+import time
 
 try:
     import isaacgym  # noqa: F401
@@ -73,6 +74,10 @@ def evaluate(args: RslRlPPOConfig):
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
+    if args.sim == "mujoco":
+        args.cuda = False
+        args.device = "cpu"
+
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
     print(f"Using device: {device}")
 
@@ -110,17 +115,6 @@ def evaluate(args: RslRlPPOConfig):
 
     obs = wrapped_env.get_observations()
 
-    def _obs_to_device(obs: dict, device: torch.device) -> dict:
-        out = {}
-        for k, v in obs.items():
-            if isinstance(v, np.ndarray):
-                out[k] = torch.as_tensor(v, device=device)
-            elif torch.is_tensor(v):
-                out[k] = v.to(device)
-            else:
-                out[k] = torch.as_tensor(v, device=device)
-        return out
-
     # Resolve obs_groups (mimicking OnPolicyRunner.__init__)
     default_sets = ["critic"]
     args.obs_groups = resolve_obs_groups(obs, {}, default_sets)
@@ -157,8 +151,9 @@ def evaluate(args: RslRlPPOConfig):
     env.reset()
     obs, _, _, _, _ = env.step(torch.zeros(env.num_envs, env.num_actions, device=device))
     obs = wrapped_env.get_observations()
-    obs = _obs_to_device(obs, device)
     print(f"Starting evaluation for 1000000 steps...")
+
+    t0 = time.time()
     for i in range(1000000):
         # set fixed command
         env.commands_manager.value[:, 0] = 0.5
@@ -166,11 +161,8 @@ def evaluate(args: RslRlPPOConfig):
         env.commands_manager.value[:, 2] = 0.0
         actions = policy(obs)
         obs, _, _, _ = wrapped_env.step(actions)
-        obs = _obs_to_device(obs, device)
-
-        if (i + 1) % 1000 == 0:
-            print(f"Step {i + 1}/1000000")
-
+        if (i + 1) % 100 == 0:
+            print(f"Step {i + 1}/1000000 | Simulation time: {(i + 1) * env.step_dt:.2f}s | Elapsed time: {time.time() - t0:.2f}s")
     print("Evaluation complete!")
 
 
