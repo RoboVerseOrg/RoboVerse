@@ -38,6 +38,18 @@ Randomization Levels:
 
 Run:
     python get_started/12_domain_randomization.py --scene_mode 0 --level 2
+
+Using Custom Trajectory:
+    To replay a custom trajectory file, use the --traj_filepath argument:
+    python get_started/12_domain_randomization.py --traj_filepath path/to/your/trajectory_v2.pkl.gz
+
+    The trajectory file should be in v2 format with one of these extensions:
+    - _v2.pkl
+    - _v2.pkl.gz
+    - _v2.json
+    - _v2.yaml
+
+    If the file is in roboverse_data directory, it will be automatically downloaded if not found locally.
 """
 
 from __future__ import annotations
@@ -86,6 +98,7 @@ from metasim.scenario.render import RenderCfg
 from metasim.task.registry import get_task_class
 from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
+from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.obs_utils import ObsSaver
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
@@ -93,7 +106,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
 def create_env(args):
     """Create task environment with lights and camera."""
-    task_name = "close_box"
+    task_name = args.task
     task_cls = get_task_class(task_name)
 
     camera = PinholeCameraCfg(
@@ -635,6 +648,7 @@ def main():
         sim: Literal["isaacsim"] = "isaacsim"
         renderer: str | None = None
         robot: str = "franka"
+        task: str = "close_box"  # Task name (e.g., "close_box", "pick_cube", etc.)
         scene: str | None = None
         num_envs: int = 1
         headless: bool = False
@@ -643,6 +657,7 @@ def main():
         level: Literal[0, 1, 2, 3] = 1
         randomize_interval: int = 60
         render_mode: Literal["raytracing", "pathtracing"] = "raytracing"
+        traj_filepath: str | None = None  # Custom trajectory file path (optional)
 
     args = tyro.cli(Args)
 
@@ -654,6 +669,7 @@ def main():
     log.info("=" * 70)
     log.info("Domain Randomization Demo")
     log.info("=" * 70)
+    log.info(f"Task: {args.task}")
     log.info(f"Scene Mode: {args.scene_mode}")
     log.info(f"Randomization Level: {args.level}")
     log.info(f"Seed: {args.seed}")
@@ -663,8 +679,23 @@ def main():
     handler = env.handler
 
     # Load trajectory
-    traj_filepath = env.traj_filepath
+    # Use custom trajectory path if provided, otherwise use default from task
+    if args.traj_filepath is not None:
+        traj_filepath = args.traj_filepath
+        log.info(f"Using custom trajectory file: {traj_filepath}")
+        # Check if file exists, try to download if it's a roboverse_data path
+        if not os.path.exists(traj_filepath):
+            log.info("Trajectory file not found locally, attempting to download...")
+            check_and_download_single(traj_filepath)
+    else:
+        traj_filepath = env.traj_filepath
+        log.info(f"Using default trajectory file from task: {traj_filepath}")
+
+    assert os.path.exists(traj_filepath), f"Trajectory file does not exist: {traj_filepath}"
+    log.info(f"Loading trajectory from: {traj_filepath}")
+
     init_states, all_actions, _ = get_traj(traj_filepath, env.scenario.robots[0], handler)
+    log.info(f"Loaded {len(init_states)} trajectory episodes, {len(all_actions[0])} steps per episode")
     init_state = init_states[0]
 
     # Initialize randomizers (NEW: Auto-initializes and populates ObjectRegistry)
