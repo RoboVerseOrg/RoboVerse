@@ -11,7 +11,7 @@ class AgibotA2Dof12Cfg(RobotCfg):
     name: str = "agibot_a2_dof12"
     num_joints: int = 12
     urdf_path: str = "roboverse_data/robots/agibot_a2/urdf/agibot_a2_dof12.urdf"
-    # usd_path: str = "roboverse_data/robots/agibot_a2/usd/agibot_a2_dof12.usd"
+    usd_path: str = "roboverse_data/robots/agibot_a2/usd/agibot_a2_dof12.usd"
     xml_path: str = "roboverse_data/robots/agibot_a2/mjcf/agibot_a2_dof12.mjcf"
     mjcf_path: str = xml_path
 
@@ -19,18 +19,22 @@ class AgibotA2Dof12Cfg(RobotCfg):
     enabled_self_collisions: bool = False
 
     actuators: dict[str, BaseActuatorCfg] = {
-        "idx01_left_hip_roll": BaseActuatorCfg(stiffness=130, damping=5.0, torque_limit=76.8, velocity_limit=12.0),
-        "idx02_left_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, torque_limit=76.8, velocity_limit=12.0),
-        "idx03_left_hip_pitch": BaseActuatorCfg(stiffness=200, damping=6.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx04_left_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx05_left_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
-        "idx06_left_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
-        "idx07_right_hip_roll": BaseActuatorCfg(stiffness=130, damping=5.0, torque_limit=76.8, velocity_limit=12.0),
-        "idx08_right_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, torque_limit=76.8, velocity_limit=12.0),
-        "idx09_right_hip_pitch": BaseActuatorCfg(stiffness=200, damping=6.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx10_right_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, torque_limit=216.0, velocity_limit=12.0),
-        "idx11_right_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
-        "idx12_right_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, torque_limit=38.4, velocity_limit=12.0),
+        "idx01_left_hip_roll": BaseActuatorCfg(stiffness=130, damping=5.0, effort_limit_sim=76.8, velocity_limit=12.0),
+        "idx02_left_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, effort_limit_sim=76.8, velocity_limit=12.0),
+        "idx03_left_hip_pitch": BaseActuatorCfg(
+            stiffness=200, damping=6.0, effort_limit_sim=216.0, velocity_limit=12.0
+        ),
+        "idx04_left_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, effort_limit_sim=216.0, velocity_limit=12.0),
+        "idx05_left_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, effort_limit_sim=38.4, velocity_limit=12.0),
+        "idx06_left_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, effort_limit_sim=38.4, velocity_limit=12.0),
+        "idx07_right_hip_roll": BaseActuatorCfg(stiffness=130, damping=5.0, effort_limit_sim=76.8, velocity_limit=12.0),
+        "idx08_right_hip_yaw": BaseActuatorCfg(stiffness=130, damping=3.0, effort_limit_sim=76.8, velocity_limit=12.0),
+        "idx09_right_hip_pitch": BaseActuatorCfg(
+            stiffness=200, damping=6.0, effort_limit_sim=216.0, velocity_limit=12.0
+        ),
+        "idx10_right_tarsus": BaseActuatorCfg(stiffness=220, damping=7.0, effort_limit_sim=216.0, velocity_limit=12.0),
+        "idx11_right_toe_pitch": BaseActuatorCfg(stiffness=50, damping=1.5, effort_limit_sim=38.4, velocity_limit=12.0),
+        "idx12_right_toe_roll": BaseActuatorCfg(stiffness=50, damping=1.5, effort_limit_sim=38.4, velocity_limit=12.0),
     }
 
     joint_limits: dict[str, tuple[float, float]] = {
