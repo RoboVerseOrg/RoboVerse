@@ -422,9 +422,8 @@ class IsaacgymHandler(BaseSimHandler):
         asset_options.fix_base_link = self.robots[0].fix_base_link
         asset_options.disable_gravity = not self.robots[0].enabled_gravity
         asset_options.flip_visual_attachments = self.robots[0].isaacgym_flip_visual_attachments
-        asset_options.collapse_fixed_joints = self.robots[0].collapse_fixed_joints
+        asset_options.collapse_fixed_joints = getattr(self.robots[0], "collapse_fixed_joints", False)
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
-        # Defaults are set to free movement and will be updated based on the configuration in actuator_cfg below.
         asset_options.replace_cylinder_with_capsule = self.scenario.sim_params.replace_cylinder_with_capsule
         robot_asset = self.gym.load_asset(self.sim, asset_root, robot_asset_file, asset_options)
         # configure robot dofs
@@ -761,7 +760,6 @@ class IsaacgymHandler(BaseSimHandler):
 
         camera_states = {}
 
-        self.refresh_render()
         self.gym.start_access_image_tensors(self.sim)
 
         for cam_id, cam in enumerate(self.cameras):
@@ -864,12 +862,6 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
 
-    def refresh_render(self) -> None:
-        # Step the physics
-        self.gym.simulate(self.sim)
-        self.gym.fetch_results(self.sim, True)
-        self._render()
-
     def _simulate_one_physics_step(self):
         self.gym.simulate(self.sim)
         if self.device == "cpu":
@@ -891,6 +883,8 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _render(self) -> None:
         """Listen for keyboard events, step graphics and render the environment"""
+        if self.device != "cpu":
+            self.gym.fetch_results(self.sim, True)
         if not self.headless:
             for evt in self.gym.query_viewer_action_events(self.viewer):
                 if evt.action == "toggle_viewer_sync" and evt.value > 0:

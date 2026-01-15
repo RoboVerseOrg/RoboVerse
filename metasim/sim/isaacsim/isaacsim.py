@@ -886,7 +886,8 @@ class IsaacsimHandler(BaseSimHandler):
             except Exception as e:
                 log.warning(f"Failed to download terrain material {mdl_path}: {e}")
 
-        num_cols = math.ceil(math.sqrt(self._num_envs))
+        ground_padding = 8
+        num_cols = math.ceil(math.sqrt(self._num_envs)) + ground_padding
         num_rows = num_cols
         # make each tile at least env_spacing (add a margin so robot never touches tile boundary)
         tile = 1.25 * self.scenario.env_spacing
