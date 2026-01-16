@@ -93,6 +93,26 @@ def joint_pos_limits(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     return torch.sum(out_of_limits, dim=1)
 
 
+def joint_effort_limits(env: EnvTypes, env_states: TensorState, soft_limit_factor: float = 1.0) -> torch.Tensor:
+    """Penalize joint efforts that exceed torque limits using an L2 squared kernel."""
+    robot_state = env_states.robots[env.name]
+    if env.manual_pd_on:
+        processed_actions = (env.actions * env.action_scale + env.actions_offset).clip(
+            -env.action_clip,
+            env.action_clip,
+        )
+        effort = env.p_gains * (processed_actions - robot_state.joint_pos) - env.d_gains * robot_state.joint_vel
+    else:
+        effort = robot_state.joint_effort_target
+        if effort is None:
+            return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    torque_limits = env.torque_limits * soft_limit_factor
+    excess = torch.abs(effort) - torque_limits
+    excess = excess.clamp(min=0.0)
+    return torch.sum(torch.square(excess), dim=1)
+
+
 def energy(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     r"""Sum |qdot|*|tau| across joints ("energy" usage)."""
     base = env_states.robots[env.name]
