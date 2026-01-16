@@ -353,11 +353,15 @@ class LeggedRobotTask(AgentTask):
         # Compute "true" next observations BEFORE reset (for off-policy RL)
         # This is the observation that would be returned if the env didn't auto-reset
         true_obs_single, _ = self._compute_task_observations(env_states)
-        # Temporarily append to queue to compute obs with full history
-        self.obs_buf_queue.append(true_obs_single)
-        true_next_obs_with_history = self.obs_buf.clone()
-        # Remove the temporary observation
-        # self.obs_buf_queue.pop()
+        # Compute history as if we appended without mutating the queue
+        if self.obs_buf_queue is None or len(self.obs_buf_queue) == 0:
+            true_next_obs_with_history = true_obs_single.clone()
+        else:
+            obs_queue = list(self.obs_buf_queue)
+            if self.obs_buf_queue.maxlen is not None and len(obs_queue) == self.obs_buf_queue.maxlen:
+                obs_queue = obs_queue[1:]
+            obs_queue.append(true_obs_single)
+            true_next_obs_with_history = torch.cat(obs_queue, dim=1)
 
         # reset envs
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)

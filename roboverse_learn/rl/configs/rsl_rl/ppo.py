@@ -100,7 +100,7 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
             self.model_dir = os.path.join("outputs", name, self.task, datetime.now().strftime("%Y%m%d_%H%M%S"))
 
         if self.obs_groups is None:
-            self.obs_groups = {"policy": ["policy"], "critic": ["policy", "critic"]}
+            self.obs_groups = {"policy": ["policy"], "critic": ["critic"]}
 
         # Build runner training config for RSL-RL
         policy_cfg = self.policy.to_dict() if hasattr(self.policy, "to_dict") else dict(self.policy.__dict__)
@@ -128,6 +128,11 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
 
         if self.clip_actions is not None:
             self.train_cfg["clip_actions"] = self.clip_actions
+
+        # Sync logger with use_wandb flag
+        if self.use_wandb:
+            self.logger = "wandb"
+            self.train_cfg["logger"] = "wandb"
 
 
 __all__ = ["RslRlPPOConfig"]

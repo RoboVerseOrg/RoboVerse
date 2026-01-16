@@ -21,7 +21,7 @@ class G1Dof12Cfg(RobotCfg):
     enabled_self_collisions: bool = True
     isaacgym_read_mjcf = False
     isaacgym_flip_visual_attachments: bool = False
-    collapse_fixed_joints: bool = False
+    collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
         # N7520-14.3: hip_pitch, hip_yaw (stiffness 100, damping 2, torque 88, vel 32)
