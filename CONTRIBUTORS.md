@@ -42,8 +42,8 @@ Guidelines for modifications:
 * Songlin Wei
 * Xinjie Wang
 * Xinying Guo
-* Yikai Tang
 * Yi Zhang
+* Yikai Tang
 * Yongce Liu
 * Yu Hong
 * Yuchen Huang
