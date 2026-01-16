@@ -21,6 +21,7 @@ Guidelines for modifications:
 ## Contributors
 
 * Bangjun Wang
+* Bei Wang
 * Boqi Zhao
 * Chaoyi Xu
 * Chengyang Zhao
@@ -42,6 +43,7 @@ Guidelines for modifications:
 * Xinjie Wang
 * Xinying Guo
 * Yikai Tang
+* Yi Zhang
 * Yongce Liu
 * Yu Hong
 * Yuchen Huang
@@ -49,8 +51,6 @@ Guidelines for modifications:
 * Yutong Liang
 * Yuyang Li
 * Zhigen Zhao
-* Yi Zhang
-* Bei Wang
 
 ## Acknowledgements
 
