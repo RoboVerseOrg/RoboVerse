@@ -24,6 +24,7 @@ _DEFAULT_FILE_TYPE = {
     "isaacgym": "urdf",
     "mujoco": "mjcf",
     "mjx": "mjx_mjcf",
+    "newton": "urdf",
 }
 
 
