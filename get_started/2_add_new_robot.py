@@ -49,6 +49,7 @@ class Args:
         "sapien3",
         "mujoco",
         "mjx",
+        "newton",
     ] = "mujoco"
 
     ## Others

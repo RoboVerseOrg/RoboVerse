@@ -112,7 +112,12 @@ class NewtonHandler(BaseSimHandler):
         self._control = self._model.control()
 
         # Create MuJoCo solver
-        self._solver = SolverMuJoCo(self._model)
+        sim_params = self.scenario.sim_params
+        self._solver = SolverMuJoCo(
+            self._model,
+            njmax=sim_params.njmax,
+            nconmax=sim_params.nconmax,
+        )
 
         # Initialize Viewer for Rendering (if needed)
         self._viewer = None
@@ -125,6 +130,9 @@ class NewtonHandler(BaseSimHandler):
 
             self._viewer = ViewerGL(width=max_w, height=max_h, headless=headless)
             self._viewer.set_model(self._model)
+            # Set world offsets for visual separation of parallel environments
+            spacing = self.scenario.env_spacing
+            self._viewer.set_world_offsets((spacing, spacing, 0.0))
             if not headless:
                 if self._viewer.ui is None or not self._viewer.ui.is_available:
                     log.warning("Newton Viewer UI is unavailable. Install `imgui-bundle` to enable the left panel.")
