@@ -52,6 +52,7 @@ newton = [
     "mujoco>=3.3.7",
     "mujoco-warp>=0.0.1",
     "newton @ git+https://github.com/newton-physics/newton.git",
+    "imgui-bundle",
     "pycollada",
 ]
 

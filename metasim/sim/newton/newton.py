@@ -67,6 +67,9 @@ class NewtonHandler(BaseSimHandler):
         self._state_1: newton.State | None = None
         self._control: newton.Control | None = None
         self._solver: SolverMuJoCo | None = None
+        self._viewer = None
+        self._newton_camera = None
+        self._sim_time = 0.0
 
         # Caches for efficient lookups
         self._joint_name_to_id: dict[str, dict[str, int]] = {}
@@ -111,6 +114,9 @@ class NewtonHandler(BaseSimHandler):
 
             self._viewer = ViewerGL(width=max_w, height=max_h, headless=headless)
             self._viewer.set_model(self._model)
+            if not headless:
+                if self._viewer.ui is None or not self._viewer.ui.is_available:
+                    log.warning("Newton Viewer UI is unavailable. Install `imgui-bundle` to enable the left panel.")
 
             # Create Newton Camera from first camera config
             # We'll update it per-camera during _get_states
@@ -388,6 +394,20 @@ class NewtonHandler(BaseSimHandler):
 
             # Swap state buffers
             self._state_0, self._state_1 = self._state_1, self._state_0
+            self._sim_time += dt
+
+        self._render_viewer()
+
+    def _render_viewer(self) -> None:
+        if self._viewer is None or self.headless or self._state_0 is None:
+            return
+        self._viewer.begin_frame(self._sim_time)
+        self._viewer.log_state(self._state_0)
+        self._viewer.end_frame()
+
+    def render(self) -> None:
+        """Render the current state to the Newton viewer."""
+        self._render_viewer()
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get current states of all robots and objects."""
@@ -410,6 +430,8 @@ class NewtonHandler(BaseSimHandler):
         if self._viewer and self.scenario.cameras and self._newton_camera:
             from pyglet.math import Vec3 as PyVec3  # Newton Camera uses pyglet Vec3
 
+            self._viewer.log_state(self._state_0)
+
             for cam_cfg in self.scenario.cameras:
                 # Update Newton Camera params
                 self._newton_camera.width = cam_cfg.width
@@ -428,12 +450,8 @@ class NewtonHandler(BaseSimHandler):
                     self._newton_camera.pitch = 0.0
                     self._newton_camera.yaw = -180.0
 
-                # Sync simulation state to viewer before rendering
-                # This updates body transforms so objects are positioned correctly
-                self._viewer.log_state(self._state_0)
-
                 # Render using Newton Camera
-                self._viewer.renderer.render(self._newton_camera, self._viewer.objects)
+                self._viewer.renderer.render(self._newton_camera, self._viewer.objects, self._viewer.lines)
 
                 # Get frame - returns warp array (H, W, 3) uint8
                 rgb_wp = self._viewer.get_frame()
