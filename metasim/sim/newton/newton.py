@@ -21,6 +21,7 @@ from newton.viewer import ViewerGL
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
@@ -76,6 +77,10 @@ class NewtonHandler(BaseSimHandler):
         self._body_name_to_id: dict[str, dict[str, int]] = {}
         self._robot_joint_ids: dict[str, list[int]] = {}
         self._robot_body_ids: dict[str, list[int]] = {}
+        self._body_children: dict[int, dict[int, list[int]]] = defaultdict(lambda: defaultdict(list))
+        self._body_child_to_joint: dict[int, dict[int, int]] = defaultdict(dict)
+        self._obj_body_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
+        self._obj_joint_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
 
         # Actions cache
         self._actions_cache: list[Action] = []
@@ -94,6 +99,12 @@ class NewtonHandler(BaseSimHandler):
 
         # Build the Newton model from scenario configuration
         self._build_model()
+
+        # Build name-to-ID caches for joint/body lookups
+        self._build_name_caches()
+
+        # Apply actuator gains and limits before creating the solver
+        self._apply_actuator_settings()
 
         # Create states (double-buffering for solver)
         self._state_0 = self._model.state()
@@ -133,9 +144,6 @@ class NewtonHandler(BaseSimHandler):
             )
             self._newton_camera.pitch = pitch
             self._newton_camera.yaw = yaw
-
-        # Build name-to-ID caches
-        self._build_name_caches()
 
         log.info(f"Newton launched with {self.num_envs} worlds, solver={self._solver.__class__.__name__}")
 
@@ -280,6 +288,10 @@ class NewtonHandler(BaseSimHandler):
         """Build caches for looking up body and joint indices by name."""
         self._body_name_cache = defaultdict(dict)
         self._joint_name_cache = defaultdict(dict)
+        self._body_children = defaultdict(lambda: defaultdict(list))
+        self._body_child_to_joint = defaultdict(dict)
+        self._obj_body_indices = defaultdict(dict)
+        self._obj_joint_indices = defaultdict(dict)
 
         # DEBUG: Print all body names
         # print(f"DEBUG: Model Body Names: {self._model.body_key}") # Commented out to be safe, I'll rely on add_urdf return checks
@@ -297,6 +309,8 @@ class NewtonHandler(BaseSimHandler):
 
         joint_keys = self._model.joint_key
         joint_worlds = self._model.joint_world.numpy()
+        joint_parents = self._model.joint_parent.numpy()
+        joint_children = self._model.joint_child.numpy()
 
         for i, key in enumerate(joint_keys):
             world = joint_worlds[i]
@@ -304,15 +318,182 @@ class NewtonHandler(BaseSimHandler):
                 self._joint_name_cache[world][key] = i
 
         # Build body -> parent joint map
-        joint_children = self._model.joint_child.numpy()
         for i, child_idx in enumerate(joint_children):
             if child_idx >= 0:
                 self._body_parent_joint[child_idx] = i
+                world = joint_worlds[i]
+                if world != -1:
+                    self._body_child_to_joint[world][child_idx] = i
+                    parent_idx = joint_parents[i]
+                    if parent_idx >= 0:
+                        self._body_children[world][parent_idx].append(child_idx)
 
         # Access start indices for fast lookup
         self._joint_q_starts = self._model.joint_q_start.numpy()
         self._joint_qd_starts = self._model.joint_qd_start.numpy()
         self._joint_types = self._model.joint_type.numpy()
+
+    def _apply_actuator_settings(self) -> None:
+        """Apply actuator stiffness/damping/limits to the Newton model."""
+        if self._model is None or self._model.joint_count == 0:
+            return
+
+        joint_target_ke = self._model.joint_target_ke.numpy()
+        joint_target_kd = self._model.joint_target_kd.numpy()
+        joint_armature = self._model.joint_armature.numpy()
+        joint_effort_limit = self._model.joint_effort_limit.numpy()
+        joint_velocity_limit = self._model.joint_velocity_limit.numpy()
+        joint_target_pos = self._model.joint_target_pos.numpy()
+        joint_target_vel = self._model.joint_target_vel.numpy()
+        joint_q = self._model.joint_q.numpy()
+
+        updated = False
+
+        for env_id in range(self.num_envs):
+            for robot in self.robots:
+                if not isinstance(robot, RobotCfg) or not robot.actuators:
+                    continue
+                for joint_name, actuator in robot.actuators.items():
+                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    if joint_idx is None:
+                        continue
+
+                    qd_start = self._joint_qd_starts[joint_idx]
+                    qd_end = self._joint_qd_starts[joint_idx + 1]
+                    if qd_end <= qd_start:
+                        continue
+
+                    if actuator.stiffness is not None:
+                        joint_target_ke[qd_start:qd_end] = actuator.stiffness
+                        updated = True
+                    if actuator.damping is not None:
+                        joint_target_kd[qd_start:qd_end] = actuator.damping
+                        updated = True
+                    if actuator.armature is not None:
+                        joint_armature[qd_start:qd_end] = actuator.armature
+                        updated = True
+                    if actuator.effort_limit_sim is not None:
+                        joint_effort_limit[qd_start:qd_end] = actuator.effort_limit_sim
+                        updated = True
+
+                    vel_limit = (
+                        actuator.velocity_limit_sim
+                        if actuator.velocity_limit_sim is not None
+                        else actuator.velocity_limit
+                    )
+                    if vel_limit is not None:
+                        joint_velocity_limit[qd_start:qd_end] = vel_limit
+                        updated = True
+
+                    # Initialize target position from the current joint state for 1-DoF joints
+                    if qd_end - qd_start == 1:
+                        q_start = self._joint_q_starts[joint_idx]
+                        joint_target_pos[qd_start] = joint_q[q_start]
+                        joint_target_vel[qd_start] = 0.0
+                        updated = True
+
+        if updated:
+            self._model.joint_target_ke.assign(joint_target_ke)
+            self._model.joint_target_kd.assign(joint_target_kd)
+            self._model.joint_armature.assign(joint_armature)
+            self._model.joint_effort_limit.assign(joint_effort_limit)
+            self._model.joint_velocity_limit.assign(joint_velocity_limit)
+            self._model.joint_target_pos.assign(joint_target_pos)
+            self._model.joint_target_vel.assign(joint_target_vel)
+
+    def _get_body_indices(self, env_id: int, obj_name: str) -> list[int]:
+        """Return body indices (root first) for an object in a given env."""
+        cached = self._obj_body_indices[env_id].get(obj_name)
+        if cached is not None:
+            return cached
+
+        root_idx = self._obj_to_root_body[env_id].get(obj_name)
+        if root_idx is None:
+            self._obj_body_indices[env_id][obj_name] = []
+            return []
+
+        body_ids = []
+        stack = [root_idx]
+        visited = set()
+
+        children_map = self._body_children.get(env_id, {})
+        while stack:
+            body_idx = stack.pop()
+            if body_idx in visited:
+                continue
+            visited.add(body_idx)
+            body_ids.append(body_idx)
+            for child_idx in children_map.get(body_idx, []):
+                if child_idx not in visited:
+                    stack.append(child_idx)
+
+        self._obj_body_indices[env_id][obj_name] = body_ids
+        return body_ids
+
+    def _get_joint_indices(self, env_id: int, obj_name: str) -> list[int]:
+        """Return joint indices (including root joint if any) for an object in a given env."""
+        cached = self._obj_joint_indices[env_id].get(obj_name)
+        if cached is not None:
+            return cached
+
+        body_ids = self._get_body_indices(env_id, obj_name)
+        joint_ids = []
+        joint_map = self._body_child_to_joint.get(env_id, {})
+        for body_idx in body_ids:
+            joint_idx = joint_map.get(body_idx)
+            if joint_idx is not None:
+                joint_ids.append(joint_idx)
+
+        self._obj_joint_indices[env_id][obj_name] = joint_ids
+        return joint_ids
+
+    @staticmethod
+    def _reorder_quat_xyzw_to_wxyz(quat_xyzw: torch.Tensor) -> torch.Tensor:
+        """Reorder quaternion from xyzw to wxyz for torch tensors."""
+        return torch.stack(
+            [quat_xyzw[..., 3], quat_xyzw[..., 0], quat_xyzw[..., 1], quat_xyzw[..., 2]],
+            dim=-1,
+        )
+
+    def _pack_body_state(self, body_q: torch.Tensor, body_qd: torch.Tensor | None, body_ids: list[int]) -> torch.Tensor:
+        """Pack body state into [pos, quat, lin_vel, ang_vel] for a list of body indices."""
+        if not body_ids:
+            return torch.zeros((0, 13), device=self._device)
+
+        pos = body_q[body_ids, 0:3]
+        quat = self._reorder_quat_xyzw_to_wxyz(body_q[body_ids, 3:7])
+
+        if body_qd is None:
+            lin_vel = torch.zeros_like(pos)
+            ang_vel = torch.zeros_like(pos)
+        else:
+            lin_vel = body_qd[body_ids, 0:3]
+            ang_vel = body_qd[body_ids, 3:6]
+
+        return torch.cat([pos, quat, lin_vel, ang_vel], dim=-1)
+
+    @staticmethod
+    def _coerce_dof_values(value, dof_count: int) -> list[float] | None:
+        """Normalize a DOF value into a list of floats matching dof_count."""
+        if dof_count <= 0:
+            return None
+
+        if isinstance(value, torch.Tensor):
+            if value.numel() == 1:
+                return [float(value.item())] if dof_count == 1 else None
+            values = value.detach().cpu().numpy().reshape(-1).tolist()
+        elif isinstance(value, np.ndarray):
+            values = value.reshape(-1).tolist()
+        elif isinstance(value, (list, tuple)):
+            values = list(value)
+        else:
+            return [float(value)] if dof_count == 1 else None
+
+        if len(values) == dof_count:
+            return [float(v) for v in values]
+        if len(values) == 1 and dof_count == 1:
+            return [float(values[0])]
+        return None
 
     def _look_at_to_pitch_yaw(self, pos, look_at):
         """Convert camera position and look_at target to pitch and yaw angles.
@@ -492,30 +673,89 @@ class NewtonHandler(BaseSimHandler):
         """Extract state for a robot across specified environments."""
         state = self._state_0
 
-        # Get body transforms and velocities from Newton state
-        # Newton State has: body_q (transforms), body_qd (velocities), joint_q, joint_qd
-        body_q = wp2torch(state.body_q)  # (num_bodies, 7) - pos(3) + quat(4)
-        body_qd = wp2torch(state.body_qd)  # (num_bodies, 6) - lin_vel(3) + ang_vel(3)
-        joint_q = wp2torch(state.joint_q)  # (num_joints,)
-        joint_qd = wp2torch(state.joint_qd)  # (num_joints,)
+        body_q = wp2torch(state.body_q) if state is not None else None
+        body_qd = wp2torch(state.body_qd) if state is not None else None
+        joint_q = wp2torch(state.joint_q) if state is not None else None
+        joint_qd = wp2torch(state.joint_qd) if state is not None else None
 
-        # TODO: Map body/joint indices per robot per world
-        # For now, return placeholder with correct structure
+        joint_target_pos = (
+            wp2torch(self._control.joint_target_pos) if self._control and self._control.joint_target_pos else None
+        )
+        joint_target_vel = (
+            wp2torch(self._control.joint_target_vel) if self._control and self._control.joint_target_vel else None
+        )
+        joint_f = wp2torch(self._control.joint_f) if self._control and self._control.joint_f else None
+
         num_envs = len(env_ids)
-
-        # Combine into root_state format: (N, 13) = pos(3) + quat(4) + lin_vel(3) + ang_vel(3)
-        # Newton quat is xyzw, need to convert to wxyz for MetaSim
         root_state = torch.zeros(num_envs, 13, device=self._device)
+
+        joint_names = self._get_joint_names(robot_name, sort=True)
+        num_joints = len(joint_names)
+        joint_pos = torch.zeros(num_envs, num_joints, device=self._device)
+        joint_vel = torch.zeros(num_envs, num_joints, device=self._device)
+        joint_pos_target = (
+            torch.zeros(num_envs, num_joints, device=self._device) if joint_target_pos is not None else None
+        )
+        joint_vel_target = (
+            torch.zeros(num_envs, num_joints, device=self._device) if joint_target_vel is not None else None
+        )
+        joint_effort_target = torch.zeros(num_envs, num_joints, device=self._device) if joint_f is not None else None
+
+        body_states = []
+
+        for row, env_id in enumerate(env_ids):
+            root_idx = self._obj_to_root_body[env_id].get(robot_name)
+            if root_idx is not None and body_q is not None:
+                root_state[row] = self._pack_body_state(body_q, body_qd, [root_idx])[0]
+
+            body_ids = self._get_body_indices(env_id, robot_name)
+            if body_q is not None:
+                body_ids_no_root = body_ids[1:]
+                if body_ids_no_root:
+                    body_names = [self._model.body_key[idx] for idx in body_ids_no_root]
+                    sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+                    sorted_body_ids = [idx for _, idx in sorted_pairs]
+                else:
+                    sorted_body_ids = []
+                body_states.append(self._pack_body_state(body_q, body_qd, sorted_body_ids))
+            else:
+                body_states.append(None)
+
+            for col, joint_name in enumerate(joint_names):
+                joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                if joint_idx is None:
+                    continue
+                q_start = self._joint_q_starts[joint_idx]
+                qd_start = self._joint_qd_starts[joint_idx]
+                qd_end = self._joint_qd_starts[joint_idx + 1]
+                if qd_end <= qd_start:
+                    continue
+                if qd_end - qd_start != 1:
+                    continue
+                if joint_q is not None:
+                    joint_pos[row, col] = joint_q[q_start]
+                if joint_qd is not None:
+                    joint_vel[row, col] = joint_qd[qd_start]
+                if joint_target_pos is not None:
+                    joint_pos_target[row, col] = joint_target_pos[qd_start]
+                if joint_target_vel is not None:
+                    joint_vel_target[row, col] = joint_target_vel[qd_start]
+                if joint_f is not None:
+                    joint_effort_target[row, col] = joint_f[qd_start]
+
+        body_state = None
+        if body_states and body_states[0] is not None:
+            body_state = torch.stack(body_states, dim=0)
 
         return RobotState(
             root_state=root_state,
-            body_names=[],  # TODO: populate from cache
-            body_state=None,
-            joint_pos=joint_q.unsqueeze(0).expand(num_envs, -1) if joint_q is not None else None,
-            joint_vel=joint_qd.unsqueeze(0).expand(num_envs, -1) if joint_qd is not None else None,
-            joint_pos_target=None,
-            joint_vel_target=None,
-            joint_effort_target=None,
+            body_names=self._get_body_names(robot_name),
+            body_state=body_state,
+            joint_pos=joint_pos,
+            joint_vel=joint_vel,
+            joint_pos_target=joint_pos_target,
+            joint_vel_target=joint_vel_target,
+            joint_effort_target=joint_effort_target,
         )
 
     def _extract_object_state(self, obj_name: str, env_ids: list[int]) -> ObjectState:
@@ -523,7 +763,67 @@ class NewtonHandler(BaseSimHandler):
         num_envs = len(env_ids)
         root_state = torch.zeros(num_envs, 13, device=self._device)
 
-        return ObjectState(root_state=root_state)
+        state = self._state_0
+        body_q = wp2torch(state.body_q) if state is not None else None
+        body_qd = wp2torch(state.body_qd) if state is not None else None
+        joint_q = wp2torch(state.joint_q) if state is not None else None
+        joint_qd = wp2torch(state.joint_qd) if state is not None else None
+
+        obj_cfg = self.object_dict.get(obj_name)
+        is_articulation = isinstance(obj_cfg, ArticulationObjCfg)
+
+        body_states = []
+        joint_names = self._get_joint_names(obj_name, sort=True) if is_articulation else []
+        num_joints = len(joint_names)
+        joint_pos = torch.zeros(num_envs, num_joints, device=self._device) if is_articulation else None
+        joint_vel = torch.zeros(num_envs, num_joints, device=self._device) if is_articulation else None
+
+        for row, env_id in enumerate(env_ids):
+            root_idx = self._obj_to_root_body[env_id].get(obj_name)
+            if root_idx is not None and body_q is not None:
+                root_state[row] = self._pack_body_state(body_q, body_qd, [root_idx])[0]
+
+            if is_articulation:
+                body_ids = self._get_body_indices(env_id, obj_name)
+                if body_q is not None:
+                    body_ids_no_root = body_ids[1:]
+                    if body_ids_no_root:
+                        body_names = [self._model.body_key[idx] for idx in body_ids_no_root]
+                        sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+                        sorted_body_ids = [idx for _, idx in sorted_pairs]
+                    else:
+                        sorted_body_ids = []
+                    body_states.append(self._pack_body_state(body_q, body_qd, sorted_body_ids))
+                else:
+                    body_states.append(None)
+
+                for col, joint_name in enumerate(joint_names):
+                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    if joint_idx is None:
+                        continue
+                    q_start = self._joint_q_starts[joint_idx]
+                    qd_start = self._joint_qd_starts[joint_idx]
+                    qd_end = self._joint_qd_starts[joint_idx + 1]
+                    if qd_end <= qd_start:
+                        continue
+                    if qd_end - qd_start != 1:
+                        continue
+                    if joint_q is not None:
+                        joint_pos[row, col] = joint_q[q_start]
+                    if joint_qd is not None:
+                        joint_vel[row, col] = joint_qd[qd_start]
+
+        body_state = None
+        if body_states and body_states[0] is not None:
+            body_state = torch.stack(body_states, dim=0)
+
+        return ObjectState(
+            root_state=root_state,
+            body_names=self._get_body_names(obj_name) if is_articulation else None,
+            body_state=body_state,
+            joint_pos=joint_pos,
+            joint_vel=joint_vel,
+        )
 
     def _set_states(self, states: TensorState | list, env_ids: list[int] | None = None) -> None:
         """Set the physics state from a TensorState or list."""
@@ -538,13 +838,22 @@ class NewtonHandler(BaseSimHandler):
 
         # Prepare arrays for update (clone to host/numpy)
         body_q = self._model.body_q.numpy()
-        # body_qd = self._model.body_qd.numpy()
-        joint_q = self._model.joint_q.numpy()
-        # joint_qd = self._model.joint_qd.numpy()
-        joint_X_p = self._model.joint_X_p.numpy()
+        body_qd = self._model.body_qd.numpy()
+        joint_q = self._model.joint_q.numpy() if self._model.joint_q is not None else None
+        joint_qd = self._model.joint_qd.numpy() if self._model.joint_qd is not None else None
+        joint_X_p = self._model.joint_X_p.numpy() if self._model.joint_X_p is not None else None
 
         dirty_joints = False
         dirty_bodies = False
+        dirty_body_vels = False
+        dirty_joint_vels = False
+
+        control_joint_target_pos = (
+            wp2torch(self._control.joint_target_pos) if self._control and self._control.joint_target_pos else None
+        )
+        control_joint_target_vel = (
+            wp2torch(self._control.joint_target_vel) if self._control and self._control.joint_target_vel else None
+        )
 
         for i, env_id in enumerate(env_ids):
             state_dict = states_nested[i]
@@ -564,17 +873,21 @@ class NewtonHandler(BaseSimHandler):
 
                     pos = obj_state.get("pos")
                     quat = obj_state.get("rot")  # wxyz
+                    vel = obj_state.get("vel")
+                    ang_vel = obj_state.get("ang_vel")
+
+                    # Convert data to numpy
+                    def to_np(x):
+                        if hasattr(x, "cpu"):
+                            return x.cpu().numpy()
+                        return np.array(x)
+
+                    pos_np = to_np(pos) if pos is not None else None
+                    quat_np = to_np(quat) if quat is not None else None
+                    vel_np = to_np(vel) if vel is not None else None
+                    ang_vel_np = to_np(ang_vel) if ang_vel is not None else None
 
                     if pos is not None or quat is not None:
-                        # Convert data to numpy
-                        def to_np(x):
-                            if hasattr(x, "cpu"):
-                                return x.cpu().numpy()
-                            return np.array(x)
-
-                        pos_np = to_np(pos) if pos is not None else None
-                        quat_np = to_np(quat) if quat is not None else None
-
                         # Handle implicit parent joint
                         if body_idx in self._body_parent_joint:
                             joint_idx = self._body_parent_joint[body_idx]
@@ -607,23 +920,87 @@ class NewtonHandler(BaseSimHandler):
                                 body_q[body_idx][3:] = xyzw
                             dirty_bodies = True
 
-                # 2. Update Joint DOFs (for robots)
-                if "dof_pos" in obj_state:
-                    for j_name, j_pos in obj_state["dof_pos"].items():
-                        # Find joint index
-                        if j_name in self._joint_name_cache[env_id]:
-                            j_idx = self._joint_name_cache[env_id][j_name]
-                            q_start = self._joint_q_starts[j_idx]
+                    if vel is not None or ang_vel is not None:
+                        if vel_np is not None:
+                            body_qd[body_idx][:3] = vel_np
+                        if ang_vel_np is not None:
+                            body_qd[body_idx][3:6] = ang_vel_np
+                        dirty_body_vels = True
+                    elif pos is not None or quat is not None:
+                        body_qd[body_idx][:6] = 0.0
+                        dirty_body_vels = True
 
-                            # Update joint position
-                            val = j_pos.item() if hasattr(j_pos, "item") else j_pos
-                            joint_q[q_start] = val
-                            dirty_joints = True
+                # 2. Update Joint DOFs (for robots/articulations)
+                dof_pos = obj_state.get("dof_pos") or {}
+                dof_vel = obj_state.get("dof_vel") or {}
+
+                for j_name, j_pos in dof_pos.items():
+                    if joint_q is None or joint_qd is None:
+                        continue
+                    if j_name not in self._joint_name_cache[env_id]:
+                        continue
+                    j_idx = self._joint_name_cache[env_id][j_name]
+                    q_start = self._joint_q_starts[j_idx]
+                    qd_start = self._joint_qd_starts[j_idx]
+                    qd_end = self._joint_qd_starts[j_idx + 1]
+                    if qd_end <= qd_start:
+                        continue
+                    if qd_end - qd_start != 1:
+                        continue
+
+                    values = self._coerce_dof_values(j_pos, qd_end - qd_start)
+                    if values is None:
+                        continue
+
+                    joint_q[q_start] = values[0]
+                    dirty_joints = True
+
+                    if j_name in dof_vel:
+                        vel_values = self._coerce_dof_values(dof_vel[j_name], qd_end - qd_start)
+                        if vel_values is not None:
+                            joint_qd[qd_start] = vel_values[0]
+                            dirty_joint_vels = True
+                    else:
+                        joint_qd[qd_start] = 0.0
+                        dirty_joint_vels = True
+
+                    if control_joint_target_pos is not None:
+                        control_joint_target_pos[qd_start] = values[0]
+                    if control_joint_target_vel is not None:
+                        control_joint_target_vel[qd_start] = 0.0
+
+                for j_name, j_vel in dof_vel.items():
+                    if j_name in dof_pos:
+                        continue
+                    if joint_qd is None:
+                        continue
+                    if j_name not in self._joint_name_cache[env_id]:
+                        continue
+                    j_idx = self._joint_name_cache[env_id][j_name]
+                    qd_start = self._joint_qd_starts[j_idx]
+                    qd_end = self._joint_qd_starts[j_idx + 1]
+                    if qd_end <= qd_start:
+                        continue
+                    if qd_end - qd_start != 1:
+                        continue
+                    vel_values = self._coerce_dof_values(j_vel, qd_end - qd_start)
+                    if vel_values is None:
+                        continue
+                    joint_qd[qd_start] = vel_values[0]
+                    dirty_joint_vels = True
 
         # Write back to Newton arrays
         if dirty_bodies:
             self._model.body_q.assign(body_q)
             self._state_0.body_q.assign(body_q)
+
+        if dirty_body_vels:
+            self._model.body_qd.assign(body_qd)
+            self._state_0.body_qd.assign(body_qd)
+
+        if dirty_joint_vels:
+            self._model.joint_qd.assign(joint_qd)
+            self._state_0.joint_qd.assign(joint_qd)
 
         if dirty_joints:
             self._model.joint_q.assign(joint_q)
@@ -632,25 +1009,124 @@ class NewtonHandler(BaseSimHandler):
 
             # Run Forward Kinematics to propagate joint changes to bodies
             eval_fk(self._model, self._state_0.joint_q, self._state_0.joint_qd, self._state_0)
-        pass
 
     def _set_dof_targets(self, actions: list[Action]) -> None:
         """Set DOF position/velocity targets for robot joints."""
         self._actions_cache = actions
 
-        # Write targets to Newton Control object
-        # TODO: Map action dict to control array indices
-        pass
+        if self._control is None:
+            return
+
+        joint_target_pos = (
+            wp2torch(self._control.joint_target_pos) if self._control.joint_target_pos is not None else None
+        )
+        joint_target_vel = (
+            wp2torch(self._control.joint_target_vel) if self._control.joint_target_vel is not None else None
+        )
+        joint_f = wp2torch(self._control.joint_f) if self._control.joint_f is not None else None
+
+        for env_id, action in enumerate(actions):
+            for robot in self.robots:
+                if robot.name not in action:
+                    continue
+                robot_action = action[robot.name]
+                dof_pos = robot_action.get("dof_pos_target") or {}
+                dof_effort = robot_action.get("dof_effort_target") or {}
+                dof_vel_target = robot_action.get("dof_vel_target") or {}
+
+                if joint_target_pos is not None:
+                    for joint_name, target in dof_pos.items():
+                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        if joint_idx is None:
+                            continue
+                        qd_start = self._joint_qd_starts[joint_idx]
+                        qd_end = self._joint_qd_starts[joint_idx + 1]
+                        if qd_end - qd_start != 1:
+                            continue
+                        values = self._coerce_dof_values(target, qd_end - qd_start)
+                        if values is None:
+                            continue
+                        joint_target_pos[qd_start] = values[0]
+                        if joint_target_vel is not None and joint_name not in dof_vel_target:
+                            joint_target_vel[qd_start] = 0.0
+
+                if joint_target_vel is not None:
+                    for joint_name, target in dof_vel_target.items():
+                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        if joint_idx is None:
+                            continue
+                        qd_start = self._joint_qd_starts[joint_idx]
+                        qd_end = self._joint_qd_starts[joint_idx + 1]
+                        if qd_end - qd_start != 1:
+                            continue
+                        values = self._coerce_dof_values(target, qd_end - qd_start)
+                        if values is None:
+                            continue
+                        joint_target_vel[qd_start] = values[0]
+
+                if joint_f is not None:
+                    for joint_name, effort in dof_effort.items():
+                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        if joint_idx is None:
+                            continue
+                        qd_start = self._joint_qd_starts[joint_idx]
+                        qd_end = self._joint_qd_starts[joint_idx + 1]
+                        if qd_end - qd_start != 1:
+                            continue
+                        values = self._coerce_dof_values(effort, qd_end - qd_start)
+                        if values is None:
+                            continue
+                        joint_f[qd_start] = values[0]
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get joint names for an articulated object."""
-        # TODO: Extract from Newton model
-        return []
+        obj_cfg = self.object_dict.get(obj_name)
+        env_id = 0
+
+        if isinstance(obj_cfg, RobotCfg):
+            if obj_cfg.joint_limits:
+                names = list(obj_cfg.joint_limits.keys())
+            elif obj_cfg.actuators:
+                names = list(obj_cfg.actuators.keys())
+            else:
+                names = []
+            if env_id in self._joint_name_cache:
+                names = [name for name in names if name in self._joint_name_cache[env_id]]
+            if not names:
+                joint_ids = self._get_joint_indices(env_id, obj_name)
+                for joint_idx in joint_ids:
+                    qd_start = self._joint_qd_starts[joint_idx]
+                    qd_end = self._joint_qd_starts[joint_idx + 1]
+                    if qd_end - qd_start == 1:
+                        names.append(self._model.joint_key[joint_idx])
+        else:
+            joint_ids = self._get_joint_indices(env_id, obj_name)
+            names = []
+            for joint_idx in joint_ids:
+                qd_start = self._joint_qd_starts[joint_idx]
+                qd_end = self._joint_qd_starts[joint_idx + 1]
+                if qd_end - qd_start == 1:
+                    names.append(self._model.joint_key[joint_idx])
+
+        if sort:
+            names.sort()
+        return names
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get body/link names for an articulated object."""
-        # TODO: Extract from Newton model
-        return []
+        obj_cfg = self.object_dict.get(obj_name)
+        if not isinstance(obj_cfg, ArticulationObjCfg):
+            return []
+
+        env_id = 0
+        body_ids = self._get_body_indices(env_id, obj_name)
+        if not body_ids:
+            return []
+
+        names = [self._model.body_key[idx] for idx in body_ids[1:]]
+        if sort:
+            names.sort()
+        return names
 
     def close(self) -> None:
         """Clean up Newton resources."""
