@@ -621,52 +621,72 @@ class NewtonHandler(BaseSimHandler):
 
             self._viewer.log_state(self._state_0)
 
+            # Get world offsets for per-environment rendering
+            world_offsets_np = None
+            if self._viewer.world_offsets is not None:
+                world_offsets_np = self._viewer.world_offsets.numpy()
+
             for cam_cfg in self.scenario.cameras:
-                # Update Newton Camera params
-                self._newton_camera.width = cam_cfg.width
-                self._newton_camera.height = cam_cfg.height
-                self._newton_camera.fov = cam_cfg.vertical_fov
+                rgb_list = []
+                depth_list = []
 
-                # Set camera position and compute pitch/yaw from look_at
-                self._newton_camera.pos = PyVec3(*cam_cfg.pos)
+                for env_id in env_ids:
+                    # Update Newton Camera params
+                    self._newton_camera.width = cam_cfg.width
+                    self._newton_camera.height = cam_cfg.height
+                    self._newton_camera.fov = cam_cfg.vertical_fov
 
-                if hasattr(cam_cfg, "look_at") and cam_cfg.look_at is not None:
-                    pitch, yaw = self._look_at_to_pitch_yaw(cam_cfg.pos, cam_cfg.look_at)
-                    self._newton_camera.pitch = pitch
-                    self._newton_camera.yaw = yaw
-                else:
-                    # Default orientation (looking down -Y for Z-up)
-                    self._newton_camera.pitch = 0.0
-                    self._newton_camera.yaw = -180.0
+                    # Calculate camera position with world offset for this environment
+                    cam_pos = list(cam_cfg.pos)
+                    look_at = list(cam_cfg.look_at) if hasattr(cam_cfg, "look_at") and cam_cfg.look_at else None
 
-                # Render using Newton Camera
-                self._viewer.renderer.render(self._newton_camera, self._viewer.objects, self._viewer.lines)
+                    if world_offsets_np is not None and env_id < len(world_offsets_np):
+                        offset = world_offsets_np[env_id]
+                        cam_pos[0] += offset[0]
+                        cam_pos[1] += offset[1]
+                        cam_pos[2] += offset[2]
+                        if look_at is not None:
+                            look_at[0] += offset[0]
+                            look_at[1] += offset[1]
+                            look_at[2] += offset[2]
 
-                # Get frame - returns warp array (H, W, 3) uint8
-                rgb_wp = self._viewer.get_frame()
+                    # Set camera position
+                    self._newton_camera.pos = PyVec3(*cam_pos)
 
-                # Convert to torch tensor (N, H, W, 3) float32 [0, 1]
-                rgb_np = rgb_wp.numpy()
-                # Return uint8 RGB to match MuJoCo convention (test script expects uint8 for imageio)
-                rgb_tensor = torch.from_numpy(rgb_np.copy()).to(self._device)
+                    if look_at is not None:
+                        pitch, yaw = self._look_at_to_pitch_yaw(cam_pos, look_at)
+                        self._newton_camera.pitch = pitch
+                        self._newton_camera.yaw = yaw
+                    else:
+                        # Default orientation (looking down -Y for Z-up)
+                        self._newton_camera.pitch = 0.0
+                        self._newton_camera.yaw = -180.0
 
-                # Placeholder depth (ViewerGL doesn't expose depth readback easily)
-                depth_tensor = torch.zeros((cam_cfg.height, cam_cfg.width), device=self._device)
+                    # Render using Newton Camera
+                    self._viewer.renderer.render(self._newton_camera, self._viewer.objects, self._viewer.lines)
 
-                # Add batch dim
-                if self.num_envs == 1:
-                    rgb_tensor = rgb_tensor.unsqueeze(0)  # (1, H, W, 3)
-                    depth_tensor = depth_tensor.unsqueeze(0).unsqueeze(-1)  # (1, H, W, 1)
-                else:
-                    rgb_tensor = rgb_tensor.unsqueeze(0).expand(self.num_envs, -1, -1, -1)
-                    depth_tensor = depth_tensor.unsqueeze(0).unsqueeze(-1).expand(self.num_envs, -1, -1, -1)
+                    # Get frame - returns warp array (H, W, 3) uint8
+                    rgb_wp = self._viewer.get_frame()
+
+                    # Convert to torch tensor
+                    rgb_np = rgb_wp.numpy()
+                    rgb_tensor = torch.from_numpy(rgb_np.copy()).to(self._device)
+                    rgb_list.append(rgb_tensor)
+
+                    # Placeholder depth (ViewerGL doesn't expose depth readback easily)
+                    depth_tensor = torch.zeros((cam_cfg.height, cam_cfg.width), device=self._device)
+                    depth_list.append(depth_tensor.unsqueeze(-1))  # Shape: (H, W, 1)
+
+                # Stack all environment renders
+                rgb_stacked = torch.stack(rgb_list, dim=0)  # (num_envs, H, W, 3)
+                depth_stacked = torch.stack(depth_list, dim=0)  # (num_envs, H, W, 1)
 
                 camera_states[cam_cfg.name] = CameraState(
-                    rgb=rgb_tensor,
-                    depth=depth_tensor,
+                    rgb=rgb_stacked,
+                    depth=depth_stacked,
                     intrinsics=torch.tensor(cam_cfg.intrinsics, device=self.device)
                     .unsqueeze(0)
-                    .expand(self.num_envs, -1, -1),
+                    .expand(len(env_ids), -1, -1),
                 )
 
         extras = self.get_extra()
