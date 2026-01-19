@@ -88,6 +88,11 @@ class NewtonHandler(BaseSimHandler):
         self._obj_body_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
         self._obj_joint_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
 
+        # Gravity handling
+        self._gravity_disabled_body_ids: dict[int, list[int]] = defaultdict(list)
+        self._gravity_compensation_enabled = False
+        self._gravity_vec = None
+
         # Actions cache
         self._actions_cache: list[Action] | torch.Tensor | np.ndarray = []
 
@@ -109,13 +114,22 @@ class NewtonHandler(BaseSimHandler):
         # Build name-to-ID caches for joint/body lookups
         self._build_name_caches()
 
-        # Apply actuator gains and limits before creating the solver
+        # Apply global gravity from scenario
+        self._apply_gravity_settings()
+
+        # Build gravity compensation map for robots with gravity disabled
+        self._build_gravity_compensation()
+
+        # Apply actuator gains and limits before creating the solver/control
         self._apply_actuator_settings()
 
-        # Create states (double-buffering for solver)
+        # Create states (double-buffering for solver) and control
         self._state_0 = self._model.state()
         self._state_1 = self._model.state()
         self._control = self._model.control()
+
+        # Apply default root poses and joint positions from scenario
+        self._apply_default_state()
 
         # Create MuJoCo solver
         sim_params = self.scenario.sim_params
@@ -175,6 +189,52 @@ class NewtonHandler(BaseSimHandler):
         log.info(f"Newton launched with {self.num_envs} worlds, solver={self._solver.__class__.__name__}")
 
         return super().launch()
+
+    def _apply_default_state(self) -> None:
+        """Apply scenario default poses and joint positions to the model/state/control."""
+        if self._model is None or self._state_0 is None:
+            return
+
+        default_states: list[dict] = []
+        for _ in range(self.num_envs):
+            env_state = {"robots": {}, "objects": {}}
+
+            for robot in self.robots:
+                robot_state = {}
+                if getattr(robot, "default_position", None) is not None:
+                    robot_state["pos"] = robot.default_position
+                if getattr(robot, "default_orientation", None) is not None:
+                    robot_state["rot"] = robot.default_orientation
+                if getattr(robot, "default_joint_positions", None):
+                    robot_state["dof_pos"] = robot.default_joint_positions
+                if robot_state:
+                    env_state["robots"][robot.name] = robot_state
+
+            for obj in self.objects:
+                obj_state = {}
+                if getattr(obj, "default_position", None) is not None:
+                    obj_state["pos"] = obj.default_position
+                if getattr(obj, "default_orientation", None) is not None:
+                    obj_state["rot"] = obj.default_orientation
+                if isinstance(obj, ArticulationObjCfg) and getattr(obj, "default_joint_positions", None):
+                    obj_state["dof_pos"] = obj.default_joint_positions
+                if obj_state:
+                    env_state["objects"][obj.name] = obj_state
+
+            default_states.append(env_state)
+
+        self._set_states(default_states, env_ids=list(range(self.num_envs)))
+
+        # Keep the alternate state buffer consistent
+        if self._state_1 is not None:
+            if self._state_0.body_q is not None:
+                self._state_1.body_q.assign(self._state_0.body_q)
+            if self._state_0.body_qd is not None:
+                self._state_1.body_qd.assign(self._state_0.body_qd)
+            if self._state_0.joint_q is not None:
+                self._state_1.joint_q.assign(self._state_0.joint_q)
+            if self._state_0.joint_qd is not None:
+                self._state_1.joint_qd.assign(self._state_0.joint_qd)
 
     def _build_model(self) -> None:
         """Build Newton model from scenario configuration."""
@@ -359,6 +419,74 @@ class NewtonHandler(BaseSimHandler):
         self._joint_q_starts = self._model.joint_q_start.numpy()
         self._joint_qd_starts = self._model.joint_qd_start.numpy()
         self._joint_types = self._model.joint_type.numpy()
+
+    def _apply_gravity_settings(self) -> None:
+        """Apply scenario gravity to the Newton model."""
+        if self._model is None:
+            return
+        gravity = getattr(self.scenario, "gravity", None)
+        if gravity is None:
+            return
+        try:
+            self._model.set_gravity(tuple(gravity))
+        except Exception as exc:
+            log.warning(f"Failed to set Newton gravity: {exc}")
+
+    def _build_gravity_compensation(self) -> None:
+        """Build list of body ids that should be gravity-compensated."""
+        self._gravity_disabled_body_ids = defaultdict(list)
+        self._gravity_compensation_enabled = False
+
+        if self._model is None:
+            return
+
+        gravity = getattr(self.scenario, "gravity", None)
+        if gravity is None:
+            return
+
+        for env_id in range(self.num_envs):
+            body_ids: list[int] = []
+            for robot in self.robots:
+                if getattr(robot, "enabled_gravity", True):
+                    continue
+                body_ids.extend(self._get_body_indices(env_id, robot.name))
+
+            if body_ids:
+                # Deduplicate while preserving order
+                seen = set()
+                deduped = []
+                for bid in body_ids:
+                    if bid in seen:
+                        continue
+                    seen.add(bid)
+                    deduped.append(bid)
+                self._gravity_disabled_body_ids[env_id] = deduped
+                self._gravity_compensation_enabled = True
+
+        if self._gravity_compensation_enabled:
+            self._gravity_vec = torch.tensor(gravity, dtype=torch.float32, device=self._device)
+
+    def _apply_gravity_compensation(self) -> None:
+        """Apply per-body gravity compensation for robots with gravity disabled."""
+        if not self._gravity_compensation_enabled:
+            return
+        if self._state_0 is None or self._state_0.body_f is None:
+            return
+        if self._model is None or self._model.body_mass is None:
+            return
+
+        body_f = wp2torch(self._state_0.body_f)
+        body_f.zero_()
+
+        body_mass = wp2torch(self._model.body_mass)
+        gravity = self._gravity_vec
+
+        for body_ids in self._gravity_disabled_body_ids.values():
+            for body_id in body_ids:
+                m = body_mass[body_id]
+                if m == 0:
+                    continue
+                body_f[body_id, 0:3] = -m * gravity
 
     def _apply_actuator_settings(self) -> None:
         """Apply actuator stiffness/damping/limits to the Newton model."""
@@ -588,6 +716,9 @@ class NewtonHandler(BaseSimHandler):
         dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt else 0.005
 
         for _ in range(self.decimation):
+            # Apply gravity compensation (per-body) if configured
+            self._apply_gravity_compensation()
+
             # Generate contacts
             contacts = self._model.collide(self._state_0)
 
