@@ -87,6 +87,7 @@ class NewtonHandler(BaseSimHandler):
         self._body_child_to_joint: dict[int, dict[int, int]] = defaultdict(dict)
         self._obj_body_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
         self._obj_joint_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
+        self._obj_joint_name_cache: dict[int, dict[str, dict[str, int]]] = defaultdict(dict)
 
         # Gravity handling
         self._gravity_disabled_body_ids: dict[int, list[int]] = defaultdict(list)
@@ -239,6 +240,11 @@ class NewtonHandler(BaseSimHandler):
     def _build_model(self) -> None:
         """Build Newton model from scenario configuration."""
         builder = newton.ModelBuilder()
+        builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
+            limit_ke=1.0e3,
+            limit_kd=1.0e1,
+            friction=1.0e-5,
+        )
 
         # Set timestep
         if self.scenario.sim_params.dt is not None:
@@ -256,6 +262,11 @@ class NewtonHandler(BaseSimHandler):
         for env_id in range(self.num_envs):
             # Create sub-builder for this environment
             env_builder = newton.ModelBuilder()
+            env_builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
+                limit_ke=1.0e3,
+                limit_kd=1.0e1,
+                friction=1.0e-5,
+            )
 
             # Track local indices for this env
             env_map = {}
@@ -379,6 +390,7 @@ class NewtonHandler(BaseSimHandler):
         self._body_child_to_joint = defaultdict(dict)
         self._obj_body_indices = defaultdict(dict)
         self._obj_joint_indices = defaultdict(dict)
+        self._obj_joint_name_cache = defaultdict(dict)
 
         # DEBUG: Print all body names
         # print(f"DEBUG: Model Body Names: {self._model.body_key}") # Commented out to be safe, I'll rely on add_urdf return checks
@@ -419,6 +431,17 @@ class NewtonHandler(BaseSimHandler):
         self._joint_q_starts = self._model.joint_q_start.numpy()
         self._joint_qd_starts = self._model.joint_qd_start.numpy()
         self._joint_types = self._model.joint_type.numpy()
+
+        # Build per-object joint name maps to disambiguate duplicate joint names
+        for env_id in range(self.num_envs):
+            for obj in (*self.robots, *self.objects):
+                joint_map = {}
+                for joint_idx in self._get_joint_indices(env_id, obj.name):
+                    joint_name = self._model.joint_key[joint_idx]
+                    if joint_name not in joint_map:
+                        joint_map[joint_name] = joint_idx
+                if joint_map:
+                    self._obj_joint_name_cache[env_id][obj.name] = joint_map
 
     def _apply_gravity_settings(self) -> None:
         """Apply scenario gravity to the Newton model."""
@@ -509,7 +532,7 @@ class NewtonHandler(BaseSimHandler):
                 if not isinstance(robot, RobotCfg) or not robot.actuators:
                     continue
                 for joint_name, actuator in robot.actuators.items():
-                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
                     if joint_idx is None:
                         continue
 
@@ -601,6 +624,36 @@ class NewtonHandler(BaseSimHandler):
 
         self._obj_joint_indices[env_id][obj_name] = joint_ids
         return joint_ids
+
+    def _get_obj_joint_name_map(self, env_id: int, obj_name: str) -> dict[str, int]:
+        """Return per-object joint name -> joint index mapping for a given env."""
+        cached = self._obj_joint_name_cache.get(env_id, {}).get(obj_name)
+        if cached is not None:
+            return cached
+        joint_map: dict[str, int] = {}
+        if self._model is None:
+            return joint_map
+        for joint_idx in self._get_joint_indices(env_id, obj_name):
+            joint_name = self._model.joint_key[joint_idx]
+            if joint_name not in joint_map:
+                joint_map[joint_name] = joint_idx
+        self._obj_joint_name_cache[env_id][obj_name] = joint_map
+        return joint_map
+
+    def _get_joint_index(self, env_id: int, obj_name: str, joint_name: str) -> int | None:
+        """Resolve a joint index for a specific object in a given env."""
+        obj_map = self._get_obj_joint_name_map(env_id, obj_name)
+        return obj_map.get(joint_name)
+
+    def _collect_joint_names(self, env_id: int, obj_name: str) -> list[str]:
+        """Collect 1-DoF joint names for an object in a given env."""
+        names: list[str] = []
+        for joint_idx in self._get_joint_indices(env_id, obj_name):
+            qd_start = self._joint_qd_starts[joint_idx]
+            qd_end = self._joint_qd_starts[joint_idx + 1]
+            if qd_end - qd_start == 1:
+                names.append(self._model.joint_key[joint_idx])
+        return names
 
     @staticmethod
     def _reorder_quat_xyzw_to_wxyz(quat_xyzw: torch.Tensor) -> torch.Tensor:
@@ -904,7 +957,7 @@ class NewtonHandler(BaseSimHandler):
                 body_states.append(None)
 
             for col, joint_name in enumerate(joint_names):
-                joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                joint_idx = self._get_joint_index(env_id, robot_name, joint_name)
                 if joint_idx is None:
                     continue
                 q_start = self._joint_q_starts[joint_idx]
@@ -980,7 +1033,7 @@ class NewtonHandler(BaseSimHandler):
                     body_states.append(None)
 
                 for col, joint_name in enumerate(joint_names):
-                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    joint_idx = self._get_joint_index(env_id, obj_name, joint_name)
                     if joint_idx is None:
                         continue
                     q_start = self._joint_q_starts[joint_idx]
@@ -1138,9 +1191,9 @@ class NewtonHandler(BaseSimHandler):
                 for j_name, j_pos in dof_pos.items():
                     if joint_q is None or joint_qd is None:
                         continue
-                    if j_name not in self._joint_name_cache[env_id]:
+                    j_idx = self._get_joint_index(env_id, name, j_name)
+                    if j_idx is None:
                         continue
-                    j_idx = self._joint_name_cache[env_id][j_name]
                     q_start = self._joint_q_starts[j_idx]
                     qd_start = self._joint_qd_starts[j_idx]
                     qd_end = self._joint_qd_starts[j_idx + 1]
@@ -1175,9 +1228,9 @@ class NewtonHandler(BaseSimHandler):
                         continue
                     if joint_qd is None:
                         continue
-                    if j_name not in self._joint_name_cache[env_id]:
+                    j_idx = self._get_joint_index(env_id, name, j_name)
+                    if j_idx is None:
                         continue
-                    j_idx = self._joint_name_cache[env_id][j_name]
                     qd_start = self._joint_qd_starts[j_idx]
                     qd_end = self._joint_qd_starts[j_idx + 1]
                     if qd_end <= qd_start:
@@ -1264,7 +1317,7 @@ class NewtonHandler(BaseSimHandler):
             for env_id in range(min(self.num_envs, action_tensor.shape[0])):
                 for col in range(max_joints):
                     joint_name = joint_names[col]
-                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
                     if joint_idx is None:
                         continue
                     qd_start = self._joint_qd_starts[joint_idx]
@@ -1293,7 +1346,7 @@ class NewtonHandler(BaseSimHandler):
 
                 if joint_target_pos is not None:
                     for joint_name, target in dof_pos.items():
-                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
                         if joint_idx is None:
                             continue
                         qd_start = self._joint_qd_starts[joint_idx]
@@ -1309,7 +1362,7 @@ class NewtonHandler(BaseSimHandler):
 
                 if joint_target_vel is not None:
                     for joint_name, target in dof_vel_target.items():
-                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
                         if joint_idx is None:
                             continue
                         qd_start = self._joint_qd_starts[joint_idx]
@@ -1323,7 +1376,7 @@ class NewtonHandler(BaseSimHandler):
 
                 if joint_f is not None:
                     for joint_name, effort in dof_effort.items():
-                        joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                        joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
                         if joint_idx is None:
                             continue
                         qd_start = self._joint_qd_starts[joint_idx]
@@ -1347,23 +1400,13 @@ class NewtonHandler(BaseSimHandler):
                 names = list(obj_cfg.actuators.keys())
             else:
                 names = []
-            if env_id in self._joint_name_cache:
-                names = [name for name in names if name in self._joint_name_cache[env_id]]
+            obj_joint_map = self._get_obj_joint_name_map(env_id, obj_name)
+            if obj_joint_map:
+                names = [name for name in names if name in obj_joint_map]
             if not names:
-                joint_ids = self._get_joint_indices(env_id, obj_name)
-                for joint_idx in joint_ids:
-                    qd_start = self._joint_qd_starts[joint_idx]
-                    qd_end = self._joint_qd_starts[joint_idx + 1]
-                    if qd_end - qd_start == 1:
-                        names.append(self._model.joint_key[joint_idx])
+                names = self._collect_joint_names(env_id, obj_name)
         else:
-            joint_ids = self._get_joint_indices(env_id, obj_name)
-            names = []
-            for joint_idx in joint_ids:
-                qd_start = self._joint_qd_starts[joint_idx]
-                qd_end = self._joint_qd_starts[joint_idx + 1]
-                if qd_end - qd_start == 1:
-                    names.append(self._model.joint_key[joint_idx])
+            names = self._collect_joint_names(env_id, obj_name)
 
         if sort:
             names.sort()
