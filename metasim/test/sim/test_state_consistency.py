@@ -57,7 +57,7 @@ def _create_init_states(num_envs: int) -> list[dict]:
     ] * num_envs
 
 
-@pytest.mark.sim("isaacsim", "mujoco", "isaacgym")
+@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "newton")
 def test_state_consistency(handler):
     """Test that set_states and get_states are consistent."""
     num_envs = handler.scenario.num_envs

@@ -43,7 +43,7 @@ def reset_robot_to_default(handler, request):
         handler.simulate()
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_basic(handler):
     """Test basic set_dof_targets functionality."""
     target_positions = {
@@ -78,7 +78,7 @@ def test_set_dof_targets_basic(handler):
     log.info(f"Set dof targets basic test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_within_limits(handler):
     """Test that dof targets respect joint limits."""
     robot = handler.scenario.robots[0]
@@ -112,7 +112,7 @@ def test_set_dof_targets_within_limits(handler):
     log.info(f"Set dof targets within limits test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_sequential_changes(handler):
     """Test applying sequential dof targets."""
     # First target
@@ -164,7 +164,7 @@ def test_set_dof_targets_sequential_changes(handler):
     log.info(f"Set dof targets sequential changes test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_per_env(handler):
     """Test setting different dof targets for each environment."""
     if handler.scenario.num_envs < 2:
@@ -208,7 +208,7 @@ def test_set_dof_targets_per_env(handler):
     log.info(f"Set dof targets per env test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dof_targets_gripper_control(handler):
     """Test gripper control via finger joints."""
     # Open gripper
@@ -251,7 +251,7 @@ def test_dof_targets_gripper_control(handler):
     log.info(f"Dof targets gripper control test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dof_convergence_to_target(handler):
     """Test that DOF positions converge to targets over time."""
     target_positions = {

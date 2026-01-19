@@ -17,7 +17,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.test.test_utils import assert_close
 
 
-@pytest.mark.sim("isaacsim", "isaacgym")
+@pytest.mark.sim("isaacsim", "isaacgym", "newton")
 def test_parallel_envs_state_independence(handler):
     """Test that parallel environments maintain independent states."""
     if handler.scenario.num_envs < 2:
@@ -86,7 +86,7 @@ def test_parallel_envs_state_independence(handler):
     log.info(f"Parallel envs state independence test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("isaacsim", "isaacgym")
+@pytest.mark.sim("isaacsim", "isaacgym", "newton")
 def test_parallel_envs_actions(handler):
     """Test that different actions can be applied to each parallel environment."""
     if handler.scenario.num_envs < 2:
@@ -128,7 +128,7 @@ def test_parallel_envs_actions(handler):
     log.info(f"Parallel envs actions test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("isaacsim", "isaacgym")
+@pytest.mark.sim("isaacsim", "isaacgym", "newton")
 def test_parallel_envs_simulate_consistency(handler):
     """Test that simulate() updates all environments consistently."""
     if handler.scenario.num_envs < 2:
@@ -213,7 +213,7 @@ def test_parallel_envs_simulate_consistency(handler):
     log.info(f"Parallel envs simulate consistency test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("isaacsim", "isaacgym")
+@pytest.mark.sim("isaacsim", "isaacgym", "newton")
 def test_parallel_tensor_state_batching(handler):
     """Test that tensor state correctly batches data across environments."""
     if handler.scenario.num_envs < 2:
@@ -233,7 +233,7 @@ def test_parallel_tensor_state_batching(handler):
     log.info(f"Parallel tensor state batching test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("isaacsim", "isaacgym")
+@pytest.mark.sim("isaacsim", "isaacgym", "newton")
 def test_parallel_envs_partial_env_ids(handler):
     """Test setting states for specific environment IDs."""
     if handler.scenario.num_envs < 2:
