@@ -14,8 +14,10 @@ import newton
 import numpy as np
 import scipy.spatial.transform as tr
 import warp as wp
+from newton import Contacts
 from newton._src.sim.articulation import eval_fk
 from newton._src.sim.joints import JointType
+from newton.sensors import SensorContact, populate_contacts
 from newton.solvers import SolverMuJoCo
 from newton.viewer import ViewerGL
 
@@ -72,6 +74,10 @@ class NewtonHandler(BaseSimHandler):
         self._newton_camera = None
         self._sim_time = 0.0
 
+        # Contact sensor for contact force queries
+        self._contacts: Contacts | None = None
+        self._contact_sensor: SensorContact | None = None
+
         # Caches for efficient lookups
         self._joint_name_to_id: dict[str, dict[str, int]] = {}
         self._body_name_to_id: dict[str, dict[str, int]] = {}
@@ -83,7 +89,7 @@ class NewtonHandler(BaseSimHandler):
         self._obj_joint_indices: dict[int, dict[str, list[int]]] = defaultdict(dict)
 
         # Actions cache
-        self._actions_cache: list[Action] = []
+        self._actions_cache: list[Action] | torch.Tensor | np.ndarray = []
 
         # Decimation for substeps
         if scenario.decimation is not None:
@@ -119,14 +125,26 @@ class NewtonHandler(BaseSimHandler):
             nconmax=sim_params.nconmax,
         )
 
-        # Initialize Viewer for Rendering (if needed)
+        # Initialize Contacts object for contact force queries
+        nconmax = self._resolve_contact_capacity(sim_params.nconmax)
+        self._contacts = Contacts(
+            rigid_contact_max=nconmax,
+            soft_contact_max=0,
+            device=self._device,
+        )
+        self._ensure_contact_buffers()
+
+        # Initialize Viewer for Rendering (GUI is controlled by headless only)
         self._viewer = None
         self._newton_camera = None  # Newton's native Camera for ViewerGL rendering
-        if self.scenario.cameras:
-            max_w = max([c.width for c in self.scenario.cameras])
-            max_h = max([c.height for c in self.scenario.cameras])
-
-            headless = getattr(self.scenario, "headless", True)
+        headless = getattr(self.scenario, "headless", True)
+        if (not headless) or self.scenario.cameras:
+            if self.scenario.cameras:
+                max_w = max(c.width for c in self.scenario.cameras)
+                max_h = max(c.height for c in self.scenario.cameras)
+            else:
+                # Default window size when no cameras are defined
+                max_w, max_h = 1280, 720
 
             self._viewer = ViewerGL(width=max_w, height=max_h, headless=headless)
             self._viewer.set_model(self._model)
@@ -137,21 +155,22 @@ class NewtonHandler(BaseSimHandler):
                 if self._viewer.ui is None or not self._viewer.ui.is_available:
                     log.warning("Newton Viewer UI is unavailable. Install `imgui-bundle` to enable the left panel.")
 
-            # Create Newton Camera from first camera config
-            # We'll update it per-camera during _get_states
-            from newton._src.viewer.camera import Camera as NewtonCamera
+            if self.scenario.cameras:
+                # Create Newton Camera from first camera config
+                # We'll update it per-camera during _get_states
+                from newton._src.viewer.camera import Camera as NewtonCamera
 
-            first_cam = self.scenario.cameras[0]
-            pitch, yaw = self._look_at_to_pitch_yaw(first_cam.pos, first_cam.look_at)
-            self._newton_camera = NewtonCamera(
-                fov=first_cam.vertical_fov,
-                width=first_cam.width,
-                height=first_cam.height,
-                pos=first_cam.pos,
-                up_axis="Z",
-            )
-            self._newton_camera.pitch = pitch
-            self._newton_camera.yaw = yaw
+                first_cam = self.scenario.cameras[0]
+                pitch, yaw = self._look_at_to_pitch_yaw(first_cam.pos, first_cam.look_at)
+                self._newton_camera = NewtonCamera(
+                    fov=first_cam.vertical_fov,
+                    width=first_cam.width,
+                    height=first_cam.height,
+                    pos=first_cam.pos,
+                    up_axis="Z",
+                )
+                self._newton_camera.pitch = pitch
+                self._newton_camera.yaw = yaw
 
         log.info(f"Newton launched with {self.num_envs} worlds, solver={self._solver.__class__.__name__}")
 
@@ -581,6 +600,10 @@ class NewtonHandler(BaseSimHandler):
                 dt=dt,
             )
 
+            # Populate contacts with force data from solver (for contact force queries)
+            if self._contacts is not None:
+                populate_contacts(self._contacts, self._solver)
+
             # Swap state buffers
             self._state_0, self._state_1 = self._state_1, self._state_0
             self._sim_time += dt
@@ -857,12 +880,31 @@ class NewtonHandler(BaseSimHandler):
         """Set the physics state from a TensorState or list."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
+        elif isinstance(env_ids, torch.Tensor):
+            env_ids = env_ids.detach().cpu().tolist()
+        elif isinstance(env_ids, np.ndarray):
+            env_ids = env_ids.tolist()
+
+        env_ids = [int(e) for e in env_ids]
 
         # Convert to nested dict if needed
         if isinstance(states, TensorState):
             states_nested = state_tensor_to_nested(self, states)
+
+            def state_lookup(idx: int, env_id: int):
+                return states_nested[env_id]
+
         else:
             states_nested = states
+            if len(states_nested) == self.num_envs:
+
+                def state_lookup(idx: int, env_id: int):
+                    return states_nested[env_id]
+
+            else:
+
+                def state_lookup(idx: int, env_id: int):
+                    return states_nested[idx]
 
         # Prepare arrays for update (clone to host/numpy)
         body_q = self._model.body_q.numpy()
@@ -884,7 +926,7 @@ class NewtonHandler(BaseSimHandler):
         )
 
         for i, env_id in enumerate(env_ids):
-            state_dict = states_nested[i]
+            state_dict = state_lookup(i, env_id)
 
             # Combine robots and objects
             all_state = {**state_dict.get("objects", {}), **state_dict.get("robots", {})}
@@ -1038,7 +1080,7 @@ class NewtonHandler(BaseSimHandler):
             # Run Forward Kinematics to propagate joint changes to bodies
             eval_fk(self._model, self._state_0.joint_q, self._state_0.joint_qd, self._state_0)
 
-    def _set_dof_targets(self, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: list[Action] | torch.Tensor | np.ndarray) -> None:
         """Set DOF position/velocity targets for robot joints."""
         self._actions_cache = actions
 
@@ -1052,6 +1094,62 @@ class NewtonHandler(BaseSimHandler):
             wp2torch(self._control.joint_target_vel) if self._control.joint_target_vel is not None else None
         )
         joint_f = wp2torch(self._control.joint_f) if self._control.joint_f is not None else None
+
+        # Fast path: tensor/ndarray actions (vectorized envs).
+        if isinstance(actions, (torch.Tensor, np.ndarray)):
+            if not self.robots:
+                return
+
+            # Prefer effort control if any joint is configured as effort (matches legged tasks)
+            robot = self.robots[0]
+            use_effort = False
+            if isinstance(robot, RobotCfg) and robot.control_type:
+                use_effort = any(mode == "effort" for mode in robot.control_type.values())
+
+            target_device = None
+            if use_effort and joint_f is not None:
+                target_device = joint_f.device
+            elif joint_target_pos is not None:
+                target_device = joint_target_pos.device
+            elif joint_f is not None:
+                target_device = joint_f.device
+
+            if target_device is None:
+                return
+
+            action_tensor = torch.as_tensor(actions, dtype=torch.float32)
+            if action_tensor.ndim == 1:
+                action_tensor = action_tensor.unsqueeze(0)
+            if action_tensor.device != target_device:
+                action_tensor = action_tensor.to(target_device)
+
+            # Broadcast single action across all envs if needed
+            if action_tensor.shape[0] == 1 and self.num_envs > 1:
+                action_tensor = action_tensor.repeat(self.num_envs, 1)
+
+            joint_names = self._get_joint_names(robot.name, sort=True)
+            max_joints = min(action_tensor.shape[1], len(joint_names))
+
+            for env_id in range(min(self.num_envs, action_tensor.shape[0])):
+                for col in range(max_joints):
+                    joint_name = joint_names[col]
+                    joint_idx = self._joint_name_cache[env_id].get(joint_name)
+                    if joint_idx is None:
+                        continue
+                    qd_start = self._joint_qd_starts[joint_idx]
+                    qd_end = self._joint_qd_starts[joint_idx + 1]
+                    if qd_end - qd_start != 1:
+                        continue
+
+                    value = action_tensor[env_id, col]
+                    if use_effort and joint_f is not None:
+                        joint_f[qd_start] = value
+                    else:
+                        if joint_target_pos is not None:
+                            joint_target_pos[qd_start] = value
+                        if joint_target_vel is not None:
+                            joint_target_vel[qd_start] = 0.0
+            return
 
         for env_id, action in enumerate(actions):
             for robot in self.robots:
@@ -1155,6 +1253,126 @@ class NewtonHandler(BaseSimHandler):
         if sort:
             names.sort()
         return names
+
+    def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
+        """Get body indices for reindexing contact forces.
+
+        Returns a list of body indices in sorted body name order, which can be used
+        to reorder contact forces to match the sorted body order expected by ContactForces query.
+
+        Args:
+            obj_name: Name of the object (robot or articulated object)
+
+        Returns:
+            List of body indices in sorted name order
+        """
+        env_id = 0
+        body_ids = self._get_body_indices(env_id, obj_name)
+        if not body_ids:
+            return []
+
+        # Get body names and their indices
+        body_names_with_indices = [(self._model.body_key[idx], idx) for idx in body_ids]
+
+        # Sort by body name and return the indices
+        sorted_pairs = sorted(body_names_with_indices, key=lambda x: x[0])
+        return [idx for _, idx in sorted_pairs]
+
+    def init_contact_sensor(self, robot_name: str) -> None:
+        """Initialize contact sensor for the given robot.
+
+        This is called by ContactForces.bind_handler() when contact force query is registered.
+
+        Args:
+            robot_name: Name of the robot to create contact sensor for
+        """
+        if self._contact_sensor is not None:
+            return  # Already initialized
+
+        if self._model is None:
+            log.warning("Cannot initialize contact sensor: model not yet built")
+            return
+
+        # Create sensor that senses contact forces on all bodies of the robot
+        # We use body pattern matching to select all bodies belonging to this robot
+        body_ids = self._get_body_indices(0, robot_name)
+        if not body_ids:
+            log.warning(f"No bodies found for robot {robot_name}")
+            return
+
+        # Get body names for pattern matching
+        body_names = [self._model.body_key[idx] for idx in body_ids]
+
+        # Create contact sensor for these bodies
+        self._contact_sensor = SensorContact(
+            self._model,
+            sensing_obj_bodies=body_names,
+            include_total=True,
+        )
+        log.info(f"Initialized Newton contact sensor for {robot_name} with {len(body_names)} bodies")
+
+    def _resolve_contact_capacity(self, fallback: int | None) -> int:
+        if self._solver is None:
+            return fallback if fallback is not None else 2048
+        mjw_data = getattr(self._solver, "mjw_data", None)
+        if mjw_data is not None:
+            return int(mjw_data.naconmax)
+        mj_model = getattr(self._solver, "mj_model", None)
+        if mj_model is not None:
+            return int(mj_model.nconmax)
+        return fallback if fallback is not None else 2048
+
+    def _ensure_contact_buffers(self) -> None:
+        if self._contacts is None:
+            return
+        if not hasattr(self._contacts, "pair"):
+            self._contacts.pair = wp.zeros(
+                self._contacts.rigid_contact_max,
+                dtype=wp.vec2i,
+                device=self._contacts.device,
+            )
+        if not hasattr(self._contacts, "normal"):
+            self._contacts.normal = wp.zeros(
+                self._contacts.rigid_contact_max,
+                dtype=wp.vec3,
+                device=self._contacts.device,
+            )
+        if not hasattr(self._contacts, "force"):
+            self._contacts.force = wp.zeros(
+                self._contacts.rigid_contact_max,
+                dtype=wp.float32,
+                device=self._contacts.device,
+            )
+
+    def get_contact_forces(self) -> torch.Tensor:
+        """Get the current contact forces from the contact sensor.
+
+        Returns:
+            Tensor of shape (num_bodies, 3) containing contact forces for each body
+        """
+        if self._contact_sensor is None or self._contacts is None:
+            return torch.zeros((0, 3), device=self.device)
+
+        self._ensure_contact_buffers()
+
+        # Evaluate contact sensor with current contacts
+        self._contact_sensor.eval(self._contacts)
+
+        # Get net force from sensor
+        net_force = self._contact_sensor.get_total_force()
+
+        # Convert warp array to torch tensor
+        # net_force shape is (num_sensing_objs, num_counterparts) with each element being vec3
+        # Since we used include_total=True, the first column is the total force
+        net_force_np = net_force.numpy()
+
+        # Reshape to (num_bodies, 3) - take the total force (first column)
+        if net_force_np.shape[1] > 0:
+            forces = torch.tensor(net_force_np[:, 0, :], dtype=torch.float32, device=self.device)
+        else:
+            forces = torch.zeros((net_force_np.shape[0], 3), device=self.device)
+
+        return forces
 
     def close(self) -> None:
         """Clean up Newton resources."""

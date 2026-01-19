@@ -13,6 +13,7 @@ SimBackend = Literal[
     "mujoco",
     "genesis",
     "mjx",
+    "newton",
 ]
 
 from roboverse_learn.rl.configs.rsl_rl.algorithm import (

@@ -94,6 +94,7 @@ class MaterialRandomizer(BaseQueryType):
 
     def _get_set_shape_indices(self):
         num_shapes_per_body = None
+        expected_shapes = 0
         if self.simulator_name == "isaacsim":
             if self.obj_name in self.handler.scene.articulations:
                 obj_inst = self.handler.scene.articulations[self.obj_name]
@@ -105,6 +106,9 @@ class MaterialRandomizer(BaseQueryType):
                     link_physx_view = obj_inst._physics_sim_view.create_rigid_body_view(link_path)  # type: ignore
                     num_shapes_per_body.append(link_physx_view.max_shapes)
                 # ensure the parsing is correct
+                expected_shapes = obj_inst.root_physx_view.max_shapes
+            elif self.obj_name in self.handler.scene.rigid_objects:
+                obj_inst = self.handler.scene.rigid_objects[self.obj_name]
                 expected_shapes = obj_inst.root_physx_view.max_shapes
         elif self.simulator_name == "isaacgym":
             if self.obj_name in self.all_robot_names:
@@ -123,6 +127,8 @@ class MaterialRandomizer(BaseQueryType):
             for geom_bodyid in model.geom_bodyid:
                 num_shapes_per_body[geom_bodyid] += 1
             expected_shapes = model.ngeom
+        else:
+            return []
         if num_shapes_per_body is not None and sum(num_shapes_per_body) != expected_shapes:
             raise ValueError(
                 "Randomization term 'randomize_rigid_body_material' failed to parse the number of shapes per body."

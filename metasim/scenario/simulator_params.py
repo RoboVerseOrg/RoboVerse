@@ -39,8 +39,8 @@ class SimParamCfg:
     max_depenetration_velocity: float = 1.0
     default_buffer_size_multiplier: int = 2.0
 
-    ## MJX specific parameters
-    nconmax: int | None = None
+    ## MJX, Newton specific parameters
+    nconmax: int | None = 512
     njmax: int | None = None
 
     ## Resource management

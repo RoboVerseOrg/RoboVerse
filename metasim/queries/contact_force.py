@@ -38,7 +38,7 @@ class ContactForces(BaseQueryType):
         self.simulator = handler.scenario.simulator
         self.num_envs = handler.scenario.num_envs
         self.robots = handler.robots
-        if self.simulator in ["isaacgym", "mujoco"]:
+        if self.simulator in ["isaacgym", "mujoco", "newton"]:
             self.body_ids_reindex = handler._get_body_ids_reindex(self.robots[0].name)
         elif self.simulator == "isaacsim":
             sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
@@ -49,6 +49,10 @@ class ContactForces(BaseQueryType):
             )
         else:
             raise NotImplementedError
+
+        # Newton-specific: initialize contact sensor
+        if self.simulator == "newton":
+            self.handler.init_contact_sensor(self.robots[0].name)
         self.initialize()
         self.__call__()
 
@@ -63,6 +67,8 @@ class ContactForces(BaseQueryType):
                 self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
             elif self.simulator == "mujoco":
                 self._current_contact_force = self._get_contact_forces_mujoco()
+            elif self.simulator == "newton":
+                self._current_contact_force = self._get_contact_forces_newton()
             else:
                 raise NotImplementedError
             self._contact_forces_queue.append(
@@ -92,6 +98,14 @@ class ContactForces(BaseQueryType):
 
         return contact_forces
 
+    def _get_contact_forces_newton(self) -> torch.Tensor:
+        """Get contact forces from Newton simulator.
+
+        Returns:
+            torch.Tensor: shape (nbody, 3), contact forces for each body
+        """
+        return self.handler.get_contact_forces()
+
     def __call__(self):
         """Fetch the newest net contact forces and update the queue."""
         if self.simulator == "isaacgym":
@@ -100,6 +114,8 @@ class ContactForces(BaseQueryType):
             self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
         elif self.simulator == "mujoco":
             self._current_contact_force = self._get_contact_forces_mujoco()
+        elif self.simulator == "newton":
+            self._current_contact_force = self._get_contact_forces_newton()
         else:
             raise NotImplementedError
         self._contact_forces_queue.append(
