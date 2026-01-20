@@ -31,6 +31,10 @@ class ContactForces(BaseQueryType):
         self.history_length = history_length
         self._current_contact_force = None
         self._contact_forces_queue = deque(maxlen=history_length)
+        self._newton_env_ids = None
+        self._newton_local_ids = None
+        self._newton_valid_mask = None
+        self._newton_body_count = None
 
     def bind_handler(self, handler: BaseSimHandler, *args, **kwargs):
         """Bind the simulator handler and pre-compute per-robot indexing."""
@@ -38,7 +42,7 @@ class ContactForces(BaseQueryType):
         self.simulator = handler.scenario.simulator
         self.num_envs = handler.scenario.num_envs
         self.robots = handler.robots
-        if self.simulator in ["isaacgym", "mujoco", "newton"]:
+        if self.simulator in ["isaacgym", "mujoco"]:
             self.body_ids_reindex = handler._get_body_ids_reindex(self.robots[0].name)
         elif self.simulator == "isaacsim":
             sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
@@ -47,12 +51,14 @@ class ContactForces(BaseQueryType):
                 dtype=torch.int,
                 device=self.handler.device,
             )
+        elif self.simulator == "newton":
+            self.handler.init_contact_sensor(self.robots[0].name)
+            sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
+            self.body_ids_reindex = list(range(len(sorted_body_names)))
+            self._build_newton_reindex()
         else:
             raise NotImplementedError
 
-        # Newton-specific: initialize contact sensor
-        if self.simulator == "newton":
-            self.handler.init_contact_sensor(self.robots[0].name)
         self.initialize()
         self.__call__()
 
@@ -71,9 +77,12 @@ class ContactForces(BaseQueryType):
                 self._current_contact_force = self._get_contact_forces_newton()
             else:
                 raise NotImplementedError
-            self._contact_forces_queue.append(
-                self._current_contact_force.clone().view(self.num_envs, -1, 3)[:, self.body_ids_reindex, :]
-            )
+            if self.simulator == "newton":
+                self._contact_forces_queue.append(self._map_newton_contact_forces(self._current_contact_force))
+            else:
+                self._contact_forces_queue.append(
+                    self._current_contact_force.clone().view(self.num_envs, -1, 3)[:, self.body_ids_reindex, :]
+                )
 
     def _get_contact_forces_mujoco(self) -> torch.Tensor:
         """Compute net contact forces on each body.
@@ -118,9 +127,12 @@ class ContactForces(BaseQueryType):
             self._current_contact_force = self._get_contact_forces_newton()
         else:
             raise NotImplementedError
-        self._contact_forces_queue.append(
-            self._current_contact_force.view(self.num_envs, -1, 3)[:, self.body_ids_reindex, :]
-        )
+        if self.simulator == "newton":
+            self._contact_forces_queue.append(self._map_newton_contact_forces(self._current_contact_force))
+        else:
+            self._contact_forces_queue.append(
+                self._current_contact_force.view(self.num_envs, -1, 3)[:, self.body_ids_reindex, :]
+            )
         return {self.robots[0].name: self}
 
     @property
@@ -132,3 +144,95 @@ class ContactForces(BaseQueryType):
     def contact_forces(self) -> torch.Tensor:
         """Return the latest contact forces snapshot."""
         return self._contact_forces_queue[-1]
+
+    def _build_newton_reindex(self) -> None:
+        """Build mapping from Newton contact sensor rows to per-env sorted body indices."""
+        if self.handler is None:
+            return
+        sensor = getattr(self.handler, "_contact_sensor", None)
+        model = getattr(self.handler, "_model", None)
+        if sensor is None or model is None:
+            self._newton_body_count = 0
+            self._newton_env_ids = None
+            self._newton_local_ids = None
+            self._newton_valid_mask = None
+            return
+
+        body_worlds = model.body_world.numpy()
+        per_env_maps = []
+        body_count = None
+        for env_id in range(self.num_envs):
+            body_ids = self.handler._get_body_indices(env_id, self.robots[0].name)
+            body_ids_no_root = body_ids[1:]
+            if not body_ids_no_root:
+                per_env_maps.append({})
+                if body_count is None:
+                    body_count = 0
+                continue
+            body_names = [model.body_key[idx] for idx in body_ids_no_root]
+            sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+            sorted_body_ids = [idx for _, idx in sorted_pairs]
+            if body_count is None:
+                body_count = len(sorted_body_ids)
+            per_env_maps.append({body_idx: local_idx for local_idx, body_idx in enumerate(sorted_body_ids)})
+
+        if body_count is None:
+            body_count = 0
+
+        env_ids = []
+        local_ids = []
+        valid = []
+        for row in sensor.sensing_objs:
+            body_idx = row[0]
+            if not isinstance(body_idx, (int, np.integer)):
+                env_ids.append(-1)
+                local_ids.append(-1)
+                valid.append(False)
+                continue
+            body_idx = int(body_idx)
+            if body_idx < 0 or body_idx >= len(body_worlds):
+                env_ids.append(-1)
+                local_ids.append(-1)
+                valid.append(False)
+                continue
+            env_id = int(body_worlds[body_idx])
+            if env_id < 0 or env_id >= self.num_envs:
+                env_ids.append(-1)
+                local_ids.append(-1)
+                valid.append(False)
+                continue
+            local_idx = per_env_maps[env_id].get(body_idx)
+            if local_idx is None or local_idx >= body_count:
+                env_ids.append(env_id)
+                local_ids.append(-1)
+                valid.append(False)
+                continue
+            env_ids.append(env_id)
+            local_ids.append(local_idx)
+            valid.append(True)
+
+        self._newton_env_ids = torch.tensor(env_ids, device=self.handler.device, dtype=torch.long)
+        self._newton_local_ids = torch.tensor(local_ids, device=self.handler.device, dtype=torch.long)
+        self._newton_valid_mask = torch.tensor(valid, device=self.handler.device, dtype=torch.bool)
+        self._newton_body_count = body_count
+
+    def _map_newton_contact_forces(self, forces: torch.Tensor) -> torch.Tensor:
+        """Map Newton sensor forces to (num_envs, num_bodies, 3) in sorted body order."""
+        if forces is None:
+            return torch.zeros((self.num_envs, 0, 3), device=self.handler.device)
+        if forces.ndim == 3 and forces.shape[0] == self.num_envs:
+            return forces
+        if self._newton_body_count is None:
+            self._build_newton_reindex()
+        body_count = self._newton_body_count or 0
+        output = torch.zeros((self.num_envs, body_count, 3), device=forces.device, dtype=forces.dtype)
+        if body_count == 0:
+            return output
+        if self._newton_env_ids is None or self._newton_local_ids is None or self._newton_valid_mask is None:
+            return output
+        if forces.shape[0] != self._newton_env_ids.shape[0]:
+            return output
+        mask = self._newton_valid_mask
+        if mask.any():
+            output[self._newton_env_ids[mask], self._newton_local_ids[mask]] = forces[mask]
+        return output
