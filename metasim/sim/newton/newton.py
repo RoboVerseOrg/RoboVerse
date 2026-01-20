@@ -234,6 +234,11 @@ class NewtonHandler(BaseSimHandler):
         builder.default_shape_cfg.torsional_friction = 0.0
         builder.default_shape_cfg.rolling_friction = 0.0
 
+        # Use detailed inertia validation/correction to avoid MuJoCo compile errors
+        # for URDFs with invalid inertia tensors.
+        builder.validate_inertia_detailed = True
+        builder.bound_inertia = 1e-6
+
         # Map contact offset to Newton's shape thickness/contact margin and builder margin.
         contact_offset = getattr(self.scenario.sim_params, "contact_offset", None)
         if contact_offset is not None:
