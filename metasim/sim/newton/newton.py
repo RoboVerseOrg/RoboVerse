@@ -8,6 +8,7 @@ from loguru import logger as log
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
 
+import math
 from collections import defaultdict
 
 import newton
@@ -17,7 +18,7 @@ import warp as wp
 from newton import Contacts
 from newton._src.sim.articulation import eval_fk
 from newton._src.sim.joints import JointType
-from newton.sensors import SensorContact, populate_contacts
+from newton.sensors import SensorContact, SensorTiledCamera, populate_contacts
 from newton.solvers import SolverMuJoCo
 from newton.viewer import ViewerGL
 
@@ -61,7 +62,6 @@ class NewtonHandler(BaseSimHandler):
     ):
         super().__init__(scenario, optional_queries)
 
-        self._scenario = scenario
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Newton model and state
@@ -71,8 +71,12 @@ class NewtonHandler(BaseSimHandler):
         self._control: newton.Control | None = None
         self._solver: SolverMuJoCo | None = None
         self._viewer = None
-        self._newton_camera = None
         self._sim_time = 0.0
+
+        # Tiled camera sensors (decoupled from ViewerGL window size)
+        self._camera_groups: list[dict] = []
+        self._use_tiled_camera = False
+        self._shape_color_overrides: dict[int, np.ndarray] = {}
 
         # Contact sensor for contact force queries
         self._contacts: Contacts | None = None
@@ -115,6 +119,9 @@ class NewtonHandler(BaseSimHandler):
         # Build name-to-ID caches for joint/body lookups
         self._build_name_caches()
 
+        # Apply foot friction overrides based on ground friction
+        self._apply_foot_friction_overrides()
+
         # Apply global gravity from scenario
         self._apply_gravity_settings()
 
@@ -149,43 +156,25 @@ class NewtonHandler(BaseSimHandler):
         )
         self._ensure_contact_buffers()
 
-        # Initialize Viewer for Rendering (GUI is controlled by headless only)
+        # Initialize Viewer for GUI rendering (optional)
         self._viewer = None
-        self._newton_camera = None  # Newton's native Camera for ViewerGL rendering
         headless = getattr(self.scenario, "headless", True)
-        if (not headless) or self.scenario.cameras:
+        if not headless:
             if self.scenario.cameras:
                 max_w = max(c.width for c in self.scenario.cameras)
                 max_h = max(c.height for c in self.scenario.cameras)
             else:
-                # Default window size when no cameras are defined
                 max_w, max_h = 1280, 720
 
-            self._viewer = ViewerGL(width=max_w, height=max_h, headless=headless)
+            self._viewer = ViewerGL(width=max_w, height=max_h, headless=False)
             self._viewer.set_model(self._model)
-            # Set world offsets for visual separation of parallel environments
             spacing = self.scenario.env_spacing
             self._viewer.set_world_offsets((spacing, spacing, 0.0))
-            if not headless:
-                if self._viewer.ui is None or not self._viewer.ui.is_available:
-                    log.warning("Newton Viewer UI is unavailable. Install `imgui-bundle` to enable the left panel.")
+            if self._viewer.ui is None or not self._viewer.ui.is_available:
+                log.warning("Newton Viewer UI is unavailable. Install `imgui-bundle` to enable the left panel.")
 
-            if self.scenario.cameras:
-                # Create Newton Camera from first camera config
-                # We'll update it per-camera during _get_states
-                from newton._src.viewer.camera import Camera as NewtonCamera
-
-                first_cam = self.scenario.cameras[0]
-                pitch, yaw = self._look_at_to_pitch_yaw(first_cam.pos, first_cam.look_at)
-                self._newton_camera = NewtonCamera(
-                    fov=first_cam.vertical_fov,
-                    width=first_cam.width,
-                    height=first_cam.height,
-                    pos=first_cam.pos,
-                    up_axis="Z",
-                )
-                self._newton_camera.pitch = pitch
-                self._newton_camera.yaw = yaw
+        # Initialize tiled camera sensors (decoupled from ViewerGL window size)
+        self._init_tiled_cameras()
 
         log.info(f"Newton launched with {self.num_envs} worlds, solver={self._solver.__class__.__name__}")
 
@@ -237,39 +226,122 @@ class NewtonHandler(BaseSimHandler):
             if self._state_0.joint_qd is not None:
                 self._state_1.joint_qd.assign(self._state_0.joint_qd)
 
+    def _configure_builder_defaults(self, builder: newton.ModelBuilder) -> None:
+        """Align Newton builder defaults with expected PhysX-like defaults."""
+        # Newton defaults: mu=0.5, torsional=0.25, rolling=0.0005. PhysX defaults are closer to mu=1.0 and 0 for
+        # torsional/rolling friction. Update defaults to reduce cross-simulator mismatch.
+        builder.default_shape_cfg.mu = 1.0
+        builder.default_shape_cfg.torsional_friction = 0.0
+        builder.default_shape_cfg.rolling_friction = 0.0
+
+        # Map contact offset to Newton's shape thickness/contact margin and builder margin.
+        contact_offset = getattr(self.scenario.sim_params, "contact_offset", None)
+        if contact_offset is not None:
+            offset = max(0.0, float(contact_offset))
+            builder.default_shape_cfg.thickness = offset
+            builder.default_shape_cfg.contact_margin = offset
+            builder.rigid_contact_margin = offset
+
+    def _get_ground_shape_cfg(self, builder: newton.ModelBuilder) -> newton.ModelBuilder.ShapeConfig:
+        """Create a ground shape config that honors ScenarioCfg ground friction."""
+        cfg = builder.default_shape_cfg.copy()
+        ground_cfg = getattr(self.scenario, "ground", None)
+        if ground_cfg is None:
+            return cfg
+
+        # Prefer dynamic friction for sliding, fallback to static friction.
+        mu = getattr(ground_cfg, "dynamic_friction", None)
+        if mu is None:
+            mu = getattr(ground_cfg, "static_friction", None)
+        if mu is not None:
+            cfg.mu = float(mu)
+
+        return cfg
+
+    def _apply_foot_friction_overrides(self) -> None:
+        """Apply ground friction to foot shapes based on robot feet_links."""
+        if self._model is None or self._model.shape_material_mu is None:
+            return
+
+        ground_cfg = getattr(self.scenario, "ground", None)
+        if ground_cfg is None:
+            return
+
+        mu = getattr(ground_cfg, "dynamic_friction", None)
+        if mu is None:
+            mu = getattr(ground_cfg, "static_friction", None)
+        if mu is None:
+            return
+
+        mu = float(mu)
+        shape_mu = self._model.shape_material_mu.numpy()
+        shape_torsion = (
+            self._model.shape_material_torsional_friction.numpy()
+            if self._model.shape_material_torsional_friction is not None
+            else None
+        )
+        shape_rolling = (
+            self._model.shape_material_rolling_friction.numpy()
+            if self._model.shape_material_rolling_friction is not None
+            else None
+        )
+
+        shape_indices: set[int] = set()
+        for env_id in range(self.num_envs):
+            for robot in self.robots:
+                foot_tokens = getattr(robot, "feet_links", None)
+                if not foot_tokens:
+                    continue
+                for body_id in self._get_body_indices(env_id, robot.name):
+                    body_name = self._model.body_key[body_id]
+                    if not any(token in body_name for token in foot_tokens):
+                        continue
+                    for shape_idx in self._model.body_shapes.get(body_id, []):
+                        shape_indices.add(shape_idx)
+
+        if not shape_indices:
+            return
+
+        for shape_idx in shape_indices:
+            if 0 <= shape_idx < len(shape_mu):
+                shape_mu[shape_idx] = mu
+                if shape_torsion is not None:
+                    shape_torsion[shape_idx] = 0.0
+                if shape_rolling is not None:
+                    shape_rolling[shape_idx] = 0.0
+
+        self._model.shape_material_mu.assign(shape_mu)
+        if shape_torsion is not None:
+            self._model.shape_material_torsional_friction.assign(shape_torsion)
+        if shape_rolling is not None:
+            self._model.shape_material_rolling_friction.assign(shape_rolling)
+
     def _build_model(self) -> None:
         """Build Newton model from scenario configuration."""
         builder = newton.ModelBuilder()
-        builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
-            limit_ke=1.0e3,
-            limit_kd=1.0e1,
-            friction=1.0e-5,
-        )
+        self._configure_builder_defaults(builder)
 
-        # Set timestep
-        if self.scenario.sim_params.dt is not None:
-            builder.default_shape_thickness = 0.001
-            # dt is set during solver.step()
+        # dt is set during solver.step()
 
         # Add ground plane (global, shared across all worlds)
         builder.current_world = -1
-        builder.add_ground_plane()
+        self._shape_color_overrides = {}
+        ground_shape_cfg = self._get_ground_shape_cfg(builder)
+        ground_shape_idx = builder.add_ground_plane(cfg=ground_shape_cfg)
+        # Give the ground a neutral gray to avoid pure white output
+        self._shape_color_overrides[ground_shape_idx] = np.array([0.35, 0.35, 0.35, 1.0], dtype=np.float32)
 
-        # Add robots and objects for each environment
         # Add robots and objects for each environment
         self._obj_to_root_body = defaultdict(dict)
 
         for env_id in range(self.num_envs):
             # Create sub-builder for this environment
             env_builder = newton.ModelBuilder()
-            env_builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
-                limit_ke=1.0e3,
-                limit_kd=1.0e1,
-                friction=1.0e-5,
-            )
+            self._configure_builder_defaults(env_builder)
 
             # Track local indices for this env
             env_map = {}
+            env_shape_colors: dict[int, np.ndarray] = {}
 
             # Add robot(s)
             for robot in self.robots:
@@ -284,19 +356,24 @@ class NewtonHandler(BaseSimHandler):
             # Add objects
             for obj in self.objects:
                 start_count = len(env_builder.body_mass)
-                self._add_object_to_builder(env_builder, obj)
+                self._add_object_to_builder(env_builder, obj, env_shape_colors)
                 end_count = len(env_builder.body_mass)
                 if end_count > start_count:
                     env_map[obj.name] = start_count
 
             # Add this environment as a separate world
-            # Calculate global offset
+            # Calculate global offsets
             global_offset = len(builder.body_mass)
+            shape_offset = builder.shape_count
             builder.add_world(env_builder)
 
             # Store global indices
             for name, local_idx in env_map.items():
                 self._obj_to_root_body[env_id][name] = global_offset + local_idx
+
+            # Store global shape colors
+            for local_shape_idx, color in env_shape_colors.items():
+                self._shape_color_overrides[shape_offset + local_shape_idx] = color
 
         # Finalize model
         self._model = builder.finalize(device=self._device)
@@ -319,9 +396,26 @@ class NewtonHandler(BaseSimHandler):
             ),
             floating=not robot.fix_base_link,
             enable_self_collisions=robot.enabled_self_collisions,
+            ignore_inertial_definitions=False,
+            collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
         )
 
-    def _add_object_to_builder(self, builder: newton.ModelBuilder, obj) -> None:
+    def _normalize_color(self, color) -> np.ndarray | None:
+        """Normalize color list/tuple to RGBA float array in [0, 1]."""
+        if color is None:
+            return None
+        col = np.array(color, dtype=np.float32).reshape(-1)
+        if col.size not in (3, 4):
+            return None
+        if col.max() > 1.0:
+            col = col / 255.0
+        if col.size == 3:
+            col = np.concatenate([col, np.array([1.0], dtype=np.float32)])
+        return col.astype(np.float32)
+
+    def _add_object_to_builder(
+        self, builder: newton.ModelBuilder, obj, shape_colors: dict[int, np.ndarray] | None = None
+    ) -> None:
         """Add an object to the model builder."""
         if isinstance(obj, PrimitiveCubeCfg):
             # Add box shape
@@ -332,12 +426,16 @@ class NewtonHandler(BaseSimHandler):
                 ),
                 key=obj.name,
             )
-            builder.add_shape_box(
+            shape_idx = builder.add_shape_box(
                 body=body,
                 hx=obj.half_size[0],
                 hy=obj.half_size[1],
                 hz=obj.half_size[2],
             )
+            if shape_colors is not None:
+                color = self._normalize_color(getattr(obj, "color", None))
+                if color is not None:
+                    shape_colors[shape_idx] = color
         elif isinstance(obj, PrimitiveSphereCfg):
             # Add sphere shape
             body = builder.add_body(
@@ -347,7 +445,11 @@ class NewtonHandler(BaseSimHandler):
                 ),
                 key=obj.name,
             )
-            builder.add_shape_sphere(body=body, radius=obj.radius)
+            shape_idx = builder.add_shape_sphere(body=body, radius=obj.radius)
+            if shape_colors is not None:
+                color = self._normalize_color(getattr(obj, "color", None))
+                if color is not None:
+                    shape_colors[shape_idx] = color
         elif isinstance(obj, PrimitiveCylinderCfg):
             # Add capsule shape (Newton uses capsules, approximate cylinder)
             body = builder.add_body(
@@ -357,7 +459,11 @@ class NewtonHandler(BaseSimHandler):
                 ),
                 key=obj.name,
             )
-            builder.add_shape_capsule(body=body, radius=obj.radius, half_height=obj.height / 2)
+            shape_idx = builder.add_shape_capsule(body=body, radius=obj.radius, half_height=obj.height / 2)
+            if shape_colors is not None:
+                color = self._normalize_color(getattr(obj, "color", None))
+                if color is not None:
+                    shape_colors[shape_idx] = color
         elif isinstance(obj, ArticulationObjCfg):
             # Load articulated object from URDF
             urdf_path = obj.urdf_path
@@ -369,6 +475,8 @@ class NewtonHandler(BaseSimHandler):
                         wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
                     ),
                     floating=not obj.fix_base_link,
+                    ignore_inertial_definitions=False,
+                    collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
                 )
         else:
             # Try URDF for other file-based objects
@@ -380,6 +488,8 @@ class NewtonHandler(BaseSimHandler):
                         wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
                     ),
                     floating=not getattr(obj, "fix_base_link", True),
+                    ignore_inertial_definitions=False,
+                    collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
                 )
 
     def _build_name_caches(self) -> None:
@@ -541,12 +651,23 @@ class NewtonHandler(BaseSimHandler):
                     if qd_end <= qd_start:
                         continue
 
-                    if actuator.stiffness is not None:
-                        joint_target_ke[qd_start:qd_end] = actuator.stiffness
+                    control_mode = None
+                    if robot.control_type:
+                        control_mode = robot.control_type.get(joint_name)
+                    is_effort = control_mode == "effort"
+
+                    if is_effort:
+                        # Effort-controlled joints should not have internal PD drives.
+                        joint_target_ke[qd_start:qd_end] = 0.0
+                        joint_target_kd[qd_start:qd_end] = 0.0
                         updated = True
-                    if actuator.damping is not None:
-                        joint_target_kd[qd_start:qd_end] = actuator.damping
-                        updated = True
+                    else:
+                        if actuator.stiffness is not None:
+                            joint_target_ke[qd_start:qd_end] = actuator.stiffness
+                            updated = True
+                        if actuator.damping is not None:
+                            joint_target_kd[qd_start:qd_end] = actuator.damping
+                            updated = True
                     if actuator.armature is not None:
                         joint_armature[qd_start:qd_end] = actuator.armature
                         updated = True
@@ -703,66 +824,191 @@ class NewtonHandler(BaseSimHandler):
             return [float(values[0])]
         return None
 
-    def _look_at_to_pitch_yaw(self, pos, look_at):
-        """Convert camera position and look_at target to pitch and yaw angles.
+    def _get_world_up(self) -> np.ndarray:
+        """Get world up axis as a unit vector."""
+        up_axis = getattr(self._model, "up_axis", "Z") if self._model is not None else "Z"
+        if isinstance(up_axis, int):
+            axis_idx = int(up_axis)
+        else:
+            axis_idx = "XYZ".index(str(up_axis).upper())
+        up = np.zeros(3, dtype=np.float32)
+        up[axis_idx] = 1.0
+        return up
 
-        Newton's Camera uses pitch (elevation) and yaw (azimuth) angles.
-        For Z-up: yaw rotates around Z, pitch is elevation from XY plane.
-        """
-        pos = np.array(pos, dtype=np.float32)
-        target = np.array(look_at, dtype=np.float32)
+    def _camera_pose_to_transform(
+        self, pos: tuple[float, float, float], look_at: tuple[float, float, float] | None
+    ) -> wp.transformf:
+        """Build a camera-to-world transform for SensorTiledCamera."""
+        pos_np = np.array(pos, dtype=np.float32)
+        world_up = self._get_world_up()
 
-        # Direction from camera to target
-        direction = target - pos
-        direction /= np.linalg.norm(direction) + 1e-6
+        if look_at is None:
+            # Default forward: pick a direction not parallel to world_up
+            if abs(world_up[2]) > 0.9:
+                forward = np.array([0.0, -1.0, 0.0], dtype=np.float32)
+            else:
+                forward = np.array([0.0, 0.0, -1.0], dtype=np.float32)
+            target = pos_np + forward
+        else:
+            target = np.array(look_at, dtype=np.float32)
 
-        # For Z-up coordinate system:
-        # yaw = angle in XY plane from +X axis (counterclockwise)
-        # pitch = elevation angle from XY plane
+        forward = target - pos_np
+        norm = np.linalg.norm(forward)
+        if norm < 1e-6:
+            forward = np.array([0.0, -1.0, 0.0], dtype=np.float32)
+        else:
+            forward = forward / norm
 
-        # Compute yaw (azimuth)
-        yaw = np.degrees(np.arctan2(direction[1], direction[0]))
-
-        # Compute pitch (elevation)
-        horizontal_dist = np.sqrt(direction[0] ** 2 + direction[1] ** 2)
-        pitch = np.degrees(np.arctan2(direction[2], horizontal_dist))
-
-        return pitch, yaw
-
-    def _look_at_to_quat(self, pos: tuple[float, float, float], look_at: tuple[float, float, float]) -> str:
-        """Compute quaternion (w x y z) for camera looking at target from pos."""
-        pos = np.array(pos)
-        target = np.array(look_at)
-
-        # Camera forward (-Z) points to target
-        forward = target - pos
-        forward /= np.linalg.norm(forward) + 1e-6
-
-        # World Up
-        world_up = np.array([0.0, 0.0, 1.0])
-
-        # Right (+X)
         right = np.cross(forward, world_up)
         right_norm = np.linalg.norm(right)
         if right_norm < 1e-6:
-            # Degenerate case (looking straight up/down), assume X is right
-            right = np.array([1.0, 0.0, 0.0])
-        else:
-            right /= right_norm
+            # Choose an arbitrary axis not parallel to forward
+            fallback = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+            if abs(forward[0]) > 0.9:
+                fallback = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+            right = np.cross(forward, fallback)
+            right_norm = np.linalg.norm(right)
+        right = right / (right_norm + 1e-6)
 
-        # Up (+Y)
         up = np.cross(right, forward)
-        up /= np.linalg.norm(up) + 1e-6
+        up = up / (np.linalg.norm(up) + 1e-6)
 
-        # Rotation Matrix: [right, up, -forward]
-        # Columns are the axes of the camera frame in world coordinates
+        # Camera frame uses -Z as forward
         R = np.column_stack([right, up, -forward])
+        quat_xyzw = tr.Rotation.from_matrix(R).as_quat()
 
-        # Convert to quaternion (x, y, z, w)
-        quat = tr.Rotation.from_matrix(R).as_quat()
+        return wp.transformf(wp.vec3(*pos_np), wp.quat(*quat_xyzw))
 
-        # Return w x y z
-        return f"{quat[3]} {quat[0]} {quat[1]} {quat[2]}"
+    def _build_camera_transforms(self, cam_indices: list[int]) -> wp.array:
+        """Build per-camera, per-world transforms for SensorTiledCamera."""
+        transforms = []
+        for cam_idx in cam_indices:
+            cam_cfg = self.scenario.cameras[cam_idx]
+            look_at = cam_cfg.look_at if getattr(cam_cfg, "look_at", None) else None
+            cam_tf = self._camera_pose_to_transform(cam_cfg.pos, look_at)
+            transforms.append([cam_tf for _ in range(self.num_envs)])
+        return wp.array(transforms, dtype=wp.transformf, device=self._model.device if self._model else None)
+
+    def _init_tiled_cameras(self) -> None:
+        """Initialize SensorTiledCamera groups for decoupled camera rendering."""
+        self._camera_groups = []
+        self._use_tiled_camera = False
+
+        if not self.scenario.cameras or self._model is None:
+            return
+
+        # Group cameras by resolution since SensorTiledCamera requires uniform size per sensor
+        cam_groups: dict[tuple[int, int], list[int]] = defaultdict(list)
+        for idx, cam_cfg in enumerate(self.scenario.cameras):
+            cam_groups[(cam_cfg.width, cam_cfg.height)].append(idx)
+
+        try:
+            with wp.ScopedDevice(self._model.device):
+                for (width, height), cam_indices in cam_groups.items():
+                    sensor = SensorTiledCamera(
+                        model=self._model,
+                        num_cameras=len(cam_indices),
+                        width=width,
+                        height=height,
+                        options=SensorTiledCamera.Options(
+                            default_light=True,
+                            default_light_shadows=True,
+                        ),
+                    )
+                    if self._shape_color_overrides:
+                        colors = np.ones((self._model.shape_count, 4), dtype=np.float32)
+                        for shape_idx, color in self._shape_color_overrides.items():
+                            if 0 <= shape_idx < colors.shape[0]:
+                                colors[shape_idx] = color
+                        sensor.render_context.shape_colors = wp.array(colors, dtype=wp.vec4f)
+                    fovs = [math.radians(self.scenario.cameras[i].vertical_fov) for i in cam_indices]
+                    camera_rays = sensor.compute_pinhole_camera_rays(fovs)
+                    color_image = sensor.create_color_image_output()
+                    depth_image = sensor.create_depth_image_output()
+                    camera_transforms = self._build_camera_transforms(cam_indices)
+
+                    self._camera_groups.append({
+                        "width": width,
+                        "height": height,
+                        "cam_indices": cam_indices,
+                        "sensor": sensor,
+                        "camera_rays": camera_rays,
+                        "color_image": color_image,
+                        "depth_image": depth_image,
+                        "camera_transforms": camera_transforms,
+                    })
+
+            self._use_tiled_camera = True
+            log.info(
+                f"Initialized SensorTiledCamera for {len(self.scenario.cameras)} camera(s) "
+                f"across {len(self._camera_groups)} resolution group(s)."
+            )
+        except Exception as e:
+            log.warning(f"Failed to initialize SensorTiledCamera. Camera outputs disabled. Error: {e}")
+            self._camera_groups = []
+            self._use_tiled_camera = False
+
+    def _render_tiled_cameras(self, env_ids: list[int]) -> dict:
+        """Render cameras using SensorTiledCamera and return CameraState dict."""
+        camera_states = {}
+        if not self._camera_groups or self._state_0 is None or self._model is None:
+            return camera_states
+
+        num_worlds = self._model.num_worlds
+        use_env_ids = env_ids if env_ids is not None else list(range(num_worlds))
+
+        with wp.ScopedDevice(self._model.device):
+            for group in self._camera_groups:
+                sensor: SensorTiledCamera = group["sensor"]
+                sensor.render(
+                    self._state_0,
+                    group["camera_transforms"],
+                    group["camera_rays"],
+                    color_image=group["color_image"],
+                    depth_image=group["depth_image"],
+                )
+
+                color_np = group["color_image"].numpy() if group["color_image"] is not None else None
+                depth_np = group["depth_image"].numpy() if group["depth_image"] is not None else None
+
+                width = group["width"]
+                height = group["height"]
+
+                for local_idx, cam_idx in enumerate(group["cam_indices"]):
+                    cam_cfg = self.scenario.cameras[cam_idx]
+                    rgb_tensor = None
+                    depth_tensor = None
+
+                    if color_np is not None:
+                        color_cam = color_np[:, local_idx, :].reshape(num_worlds, height, width)
+                        r = (color_cam & 0xFF).astype(np.uint8)
+                        g = ((color_cam >> 8) & 0xFF).astype(np.uint8)
+                        b = ((color_cam >> 16) & 0xFF).astype(np.uint8)
+                        rgb = np.stack([r, g, b], axis=-1)
+                        rgb_tensor = torch.from_numpy(rgb).to(self._device)
+                        if len(use_env_ids) != num_worlds:
+                            rgb_tensor = rgb_tensor[use_env_ids]
+
+                    if depth_np is not None:
+                        depth_cam = depth_np[:, local_idx, :].reshape(num_worlds, height, width)
+                        depth = depth_cam[..., None]
+                        depth_tensor = torch.from_numpy(depth).to(self._device)
+                        if len(use_env_ids) != num_worlds:
+                            depth_tensor = depth_tensor[use_env_ids]
+
+                    intrinsics = (
+                        torch.tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
+                        .unsqueeze(0)
+                        .expand(len(use_env_ids), -1, -1)
+                    )
+
+                    camera_states[cam_cfg.name] = CameraState(
+                        rgb=rgb_tensor,
+                        depth=depth_tensor,
+                        intrinsics=intrinsics,
+                    )
+
+        return camera_states
 
     def _simulate(self) -> None:
         """Advance simulation by one step (with decimation substeps)."""
@@ -822,79 +1068,9 @@ class NewtonHandler(BaseSimHandler):
         for obj in self.objects:
             object_states[obj.name] = self._extract_object_state(obj.name, env_ids)
 
-        # Camera rendering using ViewerGL
-        if self._viewer and self.scenario.cameras and self._newton_camera:
-            from pyglet.math import Vec3 as PyVec3  # Newton Camera uses pyglet Vec3
-
-            self._viewer.log_state(self._state_0)
-
-            # Get world offsets for per-environment rendering
-            world_offsets_np = None
-            if self._viewer.world_offsets is not None:
-                world_offsets_np = self._viewer.world_offsets.numpy()
-
-            for cam_cfg in self.scenario.cameras:
-                rgb_list = []
-                depth_list = []
-
-                for env_id in env_ids:
-                    # Update Newton Camera params
-                    self._newton_camera.width = cam_cfg.width
-                    self._newton_camera.height = cam_cfg.height
-                    self._newton_camera.fov = cam_cfg.vertical_fov
-
-                    # Calculate camera position with world offset for this environment
-                    cam_pos = list(cam_cfg.pos)
-                    look_at = list(cam_cfg.look_at) if hasattr(cam_cfg, "look_at") and cam_cfg.look_at else None
-
-                    if world_offsets_np is not None and env_id < len(world_offsets_np):
-                        offset = world_offsets_np[env_id]
-                        cam_pos[0] += offset[0]
-                        cam_pos[1] += offset[1]
-                        cam_pos[2] += offset[2]
-                        if look_at is not None:
-                            look_at[0] += offset[0]
-                            look_at[1] += offset[1]
-                            look_at[2] += offset[2]
-
-                    # Set camera position
-                    self._newton_camera.pos = PyVec3(*cam_pos)
-
-                    if look_at is not None:
-                        pitch, yaw = self._look_at_to_pitch_yaw(cam_pos, look_at)
-                        self._newton_camera.pitch = pitch
-                        self._newton_camera.yaw = yaw
-                    else:
-                        # Default orientation (looking down -Y for Z-up)
-                        self._newton_camera.pitch = 0.0
-                        self._newton_camera.yaw = -180.0
-
-                    # Render using Newton Camera
-                    self._viewer.renderer.render(self._newton_camera, self._viewer.objects, self._viewer.lines)
-
-                    # Get frame - returns warp array (H, W, 3) uint8
-                    rgb_wp = self._viewer.get_frame()
-
-                    # Convert to torch tensor
-                    rgb_np = rgb_wp.numpy()
-                    rgb_tensor = torch.from_numpy(rgb_np.copy()).to(self._device)
-                    rgb_list.append(rgb_tensor)
-
-                    # Placeholder depth (ViewerGL doesn't expose depth readback easily)
-                    depth_tensor = torch.zeros((cam_cfg.height, cam_cfg.width), device=self._device)
-                    depth_list.append(depth_tensor.unsqueeze(-1))  # Shape: (H, W, 1)
-
-                # Stack all environment renders
-                rgb_stacked = torch.stack(rgb_list, dim=0)  # (num_envs, H, W, 3)
-                depth_stacked = torch.stack(depth_list, dim=0)  # (num_envs, H, W, 1)
-
-                camera_states[cam_cfg.name] = CameraState(
-                    rgb=rgb_stacked,
-                    depth=depth_stacked,
-                    intrinsics=torch.tensor(cam_cfg.intrinsics, device=self.device)
-                    .unsqueeze(0)
-                    .expand(len(env_ids), -1, -1),
-                )
+        # Camera rendering using SensorTiledCamera (decoupled from GUI window size)
+        if self._use_tiled_camera:
+            camera_states = self._render_tiled_cameras(env_ids)
 
         extras = self.get_extra()
         return TensorState(
@@ -1551,6 +1727,11 @@ class NewtonHandler(BaseSimHandler):
     def close(self) -> None:
         """Clean up Newton resources."""
         log.info("Closing Newton handler")
+        if self._viewer is not None:
+            self._viewer.close()
+            self._viewer = None
+        self._camera_groups = []
+        self._use_tiled_camera = False
         self._model = None
         self._state_0 = None
         self._state_1 = None
