@@ -42,6 +42,8 @@ class SimParamCfg:
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
     njmax: int | None = None
+    # If None, Newton defaults to MuJoCo contacts when using SolverMuJoCo
+    newton_use_mujoco_contacts: bool | None = None
 
     ## Resource management
     num_threads: int = 0

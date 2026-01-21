@@ -52,6 +52,7 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
     task: str = "walk_g1_dof29"
     robot: str = "g1_dof29"
     sim: SimBackend = "isaacgym"
+    newton_use_mujoco_contacts: bool | None = None
     num_envs: int = 4096
     headless: bool = False
     cuda: bool = True

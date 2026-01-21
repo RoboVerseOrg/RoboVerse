@@ -34,6 +34,10 @@ def make_roboverse_env(args: RslRlPPOConfig):
         headless=args.headless,
         cameras=[]
     )
+    if args.sim == "newton":
+        if args.newton_use_mujoco_contacts is None:
+            args.newton_use_mujoco_contacts = True
+        scenario.sim_params.newton_use_mujoco_contacts = args.newton_use_mujoco_contacts
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
     # Pass env_cfg to task constructor

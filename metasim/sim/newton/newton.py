@@ -72,6 +72,7 @@ class NewtonHandler(BaseSimHandler):
         self._solver: SolverMuJoCo | None = None
         self._viewer = None
         self._sim_time = 0.0
+        self._use_mujoco_contacts = False
 
         # Tiled camera sensors (decoupled from ViewerGL window size)
         self._camera_groups: list[dict] = []
@@ -141,11 +142,16 @@ class NewtonHandler(BaseSimHandler):
 
         # Create MuJoCo solver
         sim_params = self.scenario.sim_params
+        use_mujoco_contacts = getattr(sim_params, "newton_use_mujoco_contacts", None)
+        if use_mujoco_contacts is None:
+            use_mujoco_contacts = True
         self._solver = SolverMuJoCo(
             self._model,
             njmax=sim_params.njmax,
             nconmax=sim_params.nconmax,
+            use_mujoco_contacts=use_mujoco_contacts,
         )
+        self._use_mujoco_contacts = bool(use_mujoco_contacts)
 
         # Initialize Contacts object for contact force queries
         nconmax = self._resolve_contact_capacity(sim_params.nconmax)
@@ -1023,8 +1029,11 @@ class NewtonHandler(BaseSimHandler):
             # Apply gravity compensation (per-body) if configured
             self._apply_gravity_compensation()
 
-            # Generate contacts
-            contacts = self._model.collide(self._state_0)
+            # Generate contacts only when the solver requires external contacts
+            if self._use_mujoco_contacts:
+                contacts = self._contacts if self._contacts is not None else Contacts(0, 0, device=self._device)
+            else:
+                contacts = self._model.collide(self._state_0)
 
             # Step solver
             self._solver.step(
