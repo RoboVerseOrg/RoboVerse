@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -91,6 +92,8 @@ class MaterialRandomizer(BaseQueryType):
         self.all_object_names = [obj.name for obj in self.handler.objects]
 
         self.set_shape_indices = self._get_set_shape_indices()
+        if self.simulator_name == "newton":
+            self._newton_shape_indices = self._build_newton_shape_indices()
 
     def _get_set_shape_indices(self):
         num_shapes_per_body = None
@@ -127,6 +130,8 @@ class MaterialRandomizer(BaseQueryType):
             for geom_bodyid in model.geom_bodyid:
                 num_shapes_per_body[geom_bodyid] += 1
             expected_shapes = model.ngeom
+        elif self.simulator_name == "newton":
+            return []
         else:
             return []
         if num_shapes_per_body is not None and sum(num_shapes_per_body) != expected_shapes:
@@ -150,6 +155,33 @@ class MaterialRandomizer(BaseQueryType):
 
         return set_shape_indices
 
+    def _build_newton_shape_indices(self) -> dict[int, list[int]]:
+        """Build per-env shape index lists for Newton."""
+        model = getattr(self.handler, "_model", None)
+        if model is None or not hasattr(model, "body_shapes"):
+            return {}
+
+        body_names = self.body_names
+        target_names = self.set_body_names if self.set_body_names is not None else body_names
+        target_names = [name for name in target_names if name in body_names]
+
+        shape_indices_by_env: dict[int, list[int]] = {}
+        for env_id in range(self.handler.num_envs):
+            body_ids = self.handler._get_body_indices(env_id, self.obj_name)
+            if not body_ids:
+                continue
+            name_to_body = {model.body_key[idx]: idx for idx in body_ids}
+            shape_indices: list[int] = []
+            for name in target_names:
+                body_id = name_to_body.get(name)
+                if body_id is None:
+                    continue
+                shape_indices.extend(list(model.body_shapes.get(body_id, [])))
+            if shape_indices:
+                shape_indices_by_env[env_id] = sorted(set(shape_indices))
+
+        return shape_indices_by_env
+
     def randomize(self, env_ids: torch.Tensor):
         """Randomize material properties across supported simulators."""
         if self.simulator_name == "isaacsim":
@@ -158,6 +190,8 @@ class MaterialRandomizer(BaseQueryType):
             self._randomize_isaacgym(env_ids)
         elif self.simulator_name == "mujoco":
             self._randomize_mujoco(env_ids)
+        elif self.simulator_name == "newton":
+            self._randomize_newton(env_ids)
         else:
             log.warning(
                 f"Material randomization not implemented for simulator: {self.simulator_name}. This randomization step will be skipped."
@@ -253,6 +287,51 @@ class MaterialRandomizer(BaseQueryType):
         # solref：timeconst & damping ratio
         model.geom_solref[self.set_shape_indices, 1] = damping
 
+    def _randomize_newton(self, env_ids: torch.Tensor):
+        """Randomize material properties for Newton simulator."""
+        model = getattr(self.handler, "_model", None)
+        if model is None or model.shape_material_mu is None:
+            return
+
+        shape_mu = model.shape_material_mu.numpy()
+        shape_restitution = (
+            model.shape_material_restitution.numpy() if model.shape_material_restitution is not None else None
+        )
+        shape_torsion = (
+            model.shape_material_torsional_friction.numpy()
+            if model.shape_material_torsional_friction is not None
+            else None
+        )
+        shape_rolling = (
+            model.shape_material_rolling_friction.numpy() if model.shape_material_rolling_friction is not None else None
+        )
+
+        roll_friction_factor = 0.05
+        spin_friction_factor = 0.02
+
+        for env_id in env_ids.tolist():
+            shape_indices = self._newton_shape_indices.get(int(env_id), [])
+            if not shape_indices:
+                continue
+            bucket_ids = torch.randint(0, self.num_buckets, (len(shape_indices),), device="cpu")
+            material_samples = self.material_buckets[bucket_ids].cpu().numpy()
+
+            shape_mu[shape_indices] = material_samples[:, 0]
+            if shape_restitution is not None:
+                shape_restitution[shape_indices] = material_samples[:, 2]
+            if shape_torsion is not None:
+                shape_torsion[shape_indices] = spin_friction_factor * material_samples[:, 1]
+            if shape_rolling is not None:
+                shape_rolling[shape_indices] = roll_friction_factor * material_samples[:, 1]
+
+        model.shape_material_mu.assign(shape_mu)
+        if shape_restitution is not None:
+            model.shape_material_restitution.assign(shape_restitution)
+        if shape_torsion is not None:
+            model.shape_material_torsional_friction.assign(shape_torsion)
+        if shape_rolling is not None:
+            model.shape_material_rolling_friction.assign(shape_rolling)
+
 
 class MassRandomizer(BaseQueryType):
     """Randomize body masses for a given asset."""
@@ -309,6 +388,9 @@ class MassRandomizer(BaseQueryType):
             else torch.arange(len(self.body_names), dtype=torch.int, device="cpu")
         )
         self.default_masses = deepcopy(self._get_masses())
+        if self.simulator_name == "newton":
+            self._newton_body_ids = self._build_newton_body_id_map()
+            self.default_inertias = self._get_inertias_newton()
 
     def __call__(self, env_ids: torch.Tensor | None = None):
         """Apply mass randomization for selected environments."""
@@ -326,6 +408,8 @@ class MassRandomizer(BaseQueryType):
             return self._get_masses_isaacgym()
         elif self.simulator_name == "mujoco":
             return self._get_masses_mujoco()
+        elif self.simulator_name == "newton":
+            return self._get_masses_newton()
 
     def _get_masses_isaacsim(self):
         if self.obj_name in self.handler.scene.articulations:
@@ -386,6 +470,8 @@ class MassRandomizer(BaseQueryType):
             self._set_masses_isaacgym(masses, env_ids)
         elif self.simulator_name == "mujoco":
             self._set_masses_mujoco(masses, env_ids)
+        elif self.simulator_name == "newton":
+            self._set_masses_newton(masses, env_ids)
 
     def _set_masses_isaacsim(self, masses: torch.Tensor, env_ids: torch.Tensor):
         if self.obj_name in self.handler.scene.articulations:
@@ -450,10 +536,12 @@ class MassRandomizer(BaseQueryType):
             model.body_inertia[self.set_body_ids] = (
                 model.body_inertia[self.set_body_ids] * ratios.squeeze(0).numpy()
             )  # only single env
+        elif self.simulator_name == "newton":
+            self._recompute_inertias_newton(ratios, env_ids)
 
     def randomize(self, env_ids: torch.Tensor):
         """Randomize masses and optionally recompute inertias."""
-        if self.simulator_name not in ("isaacsim", "isaacgym", "mujoco"):
+        if self.simulator_name not in ("isaacsim", "isaacgym", "mujoco", "newton"):
             log.warning(
                 f"Mass randomization not implemented for simulator: {self.simulator_name}. This randomization step will be skipped."
             )
@@ -483,6 +571,111 @@ class MassRandomizer(BaseQueryType):
                 masses[env_ids[:, None], self.set_body_ids] / self.default_masses[env_ids[:, None], self.set_body_ids]
             )
             self._recompute_inertias(ratios, env_ids)
+
+    def _build_newton_body_id_map(self) -> dict[int, list[int | None]]:
+        """Map env_id -> body ids aligned with self.body_names for Newton."""
+        model = getattr(self.handler, "_model", None)
+        if model is None:
+            return {}
+
+        body_id_map: dict[int, list[int | None]] = {}
+        for env_id in range(self.handler.num_envs):
+            body_ids = self.handler._get_body_indices(env_id, self.obj_name)
+            if not body_ids:
+                continue
+            name_to_body = {model.body_key[idx]: idx for idx in body_ids}
+            ids = [name_to_body.get(name) for name in self.body_names]
+            body_id_map[env_id] = ids
+        return body_id_map
+
+    def _get_masses_newton(self):
+        model = getattr(self.handler, "_model", None)
+        if model is None:
+            return None
+
+        body_mass = model.body_mass.numpy()
+        masses = torch.zeros(
+            (self.handler.num_envs, len(self.body_names)),
+            dtype=torch.float32,
+            device=self.handler.device,
+        )
+        for env_id, ids in self._newton_body_ids.items():
+            for i, body_id in enumerate(ids):
+                if body_id is None:
+                    continue
+                masses[env_id, i] = body_mass[body_id]
+        return masses
+
+    def _get_inertias_newton(self):
+        model = getattr(self.handler, "_model", None)
+        if model is None:
+            return None
+
+        body_inertia = model.body_inertia.numpy()
+        inertias = torch.zeros(
+            (self.handler.num_envs, len(self.body_names), 3, 3),
+            dtype=torch.float32,
+            device=self.handler.device,
+        )
+        for env_id, ids in self._newton_body_ids.items():
+            for i, body_id in enumerate(ids):
+                if body_id is None:
+                    continue
+                inertias[env_id, i] = torch.tensor(body_inertia[body_id], device=self.handler.device)
+        return inertias
+
+    def _set_masses_newton(self, masses: torch.Tensor, env_ids: torch.Tensor):
+        model = getattr(self.handler, "_model", None)
+        if model is None:
+            return
+
+        body_mass = model.body_mass.numpy()
+        body_inv_mass = model.body_inv_mass.numpy()
+
+        for env_id in env_ids.tolist():
+            ids = self._newton_body_ids.get(int(env_id), [])
+            for idx in self.set_body_ids.tolist():
+                if idx >= len(ids):
+                    continue
+                body_id = ids[idx]
+                if body_id is None:
+                    continue
+                mass_val = float(masses[env_id, idx])
+                body_mass[body_id] = mass_val
+                body_inv_mass[body_id] = 1.0 / mass_val if mass_val > 0.0 else 0.0
+
+        model.body_mass.assign(body_mass)
+        model.body_inv_mass.assign(body_inv_mass)
+
+    def _recompute_inertias_newton(self, ratios: torch.Tensor, env_ids: torch.Tensor):
+        model = getattr(self.handler, "_model", None)
+        if model is None or self.default_inertias is None:
+            return
+
+        body_inertia = model.body_inertia.numpy()
+        body_inv_inertia = model.body_inv_inertia.numpy()
+
+        for env_id in env_ids.tolist():
+            ids = self._newton_body_ids.get(int(env_id), [])
+            for idx in self.set_body_ids.tolist():
+                if idx >= len(ids):
+                    continue
+                body_id = ids[idx]
+                if body_id is None:
+                    continue
+                ratio = float(ratios[env_id, idx])
+                inertia = (self.default_inertias[env_id, idx] * ratio).cpu().numpy()
+                body_inertia[body_id] = inertia
+                if ratio > 0.0 and inertia.any():
+                    try:
+                        body_inv_inertia[body_id] = np.linalg.inv(inertia)
+                    except np.linalg.LinAlgError:
+                        body_inv_inertia[body_id] = np.zeros((3, 3), dtype=np.float32)
+                else:
+                    body_inv_inertia[body_id] = np.zeros((3, 3), dtype=np.float32)
+
+        model.body_inertia.assign(body_inertia)
+        model.body_inv_inertia.assign(body_inv_inertia)
 
 
 ##########################################################################################
