@@ -24,7 +24,7 @@ GROUPS = [
     "Metaworld",
     "Rlafford",
 ]
-PLATFORMS = ["isaaclab", "mujoco", "isaacgym", "sapien3", "genesis"]
+PLATFORMS = ["isaacsim", "mujoco", "isaacgym", "sapien3", "genesis", "newton"]
 
 
 def parse_docstring_metadata(docstring: str):

@@ -2,7 +2,7 @@
 
 ## Overview
 
-RoboVerse provides a comprehensive testing infrastructure built on pytest that enables efficient, cross-backend testing of simulation functionality. The system is designed around handler reuse and scenario sharing, dramatically reducing test execution time while maintaining full coverage across all supported simulator backends (MuJoCo, MJX, IsaacGym, IsaacSim).
+RoboVerse provides a comprehensive testing infrastructure built on pytest that enables efficient, cross-backend testing of simulation functionality. The system is designed around handler reuse and scenario sharing, dramatically reducing test execution time while maintaining full coverage across all supported simulator backends (MuJoCo, MJX, IsaacGym, IsaacSim, Newton).
 
 Key features of the testing system include:
 
@@ -38,6 +38,7 @@ Markers declare which simulator backends a test requires:
 - `@pytest.mark.mjx`: Test runs on MuJoCo MJX backend
 - `@pytest.mark.isaacgym`: Test runs on IsaacGym backend
 - `@pytest.mark.isaacsim`: Test runs on IsaacSim backend
+- `@pytest.mark.newton`: Test runs on Newton backend
 - `@pytest.mark.sim("sim1", "sim2")`: Test runs on multiple specified backends
 - `@pytest.mark.general`: Test requires no simulator/handler (pure unit test)
 
@@ -320,6 +321,9 @@ python metasim/test/isaacgym_entry.py metasim/test/ -k isaacgym
 
 # IsaacSim only
 pytest metasim/test/ -k isaacsim
+
+# Newton only
+pytest metasim/test/ -k newton
 
 # General tests (no simulator)
 pytest metasim/test/ -k general

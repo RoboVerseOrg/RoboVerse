@@ -46,6 +46,10 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - ``uv pip install -e ".[pybullet]"``
      - 3.6-3.11
      - 3.10
+   * - Newton
+     - ``uv pip install -e ".[newton]"``
+     - 3.10-3.12
+     - 3.10
    * - IsaacSim v4.5.0
      - See below
      - 3.10

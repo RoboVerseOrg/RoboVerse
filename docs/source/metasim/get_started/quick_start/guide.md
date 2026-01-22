@@ -15,7 +15,7 @@ Let's understand each component:
 ### 1. Handler: The Physics Engine Interface
 
 
-A **Handler** is the core component that directly interfaces with physics engines (like MuJoCo, IsaacSim, PyBullet, etc.). Think of it as a translator that speaks the language of different simulators.
+A **Handler** is the core component that directly interfaces with physics engines (like MuJoCo, IsaacSim, PyBullet, Newton, etc.). Think of it as a translator that speaks the language of different simulators.
 
 
 ```python

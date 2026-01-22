@@ -46,6 +46,11 @@ python get_started/1_control_robot.py  --sim sapien3
 python get_started/1_control_robot.py  --sim pybullet
 ```
 
+#### Newton
+```bash
+python get_started/1_control_robot.py  --sim newton
+```
+
 
 You will get the following videos:
 
@@ -53,9 +58,9 @@ You will get the following videos:
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/1_move_robot_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/1_move_robot_isaacsim.mp4" type="video/mp4">
             </video>
-            <p style="margin-top: 5px;">IsaacSim</p>
+            <p style="margin-top: 5px;">Isaac Sim</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
@@ -88,6 +93,14 @@ You will get the following videos:
                 <source src="https://roboverse.wiki/_static/standard_output/1_move_robot_pybullet.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">PyBullet</p>
+        </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; width: 100%;">
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/1_move_robot_newton.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Newton</p>
         </div>
     </div>
 </div>
