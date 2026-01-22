@@ -119,6 +119,8 @@ class NewtonHandler(BaseSimHandler):
 
         # Build name-to-ID caches for joint/body lookups
         self._build_name_caches()
+        # Precompute per-env index caches for fast state extraction
+        self._build_state_index_caches()
 
         # Apply foot friction overrides based on ground friction
         self._apply_foot_friction_overrides()
@@ -144,13 +146,21 @@ class NewtonHandler(BaseSimHandler):
         sim_params = self.scenario.sim_params
         use_mujoco_contacts = getattr(sim_params, "newton_use_mujoco_contacts", None)
         if use_mujoco_contacts is None:
-            use_mujoco_contacts = True
-        self._solver = SolverMuJoCo(
-            self._model,
-            njmax=sim_params.njmax,
-            nconmax=sim_params.nconmax,
-            use_mujoco_contacts=use_mujoco_contacts,
-        )
+            use_mujoco_contacts = False
+
+        if use_mujoco_contacts:
+            self._solver = SolverMuJoCo(
+                self._model,
+                njmax=sim_params.njmax,
+                nconmax=sim_params.nconmax,
+                use_mujoco_contacts=use_mujoco_contacts,
+            )
+        else:  # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
+            self._solver = SolverMuJoCo(
+                self._model,
+                njmax=sim_params.njmax,
+                nconmax=sim_params.nconmax,
+            )
         self._use_mujoco_contacts = bool(use_mujoco_contacts)
 
         # Initialize Contacts object for contact force queries
@@ -342,47 +352,41 @@ class NewtonHandler(BaseSimHandler):
         # Give the ground a neutral gray to avoid pure white output
         self._shape_color_overrides[ground_shape_idx] = np.array([0.35, 0.35, 0.35, 1.0], dtype=np.float32)
 
-        # Add robots and objects for each environment
+        # Add robots and objects for each environment (reuse a single template builder)
         self._obj_to_root_body = defaultdict(dict)
 
+        env_builder = newton.ModelBuilder()
+        self._configure_builder_defaults(env_builder)
+
+        # Track local indices for this env template
+        env_map = {}
+        env_shape_colors: dict[int, np.ndarray] = {}
+
+        # Add robot(s) once to template
+        for robot in self.robots:
+            start_count = len(env_builder.body_mass)
+            self._add_robot_to_builder(env_builder, robot)
+            end_count = len(env_builder.body_mass)
+            if end_count > start_count:
+                env_map[robot.name] = start_count
+
+        # Add objects once to template
+        for obj in self.objects:
+            start_count = len(env_builder.body_mass)
+            self._add_object_to_builder(env_builder, obj, env_shape_colors)
+            end_count = len(env_builder.body_mass)
+            if end_count > start_count:
+                env_map[obj.name] = start_count
+
+        # Instantiate identical worlds from template
         for env_id in range(self.num_envs):
-            # Create sub-builder for this environment
-            env_builder = newton.ModelBuilder()
-            self._configure_builder_defaults(env_builder)
-
-            # Track local indices for this env
-            env_map = {}
-            env_shape_colors: dict[int, np.ndarray] = {}
-
-            # Add robot(s)
-            for robot in self.robots:
-                # Check current body count
-                start_count = len(env_builder.body_mass)
-                self._add_robot_to_builder(env_builder, robot)
-                end_count = len(env_builder.body_mass)
-                if end_count > start_count:
-                    # Assume first added body is root
-                    env_map[robot.name] = start_count
-
-            # Add objects
-            for obj in self.objects:
-                start_count = len(env_builder.body_mass)
-                self._add_object_to_builder(env_builder, obj, env_shape_colors)
-                end_count = len(env_builder.body_mass)
-                if end_count > start_count:
-                    env_map[obj.name] = start_count
-
-            # Add this environment as a separate world
-            # Calculate global offsets
             global_offset = len(builder.body_mass)
             shape_offset = builder.shape_count
             builder.add_world(env_builder)
 
-            # Store global indices
             for name, local_idx in env_map.items():
                 self._obj_to_root_body[env_id][name] = global_offset + local_idx
 
-            # Store global shape colors
             for local_shape_idx, color in env_shape_colors.items():
                 self._shape_color_overrides[shape_offset + local_shape_idx] = color
 
@@ -512,6 +516,20 @@ class NewtonHandler(BaseSimHandler):
         self._obj_body_indices = defaultdict(dict)
         self._obj_joint_indices = defaultdict(dict)
         self._obj_joint_name_cache = defaultdict(dict)
+        self._obj_root_body_ids: dict[str, torch.Tensor] = {}
+        self._obj_sorted_body_ids: dict[str, torch.Tensor] = {}
+        self._obj_sorted_body_names: dict[str, list[str]] = {}
+        self._obj_sorted_joint_names: dict[str, list[str]] = {}
+        self._obj_joint_q_idx: dict[str, torch.Tensor] = {}
+        self._obj_joint_qd_idx: dict[str, torch.Tensor] = {}
+        self._obj_joint_valid: dict[str, torch.Tensor] = {}
+        self._obj_root_joint_idx: dict[str, torch.Tensor] = {}
+        self._obj_root_joint_type: dict[str, torch.Tensor] = {}
+        self._joint_q_starts_t: torch.Tensor | None = None
+        self._joint_qd_starts_t: torch.Tensor | None = None
+        self._joint_types_t: torch.Tensor | None = None
+        self._root_q_offsets: torch.Tensor | None = None
+        self._root_qd_offsets: torch.Tensor | None = None
 
         # DEBUG: Print all body names
         # print(f"DEBUG: Model Body Names: {self._model.body_key}") # Commented out to be safe, I'll rely on add_urdf return checks
@@ -563,6 +581,131 @@ class NewtonHandler(BaseSimHandler):
                         joint_map[joint_name] = joint_idx
                 if joint_map:
                     self._obj_joint_name_cache[env_id][obj.name] = joint_map
+
+    def _build_state_index_caches(self) -> None:
+        """Precompute per-env indices for fast state extraction."""
+        if self._model is None:
+            return
+
+        self._obj_root_body_ids = {}
+        self._obj_sorted_body_ids = {}
+        self._obj_sorted_body_names = {}
+        self._obj_sorted_joint_names = {}
+        self._obj_joint_q_idx = {}
+        self._obj_joint_qd_idx = {}
+        self._obj_joint_valid = {}
+        self._obj_root_joint_idx = {}
+        self._obj_root_joint_type = {}
+        self._joint_q_starts_t = None
+        self._joint_qd_starts_t = None
+        self._joint_types_t = None
+        self._root_q_offsets = None
+        self._root_qd_offsets = None
+
+        for obj in (*self.robots, *self.objects):
+            name = obj.name
+            root_ids = torch.full((self.num_envs,), -1, device=self._device, dtype=torch.long)
+            root_joint_idx = torch.full((self.num_envs,), -1, device=self._device, dtype=torch.long)
+            root_joint_type = torch.full((self.num_envs,), -1, device=self._device, dtype=torch.int32)
+            sorted_body_ids_by_env: list[list[int]] = []
+            body_len = None
+            body_consistent = True
+
+            for env_id in range(self.num_envs):
+                root_idx = self._obj_to_root_body[env_id].get(name)
+                if root_idx is not None:
+                    root_ids[env_id] = int(root_idx)
+                    joint_idx = self._body_parent_joint.get(root_idx)
+                    if joint_idx is not None:
+                        root_joint_idx[env_id] = int(joint_idx)
+                        root_joint_type[env_id] = int(self._joint_types[joint_idx])
+
+                body_ids = self._get_body_indices(env_id, name)
+                if body_ids:
+                    body_names = [self._model.body_key[idx] for idx in body_ids]
+                    sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
+                    sorted_body_ids = [idx for _, idx in sorted_pairs]
+                else:
+                    sorted_body_ids = []
+
+                if body_len is None:
+                    body_len = len(sorted_body_ids)
+                    if body_len and env_id == 0:
+                        self._obj_sorted_body_names[name] = [n for n, _ in sorted_pairs]
+                elif len(sorted_body_ids) != body_len:
+                    body_consistent = False
+
+                sorted_body_ids_by_env.append(sorted_body_ids)
+
+            self._obj_root_body_ids[name] = root_ids
+            self._obj_root_joint_idx[name] = root_joint_idx
+            self._obj_root_joint_type[name] = root_joint_type
+            if body_consistent and body_len and body_len > 0:
+                self._obj_sorted_body_ids[name] = torch.tensor(
+                    sorted_body_ids_by_env, device=self._device, dtype=torch.long
+                )
+
+            if not isinstance(obj, ArticulationObjCfg):
+                continue
+
+            joint_names = self._get_joint_names(name, sort=True)
+            if not joint_names:
+                continue
+            self._obj_sorted_joint_names[name] = joint_names
+
+            q_idx_by_env: list[list[int]] = []
+            qd_idx_by_env: list[list[int]] = []
+            valid_by_env: list[list[bool]] = []
+
+            for env_id in range(self.num_envs):
+                q_idx: list[int] = []
+                qd_idx: list[int] = []
+                valid: list[bool] = []
+
+                for joint_name in joint_names:
+                    joint_idx = self._get_joint_index(env_id, name, joint_name)
+                    if joint_idx is None:
+                        q_idx.append(0)
+                        qd_idx.append(0)
+                        valid.append(False)
+                        continue
+                    q_start = int(self._joint_q_starts[joint_idx])
+                    qd_start = int(self._joint_qd_starts[joint_idx])
+                    qd_end = int(self._joint_qd_starts[joint_idx + 1])
+                    if qd_end - qd_start != 1:
+                        q_idx.append(0)
+                        qd_idx.append(0)
+                        valid.append(False)
+                        continue
+                    q_idx.append(q_start)
+                    qd_idx.append(qd_start)
+                    valid.append(True)
+
+                q_idx_by_env.append(q_idx)
+                qd_idx_by_env.append(qd_idx)
+                valid_by_env.append(valid)
+
+            q_idx_tensor = torch.tensor(q_idx_by_env, device=self._device, dtype=torch.long)
+            qd_idx_tensor = torch.tensor(qd_idx_by_env, device=self._device, dtype=torch.long)
+            valid_tensor = torch.tensor(valid_by_env, device=self._device, dtype=torch.bool)
+
+            if valid_tensor.numel() and (valid_tensor == valid_tensor[0]).all():
+                valid_mask = valid_tensor[0]
+            else:
+                valid_mask = valid_tensor
+
+            self._obj_joint_q_idx[name] = q_idx_tensor
+            self._obj_joint_qd_idx[name] = qd_idx_tensor
+            self._obj_joint_valid[name] = valid_mask
+
+        if self._joint_q_starts is not None:
+            self._joint_q_starts_t = torch.as_tensor(self._joint_q_starts, device=self._device, dtype=torch.long)
+        if self._joint_qd_starts is not None:
+            self._joint_qd_starts_t = torch.as_tensor(self._joint_qd_starts, device=self._device, dtype=torch.long)
+        if self._joint_types is not None:
+            self._joint_types_t = torch.as_tensor(self._joint_types, device=self._device, dtype=torch.int32)
+        self._root_q_offsets = torch.arange(7, device=self._device, dtype=torch.long)
+        self._root_qd_offsets = torch.arange(6, device=self._device, dtype=torch.long)
 
     def _apply_gravity_settings(self) -> None:
         """Apply scenario gravity to the Newton model."""
@@ -795,10 +938,37 @@ class NewtonHandler(BaseSimHandler):
             dim=-1,
         )
 
+    @staticmethod
+    def _reorder_quat_wxyz_to_xyzw(quat_wxyz: torch.Tensor) -> torch.Tensor:
+        """Reorder quaternion from wxyz to xyzw for torch tensors."""
+        return torch.stack(
+            [quat_wxyz[..., 1], quat_wxyz[..., 2], quat_wxyz[..., 3], quat_wxyz[..., 0]],
+            dim=-1,
+        )
+
     def _pack_body_state(self, body_q: torch.Tensor, body_qd: torch.Tensor | None, body_ids: list[int]) -> torch.Tensor:
         """Pack body state into [pos, quat, lin_vel, ang_vel] for a list of body indices."""
         if not body_ids:
             return torch.zeros((0, 13), device=self._device)
+
+        pos = body_q[body_ids, 0:3]
+        quat = self._reorder_quat_xyzw_to_wxyz(body_q[body_ids, 3:7])
+
+        if body_qd is None:
+            lin_vel = torch.zeros_like(pos)
+            ang_vel = torch.zeros_like(pos)
+        else:
+            lin_vel = body_qd[body_ids, 0:3]
+            ang_vel = body_qd[body_ids, 3:6]
+
+        return torch.cat([pos, quat, lin_vel, ang_vel], dim=-1)
+
+    def _pack_body_state_batch(
+        self, body_q: torch.Tensor, body_qd: torch.Tensor | None, body_ids: torch.Tensor
+    ) -> torch.Tensor:
+        """Pack body state for batched indices (supports 1D or 2D index tensors)."""
+        if body_ids.numel() == 0:
+            return torch.zeros((*body_ids.shape, 13), device=self._device)
 
         pos = body_q[body_ids, 0:3]
         quat = self._reorder_quat_xyzw_to_wxyz(body_q[body_ids, 3:7])
@@ -1112,9 +1282,15 @@ class NewtonHandler(BaseSimHandler):
         joint_f = wp2torch(self._control.joint_f) if self._control and self._control.joint_f else None
 
         num_envs = len(env_ids)
+        if isinstance(env_ids, torch.Tensor):
+            env_ids_t = env_ids.to(device=self._device, dtype=torch.long)
+        else:
+            env_ids_t = torch.tensor(env_ids, device=self._device, dtype=torch.long)
         root_state = torch.zeros(num_envs, 13, device=self._device)
 
-        joint_names = self._get_joint_names(robot_name, sort=True)
+        joint_names = self._obj_sorted_joint_names.get(robot_name)
+        if joint_names is None:
+            joint_names = self._get_joint_names(robot_name, sort=True)
         num_joints = len(joint_names)
         joint_pos = torch.zeros(num_envs, num_joints, device=self._device)
         joint_vel = torch.zeros(num_envs, num_joints, device=self._device)
@@ -1126,55 +1302,101 @@ class NewtonHandler(BaseSimHandler):
         )
         joint_effort_target = torch.zeros(num_envs, num_joints, device=self._device) if joint_f is not None else None
 
-        body_states = []
+        body_state = None
+        if body_q is not None and robot_name in self._obj_sorted_body_ids:
+            body_ids_all = self._obj_sorted_body_ids[robot_name]
+            if body_ids_all.shape[0] >= self.num_envs:
+                body_ids = body_ids_all[env_ids_t]
+                body_state = self._pack_body_state_batch(body_q, body_qd, body_ids)
 
-        for row, env_id in enumerate(env_ids):
-            root_idx = self._obj_to_root_body[env_id].get(robot_name)
-            if root_idx is not None and body_q is not None:
-                root_state[row] = self._pack_body_state(body_q, body_qd, [root_idx])[0]
+        if body_q is not None and robot_name in self._obj_root_body_ids:
+            root_ids_all = self._obj_root_body_ids[robot_name]
+            if root_ids_all.numel() >= self.num_envs:
+                root_ids = root_ids_all[env_ids_t]
+                valid = root_ids >= 0
+                if valid.any():
+                    root_ids_safe = root_ids.clone()
+                    root_ids_safe[~valid] = 0
+                    root_state_vals = self._pack_body_state_batch(body_q, body_qd, root_ids_safe)
+                    root_state[valid] = root_state_vals[valid]
 
-            body_ids = self._get_body_indices(env_id, robot_name)
-            if body_q is not None:
-                body_ids_no_root = body_ids[1:]
-                if body_ids_no_root:
-                    body_names = [self._model.body_key[idx] for idx in body_ids_no_root]
-                    sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+        def _gather_dof(src: torch.Tensor, idx: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor:
+            idx_safe = idx.clone()
+            if valid_mask.dim() == 1:
+                if not valid_mask.all():
+                    idx_safe[:, ~valid_mask] = 0
+                out = src[idx_safe]
+                if not valid_mask.all():
+                    out[:, ~valid_mask] = 0
+            else:
+                valid_sel = valid_mask[env_ids_t]
+                idx_safe[~valid_sel] = 0
+                out = src[idx_safe]
+                out[~valid_sel] = 0
+            return out
+
+        if num_joints and robot_name in self._obj_joint_q_idx:
+            q_idx_all = self._obj_joint_q_idx[robot_name]
+            qd_idx_all = self._obj_joint_qd_idx[robot_name]
+            valid_mask = self._obj_joint_valid[robot_name]
+            q_idx = q_idx_all[env_ids_t]
+            qd_idx = qd_idx_all[env_ids_t]
+
+            if joint_q is not None:
+                joint_pos = _gather_dof(joint_q, q_idx, valid_mask)
+            if joint_qd is not None:
+                joint_vel = _gather_dof(joint_qd, qd_idx, valid_mask)
+            if joint_target_pos is not None:
+                joint_pos_target = _gather_dof(joint_target_pos, qd_idx, valid_mask)
+            if joint_target_vel is not None:
+                joint_vel_target = _gather_dof(joint_target_vel, qd_idx, valid_mask)
+            if joint_f is not None:
+                joint_effort_target = _gather_dof(joint_f, qd_idx, valid_mask)
+        else:
+            for row, env_id in enumerate(env_ids):
+                for col, joint_name in enumerate(joint_names):
+                    joint_idx = self._get_joint_index(env_id, robot_name, joint_name)
+                    if joint_idx is None:
+                        continue
+                    q_start = self._joint_q_starts[joint_idx]
+                    qd_start = self._joint_qd_starts[joint_idx]
+                    qd_end = self._joint_qd_starts[joint_idx + 1]
+                    if qd_end <= qd_start:
+                        continue
+                    if qd_end - qd_start != 1:
+                        continue
+                    if joint_q is not None:
+                        joint_pos[row, col] = joint_q[q_start]
+                    if joint_qd is not None:
+                        joint_vel[row, col] = joint_qd[qd_start]
+                    if joint_target_pos is not None:
+                        joint_pos_target[row, col] = joint_target_pos[qd_start]
+                    if joint_target_vel is not None:
+                        joint_vel_target[row, col] = joint_target_vel[qd_start]
+                    if joint_f is not None:
+                        joint_effort_target[row, col] = joint_f[qd_start]
+
+        if body_state is None and body_q is not None:
+            body_states = []
+            for row, env_id in enumerate(env_ids):
+                root_idx = self._obj_to_root_body[env_id].get(robot_name)
+                if root_idx is not None:
+                    root_state[row] = self._pack_body_state(body_q, body_qd, [root_idx])[0]
+
+                body_ids = self._get_body_indices(env_id, robot_name)
+                if body_ids:
+                    body_names = [self._model.body_key[idx] for idx in body_ids]
+                    sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
                     sorted_body_ids = [idx for _, idx in sorted_pairs]
                 else:
                     sorted_body_ids = []
                 body_states.append(self._pack_body_state(body_q, body_qd, sorted_body_ids))
-            else:
-                body_states.append(None)
-
-            for col, joint_name in enumerate(joint_names):
-                joint_idx = self._get_joint_index(env_id, robot_name, joint_name)
-                if joint_idx is None:
-                    continue
-                q_start = self._joint_q_starts[joint_idx]
-                qd_start = self._joint_qd_starts[joint_idx]
-                qd_end = self._joint_qd_starts[joint_idx + 1]
-                if qd_end <= qd_start:
-                    continue
-                if qd_end - qd_start != 1:
-                    continue
-                if joint_q is not None:
-                    joint_pos[row, col] = joint_q[q_start]
-                if joint_qd is not None:
-                    joint_vel[row, col] = joint_qd[qd_start]
-                if joint_target_pos is not None:
-                    joint_pos_target[row, col] = joint_target_pos[qd_start]
-                if joint_target_vel is not None:
-                    joint_vel_target[row, col] = joint_target_vel[qd_start]
-                if joint_f is not None:
-                    joint_effort_target[row, col] = joint_f[qd_start]
-
-        body_state = None
-        if body_states and body_states[0] is not None:
-            body_state = torch.stack(body_states, dim=0)
+            if body_states and body_states[0] is not None:
+                body_state = torch.stack(body_states, dim=0)
 
         return RobotState(
             root_state=root_state,
-            body_names=self._get_body_names(robot_name),
+            body_names=self._obj_sorted_body_names.get(robot_name, self._get_body_names(robot_name)),
             body_state=body_state,
             joint_pos=joint_pos,
             joint_vel=joint_vel,
@@ -1211,10 +1433,9 @@ class NewtonHandler(BaseSimHandler):
             if is_articulation:
                 body_ids = self._get_body_indices(env_id, obj_name)
                 if body_q is not None:
-                    body_ids_no_root = body_ids[1:]
-                    if body_ids_no_root:
-                        body_names = [self._model.body_key[idx] for idx in body_ids_no_root]
-                        sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+                    if body_ids:
+                        body_names = [self._model.body_key[idx] for idx in body_ids]
+                        sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
                         sorted_body_ids = [idx for _, idx in sorted_pairs]
                     else:
                         sorted_body_ids = []
@@ -1252,6 +1473,10 @@ class NewtonHandler(BaseSimHandler):
 
     def _set_states(self, states: TensorState | list, env_ids: list[int] | None = None) -> None:
         """Set the physics state from a TensorState or list."""
+        if isinstance(states, TensorState):
+            self._set_states_tensor(states, env_ids)
+            return
+
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         elif isinstance(env_ids, torch.Tensor):
@@ -1454,6 +1679,212 @@ class NewtonHandler(BaseSimHandler):
             # Run Forward Kinematics to propagate joint changes to bodies
             eval_fk(self._model, self._state_0.joint_q, self._state_0.joint_qd, self._state_0)
 
+    def _set_states_tensor(self, states: TensorState, env_ids: list[int] | None) -> None:
+        """Fast-path setter for TensorState using cached indices."""
+        if self._model is None or self._state_0 is None:
+            return
+
+        if env_ids is None:
+            env_ids_t = torch.arange(self.num_envs, device=self._device, dtype=torch.long)
+        else:
+            env_ids_t = torch.as_tensor(env_ids, device=self._device, dtype=torch.long)
+        if env_ids_t.numel() == 0:
+            return
+
+        body_q_model = wp2torch(self._model.body_q) if self._model.body_q is not None else None
+        body_q_state = wp2torch(self._state_0.body_q) if self._state_0.body_q is not None else None
+        body_qd_model = wp2torch(self._model.body_qd) if self._model.body_qd is not None else None
+        body_qd_state = wp2torch(self._state_0.body_qd) if self._state_0.body_qd is not None else None
+        joint_q_model = wp2torch(self._model.joint_q) if self._model.joint_q is not None else None
+        joint_q_state = wp2torch(self._state_0.joint_q) if self._state_0.joint_q is not None else None
+        joint_qd_model = wp2torch(self._model.joint_qd) if self._model.joint_qd is not None else None
+        joint_qd_state = wp2torch(self._state_0.joint_qd) if self._state_0.joint_qd is not None else None
+        joint_X_p = wp2torch(self._model.joint_X_p) if self._model.joint_X_p is not None else None
+
+        body_q_targets = [t for t in (body_q_model, body_q_state) if t is not None]
+        body_qd_targets = [t for t in (body_qd_model, body_qd_state) if t is not None]
+        joint_q_targets = [t for t in (joint_q_model, joint_q_state) if t is not None]
+        joint_qd_targets = [t for t in (joint_qd_model, joint_qd_state) if t is not None]
+
+        control_joint_target_pos = (
+            wp2torch(self._control.joint_target_pos) if self._control and self._control.joint_target_pos else None
+        )
+        control_joint_target_vel = (
+            wp2torch(self._control.joint_target_vel) if self._control and self._control.joint_target_vel else None
+        )
+
+        dirty_joints = False
+
+        free_type = int(JointType.FREE)
+        fixed_type = int(JointType.FIXED)
+
+        def _assign(targets: list[torch.Tensor], idx: torch.Tensor, values: torch.Tensor) -> None:
+            for tgt in targets:
+                tgt[idx] = values
+
+        def _scatter_values(
+            targets: list[torch.Tensor], idx: torch.Tensor, values: torch.Tensor, valid_mask: torch.Tensor
+        ) -> None:
+            if not targets:
+                return
+            if valid_mask.dim() == 1:
+                if valid_mask.all():
+                    for tgt in targets:
+                        tgt[idx] = values
+                else:
+                    idx_sel = idx[:, valid_mask]
+                    vals_sel = values[:, valid_mask]
+                    for tgt in targets:
+                        tgt[idx_sel] = vals_sel
+            else:
+                valid_sel = valid_mask[env_ids_t]
+                flat_idx = idx[valid_sel]
+                flat_vals = values[valid_sel]
+                for tgt in targets:
+                    tgt[flat_idx] = flat_vals
+
+        def _apply_root_state(name: str, root_state: torch.Tensor) -> None:
+            nonlocal dirty_joints
+            root_ids_all = self._obj_root_body_ids.get(name)
+            if root_ids_all is None:
+                return
+            root_ids = root_ids_all[env_ids_t]
+            valid_root = root_ids >= 0
+            if not valid_root.any():
+                return
+            root_state = root_state[valid_root]
+            root_ids = root_ids[valid_root]
+
+            pos = root_state[:, 0:3]
+            quat_xyzw = self._reorder_quat_wxyz_to_xyzw(root_state[:, 3:7])
+            lin_vel = root_state[:, 7:10]
+            ang_vel = root_state[:, 10:13]
+
+            joint_idx_all = self._obj_root_joint_idx.get(name)
+            joint_type_all = self._obj_root_joint_type.get(name)
+            if joint_idx_all is None or joint_type_all is None:
+                if body_q_targets:
+                    _assign(body_q_targets, root_ids, torch.cat([pos, quat_xyzw], dim=-1))
+                if body_qd_targets:
+                    _assign(body_qd_targets, root_ids, torch.cat([lin_vel, ang_vel], dim=-1))
+                return
+
+            joint_idx = joint_idx_all[env_ids_t][valid_root]
+            joint_type = joint_type_all[env_ids_t][valid_root]
+
+            free_mask = joint_type == free_type
+            fixed_mask = joint_type == fixed_type
+            no_joint_mask = ~(free_mask | fixed_mask)
+
+            if free_mask.any() and joint_q_targets and self._joint_q_starts_t is not None:
+                j_idx = joint_idx[free_mask]
+                q_start = self._joint_q_starts_t[j_idx]
+                q_idx = q_start[:, None] + (
+                    self._root_q_offsets if self._root_q_offsets is not None else torch.arange(7, device=self._device)
+                )
+                values = torch.cat([pos[free_mask], quat_xyzw[free_mask]], dim=-1)
+                _assign(joint_q_targets, q_idx, values)
+                dirty_joints = True
+
+            if free_mask.any() and joint_qd_targets and self._joint_qd_starts_t is not None:
+                j_idx = joint_idx[free_mask]
+                qd_start = self._joint_qd_starts_t[j_idx]
+                qd_idx = qd_start[:, None] + (
+                    self._root_qd_offsets if self._root_qd_offsets is not None else torch.arange(6, device=self._device)
+                )
+                values = torch.cat([lin_vel[free_mask], ang_vel[free_mask]], dim=-1)
+                _assign(joint_qd_targets, qd_idx, values)
+                dirty_joints = True
+
+            if fixed_mask.any() and joint_X_p is not None:
+                j_idx = joint_idx[fixed_mask]
+                joint_X_p[j_idx, 0:3] = pos[fixed_mask]
+                joint_X_p[j_idx, 3:7] = quat_xyzw[fixed_mask]
+                dirty_joints = True
+
+            if no_joint_mask.any():
+                b_ids = root_ids[no_joint_mask]
+                if body_q_targets:
+                    _assign(body_q_targets, b_ids, torch.cat([pos[no_joint_mask], quat_xyzw[no_joint_mask]], dim=-1))
+                if body_qd_targets:
+                    _assign(body_qd_targets, b_ids, torch.cat([lin_vel[no_joint_mask], ang_vel[no_joint_mask]], dim=-1))
+
+        # Apply object states
+        for obj in self.objects:
+            if obj.name not in states.objects:
+                continue
+            obj_state = states.objects[obj.name]
+            root_state = obj_state.root_state
+            if root_state.device != self._device:
+                root_state = root_state.to(self._device)
+            _apply_root_state(obj.name, root_state[env_ids_t])
+
+            if isinstance(obj, ArticulationObjCfg) and obj_state.joint_pos is not None:
+                q_idx_all = self._obj_joint_q_idx.get(obj.name)
+                qd_idx_all = self._obj_joint_qd_idx.get(obj.name)
+                valid_mask = self._obj_joint_valid.get(obj.name)
+                if q_idx_all is not None and qd_idx_all is not None and valid_mask is not None:
+                    q_idx = q_idx_all[env_ids_t]
+                    qd_idx = qd_idx_all[env_ids_t]
+                    joint_pos = obj_state.joint_pos
+                    if joint_pos.device != self._device:
+                        joint_pos = joint_pos.to(self._device)
+                    joint_pos = joint_pos[env_ids_t]
+                    joint_vel = obj_state.joint_vel
+                    if joint_vel is not None:
+                        if joint_vel.device != self._device:
+                            joint_vel = joint_vel.to(self._device)
+                        joint_vel = joint_vel[env_ids_t]
+                    _scatter_values(joint_q_targets, q_idx, joint_pos, valid_mask)
+                    if joint_vel is not None:
+                        _scatter_values(joint_qd_targets, qd_idx, joint_vel, valid_mask)
+                    else:
+                        _scatter_values(joint_qd_targets, qd_idx, torch.zeros_like(joint_pos), valid_mask)
+                    dirty_joints = True
+
+        # Apply robot states
+        for robot in self.robots:
+            if robot.name not in states.robots:
+                continue
+            robot_state = states.robots[robot.name]
+            root_state = robot_state.root_state
+            if root_state.device != self._device:
+                root_state = root_state.to(self._device)
+            _apply_root_state(robot.name, root_state[env_ids_t])
+
+            if robot_state.joint_pos is not None:
+                q_idx_all = self._obj_joint_q_idx.get(robot.name)
+                qd_idx_all = self._obj_joint_qd_idx.get(robot.name)
+                valid_mask = self._obj_joint_valid.get(robot.name)
+                if q_idx_all is not None and qd_idx_all is not None and valid_mask is not None:
+                    q_idx = q_idx_all[env_ids_t]
+                    qd_idx = qd_idx_all[env_ids_t]
+                    joint_pos = robot_state.joint_pos
+                    if joint_pos.device != self._device:
+                        joint_pos = joint_pos.to(self._device)
+                    joint_pos = joint_pos[env_ids_t]
+                    joint_vel = robot_state.joint_vel
+                    if joint_vel is not None:
+                        if joint_vel.device != self._device:
+                            joint_vel = joint_vel.to(self._device)
+                        joint_vel = joint_vel[env_ids_t]
+                    _scatter_values(joint_q_targets, q_idx, joint_pos, valid_mask)
+                    if joint_vel is not None:
+                        _scatter_values(joint_qd_targets, qd_idx, joint_vel, valid_mask)
+                    else:
+                        _scatter_values(joint_qd_targets, qd_idx, torch.zeros_like(joint_pos), valid_mask)
+
+                    if control_joint_target_pos is not None:
+                        _scatter_values([control_joint_target_pos], qd_idx, joint_pos, valid_mask)
+                    if control_joint_target_vel is not None:
+                        if joint_vel is None:
+                            joint_vel = torch.zeros_like(joint_pos)
+                        _scatter_values([control_joint_target_vel], qd_idx, joint_vel, valid_mask)
+                    dirty_joints = True
+
+        if dirty_joints:
+            eval_fk(self._model, self._state_0.joint_q, self._state_0.joint_qd, self._state_0)
+
     def _set_dof_targets(self, actions: list[Action] | torch.Tensor | np.ndarray) -> None:
         """Set DOF position/velocity targets for robot joints."""
         self._actions_cache = actions
@@ -1500,6 +1931,54 @@ class NewtonHandler(BaseSimHandler):
             # Broadcast single action across all envs if needed
             if action_tensor.shape[0] == 1 and self.num_envs > 1:
                 action_tensor = action_tensor.repeat(self.num_envs, 1)
+
+            robot_name = robot.name
+            qd_idx_all = self._obj_joint_qd_idx.get(robot_name)
+            valid_mask = self._obj_joint_valid.get(robot_name)
+
+            if qd_idx_all is not None and valid_mask is not None:
+                env_count = min(self.num_envs, action_tensor.shape[0], qd_idx_all.shape[0])
+                if env_count <= 0:
+                    return
+                max_joints = min(action_tensor.shape[1], qd_idx_all.shape[1])
+                if max_joints <= 0:
+                    return
+
+                qd_idx = qd_idx_all[:env_count, :max_joints]
+                if qd_idx.device != target_device:
+                    qd_idx = qd_idx.to(target_device)
+                action_slice = action_tensor[:env_count, :max_joints]
+
+                if isinstance(valid_mask, torch.Tensor):
+                    if valid_mask.ndim == 1:
+                        mask = valid_mask[:max_joints]
+                        if mask.device != target_device:
+                            mask = mask.to(target_device)
+                        qd_idx_sel = qd_idx[:, mask]
+                        action_sel = action_slice[:, mask]
+                        idx_flat = qd_idx_sel.reshape(-1)
+                        val_flat = action_sel.reshape(-1)
+                    else:
+                        mask = valid_mask[:env_count, :max_joints]
+                        if mask.device != target_device:
+                            mask = mask.to(target_device)
+                        idx_flat = qd_idx[mask]
+                        val_flat = action_slice[mask]
+                else:
+                    idx_flat = qd_idx.reshape(-1)
+                    val_flat = action_slice.reshape(-1)
+
+                if idx_flat.numel() == 0:
+                    return
+
+                if use_effort and joint_f is not None:
+                    joint_f[idx_flat] = val_flat
+                else:
+                    if joint_target_pos is not None:
+                        joint_target_pos[idx_flat] = val_flat
+                    if joint_target_vel is not None:
+                        joint_target_vel[idx_flat] = 0.0
+                return
 
             joint_names = self._get_joint_names(robot.name, sort=True)
             max_joints = min(action_tensor.shape[1], len(joint_names))
@@ -1613,7 +2092,8 @@ class NewtonHandler(BaseSimHandler):
         if not body_ids:
             return []
 
-        names = [self._model.body_key[idx] for idx in body_ids[1:]]
+        # Include the root link to align with other simulators (IsaacGym/MuJoCo).
+        names = [self._model.body_key[idx] for idx in body_ids]
         if sort:
             names.sort()
         return names

@@ -163,14 +163,13 @@ class ContactForces(BaseQueryType):
         body_count = None
         for env_id in range(self.num_envs):
             body_ids = self.handler._get_body_indices(env_id, self.robots[0].name)
-            body_ids_no_root = body_ids[1:]
-            if not body_ids_no_root:
+            if not body_ids:
                 per_env_maps.append({})
                 if body_count is None:
                     body_count = 0
                 continue
-            body_names = [model.body_key[idx] for idx in body_ids_no_root]
-            sorted_pairs = sorted(zip(body_names, body_ids_no_root), key=lambda pair: pair[0])
+            body_names = [model.body_key[idx] for idx in body_ids]
+            sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
             sorted_body_ids = [idx for _, idx in sorted_pairs]
             if body_count is None:
                 body_count = len(sorted_body_ids)

@@ -387,10 +387,10 @@ class MassRandomizer(BaseQueryType):
             if self.set_body_names is not None
             else torch.arange(len(self.body_names), dtype=torch.int, device="cpu")
         )
-        self.default_masses = deepcopy(self._get_masses())
         if self.simulator_name == "newton":
             self._newton_body_ids = self._build_newton_body_id_map()
             self.default_inertias = self._get_inertias_newton()
+        self.default_masses = deepcopy(self._get_masses())
 
     def __call__(self, env_ids: torch.Tensor | None = None):
         """Apply mass randomization for selected environments."""
@@ -599,11 +599,12 @@ class MassRandomizer(BaseQueryType):
             dtype=torch.float32,
             device=self.handler.device,
         )
+        body_mass_t = torch.as_tensor(body_mass, device=self.handler.device, dtype=masses.dtype)
         for env_id, ids in self._newton_body_ids.items():
             for i, body_id in enumerate(ids):
                 if body_id is None:
                     continue
-                masses[env_id, i] = body_mass[body_id]
+                masses[env_id, i] = body_mass_t[body_id]
         return masses
 
     def _get_inertias_newton(self):
@@ -657,13 +658,13 @@ class MassRandomizer(BaseQueryType):
 
         for env_id in env_ids.tolist():
             ids = self._newton_body_ids.get(int(env_id), [])
-            for idx in self.set_body_ids.tolist():
+            for local_i, idx in enumerate(self.set_body_ids.tolist()):
                 if idx >= len(ids):
                     continue
                 body_id = ids[idx]
                 if body_id is None:
                     continue
-                ratio = float(ratios[env_id, idx])
+                ratio = float(ratios[env_id, local_i])
                 inertia = (self.default_inertias[env_id, idx] * ratio).cpu().numpy()
                 body_inertia[body_id] = inertia
                 if ratio > 0.0 and inertia.any():
