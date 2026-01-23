@@ -68,7 +68,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             reward_funcs.joint_deviation_l1,
         )
         flat_orientation = -1.0
-        base_height = (-10.0, {"target_height": 0.78})
+        base_height = (-1.0, {"target_height": 0.78})
         feet_gait = (
             0.5,
             {
@@ -202,8 +202,8 @@ class WalkG1Dof29Task(LeggedRobotTask):
             njmax=210,
             nconmax=64,
             newton_use_mujoco_contacts=True,
-            newton_solver_iterations=100,
-            newton_ls_iterations=10,
+            newton_solver_iterations=200,
+            newton_ls_iterations=20,
             newton_solver="newton",
             newton_integrator="implicit",
             newton_cone="pyramidal",
