@@ -80,11 +80,11 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         )
         feet_slide = (-0.2, {"body_names": (".*ankle_roll.*")})
         feet_clearance = (
-            1.0,
+            2.0,
             {
                 "std": math.sqrt(0.05),
                 "tanh_mult": 2.0,
-                "target_height": 0.1,
+                "target_height": 0.15,
                 "body_names": (".*ankle_roll.*"),
             },
         )
