@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from copy import deepcopy
 
 import numpy as np
 import torch
 from loguru import logger as log
+from scipy.interpolate import RegularGridInterpolator
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.cameras import PinholeCameraCfg
@@ -28,11 +30,13 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
+from metasim.utils.gs_util import alpha_blend_rgba_torch
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.terrain_utils import TerrainGenerator
 
-# Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -99,7 +103,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         sim_config: SimulationCfg = SimulationCfg(
             device="cuda:0",
-            render_interval=self.scenario.decimation,  # TTODO divide into render interval and control decimation
+            render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
                 solver_type=self.scenario.sim_params.solver_type,
@@ -151,15 +155,21 @@ class IsaacsimHandler(BaseSimHandler):
         )
 
     def _update_camera_pose(self) -> None:
+        env_origins = getattr(self.scene, "env_origins", None)
+        if env_origins is None:
+            env_origins = torch.zeros((self.num_envs, 3), device=self.device)
+        else:
+            env_origins = env_origins.to(self.device)
+
         for camera in self.cameras:
             if isinstance(camera, PinholeCameraCfg):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
-                    position_tensor = torch.tensor(camera.pos, device=self.device).unsqueeze(0)
-                    position_tensor = position_tensor.repeat(self.num_envs, 1)
-                    camera_lookat_tensor = torch.tensor(camera.look_at, device=self.device).unsqueeze(0)
-                    camera_lookat_tensor = camera_lookat_tensor.repeat(self.num_envs, 1)
+                    position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
+                    camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
+                    position_tensor = position_tensor + env_origins
+                    camera_lookat_tensor = camera_lookat_tensor + env_origins
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
                     # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
             else:
@@ -198,8 +208,10 @@ class IsaacsimHandler(BaseSimHandler):
 
         # Initialize GS background if enabled
         self._build_gs_background()
-
-        return super().launch()
+        super().launch()
+        for sensor in self.scene.sensors.values():
+            if hasattr(sensor, "_initialize_callback"):
+                sensor._initialize_callback(None)
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -329,6 +341,76 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
+    def _get_foreground_mask(
+        self,
+        instance_seg_data: torch.Tensor | None,
+        instance_seg_id2label: dict[int, str] | None,
+        instance_id_seg_data: torch.Tensor | None,
+        instance_id_seg_id2label: dict[int, str] | None,
+    ) -> torch.Tensor | None:
+        """
+        Create foreground mask by excluding terrain/ground from instance segmentation data.
+
+        Args:
+            instance_seg_data: Instance segmentation data (semantic level).
+            instance_seg_id2label: Mapping from instance IDs to labels for instance_seg_data.
+            instance_id_seg_data: Instance ID segmentation data (instance level, more precise).
+            instance_id_seg_id2label: Mapping from instance IDs to labels for instance_id_seg_data.
+
+        Returns:
+            Foreground mask tensor: 1 for objects (not terrain), 0 for terrain/background.
+            Returns None if no instance segmentation data is available.
+        """
+        foreground_mask = None
+
+        # Use instance_id_seg_data if available (more precise), otherwise use instance_seg_data
+        if instance_id_seg_data is not None and instance_id_seg_id2label is not None:
+            # Find terrain IDs from labels
+            terrain_ids = {
+                id
+                for id, label in instance_id_seg_id2label.items()
+                if any(kw in label.lower() for kw in ["ground", "terrain", "floor", "world/ground"])
+            }
+            unique_ids = torch.unique(instance_id_seg_data)
+
+            if terrain_ids:
+                # Object mask: 1 for objects (not terrain), 0 for terrain/background
+                foreground_mask = torch.ones_like(instance_id_seg_data, dtype=torch.float32)
+                for terrain_id in terrain_ids:
+                    if terrain_id in unique_ids:
+                        foreground_mask[instance_id_seg_data == terrain_id] = 0.0
+                # Exclude background (id == 0) if it exists
+                if 0 in unique_ids:
+                    foreground_mask[instance_id_seg_data == 0] = 0.0
+        elif instance_seg_data is not None and instance_seg_id2label is not None:
+            # Fallback to instance_seg_data
+            terrain_ids = {
+                id
+                for id, label in instance_seg_id2label.items()
+                if any(kw in label.lower() for kw in ["ground", "terrain", "floor", "world/ground"])
+            }
+            unique_ids = torch.unique(instance_seg_data)
+
+            if terrain_ids:
+                foreground_mask = torch.ones_like(instance_seg_data, dtype=torch.float32)
+                for terrain_id in terrain_ids:
+                    if terrain_id in unique_ids:
+                        foreground_mask[instance_seg_data == terrain_id] = 0.0
+                # Exclude background (id == 0) if it exists
+                if 0 in unique_ids:
+                    foreground_mask[instance_seg_data == 0] = 0.0
+
+        # Fallback: if no terrain IDs found or mask is all zeros, use simple foreground mask
+        if foreground_mask is None or (foreground_mask is not None and foreground_mask.sum() == 0):
+            if instance_id_seg_data is not None:
+                foreground_mask = (instance_id_seg_data > 0).float()
+            elif instance_seg_data is not None:
+                foreground_mask = (instance_seg_data > 0).float()
+            else:
+                log.warning("No instance segmentation data available for foreground mask")
+
+        return foreground_mask
+
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -412,9 +494,17 @@ class IsaacsimHandler(BaseSimHandler):
             if (
                 self.scenario.gs_scene is not None
                 and self.scenario.gs_scene.with_gs_background
-                and ROBO_SPLATTER_AVAILABLE
                 and rgb_data is not None
             ):
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
+
+                foreground_mask = self._get_foreground_mask(
+                    instance_seg_data, instance_seg_id2label, instance_id_seg_data, instance_id_seg_id2label
+                )
+                assert foreground_mask is not None, "Foreground mask is None"
+
                 # Get camera parameters (already as torch tensors on device)
                 Ks_t, c2w_t = self._get_camera_params(camera, camera_inst)
 
@@ -427,33 +517,27 @@ class IsaacsimHandler(BaseSimHandler):
                     device=self.device,
                 )
 
-                gs_result = self.gs_background.render(gs_cam)
-                # Create foreground mask from instance segmentation
-                if instance_seg_data is not None:
-                    from metasim.utils.gs_util import alpha_blend_rgba_torch
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
 
-                    # Get foreground mask from instance segmentation
-                    foreground_mask = (instance_seg_data > 0).float()  # Shape: (envs, H, W)
+                # Get RGB Blending with GS background
+                sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
+                gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
 
-                    # Get RGB Blending with GS background
-                    sim_rgb = rgb_data.float() / 255.0  # Normalize to [0, 1], Shape: (envs, H, W, 3)
-                    gs_rgb = gs_result.rgb  # Shape: (envs, H, W, 3), BGR order
+                if isinstance(gs_rgb, np.ndarray):
+                    gs_rgb = torch.from_numpy(gs_rgb)
+                gs_rgb = gs_rgb.to(self.device)
+                blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
+                rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8).unsqueeze(0)
 
-                    if isinstance(gs_rgb, np.ndarray):
-                        gs_rgb = torch.from_numpy(gs_rgb)
-                    gs_rgb = gs_rgb.to(self.device)
-                    blended_rgb = alpha_blend_rgba_torch(sim_rgb, gs_rgb, foreground_mask)
-                    rgb_data = (blended_rgb * 255.0).clamp(0, 255).to(torch.uint8).unsqueeze(0)
-
-                    # Get Depth Blending with GS background
-                    sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
-                    if isinstance(bg_depth, np.ndarray):
-                        bg_depth = torch.from_numpy(bg_depth)
-                    bg_depth = bg_depth.to(self.device)
-                    # Use torch.where for depth composition
-                    depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
-                    depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)
+                # Get Depth Blending with GS background
+                sim_depth = depth_data.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                bg_depth = gs_result.depth.squeeze(-1)  # Shape: (envs, H, W, 1) -> (envs, H, W)
+                if isinstance(bg_depth, np.ndarray):
+                    bg_depth = torch.from_numpy(bg_depth)
+                bg_depth = bg_depth.to(self.device)
+                # Use torch.where for depth composition
+                depth_comp = torch.where(foreground_mask > 0.5, sim_depth, bg_depth)
+                depth_data = depth_comp.unsqueeze(0).unsqueeze(-1)
 
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
@@ -486,7 +570,6 @@ class IsaacsimHandler(BaseSimHandler):
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
-        # TODO: support set torque
         if isinstance(actions, torch.Tensor):
             actions_tensor = actions
         else:
@@ -497,12 +580,15 @@ class IsaacsimHandler(BaseSimHandler):
                 for env_id in range(self.num_envs):
                     joint_targets = actions[env_id][robot.name]["dof_pos_target"]
                     for j, joint_name in enumerate(sorted_joint_names):
-                        robot_tensor[env_id, j] = torch.tensor(joint_targets[joint_name], device=self.device)
+                        robot_tensor[env_id, j] = torch.tensor(
+                            joint_targets[joint_name],
+                            device=self.device,
+                        )
                 per_robot_tensors.append(robot_tensor)
             actions_tensor = torch.cat(per_robot_tensors, dim=-1)
 
         offset = 0
-        for robot in self.robots:
+        for i, robot in enumerate(self.robots):
             robot_inst = self.scene.articulations[robot.name]
             sorted_joint_names = self.get_joint_names(robot.name, sort=True)
             joint_count = len(sorted_joint_names)
@@ -526,7 +612,14 @@ class IsaacsimHandler(BaseSimHandler):
                 continue
 
             joint_targets = robot_actions_sorted[:, action_indices]
-            robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+
+            if self._manual_pd_on[i]:
+                # torque / effort control
+                robot_inst.set_joint_effort_target(joint_targets, joint_ids=joint_ids)
+            else:
+                # position control
+                robot_inst.set_joint_position_target(joint_targets, joint_ids=joint_ids)
+
             robot_inst.write_data_to_sim()
 
     def _simulate(self):
@@ -554,50 +647,66 @@ class IsaacsimHandler(BaseSimHandler):
         if self._physics_step_counter < 5:
             self._update_camera_pose()
 
-        self._physics_step_counter += 1
-
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
 
-        manual_pd = any(mode == "effort" for mode in robot.control_type.values())
+        control_type = getattr(robot, "control_type", None)
+        manual_pd = any(mode == "effort" for mode in control_type.values()) if control_type else False
         self._manual_pd_on.append(manual_pd)
-        cfg = ArticulationCfg(
-            spawn=sim_utils.UsdFileCfg(
-                usd_path=robot.usd_path,
-                activate_contact_sensors=True,
-                rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                    max_depenetration_velocity=getattr(
-                        robot, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
-                    )
+
+        spawn_cfg = sim_utils.UsdFileCfg(
+            usd_path=os.path.abspath(robot.usd_path),
+            activate_contact_sensors=True,
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=not robot.enabled_gravity,
+                retain_accelerations=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                max_depenetration_velocity=getattr(
+                    robot, "max_depenetration_velocity", self.scenario.sim_params.max_depenetration_velocity
                 ),
-                articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=robot.fix_base_link),
-                collision_props=sim_utils.CollisionPropertiesCfg(
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+                enabled_self_collisions=robot.enabled_self_collisions,
+                fix_root_link=robot.fix_base_link,
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=4,
+            ),
+            collision_props=getattr(
+                robot,
+                "collision_props",
+                sim_utils.CollisionPropertiesCfg(
                     contact_offset=getattr(robot, "contact_offset", self.scenario.sim_params.contact_offset),
                     rest_offset=getattr(robot, "rest_offset", self.scenario.sim_params.rest_offset),
                 ),
             ),
+        )
+        cfg = ArticulationCfg(
+            spawn=spawn_cfg,
             actuators={
                 jn: ImplicitActuatorCfg(
                     joint_names_expr=[jn],
+                    effort_limit_sim=actuator.effort_limit_sim,
+                    velocity_limit_sim=actuator.velocity_limit_sim,
                     stiffness=actuator.stiffness if not manual_pd else 0.0,
                     damping=actuator.damping if not manual_pd else 0.0,
-                    armature=getattr(robot, "armature", 0.01),
+                    armature=actuator.armature if actuator.armature is not None else getattr(robot, "armature", 0.01),
                 )
                 for jn, actuator in robot.actuators.items()
             },
         )
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
-        cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
-        cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
-        cfg.spawn.articulation_props.enabled_self_collisions = robot.enabled_self_collisions
         init_state = ArticulationCfg.InitialStateCfg(
-            pos=[0.0, 0.0, 0.0],
+            pos=getattr(robot, "default_pos", [0.0, 0.0, 0.0]),
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )
         cfg.init_state = init_state
+        # NOTE `velocity_limit` here won't take effect
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
@@ -777,19 +886,31 @@ class IsaacsimHandler(BaseSimHandler):
             except Exception as e:
                 log.warning(f"Failed to download terrain material {mdl_path}: {e}")
 
+        ground_padding = 8
+        num_cols = math.ceil(math.sqrt(self._num_envs)) + ground_padding
+        num_rows = num_cols
+        # make each tile at least env_spacing (add a margin so robot never touches tile boundary)
+        tile = 1.25 * self.scenario.env_spacing
+
         plane_gen_cfg = TerrainGeneratorCfg(
-            size=(100.0, 100.0),  # ground size (in total)
+            size=(tile, tile),
+            num_rows=num_rows,
+            num_cols=num_cols,
             horizontal_scale=0.1,
-            vertical_scale=0.0,
+            vertical_scale=0.005,
             slope_threshold=None,
             use_cache=False,
             sub_terrains={
                 "flat": mesh_cfg.MeshPlaneTerrainCfg(
                     proportion=1.0,
-                    size=(10.0, 10.0),
                 ),
             },
         )
+
+        ground_cfg = getattr(self.scenario, "ground", None)
+        static_friction = getattr(ground_cfg, "static_friction", 1.0) if ground_cfg is not None else 1.0
+        dynamic_friction = getattr(ground_cfg, "dynamic_friction", 1.0) if ground_cfg is not None else 1.0
+        restitution = getattr(ground_cfg, "restitution", 0.0) if ground_cfg is not None else 0.0
 
         terrain_config = TerrainImporterCfg(
             prim_path="/World/ground",
@@ -799,9 +920,9 @@ class IsaacsimHandler(BaseSimHandler):
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
                 restitution_combine_mode="multiply",
-                static_friction=1.0,
-                dynamic_friction=1.0,
-                restitution=0.0,
+                static_friction=static_friction,
+                dynamic_friction=dynamic_friction,
+                restitution=restitution,
             ),
             debug_vis=False,
             visual_material=sim_utils.MdlFileCfg(
@@ -811,11 +932,145 @@ class IsaacsimHandler(BaseSimHandler):
                 albedo_brightness=1.2,
             ),
         )
+
         terrain_config.num_envs = self.scene.cfg.num_envs
         terrain_config.env_spacing = self.scene.cfg.env_spacing
-
         self.terrain = terrain_config.class_type(terrain_config)
         self.terrain.env_origins = self.terrain.terrain_origins
+        if ground_cfg is not None:
+            self._build_custom_terrain_mesh(ground_cfg)
+
+    def _build_custom_terrain_mesh(self, ground_cfg) -> None:
+        """Procedurally author a USD mesh using TerrainGenerator."""
+        tg = TerrainGenerator(ground_cfg)
+        stage_vertices, stage_triangles, height_mat = tg.generate_terrain(ground_cfg, type="both")
+
+        max_triangles = getattr(ground_cfg, "max_mesh_triangles", 20000)
+        raw_heights = (height_mat / tg.vertical_scale).astype(np.float32)
+        ds_heights, scale_x, scale_y = self._downsample_height_field(raw_heights, tg.horizontal_scale, max_triangles)
+        if not math.isclose(scale_x, scale_y, rel_tol=1e-4):
+            stage_vertices = stage_vertices.copy()
+            stage_vertices[:, 1] *= scale_y / max(scale_x, 1e-6)
+
+        stage_height_mat = ds_heights * tg.vertical_scale
+        if stage_triangles.shape[0] != stage_triangles.shape[0]:
+            log.info(
+                "Downsampled IsaacSim terrain mesh from %d to %d triangles (limit=%d).",
+                len(stage_triangles),
+                len(stage_triangles),
+                max_triangles,
+            )
+
+        self._ground_mesh_vertices = stage_vertices
+        self._ground_mesh_triangles = stage_triangles.astype(np.int32)
+        self._height_mat = stage_height_mat
+
+        # Center the terrain at the origin
+        terrain_vertices = self._ground_mesh_vertices.copy()
+        half_width = (terrain_vertices[:, 0].max() - terrain_vertices[:, 0].min()) / 2.0
+        half_height = (terrain_vertices[:, 1].max() - terrain_vertices[:, 1].min()) / 2.0
+        terrain_vertices[:, 0] -= half_width
+        terrain_vertices[:, 1] -= half_height
+
+        from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics, UsdShade
+
+        try:
+            import omni.isaac.core.utils.prims as prim_utils
+        except ModuleNotFoundError:
+            import isaacsim.core.utils.prims as prim_utils
+
+        stage = prim_utils.get_current_stage()
+        if stage is None:
+            log.error("IsaacSim stage is not available; cannot create terrain mesh.")
+            return
+
+        ground_root_path = "/World/ground"
+        ground_root = stage.GetPrimAtPath(ground_root_path)
+        if not ground_root or not ground_root.IsValid():
+            ground_root = stage.DefinePrim(ground_root_path, "Xform")
+        else:
+            for child in list(ground_root.GetChildren()):
+                stage.RemovePrim(child.GetPath())
+
+        mesh_path = f"{ground_root_path}/generated_mesh"
+        mesh = UsdGeom.Mesh.Define(stage, mesh_path)
+        mesh.CreateSubdivisionSchemeAttr().Set("none")
+        mesh.CreateDoubleSidedAttr(True)
+        mesh.CreatePointsAttr([Gf.Vec3f(float(x), float(y), float(z)) for x, y, z in terrain_vertices])
+        mesh.CreateFaceVertexCountsAttr([3] * len(self._ground_mesh_triangles))
+        mesh.CreateFaceVertexIndicesAttr(self._ground_mesh_triangles.flatten().tolist())
+        mesh.CreateExtentAttr(self._compute_mesh_extent(terrain_vertices))
+        mesh.CreateDisplayColorAttr([Gf.Vec3f(0.6, 0.6, 0.6)])
+
+        # Enable physics collisions on the generated mesh
+        collision_api = UsdPhysics.CollisionAPI.Apply(mesh.GetPrim())
+        collision_api.CreateCollisionEnabledAttr(True)
+        UsdPhysics.MeshCollisionAPI.Apply(mesh.GetPrim())
+        rigid_api = UsdPhysics.RigidBodyAPI.Apply(mesh.GetPrim())
+        rigid_api.CreateRigidBodyEnabledAttr(False)
+
+        physx_collision_api = PhysxSchema.PhysxCollisionAPI.Apply(mesh.GetPrim())
+        physx_collision_api.CreateRestOffsetAttr(0.0)
+        physx_collision_api.CreateContactOffsetAttr(0.02)
+        PhysxSchema.PhysxTriangleMeshCollisionAPI.Apply(mesh.GetPrim())
+
+        static_friction = getattr(ground_cfg, "static_friction", 1.0)
+        dynamic_friction = getattr(ground_cfg, "dynamic_friction", 1.0)
+        restitution = getattr(ground_cfg, "restitution", 0.0)
+
+        material_path = "/World/Materials/TerrainMaterial"
+        usd_material = UsdShade.Material.Define(stage, material_path)
+        material_api = UsdPhysics.MaterialAPI.Apply(usd_material.GetPrim())
+        material_api.CreateStaticFrictionAttr(static_friction)
+        material_api.CreateDynamicFrictionAttr(dynamic_friction)
+        material_api.CreateRestitutionAttr(restitution)
+        mat_binding = UsdShade.MaterialBindingAPI(mesh.GetPrim())
+        mat_binding.Bind(usd_material, materialPurpose="physics")
+
+        self._ground_mesh_vertices = terrain_vertices
+        self._terrain_margin = tg.margin
+
+        log.info(
+            "Generated IsaacSim terrain mesh with %d vertices and %d triangles.",
+            len(self._ground_mesh_vertices),
+            len(self._ground_mesh_triangles),
+        )
+
+    def _downsample_height_field(
+        self, height_field_raw: np.ndarray, horizontal_scale: float, max_triangles: int
+    ) -> tuple[np.ndarray, float, float]:
+        """Reduce height-field resolution to keep triangle count manageable for PhysX GPU buffers."""
+        rows, cols = height_field_raw.shape
+        total_triangles = 2 * max(rows - 1, 0) * max(cols - 1, 0)
+        if max_triangles is None or max_triangles <= 0 or total_triangles <= max_triangles or total_triangles == 0:
+            return height_field_raw, horizontal_scale, horizontal_scale
+
+        reduction = math.sqrt(total_triangles / max_triangles)
+        new_rows = max(2, math.floor((rows - 1) / reduction) + 1)
+        new_cols = max(2, math.floor((cols - 1) / reduction) + 1)
+
+        src_x = np.linspace(0.0, rows - 1, rows, dtype=np.float32)
+        src_y = np.linspace(0.0, cols - 1, cols, dtype=np.float32)
+        interpolator = RegularGridInterpolator((src_x, src_y), height_field_raw, bounds_error=False, fill_value=None)
+        dst_x = np.linspace(0.0, rows - 1, new_rows, dtype=np.float32)
+        dst_y = np.linspace(0.0, cols - 1, new_cols, dtype=np.float32)
+        grid = np.stack(np.meshgrid(dst_x, dst_y, indexing="ij"), axis=-1)
+        downsampled = interpolator(grid)
+
+        total_width_x = (rows - 1) * horizontal_scale
+        total_width_y = (cols - 1) * horizontal_scale
+        scale_x = total_width_x / max(new_rows - 1, 1)
+        scale_y = total_width_y / max(new_cols - 1, 1)
+
+        return downsampled.astype(np.float32), scale_x, scale_y
+
+    @staticmethod
+    def _compute_mesh_extent(vertices: np.ndarray):
+        from pxr import Gf
+
+        min_corner = vertices.min(axis=0)
+        max_corner = vertices.max(axis=0)
+        return [Gf.Vec3f(*min_corner.tolist()), Gf.Vec3f(*max_corner.tolist())]
 
     def _load_scene(self) -> None:
         """Load scene from SceneCfg configuration.
@@ -937,6 +1192,7 @@ class IsaacsimHandler(BaseSimHandler):
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/.*",
             history_length=3,
             update_period=0.005,
+            force_threshold=10.0,
             track_air_time=True,
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)

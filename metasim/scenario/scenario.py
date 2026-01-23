@@ -6,9 +6,10 @@ from typing import Literal
 
 from metasim.utils.configclass import configclass
 from metasim.utils.hf_util import FileDownloader
-from metasim.utils.setup_util import get_robot, get_scene
+from metasim.utils.setup_util import get_ground, get_robot, get_scene
 
 from .cameras import BaseCameraCfg
+from .grounds import GroundCfg
 from .lights import BaseLightCfg, DistantLightCfg
 from .objects import BaseObjCfg
 from .render import RenderCfg
@@ -28,6 +29,7 @@ class ScenarioCfg:
     objects: list[BaseObjCfg] = []
     cameras: list[BaseCameraCfg] = []
     gs_scene: GSSceneCfg | None = None
+    ground: GroundCfg | None = None
 
     # runtime
     render: RenderCfg = RenderCfg()
@@ -63,6 +65,9 @@ class ScenarioCfg:
 
         if isinstance(self.scene, str):
             self.scene = get_scene(self.scene)
+
+        if isinstance(self.ground, str):
+            self.ground = get_ground(self.ground)
 
         # FileDownloader(self).do_it()  # download any external assets
 

@@ -88,7 +88,7 @@ class JointPosChecker:
 
     def check(self, handler: BaseSimHandler, states: TensorState) -> torch.BoolTensor:
         dof_pos = get_dof_pos(handler, self.obj_name, self.joint_name)
-        log.debug(f"Joint {self.joint_name} of object {self.obj_name} has position {tensor_to_str(dof_pos)}")
+        # log.debug(f"Joint {self.joint_name} of object {self.obj_name} has position {tensor_to_str(dof_pos)}")
         if self.mode == "ge":
             return dof_pos >= self.radian_threshold
         elif self.mode == "le":

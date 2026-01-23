@@ -8,11 +8,11 @@ You may choose one or more of the following simulators, according to your operat
 
  For beginners， we recommend choosing one specific simulator for each environment, which makes environment configuration simpler and provides better isolation.
 
-| OS      | IsaacSim | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet |
-|---------|----------|----------|--------|---------|---------|---------|----------|
-| MacOS   |          |          | ✓      |         | ✓       | ✓       |          |
-| Windows | ✓        |          | ✓      |         | ✓       | ✓       |          |
-| Ubuntu  | ✓        | ✓        | ✓      | ✓       | ✓       | ✓       | ✓        |
+| OS      | IsaacSim | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet | Newton |
+|---------|----------|----------|--------|---------|---------|---------|----------|--------|
+| MacOS   |          |          | ✓      |         | ✓       | ✓       |          |        |
+| Windows | ✓        |          | ✓      |         | ✓       | ✓       |          |        |
+| Ubuntu  | ✓        | ✓        | ✓      | ✓       | ✓       | ✓       | ✓        | ✓      |
 
 ```{note}
 RoboVerse team hasn't got the chance to fully test MetaSim on MacOS and Windows. Please let us know if you have any issues.

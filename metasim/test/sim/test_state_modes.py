@@ -16,7 +16,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.test.test_utils import assert_close
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_get_states_dict_mode(handler):
     """Test that get_states with mode='dict' returns list of dicts."""
     dict_state = handler.get_states(mode="dict")
@@ -48,7 +48,7 @@ def test_get_states_dict_mode(handler):
     log.info(f"Get states dict mode test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_state_mode_conversion_consistency(handler):
     """Test that tensor and dict modes represent the same state."""
     # Set a known state
@@ -106,7 +106,7 @@ def test_state_mode_conversion_consistency(handler):
     log.info(f"State mode conversion consistency test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_state_mode_multiple_calls(handler):
     """Test that calling get_states with different modes multiple times works correctly."""
     # Call with tensor mode
@@ -138,7 +138,7 @@ def test_state_mode_multiple_calls(handler):
     log.info(f"State mode multiple calls test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dict_state_all_objects(handler):
     """Test that dict state includes all objects and robots."""
     dict_state = handler.get_states(mode="dict")

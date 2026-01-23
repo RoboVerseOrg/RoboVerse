@@ -134,7 +134,6 @@ class USDCollections:
         "decorations": (
             FamilyInfo("embodiedgen", "dataset/desktop_supplies/decorations", "Decorations from EmbodiedGen"),
         ),
-        "fruits": (FamilyInfo("embodiedgen", "dataset/desktop_supplies/fruits", "Fruits from EmbodiedGen"),),
         "office_stationery": (
             FamilyInfo(
                 "embodiedgen", "dataset/desktop_supplies/office_stationery", "Office stationery from EmbodiedGen"
@@ -393,7 +392,7 @@ class SceneUSDCollections:
         >>> tables = SceneUSDCollections.table_assets(max_assets=10)
         >>>
         >>> # Get object assets (general)
-        >>> objects = SceneUSDCollections.object_assets(families=("fruits", "decorations"), max_assets=20)
+        >>> objects = SceneUSDCollections.object_assets(families=("office_stationery", "decorations"), max_assets=20)
         >>>
         >>> # Get Table785 curated set (specific - 5 tables)
         >>> table785 = SceneUSDCollections.table785(indices=[0, 1, 2])
@@ -401,13 +400,13 @@ class SceneUSDCollections:
         >>> # Get Kujiale scenes (specific - 12 scenes)
         >>> scenes = SceneUSDCollections.kujiale_scenes()
         >>>
-        >>> # Get desktop supplies objects (specific - 10 fruits)
+        >>> # Get desktop supplies objects (specific - 10 office stationery)
         >>> desktop_objects = SceneUSDCollections.desktop_supplies(indices=[0, 1, 2])
     """
 
     TABLE_FAMILIES = ("table",)
     SCENE_FAMILIES = ("kujiale",)
-    OBJECT_FAMILIES = ("decorations", "fruits", "office_stationery", "office_tools", "remote_control")
+    OBJECT_FAMILIES = ("decorations", "office_stationery", "office_tools", "remote_control")
 
     @staticmethod
     def table_assets(
@@ -464,7 +463,7 @@ class SceneUSDCollections:
     ) -> list[str]:
         """Return desktop object USD assets from the USD family registry.
 
-        Includes decorations, fruits, office supplies, tools, and remote controls
+        Includes decorations, office_stationery, office supplies, tools, and remote controls
         from the EmbodiedGen desktop_supplies dataset.
 
         Args:
@@ -577,10 +576,10 @@ class SceneUSDCollections:
         indices: list[int] | None = None,
         return_configs: bool = False,
     ) -> list[str] | tuple[list[str], dict[str, dict]]:
-        """Get desktop supplies curated set (10 specific fruit objects from EmbodiedGen).
+        """Get desktop supplies curated set (10 specific office stationery objects from EmbodiedGen).
 
-        This is a convenience method that returns a hardcoded list of 10 fruit objects
-        from the desktop_supplies/fruits category. This demonstrates the specific pattern
+        This is a convenience method that returns a hardcoded list of 10 office stationery objects
+        from the desktop_supplies/office_stationery category. This demonstrates the specific pattern
         similar to table785() and kujiale_scenes().
         For general object access with flexible category selection, use object_assets() instead.
 
@@ -600,20 +599,20 @@ class SceneUSDCollections:
             >>> paths, configs = SceneUSDCollections.desktop_supplies(return_configs=True)
             >>> USDAssetPoolCfg(usd_paths=paths, per_path_overrides=configs)
         """
-        # Curated desktop supplies: 10 fruits from EmbodiedGen
-        # Source: https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/dataset/desktop_supplies/fruits
+        # Curated desktop supplies: 10 office stationery from EmbodiedGen
+        # Source: https://huggingface.co/datasets/HorizonRobotics/EmbodiedGenData/tree/main/dataset/desktop_supplies/office_stationery
         DESKTOP_SUPPLIES_UUIDS = {
-            "fruits": (
-                "0308c3ddcd2a5823ba0c74d624ae6e16",
-                "20e6e6d0a512585b83fdea02a7a73207",
-                "2db0218135735e7691d6a0af3bf1f36f",
-                "3452299858935fcea7e3efb69ad2550c",
-                "39189a4317b454f6a10f153dcb7a29ec",
-                "43b757b2d85051bbaec62e136a506dba",
-                "50b88ffa707b53adaad3229d94bb24fa",
-                "9bb9f582fd875638bb1362edfc064aad",
-                "ae283eef0c1f5ca0b2af059fc073a3eb",
-                "c3dc4a1606405f408ed5793f75c4dd36",
+            "office_stationery": (
+                "0634f388c3845f1e929f367581352d20",
+                "0773f8fc18b45b85a3a5a65c99e746e6",
+                "09b4f19c0be9527883c97921b7f5d736",
+                "10ab616ea78652a8a5611334723ad931",
+                "1695ee4d1917544cb55ab8477ede5060",
+                "1ad9e289b3f35c4e94bea6fdcc794af3",
+                "1c3090016ed053e2bb444e9470aaf9cb",
+                "1e7cfd9a38ca56a891842b62f92cebfa",
+                "1f9eb044e10857beb7fa41f71d738e7a",
+                "2faedaa2fd0d580a8c00f8d94877c446",
             ),
         }
         paths = _collect_desktop_supplies(
@@ -730,7 +729,7 @@ def _collect_desktop_supplies(
     """Collect desktop supplies asset paths from EmbodiedGen repository.
 
     Returns a curated set of objects from desktop_supplies dataset.
-    Currently includes 10 fruits. Can be extended with more categories.
+    Currently includes 10 office stationery items. Can be extended with more categories.
 
     Returns USD paths if available (after conversion), otherwise URDF paths.
 
@@ -961,7 +960,7 @@ def get_desktop_object_configs() -> dict[str, dict]:
         Dictionary mapping object UUIDs to their config overrides
 
     Note:
-        - This can include objects from all categories (fruits, decorations, etc.)
+        - This can include objects from all categories (office_stationery, decorations, etc.)
         - Configurations are automatically matched by UUID found in path
         - Missing configurations will use default values (no error)
 
@@ -972,66 +971,67 @@ def get_desktop_object_configs() -> dict[str, dict]:
         ```
     """
     return {
-        # Fruits (curated set - 10 objects)
-        # Positioned directly on table surface (z=0.75)
-        # Pure visual decoration - no physics simulation
+        # Office stationery (curated set - 10 objects)
+        # Positioned at table surface (z=0.75)
+        # Static colliders: have collision but no dynamic physics (cannot fall)
+        # This allows randomization between demos without PhysX errors
         # Layout: distributed around the table edges, away from task area
         # Left front area
-        "0308c3ddcd2a5823ba0c74d624ae6e16": {
-            "position": (-0.5, 0.4, 0.75),  # On table surface
+        "0634f388c3845f1e929f367581352d20": {
+            "position": (-0.5, 0.4, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Right front area
-        "20e6e6d0a512585b83fdea02a7a73207": {
+        "0773f8fc18b45b85a3a5a65c99e746e6": {
             "position": (0.5, 0.4, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Right side
-        "2db0218135735e7691d6a0af3bf1f36f": {
+        "09b4f19c0be9527883c97921b7f5d736": {
             "position": (0.6, 0.0, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Left side
-        "3452299858935fcea7e3efb69ad2550c": {
+        "10ab616ea78652a8a5611334723ad931": {
             "position": (-0.6, 0.0, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Center front
-        "39189a4317b454f6a10f153dcb7a29ec": {
+        "1695ee4d1917544cb55ab8477ede5060": {
             "position": (0.0, 0.5, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Far left front
-        "43b757b2d85051bbaec62e136a506dba": {
+        "1ad9e289b3f35c4e94bea6fdcc794af3": {
             "position": (-0.7, 0.3, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Far right front
-        "50b88ffa707b53adaad3229d94bb24fa": {
+        "1c3090016ed053e2bb444e9470aaf9cb": {
             "position": (0.7, 0.3, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Right center
-        "9bb9f582fd875638bb1362edfc064aad": {
+        "1e7cfd9a38ca56a891842b62f92cebfa": {
             "position": (0.5, 0.1, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Left front near
-        "ae283eef0c1f5ca0b2af059fc073a3eb": {
+        "1f9eb044e10857beb7fa41f71d738e7a": {
             "position": (-0.4, 0.5, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
         },
         # Right front near
-        "c3dc4a1606405f408ed5793f75c4dd36": {
+        "2faedaa2fd0d580a8c00f8d94877c446": {
             "position": (0.4, 0.5, 0.75),
             "rotation": (1.0, 0.0, 0.0, 0.0),
             "scale": (0.8, 0.8, 0.8),
@@ -1259,6 +1259,7 @@ class ScenePresets:
                         size=(room_size, room_size, wall_thickness),
                         position=(0.0, 0.0, 0.005),
                         default_material="roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl",
+                        add_collision=True,
                     ),
                     # Front wall (positive Y)
                     ManualGeometryCfg(
@@ -1267,6 +1268,7 @@ class ScenePresets:
                         size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
                         position=(0.0, half_room + half_thickness, wall_height / 2),
                         default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                        add_collision=True,
                     ),
                     # Back wall (negative Y)
                     ManualGeometryCfg(
@@ -1275,6 +1277,7 @@ class ScenePresets:
                         size=(room_size + 2 * wall_thickness, wall_thickness, wall_height),
                         position=(0.0, -half_room - half_thickness, wall_height / 2),
                         default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                        add_collision=True,
                     ),
                     # Left wall (negative X)
                     ManualGeometryCfg(
@@ -1283,6 +1286,7 @@ class ScenePresets:
                         size=(wall_thickness, room_size, wall_height),
                         position=(-half_room - half_thickness, 0.0, wall_height / 2),
                         default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                        add_collision=True,
                     ),
                     # Right wall (positive X)
                     ManualGeometryCfg(
@@ -1291,6 +1295,7 @@ class ScenePresets:
                         size=(wall_thickness, room_size, wall_height),
                         position=(half_room + half_thickness, 0.0, wall_height / 2),
                         default_material="roboverse_data/materials/arnold/Masonry/Brick_Pavers.mdl",
+                        add_collision=True,
                     ),
                     # Ceiling
                     ManualGeometryCfg(
@@ -1299,6 +1304,7 @@ class ScenePresets:
                         size=(room_size, room_size, wall_thickness),
                         position=(0.0, 0.0, wall_height + wall_thickness / 2),
                         default_material="roboverse_data/materials/arnold/Architecture/Roof_Tiles.mdl",
+                        add_collision=True,
                     ),
                 ],
             ),

@@ -7,11 +7,14 @@ from loguru import logger as log
 
 def assert_close(a, b, atol=1e-3, message="Consistency Error"):
     if isinstance(a, torch.Tensor):
+        b = torch.tensor(b)
         assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b} " + message
     elif isinstance(a, float):
+        b = float(b)
         assert math.isclose(a, b, abs_tol=atol), f"a: {a} != b: {b} " + message
     else:
         raise ValueError(f"Unsupported type: {type(a)}")
+    return True
 
 
 def get_test_parameters():
@@ -19,10 +22,11 @@ def get_test_parameters():
 
     Note: MuJoCo, MJX, SAPIEN2, and SAPIEN3 are limited to num_envs=1 in tests due to
     current test setup constraints (single-environment physics data access patterns).
-    IsaacGym, IsaacSim, and Genesis support multiple parallel environments.
+    IsaacGym, IsaacSim, Newton, and Genesis support multiple parallel environments.
     """
     isaacsim_params = [("isaacsim", num_envs) for num_envs in [1, 2, 4]]
     isaacgym_params = [("isaacgym", num_envs) for num_envs in [1, 2, 4]]
+    newton_params = [("newton", num_envs) for num_envs in [1, 2, 4]]
     genesis_params = [("genesis", num_envs) for num_envs in [1, 2, 4]]
     mujoco_params = [("mujoco", 1)]
     mjx_params = [("mjx", 1)]
@@ -33,6 +37,7 @@ def get_test_parameters():
         + mjx_params
         + isaacsim_params
         + isaacgym_params
+        + newton_params
         + genesis_params
         + sapien3_params
         + sapien2_params

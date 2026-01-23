@@ -27,6 +27,9 @@ from .camera_randomizer import (
 
 # Core infrastructure
 from .core import IsaacSimAdapter, ObjectMetadata, ObjectRegistry
+
+# Unified DR Manager
+from .dr_manager import DomainRandomizationManager, DRConfig
 from .light_randomizer import (
     LightColorRandomCfg,
     LightIntensityRandomCfg,
@@ -76,6 +79,8 @@ __all__ = [
     "CameraPresets",
     "CameraRandomCfg",
     "CameraRandomizer",
+    "DRConfig",
+    "DomainRandomizationManager",
     "EnvironmentLayerCfg",
     "IsaacSimAdapter",
     "LightColorRandomCfg",

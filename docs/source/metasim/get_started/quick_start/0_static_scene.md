@@ -43,17 +43,26 @@ python get_started/0_static_scene.py  --sim sapien3
 python get_started/0_static_scene.py  --sim pybullet
 ```
 
+#### Newton
+```bash
+python get_started/0_static_scene.py  --sim newton
+```
+
 
 
 You will get the following image:
 ---
-| Isaac Lab | Isaac Gym | Mujoco |
+| Isaac Sim | Isaac Gym | Mujoco |
 |:---:|:---:|:---:|
-| ![Isaac Lab](../../../_static/standard_output/0_static_scene_isaaclab.png) | ![Isaac Gym](../../../_static/standard_output/0_static_scene_isaacgym.png) | ![Mujoco](../../../_static/standard_output/0_static_scene_mujoco.png) |
+| ![Isaac Sim](../../../_static/standard_output/0_static_scene_isaacsim.png) | ![Isaac Gym](../../../_static/standard_output/0_static_scene_isaacgym.png) | ![Mujoco](../../../_static/standard_output/0_static_scene_mujoco.png) |
 
 | Genesis | Sapien | PyBullet |
 |:---:|:---:|:---:|
 | ![Genesis](../../../_static/standard_output/0_static_scene_genesis.png) | ![Sapien](../../../_static/standard_output/0_static_scene_sapien3.png) | ![Pybullet](../../../_static/standard_output/0_static_scene_pybullet.png) |
+
+| Newton |
+|:---:|
+| ![Newton](../../../_static/standard_output/0_static_scene_newton.png) |
 
 ## Code Highlights
 

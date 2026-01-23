@@ -1,7 +1,7 @@
 """Shared pytest utilities for simulator-backed tests.
 
 This module provides:
-- global marker registration (isaacsim/isaacgym/mujoco/mjx/sim/general)
+- global marker registration (isaacsim/isaacgym/mujoco/mjx/newton/sim/general)
 - a registry to associate test package prefixes with a scenario_fn
 - a generic `handler` fixture that creates a handler using the registered
   scenario builder for that package.
@@ -25,7 +25,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.sim_context import HandlerContext
 from metasim.test.test_utils import get_test_parameters
 
-_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "sapien3"}
+_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "newton", "sapien3"}
 
 # pkg_prefix -> scenario_fn
 _SUITE_REGISTRY: dict[str, Callable[[str, int], ScenarioCfg]] = {}
@@ -52,6 +52,7 @@ def pytest_configure(config):
         ("isaacgym", "tests that require or target IsaacGym"),
         ("mujoco", "tests that require or target MuJoCo"),
         ("mjx", "tests that require or target MJX"),
+        ("newton", "tests that require or target Newton"),
         ("sapien3", "tests that require or target SAPIEN3"),
         ("sim(*sims)", "specify one or more simulator backends for a test"),
         ("general", "tests that require no simulator/handler"),

@@ -44,9 +44,16 @@ genesis = [
 
 ]
 robosplatter = [
-   "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git",
+   "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git@v0.1.2",
    "setuptools==59.5.0"
-
+]
+newton = [
+    "warp-lang>=1.11.0",
+    "mujoco>=3.3.7",
+    "mujoco-warp>=0.0.1",
+    "newton @ git+https://github.com/newton-physics/newton.git",
+    "imgui-bundle",
+    "pycollada",
 ]
 
 [tool.uv]

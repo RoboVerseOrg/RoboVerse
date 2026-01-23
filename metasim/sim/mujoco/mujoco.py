@@ -54,6 +54,7 @@ from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
+from metasim.utils.terrain_utils import TerrainGenerator
 
 try:
     import mujoco.viewer
@@ -61,9 +62,12 @@ except (ImportError, AttributeError):
     log.warning("Mujoco Viewer not available. Please check your OPENGL environment.")
     pass
 
+from metasim.utils.gs_util import alpha_blend_rgba
+
 # Optional: RoboSplatter imports for GS background rendering
 try:
     from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
 
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
@@ -172,6 +176,17 @@ class MujocoHandler(BaseSimHandler):
             # so hashed filenames resolve correctly.
             self._mj_model = mujoco.MjModel.from_xml_path(xml_path)
             self._mj_data = mujoco.MjData(self._mj_model)
+
+        # load the ground
+        if hasattr(self, "_height_mat"):
+            if self._height_mat is not None:
+                # normalize height field to [0, 1] range for mujoco hfield
+                height_mat = self._height_mat
+                z_min = float(height_mat.min())
+                z_max = float(height_mat.max())
+                z_span = max(z_max - z_min, 1e-6)
+                normalized_height_mat = (height_mat - z_min) / z_span
+                self.physics.model.hfield_data[:] = normalized_height_mat.flatten(order="C")
 
         # Create a default-sized renderer (camera sizes can be applied on demand)
         self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
@@ -327,25 +342,35 @@ class MujocoHandler(BaseSimHandler):
     def _init_mujoco(self) -> mjcf.RootElement:
         """Initialize MuJoCo model with optional scene support."""
 
-        if self.scenario.scene is not None:
-            mjcf_model = mjcf.from_path(self.scenario.scene.mjcf_path)
-            log.info(f"Loaded scene from: {self.scenario.scene.mjcf_path}")
-        else:
-            mjcf_model = mjcf.RootElement()
-            self._add_default_ground(mjcf_model)
+        mjcf_model = self._init_scene()
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         else:
             mjcf_model.option.timestep = 0.001
-
-        self._add_cameras_to_model(mjcf_model)
+        self._add_ground(mjcf_model)
         self._add_objects_to_model(mjcf_model)
         self._add_robots_to_model(mjcf_model)
+        self._add_cameras_to_model(mjcf_model)
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _init_scene(self) -> mjcf.RootElement:
+        """Initialize scene elements."""
+        if self.scenario.scene is not None:
+            mjcf_model = mjcf.from_path(self.scenario.scene.mjcf_path)
+            log.info(f"Loaded scene from: {self.scenario.scene.mjcf_path}")
+        else:
+            mjcf_model = mjcf.RootElement()
+        return mjcf_model
+
+    def _add_ground(self, mjcf_model: mjcf.RootElement) -> None:
+        if self.scenario.ground is not None:
+            self._add_custom_ground(mjcf_model)
+        else:
+            self._add_default_ground(mjcf_model)
 
     def _apply_default_joint_positions(self) -> None:
         """Set initial joint positions from robot/object configs if provided."""
@@ -398,12 +423,66 @@ class MujocoHandler(BaseSimHandler):
             material="matplane",
         )
 
+        # Expose a simple quad mesh centered at origin, similar to IsaacGym handler.
+        step = float(self.scenario.env_spacing)
+        num_per_row = 1  # MujocoHandler supports single env
+        num_rows = 1
+        width = max(1, num_per_row) * step
+        height = max(1, num_rows) * step
+        border_offset = 20.0
+        hw, hh = width * 0.5 + border_offset, height * 0.5 + border_offset
+
+        self._ground_mesh_vertices = np.array(
+            [
+                [-hw, -hh, 0.0],
+                [hw, -hh, 0.0],
+                [-hw, hh, 0.0],
+                [hw, hh, 0.0],
+            ],
+            dtype=np.float32,
+        )
+        self._ground_mesh_triangles = np.array(
+            [
+                [0, 2, 1],
+                [1, 2, 3],
+            ],
+            dtype=np.int32,
+        )
+
     def _add_cameras_to_model(self, mjcf_model: mjcf.RootElement) -> None:
-        """Add cameras to the model."""
+        """Add cameras to the model. If mount_to is set, attach camera under that body so it follows motion."""
         camera_max_width = 640
         camera_max_height = 480
 
         for camera in self.cameras:
+            camera_name = f"{camera.name}_custom"
+            camera_max_width = max(camera_max_width, camera.width)
+            camera_max_height = max(camera_max_height, camera.height)
+
+            mount_to = camera.mount_to
+            if mount_to is not None:
+                mount_link = camera.mount_link.split("/")[-1]  # mujoco requires the leaf prim
+
+                model_prefix = self.mj_objects[mount_to].model
+                full_body_name = f"{model_prefix}/{mount_link}"
+
+                body_elem = mjcf_model.find("body", full_body_name)
+
+                # local mount pos/quat
+                mpos = camera.mount_pos
+                mquat = camera.mount_quat
+
+                body_elem.add(
+                    "camera",
+                    name=camera_name,
+                    mode="fixed",
+                    pos=f"{mpos[0]} {mpos[1]} {mpos[2]}",
+                    quat=f"{mquat[0]} {mquat[1]} {mquat[2]} {mquat[3]}",
+                    fovy=camera.vertical_fov,
+                )
+                continue
+
+            # attach camera to world
             direction = np.array([
                 camera.look_at[0] - camera.pos[0],
                 camera.look_at[1] - camera.pos[1],
@@ -421,9 +500,7 @@ class MujocoHandler(BaseSimHandler):
                 "fovy": camera.vertical_fov,
                 "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
             }
-            mjcf_model.worldbody.add("camera", name=f"{camera.name}_custom", **camera_params)
-            camera_max_width = max(camera_max_width, camera.width)
-            camera_max_height = max(camera_max_height, camera.height)
+            mjcf_model.worldbody.add("camera", name=camera_name, **camera_params)
 
         if camera_max_width > 640 or camera_max_height > 480:
             self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
@@ -481,6 +558,10 @@ class MujocoHandler(BaseSimHandler):
                 child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
                 robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
                 robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+            if hasattr(robot, "default_position") and robot.default_position is not None:
+                robot_attached.pos = list(robot.default_position)
+            if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
+                robot_attached.quat = robot.default_orientation
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
 
@@ -614,12 +695,87 @@ class MujocoHandler(BaseSimHandler):
 
         camera_states = {}
         for camera in self.cameras:
-            camera_id = f"{camera.name}_custom"  # XXX: hard code camera id for now
+            if camera.mount_to is not None:
+                camera_id = f"{self.mj_objects[camera.mount_to].model}/{camera.name}_custom"
+            else:
+                camera_id = f"{camera.name}_custom"
 
+            rgb = None
             depth = None
+            if "rgb" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:  # optional but safer
+                        # match renderer size to camera if needed
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+                        # mirror state and render
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+                        rgb_np = self.renderer.render()
+                    rgb = torch.from_numpy(rgb_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    # Ensure numpy array -> torch tensor with shape (1, H, W, C)
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+                else:
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
 
+            if "depth" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:
+                        # Ensure renderer matches the camera size
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+
+                        # Keep native model/data in sync with dm_control physics
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+
+                        # --- Cross-version depth rendering for mujoco.Renderer ---
+                        if hasattr(self.renderer, "enable_depth_rendering"):
+                            # Newer MuJoCo (>= 3.2/3.3): enable depth mode, render(), then disable.
+                            self.renderer.enable_depth_rendering()
+                            depth_np = self.renderer.render()
+                            self.renderer.disable_depth_rendering()
+                        elif hasattr(mujoco, "RenderMode"):
+                            # Some 3.x builds expose RenderMode enum on mujoco
+                            depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
+                        else:
+                            # Very old fallback: some builds returned (rgb, depth) as a tuple.
+                            # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
+                            maybe = self.renderer.render()
+                            if isinstance(maybe, tuple) and len(maybe) == 2:
+                                _, depth_np = maybe
+                            else:
+                                raise RuntimeError("Depth rendering not supported by this mujoco.Renderer build.")
+                    depth = torch.from_numpy(depth_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+                else:
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+
+            # Additional GS background rendering and blending (if enabled)
             if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
-                from metasim.utils.gs_util import alpha_blend_rgba
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
 
                 # Extract camera parameters
                 Ks, c2w = self._get_camera_params(camera_id, camera)
@@ -632,7 +788,7 @@ class MujocoHandler(BaseSimHandler):
                     image_width=camera.width,
                     device="cuda" if torch.cuda.is_available() else "cpu",
                 )
-                gs_result = self.gs_background.render(gs_cam)
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
                 gs_result.to_numpy()
 
                 # Get semantic segmentation (geom IDs and object IDs)
@@ -645,102 +801,25 @@ class MujocoHandler(BaseSimHandler):
                 seg_mask = np.where(foreground_mask, 255, 0).astype(np.uint8)
 
                 if "rgb" in camera.data_types:
-                    # Get MuJoCo simulation rendering
-                    sim_rgb = self.physics.render(
-                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False, segmentation=False
-                    )
                     # Blend RGB: foreground objects over GS background
-                    sim_color = (sim_rgb * 255).astype(np.uint8) if sim_rgb.max() <= 1.0 else sim_rgb.astype(np.uint8)
+                    sim_color = (rgb_np * 255).astype(np.uint8) if rgb_np.max() <= 1.0 else rgb_np.astype(np.uint8)
                     foreground = np.concatenate([sim_color, seg_mask[..., None]], axis=-1)
                     background = gs_result.rgb.squeeze(0)
                     blended_rgb = alpha_blend_rgba(foreground, background)
-                    rgb = torch.from_numpy(np.array(blended_rgb.copy()))
+                    rgb = torch.from_numpy(np.ascontiguousarray(blended_rgb.copy())).unsqueeze(0)
 
                 if "depth" in camera.data_types:
-                    sim_depth = self.physics.render(
-                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True, segmentation=False
-                    )
                     # Compose depth: use simulation depth for foreground, GS depth for background
                     bg_depth = gs_result.depth.squeeze(0)
                     if bg_depth.ndim == 3 and bg_depth.shape[-1] == 1:
                         bg_depth = bg_depth[..., 0]
-                    depth_comp = np.where(foreground_mask, sim_depth, bg_depth)
-                    depth = torch.from_numpy(depth_comp.copy())
-
-            else:
-                if "rgb" in camera.data_types:
+                    depth_comp = np.where(foreground_mask, depth_np, bg_depth)
                     if sys.platform == "darwin":
-                        with self._mj_lock:  # optional but safer
-                            # match renderer size to camera if needed
-                            if self.renderer is None or (self.renderer.width, self.renderer.height) != (
-                                camera.width,
-                                camera.height,
-                            ):
-                                self.renderer = mujoco.Renderer(
-                                    self._mj_model, width=camera.width, height=camera.height
-                                )
-                            # mirror state and render
-                            self._mirror_state_to_native()
-                            self.renderer.update_scene(self._mj_data, camera=camera_id)
-                            rgb_np = self.renderer.render()
-                        rgb = torch.from_numpy(rgb_np.copy()).unsqueeze(0)
-                    elif sys.platform == "win32":
-                        rgb_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=False
-                        )
-                        # Ensure numpy array -> torch tensor with shape (1, H, W, C)
-                        rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+                        depth = torch.from_numpy(depth_comp.copy()).unsqueeze(0)
                     else:
-                        rgb_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=False
-                        )
-                        rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
-                if "depth" in camera.data_types:
-                    if sys.platform == "darwin":
-                        with self._mj_lock:
-                            # Ensure renderer matches the camera size
-                            if self.renderer is None or (self.renderer.width, self.renderer.height) != (
-                                camera.width,
-                                camera.height,
-                            ):
-                                self.renderer = mujoco.Renderer(
-                                    self._mj_model, width=camera.width, height=camera.height
-                                )
+                        depth = torch.from_numpy(np.ascontiguousarray(depth_comp.copy())).unsqueeze(0)
 
-                            # Keep native model/data in sync with dm_control physics
-                            self._mirror_state_to_native()
-                            self.renderer.update_scene(self._mj_data, camera=camera_id)
-
-                            # --- Cross-version depth rendering for mujoco.Renderer ---
-                            if hasattr(self.renderer, "enable_depth_rendering"):
-                                # Newer MuJoCo (>= 3.2/3.3): enable depth mode, render(), then disable.
-                                self.renderer.enable_depth_rendering()
-                                depth_np = self.renderer.render()
-                                self.renderer.disable_depth_rendering()
-                            elif hasattr(mujoco, "RenderMode"):
-                                # Some 3.x builds expose RenderMode enum on mujoco
-                                depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
-                            else:
-                                # Very old fallback: some builds returned (rgb, depth) as a tuple.
-                                # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
-                                maybe = self.renderer.render()
-                                if isinstance(maybe, tuple) and len(maybe) == 2:
-                                    _, depth_np = maybe
-                                else:
-                                    raise RuntimeError("Depth rendering not supported by this mujoco.Renderer build.")
-                        depth = torch.from_numpy(depth_np.copy()).unsqueeze(0)
-                    elif sys.platform == "win32":
-                        depth_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=True
-                        )
-                        depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
-                    else:
-                        depth_np = self.physics.render(
-                            width=camera.width, height=camera.height, camera_id=camera_id, depth=True
-                        )
-                        depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
-                state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
-
+            state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
             camera_states[camera.name] = state
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
@@ -1031,6 +1110,54 @@ class MujocoHandler(BaseSimHandler):
             self._body_ids_reindex_cache[obj_name] = body_ids_reindex
 
         return self._body_ids_reindex_cache[obj_name]
+
+    def _add_custom_ground(self, mjcf_model):
+        tg = TerrainGenerator(self.scenario.ground)
+        static_friction = getattr(self.scenario.ground, "static_friction", 1.0)
+        dynamic_friction = getattr(self.scenario.ground, "dynamic_friction", 1.0)
+        restitution = getattr(self.scenario.ground, "restitution", 0.0)
+
+        vertices, triangles, height_mat = tg.generate_terrain(self.scenario.ground, type="both")
+        # Also create a triangular mesh representation for queries (e.g., LiDAR warp raycasts),
+        # consistent with IsaacGym handler's ground mesh exposure.
+        # Store mesh for external consumers (e.g., LidarPointCloud)
+        self._ground_mesh_vertices = vertices
+        self._ground_mesh_triangles = triangles.astype(np.int32)
+        z_min = float(height_mat.min())
+        z_max = float(height_mat.max())
+        z_span = max(z_max - z_min, 1e-6)
+        hfield_name = "terrain"
+
+        self._terrain_hfield_name = hfield_name
+
+        ## Position hfield centered at origin
+        half_width = (vertices[:, 0].max() - vertices[:, 0].min()) / 2.0
+        half_height = (vertices[:, 1].max() - vertices[:, 1].min()) / 2.0
+        mjcf_model.asset.add(
+            "hfield",
+            name=hfield_name,
+            nrow=height_mat.shape[0],
+            ncol=height_mat.shape[1],
+            size=[
+                half_height,
+                half_width,
+                z_span,
+                0.001,
+            ],
+        )
+        mjcf_model.worldbody.add(
+            "geom",
+            name="terrain_geom",
+            type="hfield",
+            hfield=hfield_name,
+            pos=[0.0, 0.0, z_min],
+            rgba="0.8 0.8 0.8 1",
+            friction=[static_friction, dynamic_friction, 0.001],
+            solimp=[0.9, 0.95, 0.001, 0.5, 2.0],
+            contype="1",
+            conaffinity="15",
+        )
+        self._height_mat = height_mat
 
     ############################################################
     ## Misc
