@@ -42,10 +42,10 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
     class RewardsScales:
         """Reward weights for gait, posture, and energy usage."""
 
-        track_lin_vel_xy = (1.0, {"std": math.sqrt(0.01)})
-        track_ang_vel_z = (0.5, {"std": math.sqrt(0.01)})
+        track_lin_vel_xy = (1.0, {"std": 0.5})
+        track_ang_vel_z = (0.5, {"std": 0.5})
         is_alive = 0.15
-        lin_vel_z = -2.0
+        lin_vel_z = -0.5
         ang_vel_xy = -0.05
         joint_vel = -0.001
         joint_acc = -2.5e-7
