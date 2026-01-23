@@ -89,7 +89,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             },
         )
         feet_air_time = (
-            1.0,
+            100.0,
             {
                 "threshold": 0.3,
                 "body_names": (".*ankle_roll.*"),
