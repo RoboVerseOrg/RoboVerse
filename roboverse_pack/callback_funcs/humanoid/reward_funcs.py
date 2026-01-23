@@ -294,19 +294,20 @@ def feet_air_time(
     is_contact = contact_forces.contact_forces_history[:, :, indices, :].norm(dim=-1).max(dim=1)[0] > 1.0
 
     # Initialize feet_air_time buffer if it doesn't exist
-    if "feet_air_time" not in env.history_buffer:
-        env.history_buffer["feet_air_time"] = torch.zeros(
-            (env.num_envs, len(indices)), dtype=torch.float, device=env.device
-        )
+    if not hasattr(env, "feet_air_time_tracker"):
+        env.feet_air_time_tracker = torch.zeros((env.num_envs, len(indices)), dtype=torch.float, device=env.device)
 
-    # Update air time: +dt if in air (not contact), reset to 0 if in contact
-    # Note: We need to update the buffer in-place but in a way that persists across steps?
-    # RSL-RL usually handles this in the env step.
-    # BUT since we are in a pure callback function, we update the buffer attached to `env`.
-    env.history_buffer["feet_air_time"] += env.step_dt
-    env.history_buffer["feet_air_time"] *= ~is_contact
+    # 1. Update air time
+    env.feet_air_time_tracker += env.step_dt
 
-    reward = torch.sum(torch.clamp(env.history_buffer["feet_air_time"] - threshold, min=0.0), dim=1)
+    # 2. Reset on contact
+    env.feet_air_time_tracker *= ~is_contact
+
+    # 3. Reset on env reset (important!)
+    if hasattr(env, "reset_buf"):
+        env.feet_air_time_tracker[env.reset_buf, :] = 0.0
+
+    reward = torch.sum(torch.clamp(env.feet_air_time_tracker - threshold, min=0.0), dim=1)
 
     # Only reward if commanding to move
     if command_name == "base_velocity":
