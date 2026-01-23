@@ -149,15 +149,15 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
     callbacks_terminate = {
         "time_out": termination_funcs.time_out,
         "base_contact": (
-            termination_funcs.undesired_contact,
-            {"contact_names": ["torso_link"], "limit_range": 1.0},
+            termination_funcs.root_height_below_minimum,
+            {"minimum_height": 0.2},
         ),
     }
     initial_states = BaseEnvCfg.InitialStates()
     initial_states.robots = {
         **BaseEnvCfg.InitialStates.robots,
         "g1_dof29": {
-            "pos": [0.0, 0.0, 0.76],
+            "pos": [0.0, 0.0, 0.78],
             "default_joint_pos": {
                 ".*_hip_pitch_joint": -0.1,
                 ".*_knee_joint": 0.3,
