@@ -44,6 +44,31 @@ class SimParamCfg:
     njmax: int | None = None
     # If None, Newton defaults to MuJoCo contacts when using SolverMuJoCo
     newton_use_mujoco_contacts: bool | None = None
+    # Newton solver configuration
+    newton_solver: str | None = None
+    """Newton solver type: 'newton', 'cg', 'pgs', etc."""
+    newton_integrator: str | None = None
+    """Newton integrator: 'implicit', 'euler', 'rk4', etc. 'implicit' becomes 'implicitfast'."""
+    newton_cone: str | None = None
+    """Friction cone type: 'pyramidal' or 'elliptic'."""
+    newton_impratio: float | None = None
+    """Ratio of implicit to explicit integration."""
+    newton_ls_parallel: bool | None = None
+    """Enable parallel line search for faster solver convergence."""
+    newton_solver_iterations: int | None = None
+    """Number of solver iterations."""
+    newton_ls_iterations: int | None = None
+    """Number of line search iterations."""
+    newton_use_mujoco_cpu: bool | None = None
+    """Use MuJoCo CPU backend."""
+    newton_disable_contacts: bool | None = None
+    """Disable contact computation."""
+    newton_update_data_interval: int | None = None
+    """Interval for updating data."""
+    newton_tolerance: float | None = None
+    """Solver tolerance."""
+    newton_ls_tolerance: float | None = None
+    """Line search tolerance."""
 
     ## Resource management
     num_threads: int = 0
