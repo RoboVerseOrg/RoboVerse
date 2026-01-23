@@ -272,3 +272,45 @@ def undesired_contacts(
 
     # sum over contacts for each environment
     return torch.sum(is_contact, dim=1)
+
+
+def feet_air_time(
+    env: EnvTypes,
+    env_states: TensorState,
+    threshold: float,
+    body_names: str | tuple[str] = ".*ankle_roll.*",
+    command_name: str = "base_velocity",
+) -> torch.Tensor:
+    """Reward keeping the feet in the air for a specific duration (swing phase).
+
+    This function tracks the time the feet have been in the air and rewards the agent if the time exceeds
+    the specified threshold. The reward is computed as the sum of the air time for each foot, clipped at the
+    threshold.
+    """
+    # extract the used quantities (to enable type-hinting)
+    indices = _get_indices(env, body_names, env_states.robots[env.name].body_names)
+    contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
+    # Check if the feet are in contact with the ground (contact force > 1.0)
+    is_contact = contact_forces.contact_forces_history[:, :, indices, :].norm(dim=-1).max(dim=1)[0] > 1.0
+
+    # Initialize feet_air_time buffer if it doesn't exist
+    if "feet_air_time" not in env.history_buffer:
+        env.history_buffer["feet_air_time"] = torch.zeros(
+            (env.num_envs, len(indices)), dtype=torch.float, device=env.device
+        )
+
+    # Update air time: +dt if in air (not contact), reset to 0 if in contact
+    # Note: We need to update the buffer in-place but in a way that persists across steps?
+    # RSL-RL usually handles this in the env step.
+    # BUT since we are in a pure callback function, we update the buffer attached to `env`.
+    env.history_buffer["feet_air_time"] += env.step_dt
+    env.history_buffer["feet_air_time"] *= ~is_contact
+
+    reward = torch.sum(torch.clamp(env.history_buffer["feet_air_time"] - threshold, min=0.0), dim=1)
+
+    # Only reward if commanding to move
+    if command_name == "base_velocity":
+        cmd_norm = torch.norm(env.commands_manager.value[:, :2], dim=1)
+        reward *= (cmd_norm > 0.1).float()
+
+    return reward

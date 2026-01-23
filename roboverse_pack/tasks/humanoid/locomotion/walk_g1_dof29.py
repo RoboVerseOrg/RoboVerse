@@ -88,6 +88,14 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                 "body_names": (".*ankle_roll.*"),
             },
         )
+        feet_air_time = (
+            1.0,
+            {
+                "threshold": 0.3,
+                "body_names": (".*ankle_roll.*"),
+            },
+            reward_funcs.feet_air_time,
+        )
         undesired_contacts = (-0.5, {"threshold": 1, "body_names": ("(?!.*ankle.*).*")})
 
     rewards = BaseEnvCfg.Rewards(
