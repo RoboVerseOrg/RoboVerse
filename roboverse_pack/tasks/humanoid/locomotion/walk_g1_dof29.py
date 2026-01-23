@@ -5,7 +5,6 @@ import math
 
 import torch
 
-import roboverse_pack.utils.curriculum_utils as curr_funs
 from metasim.queries import ContactForces
 from metasim.scenario.lights import DomeLightCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -20,75 +19,85 @@ from roboverse_pack.callback_funcs.humanoid import (
     step_funcs,
     termination_funcs,
 )
-from roboverse_pack.randomization.humanoid import (
-    MassRandomizer,
-    MaterialRandomizer,
-)
 from roboverse_pack.tasks.humanoid.base import LeggedRobotTask
 from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
+from roboverse_pack.utils.humanoid_utils import get_indices_from_substring
 
 
 @configclass
 class WalkG1Dof29EnvCfg(BaseEnvCfg):
     """Environment configuration for humanoid walking task."""
 
-    obs_len_history = 5
-    priv_obs_len_history = 5
+    obs_len_history = 1
+    priv_obs_len_history = 1
     episode_length_s = 20.0
 
-    control = BaseEnvCfg.Control(action_scale=0.25, soft_joint_pos_limit_factor=0.9)
+    control = BaseEnvCfg.Control(action_scale=0.5, soft_joint_pos_limit_factor=0.9)
+    observed_joint_names = ["waist.*", ".*_hip.*", ".*_knee.*", ".*_ankle.*"]
 
     @configclass
     class RewardsScales:
         """Reward weights for gait, posture, and energy usage."""
 
-        track_lin_vel_xy = (1.0, {"std": math.sqrt(0.25)})
-        track_ang_vel_z = (0.5, {"std": math.sqrt(0.25)})
-        is_alive = 0.15
-        lin_vel_z = -2.0
+        termination_penalty = (-200.0, {}, reward_funcs.termination_penalty)
+        track_lin_vel_xy = (
+            1.0,
+            {"std": math.sqrt(0.25)},
+            reward_funcs.track_lin_vel_xy_yaw_frame,
+        )
+        track_ang_vel_z = (
+            1.0,
+            {"std": math.sqrt(0.25)},
+            reward_funcs.track_ang_vel_z_world,
+        )
+        lin_vel_z = -0.2
         ang_vel_xy = -0.05
-        joint_vel = -0.001
-        joint_acc = -2.5e-7
-        action_rate = -0.05
-        joint_pos_limits = -5.0
-        energy = -2e-5
+        flat_orientation = -1.0
+        action_rate = -0.005
+        dof_acc_l2 = (
+            -1.0e-7,
+            {"joint_names": (".*_hip_.*", ".*_knee_joint")},
+            reward_funcs.joint_acc,
+        )
+        dof_torques_l2 = (
+            -2.0e-6,
+            {"joint_names": (".*_hip_.*", ".*_knee_joint")},
+            reward_funcs.joint_torques_l2,
+        )
+        feet_air_time = (
+            0.75,
+            {"threshold": 0.4, "body_names": ".*_ankle_roll_link"},
+            reward_funcs.feet_air_time_positive_biped,
+        )
+        feet_slide = (-0.1, {"body_names": ".*_ankle_roll_link"})
+        dof_pos_limits = (
+            -1.0,
+            {"joint_names": (".*_ankle_pitch_joint", ".*_ankle_roll_joint")},
+            reward_funcs.joint_pos_limits,
+        )
+        joint_deviation_hip = (
+            -0.1,
+            {"joint_names": (".*_hip_yaw_joint", ".*_hip_roll_joint")},
+            reward_funcs.joint_deviation_l1,
+        )
         joint_deviation_arms = (
             -0.1,
-            {"joint_names": (".*_shoulder_.*_joint", ".*_elbow_joint", ".*_wrist_.*")},
-            reward_funcs.joint_deviation_l1,
-        )
-        joint_deviation_waists = (
-            -1.0,
-            {"joint_names": "waist.*"},
-            reward_funcs.joint_deviation_l1,
-        )
-        joint_deviation_legs = (
-            -1.0,
-            {"joint_names": (".*_hip_roll_joint", ".*_hip_yaw_joint")},
-            reward_funcs.joint_deviation_l1,
-        )
-        flat_orientation = -5.0
-        base_height = (-10.0, {"target_height": 0.78})
-        feet_gait = (
-            0.5,
             {
-                "period": 0.8,
-                "offset": [0.0, 0.5],
-                "threshold": 0.55,
-                "body_names": (".*ankle_roll.*"),
+                "joint_names": (
+                    ".*_shoulder_pitch_joint",
+                    ".*_shoulder_roll_joint",
+                    ".*_shoulder_yaw_joint",
+                    ".*_elbow_joint",
+                    ".*_wrist_.*_joint",
+                )
             },
+            reward_funcs.joint_deviation_l1,
         )
-        feet_slide = (-0.2, {"body_names": (".*ankle_roll.*")})
-        feet_clearance = (
-            1.0,
-            {
-                "std": math.sqrt(0.05),
-                "tanh_mult": 2.0,
-                "target_height": 0.1,
-                "body_names": (".*ankle_roll.*"),
-            },
+        joint_deviation_torso = (
+            -0.2,
+            {"joint_names": "waist_.*_joint"},
+            reward_funcs.joint_deviation_l1,
         )
-        undesired_contacts = (-1.0, {"threshold": 1, "body_names": ("(?!.*ankle.*).*")})
 
     rewards = BaseEnvCfg.Rewards(
         only_positive_rewards=False,
@@ -98,69 +107,64 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
     commands = BaseEnvCfg.Commands(
         value=None,
         resample=step_funcs.resample_commands,
-        heading_command=False,
+        heading_command=True,
+        resampling_time=1.0e9,
         rel_standing_envs=0.02,
-        ranges=BaseEnvCfg.Commands.Ranges(lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_yaw=(-0.1, 0.1)),
-        limit_ranges=BaseEnvCfg.Commands.Ranges(lin_vel_x=(-0.5, 1.0), lin_vel_y=(-0.3, 0.3), ang_vel_yaw=(-0.2, 0.2)),
+        ranges=BaseEnvCfg.Commands.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_yaw=(-1.0, 1.0),
+            heading=(-3.14, 3.14),
+        ),
+        limit_ranges=BaseEnvCfg.Commands.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_yaw=(-1.0, 1.0),
+            heading=(-3.14, 3.14),
+        ),
     )
 
-    curriculum = BaseEnvCfg.Curriculum(
-        enabled=True,
-        funcs={
-            "lin_vel_cmd_levels": curr_funs.lin_vel_cmd_levels,
-            #  "terrain_levels": curr_funs.terrain_levels_vel
-        },
-    )
+    curriculum = BaseEnvCfg.Curriculum(enabled=False, funcs={})
 
     callbacks_query = {"contact_forces": ContactForces(history_length=3)}
-    callbacks_setup = {
-        "material_randomizer": MaterialRandomizer(
-            obj_name="g1_dof29",
-            static_friction_range=(0.3, 1.0),
-            dynamic_friction_range=(0.3, 1.0),
-            restitution_range=(0.0, 0.0),
-            num_buckets=64,
-        ),
-        "mass_randomizer": MassRandomizer(
-            obj_name="g1_dof29",
-            body_names="torso_link",
-            mass_distribution_params=(-1.0, 3.0),
-            operation="add",
-        ),
-    }
+    callbacks_setup = {}
     callbacks_reset = {
         "random_root_state": (
             reset_funcs.random_root_state_terrain_aware,
             {
                 "pose_range": [
-                    [-0.5, -0.5, 0.0, 0, 0, -3.14],  # x, y, z_offset, roll, pitch, yaw
-                    [0.5, 0.5, 0.05, 0, 0, 3.14],  # z_offset can vary slightly
+                    [-0.5, -0.5, 0.0, 0.0, 0.0, -3.14],  # x, y, z_offset, roll, pitch, yaw
+                    [0.5, 0.5, 0.0, 0.0, 0.0, 3.14],
                 ],
                 "velocity_range": [[0] * 6, [0] * 6],
-                # base_height_offset is None by default, uses robot's default z position (0.8m from cfg_base.py)
+                # base_height_offset is None by default, uses robot's default z position
             },
         ),
         "reset_joints_by_scale": (
             reset_funcs.reset_joints_by_scale,
-            {"position_range": (1.0, 1.0), "velocity_range": (-1.0, 1.0)},
+            {"position_range": (1.0, 1.0), "velocity_range": (0.0, 0.0)},
         ),
     }
-    callbacks_post_step = {
-        "push_robot": (
-            step_funcs.push_by_setting_velocity,
-            {
-                "interval_range_s": (5.0, 5.0),
-                "velocity_range": [[-0.5, -0.5, 0.0], [0.5, 0.5, 0.0]],
-            },
-        )
-    }
+    callbacks_post_step = {}
     callbacks_terminate = {
         "time_out": termination_funcs.time_out,
-        "base_height": (
-            termination_funcs.root_height_below_minimum,
-            {"minimum_height": 0.2},
+        "base_contact": (
+            termination_funcs.undesired_contact,
+            {"contact_names": ["torso_link"], "limit_range": 1.0},
         ),
-        "bad_orientation": (termination_funcs.bad_orientation, {"limit_angle": 0.8}),
+    }
+    initial_states = BaseEnvCfg.InitialStates()
+    initial_states.robots = {
+        **BaseEnvCfg.InitialStates.robots,
+        "g1_dof29": {
+            "pos": [0.0, 0.0, 0.76],
+            "default_joint_pos": {
+                ".*_hip_pitch_joint": -0.1,
+                ".*_knee_joint": 0.3,
+                ".*_ankle_pitch_joint": -0.2,
+                ".*_wrist_.*_joint": 0.0,
+            },
+        },
     }
 
 
@@ -199,6 +203,16 @@ class WalkG1Dof29Task(LeggedRobotTask):
             replace_cylinder_with_capsule=True,
             friction_correlation_distance=0.025,
             friction_offset_threshold=0.04,
+            njmax=210,
+            nconmax=64,
+            newton_use_mujoco_contacts=True,
+            newton_solver_iterations=100,
+            newton_ls_iterations=10,
+            newton_solver="newton",
+            newton_integrator="implicit",
+            newton_cone="pyramidal",
+            newton_impratio=1.0,
+            newton_ls_parallel=True,
         ),
         lights=[
             DomeLightCfg(
@@ -225,31 +239,41 @@ class WalkG1Dof29Task(LeggedRobotTask):
 
         super().__init__(scenario=scenario_copy, config=env_cfg, device=device)
 
+    def _pre_physics_step(self, actions: torch.Tensor) -> torch.Tensor:
+        actions = super()._pre_physics_step(actions)
+        if hasattr(self, "action_mask") and self.action_mask is not None:
+            actions = actions * self.action_mask
+        return actions
+
     def _init_buffers(self):
-        # commands + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_obs = 3 + 3 + 3 + self.num_actions * 3
-        # commands + base_lin_vel + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_priv_obs = 3 + 3 + 3 + 3 + self.num_actions * 3
-        # Rewrite SOME Hyfer-Parameters
+        self.obs_joint_indices = get_indices_from_substring(self.cfg.observed_joint_names, self.sorted_joint_names)
+        if self.obs_joint_indices.numel() == 0:
+            self.obs_joint_indices = torch.arange(self.num_actions, device=self.device)
+        else:
+            self.obs_joint_indices = self.obs_joint_indices.to(self.device)
+        self.obs_joint_indices = self.obs_joint_indices.long()
+        self.num_obs_joints = int(self.obs_joint_indices.numel())
+
+        self.action_mask = torch.zeros(self.num_actions, dtype=torch.float, device=self.device)
+        self.action_mask[self.obs_joint_indices] = 1.0
+
+        # base_ang_vel + projected_gravity + commands + dof pos/vel/actions
+        self.num_obs = 9 + self.num_obs_joints * 3
+        self.num_priv_obs = self.num_obs + 3
+
         self.obs_clip_limit = 100.0
         self.obs_scale = torch.ones(size=(self.num_obs,), dtype=torch.float, device=self.device)
         self.priv_obs_scale = torch.ones(size=(self.num_priv_obs,), dtype=torch.float, device=self.device)
         self.obs_noise = torch.zeros(size=(self.num_obs,), dtype=torch.float, device=self.device)
 
-        ##################### for observation scale #####################
-        self.obs_scale[3:6] = 0.2  # angular velocity
-        self.obs_scale[9 + self.num_actions : 9 + 2 * self.num_actions] = 0.05  # joint velocity
-
-        ##################### for priviliged observation scale #####################
-        self.priv_obs_scale[6:9] = 0.2  # angular velocity
-        self.priv_obs_scale[12 + self.num_actions : 12 + 2 * self.num_actions] = 0.05  # joint velocity
-
-        ################### for noise vector ####################
-        # [0:3] -> commands
-        self.obs_noise[3:6] = 0.2  # [3:6] -> base_ang_vel
+        self.obs_noise[0:3] = 0.1  # base_lin_vel
+        self.obs_noise[3:6] = 0.2  # base_ang_vel
         self.obs_noise[6:9] = 0.05  # projected_gravity
-        self.obs_noise[9 : 9 + self.num_actions] = 0.01
-        self.obs_noise[9 + self.num_actions : 9 + 2 * self.num_actions] = 1.5  # joint velocities
+        # commands are noiseless
+        pos_start = 12
+        self.obs_noise[pos_start : pos_start + self.num_obs_joints] = 0.01
+        vel_start = pos_start + self.num_obs_joints
+        self.obs_noise[vel_start : vel_start + self.num_obs_joints] = 1.5
         return super()._init_buffers()
 
     def _compute_task_observations(self, env_states: TensorState):
@@ -259,10 +283,9 @@ class WalkG1Dof29Task(LeggedRobotTask):
         base_ang_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 10:13])
         projected_gravity = quat_rotate_inverse(base_quat, self.gravity_vec)
 
-        q = env_states.robots[self.name].joint_pos - self.default_dof_pos
-        dq = env_states.robots[self.name].joint_vel - self.default_dof_vel
-
-        # gait = self._gait_phase()
+        q = robot_state.joint_pos[:, self.obs_joint_indices] - self.default_dof_pos[self.obs_joint_indices]
+        dq = robot_state.joint_vel[:, self.obs_joint_indices] - self.default_dof_vel[self.obs_joint_indices]
+        actions = self.actions[:, self.obs_joint_indices]
 
         obs_buf = torch.cat(
             (
@@ -271,7 +294,7 @@ class WalkG1Dof29Task(LeggedRobotTask):
                 projected_gravity,  # 3
                 q,  # |A|
                 dq,  # |A|
-                self.actions,  # |A|
+                actions,  # |A|
                 # gait
             ),
             dim=-1,
@@ -285,7 +308,7 @@ class WalkG1Dof29Task(LeggedRobotTask):
                 projected_gravity,  # 3
                 q,  # |A|
                 dq,  # |A|
-                self.actions,  # |A|
+                actions,  # |A|
                 # gait
             ),
             dim=-1,

@@ -44,6 +44,19 @@ class SimParamCfg:
     njmax: int | None = None
     # If None, Newton defaults to MuJoCo contacts when using SolverMuJoCo
     newton_use_mujoco_contacts: bool | None = None
+    # Newton MuJoCo Warp solver tuning (optional)
+    newton_solver_iterations: int | None = None
+    newton_ls_iterations: int | None = None
+    newton_solver: str | int | None = None
+    newton_integrator: str | int | None = None
+    newton_cone: str | int | None = None
+    newton_impratio: float | None = None
+    newton_ls_parallel: bool | None = None
+    newton_use_mujoco_cpu: bool | None = None
+    newton_disable_contacts: bool | None = None
+    newton_update_data_interval: int | None = None
+    newton_tolerance: float | None = None
+    newton_ls_tolerance: float | None = None
 
     ## Resource management
     num_threads: int = 0

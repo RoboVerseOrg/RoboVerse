@@ -4,7 +4,7 @@ import torch
 
 from metasim.queries import ContactForces
 from metasim.types import TensorState
-from metasim.utils.math import quat_rotate_inverse
+from metasim.utils.math import quat_rotate_inverse, yaw_quat
 from roboverse_pack.tasks.humanoid.base.types import EnvTypes
 from roboverse_pack.utils.humanoid_utils import get_indices_from_substring, hash_names
 
@@ -20,6 +20,18 @@ def track_lin_vel_xy(env: EnvTypes, env_states: TensorState, std: float) -> torc
     return torch.exp(-lin_vel_error / std**2)
 
 
+def track_lin_vel_xy_yaw_frame(env: EnvTypes, env_states: TensorState, std: float) -> torch.Tensor:
+    """Reward tracking of linear velocity commands (xy axes) in the yaw-aligned frame using exponential kernel."""
+    robot_state = env_states.robots[env.name]
+    base_quat = robot_state.root_state[:, 3:7]
+    base_lin_vel = robot_state.root_state[:, 7:10]
+    yaw_quat_only = yaw_quat(base_quat)
+    lin_vel_yaw = quat_rotate_inverse(yaw_quat_only, base_lin_vel)
+    lin_vel_diff = env.commands_manager.value[:, :2] - lin_vel_yaw[:, :2]
+    lin_vel_error = torch.sum(torch.square(lin_vel_diff), dim=1)
+    return torch.exp(-lin_vel_error / std**2)
+
+
 def track_ang_vel_z(env: EnvTypes, env_states: TensorState, std: float) -> torch.Tensor:
     """Track angular velocity commands (yaw)."""
     robot_state = env_states.robots[env.name]
@@ -30,10 +42,26 @@ def track_ang_vel_z(env: EnvTypes, env_states: TensorState, std: float) -> torch
     return torch.exp(-ang_vel_error / std**2)
 
 
+def track_ang_vel_z_world(env: EnvTypes, env_states: TensorState, std: float) -> torch.Tensor:
+    """Track angular velocity commands (yaw) in the world frame."""
+    robot_state = env_states.robots[env.name]
+    ang_vel_z = robot_state.root_state[:, 12]
+    ang_vel_diff = env.commands_manager.value[:, 2] - ang_vel_z
+    ang_vel_error = torch.square(ang_vel_diff)
+    return torch.exp(-ang_vel_error / std**2)
+
+
 def is_alive(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     """Reward for being alive."""
     return (~env.reset_buf).float()
     # return 1.0
+
+
+def termination_penalty(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
+    """Penalize terminations that are not timeouts."""
+    if hasattr(env, "_terminated_buf"):
+        return env._terminated_buf.float()
+    return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
 
 def lin_vel_z(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
@@ -64,17 +92,27 @@ def joint_vel(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     return torch.sum(torch.square(robot_state.joint_vel), dim=1)
 
 
-def joint_acc(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
+def joint_vel_l2(env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str] | None = None) -> torch.Tensor:
+    """Penalize joint velocities using L2 squared kernel for specified joints."""
+    robot_state = env_states.robots[env.name]
+    if joint_names is None:
+        return torch.sum(torch.square(robot_state.joint_vel), dim=1)
+    indices = _get_indices(env, joint_names, env.sorted_joint_names).long()
+    return torch.sum(torch.square(robot_state.joint_vel[:, indices]), dim=1)
+
+
+def joint_acc(env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str] | None = None) -> torch.Tensor:
     """Penalize joint accelerations on the articulation using L2 squared kernel.
 
     NOTE: Only the joints configured in :attr:`asset_cfg.joint_ids` will have their joint accelerations contribute to the term.
     """
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
-    return torch.sum(
-        torch.square((env.history_buffer["joint_vel"][-1] - robot_state.joint_vel) / env.step_dt),
-        dim=1,
-    )
+    joint_accel = (env.history_buffer["joint_vel"][-1] - robot_state.joint_vel) / env.step_dt
+    if joint_names is not None:
+        indices = _get_indices(env, joint_names, env.sorted_joint_names).long()
+        joint_accel = joint_accel[:, indices]
+    return torch.sum(torch.square(joint_accel), dim=1)
 
 
 def action_rate(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
@@ -82,15 +120,45 @@ def action_rate(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     return torch.sum(torch.square(env.history_buffer["actions"][-1] - env.actions), dim=1)
 
 
-def joint_pos_limits(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
+def joint_pos_limits(
+    env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str] | None = None
+) -> torch.Tensor:
     """Penalize joint positions if they cross the soft limits.
 
     This is computed as a sum of the absolute value of the difference between the joint position and the soft limits.
     """
     robot_state = env_states.robots[env.name]
-    out_of_limits = -(robot_state.joint_pos - env.soft_dof_pos_limits[:, 0]).clip(max=0.0)
-    out_of_limits += (robot_state.joint_pos - env.soft_dof_pos_limits[:, 1]).clip(min=0.0)
+    if joint_names is None:
+        out_of_limits = -(robot_state.joint_pos - env.soft_dof_pos_limits[:, 0]).clip(max=0.0)
+        out_of_limits += (robot_state.joint_pos - env.soft_dof_pos_limits[:, 1]).clip(min=0.0)
+        return torch.sum(out_of_limits, dim=1)
+    indices = _get_indices(env, joint_names, env.sorted_joint_names).long()
+    joint_pos = robot_state.joint_pos[:, indices]
+    limits = env.soft_dof_pos_limits[indices]
+    out_of_limits = -(joint_pos - limits[:, 0]).clip(max=0.0)
+    out_of_limits += (joint_pos - limits[:, 1]).clip(min=0.0)
     return torch.sum(out_of_limits, dim=1)
+
+
+def joint_torques_l2(
+    env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str] | None = None
+) -> torch.Tensor:
+    """Penalize joint torques using L2 squared kernel for specified joints."""
+    robot_state = env_states.robots[env.name]
+    effort = robot_state.joint_effort_target
+    if effort is None:
+        if env.manual_pd_on:
+            processed_actions = (env.actions * env.action_scale + env.actions_offset).clip(
+                -env.action_clip,
+                env.action_clip,
+            )
+            effort = env.p_gains * (processed_actions - robot_state.joint_pos) - env.d_gains * robot_state.joint_vel
+        else:
+            return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    if joint_names is not None:
+        indices = _get_indices(env, joint_names, env.sorted_joint_names).long()
+        effort = effort[:, indices]
+    return torch.sum(torch.square(effort), dim=1)
 
 
 def joint_effort_limits(env: EnvTypes, env_states: TensorState, soft_limit_factor: float = 1.0) -> torch.Tensor:
@@ -239,6 +307,54 @@ def feet_slide(
 
     body_vel = env_states.robots[env.name].body_state[:, indices, 7:9]
     reward = torch.sum(body_vel.norm(dim=-1) * contacts, dim=1)
+    return reward
+
+
+def feet_air_time_positive_biped(
+    env: EnvTypes,
+    env_states: TensorState,
+    threshold: float,
+    body_names: str | tuple[str] = ".*_ankle_roll_link",
+    command_name: str | None = None,
+) -> torch.Tensor:
+    """Reward long steps taken by the feet for bipeds using contact duration."""
+    indices = _get_indices(env, body_names, env_states.robots[env.name].body_names).long()
+    num_feet = len(indices)
+    if num_feet == 0:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    state_key = f"feet_air_time_state_{hash_names(body_names)}"
+    if state_key not in env.extras_buffer:
+        env.extras_buffer[state_key] = {
+            "air_time": torch.zeros(env.num_envs, num_feet, dtype=torch.float, device=env.device),
+            "contact_time": torch.zeros(env.num_envs, num_feet, dtype=torch.float, device=env.device),
+        }
+
+    state = env.extras_buffer[state_key]
+    air_time = state["air_time"]
+    contact_time = state["contact_time"]
+
+    contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
+    contact_now = contact_forces.contact_forces_history[:, -1, indices, :].norm(dim=-1) > 1.0
+
+    air_time[:] = torch.where(contact_now, torch.zeros_like(air_time), air_time + env.step_dt)
+    contact_time[:] = torch.where(contact_now, contact_time + env.step_dt, torch.zeros_like(contact_time))
+
+    single_stance = torch.sum(contact_now.int(), dim=1) == 1
+    in_mode_time = torch.where(contact_now, contact_time, air_time)
+    reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, torch.zeros_like(in_mode_time)), dim=1)[0]
+    reward = torch.clamp(reward, max=threshold)
+
+    # convert to steps so reward scaling by step_dt preserves the original units
+    reward = reward / env.step_dt
+
+    cmd_norm = torch.norm(env.commands_manager.value[:, :2], dim=1)
+    reward *= (cmd_norm > 0.1).float()
+
+    if hasattr(env, "reset_buf") and env.reset_buf.any():
+        air_time[env.reset_buf] = 0.0
+        contact_time[env.reset_buf] = 0.0
+
     return reward
 
 

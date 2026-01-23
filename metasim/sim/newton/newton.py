@@ -148,13 +148,44 @@ class NewtonHandler(BaseSimHandler):
         if use_mujoco_contacts is None:
             use_mujoco_contacts = False
 
+        solver_kwargs: dict[str, object] = {
+            "njmax": sim_params.njmax,
+            "nconmax": sim_params.nconmax,
+        }
+
+        if getattr(sim_params, "newton_solver_iterations", None) is not None:
+            solver_kwargs["iterations"] = sim_params.newton_solver_iterations
+        if getattr(sim_params, "newton_ls_iterations", None) is not None:
+            solver_kwargs["ls_iterations"] = sim_params.newton_ls_iterations
+        if getattr(sim_params, "newton_solver", None) is not None:
+            solver_kwargs["solver"] = sim_params.newton_solver
+        if getattr(sim_params, "newton_integrator", None) is not None:
+            integrator = sim_params.newton_integrator
+            if integrator == "implicit":
+                integrator = "implicitfast"
+            solver_kwargs["integrator"] = integrator
+        if getattr(sim_params, "newton_cone", None) is not None:
+            solver_kwargs["cone"] = sim_params.newton_cone
+        if getattr(sim_params, "newton_impratio", None) is not None:
+            solver_kwargs["impratio"] = sim_params.newton_impratio
+        if getattr(sim_params, "newton_ls_parallel", None) is not None:
+            solver_kwargs["ls_parallel"] = sim_params.newton_ls_parallel
+        if getattr(sim_params, "newton_use_mujoco_cpu", None) is not None:
+            solver_kwargs["use_mujoco_cpu"] = sim_params.newton_use_mujoco_cpu
+        if getattr(sim_params, "newton_disable_contacts", None) is not None:
+            solver_kwargs["disable_contacts"] = sim_params.newton_disable_contacts
+        if getattr(sim_params, "newton_update_data_interval", None) is not None:
+            solver_kwargs["update_data_interval"] = sim_params.newton_update_data_interval
+        if getattr(sim_params, "newton_tolerance", None) is not None:
+            solver_kwargs["tolerance"] = sim_params.newton_tolerance
+        if getattr(sim_params, "newton_ls_tolerance", None) is not None:
+            solver_kwargs["ls_tolerance"] = sim_params.newton_ls_tolerance
+
+        # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
         if use_mujoco_contacts:
-            self._solver = SolverMuJoCo(
-                self._model,
-                njmax=sim_params.njmax,
-                nconmax=sim_params.nconmax,
-                use_mujoco_contacts=use_mujoco_contacts,
-            )
+            solver_kwargs["use_mujoco_contacts"] = True
+
+            self._solver = SolverMuJoCo(self._model, **solver_kwargs)
         else:  # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
             self._solver = SolverMuJoCo(
                 self._model,
