@@ -278,40 +278,50 @@ def feet_air_time(
     env: EnvTypes,
     env_states: TensorState,
     threshold: float,
-    body_names: str | tuple[str] = ".*ankle_roll.*",
-    command_name: str = "base_velocity",
+    body_names: str | tuple[str] = ".*_ankle_roll_link",
 ) -> torch.Tensor:
-    """Reward keeping the feet in the air for a specific duration (swing phase).
+    """Reward long steps taken by the feet for bipeds using contact duration."""
+    indices = _get_indices(env, body_names, env_states.robots[env.name].body_names).long()
+    num_feet = len(indices)
+    if num_feet == 0:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
-    This function tracks the time the feet have been in the air and rewards the agent if the time exceeds
-    the specified threshold. The reward is computed as the sum of the air time for each foot, clipped at the
-    threshold.
-    """
-    # extract the used quantities (to enable type-hinting)
-    indices = _get_indices(env, body_names, env_states.robots[env.name].body_names)
+    # Use a unique key for the state to avoid conflicts if multiple rewards use this
+    state_key = f"feet_air_time_state_{hash_names(body_names)}"
+    if state_key not in env.extras_buffer:
+        env.extras_buffer[state_key] = {
+            "air_time": torch.zeros(env.num_envs, num_feet, dtype=torch.float, device=env.device),
+            "contact_time": torch.zeros(env.num_envs, num_feet, dtype=torch.float, device=env.device),
+        }
+
+    state = env.extras_buffer[state_key]
+    air_time = state["air_time"]
+    contact_time = state["contact_time"]
+
     contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
-    # Check if the feet are in contact with the ground (contact force > 1.0)
-    is_contact = contact_forces.contact_forces_history[:, :, indices, :].norm(dim=-1).max(dim=1)[0] > 1.0
+    # Check current contact status
+    contact_now = contact_forces.contact_forces_history[:, -1, indices, :].norm(dim=-1) > 1.0
 
-    # Initialize feet_air_time buffer if it doesn't exist
-    if not hasattr(env, "feet_air_time_tracker"):
-        env.feet_air_time_tracker = torch.zeros((env.num_envs, len(indices)), dtype=torch.float, device=env.device)
+    # Update timers: reset air_time if contact, else increment. Reset contact_time if air, else increment.
+    air_time[:] = torch.where(contact_now, torch.zeros_like(air_time), air_time + env.step_dt)
+    contact_time[:] = torch.where(contact_now, contact_time + env.step_dt, torch.zeros_like(contact_time))
 
-    # 1. Update air time
-    env.feet_air_time_tracker += env.step_dt
+    # Single stance logic: Reward is based on valid single stance duration?
+    # The reference implementation rewards maintaining single stance and accumulates time in mode.
+    single_stance = torch.sum(contact_now.int(), dim=1) == 1
+    # Time in current mode (either air or contact)
+    in_mode_time = torch.where(contact_now, contact_time, air_time)
 
-    # 2. Reset on contact
-    env.feet_air_time_tracker *= ~is_contact
+    # Reward is the minimum time in mode across feet, IF in single stance.
+    # This implies we reward properly holding the stance/swing phase.
+    reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, torch.zeros_like(in_mode_time)), dim=1)[0]
+    reward = torch.clamp(reward, max=threshold)
 
-    # 3. Reset on env reset (important!)
-    if hasattr(env, "reset_buf"):
-        env.feet_air_time_tracker[env.reset_buf, :] = 0.0
+    cmd_norm = torch.norm(env.commands_manager.value[:, :2], dim=1)
+    reward *= (cmd_norm > 0.1).float()
 
-    reward = torch.sum(torch.clamp(env.feet_air_time_tracker - threshold, min=0.0), dim=1)
-
-    # Only reward if commanding to move
-    if command_name == "base_velocity":
-        cmd_norm = torch.norm(env.commands_manager.value[:, :2], dim=1)
-        reward *= (cmd_norm > 0.1).float()
+    if hasattr(env, "reset_buf") and env.reset_buf.any():
+        air_time[env.reset_buf] = 0.0
+        contact_time[env.reset_buf] = 0.0
 
     return reward
