@@ -12,6 +12,8 @@ import numpy as np
 import rootutils
 import torch
 import tyro
+import datetime
+from loguru import logger as log
 from rsl_rl.runners import OnPolicyRunner
 
 rootutils.setup_root(__file__, pythonpath=True)
@@ -19,6 +21,33 @@ rootutils.setup_root(__file__, pythonpath=True)
 from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
 from metasim.task.registry import get_task_class
+
+
+def get_log_dir(exp_name: str, task_name: str, now=None) -> str:
+    """Get the log directory (aligned with ppo.py saving logic)."""
+    if now is None:
+        now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_dir = f"./outputs/{exp_name}/{task_name}/{now}"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    log.info("Log directory: {}", log_dir)
+    return log_dir
+
+
+def get_load_path(load_root: str, checkpoint: int | str = None) -> str:
+    """Get the path to load the model from."""
+    if isinstance(checkpoint, int):
+        if checkpoint == -1:
+            models = [file for file in os.listdir(load_root) if "model" in file and file.endswith(".pt")]
+            models.sort(key=lambda m: f"{m!s:0>15}")
+            model = models[-1]
+            load_path = f"{load_root}/{model}"
+        else:
+            load_path = f"{load_root}/model_{checkpoint}.pt"
+    else:
+        load_path = f"{load_root}/{checkpoint}.pt"
+    log.info(f"Loading checkpoint {checkpoint} from {load_root}")
+    return load_path
 
 
 def make_roboverse_env(args: RslRlPPOConfig):
@@ -85,6 +114,20 @@ def train(args: RslRlPPOConfig):
         log_dir=args.model_dir,
         device=device
     )
+
+    if args.resume:
+        # Get the run directory
+        exp_name = args.exp_name or args.experiment_name or args.task
+
+        load_root = (
+            args.resume
+            if os.path.isdir(args.resume)
+            else get_log_dir(exp_name=exp_name, task_name=args.task, now=args.resume)
+        )
+
+        checkpoint_num = args.checkpoint if args.checkpoint is not None else -1
+        checkpoint_path = get_load_path(load_root=load_root, checkpoint=checkpoint_num)
+        runner.load(checkpoint_path)
 
     # Train
     print(f"Training RSL-RL PPO on {args.task} with {args.num_envs} environments")
