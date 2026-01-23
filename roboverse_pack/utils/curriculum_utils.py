@@ -21,7 +21,12 @@ def lin_vel_cmd_levels(  # used
         reward_term_scales = env.reward_scales[reward_term_name][0] / env.step_dt
         reward = torch.mean(env.episode_rewards[reward_term_name][env_ids]) / env.cfg.episode_length_s
 
-        if reward > reward_term_scales * 0.8:
+        # Special case: if command range is small, increase curriculum if robot survives long enough
+        is_small_range = ranges.lin_vel_x[1] <= 0.1
+        max_episode_length = torch.max(env._episode_steps[env_ids].float())
+        survived_long_enough = max_episode_length > env.max_episode_steps * 0.9
+
+        if (is_small_range and survived_long_enough) or (reward > reward_term_scales * 0.7):
             delta_command = torch.tensor([-0.1, 0.1], device=env.device)
             ranges.lin_vel_x = torch.clamp(  # ensure new ranges don't exceed the hard limits
                 torch.tensor(ranges.lin_vel_x, device=env.device) + delta_command,
