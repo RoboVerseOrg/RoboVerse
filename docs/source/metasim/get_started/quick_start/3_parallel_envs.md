@@ -36,6 +36,11 @@ python get_started/3_parallel_envs.py  --sim mujoco --num_envs 4 --headless
 ```
 **If you are on mac**, please avoid running this task without the `headless` tag.
 
+#### Newton
+```bash
+python get_started/3_parallel_envs.py  --sim newton --num_envs 4
+```
+
 We can open multiple environments at the same time.
 
 <video width="50%" autoplay loop muted playsinline>
@@ -48,9 +53,9 @@ You will get the following videos:
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_isaacsim.mp4" type="video/mp4">
             </video>
-            <p style="margin-top: 5px;">Isaac Lab</p>
+            <p style="margin-top: 5px;">Isaac Sim</p>
         </div>
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
@@ -63,6 +68,14 @@ You will get the following videos:
                 <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_genesis.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">Genesis</p>
+        </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; width: 100%;">
+        <div style="width: 32%; text-align: center;">
+            <video width="100%" autoplay loop muted playsinline>
+                <source src="https://roboverse.wiki/_static/standard_output/3_parallel_envs_newton.mp4" type="video/mp4">
+            </video>
+            <p style="margin-top: 5px;">Newton</p>
         </div>
     </div>
 

@@ -13,7 +13,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.sim.base import BaseSimHandler
 
 
-@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
+@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "newton", "sapien2", "sapien3")
 def test_self_collision(handler: BaseSimHandler):
     """Test that joint limits are respected during simulation."""
     dof_targets = [
@@ -62,7 +62,7 @@ def test_self_collision(handler: BaseSimHandler):
     )
 
 
-@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "sapien2", "sapien3")
+@pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "newton", "sapien2", "sapien3")
 def test_mutual_collision(handler: BaseSimHandler):
     """Test that joint limits are respected during simulation."""
 

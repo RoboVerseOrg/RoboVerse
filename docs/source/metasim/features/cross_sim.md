@@ -1,7 +1,7 @@
 # Cross Simulator
 ## Basic usage
-By default, the simulator is set to `isaaclab`. You can change it to other simulators by setting the `sim` argument. Currently, we support:
-- `isaaclab`
+By default, the simulator is set to `isaacsim`. You can change it to other simulators by setting the `sim` argument. Currently, we support:
+- `isaacsim`
 - `isaacgym`
 - `pyrep`
 

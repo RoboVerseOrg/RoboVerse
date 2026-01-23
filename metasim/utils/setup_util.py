@@ -140,6 +140,14 @@ def get_sim_handler_class(sim: SimType):
         except ImportError as e:
             log.error("MJX is not installed, please install it first")
             raise e
+    elif sim == SimType.NEWTON:
+        try:
+            from metasim.sim.newton import NewtonHandler
+
+            return NewtonHandler
+        except ImportError as e:
+            log.error("Newton is not installed. Activate newton conda environment: conda activate newton")
+            raise e
     else:
         raise ValueError(f"Invalid simulator type: {sim}")
 

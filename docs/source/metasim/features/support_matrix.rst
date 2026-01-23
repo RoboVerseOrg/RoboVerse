@@ -9,7 +9,7 @@ Supported Simulators
 
 There are 3 levels of supportance for each simulator:
 
-- **Actively supported**: ``isaaclab``, ``isaacgym``, ``mujoco``, ``sapien2``, ``sapien3``, ``genesis``, ``pybullet`` . These simulators should always be guaranteed to work on the main branch.
+- **Actively supported**: ``isaacsim``, ``isaacgym``, ``mujoco``, ``sapien2``, ``sapien3``, ``genesis``, ``pybullet``, ``newton`` . These simulators should always be guaranteed to work on the main branch.
 - **Inactively supported**: ``pyrep``. These simulators won't be actively supported. They will only be guaranteed to work when a major version is released.
 - **Experimental**: ``mjx``, ``blender``. These simulators (renderers) are still in experimental stage and will be added to "actively supported" list in the future.
 
@@ -26,15 +26,16 @@ Simulation Configuration
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20 20 20
+   :widths: 15 15 15 15 15 15 15 15
 
    * - Parameter
-     - IsaacLab
+     - IsaacSim
      - IsaacGym
      - MuJoCo
      - Genesis
      - SAPIEN3
      - PyBullet
+     - Newton
    * - ``dt``
      - `1/60 <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.SimulationCfg.dt>`_
      - `1/60 <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=substeps#isaacgym.gymapi.SimParams.substeps>`_
@@ -42,9 +43,11 @@ Simulation Configuration
      - `1/100 <https://genesis-world.readthedocs.io/en/latest/api_reference/scene/simulator.html#genesis.engine.simulator.Simulator.dt>`_
      - 1/100
      - `1/240 <https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit?tab=t.0#heading=h.kyqqrtg5v8nc>`_
+     - 1/60
    * - ``solver_type``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.solver_type>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams.solver_type>`_
+     -
      -
      -
      -
@@ -56,6 +59,7 @@ Simulation Configuration
      - ✓
      -
      -
+     - ✓
 
 
 
@@ -64,21 +68,23 @@ Robot Configuration
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20 20 20
+   :widths: 15 15 15 15 15 15 15 15
 
    * - Parameter
-     - IsaacLab
+     - IsaacSim
      - IsaacGym
      - MuJoCo
      - Genesis
      - SAPIEN3
      - PyBullet
+     - Newton
    * - ``stiffness``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.stiffness>`_
      - ✓
      -
      -
      - ✓
+     -
      -
    * - ``damping``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.damping>`_
@@ -87,8 +93,10 @@ Robot Configuration
      -
      - ✓
      -
+     -
    * - ``velocity_limit``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.actuators.html#isaaclab.actuators.ActuatorBaseCfg.velocity_limit>`_
+     -
      -
      -
      -
@@ -101,9 +109,11 @@ Robot Configuration
      -
      -
      -
+     -
    * - ``fully_actuated``
      - ✓
      - ✓
+     -
      -
      -
      -
@@ -115,18 +125,20 @@ Physics Engine Configuration
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20 20 20
+   :widths: 15 15 15 15 15 15 15 15
 
    * - Parameter
-     - IsaacLab
+     - IsaacSim
      - IsaacGym
      - MuJoCo
      - Genesis
      - SAPIEN3
      - PyBullet
+     - Newton
    * - ``bounce_threshold_velocity``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.bounce_threshold_velocity>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=bounce_threshold_velocity#isaacgym.gymapi.PhysXParams.bounce_threshold_velocity>`_
+     -
      -
      -
      -
@@ -138,9 +150,11 @@ Physics Engine Configuration
      -
      -
      -
+     -
    * - ``friction_correlation_distance``
      - `✓ <https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sim.html#isaaclab.sim.PhysxCfg.friction_correlation_distance>`_
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=friction_correlation_distance#isaacgym.gymapi.PhysXParams.friction_correlation_distance>`_
+     -
      -
      -
      -
@@ -152,9 +166,11 @@ Physics Engine Configuration
      -
      -
      -
+     -
    * - ``num_position_iterations``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?#isaacgym.gymapi.PhysXParams.num_position_iterations>`_
+     -
      -
      -
      -
@@ -166,9 +182,11 @@ Physics Engine Configuration
      -
      -
      -
+     -
    * - ``rest_offset``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=rest_offset#isaacgym.gymapi.RigidShapeProperties.rest_offset>`_
+     -
      -
      -
      -
@@ -180,9 +198,11 @@ Physics Engine Configuration
      -
      -
      -
+     -
    * - ``default_buffer_size_multiplier``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html?highlight=max_depenetration_velocity#isaacgym.gymapi.PhysXParams.max_depenetration_velocity:~:text=default_buffer_size_multiplier>`_
+     -
      -
      -
      -
@@ -193,18 +213,20 @@ Resource Management Configuration
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20 20 20
+   :widths: 15 15 15 15 15 15 15 15
 
    * - Parameter
-     - IsaacLab
+     - IsaacSim
      - IsaacGym
      - MuJoCo
      - Genesis
      - SAPIEN3
      - PyBullet
+     - Newton
    * - ``num_threads``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.PhysXParams.num_threads>`_
+     -
      -
      -
      -
@@ -215,18 +237,20 @@ Misc Configuration
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20 20 20
+   :widths: 15 15 15 15 15 15 15 15
 
    * - Parameter
-     - IsaacLab
+     - IsaacSim
      - IsaacGym
      - MuJoCo
      - Genesis
      - SAPIEN3
      - PyBullet
+     - Newton
    * - ``replace_cylinder_with_capsule``
      -
      - `✓ <https://docs.robotsfan.com/isaacgym/api/python/struct_py.html#isaacgym.gymapi.AssetOptions.replace_cylinder_with_capsule>`_
+     -
      -
      -
      -

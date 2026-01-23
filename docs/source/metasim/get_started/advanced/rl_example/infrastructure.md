@@ -26,7 +26,7 @@ python get_started/rl/0_ppo.py --num-envs 256 --headless
 # Different simulators
 python get_started/rl/0_ppo.py --sim mujoco
 python get_started/rl/0_ppo.py --sim genesis
-python get_started/rl/0_ppo.py --sim isaaclab
+python get_started/rl/0_ppo.py --sim isaacsim
 ```
 
 **Arguments:**
@@ -34,7 +34,7 @@ python get_started/rl/0_ppo.py --sim isaaclab
 - `--task`: Task name (default: `reach_origin`)
 - `--robot`: Robot type (default: `franka`)
 - `--num-envs`: Number of parallel environments (default: `128`)
-- `--sim`: Simulator backend (`isaacgym`, `isaaclab`, `mujoco`, `genesis`, `mjx`)
+- `--sim`: Simulator backend (`isaacgym`, `isaacsim`, `mujoco`, `genesis`, `mjx`, `newton`)
 - `--headless`: Run without GUI (flag)
 
 **Outputs:**
@@ -63,7 +63,7 @@ python get_started/rl/0_ppo_gym.py --task reach_origin --robot franka --num-envs
 - `--task`: Task name (default: `reach_origin`)
 - `--robot`: Robot type (default: `franka`)
 - `--num-envs`: Number of environments (default: `128`)
-- `--sim`: Simulator (`isaaclab`, `isaacgym`, `mujoco`, `genesis`, `mjx`)
+- `--sim`: Simulator (`isaacsim`, `isaacgym`, `mujoco`, `genesis`, `mjx`, `newton`)
 - `--headless`: Headless mode (flag)
 - `--device`: Device (`cuda`, `cpu`)
 
@@ -114,10 +114,11 @@ CONFIG = {
 ### Simulator Backends
 
 1. **Isaac Gym**: NVIDIA's physics simulation
-2. **Isaac Lab**: Next-generation Isaac simulation
+2. **Isaac Sim**: Next-generation Isaac simulation
 3. **MuJoCo**: Fast physics simulation
 4. **Genesis**: Multi-physics simulation
 5. **MJX**: JAX-based MuJoCo implementation
+6. **Newton**: GPU-accelerated physics simulation
 
 ## Dependencies
 

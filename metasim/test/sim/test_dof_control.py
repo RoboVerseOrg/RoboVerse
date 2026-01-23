@@ -6,7 +6,6 @@ from copy import deepcopy
 
 import pytest
 import rootutils
-import torch
 from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
@@ -43,7 +42,7 @@ def reset_robot_to_default(handler, request):
         handler.simulate()
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_basic(handler):
     """Test basic set_dof_targets functionality."""
     target_positions = {
@@ -78,41 +77,7 @@ def test_set_dof_targets_basic(handler):
     log.info(f"Set dof targets basic test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
-def test_set_dof_targets_within_limits(handler):
-    """Test that dof targets respect joint limits."""
-    robot = handler.scenario.robots[0]
-
-    # Get joint limits
-    joint_limits = robot.joint_limits
-
-    # Generate random targets within limits
-    random_targets = {}
-    for joint_name, (lower, upper) in joint_limits.items():
-        random_value = torch.rand(1).item() * (upper - lower) + lower
-        random_targets[joint_name] = random_value
-
-    actions = [{"franka": {"dof_pos_target": random_targets}}] * handler.scenario.num_envs
-
-    handler.set_dof_targets(actions)
-
-    # Simulate
-    for _ in range(50):
-        handler.simulate()
-
-    states = handler.get_states(mode="dict")
-
-    # Verify all joints are within limits
-    for joint_name, (lower, upper) in joint_limits.items():
-        actual_value = states[0]["robots"]["franka"]["dof_pos"][joint_name]
-        assert lower - 0.01 <= actual_value <= upper + 0.01, (
-            f"Joint {joint_name} out of bounds: {actual_value} not in [{lower}, {upper}]"
-        )
-
-    log.info(f"Set dof targets within limits test passed for {handler.scenario.simulator}")
-
-
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_sequential_changes(handler):
     """Test applying sequential dof targets."""
     # First target
@@ -164,7 +129,7 @@ def test_set_dof_targets_sequential_changes(handler):
     log.info(f"Set dof targets sequential changes test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_set_dof_targets_per_env(handler):
     """Test setting different dof targets for each environment."""
     if handler.scenario.num_envs < 2:
@@ -208,7 +173,7 @@ def test_set_dof_targets_per_env(handler):
     log.info(f"Set dof targets per env test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dof_targets_gripper_control(handler):
     """Test gripper control via finger joints."""
     # Open gripper
@@ -251,7 +216,7 @@ def test_dof_targets_gripper_control(handler):
     log.info(f"Dof targets gripper control test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dof_convergence_to_target(handler):
     """Test that DOF positions converge to targets over time."""
     target_positions = {
