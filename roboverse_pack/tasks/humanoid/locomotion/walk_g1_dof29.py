@@ -150,7 +150,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             step_funcs.push_by_setting_velocity,
             {
                 "interval_range_s": (5.0, 5.0),
-                "velocity_range": [[-0.5, -0.5, 0.0], [0.5, 0.5, 0.0]],
+                "velocity_range": [[-0.2, -0.2, 0.0], [0.2, 0.2, 0.0]],
             },
         )
     }
