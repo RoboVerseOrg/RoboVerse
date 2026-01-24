@@ -107,9 +107,14 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         value=None,
         resample=step_funcs.resample_commands,
         heading_command=False,
-        rel_standing_envs=0.02,
-        ranges=BaseEnvCfg.Commands.Ranges(lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_yaw=(-0.1, 0.1)),
-        limit_ranges=BaseEnvCfg.Commands.Ranges(lin_vel_x=(-0.5, 1.0), lin_vel_y=(-0.3, 0.3), ang_vel_yaw=(-0.2, 0.2)),
+        rel_standing_envs=0.0,
+        min_lin_speed=0.2,
+        ranges=BaseEnvCfg.Commands.Ranges(lin_vel_x=(-0.5, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_yaw=(-0.5, 0.5)),
+        limit_ranges=BaseEnvCfg.Commands.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_yaw=(-1.0, 1.0),
+        ),
     )
 
     curriculum = BaseEnvCfg.Curriculum(
