@@ -32,7 +32,7 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
     experiment_name: str = ""  # defaults to task name if left empty
     run_name: str = ""
     seed: int = 42
-    num_steps_per_env: int = 64
+    num_steps_per_env: int = 24
     max_iterations: int = 50000
     save_interval: int = 100
     empirical_normalization: bool = False
