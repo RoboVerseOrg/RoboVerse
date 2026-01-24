@@ -42,11 +42,11 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
     class RewardsScales:
         """Reward weights for gait, posture, and energy usage."""
 
-        track_lin_vel_xy = (1.0, {"std": math.sqrt(0.25)})
-        track_ang_vel_z = (0.5, {"std": math.sqrt(0.25)})
+        track_lin_vel_xy = (3.0, {"std": math.sqrt(0.25)})
+        track_ang_vel_z = (1.5, {"std": math.sqrt(0.25)})
         is_alive = 0.15
-        lin_vel_z = -0.5
-        ang_vel_xy = -0.05
+        lin_vel_z = -0.05
+        ang_vel_xy = -0.01
         joint_vel = -0.001
         joint_acc = -2.5e-7
         action_rate = -0.01
@@ -63,12 +63,12 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             reward_funcs.joint_deviation_l1,
         )
         joint_deviation_legs = (
-            -0.5,
+            -0.05,
             {"joint_names": (".*_hip_roll_joint", ".*_hip_yaw_joint")},
             reward_funcs.joint_deviation_l1,
         )
         flat_orientation = -1.0
-        base_height = (-1.0, {"target_height": 0.78})
+        base_height = (-0.1, {"target_height": 0.78})
         feet_gait = (
             0.5,
             {
@@ -89,7 +89,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             },
         )
         feet_air_time = (
-            1.0,
+            2.0,
             {
                 "threshold": 0.3,
                 "body_names": (".*ankle_roll.*"),
