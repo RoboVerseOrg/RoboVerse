@@ -255,6 +255,99 @@ def feet_clearance(
     return torch.exp(-torch.sum(reward, dim=1) / std**2)
 
 
+def _resolve_gait_params(
+    env: EnvTypes,
+    period: float | None,
+    offset: list[float] | None,
+    threshold: float | None,
+    gait_key: str,
+) -> tuple[float | None, list[float] | None, float | None]:
+    if period is not None and offset is not None and threshold is not None:
+        return period, offset, threshold
+
+    params = None
+    reward_entry = getattr(env, "reward_scales", {}).get(gait_key)
+    if isinstance(reward_entry, tuple) and len(reward_entry) >= 2:
+        params = reward_entry[1]
+
+    if params is None:
+        cfg_entry = getattr(getattr(env.cfg.rewards, "scales", None), gait_key, None)
+        if isinstance(cfg_entry, tuple) and len(cfg_entry) >= 2:
+            params = cfg_entry[1]
+
+    if isinstance(params, dict):
+        if period is None:
+            period = params.get("period", period)
+        if offset is None:
+            offset = params.get("offset", offset)
+        if threshold is None:
+            threshold = params.get("threshold", threshold)
+
+    return period, offset, threshold
+
+
+def leg_raise_imitation(
+    env: EnvTypes,
+    env_states: TensorState,
+    hip_joint_names: str | tuple[str],
+    knee_joint_names: str | tuple[str],
+    hip_min: float,
+    knee_max: float,
+    std: float,
+    max_lin_vel_cmd: float = 0.5,
+    period: float | None = None,
+    offset: list[float] | None = None,
+    threshold: float | None = None,
+    gait_key: str = "feet_gait",
+) -> torch.Tensor:
+    """Reward matching a knee/hip relationship on the front leg at low command ranges."""
+    max_cmd = env.commands_manager.ranges.lin_vel_x[1]
+    if max_cmd > max_lin_vel_cmd:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    period, offset, threshold = _resolve_gait_params(env, period, offset, threshold, gait_key)
+    if period is None or offset is None or threshold is None:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    if period <= 0.0 or threshold >= 1.0:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    joint_names = env.sorted_joint_names
+    hip_idx = _get_indices(env, hip_joint_names, joint_names)
+    knee_idx = _get_indices(env, knee_joint_names, joint_names)
+    if hip_idx.numel() == 0 or knee_idx.numel() == 0:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    num_legs = min(hip_idx.numel(), knee_idx.numel())
+    if num_legs == 0:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+    joint_pos = env_states.robots[env.name].joint_pos
+    hip_pos = joint_pos[:, hip_idx[:num_legs]]
+    knee_pos = joint_pos[:, knee_idx[:num_legs]]
+
+    phase = ((env._episode_steps * env.step_dt) % period) / period
+    offsets = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
+    leg_phase = (phase.unsqueeze(1) + offsets) % 1.0
+    swing_mask = leg_phase >= threshold
+    swing_phase = (leg_phase - threshold) / max(1.0 - threshold, 1e-6)
+    swing_phase = torch.clamp(swing_phase, min=0.0, max=1.0)
+    swing_curve = torch.sin(torch.pi * swing_phase)
+
+    hip_target = hip_min * swing_curve
+    knee_target = knee_max * swing_curve
+
+    err = torch.square(hip_pos - hip_target) + torch.square(knee_pos - knee_target)
+    err = torch.where(swing_mask, err, torch.zeros_like(err))
+
+    count = swing_mask.sum(dim=1)
+    reward = torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    valid = count > 0
+    if valid.any():
+        mean_err = err.sum(dim=1)[valid] / count[valid]
+        reward[valid] = torch.exp(-mean_err / std**2)
+    return reward
+
+
 def undesired_contacts(
     env: EnvTypes,
     env_states: TensorState,

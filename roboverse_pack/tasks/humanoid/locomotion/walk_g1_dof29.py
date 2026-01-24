@@ -96,6 +96,18 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             },
             reward_funcs.feet_air_time,
         )
+        leg_raise_imitation = (
+            2.0,
+            {
+                "hip_joint_names": ("left_hip_pitch_joint", "right_hip_pitch_joint"),
+                "knee_joint_names": ("left_knee_joint", "right_knee_joint"),
+                "hip_min": -0.35,
+                "knee_max": 0.2,
+                "std": 0.5,
+                "max_lin_vel_cmd": 0.5,
+            },
+            reward_funcs.leg_raise_imitation,
+        )
         undesired_contacts = (-0.5, {"threshold": 1, "body_names": ("(?!.*ankle.*).*")})
 
     rewards = BaseEnvCfg.Rewards(
