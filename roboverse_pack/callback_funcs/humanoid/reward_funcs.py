@@ -290,9 +290,7 @@ def leg_raise_imitation(
     env: EnvTypes,
     env_states: TensorState,
     hip_joint_names: str | tuple[str],
-    knee_joint_names: str | tuple[str],
     hip_min: float,
-    knee_max: float,
     std: float,
     max_lin_vel_cmd: float = 0.5,
     period: float | None = None,
@@ -313,17 +311,13 @@ def leg_raise_imitation(
 
     joint_names = env.sorted_joint_names
     hip_idx = _get_indices(env, hip_joint_names, joint_names)
-    knee_idx = _get_indices(env, knee_joint_names, joint_names)
-    if hip_idx.numel() == 0 or knee_idx.numel() == 0:
+    if hip_idx.numel() == 0:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
-    num_legs = min(hip_idx.numel(), knee_idx.numel())
-    if num_legs == 0:
-        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    num_legs = hip_idx.numel()
 
     joint_pos = env_states.robots[env.name].joint_pos
     hip_pos = joint_pos[:, hip_idx[:num_legs]]
-    knee_pos = joint_pos[:, knee_idx[:num_legs]]
 
     phase = ((env._episode_steps * env.step_dt) % period) / period
     offsets = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
@@ -334,9 +328,8 @@ def leg_raise_imitation(
     swing_curve = torch.sin(torch.pi * swing_phase)
 
     hip_target = hip_min * swing_curve
-    knee_target = knee_max * swing_curve
 
-    err = torch.square(hip_pos - hip_target) + torch.square(knee_pos - knee_target)
+    err = torch.square(hip_pos - hip_target)
     err = torch.where(swing_mask, err, torch.zeros_like(err))
 
     count = swing_mask.sum(dim=1)
@@ -411,3 +404,48 @@ def feet_air_time(
         contact_time[env.reset_buf] = 0.0
 
     return reward
+
+
+def foot_parallel_to_ground(
+    env: EnvTypes,
+    env_states: TensorState,
+    joint_names_lists: list[tuple[str, str, str]],
+    std: float,
+) -> torch.Tensor:
+    """Reward for keeping the feet parallel only using joint positions of the legs.
+
+    This function assumes that the sum of the hip pitch, knee pitch, and ankle pitch angles should be zero
+    to keep the foot parallel to the base (and thus the ground, assuming a flat base).
+
+    Args:
+        env: The environment object.
+        env_states: The state of the environment.
+        joint_names_lists: A list of tuples, where each tuple contains the names of the hip pitch, knee pitch,
+                           and ankle pitch joints for a leg, in that order.
+                           Example: [("left_hip_pitch", "left_knee_pitch", "left_ankle_pitch"),
+                                     ("right_hip_pitch", "right_knee_pitch", "right_ankle_pitch")]
+        std: Standard deviation for the Gaussian kernel.
+
+    Returns:
+        The computed reward.
+    """
+    robot_state = env_states.robots[env.name]
+    joint_pos = robot_state.joint_pos
+
+    total_error = 0.0
+
+    for hip_name, knee_name, ankle_name in joint_names_lists:
+        hip_idx = _get_indices(env, hip_name, env.sorted_joint_names)
+        knee_idx = _get_indices(env, knee_name, env.sorted_joint_names)
+        ankle_idx = _get_indices(env, ankle_name, env.sorted_joint_names)
+
+        hip_val = joint_pos[:, hip_idx].squeeze(-1)
+        knee_val = joint_pos[:, knee_idx].squeeze(-1)
+        ankle_val = joint_pos[:, ankle_idx].squeeze(-1)
+
+        # Target ankle pitch is -(hip_pitch + knee_pitch)
+        target_ankle_val = -(hip_val + knee_val)
+        error = torch.square(ankle_val - target_ankle_val)
+        total_error += error
+
+    return torch.exp(-total_error / std**2)

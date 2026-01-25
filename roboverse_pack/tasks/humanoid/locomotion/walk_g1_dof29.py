@@ -100,13 +100,22 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             2.0,
             {
                 "hip_joint_names": ("left_hip_pitch_joint", "right_hip_pitch_joint"),
-                "knee_joint_names": ("left_knee_joint", "right_knee_joint"),
                 "hip_min": -0.35,
-                "knee_max": 0.2,
                 "std": 0.5,
                 "max_lin_vel_cmd": 0.5,
             },
             reward_funcs.leg_raise_imitation,
+        )
+        foot_parallel_to_ground = (
+            2.0,
+            {
+                "joint_names_lists": [
+                    ("left_hip_pitch_joint", "left_knee_joint", "left_ankle_pitch_joint"),
+                    ("right_hip_pitch_joint", "right_knee_joint", "right_ankle_pitch_joint"),
+                ],
+                "std": 0.2,
+            },
+            reward_funcs.foot_parallel_to_ground,
         )
         undesired_contacts = (-0.5, {"threshold": 1, "body_names": ("(?!.*ankle.*).*")})
 
