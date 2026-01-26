@@ -173,38 +173,31 @@ def feet_gait(
     period: float,
     offset: list[float],
     threshold: float = 0.55,
+    phase_offset: float = 0.225,
     body_names: str | tuple[str] = ".*ankle_roll.*",
 ) -> torch.Tensor:
-    """Reward alternating stance phases across feet following a target gait pattern."""
+    """Reward alternating stance phases across feet following a target gait pattern.
+
+    Args:
+        env: The environment object.
+        env_states: The state of the environment.
+        period: Gait period in seconds.
+        offset: Phase offsets for each leg (e.g., [0.0, 0.5] for alternating).
+        threshold: Stance/swing threshold (stance when phase < threshold).
+        phase_offset: Shift to align with hip trajectory (0.25 aligns with sin-based trajectory).
+        body_names: Regex pattern for foot bodies.
+    """
     indices = _get_indices(env, body_names, env_states.robots[env.name].body_names)
-    command_name = "base_velocity"
 
     contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
     is_contact = contact_forces.contact_forces_history[:, :, indices, :].norm(dim=-1).max(dim=1)[0] > 1.0
-    # contact_sensor = env.handler.contact_sensor
-    # is_contact = contact_sensor.data.current_contact_time[:, env.body_ids_reindex][:, env.extras_buffer[bodies_key]] > 0
 
-    # # #### Implemention 2: using sine wave phase
-    # global_phase = (env._episode_steps * env.step_dt) % period / period
-    # sin_pos = torch.sin(2 * torch.pi * global_phase)
-    # # Add double support phase
-    # is_stance = torch.zeros(
-    #     (env.num_envs, len(indices)), dtype=torch.bool, device=env.device
-    # )
-    # # left foot stance
-    # is_stance[:, 0] = sin_pos >= 0
-    # # right foot stance
-    # is_stance[:, 1] = sin_pos < 0
-    # # Double support phase
-    # is_stance[torch.abs(sin_pos) < threshold - 0.5] = True
-
-    # reward = torch.sum(is_contact == is_stance, dim=1, dtype=torch.float32)
-
-    #### Implemention 1: using phase offsets
+    # Compute leg phases with offset
     global_phase = ((env._episode_steps * env.step_dt) % period / period).unsqueeze(1)
     phases = []
     for offset_ in offset:
-        phase = (global_phase + offset_) % 1.0
+        # Apply phase_offset to shift expected contact timing
+        phase = (global_phase + offset_ + phase_offset) % 1.0
         phases.append(phase)
     leg_phase = torch.cat(phases, dim=-1)
 
@@ -299,7 +292,8 @@ def leg_raise_imitation(
     velocity_scale: float = 1.0,
     period: float | None = None,
     offset: list[float] | None = None,
-    threshold: float | None = None,
+    static_duration: float | None = None,
+    phase_offset: float = 0.0,
     gait_key: str = "feet_gait",
 ) -> torch.Tensor:
     """Command-adaptive leg raise imitation with full cycle supervision.
@@ -307,7 +301,7 @@ def leg_raise_imitation(
     This reward guides hip pitch, hip roll, and knee joints throughout the entire gait cycle:
     - Hip pitch follows a sinusoidal trajectory, amplitude scales with forward velocity (cmd_x)
     - Hip roll target scales with lateral velocity (cmd_y) for side-stepping
-    - Knee bends during swing phase (derived from hip pitch), stays straight during stance
+    - Knee bends during lead phase (derived from hip pitch), stays straight during lag
 
     Args:
         env: The environment object.
@@ -322,14 +316,15 @@ def leg_raise_imitation(
         velocity_scale: Multiplier for how much command velocity affects hip pitch amplitude.
         period: Gait period in seconds. If None, resolved from gait_key.
         offset: Phase offsets for each leg. If None, resolved from gait_key.
-        threshold: Stance/swing threshold. If None, resolved from gait_key.
+        static_duration: Duration of the static hold at peaks. If None, resolved from gait_key (as threshold).
+        phase_offset: Shift to align with gait pattern.
         gait_key: Key to resolve gait params from if not provided.
 
     Returns:
         The computed reward.
     """
-    period, offset, threshold = _resolve_gait_params(env, period, offset, threshold, gait_key)
-    if period is None or offset is None or threshold is None:
+    period, offset, static_duration = _resolve_gait_params(env, period, offset, static_duration, gait_key)
+    if period is None or offset is None or static_duration is None:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
     if period <= 0.0:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
@@ -365,34 +360,80 @@ def leg_raise_imitation(
     # Compute phase for each leg
     global_phase = ((env._episode_steps * env.step_dt) % period) / period
     offsets_tensor = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
-    leg_phase = (global_phase.unsqueeze(1) + offsets_tensor) % 1.0  # (N, num_legs)
+    # Apply phase_offset to shift the entire cycle
+    leg_phase = (global_phase.unsqueeze(1) + offsets_tensor + phase_offset) % 1.0  # (N, num_legs)
 
-    # Determine swing vs stance phase
-    swing_mask = leg_phase >= threshold
+    # Flat-Top Sine Logic (Gapless)
+    # Lead Phase: [0.5 + static, 1.0 + static] (WRAPPED TO 0.05) if static=0.05
+    # Center of Lead: 0.8.
+    # Plateau: [0.8 - static/2, 0.8 + static/2] = [0.775, 0.825]
 
-    # Stance moving subphase aligned with other leg's swing
-    swing_duration = 1.0 - threshold  # e.g., 0.45
-    stance_move_start = threshold - 0.5  # e.g., 0.05
-    stance_move_mask = (leg_phase >= stance_move_start) & (leg_phase < 0.5)
+    # We define Lead as the Positive Amplitude region.
+    # Lead Start: 0.5 + static_duration
+    # Phase Relative to Lead Start:
+    lead_start = 0.5 + static_duration
+    p_rel = (leg_phase - lead_start) % 1.0
 
-    # Unified moving phase calculation
-    is_moving = swing_mask | stance_move_mask
-    phase_offset = torch.where(swing_mask, threshold, stance_move_start)
-    moving_norm = torch.clamp((leg_phase - phase_offset) / swing_duration, 0.0, 1.0)
+    # Lead Duration is 0.5 (Half Cycle).
+    # If p_rel < 0.5: Lead (Positive)
+    # Else: Lag (Negative)
 
-    # Trajectory: positive for swing (forward), negative for stance (backward)
-    trajectory = (2.0 * swing_mask.float() - 1.0) * torch.sin(torch.pi * moving_norm)
+    is_lead = p_rel < 0.5
 
-    # Targets (zeros when not active)
-    zeros = torch.zeros_like(leg_phase)
-    hip_pitch_target = torch.where(is_moving, adapted_pitch_amplitude * trajectory, zeros)
+    # Within Lead (or Lag), we have Rise -> Plateau -> Fall
+    # Total Duration 0.5.
+    # Plateau Duration: static_duration.
+    # Rise Duration: (0.5 - static_duration) / 2.
 
-    # Hip roll: during moving phases (swing and stance_move), direction based on cmd_y and leg side
+    plateau_len = static_duration
+    rise_len = (0.5 - plateau_len) / 2.0
+
+    # Local phase within the 0.5 window
+    # For Lag, we use the second half (0.5 to 1.0) mapped to 0 to 0.5
+    local_p = torch.where(is_lead, p_rel, p_rel - 0.5)
+
+    # Calculate Magnitude based on local_p [0, 0.5]
+    mag = torch.zeros_like(leg_phase)
+
+    in_rise = local_p < rise_len
+    in_plateau = (local_p >= rise_len) & (local_p < (rise_len + plateau_len))
+    in_fall = local_p >= (rise_len + plateau_len)
+
+    # Rise: Sin(0 to pi/2)
+    rise_arg = local_p / rise_len
+    mag = torch.where(in_rise, torch.sin(0.5 * torch.pi * rise_arg), mag)
+
+    # Plateau: 1.0
+    mag = torch.where(in_plateau, torch.ones_like(mag), mag)
+
+    # Fall: Sin(pi/2 to pi) -> Sin(pi/2 * (1 + arg)) or Cos?
+    # Easier: sin(pi/2 * (fall_end - t) / rise_len)?
+    # Fall window length is same as rise_len.
+    # Distance from end (0.5)
+    dist_from_end = 0.5 - local_p
+    fall_arg = dist_from_end / rise_len
+    mag = torch.where(in_fall, torch.sin(0.5 * torch.pi * fall_arg), mag)
+
+    # Apply Sign (Inverted per user request)
+    # Lead (Positive Phase in Interval) -> Now Negative Trajectory
+    # Lag (Negative Phase in Interval) -> Now Positive Trajectory
+    sign = torch.where(is_lead, -torch.ones_like(leg_phase), torch.ones_like(leg_phase))
+    trajectory = sign * mag
+
+    # Lead Mask for Knee Logic
+    # Knee bends during "Lead phase" (Positive).
+    # Matches 'is_lead' exactly.
+    lead_mask = is_lead
+
+    # Targets (always active, no static phases)
+    hip_pitch_target = adapted_pitch_amplitude * trajectory
+
+    # Hip roll: during both lead and lag, direction based on cmd_y and leg side
     leg_sign = torch.tensor([1.0, -1.0][:num_legs], device=env.device).view(1, -1)
-    hip_roll_target = torch.where(is_moving, hip_roll_amplitude * cmd_y * leg_sign * trajectory, zeros)
+    hip_roll_target = hip_roll_amplitude * cmd_y * leg_sign * trajectory
 
-    # Knee: bend during swing only
-    knee_target = torch.where(swing_mask, -knee_coupling * hip_pitch_target, zeros)
+    # Knee: bend during lead only, straight during lag
+    knee_target = torch.where(lead_mask, -knee_coupling * hip_pitch_target, torch.zeros_like(hip_pitch_target))
 
     # Compute errors for all joints
     hip_pitch_err = torch.square(hip_pitch_pos - hip_pitch_target)
@@ -426,9 +467,18 @@ def feet_air_time(
     env: EnvTypes,
     env_states: TensorState,
     threshold: float,
+    double_flight_penalty: float = 0.0,
     body_names: str | tuple[str] = ".*_ankle_roll_link",
 ) -> torch.Tensor:
-    """Reward long steps taken by the feet for bipeds using contact duration."""
+    """Reward long steps taken by the feet for bipeds using contact duration.
+
+    Args:
+        env: The environment object.
+        env_states: The state of the environment.
+        threshold: Maximum air time to reward.
+        double_flight_penalty: Penalty when both feet are in air (positive value = penalty).
+        body_names: Regex pattern for foot bodies.
+    """
     indices = _get_indices(env, body_names, env_states.robots[env.name].body_names).long()
     num_feet = len(indices)
     if num_feet == 0:
@@ -450,20 +500,24 @@ def feet_air_time(
     # Check current contact status
     contact_now = contact_forces.contact_forces_history[:, -1, indices, :].norm(dim=-1) > 1.0
 
-    # Update timers: reset air_time if contact, else increment. Reset contact_time if air, else increment.
+    # Update timers
     air_time[:] = torch.where(contact_now, torch.zeros_like(air_time), air_time + env.step_dt)
     contact_time[:] = torch.where(contact_now, contact_time + env.step_dt, torch.zeros_like(contact_time))
 
-    # Single stance logic: Reward is based on valid single stance duration?
-    # The reference implementation rewards maintaining single stance and accumulates time in mode.
-    single_stance = torch.sum(contact_now.int(), dim=1) == 1
+    # Count feet in contact
+    num_contacts = contact_now.sum(dim=1)
+    single_stance = num_contacts == 1
+    double_flight = num_contacts == 0
+
     # Time in current mode (either air or contact)
     in_mode_time = torch.where(contact_now, contact_time, air_time)
 
-    # Reward is the minimum time in mode across feet, IF in single stance.
-    # This implies we reward properly holding the stance/swing phase.
+    # Reward for single stance, penalty for double flight
     reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, torch.zeros_like(in_mode_time)), dim=1)[0]
     reward = torch.clamp(reward, max=threshold)
+
+    # Apply penalty when both feet are in air
+    reward = torch.where(double_flight, -double_flight_penalty * torch.ones_like(reward), reward)
 
     if hasattr(env, "reset_buf") and env.reset_buf.any():
         air_time[env.reset_buf] = 0.0

@@ -26,7 +26,7 @@ def lin_vel_cmd_levels(  # used
         max_episode_length = torch.max(env._episode_steps[env_ids].float())
         survived_long_enough = max_episode_length > env.max_episode_steps * 0.9
 
-        if (is_small_range and survived_long_enough) or (reward > reward_term_scales * 0.7):
+        if (is_small_range and survived_long_enough) or (reward > reward_term_scales * 0.8):
             delta_command = torch.tensor([-0.1, 0.1], device=env.device)
             ranges.lin_vel_x = torch.clamp(  # ensure new ranges don't exceed the hard limits
                 torch.tensor(ranges.lin_vel_x, device=env.device) + delta_command,

@@ -45,7 +45,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         track_lin_vel_xy = (3.0, {"std": math.sqrt(0.25)})
         track_ang_vel_z = (1.5, {"std": math.sqrt(0.25)})
         is_alive = 0.15
-        lin_vel_z = -0.05
+        lin_vel_z = -0.5
         ang_vel_xy = -0.01
         joint_vel = -0.001
         joint_acc = -2.5e-7
@@ -92,6 +92,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             2.0,
             {
                 "threshold": 0.3,
+                "double_flight_penalty": 0.5,
                 "body_names": (".*ankle_roll.*"),
             },
             reward_funcs.feet_air_time,
