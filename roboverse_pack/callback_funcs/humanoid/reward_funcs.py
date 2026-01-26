@@ -289,55 +289,121 @@ def _resolve_gait_params(
 def leg_raise_imitation(
     env: EnvTypes,
     env_states: TensorState,
-    hip_joint_names: str | tuple[str],
-    hip_min: float,
+    hip_pitch_names: str | tuple[str],
+    hip_roll_names: str | tuple[str],
+    knee_names: str | tuple[str],
+    hip_pitch_amplitude: float,
+    hip_roll_amplitude: float,
+    knee_coupling: float,
     std: float,
-    max_lin_vel_cmd: float = 0.5,
+    velocity_scale: float = 1.0,
     period: float | None = None,
     offset: list[float] | None = None,
     threshold: float | None = None,
     gait_key: str = "feet_gait",
 ) -> torch.Tensor:
-    """Reward matching a knee/hip relationship on the front leg at low command ranges."""
-    max_cmd = env.commands_manager.ranges.lin_vel_x[1]
-    if max_cmd > max_lin_vel_cmd:
-        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    """Command-adaptive leg raise imitation with full cycle supervision.
 
+    This reward guides hip pitch, hip roll, and knee joints throughout the entire gait cycle:
+    - Hip pitch follows a sinusoidal trajectory, amplitude scales with forward velocity (cmd_x)
+    - Hip roll target scales with lateral velocity (cmd_y) for side-stepping
+    - Knee bends during swing phase (derived from hip pitch), stays straight during stance
+
+    Args:
+        env: The environment object.
+        env_states: The state of the environment.
+        hip_pitch_names: Names of hip pitch joints (e.g., left_hip_pitch, right_hip_pitch).
+        hip_roll_names: Names of hip roll joints (e.g., left_hip_roll, right_hip_roll).
+        knee_names: Names of knee joints.
+        hip_pitch_amplitude: Base amplitude for hip pitch swing (negative = forward).
+        hip_roll_amplitude: Base amplitude for hip roll during lateral movement.
+        knee_coupling: Factor to derive knee bend from hip pitch (e.g., 0.5-0.7).
+        std: Standard deviation for the Gaussian kernel.
+        velocity_scale: Multiplier for how much command velocity affects hip pitch amplitude.
+        period: Gait period in seconds. If None, resolved from gait_key.
+        offset: Phase offsets for each leg. If None, resolved from gait_key.
+        threshold: Stance/swing threshold. If None, resolved from gait_key.
+        gait_key: Key to resolve gait params from if not provided.
+
+    Returns:
+        The computed reward.
+    """
     period, offset, threshold = _resolve_gait_params(env, period, offset, threshold, gait_key)
     if period is None or offset is None or threshold is None:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
-    if period <= 0.0 or threshold >= 1.0:
+    if period <= 0.0:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
     joint_names = env.sorted_joint_names
-    hip_idx = _get_indices(env, hip_joint_names, joint_names)
-    if hip_idx.numel() == 0:
+    hip_pitch_idx = _get_indices(env, hip_pitch_names, joint_names)
+    hip_roll_idx = _get_indices(env, hip_roll_names, joint_names)
+    knee_idx = _get_indices(env, knee_names, joint_names)
+    if hip_pitch_idx.numel() == 0 or hip_roll_idx.numel() == 0 or knee_idx.numel() == 0:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
-    num_legs = hip_idx.numel()
+    num_legs = min(hip_pitch_idx.numel(), hip_roll_idx.numel(), knee_idx.numel())
 
     joint_pos = env_states.robots[env.name].joint_pos
-    hip_pos = joint_pos[:, hip_idx[:num_legs]]
+    hip_pitch_pos = joint_pos[:, hip_pitch_idx[:num_legs]]
+    hip_roll_pos = joint_pos[:, hip_roll_idx[:num_legs]]
+    knee_pos = joint_pos[:, knee_idx[:num_legs]]
 
-    phase = ((env._episode_steps * env.step_dt) % period) / period
-    offsets = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
-    leg_phase = (phase.unsqueeze(1) + offsets) % 1.0
+    # Get command velocities
+    cmd_x = env.commands_manager.value[:, 0:1]  # Forward velocity (N, 1)
+    cmd_y = env.commands_manager.value[:, 1:2]  # Lateral velocity (N, 1)
+
+    # Command-adaptive hip pitch amplitude:
+    # - Direction: determined by sign of cmd_x (forward = negative hip pitch, backward = positive)
+    # - Magnitude: scales with |cmd_x|
+    # When cmd_x is near zero, default to forward direction (sign = 1)
+    direction = torch.sign(cmd_x)
+    direction = torch.where(torch.abs(cmd_x) < 0.05, torch.ones_like(direction), direction)
+    magnitude = 1.0 + velocity_scale * torch.abs(cmd_x)  # (N, 1)
+    # hip_pitch_amplitude is typically negative (forward swing), direction inverts for backward
+    adapted_pitch_amplitude = hip_pitch_amplitude * direction * magnitude  # (N, 1)
+
+    # Compute phase for each leg
+    global_phase = ((env._episode_steps * env.step_dt) % period) / period
+    offsets_tensor = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
+    leg_phase = (global_phase.unsqueeze(1) + offsets_tensor) % 1.0  # (N, num_legs)
+
+    # Determine swing vs stance phase
     swing_mask = leg_phase >= threshold
-    swing_phase = (leg_phase - threshold) / max(1.0 - threshold, 1e-6)
-    swing_phase = torch.clamp(swing_phase, min=0.0, max=1.0)
-    swing_curve = torch.sin(torch.pi * swing_phase)
 
-    hip_target = hip_min * swing_curve
+    # Stance moving subphase aligned with other leg's swing
+    swing_duration = 1.0 - threshold  # e.g., 0.45
+    stance_move_start = threshold - 0.5  # e.g., 0.05
+    stance_move_mask = (leg_phase >= stance_move_start) & (leg_phase < 0.5)
 
-    err = torch.square(hip_pos - hip_target)
-    err = torch.where(swing_mask, err, torch.zeros_like(err))
+    # Unified moving phase calculation
+    is_moving = swing_mask | stance_move_mask
+    phase_offset = torch.where(swing_mask, threshold, stance_move_start)
+    moving_norm = torch.clamp((leg_phase - phase_offset) / swing_duration, 0.0, 1.0)
 
-    count = swing_mask.sum(dim=1)
-    reward = torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
-    valid = count > 0
-    if valid.any():
-        mean_err = err.sum(dim=1)[valid] / count[valid]
-        reward[valid] = torch.exp(-mean_err / std**2)
+    # Trajectory: positive for swing (forward), negative for stance (backward)
+    trajectory = (2.0 * swing_mask.float() - 1.0) * torch.sin(torch.pi * moving_norm)
+
+    # Targets (zeros when not active)
+    zeros = torch.zeros_like(leg_phase)
+    hip_pitch_target = torch.where(is_moving, adapted_pitch_amplitude * trajectory, zeros)
+
+    # Hip roll: during moving phases (swing and stance_move), direction based on cmd_y and leg side
+    leg_sign = torch.tensor([1.0, -1.0][:num_legs], device=env.device).view(1, -1)
+    hip_roll_target = torch.where(is_moving, hip_roll_amplitude * cmd_y * leg_sign * trajectory, zeros)
+
+    # Knee: bend during swing only
+    knee_target = torch.where(swing_mask, -knee_coupling * hip_pitch_target, zeros)
+
+    # Compute errors for all joints
+    hip_pitch_err = torch.square(hip_pitch_pos - hip_pitch_target)
+    hip_roll_err = torch.square(hip_roll_pos - hip_roll_target)
+    knee_err = torch.square(knee_pos - knee_target)
+    total_err = hip_pitch_err + hip_roll_err + knee_err
+
+    # Mean error across legs
+    mean_err = total_err.mean(dim=1)
+    reward = torch.exp(-mean_err / std**2)
+
     return reward
 
 

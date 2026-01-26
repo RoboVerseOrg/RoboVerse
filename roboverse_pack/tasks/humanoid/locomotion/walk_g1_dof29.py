@@ -99,10 +99,14 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         leg_raise_imitation = (
             2.0,
             {
-                "hip_joint_names": ("left_hip_pitch_joint", "right_hip_pitch_joint"),
-                "hip_min": -0.35,
+                "hip_pitch_names": ("left_hip_pitch_joint", "right_hip_pitch_joint"),
+                "hip_roll_names": ("left_hip_roll_joint", "right_hip_roll_joint"),
+                "knee_names": ("left_knee_joint", "right_knee_joint"),
+                "hip_pitch_amplitude": -0.35,
+                "hip_roll_amplitude": 0.35,
+                "knee_coupling": 0.4,
                 "std": 0.5,
-                "max_lin_vel_cmd": 0.5,
+                "velocity_scale": 0.5,
             },
             reward_funcs.leg_raise_imitation,
         )
