@@ -173,7 +173,7 @@ def feet_gait(
     period: float,
     offset: list[float],
     threshold: float = 0.55,
-    phase_offset: float = 0.225,
+    phase_offset: float = 0.275,
     body_names: str | tuple[str] = ".*ankle_roll.*",
 ) -> torch.Tensor:
     """Reward alternating stance phases across feet following a target gait pattern.
@@ -361,7 +361,8 @@ def leg_raise_imitation(
     global_phase = ((env._episode_steps * env.step_dt) % period) / period
     offsets_tensor = torch.tensor(offset[:num_legs], device=env.device).view(1, -1)
     # Apply phase_offset to shift the entire cycle
-    leg_phase = (global_phase.unsqueeze(1) + offsets_tensor + phase_offset) % 1.0  # (N, num_legs)
+    # User requested to move curve 0.05 lefter (total) => Add 0.05 to phase
+    leg_phase = (global_phase.unsqueeze(1) + offsets_tensor + phase_offset + 0.05) % 1.0  # (N, num_legs)
 
     # Flat-Top Sine Logic (Gapless)
     # Lead Phase: [0.5 + static, 1.0 + static] (WRAPPED TO 0.05) if static=0.05
