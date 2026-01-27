@@ -106,6 +106,9 @@ class WalkG1Dof12EnvCfg(BaseEnvCfg):
 
     curriculum = BaseEnvCfg.Curriculum(enabled=False, funcs={"lin_vel_cmd_levels": lin_vel_cmd_levels})
 
+    initial_states = BaseEnvCfg.InitialStates()
+    initial_states.robots = {"g1_dof12": {"pos": [0.0, 0.0, 0.8]}}
+
     callbacks_query = {"contact_forces": ContactForces(history_length=3)}
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(

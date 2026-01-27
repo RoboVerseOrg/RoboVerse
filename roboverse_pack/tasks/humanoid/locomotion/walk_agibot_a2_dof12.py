@@ -116,6 +116,21 @@ class WalkAgibotA2Dof12EnvCfg(BaseEnvCfg):
         },
     )
 
+    initial_states = BaseEnvCfg.InitialStates()
+    initial_states.robots = {
+        "agibot_a2_dof12": {
+            "pos": [0.0, 0.0, 0.98],
+            "default_joint_pos": {
+                ".*_hip_roll": 0.0,
+                ".*_hip_yaw": 0.0,
+                ".*_hip_pitch": -0.115,
+                ".*_tarsus": 0.267,
+                ".*_toe_pitch": -0.152,
+                ".*_toe_roll": 0.0,
+            },
+        }
+    }
+
     callbacks_query = {"contact_forces": ContactForces(history_length=3)}
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(
