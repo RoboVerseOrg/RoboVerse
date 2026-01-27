@@ -14,9 +14,13 @@ class UnitreeLowCmdActuationModel(ActuationModel):
         *,
         protocol_to_sorted: list[int],
         torque_limits_protocol: np.ndarray | None = None,
+        kp_override_protocol: np.ndarray | None = None,
+        kd_override_protocol: np.ndarray | None = None,
     ) -> None:
         self._protocol_to_sorted = np.asarray(protocol_to_sorted, dtype=np.int64)
         self._torque_limits_protocol = torque_limits_protocol
+        self._kp_override_protocol = kp_override_protocol
+        self._kd_override_protocol = kd_override_protocol
 
     def compute_effort(self, cmd: CanonicalRobotCommand, obs: SimRobotObservation) -> np.ndarray:
         """Compute joint efforts based on the command and observation."""
@@ -30,11 +34,14 @@ class UnitreeLowCmdActuationModel(ActuationModel):
         if cmd.tau_ff is not None:
             tau += cmd.tau_ff.astype(np.float32, copy=False)
 
-        if cmd.q_des is not None and cmd.kp is not None:
-            tau += cmd.kp.astype(np.float32, copy=False) * (cmd.q_des.astype(np.float32, copy=False) - q)
+        kp = self._kp_override_protocol if self._kp_override_protocol is not None else cmd.kp
+        kd = self._kd_override_protocol if self._kd_override_protocol is not None else cmd.kd
 
-        if cmd.qd_des is not None and cmd.kd is not None:
-            tau += cmd.kd.astype(np.float32, copy=False) * (cmd.qd_des.astype(np.float32, copy=False) - dq)
+        if cmd.q_des is not None and kp is not None:
+            tau += kp.astype(np.float32, copy=False) * (cmd.q_des.astype(np.float32, copy=False) - q)
+
+        if cmd.qd_des is not None and kd is not None:
+            tau += kd.astype(np.float32, copy=False) * (cmd.qd_des.astype(np.float32, copy=False) - dq)
 
         # If the protocol exposes a per-motor mode, treat mode==0 as "disabled".
         if cmd.mode is not None:

@@ -57,3 +57,25 @@ class ActuationModel(ABC):
     def compute_effort(self, cmd: CanonicalRobotCommand, obs: SimRobotObservation) -> np.ndarray:  # pragma: no cover
         """Return effort vector in *sorted simulator joint order*."""
         raise NotImplementedError
+
+
+class StandbyController(ABC):
+    """Compute a safe effort when no external controller is active."""
+
+    @abstractmethod
+    def compute_effort(self, obs: SimRobotObservation) -> np.ndarray:  # pragma: no cover
+        """Return effort vector in *sorted simulator joint order*."""
+        raise NotImplementedError
+
+
+class ExternalAssist(ABC):
+    """Apply extra forces/constraints that help keep the robot safe during bringup."""
+
+    @abstractmethod
+    def apply(self, obs: SimRobotObservation, *, dt: float) -> None:  # pragma: no cover
+        """Apply the assist force/constraint."""
+        raise NotImplementedError
+
+    def start_release(self) -> None:
+        """Begin ramping the assist off (called when protocol control is stable)."""
+        return
