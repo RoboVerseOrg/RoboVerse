@@ -215,15 +215,15 @@ The evaluation script runs for 1,000,000 steps with fixed velocity commands for 
 
 Real-world deployment entry point:
 ```bash
-python roboverse_pack/tasks/humanoid/unitree_deploy/deploy_real.py <network_interface> <robot_yaml>
+python scripts/unitree_deploy/deploy_real.py <network_interface> <robot_yaml> [--domain-id <id>]
 ```
 
 Example:
 ```bash
-python roboverse_pack/tasks/humanoid/unitree_deploy/deploy_real.py eno1 g1_dof29_dex3.yaml
+python scripts/unitree_deploy/deploy_real.py eno1 g1_dof29_dex3.yaml
 ```
 
-Configuration files are located in `roboverse_pack/tasks/humanoid/unitree_deploy/configs/`:
+Configuration files are located in `scripts/unitree_deploy/configs/`:
 - `g1_dof12.yaml` - 12 DOF lower-body control
 - `g1_dof29.yaml` - 29 DOF full-body control
 - `g1_dof29_dex3.yaml` - 43 DOF with DeX3 hands
@@ -231,6 +231,27 @@ Configuration files are located in `roboverse_pack/tasks/humanoid/unitree_deploy
 In the YAML file, set the `policy_path` to your exported JIT policy (the `policy.pt` file from training output).
 
 This will initialize the real controller and stream commands to the robot. Ensure your networking and safety interlocks are correctly configured.
+
+### Sim-Side Validation (Unitree SDK2 Protocol)
+
+You can validate the same controller against a simulator by running a Unitree SDK2 protocol server backed by RoboVerse.
+Use a non-zero DDS domain id (e.g. 1) for simulators to avoid colliding with real robots.
+
+Terminal A (sim server):
+```bash
+python scripts/robot_protocols/unitree_sdk2_sim_server.py \
+  --sim mujoco \
+  --robot g1_dof29 \
+  --headless \
+  --domain-id 1 \
+  --iface lo \
+  --auto-remote
+```
+
+Terminal B (controller, unchanged):
+```bash
+python scripts/unitree_deploy/deploy_real.py lo g1_dof29.yaml --domain-id 1
+```
 
 
 ## Advanced Features

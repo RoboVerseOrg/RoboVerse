@@ -315,9 +315,14 @@ class SinglePybulletHandler(BaseSimHandler):
         self.debug_lines = []
 
     def _apply_action(self, action, object):
+        # Kept for backward compatibility (position control).
         p.setJointMotorControlArray(
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
+
+    def _apply_effort(self, effort, object):
+        # Torque control expects a force per joint index.
+        p.setJointMotorControlArray(object, range(effort.shape[0]), controlMode=p.TORQUE_CONTROL, forces=effort)
 
     def set_dof_targets(self, actions: list[Action] | TensorState):
         """Set the target joint positions for the object.
@@ -331,8 +336,14 @@ class SinglePybulletHandler(BaseSimHandler):
         self._actions_cache = actions
 
         for obj_name, action in actions.items():
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
-            self._apply_action(action_arr, self.object_ids[obj_name])
+            if action.get("dof_effort_target"):
+                effort_arr = np.array(
+                    [action["dof_effort_target"][name] for name in self.object_joint_order[obj_name]], dtype=np.float32
+                )
+                self._apply_effort(effort_arr, self.object_ids[obj_name])
+            else:
+                action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
+                self._apply_action(action_arr, self.object_ids[obj_name])
 
     def _simulate(self):
         """Step the simulation."""

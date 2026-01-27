@@ -12,6 +12,9 @@ from metasim.utils import configclass
 class G1Dof12Cfg(RobotCfg):
     name: str = "g1_dof12"
     num_joints: int = 12
+    # Spawn above ground by default (many workflows, including protocol servers, do not
+    # run a task-style reset before the first physics step).
+    default_position: tuple[float, float, float] = (0.0, 0.0, 0.78)
     usd_path: str = "roboverse_data/robots/g1/usd/g1_12dof.usd"
     xml_path: str = "roboverse_data/robots/g1/mjcf/g1_12dof.xml"
     urdf_path: str = "roboverse_data/robots/g1/urdf/g1_12dof.urdf"
