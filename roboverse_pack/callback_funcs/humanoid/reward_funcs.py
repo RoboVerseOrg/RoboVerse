@@ -279,6 +279,59 @@ def _resolve_gait_params(
     return period, offset, threshold
 
 
+def _compute_sine_flat_trajectory(phase: torch.Tensor, static_duration: float) -> tuple[torch.Tensor, torch.Tensor]:
+    """Computes a flat-top sine trajectory and its velocity profile (shape).
+
+    The trajectory consists of a Rise -> Plateau -> Fall -> (gap) pattern.
+
+    Returns:
+        trajectory: The position trajectory (sign * magnitude).
+        velocity_profile: The magnitude of the derivative (always positive), zero during plateau.
+    """
+    # Lead Start: 0.5 + static_duration
+    lead_start = 0.5 + static_duration
+    p_rel = (phase - lead_start) % 1.0
+
+    # Lead Duration is 0.5 (Half Cycle).
+    is_lead = p_rel < 0.5
+
+    # Within Lead (or Lag), we have Rise -> Plateau -> Fall. Total Duration 0.5.
+    plateau_len = static_duration
+    rise_len = (0.5 - plateau_len) / 2.0
+
+    # Local phase within the 0.5 window
+    # For Lag, we use the second half (0.5 to 1.0) mapped to 0 to 0.5
+    local_p = torch.where(is_lead, p_rel, p_rel - 0.5)
+
+    mag = torch.zeros_like(phase)
+    vel = torch.zeros_like(phase)
+
+    in_rise = local_p < rise_len
+    in_plateau = (local_p >= rise_len) & (local_p < (rise_len + plateau_len))
+    in_fall = local_p >= (rise_len + plateau_len)
+
+    # Rise: Sin(0 to pi/2)
+    rise_arg = local_p / rise_len
+    mag = torch.where(in_rise, torch.sin(0.5 * torch.pi * rise_arg), mag)
+    vel = torch.where(in_rise, torch.cos(0.5 * torch.pi * rise_arg), vel)
+
+    # Plateau: 1.0 (pos), 0.0 (vel)
+    mag = torch.where(in_plateau, torch.ones_like(mag), mag)
+    # vel remains 0
+
+    # Fall: Sin(pi/2 to pi)
+    # Distance from end (0.5)
+    dist_from_end = 0.5 - local_p
+    fall_arg = dist_from_end / rise_len
+    mag = torch.where(in_fall, torch.sin(0.5 * torch.pi * fall_arg), mag)
+    vel = torch.where(in_fall, torch.cos(0.5 * torch.pi * fall_arg), vel)
+
+    # Sign: Lead is negative trajectory (inverted per user request), Lag is positive
+    sign = torch.where(is_lead, -torch.ones_like(phase), torch.ones_like(phase))
+
+    return sign * mag, vel
+
+
 def leg_raise_imitation(
     env: EnvTypes,
     env_states: TensorState,
@@ -302,6 +355,7 @@ def leg_raise_imitation(
     - Hip pitch follows a sinusoidal trajectory, amplitude scales with forward velocity (cmd_x)
     - Hip roll target scales with lateral velocity (cmd_y) for side-stepping
     - Knee bends during lead phase (derived from hip pitch), stays straight during lag
+    - Knee target is derived from the velocity profile of the hip pitch trajectory (pi/2 shift)
 
     Args:
         env: The environment object.
@@ -364,67 +418,7 @@ def leg_raise_imitation(
     # User requested to move curve 0.05 lefter (total) => Add 0.05 to phase
     leg_phase = (global_phase.unsqueeze(1) + offsets_tensor + phase_offset + 0.05) % 1.0  # (N, num_legs)
 
-    # Flat-Top Sine Logic (Gapless)
-    # Lead Phase: [0.5 + static, 1.0 + static] (WRAPPED TO 0.05) if static=0.05
-    # Center of Lead: 0.8.
-    # Plateau: [0.8 - static/2, 0.8 + static/2] = [0.775, 0.825]
-
-    # We define Lead as the Positive Amplitude region.
-    # Lead Start: 0.5 + static_duration
-    # Phase Relative to Lead Start:
-    lead_start = 0.5 + static_duration
-    p_rel = (leg_phase - lead_start) % 1.0
-
-    # Lead Duration is 0.5 (Half Cycle).
-    # If p_rel < 0.5: Lead (Positive)
-    # Else: Lag (Negative)
-
-    is_lead = p_rel < 0.5
-
-    # Within Lead (or Lag), we have Rise -> Plateau -> Fall
-    # Total Duration 0.5.
-    # Plateau Duration: static_duration.
-    # Rise Duration: (0.5 - static_duration) / 2.
-
-    plateau_len = static_duration
-    rise_len = (0.5 - plateau_len) / 2.0
-
-    # Local phase within the 0.5 window
-    # For Lag, we use the second half (0.5 to 1.0) mapped to 0 to 0.5
-    local_p = torch.where(is_lead, p_rel, p_rel - 0.5)
-
-    # Calculate Magnitude based on local_p [0, 0.5]
-    mag = torch.zeros_like(leg_phase)
-
-    in_rise = local_p < rise_len
-    in_plateau = (local_p >= rise_len) & (local_p < (rise_len + plateau_len))
-    in_fall = local_p >= (rise_len + plateau_len)
-
-    # Rise: Sin(0 to pi/2)
-    rise_arg = local_p / rise_len
-    mag = torch.where(in_rise, torch.sin(0.5 * torch.pi * rise_arg), mag)
-
-    # Plateau: 1.0
-    mag = torch.where(in_plateau, torch.ones_like(mag), mag)
-
-    # Fall: Sin(pi/2 to pi) -> Sin(pi/2 * (1 + arg)) or Cos?
-    # Easier: sin(pi/2 * (fall_end - t) / rise_len)?
-    # Fall window length is same as rise_len.
-    # Distance from end (0.5)
-    dist_from_end = 0.5 - local_p
-    fall_arg = dist_from_end / rise_len
-    mag = torch.where(in_fall, torch.sin(0.5 * torch.pi * fall_arg), mag)
-
-    # Apply Sign (Inverted per user request)
-    # Lead (Positive Phase in Interval) -> Now Negative Trajectory
-    # Lag (Negative Phase in Interval) -> Now Positive Trajectory
-    sign = torch.where(is_lead, -torch.ones_like(leg_phase), torch.ones_like(leg_phase))
-    trajectory = sign * mag
-
-    # Lead Mask for Knee Logic
-    # Knee bends during "Lead phase" (Positive).
-    # Matches 'is_lead' exactly.
-    lead_mask = is_lead
+    trajectory, velocity_profile = _compute_sine_flat_trajectory(leg_phase, static_duration)
 
     # Targets (always active, no static phases)
     hip_pitch_target = adapted_pitch_amplitude * trajectory
@@ -433,8 +427,11 @@ def leg_raise_imitation(
     leg_sign = torch.tensor([1.0, -1.0][:num_legs], device=env.device).view(1, -1)
     hip_roll_target = hip_roll_amplitude * cmd_y * leg_sign * trajectory
 
-    # Knee: bend during lead only, straight during lag
-    knee_target = torch.where(lead_mask, -knee_coupling * hip_pitch_target, torch.zeros_like(hip_pitch_target))
+    # Knee: phase shifted by pi/2 relative to hip pitch, which mimics the velocity profile.
+    # We use the velocity profile computed directly from the trajectory generation.
+    # The profile is 0 during plateaus (common stance) and follows a cosine pulse during movement.
+    # Always positive.
+    knee_target = knee_coupling * torch.abs(adapted_pitch_amplitude) * velocity_profile
 
     # Compute errors for all joints
     hip_pitch_err = torch.square(hip_pitch_pos - hip_pitch_target)
