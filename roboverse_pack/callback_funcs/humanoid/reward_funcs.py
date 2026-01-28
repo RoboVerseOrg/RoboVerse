@@ -248,37 +248,6 @@ def feet_clearance(
     return torch.exp(-torch.sum(reward, dim=1) / std**2)
 
 
-def _resolve_gait_params(
-    env: EnvTypes,
-    period: float | None,
-    offset: list[float] | None,
-    threshold: float | None,
-    gait_key: str,
-) -> tuple[float | None, list[float] | None, float | None]:
-    if period is not None and offset is not None and threshold is not None:
-        return period, offset, threshold
-
-    params = None
-    reward_entry = getattr(env, "reward_scales", {}).get(gait_key)
-    if isinstance(reward_entry, tuple) and len(reward_entry) >= 2:
-        params = reward_entry[1]
-
-    if params is None:
-        cfg_entry = getattr(getattr(env.cfg.rewards, "scales", None), gait_key, None)
-        if isinstance(cfg_entry, tuple) and len(cfg_entry) >= 2:
-            params = cfg_entry[1]
-
-    if isinstance(params, dict):
-        if period is None:
-            period = params.get("period", period)
-        if offset is None:
-            offset = params.get("offset", offset)
-        if threshold is None:
-            threshold = params.get("threshold", threshold)
-
-    return period, offset, threshold
-
-
 def _compute_sine_flat_trajectory(phase: torch.Tensor, static_duration: float) -> tuple[torch.Tensor, torch.Tensor]:
     """Computes a flat-top sine trajectory and its velocity profile (shape).
 
@@ -342,12 +311,11 @@ def leg_raise_imitation(
     hip_roll_amplitude: float,
     knee_coupling: float,
     std: float,
+    period: float,
+    offset: list[float],
+    static_duration: float = 0.05,
     velocity_scale: float = 1.0,
-    period: float | None = None,
-    offset: list[float] | None = None,
-    static_duration: float | None = None,
     phase_offset: float = 0.0,
-    gait_key: str = "feet_gait",
 ) -> torch.Tensor:
     """Command-adaptive leg raise imitation with full cycle supervision.
 
@@ -367,20 +335,16 @@ def leg_raise_imitation(
         hip_roll_amplitude: Base amplitude for hip roll during lateral movement.
         knee_coupling: Factor to derive knee bend from hip pitch (e.g., 0.5-0.7).
         std: Standard deviation for the Gaussian kernel.
+        period: Gait period in seconds.
+        offset: Phase offsets for each leg (e.g., [0.0, 0.5] for alternating).
+        static_duration: Duration of the static hold for both feet.
         velocity_scale: Multiplier for how much command velocity affects hip pitch amplitude.
-        period: Gait period in seconds. If None, resolved from gait_key.
-        offset: Phase offsets for each leg. If None, resolved from gait_key.
-        static_duration: Duration of the static hold at peaks. If None, resolved from gait_key (as threshold).
         phase_offset: Shift to align with gait pattern.
-        gait_key: Key to resolve gait params from if not provided.
 
     Returns:
         The computed reward.
     """
-    period, offset, static_duration = _resolve_gait_params(env, period, offset, static_duration, gait_key)
-    if period is None or offset is None or static_duration is None:
-        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
-    if period <= 0.0:
+    if period <= 0.0 or static_duration >= 0.25:
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
     joint_names = env.sorted_joint_names
@@ -400,6 +364,7 @@ def leg_raise_imitation(
     # Get command velocities
     cmd_x = env.commands_manager.value[:, 0:1]  # Forward velocity (N, 1)
     cmd_y = env.commands_manager.value[:, 1:2]  # Lateral velocity (N, 1)
+    cmd_magnitude = torch.sqrt(cmd_x**2 + cmd_y**2)  # Overall command magnitude (N, 1)
 
     # Command-adaptive hip pitch amplitude:
     # - Direction: determined by sign of cmd_x (forward = negative hip pitch, backward = positive)
@@ -407,9 +372,9 @@ def leg_raise_imitation(
     # When cmd_x is near zero, default to forward direction (sign = 1)
     direction = torch.sign(cmd_x)
     direction = torch.where(torch.abs(cmd_x) < 0.05, torch.ones_like(direction), direction)
-    magnitude = 1.0 + velocity_scale * torch.abs(cmd_x)  # (N, 1)
+    pitch_magnitude = 1.0 + velocity_scale * torch.abs(cmd_x)  # (N, 1)
     # hip_pitch_amplitude is typically negative (forward swing), direction inverts for backward
-    adapted_pitch_amplitude = hip_pitch_amplitude * direction * magnitude  # (N, 1)
+    adapted_pitch_amplitude = hip_pitch_amplitude * direction * pitch_magnitude  # (N, 1)
 
     # Compute phase for each leg
     global_phase = ((env._episode_steps * env.step_dt) % period) / period
@@ -427,11 +392,11 @@ def leg_raise_imitation(
     leg_sign = torch.tensor([1.0, -1.0][:num_legs], device=env.device).view(1, -1)
     hip_roll_target = hip_roll_amplitude * cmd_y * leg_sign * trajectory
 
-    # Knee: phase shifted by pi/2 relative to hip pitch, which mimics the velocity profile.
-    # We use the velocity profile computed directly from the trajectory generation.
-    # The profile is 0 during plateaus (common stance) and follows a cosine pulse during movement.
-    # Always positive.
-    knee_target = knee_coupling * torch.abs(adapted_pitch_amplitude) * velocity_profile
+    # Knee: scales with overall command magnitude (both forward and lateral movement)
+    # This ensures knee bending during side-stepping as well as forward/backward walking.
+    # The velocity_profile provides the phase-dependent shape (cos pulse during rise/fall, 0 during plateau).
+    knee_amplitude = 1.0 + velocity_scale * cmd_magnitude  # Scale with total velocity
+    knee_target = knee_coupling * torch.abs(hip_pitch_amplitude) * knee_amplitude * velocity_profile
 
     # Compute errors for all joints
     hip_pitch_err = torch.square(hip_pitch_pos - hip_pitch_target)
