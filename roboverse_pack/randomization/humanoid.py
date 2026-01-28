@@ -583,7 +583,16 @@ class MassRandomizer(BaseQueryType):
             body_ids = self.handler._get_body_indices(env_id, self.obj_name)
             if not body_ids:
                 continue
-            name_to_body = {model.body_key[idx]: idx for idx in body_ids}
+            name_to_body: dict[str, int] = {}
+            for idx in body_ids:
+                key = model.body_key[idx]
+                if not isinstance(key, str):
+                    continue
+                name_to_body[key] = idx
+                if "/" in key:
+                    short = key.rsplit("/", 1)[-1]
+                    if short and short not in name_to_body:
+                        name_to_body[short] = idx
             ids = [name_to_body.get(name) for name in self.body_names]
             body_id_map[env_id] = ids
         return body_id_map

@@ -48,6 +48,10 @@ class BaseActuatorCfg:
 class RobotCfg(ArticulationObjCfg):
     """Base configuration class for robots."""
 
+    # Prefer USD for Newton by default for robots (better visuals / fewer importer edge cases),
+    # while keeping the global object default as URDF.
+    file_type: dict[str, str] = {**ArticulationObjCfg.file_type, "newton": "usd"}
+
     # ==================== Basic Information ====================
     name: str | None = None
     """Robot name for identification and reference"""

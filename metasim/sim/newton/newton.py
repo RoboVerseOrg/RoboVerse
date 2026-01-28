@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
 
 import math
+import os
 from collections import defaultdict
 
 import newton
@@ -17,6 +18,7 @@ import scipy.spatial.transform as tr
 import warp as wp
 from newton import Contacts
 from newton._src.sim.articulation import eval_fk
+from newton._src.sim.builder import ShapeFlags
 from newton._src.sim.joints import JointType
 from newton.sensors import SensorContact, SensorTiledCamera, populate_contacts
 from newton.solvers import SolverMuJoCo
@@ -62,6 +64,7 @@ class NewtonHandler(BaseSimHandler):
     ):
         super().__init__(scenario, optional_queries)
 
+        self._ensure_warp_cache_dir()
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Newton model and state
@@ -109,6 +112,35 @@ class NewtonHandler(BaseSimHandler):
             self.decimation = 1
 
         log.info(f"NewtonHandler initialized for {self.num_envs} environments")
+
+    @staticmethod
+    def _ensure_warp_cache_dir() -> None:
+        """Ensure Warp's kernel cache directory is writable.
+
+        USD import triggers Warp kernel compilation (e.g. inertia computation). In some environments
+        the default cache location may be read-only. Prefer a writable `/tmp` cache unless the user
+        already configured `WARP_CACHE_PATH`.
+        """
+        if os.environ.get("WARP_CACHE_PATH"):
+            return
+
+        # If Warp already has a cache dir and it is writable, keep it.
+        try:
+            cache_dir = getattr(wp.config, "kernel_cache_dir", None)
+            if cache_dir and os.path.isdir(cache_dir) and os.access(cache_dir, os.W_OK):
+                return
+        except Exception:
+            pass
+
+        fallback = "/tmp/warp_cache"
+        try:
+            os.makedirs(fallback, exist_ok=True)
+            os.environ["WARP_CACHE_PATH"] = fallback
+            # Also set the runtime config so this takes effect without relying on env-var lookup timing.
+            wp.config.kernel_cache_dir = fallback
+        except Exception:
+            # Best-effort; if this fails, Warp will raise a clearer error on first compilation.
+            return
 
     def launch(self) -> None:
         """Initialize Newton model, allocate states, and create solver."""
@@ -425,25 +457,44 @@ class NewtonHandler(BaseSimHandler):
         log.debug(f"Newton model built: {self._model.body_count} bodies, {self._model.joint_count} joints")
 
     def _add_robot_to_builder(self, builder: newton.ModelBuilder, robot) -> None:
-        """Add a robot to the model builder using URDF import."""
-        # Try to import URDF
-        urdf_path = robot.urdf_path
-        if urdf_path is None:
-            log.error(f"Robot {robot.name} has no URDF path defined")
-            raise ValueError(f"Robot {robot.name} requires urdf_path for Newton")
+        """Add a robot to the model builder using URDF or USD import."""
+        asset_type, asset_path = self._resolve_newton_asset(robot, label=f"Robot {robot.name}")
 
-        # Parse URDF into builder
-        ret = builder.add_urdf(
-            urdf_path,
-            xform=wp.transform(
-                wp.vec3(*robot.default_position),
-                wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
-            ),
-            floating=not robot.fix_base_link,
-            enable_self_collisions=robot.enabled_self_collisions,
-            ignore_inertial_definitions=False,
-            collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
+        xform = wp.transform(
+            wp.vec3(*robot.default_position),
+            wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
         )
+
+        if asset_type == "urdf":
+            builder.add_urdf(
+                asset_path,
+                xform=xform,
+                floating=not robot.fix_base_link,
+                enable_self_collisions=robot.enabled_self_collisions,
+                ignore_inertial_definitions=False,
+                collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
+            )
+            return
+
+        if asset_type == "usd":
+            start_count = len(builder.body_mass)
+            self._add_usd_to_builder(
+                builder,
+                asset_path,
+                xform=xform,
+                enable_self_collisions=getattr(robot, "enabled_self_collisions", True),
+                collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
+                skip_mesh_approximation=False,
+                hide_collision_shapes=True,
+                load_visual_shapes=True,
+                ignore_paths=getattr(robot, "newton_ignore_paths", None),
+            )
+            if robot.fix_base_link:
+                self._make_body_kinematic(builder, start_count)
+            # (Robots should remain collidable; do not disable collisions.)
+            return
+
+        raise ValueError(f"Unsupported Newton asset type: {asset_type}")
 
     def _normalize_color(self, color) -> np.ndarray | None:
         """Normalize color list/tuple to RGBA float array in [0, 1]."""
@@ -510,32 +561,255 @@ class NewtonHandler(BaseSimHandler):
                 if color is not None:
                     shape_colors[shape_idx] = color
         elif isinstance(obj, ArticulationObjCfg):
-            # Load articulated object from URDF
-            urdf_path = obj.urdf_path
-            if urdf_path:
+            asset_type, asset_path = self._resolve_newton_asset(obj, label=f"Object {obj.name}")
+            xform = wp.transform(
+                wp.vec3(*obj.default_position),
+                wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
+            )
+            if asset_type == "urdf":
                 builder.add_urdf(
-                    urdf_path,
-                    xform=wp.transform(
-                        wp.vec3(*obj.default_position),
-                        wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
-                    ),
+                    asset_path,
+                    xform=xform,
                     floating=not obj.fix_base_link,
                     ignore_inertial_definitions=False,
                     collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
                 )
+            elif asset_type == "usd":
+                start_count = len(builder.body_mass)
+                start_shape_count = builder.shape_count
+                self._add_usd_to_builder(
+                    builder,
+                    asset_path,
+                    xform=xform,
+                    enable_self_collisions=True,
+                    collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
+                    skip_mesh_approximation=getattr(obj, "fix_base_link", False),
+                    hide_collision_shapes=getattr(obj, "newton_hide_collision_shapes", False),
+                    load_visual_shapes=getattr(obj, "newton_load_visual_shapes", True),
+                    ignore_paths=getattr(obj, "newton_ignore_paths", None),
+                )
+                if obj.fix_base_link:
+                    self._make_body_kinematic(builder, start_count)
+                if getattr(obj, "collision_enabled", True) is False:
+                    self._make_shapes_visual_only(builder, start_shape_count, builder.shape_count)
+            else:
+                raise ValueError(f"Unsupported Newton asset type: {asset_type}")
         else:
-            # Try URDF for other file-based objects
-            if hasattr(obj, "urdf_path") and obj.urdf_path:
+            # Other file-based objects (RigidObjCfg, etc.)
+            try:
+                asset_type, asset_path = self._resolve_newton_asset(obj, label=f"Object {getattr(obj, 'name', '?')}")
+            except ValueError:
+                return
+
+            xform = wp.transform(
+                wp.vec3(*getattr(obj, "default_position", (0.0, 0.0, 0.0))),
+                wp.quat(*self._wxyz_to_xyzw(getattr(obj, "default_orientation", (1.0, 0.0, 0.0, 0.0)))),
+            )
+
+            if asset_type == "urdf":
                 builder.add_urdf(
-                    obj.urdf_path,
-                    xform=wp.transform(
-                        wp.vec3(*obj.default_position),
-                        wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
-                    ),
+                    asset_path,
+                    xform=xform,
                     floating=not getattr(obj, "fix_base_link", True),
                     ignore_inertial_definitions=False,
                     collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
                 )
+            elif asset_type == "usd":
+                start_count = len(builder.body_mass)
+                start_shape_count = builder.shape_count
+                self._add_usd_to_builder(
+                    builder,
+                    asset_path,
+                    xform=xform,
+                    enable_self_collisions=True,
+                    collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
+                    skip_mesh_approximation=getattr(obj, "fix_base_link", False),
+                    hide_collision_shapes=getattr(obj, "newton_hide_collision_shapes", False),
+                    load_visual_shapes=getattr(obj, "newton_load_visual_shapes", True),
+                    ignore_paths=getattr(obj, "newton_ignore_paths", None),
+                )
+                if getattr(obj, "fix_base_link", False):
+                    self._make_bodies_kinematic(builder, start_count)
+                if getattr(obj, "collision_enabled", True) is False:
+                    self._make_shapes_visual_only(builder, start_shape_count, builder.shape_count)
+            else:
+                raise ValueError(f"Unsupported Newton asset type: {asset_type}")
+
+    @staticmethod
+    def _is_usd_path(path: str) -> bool:
+        lower = path.lower()
+        return lower.endswith((".usd", ".usda", ".usdc", ".usdz"))
+
+    @staticmethod
+    def _is_urdf_path(path: str) -> bool:
+        return path.lower().endswith(".urdf")
+
+    def _resolve_newton_asset(self, cfg_obj, *, label: str) -> tuple[str, str]:
+        """Resolve which asset (USD/URDF) Newton should load for a cfg object."""
+        file_type = getattr(cfg_obj, "file_type", None)
+        preferred = file_type.get("newton") if isinstance(file_type, dict) else None
+
+        usd_path = getattr(cfg_obj, "usd_path", None)
+        urdf_path = getattr(cfg_obj, "urdf_path", None)
+
+        candidates: list[tuple[str, str | None]] = []
+        if preferred == "usd":
+            candidates.append(("usd", usd_path))
+            candidates.append(("urdf", urdf_path))
+        elif preferred == "urdf":
+            candidates.append(("urdf", urdf_path))
+            candidates.append(("usd", usd_path))
+        else:
+            candidates.append(("usd", usd_path))
+            candidates.append(("urdf", urdf_path))
+
+        for asset_type, path in candidates:
+            if not path:
+                continue
+            if asset_type == "usd" and not self._is_usd_path(path):
+                # If the config says "usd" but points to a non-USD file, fall back to extension inference.
+                asset_type = "usd" if self._is_usd_path(path) else ("urdf" if self._is_urdf_path(path) else asset_type)
+            if asset_type == "urdf" and not self._is_urdf_path(path):
+                asset_type = "urdf" if self._is_urdf_path(path) else ("usd" if self._is_usd_path(path) else asset_type)
+
+            if asset_type == "usd":
+                return "usd", path
+            if asset_type == "urdf":
+                return "urdf", path
+
+        raise ValueError(
+            f"{label} requires either usd_path ('.usd/.usda/.usdc/.usdz') or urdf_path ('.urdf') for Newton."
+        )
+
+    def _add_usd_to_builder(
+        self,
+        builder: newton.ModelBuilder,
+        usd_path: str,
+        *,
+        xform: wp.transform | None,
+        enable_self_collisions: bool,
+        collapse_fixed_joints: bool,
+        skip_mesh_approximation: bool,
+        hide_collision_shapes: bool,
+        load_visual_shapes: bool,
+        ignore_paths: list[str] | None,
+    ) -> None:
+        """Add a USD (UsdPhysics) asset to a Newton ModelBuilder."""
+        source = usd_path
+        if not self._looks_like_url(usd_path):
+            source = os.path.abspath(usd_path)
+        try:
+            builder.add_usd(
+                source,
+                xform=xform,
+                enable_self_collisions=enable_self_collisions,
+                collapse_fixed_joints=collapse_fixed_joints,
+                skip_mesh_approximation=skip_mesh_approximation,
+                hide_collision_shapes=hide_collision_shapes,
+                load_visual_shapes=load_visual_shapes,
+                ignore_paths=ignore_paths,
+            )
+        except ModuleNotFoundError as exc:
+            # Newton's USD importer requires OpenUSD's `pxr` module.
+            if getattr(exc, "name", None) == "pxr":
+                raise ModuleNotFoundError(
+                    "USD import in Newton requires the `pxr` Python module (OpenUSD). "
+                    "Install OpenUSD/pxr in your environment, or use URDF assets instead."
+                ) from exc
+            raise
+        except RuntimeError as exc:
+            # Some third-party USDs reference Omniverse/Nucleus assets (e.g. `omniverse:/...`) that
+            # aren't resolvable in a plain OpenUSD environment. Newton treats these as fatal stage
+            # composition errors. For presentation-only assets, we can proceed by ignoring stage
+            # composition errors (the missing assets are often physics material definitions).
+            msg = str(exc)
+            if "USD stage has composition errors while loading" in msg and "omniverse:" in msg:
+                try:
+                    import newton._src.utils.import_usd as import_usd
+                except Exception:
+                    raise
+
+                original = getattr(import_usd, "_raise_on_stage_errors", None)
+                if original is None:
+                    raise
+
+                def _noop(_stage, _stage_source):
+                    return None
+
+                log.warning(
+                    "Newton USD import: stage composition errors detected (omniverse:/ references). "
+                    "Retrying with stage error checks disabled."
+                )
+                import_usd._raise_on_stage_errors = _noop
+                try:
+                    builder.add_usd(
+                        source,
+                        xform=xform,
+                        enable_self_collisions=enable_self_collisions,
+                        collapse_fixed_joints=collapse_fixed_joints,
+                        skip_mesh_approximation=skip_mesh_approximation,
+                        hide_collision_shapes=hide_collision_shapes,
+                        load_visual_shapes=load_visual_shapes,
+                        ignore_paths=ignore_paths,
+                    )
+                finally:
+                    import_usd._raise_on_stage_errors = original
+                return
+            raise
+
+    @staticmethod
+    def _looks_like_url(path: str) -> bool:
+        return "://" in path
+
+    @staticmethod
+    def _disable_shape_collisions(builder: newton.ModelBuilder, start_shape_idx: int, end_shape_idx: int) -> None:
+        if start_shape_idx < 0:
+            start_shape_idx = 0
+        end_shape_idx = min(end_shape_idx, builder.shape_count)
+        for shape_idx in range(start_shape_idx, end_shape_idx):
+            builder.shape_flags[shape_idx] &= ~ShapeFlags.COLLIDE_SHAPES
+
+    @staticmethod
+    def _make_shapes_visual_only(builder: newton.ModelBuilder, start_shape_idx: int, end_shape_idx: int) -> None:
+        """Disable collisions for a shape range while keeping them renderable.
+
+        Some USD assets author collision on the same prims as the visual mesh. In those cases,
+        Newton may import mesh shapes as COLLIDE-only (no VISIBLE). If we disable collisions, we
+        must also force VISIBLE so the viewer can render the mesh when `show_visual` is enabled.
+        """
+        if start_shape_idx < 0:
+            start_shape_idx = 0
+        end_shape_idx = min(end_shape_idx, builder.shape_count)
+        for shape_idx in range(start_shape_idx, end_shape_idx):
+            builder.shape_flags[shape_idx] |= ShapeFlags.VISIBLE
+            builder.shape_flags[shape_idx] &= ~ShapeFlags.COLLIDE_SHAPES
+
+    @staticmethod
+    def _make_body_kinematic(builder: newton.ModelBuilder, body_id: int) -> None:
+        """Make a body kinematic by zeroing mass and inertia (best-effort)."""
+        if body_id < 0 or body_id >= len(builder.body_mass):
+            return
+        builder.body_mass[body_id] = 0.0
+        if body_id < len(builder.body_inv_mass):
+            builder.body_inv_mass[body_id] = 0.0
+        zero_I = wp.mat33(0.0)
+        if body_id < len(builder.body_inertia):
+            builder.body_inertia[body_id] = zero_I
+        if body_id < len(builder.body_inv_inertia):
+            builder.body_inv_inertia[body_id] = zero_I
+
+    @classmethod
+    def _make_bodies_kinematic(
+        cls, builder: newton.ModelBuilder, start_body_id: int, end_body_id: int | None = None
+    ) -> None:
+        """Make a contiguous range of bodies kinematic (best-effort)."""
+        if end_body_id is None:
+            end_body_id = len(builder.body_mass)
+        if start_body_id < 0:
+            start_body_id = 0
+        end_body_id = min(end_body_id, len(builder.body_mass))
+        for body_id in range(start_body_id, end_body_id):
+            cls._make_body_kinematic(builder, body_id)
 
     def _build_name_caches(self) -> None:
         """Build caches for looking up body and joint indices by name."""
@@ -574,6 +848,12 @@ class NewtonHandler(BaseSimHandler):
             world = body_worlds[i]
             if world != -1:
                 self._body_name_cache[world][key] = i
+                # USD imports often use full prim paths as body keys (e.g. "/World/Robot/torso_link").
+                # Add a basename alias so other code can refer to bodies by their short names.
+                if isinstance(key, str) and "/" in key:
+                    short = key.rsplit("/", 1)[-1]
+                    if short and short not in self._body_name_cache[world]:
+                        self._body_name_cache[world][short] = i
 
         joint_keys = self._model.joint_key
         joint_worlds = self._model.joint_world.numpy()
@@ -606,9 +886,16 @@ class NewtonHandler(BaseSimHandler):
             for obj in (*self.robots, *self.objects):
                 joint_map = {}
                 for joint_idx in self._get_joint_indices(env_id, obj.name):
-                    joint_name = self._model.joint_key[joint_idx]
-                    if joint_name not in joint_map:
-                        joint_map[joint_name] = joint_idx
+                    joint_key = self._model.joint_key[joint_idx]
+                    if joint_key not in joint_map:
+                        joint_map[joint_key] = joint_idx
+
+                    # USD imports often use full prim paths as joint keys (e.g. "/World/Robot/left_knee_joint").
+                    # Add a basename alias so robot configs can still refer to joints by their short names.
+                    if isinstance(joint_key, str) and "/" in joint_key:
+                        joint_short = joint_key.rsplit("/", 1)[-1]
+                        if joint_short and joint_short not in joint_map:
+                            joint_map[joint_short] = joint_idx
                 if joint_map:
                     self._obj_joint_name_cache[env_id][obj.name] = joint_map
 
@@ -2122,8 +2409,14 @@ class NewtonHandler(BaseSimHandler):
         if not body_ids:
             return []
 
-        # Include the root link to align with other simulators (IsaacGym/MuJoCo).
-        names = [self._model.body_key[idx] for idx in body_ids]
+        # Normalize USD body keys to short names (align with URDF/MJCF conventions).
+        names = []
+        for idx in body_ids:
+            key = self._model.body_key[idx]
+            if isinstance(key, str) and "/" in key:
+                names.append(key.rsplit("/", 1)[-1])
+            else:
+                names.append(key)
         if sort:
             names.sort()
         return names

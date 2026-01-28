@@ -238,7 +238,31 @@ class FileDownloader:
         #     self._add(traj_filepath)
 
     def _add_from_scene(self, scene: SceneCfg):
-        self._add(scene.file_name(self.scenario.simulator))
+        sim_name = self.scenario.simulator
+        try:
+            filepath = scene.file_name(sim_name)
+        except Exception as exc:
+            # Some scene config classes may not define file_type entries for every simulator.
+            # Provide a clearer error than a downstream TypeError on os.path.exists(None).
+            raise ValueError(
+                f"Scene '{getattr(scene, 'name', None)}' cannot resolve an asset path for simulator '{sim_name}': {exc}"
+            ) from exc
+
+        if filepath is None and sim_name == "newton":
+            # Newton can load USD or URDF; fall back to any available path.
+            filepath = (
+                getattr(scene, "usd_path", None)
+                or getattr(scene, "urdf_path", None)
+                or getattr(scene, "mjcf_path", None)
+            )
+
+        if filepath is None:
+            raise ValueError(
+                f"Scene '{getattr(scene, 'name', None)}' has no asset path for simulator '{sim_name}'. "
+                "Check the scene's file_type mapping and asset paths (usd_path/urdf_path/mjcf_path)."
+            )
+
+        self._add(filepath)
 
     def _add_from_object(self, obj: BaseObjCfg):
         ## TODO: add a primitive base object class?
@@ -248,7 +272,25 @@ class FileDownloader:
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return
-        self._add(obj.file_name(self.scenario.simulator))
+        sim_name = self.scenario.simulator
+        try:
+            filepath = obj.file_name(sim_name)
+        except Exception as exc:
+            raise ValueError(
+                f"Object '{getattr(obj, 'name', None)}' cannot resolve an asset path for simulator '{sim_name}': {exc}"
+            ) from exc
+
+        if filepath is None and sim_name == "newton":
+            # Newton can load USD or URDF; fall back to any available path.
+            filepath = getattr(obj, "usd_path", None) or getattr(obj, "urdf_path", None)
+
+        if filepath is None:
+            raise ValueError(
+                f"Object '{getattr(obj, 'name', None)}' has no asset path for simulator '{sim_name}'. "
+                "Check the object's file_type mapping and asset paths (usd_path/urdf_path/mjcf_path)."
+            )
+
+        self._add(filepath)
 
         for extra_resource in obj.extra_resources:
             self._add(extra_resource)
