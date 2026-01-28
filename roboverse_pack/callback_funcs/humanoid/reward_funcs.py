@@ -396,7 +396,7 @@ def leg_raise_imitation(
     # This ensures knee bending during side-stepping as well as forward/backward walking.
     # The velocity_profile provides the phase-dependent shape (cos pulse during rise/fall, 0 during plateau).
     knee_amplitude = 1.0 + velocity_scale * cmd_magnitude  # Scale with total velocity
-    knee_target = knee_coupling * torch.abs(hip_pitch_amplitude) * knee_amplitude * velocity_profile
+    knee_target = knee_coupling * abs(hip_pitch_amplitude) * knee_amplitude * velocity_profile
 
     # Compute errors for all joints
     hip_pitch_err = torch.square(hip_pitch_pos - hip_pitch_target)
