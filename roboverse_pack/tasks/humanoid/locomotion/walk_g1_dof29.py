@@ -8,6 +8,7 @@ import torch
 import roboverse_pack.utils.curriculum_utils as curr_funs
 from metasim.queries import ContactForces
 from metasim.scenario.lights import DomeLightCfg
+from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.registry import register_task
@@ -26,6 +27,62 @@ from roboverse_pack.randomization.humanoid import (
 )
 from roboverse_pack.tasks.humanoid.base import LeggedRobotTask
 from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
+
+_PHYSICAL_AI_WAREHOUSE_USD_PATHS = (
+    "third_party/PhysicalAI-SimReady-Warehouse-01/SubLayers/warehouse_floorplan_physics.usd",
+    "third_party/PhysicalAI-SimReady-Warehouse-01/SubLayers/warehouse_metro_racks_physics.usd",
+)
+
+# These assets are authored in a coordinate frame far from the origin (negative x/y).
+# Offset them so the warehouse is centered near the robot spawn at (0, 0, 0).
+_PHYSICAL_AI_WAREHOUSE_DEFAULT_POS = (23.07, 70.00, 0.01)
+
+_PHYSICAL_AI_WAREHOUSE_VISUAL_USD_PATH = (
+    "third_party/PhysicalAI-SimReady-Warehouse-01/physical_ai_simready_warehouse_01.usd"
+)
+
+_WAREHOUSE_USD_NEWTON_CFGS = []
+for i, usd_path in enumerate(_PHYSICAL_AI_WAREHOUSE_USD_PATHS):
+    cfg = RigidObjCfg(
+        name=f"warehouse_{i}",
+        usd_path=usd_path,
+        fix_base_link=True,
+        enabled_gravity=False,
+        collision_enabled=True,
+        default_position=_PHYSICAL_AI_WAREHOUSE_DEFAULT_POS,
+        default_orientation=(1.0, 0.0, 0.0, 0.0),
+        scale=1.0,
+    )
+    cfg.file_type["newton"] = "usd"
+    # This is a physics proxy layer (collision-only). Keep it collidable but invisible if a
+    # separate visual warehouse is loaded.
+    cfg.newton_load_visual_shapes = False
+    cfg.newton_hide_collision_shapes = True
+    _WAREHOUSE_USD_NEWTON_CFGS.append(cfg)
+
+_WAREHOUSE_VISUAL_USD_NEWTON_CFG = RigidObjCfg(
+    name="warehouse_visual",
+    usd_path=_PHYSICAL_AI_WAREHOUSE_VISUAL_USD_PATH,
+    fix_base_link=True,
+    enabled_gravity=False,
+    # Visual-only: don't use this mesh for collisions (too heavy).
+    collision_enabled=False,
+    default_position=_PHYSICAL_AI_WAREHOUSE_DEFAULT_POS,
+    default_orientation=(1.0, 0.0, 0.0, 0.0),
+    scale=1.0,
+)
+_WAREHOUSE_VISUAL_USD_NEWTON_CFG.file_type["newton"] = "usd"
+# Avoid importing the small hand-manipulation prop clutter (very heavy) while keeping the big structure.
+_WAREHOUSE_VISUAL_USD_NEWTON_CFG.newton_ignore_paths = [
+    "/World/Loading_Zone",
+    "/World/Sorting_Area",
+    "/World/Unloading_Staging_Zone",
+    "/World/Transporter_Area",
+]
+_WAREHOUSE_VISUAL_USD_NEWTON_CFG.newton_load_visual_shapes = True
+# Many SimReady assets author collision on the same prims as the visual mesh. If we hide collision
+# shapes here, the entire warehouse can disappear. Keep them visible but disable collisions above.
+_WAREHOUSE_VISUAL_USD_NEWTON_CFG.newton_hide_collision_shapes = False
 
 
 @configclass
@@ -349,3 +406,65 @@ class WalkG1Dof29Task(LeggedRobotTask):
         priv_obs_buf = priv_obs_buf.clip(-self.obs_clip_limit, self.obs_clip_limit) * self.priv_obs_scale
 
         return obs_buf, priv_obs_buf
+
+
+@register_task(
+    "unitree_rl.walk_g1_dof29_newton_warehouse",
+    "g1.walk_g1_dof29_newton_warehouse",
+    "walk_g1_dof29_newton_warehouse",
+)
+class WalkG1Dof29NewtonWarehouseTask(WalkG1Dof29Task):
+    """Newton presentation variant with a static warehouse USD environment."""
+
+    task_name = "walk_g1_dof29_newton_warehouse"
+
+    scenario = ScenarioCfg(
+        robots=["g1_dof29"],
+        objects=[_WAREHOUSE_VISUAL_USD_NEWTON_CFG, *_WAREHOUSE_USD_NEWTON_CFGS],
+        cameras=[],
+        num_envs=1,
+        simulator="newton",
+        headless=False,
+        env_spacing=10.0,
+        decimation=1,
+        sim_params=SimParamCfg(
+            dt=0.005,
+            substeps=1,
+            num_threads=10,
+            solver_type=1,
+            num_position_iterations=4,
+            num_velocity_iterations=0,
+            contact_offset=0.01,
+            rest_offset=0.0,
+            bounce_threshold_velocity=0.5,
+            max_depenetration_velocity=1.0,
+            default_buffer_size_multiplier=5,
+            replace_cylinder_with_capsule=True,
+            friction_correlation_distance=0.025,
+            friction_offset_threshold=0.04,
+            njmax=210,
+            nconmax=64,
+            newton_use_mujoco_contacts=True,
+            newton_solver_iterations=200,
+            newton_ls_iterations=20,
+            newton_solver="newton",
+            newton_integrator="implicit",
+            newton_cone="pyramidal",
+            newton_impratio=1.0,
+            newton_ls_parallel=True,
+        ),
+        lights=[
+            DomeLightCfg(
+                intensity=800.0,
+                color=(0.85, 0.9, 1.0),
+            )
+        ],
+    )
+
+    def __init__(
+        self,
+        scenario: ScenarioCfg | None = None,
+        device: str | torch.device | None = None,
+        env_cfg: WalkG1Dof29EnvCfg | None = None,
+    ) -> None:
+        super().__init__(scenario=scenario, device=device, env_cfg=env_cfg)
