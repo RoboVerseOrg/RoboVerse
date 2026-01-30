@@ -35,6 +35,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
     obs_len_history = 5
     priv_obs_len_history = 5
     episode_length_s = 20.0
+    gait_period_s = 0.8
 
     control = BaseEnvCfg.Control(action_scale=0.25, soft_joint_pos_limit_factor=0.9)
 
@@ -88,15 +89,6 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                 "body_names": (".*ankle_roll.*"),
             },
         )
-        feet_air_time = (
-            2.0,
-            {
-                "threshold": 0.3,
-                "double_flight_penalty": 0.5,
-                "body_names": (".*ankle_roll.*"),
-            },
-            reward_funcs.feet_air_time,
-        )
         leg_raise_imitation = (
             2.0,
             {
@@ -131,6 +123,24 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         only_positive_rewards=False,
         scales=RewardsScales(),
     )
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Keep time-based rewards and the observation "clock" consistent.
+        gait_period_s = float(self.gait_period_s)
+
+        if isinstance(self.rewards.scales.feet_gait, tuple) and len(self.rewards.scales.feet_gait) >= 2:
+            scale, params = self.rewards.scales.feet_gait[:2]
+            rest = self.rewards.scales.feet_gait[2:]
+            self.rewards.scales.feet_gait = (scale, {**params, "period": gait_period_s}, *rest)
+
+        if (
+            isinstance(self.rewards.scales.leg_raise_imitation, tuple)
+            and len(self.rewards.scales.leg_raise_imitation) >= 2
+        ):
+            scale, params = self.rewards.scales.leg_raise_imitation[:2]
+            rest = self.rewards.scales.leg_raise_imitation[2:]
+            self.rewards.scales.leg_raise_imitation = (scale, {**params, "period": gait_period_s}, *rest)
 
     commands = BaseEnvCfg.Commands(
         value=None,
@@ -277,10 +287,10 @@ class WalkG1Dof29Task(LeggedRobotTask):
         super().__init__(scenario=scenario_copy, config=env_cfg, device=device)
 
     def _init_buffers(self):
-        # commands + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_obs = 3 + 3 + 3 + self.num_actions * 3
-        # commands + base_lin_vel + base_ang_vel + projected_gravity + dof pos/vel/prev actions
-        self.num_priv_obs = 3 + 3 + 3 + 3 + self.num_actions * 3
+        # commands + base_ang_vel + projected_gravity + dof pos/vel/prev actions + gait phase
+        self.num_obs = 3 + 3 + 3 + self.num_actions * 3 + 2
+        # commands + base_lin_vel + base_ang_vel + projected_gravity + dof pos/vel/prev actions + gait phase
+        self.num_priv_obs = 3 + 3 + 3 + 3 + self.num_actions * 3 + 2
         # Rewrite SOME Hyfer-Parameters
         self.obs_clip_limit = 100.0
         self.obs_scale = torch.ones(size=(self.num_obs,), dtype=torch.float, device=self.device)
@@ -303,6 +313,17 @@ class WalkG1Dof29Task(LeggedRobotTask):
         self.obs_noise[9 + self.num_actions : 9 + 2 * self.num_actions] = 1.5  # joint velocities
         return super()._init_buffers()
 
+    def gait_phase(self, period: float | None = None) -> torch.Tensor:
+        """Compute a bounded gait phase signal (sin/cos) for deployment-friendly "clock" inputs."""
+        if period is None:
+            period = float(self.cfg.gait_period_s)
+        global_phase = (self._episode_steps * self.step_dt) % period / period
+
+        phase = torch.zeros(self.num_envs, 2, device=self.device)
+        phase[:, 0] = torch.sin(global_phase * torch.pi * 2.0)
+        phase[:, 1] = torch.cos(global_phase * torch.pi * 2.0)
+        return phase
+
     def _compute_task_observations(self, env_states: TensorState):
         robot_state = env_states.robots[self.robot.name]
         base_quat = robot_state.root_state[:, 3:7]
@@ -313,7 +334,7 @@ class WalkG1Dof29Task(LeggedRobotTask):
         q = env_states.robots[self.name].joint_pos - self.default_dof_pos
         dq = env_states.robots[self.name].joint_vel - self.default_dof_vel
 
-        # gait = self._gait_phase()
+        gait_phase = self.gait_phase()
 
         obs_buf = torch.cat(
             (
@@ -323,7 +344,7 @@ class WalkG1Dof29Task(LeggedRobotTask):
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
-                # gait
+                gait_phase,  # 2
             ),
             dim=-1,
         )
@@ -337,7 +358,7 @@ class WalkG1Dof29Task(LeggedRobotTask):
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
-                # gait
+                gait_phase,  # 2
             ),
             dim=-1,
         )
