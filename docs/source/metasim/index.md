@@ -1,6 +1,91 @@
-# User Guide
+# MetaSim User Guide
+
+**MetaSim** is the core simulation framework of RoboVerse, providing a unified interface for robotic simulation across multiple physics engines.
+
+---
+
+## Overview
+
+MetaSim enables you to:
+
+- **Write Once, Run Anywhere**: Develop simulation code that works seamlessly across MuJoCo, Isaac Sim, SAPIEN, PyBullet, Genesis, and more
+- **Configure Declaratively**: Define robots, scenes, cameras, and physics parameters through a type-safe configuration system
+- **Scale Efficiently**: Run thousands of parallel environments with GPU acceleration
+- **Extend Easily**: Add new robots, tasks, and simulators through well-defined interfaces
+
+### Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Handler** | Simulator-specific backend that manages physics and rendering |
+| **Scenario** | Complete scene specification (robots, objects, cameras, lights) |
+| **Task** | Gym-style environment with reward functions and success criteria |
+| **State** | Unified representation of simulation state across all backends |
+| **Config** | Type-safe configuration classes for all components |
+
+### Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                      Your Training Code                       │
+├──────────────────────────────────────────────────────────────┤
+│                    Task Environment (Gym API)                 │
+│              reset() / step() / render() / close()            │
+├──────────────────────────────────────────────────────────────┤
+│                    Domain Randomization                       │
+│         Physics / Visual / Sensor / Action Noise              │
+├──────────────────────────────────────────────────────────────┤
+│                      Scenario Config                          │
+│            Robots + Objects + Cameras + Lights                │
+├──────────────────────────────────────────────────────────────┤
+│                      Simulator Handler                        │
+│   MuJoCo │ Isaac Sim │ SAPIEN │ PyBullet │ Genesis │ ...     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Navigation
+
+::::{grid} 3
+:gutter: 2
+
+:::{grid-item-card} New User
+:text-align: center
+
+Start here if you're new to MetaSim
+
+1. [Prerequisites](get_started/prerequisite)
+2. [Installation](get_started/installation)
+3. [Quick Start](get_started/quick_start/index)
+:::
+
+:::{grid-item-card} Building Tasks
+:text-align: center
+
+Learn to create custom tasks
+
+1. [Concepts](concept/architecture)
+2. [Configuration](concept/config)
+3. [Task System](concept/task)
+:::
+
+:::{grid-item-card} Contributing
+:text-align: center
+
+Help improve MetaSim
+
+1. [Development Guide](developer_guide/autotest)
+2. [Adding Robots](developer_guide/contributing_new_robot)
+3. [Code Style](developer_guide/docstring)
+:::
+
+::::
+
+---
 
 ## Table of Contents
+
 ```{toctree}
 :caption: Installation
 :maxdepth: 2
@@ -20,34 +105,20 @@ get_started/roboverse_data
 
 get_started/quick_start/index
 get_started/advanced/index
-
 ```
 
 ```{toctree}
-:caption: Concept
+:caption: Concepts
 :maxdepth: 2
 :titlesonly:
 
-<!--user_guide/support_matrix-->
-<!--user_guide/render-->
-<!--user_guide/multi_env-->
-<!--user_guide/cross_embodiment-->
-<!--user_guide/cross_sim-->
 concept/architecture
 concept/state
 concept/config
 concept/handler
-<!-- tutorial/scenario -->
-<!-- tutorial/robot -->
 concept/task
 concept/get_extras
 concept/randomization
-<!-- user_guide/collect_demo_tutorial -->
-<!-- user_guide/teleoperate_demo -->
-<!-- user_guide/real2sim -->
-<!-- get_started/prepare_data_hf -->
-<!-- user_guide/tips/index -->
-
 ```
 
 ```{toctree}
@@ -58,7 +129,6 @@ concept/randomization
 features/support_matrix
 features/cross_embodiment
 features/cross_sim
-
 ```
 
 ```{toctree}
@@ -66,6 +136,7 @@ features/cross_sim
 :maxdepth: 2
 :titlesonly:
 
+developer_guide/architecture_review
 developer_guide/autotest
 developer_guide/docstring
 developer_guide/precommit_hooks
@@ -84,13 +155,3 @@ troubleshooting/docker
 troubleshooting/isaaclab
 troubleshooting/known_issues/index
 ```
-
-
-<!--
-```{toctree}
-:caption: API Reference
-:maxdepth: 1
-
-api/index
-```
--->
