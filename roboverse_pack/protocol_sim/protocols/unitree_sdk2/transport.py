@@ -3,8 +3,8 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from roboverse_pack.robot_protocols.core.interfaces import Transport
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.profile import UnitreeRobotProfile
+from roboverse_pack.protocol_sim.core.interfaces import Transport
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.profile import UnitreeRobotProfile
 
 
 class UnitreeSdk2DdsTransport(Transport):

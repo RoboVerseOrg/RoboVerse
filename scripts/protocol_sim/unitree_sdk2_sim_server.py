@@ -12,7 +12,7 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.server import UnitreeServerArgs, build_unitree_sdk2_server
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.server import UnitreeServerArgs, build_unitree_sdk2_server
 
 logger = logging.getLogger(__name__)
 

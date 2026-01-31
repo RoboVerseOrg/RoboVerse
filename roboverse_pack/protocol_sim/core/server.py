@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from roboverse_pack.robot_protocols.core.interfaces import (
+from roboverse_pack.protocol_sim.core.interfaces import (
     ActuationModel,
     ExternalAssist,
     ProtocolCodec,
     StandbyController,
     Transport,
 )
-from roboverse_pack.robot_protocols.core.sim_adapter import MetaSimAdapter
+from roboverse_pack.protocol_sim.core.sim_adapter import MetaSimAdapter
 
 
 @dataclass

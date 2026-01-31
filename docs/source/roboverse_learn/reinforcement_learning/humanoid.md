@@ -239,7 +239,7 @@ Use a non-zero DDS domain id (e.g. 1) for simulators to avoid colliding with rea
 
 Terminal A (sim server):
 ```bash
-python scripts/robot_protocols/unitree_sdk2_sim_server.py \
+python scripts/protocol_sim/unitree_sdk2_sim_server.py \
   --sim mujoco \
   --robot g1_dof29 \
   --headless \

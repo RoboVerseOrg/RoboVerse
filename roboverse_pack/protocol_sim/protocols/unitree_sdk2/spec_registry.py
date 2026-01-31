@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.profile import UnitreeRobotProfile
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.profile import UnitreeRobotProfile
 
 
 def _g1_dof29_profile() -> UnitreeRobotProfile:

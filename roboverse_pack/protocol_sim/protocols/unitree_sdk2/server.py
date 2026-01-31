@@ -9,15 +9,15 @@ from metasim.constants import SimType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.utils.setup_util import get_sim_handler_class
-from roboverse_pack.robot_protocols.core.elastic_band import ElasticBandAssist, ElasticBandConfig
-from roboverse_pack.robot_protocols.core.server import RobotProtocolServer, ServerConfig, StandbyConfig
-from roboverse_pack.robot_protocols.core.sim_adapter import MetaSimAdapter, SimTiming
-from roboverse_pack.robot_protocols.core.task_alignment import apply_task_initial_state, load_task_alignment_spec
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.actuation import UnitreeLowCmdActuationModel
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.codec import AutoRemoteConfig, UnitreeSdk2Codec
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.spec_registry import get_unitree_profile
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.standby_policy import UnitreeStandbyPolicyController
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.transport import UnitreeSdk2DdsTransport
+from roboverse_pack.protocol_sim.core.elastic_band import ElasticBandAssist, ElasticBandConfig
+from roboverse_pack.protocol_sim.core.server import RobotProtocolServer, ServerConfig, StandbyConfig
+from roboverse_pack.protocol_sim.core.sim_adapter import MetaSimAdapter, SimTiming
+from roboverse_pack.protocol_sim.core.task_alignment import apply_task_initial_state, load_task_alignment_spec
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.actuation import UnitreeLowCmdActuationModel
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.codec import AutoRemoteConfig, UnitreeSdk2Codec
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.spec_registry import get_unitree_profile
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.standby_policy import UnitreeStandbyPolicyController
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.transport import UnitreeSdk2DdsTransport
 
 
 @dataclass

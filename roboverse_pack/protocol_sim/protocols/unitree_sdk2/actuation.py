@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from roboverse_pack.robot_protocols.core.interfaces import ActuationModel
-from roboverse_pack.robot_protocols.core.types import CanonicalRobotCommand, SimRobotObservation
+from roboverse_pack.protocol_sim.core.interfaces import ActuationModel
+from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
 
 
 class UnitreeLowCmdActuationModel(ActuationModel):

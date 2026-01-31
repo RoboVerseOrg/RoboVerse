@@ -8,9 +8,9 @@ import numpy as np
 import rootutils
 import torch
 
-from roboverse_pack.robot_protocols.core.interfaces import StandbyController
-from roboverse_pack.robot_protocols.core.types import SimRobotObservation
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.math_utils import quat_rotate_inverse_wxyz
+from roboverse_pack.protocol_sim.core.interfaces import StandbyController
+from roboverse_pack.protocol_sim.core.types import SimRobotObservation
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.math_utils import quat_rotate_inverse_wxyz
 
 
 def _get_gravity_orientation_wxyz(quat_wxyz: np.ndarray) -> np.ndarray:

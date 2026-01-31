@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from roboverse_pack.robot_protocols.core.types import CanonicalRobotCommand, SimRobotObservation
+from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
 
 
 class Transport(ABC):

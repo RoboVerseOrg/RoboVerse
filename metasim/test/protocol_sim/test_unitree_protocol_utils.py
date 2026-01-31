@@ -4,10 +4,10 @@ import struct
 
 import numpy as np
 
-from roboverse_pack.robot_protocols.core.types import CanonicalRobotCommand, SimRobotObservation
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.actuation import UnitreeLowCmdActuationModel
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.codec import AutoRemoteConfig, UnitreeSdk2Codec
-from roboverse_pack.robot_protocols.protocols.unitree_sdk2.profile import UnitreeRobotProfile
+from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.actuation import UnitreeLowCmdActuationModel
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.codec import AutoRemoteConfig, UnitreeSdk2Codec
+from roboverse_pack.protocol_sim.protocols.unitree_sdk2.profile import UnitreeRobotProfile
 
 
 def test_unitree_actuation_scatter_and_clip():
