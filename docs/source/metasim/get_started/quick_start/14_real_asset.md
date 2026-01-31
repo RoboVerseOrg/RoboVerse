@@ -1,9 +1,23 @@
-#  14. Real Asset
+# Tutorial 14: Real-World Assets
+
+**Objective**: Learn how to use real-world scanned assets in simulation for sim-to-real transfer.
+
+**What you'll learn**:
+- Using EmbodiedGen generated assets
+- Converting assets between formats (URDF, USD, MJCF)
+- Setting up collision meshes
+- Asset compatibility across simulators
+
+**Prerequisites**: Completed [Tutorial 13: Teleoperation](13_teleoperate)
+
+**Estimated time**: 30 minutes
+
+---
 
 [![GitHub](https://img.shields.io/badge/GitHub-EmbodiedGen-black?logo=github)](https://github.com/HorizonRobotics/EmbodiedGen)
-[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-blue)](https://horizonrobotics.github.io/EmbodiedGen/)
+[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://horizonrobotics.github.io/EmbodiedGen/)
 
-In this tutorial, we will show you how to use real asset generated from [EmbodiedGen](https://github.com/HorizonRobotics/EmbodiedGen) in MetaSim.
+This tutorial shows how to use real assets generated from [EmbodiedGen](https://github.com/HorizonRobotics/EmbodiedGen) in MetaSim.
 
 You can visited more all-simulator-ready assets in [here](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer).
 

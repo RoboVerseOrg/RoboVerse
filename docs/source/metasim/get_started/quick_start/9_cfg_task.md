@@ -1,7 +1,19 @@
-# 9. Config-based Task
-In this tutorial, we will show you how to use MetaSim to config a task.
+# Tutorial 9: Config-Based Task Creation
 
-## Common Usage
+**Objective**: Learn how to create tasks using the Gymnasium-style API.
+
+**What you'll learn**:
+- Using `make_vec()` for Gym-compatible environments
+- Differences between direct task creation and Gym-style
+- Configuring tasks through the registry system
+
+**Prerequisites**: Completed [Tutorial 8: Replay Demonstrations](8_replay_demo)
+
+**Estimated time**: 30 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/9_cfg_task.py --sim <simulator> --num_envs <num_envs> --task <task_name>

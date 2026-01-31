@@ -1,10 +1,43 @@
-# Cross Embodiment
+# Cross-Embodiment Transfer
 
-For parallel gripper on tabletop manipulation, you can specify different robot for the same task. For example, you can specify `iiwa` for `StackCube` task.
+Cross-embodiment is a key feature of RoboVerse that enables policies and demonstrations to be transferred across different robot morphologies. This allows you to:
+
+- Train on one robot and deploy on another
+- Leverage demonstrations from multiple robot types
+- Test generalization across embodiments
+
+---
+
+## Supported Robot Categories
+
+| Category | Robots | Gripper Type |
+|----------|--------|--------------|
+| **7-DOF Arms** | Franka Panda, KUKA iiwa, Kinova Gen3 | Parallel gripper |
+| **6-DOF Arms** | UR5, UR10, xArm6 | Parallel gripper |
+| **Mobile Manipulators** | Fetch, Tiago, Stretch | Various |
+| **Dexterous Hands** | Allegro, Shadow, LEAP | Multi-finger |
+| **Humanoids** | H1, G1, GR1 | Anthropomorphic |
+
+---
+
+## Basic Usage
+
+### Switching Robots for Tasks
+
+For tabletop manipulation tasks with parallel grippers, you can swap robots easily:
 
 ```bash
+# Run StackCube with Franka (default)
+python scripts/advanced/replay_demo.py --sim=isaaclab --task=StackCube --num_envs=4
+
+# Run the same task with KUKA iiwa
 python scripts/advanced/replay_demo.py --sim=isaaclab --task=StackCube --num_envs=4 --robot=iiwa
+
+# Run with UR10
+python scripts/advanced/replay_demo.py --sim=isaaclab --task=StackCube --num_envs=4 --robot=ur10
 ```
+
+---
 
 ## Retarget between Robots
 

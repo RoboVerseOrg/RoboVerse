@@ -1,7 +1,19 @@
-#  0. Static Scene
-In this tutorial, we will show you how to use MetaSim to simulate a static scene.
+# Tutorial 0: Static Scene
 
-## Common Usage
+**Objective**: Learn how to load and visualize a basic simulation scene with objects.
+
+**What you'll learn**:
+- How to create a `ScenarioCfg` with objects
+- How to launch a handler and render a scene
+- Different object types available in MetaSim
+
+**Prerequisites**: [Installation](../installation) completed
+
+**Estimated time**: 15 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/0_static_scene.py  --sim <simulator>

@@ -1,7 +1,19 @@
-# 3. Parallel Envs
-In this tutorial, we will show you how to use MetaSim to run multiple environments in parallel.
+# Tutorial 3: Parallel Environments
 
-## Common Usage
+**Objective**: Learn how to run multiple simulation environments in parallel for faster data collection and training.
+
+**What you'll learn**:
+- How to configure `num_envs` for parallel execution
+- How different simulators handle parallelism
+- Performance considerations for GPU vs CPU simulators
+
+**Prerequisites**: Completed [Tutorial 2: Add New Robot](2_add_new_robot)
+
+**Estimated time**: 20 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/3_parallel_envs.py  --sim <simulator> --num_envs <num_envs>

@@ -1,4 +1,21 @@
-# 7. Collect Demonstrations
+# Tutorial 7: Collect Demonstrations
+
+**Objective**: Learn how to collect expert demonstrations for imitation learning.
+
+**What you'll learn**:
+- Using the demonstration collection pipeline
+- Configuring action and observation spaces
+- Applying domain randomization during collection
+- Converting demonstrations to training format (Zarr)
+
+**Prerequisites**: Completed [Tutorial 6: Advanced Rendering](6_advanced_rendering)
+
+**Estimated time**: 25 minutes
+
+---
+
+## Quick Start
+
 ```bash
 ./roboverse_learn/il/collect_demo.sh
 ```

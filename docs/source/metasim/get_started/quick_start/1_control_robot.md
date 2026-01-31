@@ -1,7 +1,20 @@
-#  1. Control Robot
-In this tutorial, we will show you how to use MetaSim to control a robot.
+# Tutorial 1: Control Robot
 
-## Common Usage
+**Objective**: Learn how to send control commands to a robot in simulation.
+
+**What you'll learn**:
+- How to add a robot to your scenario
+- How to set joint position targets using `set_dof_targets()`
+- How to step the physics simulation with `simulate()`
+- Action formats (dictionary and tensor)
+
+**Prerequisites**: Completed [Tutorial 0: Static Scene](0_static_scene)
+
+**Estimated time**: 20 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/1_control_robot.py  --sim <simulator>

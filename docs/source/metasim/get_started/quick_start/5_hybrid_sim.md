@@ -1,7 +1,21 @@
-#  5. Hybrid Sim
-In this tutorial, we will show you how to use MetaSim to simulate a hybrid system.
+# Tutorial 5: Hybrid Simulation
 
-## Common Usage
+**Objective**: Learn how to use different simulators for physics and rendering to get the best of both worlds.
+
+**What you'll learn**:
+- Separating physics simulation from rendering
+- Using MuJoCo for fast physics with Isaac Sim for high-quality rendering
+- When to use hybrid simulation
+
+**Prerequisites**: Completed [Tutorial 4: Motion Planning](4_motion_planning)
+
+**Estimated time**: 25 minutes
+
+---
+
+Hybrid simulation allows you to combine a fast physics engine with a high-quality renderer. This is useful when you need both computational efficiency and photorealistic images.
+
+## Running the Tutorial
 
 ```bash
 python get_started/5_hybrid_sim.py  --sim <simulator> --renderer <renderer>

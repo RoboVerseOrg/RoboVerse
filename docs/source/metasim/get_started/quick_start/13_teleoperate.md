@@ -1,6 +1,31 @@
-# 13. Teleoperate
+# Tutorial 13: Teleoperation
 
-## by Keyboard
+**Objective**: Learn how to control robots using various input devices for data collection and testing.
+
+**What you'll learn**:
+- Keyboard-based teleoperation
+- Phone-based teleoperation (Android/iOS)
+- XR headset teleoperation (PICO 4 Ultra)
+- Recording trajectories during teleoperation
+
+**Prerequisites**: Completed [Tutorial 12: Domain Randomization](12_domain_randomization)
+
+**Estimated time**: 25 minutes
+
+---
+
+## Teleoperation Methods
+
+| Method | Input Device | Best For |
+|--------|--------------|----------|
+| Keyboard | Computer keyboard | Quick testing, debugging |
+| Phone (Custom App) | Android phone | Intuitive 6-DOF control |
+| Phone (LeRobot) | Android/iOS | Research integration |
+| XR Headset | PICO 4 Ultra | Immersive VR control |
+
+---
+
+## Method 1: Keyboard
 
 ### Dependencies
 

@@ -1,7 +1,27 @@
-#  6. Advanced Rendering
-In this tutorial, we will show you how to use MetaSim to render the scene with advanced rendering techniques. We currently support rasterization, ray tracing, and path tracing.
+# Tutorial 6: Advanced Rendering
 
-## Common Usage
+**Objective**: Learn how to use different rendering techniques for varying quality/performance trade-offs.
+
+**What you'll learn**:
+- Rasterization vs Ray Tracing vs Path Tracing
+- Configuring render modes in MetaSim
+- When to use each rendering technique
+
+**Prerequisites**: Completed [Tutorial 5: Hybrid Simulation](5_hybrid_sim)
+
+**Estimated time**: 20 minutes
+
+---
+
+MetaSim supports multiple rendering techniques through Isaac Sim's rendering backend. Choose based on your quality vs performance requirements.
+
+| Technique | Quality | Speed | Use Case |
+|-----------|---------|-------|----------|
+| Rasterization | Good | Fast | Training, real-time |
+| Ray Tracing | Great | Medium | Validation, demos |
+| Path Tracing | Best | Slow | Final renders, sim2real |
+
+## Running the Tutorial
 
 ```bash
 python get_started/6_advanced_rendering.py  --render.mode=[rasterization|raytracing|pathtracing]

@@ -1,7 +1,22 @@
-# 2. Add New Robot
-We are all excited about humanoid, now lets add a humanoid robot to MetaSim.
+# Tutorial 2: Add New Robot
 
-## Common Usage
+**Objective**: Learn how to import and configure a custom robot in MetaSim.
+
+**What you'll learn**:
+- How to create a `RobotCfg` for a new robot
+- Required asset formats (USD, MJCF, URDF)
+- Configuring actuators, joint limits, and control types
+- Testing the robot across different simulators
+
+**Prerequisites**: Completed [Tutorial 1: Control Robot](1_control_robot)
+
+**Estimated time**: 30 minutes
+
+---
+
+In this tutorial, we'll add a humanoid robot (Unitree H1) to demonstrate the process of configuring custom robots in MetaSim.
+
+## Running the Tutorial
 
 ```bash
 python get_started/2_add_new_robot.py  --sim <simulator>

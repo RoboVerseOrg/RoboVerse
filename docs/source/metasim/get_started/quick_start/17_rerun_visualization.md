@@ -1,4 +1,18 @@
-# 17. Rerun Visualization
+# Tutorial 17: Rerun Visualization
+
+**Objective**: Learn how to use Rerun for advanced simulation visualization with timeline scrubbing and recording.
+
+**What you'll learn**:
+- Setting up Rerun for RoboVerse
+- Recording simulation sessions to `.rrd` files
+- Timeline-based exploration and replay
+- Creating custom visualizations
+
+**Prerequisites**: Completed [Tutorial 16: EmbodiedGen Layout](16_embodiedgen_layout)
+
+**Estimated time**: 20 minutes
+
+---
 
 This tutorial shows you how to use [Rerun](https://rerun.io/) to visualize RoboVerse simulations with timeline-based exploration, recording, and replay capabilities.
 

@@ -1,6 +1,20 @@
-# 12. Domain Randomization
+# Tutorial 12: Domain Randomization
 
-This tutorial shows how to use domain randomization during trajectory replay. We'll go from simple material changes to full scene randomization with lighting and camera variations - basically everything you need for robust sim-to-real transfer.
+**Objective**: Learn how to apply domain randomization for robust sim-to-real transfer.
+
+**What you'll learn**:
+- Scene randomization (geometry, materials, USD assets)
+- Lighting randomization (intensity, color temperature)
+- Camera randomization (position, orientation, FOV)
+- Multi-level randomization strategies
+
+**Prerequisites**: Completed [Tutorial 10: Mount Camera](10_mount_camera)
+
+**Estimated time**: 30 minutes
+
+---
+
+This tutorial shows how to use domain randomization during trajectory replay. We'll go from simple material changes to full scene randomization with lighting and camera variations.
 
 ## Quick Start
 

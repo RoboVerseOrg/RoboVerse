@@ -115,8 +115,8 @@ obs = handler.get_state(mode="tensor")  # Get updated state
 - Pre-configured scenarios (robots, objects, cameras)
 - Task logic (max episode length, initial states)
 - Reward functions (For RL tasks) and termination conditions
----
-。
+
+**Example: Using a Pre-built Task**
 
 ```python
 from metasim.task.registry import get_task_class

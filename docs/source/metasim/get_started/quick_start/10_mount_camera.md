@@ -1,7 +1,19 @@
-#  10. Adding Camera
-In this tutorial, we demonstrate how to add and mount cameras in MetaSim.
---sim <simulator>
-## Common Usage
+# Tutorial 10: Mount Camera
+
+**Objective**: Learn how to add and mount cameras to robots and objects for visual observations.
+
+**What you'll learn**:
+- Adding third-person view cameras
+- Mounting ego-centric cameras on robot links
+- Configuring camera resolution and intrinsics
+
+**Prerequisites**: Completed [Tutorial 9: Config-Based Task](9_cfg_task)
+
+**Estimated time**: 20 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/10_mount_camera.py  --sim <simulator>

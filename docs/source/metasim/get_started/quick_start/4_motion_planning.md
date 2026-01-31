@@ -1,8 +1,22 @@
-# 4. Motion Planning
-In this tutorial, we will show you how to use MetaSim to plan a motion for a robot.
-Note here, we can use the `pyroki` or `curobo` package to plan the motion. If you haven't installed it, please refer to our [pyroki installation guide](https://roboverse.wiki/metasim/get_started/advanced_installation/pyroki) or [curobo installation guide](https://roboverse.wiki/metasim/get_started/advanced_installation/curobo).
+# Tutorial 4: Motion Planning
 
-## Common Usage
+**Objective**: Learn how to plan collision-free robot motions using inverse kinematics solvers.
+
+**What you'll learn**:
+- Setting up IK solvers (pyroki and curobo backends)
+- Solving inverse kinematics for end-effector poses
+- Combining arm and gripper control
+- End-effector based manipulation
+
+**Prerequisites**: 
+- Completed [Tutorial 3: Parallel Environments](3_parallel_envs)
+- Installed [pyroki](../advanced_installation/pyroki) or [curobo](../advanced_installation/curobo)
+
+**Estimated time**: 30 minutes
+
+---
+
+## Running the Tutorial
 
 ```bash
 python get_started/4_motion_planning.py  --sim <simulator>

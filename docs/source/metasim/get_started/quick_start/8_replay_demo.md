@@ -1,6 +1,27 @@
-# 8. Replay Trajectories
+# Tutorial 8: Replay Demonstrations
 
-There are two control modes for replay. The `physics` mode replays the physics actions and the `states` mode replays the states, so the `physics` mode has greater possibilities to fail across different simulators, but the `states` mode is bound to succeed across different simulators.
+**Objective**: Learn how to replay recorded trajectories for visualization and debugging.
+
+**What you'll learn**:
+- Two replay modes: action-based and state-based
+- Loading trajectories from the dataset
+- Replaying across different simulators
+- Debugging trajectory playback issues
+
+**Prerequisites**: Completed [Tutorial 7: Collect Demonstrations](7_collect_demo)
+
+**Estimated time**: 15 minutes
+
+---
+
+## Replay Modes
+
+There are two control modes for replay:
+
+| Mode | Method | Reliability | Use Case |
+|------|--------|-------------|----------|
+| **Physics** | Replays recorded actions | May fail across simulators | Testing controllers |
+| **States** | Directly sets states | Always succeeds | Visualization, debugging |
 
 ## Physics replay
 
