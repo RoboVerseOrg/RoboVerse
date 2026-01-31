@@ -81,7 +81,7 @@ class TaskRerunWrapper:
             obs = self.handler.get_states(mode="tensor")
             env_states = state_tensor_to_nested(self.handler, obs)
 
-            if env_states and len(env_states) > 0:
+            if env_states:
                 state = env_states[0]
                 object_states = state.get("objects", {})
                 robot_states = state.get("robots", {})
@@ -154,7 +154,7 @@ class TaskRerunWrapper:
             obs = self.handler.get_states(mode="tensor")
             env_states = state_tensor_to_nested(self.handler, obs)
 
-            if env_states and len(env_states) > 0:
+            if env_states:
                 state = env_states[0]
                 object_states = state.get("objects", {})
                 robot_states = state.get("robots", {})
