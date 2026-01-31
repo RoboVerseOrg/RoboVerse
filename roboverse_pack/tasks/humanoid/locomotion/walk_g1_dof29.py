@@ -76,8 +76,24 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                 "period": 0.8,
                 "offset": [0.0, 0.5],
                 "threshold": 0.55,
+                "phase_offset": 0.275,
                 "body_names": (".*ankle_roll.*"),
             },
+        )
+        feet_air_time = (
+            2.0,
+            {
+                "threshold": 0.3,
+                "double_flight_penalty": 0.5,
+                # Phase-gated: only reward the expected swing foot (aligned with feet_gait + leg_raise_imitation).
+                "period": 0.8,
+                "offset": [0.0, 0.5],
+                "gait_threshold": 0.55,
+                "phase_offset": 0.275,
+                "contact_force_threshold": 1.0,
+                "body_names": (".*ankle_roll.*"),
+            },
+            reward_funcs.feet_air_time,
         )
         feet_slide = (-0.2, {"body_names": (".*ankle_roll.*")})
         feet_clearance = (
@@ -103,6 +119,8 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                 "offset": [0.0, 0.5],
                 "static_duration": 0.05,
                 "velocity_scale": 0.5,
+                # leg_raise_imitation internally adds +0.05; set +0.225 so total aligns with feet_gait phase_offset=0.275.
+                "phase_offset": 0.225,
             },
             reward_funcs.leg_raise_imitation,
         )
@@ -133,6 +151,11 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
             scale, params = self.rewards.scales.feet_gait[:2]
             rest = self.rewards.scales.feet_gait[2:]
             self.rewards.scales.feet_gait = (scale, {**params, "period": gait_period_s}, *rest)
+
+        if isinstance(self.rewards.scales.feet_air_time, tuple) and len(self.rewards.scales.feet_air_time) >= 2:
+            scale, params = self.rewards.scales.feet_air_time[:2]
+            rest = self.rewards.scales.feet_air_time[2:]
+            self.rewards.scales.feet_air_time = (scale, {**params, "period": gait_period_s}, *rest)
 
         if (
             isinstance(self.rewards.scales.leg_raise_imitation, tuple)

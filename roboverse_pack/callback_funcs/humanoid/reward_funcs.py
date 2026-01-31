@@ -431,6 +431,11 @@ def feet_air_time(
     env_states: TensorState,
     threshold: float,
     double_flight_penalty: float = 0.0,
+    period: float | None = None,
+    offset: list[float] | None = None,
+    gait_threshold: float = 0.55,
+    phase_offset: float = 0.275,
+    contact_force_threshold: float = 1.0,
     body_names: str | tuple[str] = ".*_ankle_roll_link",
 ) -> torch.Tensor:
     """Reward long steps taken by the feet for bipeds using contact duration.
@@ -440,6 +445,13 @@ def feet_air_time(
         env_states: The state of the environment.
         threshold: Maximum air time to reward.
         double_flight_penalty: Penalty when both feet are in air (positive value = penalty).
+        period: Optional gait period (seconds). When provided alongside `offset`, the reward is
+            phase-gated to only reward air time of the expected swing foot.
+        offset: Optional phase offsets for each foot. When provided alongside `period`, the reward is
+            phase-gated to only reward air time of the expected swing foot.
+        gait_threshold: Stance/swing threshold in normalized phase, matching `feet_gait` (stance when phase < threshold).
+        phase_offset: Phase offset applied before thresholding, matching `feet_gait` / `leg_raise_imitation` alignment.
+        contact_force_threshold: Contact force norm threshold for contact detection.
         body_names: Regex pattern for foot bodies.
     """
     indices = _get_indices(env, body_names, env_states.robots[env.name].body_names).long()
@@ -461,9 +473,48 @@ def feet_air_time(
 
     contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
     # Check current contact status
-    contact_now = contact_forces.contact_forces_history[:, -1, indices, :].norm(dim=-1) > 1.0
+    contact_now = contact_forces.contact_forces_history[:, -1, indices, :].norm(dim=-1) > contact_force_threshold
 
-    # Update timers
+    if period is not None and offset is not None:
+        if period <= 0.0:
+            return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
+        # Phase-gated variant (aligned with `feet_gait` and `leg_raise_imitation` timings):
+        # Only count / reward air time for the foot that is expected to be in swing.
+        global_phase = ((env._episode_steps * env.step_dt) % period) / period  # (N,)
+
+        offset_list = list(offset)
+        if len(offset_list) < num_feet:
+            offset_list = offset_list + [0.0] * (num_feet - len(offset_list))
+
+        offsets_tensor = torch.tensor(offset_list[:num_feet], device=env.device).view(1, -1)
+        foot_phase = (global_phase.unsqueeze(1) + offsets_tensor + phase_offset) % 1.0  # (N, num_feet)
+        expected_stance = foot_phase < gait_threshold
+        expected_swing = ~expected_stance
+
+        # Update timers (only within expected mode to prevent "banking" time outside the intended window).
+        air_time[:] = torch.where(
+            expected_swing & (~contact_now),
+            air_time + env.step_dt,
+            torch.zeros_like(air_time),
+        )
+        contact_time[:] = torch.where(
+            expected_stance & contact_now,
+            contact_time + env.step_dt,
+            torch.zeros_like(contact_time),
+        )
+
+        reward = torch.clamp(air_time.sum(dim=1), max=threshold)
+        double_flight = contact_now.sum(dim=1) == 0
+        reward = torch.where(double_flight, -double_flight_penalty * torch.ones_like(reward), reward)
+
+        if hasattr(env, "reset_buf") and env.reset_buf.any():
+            air_time[env.reset_buf] = 0.0
+            contact_time[env.reset_buf] = 0.0
+
+        return reward
+
+    # Default (phase-agnostic) variant.
     air_time[:] = torch.where(contact_now, torch.zeros_like(air_time), air_time + env.step_dt)
     contact_time[:] = torch.where(contact_now, contact_time + env.step_dt, torch.zeros_like(contact_time))
 
