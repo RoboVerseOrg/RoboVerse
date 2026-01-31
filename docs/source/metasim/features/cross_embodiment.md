@@ -1,22 +1,8 @@
 # Cross-Embodiment Transfer
 
-Cross-embodiment is a key feature of RoboVerse that enables policies and demonstrations to be transferred across different robot morphologies. This allows you to:
+Cross-embodiment enables policies and demonstrations to be transferred across different robot morphologies.
 
-- Train on one robot and deploy on another
-- Leverage demonstrations from multiple robot types
-- Test generalization across embodiments
-
----
-
-## Supported Robot Categories
-
-| Category | Robots | Gripper Type |
-|----------|--------|--------------|
-| **7-DOF Arms** | Franka Panda, KUKA iiwa, Kinova Gen3 | Parallel gripper |
-| **6-DOF Arms** | UR5, UR10, xArm6 | Parallel gripper |
-| **Mobile Manipulators** | Fetch, Tiago, Stretch | Various |
-| **Dexterous Hands** | Allegro, Shadow, LEAP | Multi-finger |
-| **Humanoids** | H1, G1, GR1 | Anthropomorphic |
+See [Robots Dataset](../../dataset_benchmark/dataset/robots.md) for the full list of supported robots.
 
 ---
 

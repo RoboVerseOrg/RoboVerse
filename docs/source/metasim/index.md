@@ -8,10 +8,10 @@
 
 MetaSim enables you to:
 
-- **Write Once, Run Anywhere**: Develop simulation code that works seamlessly across MuJoCo, Isaac Sim, SAPIEN, PyBullet, Genesis, and more
-- **Configure Declaratively**: Define robots, scenes, cameras, and physics parameters through a type-safe configuration system
-- **Scale Efficiently**: Run thousands of parallel environments with GPU acceleration
-- **Extend Easily**: Add new robots, tasks, and simulators through well-defined interfaces
+- **Write Once, Run Anywhere**: Develop simulation code that works across multiple simulators
+- **Configure Declaratively**: Define robots, scenes, cameras, and physics parameters through a configuration system
+- **Scale**: Run parallel environments
+- **Extend**: Add new robots, tasks, and simulators through defined interfaces
 
 ### Core Concepts
 
