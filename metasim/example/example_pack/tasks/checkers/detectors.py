@@ -15,7 +15,7 @@ from .util import get_pos, get_rot
 
 try:
     from metasim.sim import BaseSimHandler
-except:
+except ImportError:
     pass
 
 

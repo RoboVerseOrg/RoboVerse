@@ -11,7 +11,7 @@ from metasim.types import Action, CameraState, DictEnvState, ObjectState, RobotS
 
 try:
     from metasim.sim.base import BaseSimHandler
-except:
+except ImportError:
     pass
 
 

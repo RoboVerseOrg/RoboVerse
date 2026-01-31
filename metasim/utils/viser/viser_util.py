@@ -2327,13 +2327,13 @@ class ViserVisualizer:
             if robot_name in self._ik_target_markers:
                 try:
                     self._ik_target_markers[robot_name].remove()
-                except:
+                except Exception:
                     pass
 
             if robot_name in self._ik_orientation_frames:
                 try:
                     self._ik_orientation_frames[robot_name].remove()
-                except:
+                except Exception:
                     pass
 
             # Create new marker (a small sphere)
