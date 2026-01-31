@@ -9,7 +9,7 @@ lowstate_topic: "rt/lowstate"
 enable_actions_reindex: True
 
 # Trained policy for 29-DoF (no hands)
-policy_path: "outputs/humanoid/walk_g1_dof29/pretrain_noMassFrictionRandomization/exported/model_exported_jit.pt"
+policy_path: "outputs/rsl_rl_ppo/walk_g1_dof29/test/exported/model_exported_jit.pt"
 
 # should be aligned to the joint order in `joint_names`
 kps: [200, 150, 150, 200, 20, 20, 200, 150, 150, 200, 20, 20, 200, 200, 200, 40, 40, 40, 40, 20, 20, 20, 40, 40, 40, 40, 20, 20, 20]
