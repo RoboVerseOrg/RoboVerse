@@ -52,7 +52,7 @@ from isaaclab.sim import SimulationContext
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, quat_slerp
-from loguru import logger as log
+from loguru import logger
 
 ##
 # Pre-defined configs
@@ -126,7 +126,7 @@ class MotionLoader:
 
         self.input_frames = motion.shape[0]
         self.duration = (self.input_frames - 1) * self.input_dt
-        log.info(f"Motion loaded ({self.motion_file}), duration: {self.duration} sec, frames: {self.input_frames}")
+        logger.info(f"Motion loaded ({self.motion_file}), duration: {self.duration} sec, frames: {self.input_frames}")
 
     def _interpolate_motion(self):
         """Interpolates the motion to the output fps."""
@@ -148,7 +148,7 @@ class MotionLoader:
             self.motion_dof_poss_input[index_1],
             blend.unsqueeze(1),
         )
-        log.info(
+        logger.info(
             f"Motion interpolated, input frames: {self.input_frames}, input fps: {self.input_fps}, output frames:"
             f" {self.output_frames}, output fps: {self.output_fps}"
         )
@@ -317,13 +317,13 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
 
             COLLECTION = args_cli.output_name
             run = wandb.init(project="csv_to_npz", name=COLLECTION)
-            log.info(f"[INFO]: Logging motion to wandb: {COLLECTION}")
+            logger.info(f"[INFO]: Logging motion to wandb: {COLLECTION}")
             REGISTRY = "motions"
             # declare the NPZ file as the output of this run
             logged_artifact = run.log_artifact(artifact_or_path="/tmp/motion.npz", name=COLLECTION, type=REGISTRY)
             # link artifact to the registry (`target_path`)
             run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
-            log.info(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
+            logger.info(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
 
 
 def main():
@@ -338,7 +338,7 @@ def main():
     # Play the simulator
     sim.reset()
     # Now we are ready!
-    log.info("[INFO]: Setup complete...")
+    logger.info("[INFO]: Setup complete...")
     # Run the simulator
     run_simulator(
         sim,
