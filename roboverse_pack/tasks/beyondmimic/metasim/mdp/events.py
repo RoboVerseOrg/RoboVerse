@@ -43,6 +43,12 @@ def randomize_joint_default_pos(  # startup
             env_ids = env_ids[:, None]
         env.default_dof_pos_sorted[env_ids, joint_ids] = pos
 
+        # Keep original-order defaults and action offsets consistent with the new sorted defaults.
+        # NOTE: `default_dof_pos_original` and `action_offset` are used in the task's action processing path.
+        env.default_dof_pos_original = env.default_dof_pos_sorted[:, env.sorted_to_original_joint_indexes]
+        if getattr(env.robot, "action_offset", False):
+            env.action_offset = env.default_dof_pos_original.clone()
+
 
 def push_by_setting_velocity(
     env: LeggedRobotTask,

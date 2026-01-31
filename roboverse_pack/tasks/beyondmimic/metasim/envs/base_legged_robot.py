@@ -240,6 +240,12 @@ class LeggedRobotTask(RLTaskEnv):
         for metric_name, metric_value in metrics.items():
             self.extras["episode"][f"Metrics_Motion/{metric_name}"] = metric_value
 
+        # Reset optional query histories for reset envs (e.g., contact forces) to avoid leakage across episodes.
+        for query in getattr(self.handler, "optional_queries", {}).values():
+            reset_fn = getattr(query, "reset", None)
+            if callable(reset_fn):
+                reset_fn(env_ids)
+
         # reset events
 
         # reset terminations

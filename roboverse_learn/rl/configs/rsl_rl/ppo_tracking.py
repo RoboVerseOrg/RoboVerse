@@ -31,8 +31,9 @@ class RslRlPPOTrackingConfig(RslRlPPOConfig):
     wandb_project: str = "rsl_rl_ppo_tracking"
 
     # Environment / device
-    task = "motion-tracking-isaaclab"
-    robot = "g1_tracking"  # unused
+    # Use RoboVerse/MetaSim task by default (runs via metasim's IsaacSim handler).
+    task = "motion-tracking"
+    robot = "g1_tracking"
     sim: SimBackend = "isaacsim"
 
     # Logging

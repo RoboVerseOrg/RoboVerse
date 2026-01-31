@@ -106,6 +106,22 @@ class ContactForces(BaseQueryType):
         )
         return {self.robots[0].name: self}
 
+    def reset(self, env_ids=None) -> None:
+        """Reset internal history for specified env ids.
+
+        This avoids leaking pre-reset contact forces into the next episode when
+        reward/termination terms use contact force history.
+        """
+        if env_ids is None:
+            env_ids = list(range(self.num_envs))
+        if isinstance(env_ids, torch.Tensor):
+            env_ids = env_ids.detach().cpu().tolist()
+        else:
+            env_ids = list(env_ids)
+
+        for snapshot in self._contact_forces_queue:
+            snapshot[env_ids] = 0.0
+
     @property
     def contact_forces_history(self) -> torch.Tensor:
         """Get the contact forces history."""

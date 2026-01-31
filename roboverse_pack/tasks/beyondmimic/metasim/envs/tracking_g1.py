@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -10,10 +11,12 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.registry import register_task
 from metasim.types import TensorState
-from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_pack.tasks.beyondmimic.metasim.configs.tracking_g1 import TrackingG1EnvCfg
 
 from .base_legged_robot import LeggedRobotTask
+
+if TYPE_CHECKING:
+    from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 
 
 @register_task("motion-tracking")

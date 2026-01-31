@@ -335,7 +335,7 @@ class MotionCommand:
         resample_env_ids = (self.time_left <= 0.0).nonzero().flatten()
         if len(resample_env_ids) > 0:
             self._resample(resample_env_ids, env_states)
-            env_states = self.handler.get_states()
+            env_states = self.env.handler.get_states()
         # update the command
         self._update_command(env_states)
 
