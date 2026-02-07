@@ -4,7 +4,8 @@ import os
 import random
 
 try:
-    import isaacgym  # noqa: F401
+    # IsaacGym requires importing its modules before PyTorch.
+    from isaacgym import gymapi  # noqa: F401
 except ImportError:
     pass
 
@@ -96,9 +97,21 @@ def train(args: RslRlPPOConfig):
 
     # Export policy
     print("Exporting policy...")
-    policy = runner.get_inference_policy()
     policy_path = os.path.join(args.model_dir, "policy.pt")
-    torch.jit.script(policy).save(policy_path)
+    actor_critic = runner.alg.policy
+
+    class _ExportablePolicy(torch.nn.Module):
+        def __init__(self, actor_critic_module: torch.nn.Module):
+            super().__init__()
+            self.actor = getattr(actor_critic_module, "actor")
+            self.actor_obs_normalizer = getattr(actor_critic_module, "actor_obs_normalizer", torch.nn.Identity())
+
+        def forward(self, obs: torch.Tensor) -> torch.Tensor:
+            obs = self.actor_obs_normalizer(obs)
+            return self.actor(obs)
+
+    export_policy = _ExportablePolicy(actor_critic).eval().cpu()
+    torch.jit.script(export_policy).save(policy_path)
     print(f"Policy exported to {policy_path}")
 
     if args.use_wandb:

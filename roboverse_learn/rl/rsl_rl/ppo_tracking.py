@@ -4,7 +4,10 @@ import os
 import random
 
 try:
-    import isaacgym  # noqa: F401
+    # IsaacGym requires importing its modules before PyTorch.
+    # Importing only the top-level `isaacgym` package is not sufficient; we need to
+    # import `gymapi` (which loads the native deps) before `torch` is imported.
+    from isaacgym import gymapi  # noqa: F401
 except ImportError:
     pass
 
@@ -18,6 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
+from metasim.task.factory import make_task_env
 from metasim.task.registry import get_task_class
 
 
@@ -28,6 +32,10 @@ torch.backends.cudnn.benchmark = False
 
 def make_roboverse_env(args: RslRlPPOTrackingConfig):
     """Create RoboVerse task environment"""
+    if args.task == "motion-tracking-isaaclab":
+        # Ensure the task is registered (it is registered via module import side effects).
+        import roboverse_pack.tasks.beyondmimic.isaaclab.envs.tracking_rl_env  # noqa: F401
+
     task_cls = get_task_class(args.task)
 
     # Load environment configuration from task
@@ -40,8 +48,7 @@ def make_roboverse_env(args: RslRlPPOTrackingConfig):
     )
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # Pass env_cfg to task constructor
-    env = task_cls(scenario=scenario, args=args, device=device)
+    env = make_task_env(args.task, scenario=scenario, args=args, device=device)
     return env
 
 
@@ -98,9 +105,21 @@ def train(args: RslRlPPOTrackingConfig):
 
     # Export policy
     print("Exporting policy...")
-    policy = runner.get_inference_policy()
     policy_path = os.path.join(args.model_dir, "policy.pt")
-    torch.jit.script(policy).save(policy_path)
+    actor_critic = runner.alg.policy
+
+    class _ExportablePolicy(torch.nn.Module):
+        def __init__(self, actor_critic_module: torch.nn.Module):
+            super().__init__()
+            self.actor = getattr(actor_critic_module, "actor")
+            self.actor_obs_normalizer = getattr(actor_critic_module, "actor_obs_normalizer", torch.nn.Identity())
+
+        def forward(self, obs: torch.Tensor) -> torch.Tensor:
+            obs = self.actor_obs_normalizer(obs)
+            return self.actor(obs)
+
+    export_policy = _ExportablePolicy(actor_critic).eval().cpu()
+    torch.jit.script(export_policy).save(policy_path)
     print(f"Policy exported to {policy_path}")
 
     if args.use_wandb:

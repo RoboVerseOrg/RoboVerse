@@ -1163,11 +1163,19 @@ class IsaacsimHandler(BaseSimHandler):
 
     def _load_render_settings(self) -> None:
         import carb
-        import omni.replicator.core as rep
+
+        try:
+            import omni.replicator.core as rep
+        except Exception:
+            rep = None
 
         # from omni.rtx.settings.core.widgets.pt_widgets import PathTracingSettingsFrame
 
-        rep.settings.set_render_rtx_realtime()  # fix noising rendered images
+        # Replicator is optional in some IsaacSim headless experience files.
+        if rep is not None:
+            rep.settings.set_render_rtx_realtime()  # fix noising rendered images
+        else:
+            log.warning("omni.replicator.core is not available; skipping RTX realtime render settings.")
 
         settings = carb.settings.get_settings()
         if self.scenario.render.mode == "pathtracing":

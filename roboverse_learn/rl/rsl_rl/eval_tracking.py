@@ -4,7 +4,8 @@ import os
 import random
 
 try:
-    import isaacgym  # noqa: F401
+    # IsaacGym requires importing its modules before PyTorch.
+    from isaacgym import gymapi  # noqa: F401
 except ImportError:
     pass
 
@@ -20,6 +21,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
+from metasim.task.factory import make_task_env
 from metasim.task.registry import get_task_class
 
 
@@ -68,7 +70,7 @@ def make_roboverse_env(args: RslRlPPOTrackingConfig):
     )
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
-    env = task_cls(scenario=scenario, args=args, device=device)
+    env = make_task_env(args.task, scenario=scenario, args=args, device=device)
     return env
 
 

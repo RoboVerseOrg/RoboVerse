@@ -44,12 +44,8 @@ class Args:
     scene: str | None = None
     render: RenderCfg = RenderCfg()
 
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = (
-        "isaacsim"
-    )
-    renderer: (
-        Literal["isaaclab", "isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None
-    ) = None
+    sim: Literal["isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx", "isaacsim"] = "isaacsim"
+    renderer: Literal["isaacgym", "genesis", "pybullet", "mujoco", "sapien2", "sapien3", "isaacsim"] | None = None
 
     num_envs: int = 1
     try_add_table: bool = True

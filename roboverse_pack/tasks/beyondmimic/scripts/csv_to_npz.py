@@ -6,12 +6,17 @@ from __future__ import annotations
 
     # Usage
     python csv_to_npz.py --input_file LAFAN/dance1_subject2.csv --input_fps 30 --frame_range 122 722 \
-    --output_file ./motions/dance1_subject2.npz --output_fps 50
+    --output_path ./motions/dance1_subject2.npz --output_fps 50 --upload_wandb
 """
 
-"""Launch Isaac Sim Simulator first."""
+# Launch Isaac Sim simulator first.
 
 import argparse
+import os
+
+import rootutils
+
+rootutils.setup_root(__file__, pythonpath=True)
 
 import numpy as np
 from isaaclab.app import AppLauncher
@@ -30,8 +35,9 @@ parser.add_argument(
         " loaded."
     ),
 )
-parser.add_argument("--output_name", type=str, required=True, help="The name of the motion npz file.")
+parser.add_argument("--output_path", type=str, required=True, help="The path to the output motion npz file.")
 parser.add_argument("--output_fps", type=int, default=50, help="The fps of the output motion.")
+parser.add_argument("--upload_wandb", action="store_true", help="Upload the output to wandb.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -246,6 +252,10 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
     # ------- data logger -------------------------------------------------------
     log = {
         "fps": [args_cli.output_fps],
+        # Store names for deterministic reindexing across runtimes/backends.
+        # Arrays logged below follow IsaacLab's internal joint/body ordering.
+        "joint_names": np.asarray(list(robot.joint_names), dtype=np.str_),
+        "body_names": np.asarray(list(robot.body_names), dtype=np.str_),
         "joint_pos": [],
         "joint_vel": [],
         "body_pos_w": [],
@@ -311,19 +321,27 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
             ):
                 log[k] = np.stack(log[k], axis=0)
 
-            np.savez("/tmp/motion.npz", **log)
+            output_path = args_cli.output_path
+            output_dir = os.path.dirname(output_path)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+            np.savez(output_path, **log)
+            logger.info(f"[INFO]: Motion saved to {output_path}")
 
-            import wandb
+            if args_cli.upload_wandb:
+                import wandb
 
-            COLLECTION = args_cli.output_name
-            run = wandb.init(project="csv_to_npz", name=COLLECTION)
-            logger.info(f"[INFO]: Logging motion to wandb: {COLLECTION}")
-            REGISTRY = "motions"
-            # declare the NPZ file as the output of this run
-            logged_artifact = run.log_artifact(artifact_or_path="/tmp/motion.npz", name=COLLECTION, type=REGISTRY)
-            # link artifact to the registry (`target_path`)
-            run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
-            logger.info(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
+                COLLECTION = os.path.splitext(os.path.basename(output_path))[0]
+                run = wandb.init(project="csv_to_npz", name=COLLECTION)
+                logger.info(f"[INFO]: Logging motion to wandb: {COLLECTION}")
+                REGISTRY = "motions"
+                # declare the NPZ file as the output of this run
+                logged_artifact = run.log_artifact(artifact_or_path=output_path, name=COLLECTION, type=REGISTRY)
+                # link artifact to the registry (`target_path`)
+                run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
+                logger.info(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
+
+            break
 
 
 def main():

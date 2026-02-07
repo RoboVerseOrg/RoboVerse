@@ -27,25 +27,37 @@ def extract_mesh_paths_from_urdf(urdf_file_path):
 
     # Extract the filename attributes and convert to absolute paths
     mesh_paths = []
+    urdf_path = Path(urdf_file_path).resolve()
+    urdf_dir = urdf_path.parent
     for mesh in mesh_elements:
         if "filename" in mesh.attrib:
             path = mesh.attrib["filename"]
 
             # Handle package:// URLs by replacing them with absolute paths
             if path.startswith("package://"):
-                # Remove the "package://" prefix
-                path = path[len("package://") :]
+                # Remove the "package://" prefix and split into `package_name/relpath`.
+                rel = path[len("package://") :].lstrip("/")
+                pkg_name, _, pkg_rel = rel.partition("/")
 
-                # Assuming the package directory is relative to the URDF file location
-                # You might need to adjust this based on your project structure
-                urdf_dir = os.path.dirname(os.path.abspath(urdf_file_path))
-                absolute_path = os.path.normpath(os.path.join(urdf_dir, path))
-                mesh_paths.append(absolute_path)
+                # Resolve the package root by walking up from the URDF directory and
+                # finding a parent folder that matches `package_name`.
+                pkg_root: Path | None = None
+                for parent in (urdf_dir, *urdf_dir.parents):
+                    if parent.name == pkg_name:
+                        pkg_root = parent
+                        break
+
+                if pkg_root is not None:
+                    resolved = (pkg_root / pkg_rel).resolve()
+                else:
+                    # Fallback: treat as relative to the URDF directory.
+                    resolved = (urdf_dir / rel).resolve()
+
+                mesh_paths.append(str(resolved))
             else:
                 # If it's already an absolute path or a relative path, just normalize it
                 if not os.path.isabs(path):
-                    urdf_dir = os.path.dirname(os.path.abspath(urdf_file_path))
-                    path = os.path.normpath(os.path.join(urdf_dir, path))
+                    path = str((urdf_dir / path).resolve())
                 mesh_paths.append(path)
 
     # Extract material and texture files from OBJ meshes

@@ -4,7 +4,7 @@ import torch
 
 from metasim.queries import ContactForces
 from metasim.types import TensorState
-from metasim.utils.math import quat_rotate_inverse
+from metasim.utils.math import quat_apply_inverse
 from roboverse_pack.tasks.humanoid.base.types import EnvTypes
 from roboverse_pack.utils.humanoid_utils import get_indices_from_substring, hash_names
 
@@ -14,7 +14,7 @@ def track_lin_vel_xy(env: EnvTypes, env_states: TensorState, std: float) -> torc
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    base_lin_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 7:10])
+    base_lin_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 7:10])
     lin_vel_diff = env.commands_manager.value[:, :2] - base_lin_vel[:, :2]
     lin_vel_error = torch.sum(torch.square(lin_vel_diff), dim=1)
     return torch.exp(-lin_vel_error / std**2)
@@ -24,7 +24,7 @@ def track_ang_vel_z(env: EnvTypes, env_states: TensorState, std: float) -> torch
     """Track angular velocity commands (yaw)."""
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    base_ang_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 10:13])
+    base_ang_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 10:13])
     ang_vel_diff = env.commands_manager.value[:, 2] - base_ang_vel[:, 2]
     ang_vel_error = torch.square(ang_vel_diff)
     return torch.exp(-ang_vel_error / std**2)
@@ -41,7 +41,7 @@ def lin_vel_z(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    base_lin_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 7:10])
+    base_lin_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 7:10])
     return torch.square(base_lin_vel[:, 2])
 
 
@@ -50,7 +50,7 @@ def ang_vel_xy(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    base_ang_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 10:13])
+    base_ang_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 10:13])
     return torch.sum(torch.square(base_ang_vel[:, :2]), dim=1)
 
 
@@ -147,7 +147,7 @@ def flat_orientation(env: EnvTypes, env_states: TensorState) -> torch.Tensor:
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    projected_gravity = quat_rotate_inverse(base_quat, env.gravity_vec)
+    projected_gravity = quat_apply_inverse(base_quat, env.gravity_vec)
     return torch.sum(torch.square(projected_gravity[:, :2]), dim=1)
 
 

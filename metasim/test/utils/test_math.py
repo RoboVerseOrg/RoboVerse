@@ -17,6 +17,7 @@ from metasim.utils.math import (
     matrix_from_quat,
     normalize,
     quat_apply,
+    quat_apply_inverse,
     quat_error_magnitude,
     quat_from_euler_xyz,
     quat_from_matrix,
@@ -214,6 +215,28 @@ def test_quat_apply_90deg_rotation():
 
     result = quat_apply(quat, vec)
     expected = torch.tensor([[0.0, 1.0, 0.0]])  # Should rotate to y-axis
+
+    assert torch.allclose(result, expected, atol=1e-4)
+
+
+@pytest.mark.general
+def test_quat_apply_inverse_identity():
+    """Test quat_apply_inverse with identity quaternion."""
+    quat = torch.tensor([[1.0, 0.0, 0.0, 0.0]])
+    vec = torch.tensor([[1.0, 2.0, 3.0]])
+
+    result = quat_apply_inverse(quat, vec)
+    assert torch.allclose(result, vec, atol=1e-6)
+
+
+@pytest.mark.general
+def test_quat_apply_inverse_90deg_rotation():
+    """Test quat_apply_inverse with 90° rotation around z-axis."""
+    quat = torch.tensor([[0.7071, 0.0, 0.0, 0.7071]])
+    vec = torch.tensor([[0.0, 1.0, 0.0]])  # y-axis
+
+    result = quat_apply_inverse(quat, vec)
+    expected = torch.tensor([[1.0, 0.0, 0.0]])  # Should rotate back to x-axis
 
     assert torch.allclose(result, expected, atol=1e-4)
 

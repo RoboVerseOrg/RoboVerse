@@ -353,12 +353,12 @@ class SinglePybulletHandler(BaseSimHandler):
 
     def launch(self) -> None:
         """Launch the simulation."""
-        super().launch()
         self._build_pybullet()
         if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
             assert ROBO_SPLATTER_AVAILABLE, "RoboSplatter is not available. GS background rendering will be disabled."
             self._build_gs_background()
         self.already_disconnect = False
+        super().launch()
 
     def close(self):
         """Close the simulation."""
@@ -410,15 +410,33 @@ class SinglePybulletHandler(BaseSimHandler):
             rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
-            lin_vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            lin_vel_np, ang_vel_np = p.getBaseVelocity(obj_id)
+            lin_vel = torch.tensor(lin_vel_np, dtype=torch.float32)
+            ang_vel = torch.tensor(ang_vel_np, dtype=torch.float32)
             root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
+                # Build per-body state in sorted body-name order (IsaacLab-style).
+                body_names_sorted = self.get_body_names(obj.name, sort=True)
+                body_reindex = self.get_body_reindex(obj.name)
+
+                body_states = []
+                body_states.append(torch.cat([pos, rot, lin_vel, ang_vel]))
+                for link_index in range(p.getNumJoints(obj_id)):
+                    link_state = p.getLinkState(obj_id, link_index, computeLinkVelocity=1)
+                    link_pos = torch.tensor(link_state[0], dtype=torch.float32)
+                    link_rot = torch.tensor(convert_quat(np.array(link_state[1]), to="wxyz"), dtype=torch.float32)
+                    link_lin = torch.tensor(link_state[6], dtype=torch.float32)
+                    link_ang = torch.tensor(link_state[7], dtype=torch.float32)
+                    body_states.append(torch.cat([link_pos, link_rot, link_lin, link_ang]))
+
+                body_state_orig = torch.stack(body_states, dim=0).unsqueeze(0)  # (1, n_bodies, 13)
+                body_state = body_state_orig[:, body_reindex, :]
+
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
-                    body_names=None,
-                    body_state=None,  # TODO
+                    body_names=body_names_sorted,
+                    body_state=body_state,
                     joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
                 )
@@ -434,13 +452,29 @@ class SinglePybulletHandler(BaseSimHandler):
             rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
-            lin_vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            lin_vel_np, ang_vel_np = p.getBaseVelocity(obj_id)
+            lin_vel = torch.tensor(lin_vel_np, dtype=torch.float32)
+            ang_vel = torch.tensor(ang_vel_np, dtype=torch.float32)
             root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
+
+            body_names_sorted = self.get_body_names(robot.name, sort=True)
+            body_reindex = self.get_body_reindex(robot.name)
+            body_states = []
+            body_states.append(torch.cat([pos, rot, lin_vel, ang_vel]))
+            for link_index in range(p.getNumJoints(obj_id)):
+                link_state = p.getLinkState(obj_id, link_index, computeLinkVelocity=1)
+                link_pos = torch.tensor(link_state[0], dtype=torch.float32)
+                link_rot = torch.tensor(convert_quat(np.array(link_state[1]), to="wxyz"), dtype=torch.float32)
+                link_lin = torch.tensor(link_state[6], dtype=torch.float32)
+                link_ang = torch.tensor(link_state[7], dtype=torch.float32)
+                body_states.append(torch.cat([link_pos, link_rot, link_lin, link_ang]))
+
+            body_state_orig = torch.stack(body_states, dim=0).unsqueeze(0)  # (1, n_bodies, 13)
+            body_state = body_state_orig[:, body_reindex, :]
             state = RobotState(
                 root_state=root_state,
-                body_names=None,
-                body_state=None,  # TODO
+                body_names=body_names_sorted,
+                body_state=body_state,
                 joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
                 joint_pos_target=None,  # TODO
@@ -520,6 +554,29 @@ class SinglePybulletHandler(BaseSimHandler):
             return joint_names
         else:
             return []
+
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        obj_cfg = self.object_dict[obj_name]
+        if not isinstance(obj_cfg, (ArticulationObjCfg, RobotCfg)):
+            return []
+
+        obj_id = self.object_ids[obj_name]
+        base_name = p.getBodyInfo(obj_id)[0]
+        if isinstance(base_name, (bytes, bytearray)):
+            base_name = base_name.decode("utf-8")
+        base_name = str(base_name) if base_name else obj_name
+
+        # PyBullet bodies correspond to the base link + one link per joint index.
+        body_names = [base_name]
+        for joint_index in range(p.getNumJoints(obj_id)):
+            link_name = p.getJointInfo(obj_id, joint_index)[12]
+            if isinstance(link_name, (bytes, bytearray)):
+                link_name = link_name.decode("utf-8")
+            body_names.append(str(link_name))
+
+        if sort:
+            body_names.sort()
+        return body_names
 
     @property
     def actions_cache(self) -> list[Action]:

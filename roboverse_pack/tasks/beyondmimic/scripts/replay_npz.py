@@ -80,11 +80,15 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     artifact = api.artifact(registry_name)
     motion_file = str(pathlib.Path(artifact.download()) / "motion.npz")
 
+    # Resolve motion tensors into the current articulation ordering by name.
+    # This avoids silent mismatches when the motion file was recorded in a different joint/body ordering.
+    pelvis_index = int(robot.body_names.index("pelvis")) if "pelvis" in robot.body_names else 0
     motion = MotionLoader(
         motion_file,
-        torch.tensor([0], dtype=torch.long, device=sim.device),
+        torch.tensor([pelvis_index], dtype=torch.long, device=sim.device),
         sim.device,
     )
+    motion.reindex_to(joint_names=robot.joint_names, body_names=robot.body_names)
     time_steps = torch.zeros(scene.num_envs, dtype=torch.long, device=sim.device)
 
     # Simulation loop

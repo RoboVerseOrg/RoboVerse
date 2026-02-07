@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from metasim.types import TensorState
-from metasim.utils.math import matrix_from_quat, quat_rotate_inverse, subtract_frame_transforms
+from metasim.utils.math import matrix_from_quat, quat_apply_inverse, subtract_frame_transforms
 
 if TYPE_CHECKING:
     from roboverse_pack.tasks.beyondmimic.metasim.envs.base_legged_robot import LeggedRobotTask
@@ -89,13 +89,13 @@ def generated_commands(env: LeggedRobotTask, env_states: TensorState) -> torch.T
 def base_lin_vel(env: LeggedRobotTask, env_states: TensorState) -> torch.Tensor:
     """Root linear velocity in the robot's root frame."""
     robot_state = env_states.robots[env.name]
-    return quat_rotate_inverse(robot_state.root_state[:, 3:7], robot_state.root_state[:, 7:10])
+    return quat_apply_inverse(robot_state.root_state[:, 3:7], robot_state.root_state[:, 7:10])
 
 
 def base_ang_vel(env: LeggedRobotTask, env_states: TensorState) -> torch.Tensor:
     """Root angular velocity in the robot's root frame."""
     robot_state = env_states.robots[env.name]
-    return quat_rotate_inverse(robot_state.root_state[:, 3:7], robot_state.root_state[:, 10:13])
+    return quat_apply_inverse(robot_state.root_state[:, 3:7], robot_state.root_state[:, 10:13])
 
 
 def joint_pos_rel(env: LeggedRobotTask, env_states: TensorState) -> torch.Tensor:

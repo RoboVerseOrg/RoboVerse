@@ -33,9 +33,9 @@ class ScenarioCfg:
     # Runtime
     render: RenderCfg = RenderCfg()
     sim_params: SimParamCfg = SimParamCfg()
-    simulator: Literal["isaaclab","isaacgym","sapien2","sapien3",
+    simulator: Literal["isaacsim","isaacgym","sapien2","sapien3",
                        "genesis","pybullet","mujoco"] | None = None
-    renderer:  Literal["isaaclab","isaacgym","sapien2","sapien3",
+    renderer:  Literal["isaacsim","isaacgym","sapien2","sapien3",
                        "genesis","pybullet","mujoco"] | None = None
 
     # Misc

@@ -51,10 +51,18 @@ def _worker(
             elif cmd == "simulate":
                 env.simulate()
             elif cmd == "get_joint_names":
-                names = env.get_joint_names(data[0])
+                obj_name = data[0]
+                sort = True
+                if len(data) > 1:
+                    sort = data[1]
+                names = env.get_joint_names(obj_name, sort=sort)
                 remote.send(names)
             elif cmd == "get_body_names":
-                names = env.get_body_names(data[0])
+                obj_name = data[0]
+                sort = True
+                if len(data) > 1:
+                    sort = data[1]
+                names = env.get_body_names(obj_name, sort=sort)
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0])
@@ -108,10 +116,17 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             # Initialize workers
             self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.num_envs)])
             self.processes = []
+            # Each worker gets its own copy of optional queries.
+            worker_extra_spec = None
+            if extra_spec is not None:
+                try:
+                    worker_extra_spec = deepcopy(extra_spec)
+                except Exception:
+                    worker_extra_spec = extra_spec
             for rank in range(self.num_envs):
                 work_remote = self.work_remotes[rank]
                 remote = self.remotes[rank]
-                args = (rank, work_remote, remote, self.error_queue, partial(base_cls, sub_scenario))
+                args = (rank, work_remote, remote, self.error_queue, partial(base_cls, sub_scenario, worker_extra_spec))
                 # daemon=True: if the main process crashes, we should not cause things to hang
                 process = ctx.Process(target=_worker, args=args, daemon=True)  # pytype:disable=attribute-error
                 process.start()
@@ -188,13 +203,13 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def refresh_render(self):
             log.error("Rendering not supported in parallel mode")
 
-        def get_joint_names(self, obj_name: str) -> list[str]:
-            self.remotes[0].send(("get_joint_names", (obj_name,)))
+        def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            self.remotes[0].send(("get_joint_names", (obj_name, sort)))
             names = self.remotes[0].recv()
             return names
 
-        def get_body_names(self, obj_name: str) -> list[str]:
-            self.remotes[0].send(("get_body_names", (obj_name,)))
+        def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            self.remotes[0].send(("get_body_names", (obj_name, sort)))
             names = self.remotes[0].recv()
             return names
 

@@ -177,11 +177,11 @@ class RslRlBaseRunnerCfg:
     logger: Literal["tensorboard", "neptune", "wandb"] = "tensorboard"
     """The logger to use. Default is tensorboard."""
 
-    neptune_project: str = "isaaclab"
-    """The neptune project name. Default is "isaaclab"."""
+    neptune_project: str = "isaacsim"
+    """The neptune project name. Default is "isaacsim"."""
 
-    wandb_project: str = "isaaclab"
-    """The wandb project name. Default is "isaaclab"."""
+    wandb_project: str = "isaacsim"
+    """The wandb project name. Default is "isaacsim"."""
 
     resume: str | None = None
     """Resume directory name (timestamp) for training/evaluation."""

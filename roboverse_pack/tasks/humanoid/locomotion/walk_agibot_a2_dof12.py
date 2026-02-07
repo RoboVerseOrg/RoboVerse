@@ -12,7 +12,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.registry import register_task
 from metasim.types import TensorState
 from metasim.utils import configclass
-from metasim.utils.math import euler_xyz_from_quat, quat_rotate_inverse
+from metasim.utils.math import euler_xyz_from_quat, quat_apply_inverse
 from roboverse_pack.callback_funcs.humanoid import (
     reset_funcs,
     reward_funcs,
@@ -289,8 +289,8 @@ class WalkAgibotA2Dof12Task(LeggedRobotTask):
     def _compute_task_observations(self, env_states: TensorState):
         robot_state = env_states.robots[self.robot.name]
         base_quat = robot_state.root_state[:, 3:7]
-        base_lin_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 7:10])
-        base_ang_vel = quat_rotate_inverse(base_quat, robot_state.root_state[:, 10:13])
+        base_lin_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 7:10])
+        base_ang_vel = quat_apply_inverse(base_quat, robot_state.root_state[:, 10:13])
         roll, pitch, yaw = euler_xyz_from_quat(base_quat)
         base_euler_xyz = torch.stack([roll, pitch, yaw], dim=-1)
 

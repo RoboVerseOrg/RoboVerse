@@ -168,6 +168,7 @@ packages = ["metasim", "roboverse_pack", "roboverse_learn"]
 "roboverse_pack/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
 "roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 "metasim/sim/**.py" = ["D"]
+"metasim/integrations/**.py" = ["D"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 
 [tool.ruff.lint.isort]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 
 from metasim.types import TensorState
-from metasim.utils.math import quat_rotate_inverse
+from metasim.utils.math import quat_apply_inverse
 from roboverse_pack.tasks.humanoid.base.types import EnvTypes
 from roboverse_pack.utils.humanoid_utils import get_indices_from_substring
 
@@ -26,7 +26,7 @@ def bad_orientation(env: EnvTypes, env_states: TensorState, limit_angle: float) 
     # extract the used quantities (to enable type-hinting)
     robot_state = env_states.robots[env.name]
     base_quat = robot_state.root_state[:, 3:7]
-    projected_gravity = quat_rotate_inverse(base_quat, env.gravity_vec)
+    projected_gravity = quat_apply_inverse(base_quat, env.gravity_vec)
     return torch.acos(-projected_gravity[:, 2]).abs() > limit_angle
 
 

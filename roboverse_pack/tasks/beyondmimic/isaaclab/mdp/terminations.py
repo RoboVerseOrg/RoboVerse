@@ -33,11 +33,11 @@ def bad_anchor_ori(env: TrackingRLEnv, asset_cfg: SceneEntityCfg, command_name: 
 
     command: MotionCommand = env.command_manager.get_term(command_name)
     # converts world-frame gravity vector to anchor frame
-    motion_projected_gravity_b = math_utils.quat_rotate_inverse(
+    motion_projected_gravity_b = math_utils.quat_apply_inverse(
         command.anchor_quat_w, asset.data.GRAVITY_VEC_W
     )  # [n_envs, 3]
 
-    robot_projected_gravity_b = math_utils.quat_rotate_inverse(command.robot_anchor_quat_w, asset.data.GRAVITY_VEC_W)
+    robot_projected_gravity_b = math_utils.quat_apply_inverse(command.robot_anchor_quat_w, asset.data.GRAVITY_VEC_W)
 
     # checks whether the robot’s tilt magnitude deviates too much (how relatively "upright"), and ignores which way it leans
     return (motion_projected_gravity_b[:, 2] - robot_projected_gravity_b[:, 2]).abs() > threshold

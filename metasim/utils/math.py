@@ -638,9 +638,9 @@ def quat_rotate(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     return a + b + c
 
 
-# same as isaaclab.utils.math.quat_rotate_inverse
+# same as isaaclab.utils.math.quat_apply_inverse (adapted for wxyz quaternions)
 @torch.jit.script
-def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+def quat_apply_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     """Rotate a vector by the inverse of a quaternion along the last dimension of q and v.
 
     Args:
@@ -650,16 +650,15 @@ def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     Returns:
         The rotated vector in (x, y, z). Shape is (..., 3).
     """
-    q_w = q[..., 0]
-    q_vec = q[..., 1:]
-    a = v * (2.0 * q_w**2 - 1.0).unsqueeze(-1)
-    b = torch.cross(q_vec, v, dim=-1) * q_w.unsqueeze(-1) * 2.0
-    # for two-dimensional tensors, bmm is faster than einsum
-    if q_vec.dim() == 2:
-        c = q_vec * torch.bmm(q_vec.view(q.shape[0], 1, 3), v.view(q.shape[0], 3, 1)).squeeze(-1) * 2.0
-    else:
-        c = q_vec * torch.einsum("...i,...i->...", q_vec, v).unsqueeze(-1) * 2.0
-    return a - b + c
+    # store shape
+    shape = v.shape
+    # reshape to (N, 3) for multiplication
+    q = q.reshape(-1, 4)
+    v = v.reshape(-1, 3)
+    # extract components from quaternions
+    xyz = q[:, 1:]
+    t = xyz.cross(v, dim=-1) * 2
+    return (v - q[:, 0:1] * t + xyz.cross(t, dim=-1)).view(shape)
 
 
 @torch.jit.script

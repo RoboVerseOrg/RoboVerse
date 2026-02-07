@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import fields, is_dataclass
 from itertools import chain
 
 import numpy as np
@@ -13,6 +14,42 @@ try:
     from metasim.sim.base import BaseSimHandler
 except:
     pass
+
+
+def _join_extra_values(values: list):
+    """Join extra values across envs/workers.
+
+    Parallel workers may return structured extra payloads (e.g., dataclasses with
+    tensors). This function merges them into a single payload for the aggregated
+    `TensorState`.
+    """
+    if not values:
+        return None
+
+    first = values[0]
+    if isinstance(first, torch.Tensor):
+        return torch.cat(values, dim=0)
+
+    if isinstance(first, dict):
+        out = {}
+        keys = set()
+        for v in values:
+            if isinstance(v, dict):
+                keys.update(v.keys())
+        for k in keys:
+            sub = [v[k] for v in values if isinstance(v, dict) and k in v]
+            out[k] = _join_extra_values(sub)
+        return out
+
+    if is_dataclass(first):
+        kwargs = {}
+        for f in fields(first):
+            sub = [getattr(v, f.name) for v in values]
+            kwargs[f.name] = _join_extra_values(sub)
+        return type(first)(**kwargs)
+
+    # Fallback: keep the first value (best-effort).
+    return first
 
 
 def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
@@ -96,6 +133,24 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
                 if camera_states[0].intrinsics is not None
                 else None,
             )
+
+    # Join extras (optional query payloads)
+    all_extra_keys = set()
+    for state in tensor_states:
+        if isinstance(state.extras, dict):
+            all_extra_keys.update(state.extras.keys())
+    if all_extra_keys:
+        extras = {}
+        for key in all_extra_keys:
+            values = [
+                state.extras[key]
+                for state in tensor_states
+                if isinstance(state.extras, dict) and key in state.extras and state.extras[key] is not None
+            ]
+            joined = _join_extra_values(values)
+            if joined is not None:
+                extras[key] = joined
+        rst.extras = extras
 
     # Join sensors (assuming similar structure to objects)
     # for key in all_sensor_keys:

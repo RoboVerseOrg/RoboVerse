@@ -33,7 +33,15 @@ class MotionLoader:
     def __init__(self, motion_file: str, body_indexes: Sequence[int], device: str = "cpu"):
         assert os.path.isfile(motion_file), f"Invalid file path: {motion_file}"
         data = np.load(motion_file)
+        if "joint_names" not in data.files or "body_names" not in data.files:
+            raise ValueError(
+                "Motion file is missing required fields `joint_names`/`body_names`. "
+                "Regenerate the motion npz with `roboverse_pack/tasks/beyondmimic/scripts/csv_to_npz.py` "
+                "(new format stores names for deterministic reindexing)."
+            )
         self.fps = data["fps"]
+        self.joint_names = [str(x) for x in data["joint_names"].tolist()]
+        self.body_names = [str(x) for x in data["body_names"].tolist()]
         # target joint states from motion file
         self.joint_pos = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)  # [6574, 29]
         self.joint_vel = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)  # [6574, 29]
@@ -45,6 +53,38 @@ class MotionLoader:
         self._body_ang_vel_w = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)  # [6574, 30, 3]
         self._body_indexes = body_indexes  # [14,]
         self.time_step_total = self.joint_pos.shape[0]  # 6574
+
+    def reindex_to(self, *, joint_names: Sequence[str], body_names: Sequence[str]) -> None:
+        """Reindex all motion tensors to match the provided joint/body name ordering.
+
+        Notes:
+            Motion npz files are recorded in a simulator/runtime-specific ordering. MetaSim's IsaacLab
+            compat layer standardizes joint/body ordering by name for cross-backend determinism, so
+            we must realign loaded motion tensors by name to avoid silent mismatches in reward/termination.
+        """
+
+        def _build_index_map(source: list[str], target: Sequence[str], kind: str) -> list[int]:
+            src = {name: i for i, name in enumerate(source)}
+            missing = [name for name in target if name not in src]
+            if missing:
+                raise ValueError(
+                    f"Motion file is missing {kind} names required by the current robot: {missing}. "
+                    "Ensure the motion was recorded from the same robot/URDF."
+                )
+            return [int(src[name]) for name in target]
+
+        joint_idx = _build_index_map(self.joint_names, joint_names, "joint")
+        body_idx = _build_index_map(self.body_names, body_names, "body")
+
+        self.joint_pos = self.joint_pos[:, joint_idx]
+        self.joint_vel = self.joint_vel[:, joint_idx]
+        self._body_pos_w = self._body_pos_w[:, body_idx]
+        self._body_quat_w = self._body_quat_w[:, body_idx]
+        self._body_lin_vel_w = self._body_lin_vel_w[:, body_idx]
+        self._body_ang_vel_w = self._body_ang_vel_w[:, body_idx]
+
+        self.joint_names = list(joint_names)
+        self.body_names = list(body_names)
 
     @property
     def body_pos_w(self) -> torch.Tensor:
@@ -83,6 +123,7 @@ class MotionCommand(CommandTerm):
         )
 
         self.motion = MotionLoader(self.cfg.motion_file, self.body_indexes, device=self.device)
+        self.motion.reindex_to(joint_names=self.robot.joint_names, body_names=self.robot.body_names)
         self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         self.body_pos_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 3, device=self.device)
         self.body_quat_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 4, device=self.device)

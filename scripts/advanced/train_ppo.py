@@ -18,7 +18,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class MetaSimGymEnv(gym.Env):
     """Vectorized environment for MetaSim that supports parallel RL training"""
 
-    def __init__(self, scenario: ScenarioCfg, num_envs: int = 1, sim_type: SimType = SimType.ISAACLAB):
+    def __init__(self, scenario: ScenarioCfg, num_envs: int = 1, sim_type: SimType = SimType.ISAACSIM):
         super().__init__()
 
         self.num_envs = num_envs

@@ -6,7 +6,6 @@ from metasim.utils import configclass
 SimBackend = Literal[
     "isaacgym",
     "isaacsim",
-    "isaaclab",
     "mujoco",
     "genesis",
     "mjx",

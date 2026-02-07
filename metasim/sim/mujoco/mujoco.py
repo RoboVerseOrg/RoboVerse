@@ -35,6 +35,19 @@ try:
                 return
 
         mujoco.glfw.GLContext.__del__ = _safe_glctx_del
+
+    # Patch mujoco.egl.GLContext.__del__ to avoid noisy EGL errors during shutdown.
+    if hasattr(mujoco, "egl") and hasattr(mujoco.egl, "GLContext"):
+        _orig_eglctx_del = getattr(mujoco.egl.GLContext, "__del__", None)
+
+        def _safe_eglctx_del(self):
+            try:
+                if _orig_eglctx_del is not None:
+                    _orig_eglctx_del(self)
+            except Exception:
+                return
+
+        mujoco.egl.GLContext.__del__ = _safe_eglctx_del
 except Exception:
     pass
 
@@ -544,6 +557,29 @@ class MujocoHandler(BaseSimHandler):
         """Add robots to the model."""
         for robot in self.robots:
             robot_xml = mjcf.from_path(robot.mjcf_path)
+
+            # Some MJCFs only define kinematics and omit actuators. MetaSim assumes that each robot DOF
+            # is actuated so it can apply joint targets through `data.ctrl`. If a robot model provides
+            # no actuators, create a default position actuator for every joint.
+            try:
+                has_actuators = bool(list(robot_xml.actuator.all_children()))
+            except Exception:
+                has_actuators = False
+
+            if not has_actuators:
+                for joint in robot_xml.find_all("joint"):
+                    if not getattr(joint, "name", None):
+                        continue
+
+                    control_mode = robot.control_type.get(joint.name, "position") if robot.control_type else "position"
+                    if control_mode == "effort":
+                        # Torque control.
+                        robot_xml.actuator.add("motor", name=joint.name, joint=joint)
+                    else:
+                        # Position control with a reasonable stiffness default; overwrite from config when available.
+                        actuator_cfg = robot.actuators.get(joint.name) if robot.actuators else None
+                        kp = float(getattr(actuator_cfg, "stiffness", 100.0) or 100.0) if actuator_cfg else 100.0
+                        robot_xml.actuator.add("position", name=joint.name, joint=joint, kp=kp)
 
             if hasattr(robot, "scale") and robot.scale != (1.0, 1.0, 1.0):
                 self._apply_scale_to_mjcf(robot_xml, robot.scale)

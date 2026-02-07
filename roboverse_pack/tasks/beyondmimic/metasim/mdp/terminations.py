@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from metasim.types import TensorState
-from metasim.utils.math import quat_rotate_inverse
+from metasim.utils.math import quat_apply_inverse
 from roboverse_pack.tasks.beyondmimic.metasim.utils.misc import get_body_indexes
 
 if TYPE_CHECKING:
@@ -32,8 +32,8 @@ def bad_anchor_ori(env: LeggedRobotTask, env_states: TensorState, threshold: flo
     """Bad anchor orientation."""
     robot_state = env_states.robots[env.name]
     anchor_index = env.commands.robot_anchor_body_index
-    motion_projected_gravity_b = quat_rotate_inverse(env.commands.anchor_quat_w, env.gravity_vec)  # [n_envs, 3]
-    robot_projected_gravity_b = quat_rotate_inverse(robot_state.body_state[:, anchor_index, 3:7], env.gravity_vec)
+    motion_projected_gravity_b = quat_apply_inverse(env.commands.anchor_quat_w, env.gravity_vec)  # [n_envs, 3]
+    robot_projected_gravity_b = quat_apply_inverse(robot_state.body_state[:, anchor_index, 3:7], env.gravity_vec)
 
     # check whether the robot's tilt magnitude deviates too much (how relatively "upright"), and ignores which way it leans
     return (motion_projected_gravity_b[:, 2] - robot_projected_gravity_b[:, 2]).abs() > threshold

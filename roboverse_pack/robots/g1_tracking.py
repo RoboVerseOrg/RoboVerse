@@ -234,6 +234,7 @@ class G1TrackingCfg(RobotCfg):
     action_offset: bool = True  # offset actions by `default_dof_pos_original` specified in the task class
 
     def __post_init__(self):
+        super().__post_init__()
         actuators = {}
         action_scale = {}
         for cfg in self.actuators_cfg.values():
@@ -265,3 +266,15 @@ class G1TrackingCfg(RobotCfg):
         self.actuators = {k: v for k, v in zip(name_list, value_list)}
         _, name_list, value_list = resolve_matching_names_values(action_scale, joint_names)
         self.action_scale = {k: v for k, v in zip(name_list, value_list)}
+
+        # Default to position control for motion-tracking across simulators.
+        # This is required by some backends (e.g., IsaacGym) to configure DOF drive modes.
+        self.control_type = {name: "position" for name in joint_names}
+
+        # Resolve regex-based default joint state dictionaries for simulators that expect explicit names (e.g. MuJoCo).
+        if self.default_joint_positions is not None:
+            _, name_list, value_list = resolve_matching_names_values(self.default_joint_positions, joint_names)
+            self.default_joint_positions = {k: v for k, v in zip(name_list, value_list)}
+        if self.default_joint_velocities is not None:
+            _, name_list, value_list = resolve_matching_names_values(self.default_joint_velocities, joint_names)
+            self.default_joint_velocities = {k: v for k, v in zip(name_list, value_list)}

@@ -84,7 +84,7 @@ def do_it(task: BaseTaskCfg, robot: RobotCfg, handler: BaseSimHandler, source_pa
 
 def main():
     args = parse_args()
-    env_class = get_sim_env_class(SimType.ISAACLAB)
+    env_class = get_sim_env_class(SimType.ISAACSIM)
     task = get_task(args.task)
 
     if args.source_path is None:

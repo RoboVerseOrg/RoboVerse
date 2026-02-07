@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
 from datetime import datetime
+from typing import Literal, Optional
 
 from metasim.utils import configclass
-from datetime import datetime
 
 SimBackend = Literal[
     "isaacgym",
     "isaacsim",
-    "isaaclab",
     "mujoco",
     "genesis",
     "mjx",
@@ -41,7 +39,7 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
     obs_groups: Optional[dict[str, list[str]]] = None
     clip_actions: Optional[float] = None
     logger: Literal["tensorboard", "neptune", "wandb"] = "tensorboard"
-    neptune_project: str = "isaaclab"
+    neptune_project: str = "isaacsim"
     wandb_project: str = "rsl_rl_ppo"
     resume: Optional[str] = None
     load_run: str = ".*"

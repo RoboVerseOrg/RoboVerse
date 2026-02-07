@@ -12,10 +12,10 @@ from roboverse_learn.rl.configs.rsl_rl.algorithm import RslRlPpoActorCriticCfg, 
 SimBackend = Literal[
     "isaacgym",
     "isaacsim",
-    "isaaclab",
     "mujoco",
     "genesis",
     "mjx",
+    "newton",
 ]
 
 

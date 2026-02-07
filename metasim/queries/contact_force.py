@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 try:
     import isaacgym
 except ImportError:
@@ -13,10 +15,20 @@ import torch
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
 
-try:
-    import mujoco
-except ImportError:
-    pass
+
+@dataclass(frozen=True)
+class ContactForcesData:
+    """Serializable contact force payload returned via `handler.get_extra()`.
+
+    This object is intentionally small and contains only tensors so it can be
+    transferred across process boundaries in `ParallelSimWrapper`.
+    """
+
+    contact_forces_history: torch.Tensor
+    """Stacked history shaped `(num_envs, history_length, num_bodies, 3)`."""
+
+    contact_forces: torch.Tensor
+    """Latest snapshot shaped `(num_envs, num_bodies, 3)`."""
 
 
 class ContactForces(BaseQueryType):
@@ -35,6 +47,11 @@ class ContactForces(BaseQueryType):
         self._newton_local_ids = None
         self._newton_valid_mask = None
         self._newton_body_count = None
+        self._pybullet_obj_id: int | None = None
+        self._pybullet_client_id: int | None = None
+        self._pybullet_body_reindex: list[int] | None = None
+        self._mjx_body_ids: list[int] | None = None
+        self._mjx_device: str | None = None
 
     def bind_handler(self, handler: BaseSimHandler, *args, **kwargs):
         """Bind the simulator handler and pre-compute per-robot indexing."""
@@ -51,6 +68,18 @@ class ContactForces(BaseQueryType):
                 dtype=torch.int,
                 device=self.handler.device,
             )
+        elif self.simulator == "pybullet":
+            robot_name = self.robots[0].name
+            self._pybullet_obj_id = int(getattr(self.handler, "object_ids", {}).get(robot_name, -1))
+            self._pybullet_client_id = int(getattr(self.handler, "client", -1))
+            self._pybullet_body_reindex = self.handler.get_body_reindex(robot_name)
+            sorted_body_names = self.handler.get_body_names(robot_name, sort=True)
+            self.body_ids_reindex = list(range(len(sorted_body_names)))
+        elif self.simulator == "mjx":
+            robot_name = self.robots[0].name
+            self._mjx_device = str(self.handler.device)
+            self._mjx_body_ids = self._resolve_mjx_body_ids(robot_name)
+            self.body_ids_reindex = list(range(len(self._mjx_body_ids)))
         elif self.simulator == "newton":
             self.handler.init_contact_sensor(self.robots[0].name)
             sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
@@ -73,6 +102,10 @@ class ContactForces(BaseQueryType):
                 self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
             elif self.simulator == "mujoco":
                 self._current_contact_force = self._get_contact_forces_mujoco()
+            elif self.simulator == "pybullet":
+                self._current_contact_force = self._get_contact_forces_pybullet()
+            elif self.simulator == "mjx":
+                self._current_contact_force = self._get_contact_forces_mjx()
             elif self.simulator == "newton":
                 self._current_contact_force = self._get_contact_forces_newton()
             else:
@@ -90,6 +123,8 @@ class ContactForces(BaseQueryType):
         Returns:
             torch.Tensor: shape (nbody, 3), contact forces for each body
         """
+        import mujoco
+
         nbody = self.handler.physics.model.nbody
         contact_forces = torch.zeros((nbody, 3), device=self.handler.device)
 
@@ -107,6 +142,139 @@ class ContactForces(BaseQueryType):
 
         return contact_forces
 
+    def _resolve_mjx_body_ids(self, robot_name: str) -> list[int]:
+        model = getattr(self.handler, "_mjx_model", None)
+        if model is None:
+            return []
+        try:
+            from metasim.sim.mjx.mjx_helper import sorted_body_ids
+        except Exception:
+            return []
+        body_ids, _local_names = sorted_body_ids(model, f"{robot_name}/")
+        return [int(i) for i in body_ids]
+
+    def _get_contact_forces_mjx(self) -> torch.Tensor:
+        """Best-effort contact force proxy for MJX using MuJoCo's `cfrc_ext`.
+
+        Note: `cfrc_ext` contains net external forces on bodies (contact + other externals)
+        in MuJoCo coordinates. This is sufficient for common contact-penalty terms.
+        """
+        robot_name = self.robots[0].name
+        if self._mjx_body_ids is None:
+            self._mjx_body_ids = self._resolve_mjx_body_ids(robot_name)
+        body_ids = self._mjx_body_ids or []
+        if not body_ids:
+            return torch.zeros((self.num_envs, 0, 3), device=self.handler.device, dtype=torch.float32)
+
+        data = getattr(self.handler, "_data", None)
+        if data is None:
+            return torch.zeros((self.num_envs, len(body_ids), 3), device=self.handler.device, dtype=torch.float32)
+
+        try:
+            forces = data.cfrc_ext[:, body_ids, 0:3]
+        except Exception:
+            return torch.zeros((self.num_envs, len(body_ids), 3), device=self.handler.device, dtype=torch.float32)
+
+        from metasim.sim.mjx.mjx_helper import j2t
+
+        device = self._mjx_device or str(self.handler.device)
+        return j2t(forces, device=device).to(dtype=torch.float32)
+
+    def _get_contact_forces_pybullet(self) -> torch.Tensor:
+        """Compute net contact forces on each robot body/link in PyBullet.
+
+        Returns:
+            torch.Tensor: shape (num_bodies, 3) in sorted body-name order.
+        """
+        import pybullet as p
+
+        robot_name = self.robots[0].name
+        obj_id = self._pybullet_obj_id
+        if obj_id is None or obj_id < 0:
+            obj_id = int(getattr(self.handler, "object_ids", {}).get(robot_name, -1))
+        if obj_id < 0:
+            return torch.zeros((0, 3), device=self.handler.device, dtype=torch.float32)
+
+        client_id = self._pybullet_client_id
+        if client_id is None or client_id < 0:
+            client_id = int(getattr(self.handler, "client", -1))
+        kwargs = {}
+        if client_id is not None and client_id >= 0:
+            kwargs["physicsClientId"] = int(client_id)
+
+        try:
+            num_joints = int(p.getNumJoints(obj_id, **kwargs))
+        except TypeError:
+            num_joints = int(p.getNumJoints(obj_id))
+
+        forces_origin = torch.zeros((num_joints + 1, 3), device=self.handler.device, dtype=torch.float32)
+
+        def _accumulate(link_index: int, force_w: torch.Tensor) -> None:
+            body_idx = 0 if int(link_index) == -1 else int(link_index) + 1
+            if 0 <= body_idx < int(forces_origin.shape[0]):
+                forces_origin[body_idx] += force_w
+
+        def _force_on_b(contact) -> torch.Tensor:
+            # contact[7] is `contactNormalOnB` in world frame, contact[9] is `normalForce`.
+            normal_w = torch.tensor(contact[7], device=forces_origin.device, dtype=forces_origin.dtype)
+            out = float(contact[9]) * normal_w
+
+            # Friction components (best-effort; fields may not exist in all builds).
+            if len(contact) >= 12:
+                try:
+                    fric1 = float(contact[10])
+                    dir1 = torch.tensor(contact[11], device=forces_origin.device, dtype=forces_origin.dtype)
+                    out = out + fric1 * dir1
+                except Exception:
+                    pass
+            if len(contact) >= 14:
+                try:
+                    fric2 = float(contact[12])
+                    dir2 = torch.tensor(contact[13], device=forces_origin.device, dtype=forces_origin.dtype)
+                    out = out + fric2 * dir2
+                except Exception:
+                    pass
+            return out
+
+        try:
+            contacts_a = p.getContactPoints(bodyA=obj_id, **kwargs)
+        except TypeError:
+            contacts_a = p.getContactPoints(bodyA=obj_id)
+        for contact in contacts_a:
+            body_b = int(contact[2])
+            link_a = int(contact[3])
+            link_b = int(contact[4])
+            force_on_b = _force_on_b(contact)
+            if body_b == obj_id:
+                # Self-collision: apply equal and opposite forces to both links.
+                _accumulate(link_a, -force_on_b)
+                _accumulate(link_b, force_on_b)
+            else:
+                # Robot is bodyA: force on A is opposite to force on B.
+                _accumulate(link_a, -force_on_b)
+
+        try:
+            contacts_b = p.getContactPoints(bodyB=obj_id, **kwargs)
+        except TypeError:
+            contacts_b = p.getContactPoints(bodyB=obj_id)
+        for contact in contacts_b:
+            body_a = int(contact[1])
+            if body_a == obj_id:
+                # Self-collision already handled above.
+                continue
+            link_b = int(contact[4])
+            force_on_b = _force_on_b(contact)
+            _accumulate(link_b, force_on_b)
+
+        body_reindex = self._pybullet_body_reindex
+        if not body_reindex:
+            body_reindex = self.handler.get_body_reindex(robot_name)
+            self._pybullet_body_reindex = body_reindex
+        try:
+            return forces_origin[body_reindex]
+        except Exception:
+            return forces_origin
+
     def _get_contact_forces_newton(self) -> torch.Tensor:
         """Get contact forces from Newton simulator.
 
@@ -123,6 +291,10 @@ class ContactForces(BaseQueryType):
             self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
         elif self.simulator == "mujoco":
             self._current_contact_force = self._get_contact_forces_mujoco()
+        elif self.simulator == "pybullet":
+            self._current_contact_force = self._get_contact_forces_pybullet()
+        elif self.simulator == "mjx":
+            self._current_contact_force = self._get_contact_forces_mjx()
         elif self.simulator == "newton":
             self._current_contact_force = self._get_contact_forces_newton()
         else:
@@ -133,7 +305,15 @@ class ContactForces(BaseQueryType):
             self._contact_forces_queue.append(
                 self._current_contact_force.view(self.num_envs, -1, 3)[:, self.body_ids_reindex, :]
             )
-        return {self.robots[0].name: self}
+        # Return a serializable payload instead of the live query object. Returning
+        # the query instance would capture unpicklable simulator handles (e.g.
+        # IsaacGym/IsaacSim objects) and break multiprocessing.
+        return {
+            self.robots[0].name: ContactForcesData(
+                contact_forces_history=self.contact_forces_history,
+                contact_forces=self.contact_forces,
+            )
+        }
 
     @property
     def contact_forces_history(self) -> torch.Tensor:
