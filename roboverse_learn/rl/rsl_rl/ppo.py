@@ -74,6 +74,14 @@ def make_roboverse_env(args: RslRlPPOConfig):
     return env
 
 
+def _export_policy(runner: OnPolicyRunner, model_dir: str) -> str:
+    policy_filename = "policy.pt"
+    policy_path = os.path.join(model_dir, policy_filename)
+    runner.export_policy_to_jit(path=model_dir, filename=policy_filename)
+    print(f"Policy exported to {policy_path} (runner.export_policy_to_jit)")
+    return policy_path
+
+
 def train(args: RslRlPPOConfig):
     """Train RSL-RL PPO"""
     # Setup
@@ -139,10 +147,7 @@ def train(args: RslRlPPOConfig):
 
     # Export policy
     print("Exporting policy...")
-    policy = runner.get_inference_policy()
-    policy_path = os.path.join(args.model_dir, "policy.pt")
-    torch.jit.script(policy).save(policy_path)
-    print(f"Policy exported to {policy_path}")
+    _export_policy(runner=runner, model_dir=args.model_dir)
 
     if args.use_wandb:
         wandb.finish()

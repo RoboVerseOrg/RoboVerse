@@ -129,6 +129,38 @@ def _get_indices(env: EnvTypes, sub_names: tuple[str] | str, all_names: list[str
     return env.extras_buffer[hash_key]
 
 
+def _range_hits_limit(
+    curr_range: tuple[float, float] | list[float], limit_range: tuple[float, float] | list[float], atol: float = 1.0e-6
+) -> bool:
+    curr_lo, curr_hi = float(curr_range[0]), float(curr_range[1])
+    limit_lo, limit_hi = float(limit_range[0]), float(limit_range[1])
+    return curr_lo <= (limit_lo + atol) and curr_hi >= (limit_hi - atol)
+
+
+def _is_max_velocity_curriculum(env: EnvTypes, atol: float = 1.0e-6) -> bool:
+    curriculum_cfg = getattr(getattr(env, "cfg", None), "curriculum", None)
+    if curriculum_cfg is None or not getattr(curriculum_cfg, "enabled", False):
+        return False
+
+    commands_manager = getattr(env, "commands_manager", None)
+    if commands_manager is None:
+        return False
+
+    ranges = getattr(commands_manager, "ranges", None)
+    limit_ranges = getattr(commands_manager, "limit_ranges", None)
+    if ranges is None or limit_ranges is None:
+        return False
+
+    required_axes = ("lin_vel_x", "lin_vel_y")
+    for axis in required_axes:
+        if not hasattr(ranges, axis) or not hasattr(limit_ranges, axis):
+            return False
+        if not _range_hits_limit(getattr(ranges, axis), getattr(limit_ranges, axis), atol=atol):
+            return False
+
+    return True
+
+
 def joint_deviation_l1(env: EnvTypes, env_states: TensorState, joint_names: str | tuple[str]) -> torch.Tensor:
     """Penalize joint positions that deviate from the default one."""
     indices = _get_indices(env, joint_names, env.sorted_joint_names)
@@ -316,6 +348,7 @@ def leg_raise_imitation(
     static_duration: float = 0.05,
     velocity_scale: float = 1.0,
     phase_offset: float = 0.0,
+    disable_at_max_curriculum: bool = False,
 ) -> torch.Tensor:
     """Command-adaptive leg raise imitation with full cycle supervision.
 
@@ -340,11 +373,14 @@ def leg_raise_imitation(
         static_duration: Duration of the static hold for both feet.
         velocity_scale: Multiplier for how much command velocity affects hip pitch amplitude.
         phase_offset: Shift to align with gait pattern.
+        disable_at_max_curriculum: If True, return zero reward when the velocity curriculum is at maximum.
 
     Returns:
         The computed reward.
     """
     if period <= 0.0 or static_duration >= 0.25:
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    if disable_at_max_curriculum and _is_max_velocity_curriculum(env):
         return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
 
     joint_names = env.sorted_joint_names
@@ -545,6 +581,7 @@ def foot_parallel_to_ground(
     env_states: TensorState,
     joint_names_lists: list[tuple[str, str, str]],
     std: float,
+    disable_at_max_curriculum: bool = False,
 ) -> torch.Tensor:
     """Reward for keeping the feet parallel only using joint positions of the legs.
 
@@ -559,10 +596,14 @@ def foot_parallel_to_ground(
                            Example: [("left_hip_pitch", "left_knee_pitch", "left_ankle_pitch"),
                                      ("right_hip_pitch", "right_knee_pitch", "right_ankle_pitch")]
         std: Standard deviation for the Gaussian kernel.
+        disable_at_max_curriculum: If True, return zero reward when the velocity curriculum is at maximum.
 
     Returns:
         The computed reward.
     """
+    if disable_at_max_curriculum and _is_max_velocity_curriculum(env):
+        return torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+
     robot_state = env_states.robots[env.name]
     joint_pos = robot_state.joint_pos
 

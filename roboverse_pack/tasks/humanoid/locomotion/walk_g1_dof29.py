@@ -121,6 +121,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                 "velocity_scale": 0.5,
                 # leg_raise_imitation internally adds +0.05; set +0.225 so total aligns with feet_gait phase_offset=0.275.
                 "phase_offset": 0.225,
+                "disable_at_max_curriculum": True,
             },
             reward_funcs.leg_raise_imitation,
         )
@@ -132,6 +133,7 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
                     ("right_hip_pitch_joint", "right_knee_joint", "right_ankle_pitch_joint"),
                 ],
                 "std": 0.2,
+                "disable_at_max_curriculum": True,
             },
             reward_funcs.foot_parallel_to_ground,
         )
