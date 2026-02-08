@@ -246,12 +246,6 @@ def _parse_args() -> UnitreeServerArgs:
         ),
     )
     parser.add_argument(
-        "--elastic-band-release-time",
-        type=float,
-        default=1.0,
-        help="Seconds to ramp elastic-band force to zero after manual release (default: 1.0).",
-    )
-    parser.add_argument(
         "--elastic-band-height",
         type=float,
         default=2.0,
@@ -321,7 +315,6 @@ def _parse_args() -> UnitreeServerArgs:
         elastic_band_height_m=ns.elastic_band_height,
         elastic_band_length_m=ns.elastic_band_length,
         elastic_band_key_step_m=ns.elastic_band_key_step,
-        elastic_band_release_time_s=ns.elastic_band_release_time,
         standby=not ns.no_standby,
         standby_mode=ns.standby_mode,
         standby_policy_config=ns.standby_policy_config,

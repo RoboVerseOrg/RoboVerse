@@ -236,6 +236,7 @@ This will initialize the real controller and stream commands to the robot. Ensur
 
 You can validate the same controller against a simulator by running a Unitree SDK2 protocol server backed by RoboVerse.
 Use a non-zero DDS domain id (e.g. 1) for simulators to avoid colliding with real robots.
+For protocol architecture and API details, see [Protocol Simulation](../../metasim/concept/protocol_sim.md).
 
 Terminal A (sim server):
 ```bash
@@ -271,7 +272,7 @@ Elastic band assist (optional safety harness):
 - Live key adjustment step is configurable via `--elastic-band-key-step <meters>` (default `0.1`).
 - This applies an external spring-damper force from a fixed world anchor point to the robot torso/base, helping prevent early falls during bring-up.
 - The force scales with distance/stretch and relative velocity along the band direction (spring + damping behavior).
-- The band is removed only when you trigger manual release (`r` or `release`); removal ramps down over `--elastic-band-release-time` seconds (default `1.0`).
+- The band is removed immediately when you trigger manual release (`r` or `release`).
 - Intended as a debugging/safety aid for simulator validation, not as part of the final controller behavior.
 - Current implementation supports MuJoCo, IsaacGym, IsaacSim, and Newton backends.
 

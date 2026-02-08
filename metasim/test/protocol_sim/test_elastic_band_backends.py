@@ -219,6 +219,35 @@ def test_elastic_band_runtime_tuning_updates_length_and_height():
 
 
 @pytest.mark.general
+def test_elastic_band_manual_release_disables_force_immediately():
+    handler = _DummyNewtonHandler()
+    assist = ElasticBandAssist(
+        handler=handler,
+        robot_name="g1_dof29",
+        cfg=ElasticBandConfig(
+            stiffness=10.0,
+            damping=0.0,
+            point=(0.0, 0.0, 1.0),
+            length=0.0,
+            body_name="torso_link",
+            fallback_body_name="base_link",
+        ),
+    )
+
+    assist.apply(_dummy_obs(), dt=0.01)
+    _, force_before = handler.calls[-1]
+    np.testing.assert_allclose(force_before, np.array([0.0, 0.0, 10.0], dtype=np.float32), rtol=0.0, atol=1e-6)
+
+    assist.start_release()
+    _, force_release = handler.calls[-1]
+    np.testing.assert_allclose(force_release, np.array([0.0, 0.0, 0.0], dtype=np.float32), rtol=0.0, atol=1e-6)
+
+    assist.apply(_dummy_obs(), dt=0.01)
+    # After release, apply() exits early and does not issue any new force writes.
+    assert len(handler.calls) == 2
+
+
+@pytest.mark.general
 def test_elastic_band_newton_backend_is_tension_only_when_slack():
     handler = _DummyNewtonHandler()
     assist = ElasticBandAssist(

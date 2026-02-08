@@ -20,12 +20,10 @@ class ElasticBandConfig:
     length: float = 0.0
     body_name: str = "torso_link"
     fallback_body_name: str = "base_link"
-    release_time_s: float = 1.0
 
     def __post_init__(self) -> None:
         # Keep configuration numerically stable and intuitive.
         self.length = max(0.0, float(self.length))
-        self.release_time_s = max(0.0, float(self.release_time_s))
         self.point = (float(self.point[0]), float(self.point[1]), float(self.point[2]))
 
 
@@ -38,22 +36,14 @@ class ElasticBandAssist(ExternalAssist):
         self._cfg = cfg
         self._cfg_lock = threading.Lock()
 
-        self._releasing = False
-        self._release_elapsed = 0.0
-        self._scale = 1.0
+        self._enabled = True
 
         self._apply_force: Callable[[np.ndarray], None] = self._make_applier(handler, robot_name, cfg)
 
     def start_release(self) -> None:
-        """Release the elastic band by ramping the scale down to 0."""
-        with self._cfg_lock:
-            release_time_s = float(self._cfg.release_time_s)
-        if release_time_s <= 0.0:
-            self._scale = 0.0
-            self._apply_force(np.zeros((3,), dtype=np.float32))
-            return
-        self._releasing = True
-        self._release_elapsed = 0.0
+        """Disable the elastic band immediately and clear external force."""
+        self._enabled = False
+        self._apply_force(np.zeros((3,), dtype=np.float32))
 
     def set_length(self, length_m: float) -> float:
         """Set the spring rest length in meters (clamped to >= 0)."""
@@ -79,22 +69,14 @@ class ElasticBandAssist(ExternalAssist):
 
     def apply(self, obs: SimRobotObservation, *, dt: float) -> None:
         """Apply the elastic band force to the robot based on the current observation."""
-        if self._scale <= 0.0:
+        if not self._enabled:
             return
 
         with self._cfg_lock:
-            release_time_s = float(self._cfg.release_time_s)
             point = np.asarray(self._cfg.point, dtype=np.float32)
             stiffness = float(self._cfg.stiffness)
             damping = float(self._cfg.damping)
             length = float(self._cfg.length)
-
-        if self._releasing:
-            self._release_elapsed += float(dt)
-            self._scale = float(max(0.0, 1.0 - self._release_elapsed / max(1e-12, release_time_s)))
-            if self._scale <= 0.0:
-                self._apply_force(np.zeros((3,), dtype=np.float32))
-                return
 
         x = obs.root_state[0:3].astype(np.float32, copy=False)
         dx = obs.root_state[7:10].astype(np.float32, copy=False)
@@ -118,7 +100,7 @@ class ElasticBandAssist(ExternalAssist):
         if f_mag <= 0.0:
             self._apply_force(np.zeros((3,), dtype=np.float32))
             return
-        force = (f_mag * direction).astype(np.float32, copy=False) * float(self._scale)
+        force = (f_mag * direction).astype(np.float32, copy=False)
         self._apply_force(force)
 
     @staticmethod

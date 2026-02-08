@@ -86,5 +86,5 @@ class ExternalAssist(ABC):
         raise NotImplementedError
 
     def start_release(self) -> None:
-        """Begin ramping the assist off (called when protocol control is stable)."""
+        """Release or disable the assist (called when protocol control is stable)."""
         return
