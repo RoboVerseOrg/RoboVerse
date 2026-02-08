@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
+from metasim.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
 from roboverse_pack.protocol_sim.protocols.unitree_sdk2.math_utils import quat_rotate_inverse_wxyz
 from roboverse_pack.protocol_sim.protocols.unitree_sdk2.profile import UnitreeRobotProfile
 

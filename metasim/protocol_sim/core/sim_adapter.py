@@ -6,8 +6,8 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from metasim.protocol_sim.core.types import SimRobotObservation
 from metasim.sim.base import BaseSimHandler
-from roboverse_pack.protocol_sim.core.types import SimRobotObservation
 
 
 @dataclass

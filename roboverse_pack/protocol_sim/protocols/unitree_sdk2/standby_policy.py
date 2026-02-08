@@ -8,8 +8,8 @@ import numpy as np
 import rootutils
 import torch
 
-from roboverse_pack.protocol_sim.core.interfaces import StandbyController
-from roboverse_pack.protocol_sim.core.types import SimRobotObservation
+from metasim.protocol_sim.core.interfaces import StandbyController
+from metasim.protocol_sim.core.types import SimRobotObservation
 from roboverse_pack.protocol_sim.protocols.unitree_sdk2.math_utils import quat_rotate_inverse_wxyz
 
 

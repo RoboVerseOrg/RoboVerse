@@ -3,14 +3,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from roboverse_pack.protocol_sim.core.interfaces import (
+from metasim.protocol_sim.core.interfaces import (
     ActuationModel,
     ProtocolCodec,
     StandbyController,
     Transport,
 )
-from roboverse_pack.protocol_sim.core.server import RobotProtocolServer, ServerConfig, StandbyConfig
-from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
+from metasim.protocol_sim.core.server import RobotProtocolServer, ServerConfig, StandbyConfig
+from metasim.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
 
 
 class _StopLoop(RuntimeError):

@@ -6,8 +6,8 @@ from typing import Any, Callable
 
 import numpy as np
 
-from roboverse_pack.protocol_sim.core.interfaces import ExternalAssist
-from roboverse_pack.protocol_sim.core.types import SimRobotObservation
+from metasim.protocol_sim.core.interfaces import ExternalAssist
+from metasim.protocol_sim.core.types import SimRobotObservation
 
 
 @dataclass

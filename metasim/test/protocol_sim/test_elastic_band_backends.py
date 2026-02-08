@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 import torch
 
-from roboverse_pack.protocol_sim.core.elastic_band import ElasticBandAssist, ElasticBandConfig
-from roboverse_pack.protocol_sim.core.types import SimRobotObservation
+from metasim.protocol_sim.core.elastic_band import ElasticBandAssist, ElasticBandConfig
+from metasim.protocol_sim.core.types import SimRobotObservation
 
 
 class _DummyIsaacSimArticulation:
