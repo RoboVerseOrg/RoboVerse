@@ -102,18 +102,17 @@ def apply_task_initial_state(
     if pos is None:
         if pos_fallback is not None:
             pos = list(pos_fallback)
-    if pos is None:
-        return
 
     ts = handler.get_states()
     rs = ts.robots[robot_name]
     device = rs.root_state.device
     dtype = rs.root_state.dtype
 
-    # Root state: pos + identity quat, zero velocities.
-    rs.root_state[0, 0:3] = torch.as_tensor(pos, device=device, dtype=dtype)
-    rs.root_state[0, 3:7] = torch.as_tensor([1.0, 0.0, 0.0, 0.0], device=device, dtype=dtype)
-    rs.root_state[0, 7:13] = 0.0
+    # Root state: if a target position is available, reset pose and root velocities.
+    if pos is not None:
+        rs.root_state[0, 0:3] = torch.as_tensor(pos, device=device, dtype=dtype)
+        rs.root_state[0, 3:7] = torch.as_tensor([1.0, 0.0, 0.0, 0.0], device=device, dtype=dtype)
+        rs.root_state[0, 7:13] = 0.0
 
     # Joint state.
     rs.joint_pos[0] = torch.as_tensor(joint_pos, device=rs.joint_pos.device, dtype=rs.joint_pos.dtype)
