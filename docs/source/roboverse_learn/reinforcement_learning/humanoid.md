@@ -242,16 +242,38 @@ Terminal A (sim server):
 python scripts/protocol_sim/unitree_sdk2_sim_server.py \
   --sim mujoco \
   --robot g1_dof29 \
-  --headless \
   --domain-id 1 \
   --iface lo \
-  --auto-remote
+  --auto-remote \
+  --elastic-band \
+  --elastic-band-height 2.5 \
+  --elastic-band-length 0.1
 ```
 
 Terminal B (controller, unchanged):
 ```bash
 python scripts/unitree_deploy/deploy_real.py lo g1_dof29.yaml --domain-id 1
 ```
+
+Standby/takeover behavior (important):
+- The sim server enables standby control by default (`--no-standby` disables it).
+- It switches from standby to protocol control only after `100` consecutive "active" `LowCmd` frames.
+- A frame is considered active when any `kp`, `kd`, or `tau` exceeds a small threshold.
+- With `control_dt=0.02` (default deploy config), this is about `2.0s` of active commands before takeover.
+- If you need faster takeover for debugging, run the server with `--no-standby`.
+
+Elastic band assist (optional safety harness):
+- Enable with `--elastic-band`.
+- You can set the anchor height from terminal with `--elastic-band-height <meters>` (default `2.0`, lower values reduce initial lift force).
+- You can also tune rest length with `--elastic-band-length <meters>` (default `0.0`, clamped to `>= 0`; larger values reduce pull strength). The band is tension-only: if rest length exceeds current anchor distance, it goes slack instead of pushing.
+- While the server is running in an interactive terminal, you can tune live with keys (no restart): press `7` (stronger assist / shorter rest length), `8` (weaker assist / longer rest length), `]` (anchor up), `[` (anchor down), `r` (release band), `s` (show), `h` (help).
+- In line mode, use `release` to remove the band manually.
+- Live key adjustment step is configurable via `--elastic-band-key-step <meters>` (default `0.1`).
+- This applies an external spring-damper force from a fixed world anchor point to the robot torso/base, helping prevent early falls during bring-up.
+- The force scales with distance/stretch and relative velocity along the band direction (spring + damping behavior).
+- The band is removed only when you trigger manual release (`r` or `release`); removal ramps down over `--elastic-band-release-time` seconds (default `1.0`).
+- Intended as a debugging/safety aid for simulator validation, not as part of the final controller behavior.
+- Current implementation supports MuJoCo, IsaacGym, IsaacSim, and Newton backends.
 
 
 ## Advanced Features

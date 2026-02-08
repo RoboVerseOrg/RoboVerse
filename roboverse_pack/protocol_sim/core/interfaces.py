@@ -30,6 +30,15 @@ class Transport(ABC):
         """Return the most recent command message, or None if nothing received yet."""
         raise NotImplementedError
 
+    def get_latest_command_with_token(self) -> tuple[Any | None, int | None]:
+        """Return latest command plus a monotonic/unique token for new-message detection.
+
+        Transports that may reuse the same Python message object across callbacks should
+        override this and provide a callback-driven token (e.g., sequence counter).
+        """
+        msg = self.get_latest_command()
+        return msg, (id(msg) if msg is not None else None)
+
     @abstractmethod
     def publish(self, channel: str, msg: Any) -> None:  # pragma: no cover
         """Publish a message on a named channel/topic."""

@@ -31,7 +31,6 @@ class MetaSimAdapter:
         self._handler = handler
         self._robot_name = robot_name
         self._timing = timing
-        self._last_wall = time.perf_counter()
 
         self._joint_names_sorted = handler.get_joint_names(robot_name, sort=True)
 

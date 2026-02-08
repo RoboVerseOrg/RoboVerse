@@ -41,6 +41,9 @@ class UnitreeServerArgs:
     # - "robot_cfg": ignore LowCmd gains and use RobotCfg actuator stiffness/damping
     actuation_gains: str | None = None
     elastic_band: bool = False
+    elastic_band_height_m: float = 2.0
+    elastic_band_length_m: float = 0.0
+    elastic_band_key_step_m: float = 0.1
     elastic_band_release_time_s: float = 1.0
     standby: bool = True
     standby_mode: str = "policy"  # only "policy" is supported for Unitree SDK2
@@ -221,7 +224,11 @@ def build_unitree_sdk2_server(args: UnitreeServerArgs) -> RobotProtocolServer:
         assist = ElasticBandAssist(
             handler=handler,
             robot_name=args.robot,
-            cfg=ElasticBandConfig(release_time_s=float(args.elastic_band_release_time_s)),
+            cfg=ElasticBandConfig(
+                point=(0.0, 0.0, float(args.elastic_band_height_m)),
+                length=float(args.elastic_band_length_m),
+                release_time_s=float(args.elastic_band_release_time_s),
+            ),
         )
 
     server = RobotProtocolServer(

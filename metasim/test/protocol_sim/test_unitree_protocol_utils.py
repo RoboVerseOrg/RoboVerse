@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 
 import numpy as np
+import pytest
 
 from roboverse_pack.protocol_sim.core.types import CanonicalRobotCommand, SimRobotObservation
 from roboverse_pack.protocol_sim.protocols.unitree_sdk2.actuation import UnitreeLowCmdActuationModel
@@ -10,6 +11,7 @@ from roboverse_pack.protocol_sim.protocols.unitree_sdk2.codec import AutoRemoteC
 from roboverse_pack.protocol_sim.protocols.unitree_sdk2.profile import UnitreeRobotProfile
 
 
+@pytest.mark.general
 def test_unitree_actuation_scatter_and_clip():
     # Sorted sim joints: a,b,c
     obs = SimRobotObservation(
@@ -44,6 +46,7 @@ def test_unitree_actuation_scatter_and_clip():
     assert np.allclose(out, np.array([10.0, 0.0, 5.0], dtype=np.float32))
 
 
+@pytest.mark.general
 def test_unitree_codec_auto_remote_presses_buttons():
     profile = UnitreeRobotProfile(robot_name="g1_dof29", msg_type="hg", motor_names=["j0"])
     codec = UnitreeSdk2Codec(

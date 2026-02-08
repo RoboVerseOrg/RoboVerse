@@ -17,6 +17,7 @@ class UnitreeSdk2DdsTransport(Transport):
 
         self._lock = threading.Lock()
         self._latest_cmd = None
+        self._latest_cmd_token = 0
 
         self._publishers: dict[str, Any] = {}
 
@@ -24,7 +25,6 @@ class UnitreeSdk2DdsTransport(Transport):
         """Initialize and start the DDS transport."""
         try:
             from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher, ChannelSubscriber
-            from unitree_sdk2py.idl.default import unitree_go_msg_dds__SportModeState_
             from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
         except Exception as exc:  # pragma: no cover
             raise ImportError(
@@ -45,6 +45,7 @@ class UnitreeSdk2DdsTransport(Transport):
         def _on_lowcmd(msg: LowCmdT):
             with self._lock:
                 self._latest_cmd = msg
+                self._latest_cmd_token += 1
 
         sub = ChannelSubscriber(self._profile.lowcmd_topic, LowCmdT)
         sub.Init(_on_lowcmd, 10)
@@ -64,25 +65,6 @@ class UnitreeSdk2DdsTransport(Transport):
         pub_sport.Init()
         self._publishers[self._profile.sportstate_topic] = pub_sport
 
-        # Message factories (used by codec): store on transport for convenience.
-        self._sportstate_factory = unitree_go_msg_dds__SportModeState_
-
-        if self._profile.msg_type == "hg":
-            from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowState_ as LowStateDefault
-        else:
-            from unitree_sdk2py.idl.default import unitree_go_msg_dds__LowState_ as LowStateDefault
-        self._lowstate_factory = LowStateDefault
-
-    @property
-    def lowstate_factory(self):
-        """Get the factory for creating LowState messages."""
-        return getattr(self, "_lowstate_factory", None)
-
-    @property
-    def sportstate_factory(self):
-        """Get the factory for creating SportModeState messages."""
-        return getattr(self, "_sportstate_factory", None)
-
     def close(self) -> None:
         """Close the DDS transport."""
         # unitree_sdk2py does not expose an explicit shutdown for subscribers/publishers.
@@ -92,6 +74,13 @@ class UnitreeSdk2DdsTransport(Transport):
         """Get the most recent LowCmd message received."""
         with self._lock:
             return self._latest_cmd
+
+    def get_latest_command_with_token(self) -> tuple[Any | None, int | None]:
+        """Get the most recent LowCmd plus callback-driven update token."""
+        with self._lock:
+            if self._latest_cmd is None:
+                return None, None
+            return self._latest_cmd, int(self._latest_cmd_token)
 
     def publish(self, channel: str, msg: Any) -> None:
         """Publish a message to a specific DDS channel."""

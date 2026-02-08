@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
 import torch
 
 from metasim.utils.state import adapt_actions_to_dict
@@ -26,6 +27,7 @@ class _DummyHandler:
         return names
 
 
+@pytest.mark.general
 def test_adapt_actions_tensor_maps_to_effort_for_effort_robots():
     robot = _DummyRobot(name="r1", control_type={"j1": "effort", "j2": "effort"})
     handler = _DummyHandler(robot, joint_names_sorted=["j1", "j2"])
@@ -37,6 +39,7 @@ def test_adapt_actions_tensor_maps_to_effort_for_effort_robots():
     assert out["r1"]["dof_effort_target"]["j2"] == 2.0
 
 
+@pytest.mark.general
 def test_adapt_actions_tensor_maps_to_pos_for_position_robots():
     robot = _DummyRobot(name="r1", control_type={"j1": "position", "j2": "position"})
     handler = _DummyHandler(robot, joint_names_sorted=["j1", "j2"])

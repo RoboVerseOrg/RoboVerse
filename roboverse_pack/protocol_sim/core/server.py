@@ -73,6 +73,7 @@ class RobotProtocolServer:
 
         self._sim_time_s = 0.0
         self._last_cmd = None
+        self._last_cmd_token: int | None = None
         self._last_cmd_wall_s: float | None = None
         self._protocol_active = False
         self._active_cmd_streak = 0
@@ -81,6 +82,11 @@ class RobotProtocolServer:
     def sim_time_s(self) -> float:
         """Get the current simulation time in seconds."""
         return self._sim_time_s
+
+    @property
+    def assist(self) -> ExternalAssist | None:
+        """Get the optional external assist module."""
+        return self._assist
 
     def start(self) -> None:
         """Start the server."""
@@ -159,12 +165,20 @@ class RobotProtocolServer:
         while True:
             obs = self._adapter.read_observation()
 
-            msg = self._transport.get_latest_command()
-            prev_cmd = self._last_cmd
-            have_new_msg = msg is not None and msg is not prev_cmd
+            msg, msg_token = self._transport.get_latest_command_with_token()
+            if msg is None:
+                have_new_msg = False
+            elif msg_token is None:
+                # Backward-compatible fallback for transports that don't expose tokens.
+                have_new_msg = msg is not self._last_cmd
+                msg_token = id(msg)
+            else:
+                have_new_msg = msg_token != self._last_cmd_token
+
             cmd_decoded = None
             if have_new_msg:
                 self._last_cmd = msg
+                self._last_cmd_token = msg_token
                 self._last_cmd_wall_s = time.perf_counter()
                 # Decode once to support command gating (may still be unused).
                 try:
@@ -181,8 +195,6 @@ class RobotProtocolServer:
                 if not self._protocol_active:
                     self._protocol_active = True
                     self._active_cmd_streak = 0
-                    if self._assist is not None:
-                        self._assist.start_release()
                 # Ensure we have a decoded command for the last message.
                 if cmd_decoded is None:
                     cmd_decoded = self._codec.decode_command(self._last_cmd)

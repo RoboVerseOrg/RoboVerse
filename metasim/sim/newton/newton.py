@@ -98,6 +98,8 @@ class NewtonHandler(BaseSimHandler):
         self._gravity_disabled_body_ids: dict[int, list[int]] = defaultdict(list)
         self._gravity_compensation_enabled = False
         self._gravity_vec = None
+        # Optional externally injected body forces (e.g., protocol_sim elastic band assist).
+        self._external_body_forces: dict[int, torch.Tensor] = {}
 
         # Actions cache
         self._actions_cache: list[Action] | torch.Tensor | np.ndarray = []
@@ -754,26 +756,32 @@ class NewtonHandler(BaseSimHandler):
             self._gravity_vec = torch.tensor(gravity, dtype=torch.float32, device=self._device)
 
     def _apply_gravity_compensation(self) -> None:
-        """Apply per-body gravity compensation for robots with gravity disabled."""
-        if not self._gravity_compensation_enabled:
-            return
+        """Apply gravity compensation and externally injected body forces."""
         if self._state_0 is None or self._state_0.body_f is None:
-            return
-        if self._model is None or self._model.body_mass is None:
             return
 
         body_f = wp2torch(self._state_0.body_f)
         body_f.zero_()
 
-        body_mass = wp2torch(self._model.body_mass)
-        gravity = self._gravity_vec
+        # Gravity compensation for bodies that explicitly disable gravity.
+        if self._gravity_compensation_enabled:
+            if self._model is not None and self._model.body_mass is not None:
+                body_mass = wp2torch(self._model.body_mass)
+                gravity = self._gravity_vec
 
-        for body_ids in self._gravity_disabled_body_ids.values():
-            for body_id in body_ids:
-                m = body_mass[body_id]
-                if m == 0:
+                for body_ids in self._gravity_disabled_body_ids.values():
+                    for body_id in body_ids:
+                        m = body_mass[body_id]
+                        if m == 0:
+                            continue
+                        body_f[body_id, 0:3] = -m * gravity
+
+        # Add externally injected world-frame forces (if any).
+        if self._external_body_forces:
+            for body_id, force in self._external_body_forces.items():
+                if body_id < 0 or body_id >= body_f.shape[0]:
                     continue
-                body_f[body_id, 0:3] = -m * gravity
+                body_f[body_id, 0:3] += force.to(device=body_f.device, dtype=body_f.dtype)
 
     def _apply_actuator_settings(self) -> None:
         """Apply actuator stiffness/damping/limits to the Newton model."""
@@ -2231,6 +2239,19 @@ class NewtonHandler(BaseSimHandler):
         self._state_1 = None
         self._control = None
         self._solver = None
+        self._external_body_forces.clear()
+
+    def set_external_body_force(self, body_id: int, force: torch.Tensor | np.ndarray | list[float]) -> None:
+        """Set an external world-frame force for a specific body index.
+
+        The force is applied every sub-step and replaces any previously set force for the body.
+        """
+        force_t = torch.as_tensor(force, dtype=torch.float32, device=self.device).reshape(3)
+        self._external_body_forces[int(body_id)] = force_t
+
+    def clear_external_body_forces(self) -> None:
+        """Clear all externally injected body forces."""
+        self._external_body_forces.clear()
 
     @property
     def device(self) -> torch.device:
