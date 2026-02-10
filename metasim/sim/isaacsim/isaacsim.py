@@ -700,8 +700,12 @@ class IsaacsimHandler(BaseSimHandler):
             },
         )
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
+        init_pos = getattr(robot, "default_position", None)
+        if init_pos is None:
+            # Backward-compatible fallback for legacy configs.
+            init_pos = getattr(robot, "default_pos", [0.0, 0.0, 0.0])
         init_state = ArticulationCfg.InitialStateCfg(
-            pos=getattr(robot, "default_pos", [0.0, 0.0, 0.0]),
+            pos=init_pos,
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )

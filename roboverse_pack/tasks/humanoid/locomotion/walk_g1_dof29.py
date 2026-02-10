@@ -112,6 +112,25 @@ class WalkG1Dof29EnvCfg(BaseEnvCfg):
         },
     )
 
+    initial_states = BaseEnvCfg.InitialStates()
+    initial_states.robots = {
+        "g1_dof29": {
+            "pos": [0.0, 0.0, 0.8],
+            "default_joint_pos": {
+                "left_hip_pitch_joint": -0.1,
+                "right_hip_pitch_joint": -0.1,
+                ".*_knee_joint": 0.3,
+                ".*_ankle_pitch_joint": -0.2,
+                ".*_shoulder_pitch_joint": 0.3,
+                "left_shoulder_roll_joint": 0.25,
+                "right_shoulder_roll_joint": -0.25,
+                ".*_elbow_joint": 0.97,
+                "left_wrist_roll_joint": 0.15,
+                "right_wrist_roll_joint": -0.15,
+            },
+        }
+    }
+
     callbacks_query = {"contact_forces": ContactForces(history_length=3)}
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(

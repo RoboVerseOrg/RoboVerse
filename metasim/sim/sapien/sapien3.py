@@ -239,8 +239,14 @@ class Sapien3Handler(BaseSimHandler):
                 if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
-                        stiffness = object.actuators[joint.get_name()].stiffness
-                        damping = object.actuators[joint.get_name()].damping
+                        joint_name = joint.get_name()
+                        control_type = getattr(object, "control_type", None) or {}
+                        if control_type.get(joint_name, "position") == "effort":
+                            joint.set_drive_property(0.0, 0.0)
+                            continue
+
+                        stiffness = object.actuators[joint_name].stiffness
+                        damping = object.actuators[joint_name].damping
                         if stiffness is not None and damping is not None:
                             joint.set_drive_property(stiffness, damping)
                 else:
@@ -460,12 +466,22 @@ class Sapien3Handler(BaseSimHandler):
             if isinstance(instance, sapien_core.physx.PhysxArticulation):
                 pos_target = action.get("dof_pos_target", None)
                 vel_target = action.get("dof_vel_target", None)
+                effort_target = action.get("dof_effort_target", None)
                 jns = self.get_joint_names(obj_name, sort=True)
                 if pos_target is not None:
                     self._previous_dof_pos_target[obj_name] = np.array([pos_target[name] for name in jns])
                 if vel_target is not None:
                     self._previous_dof_vel_target[obj_name] = np.array([vel_target[name] for name in jns])
-                self._apply_action(instance, pos_target, vel_target)
+                if effort_target is not None:
+                    # Apply generalized torques in active-joint order.
+                    effort = np.array(
+                        [effort_target[j.get_name()] for j in instance.get_active_joints()], dtype=np.float32
+                    )
+                    self._previous_dof_torque_target[obj_name] = effort
+                    qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True)
+                    instance.set_qf(qf + effort)
+                else:
+                    self._apply_action(instance, pos_target, vel_target)
 
     def _simulate(self):
         for i in range(self.scenario.decimation):

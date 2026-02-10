@@ -267,6 +267,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("net", type=str, help="network interface")
     parser.add_argument("config", type=str, help="config file name in the configs folder", default="g1.yaml")
+    parser.add_argument(
+        "--domain-id",
+        type=int,
+        default=0,
+        help="DDS domain id (use 1+ for simulators to avoid colliding with real robots; default: 0).",
+    )
     args = parser.parse_args()
 
     # # Load config
@@ -274,7 +280,7 @@ if __name__ == "__main__":
     config = G1Config(config_path)
 
     # Initialize DDS communication
-    ChannelFactoryInitialize(0, args.net)
+    ChannelFactoryInitialize(args.domain_id, args.net)
 
     controller = Controller(config)
 

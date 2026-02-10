@@ -88,37 +88,7 @@ class BaseEnvCfg:
         """Default spawn positions for robots and objects."""
 
         objects = {}
-        robots = {
-            "g1_dof12": {"pos": [0.0, 0.0, 0.8]},
-            "g1_dof23": {"pos": [0.0, 0.0, 0.8]},
-            "g1_dof29_dex3": {"pos": [0.0, 0.0, 0.8]},
-            "g1_dof29": {
-                "pos": [0.0, 0.0, 0.8],
-                "default_joint_pos": {
-                    "left_hip_pitch_joint": -0.1,
-                    "right_hip_pitch_joint": -0.1,
-                    ".*_knee_joint": 0.3,
-                    ".*_ankle_pitch_joint": -0.2,
-                    ".*_shoulder_pitch_joint": 0.3,
-                    "left_shoulder_roll_joint": 0.25,
-                    "right_shoulder_roll_joint": -0.25,
-                    ".*_elbow_joint": 0.97,
-                    "left_wrist_roll_joint": 0.15,
-                    "right_wrist_roll_joint": -0.15,
-                },
-            },
-            "agibot_a2_dof12": {
-                "pos": [0.0, 0.0, 0.98],
-                "default_joint_pos": {
-                    ".*_hip_roll": 0.0,
-                    ".*_hip_yaw": 0.0,
-                    ".*_hip_pitch": -0.115,
-                    ".*_tarsus": 0.267,
-                    ".*_toe_pitch": -0.152,
-                    ".*_toe_roll": 0.0,
-                },
-            },
-        }
+        robots = {}
 
     initial_states = InitialStates()
 

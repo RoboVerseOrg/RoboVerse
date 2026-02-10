@@ -37,6 +37,7 @@ concept/architecture
 concept/state
 concept/config
 concept/handler
+concept/protocol_sim
 <!-- tutorial/scenario -->
 <!-- tutorial/robot -->
 concept/task

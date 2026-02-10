@@ -374,22 +374,29 @@ def adapt_actions_to_dict(
         handler: The handler of the simulation.
         actions: The actions to adapt.
     """
+    # Prefer an explicit `handler.robot` property if present; otherwise fall back to
+    # the first robot in the scenario (common for single-robot tasks).
+    robot = getattr(handler, "robot", None)
+    if robot is None:
+        robots = getattr(handler, "robots", None)
+        robot = robots[0] if robots else None
+    if robot is None:
+        raise AttributeError("Handler does not expose a robot; cannot adapt tensor actions to dict.")
+
+    robot_name = robot.name
+    joint_names = handler.get_joint_names(robot_name, sort=True)
+    control_types = getattr(robot, "control_type", None)
+    use_effort = any(mode == "effort" for mode in control_types.values()) if control_types else False
+    key = "dof_effort_target" if use_effort else "dof_pos_target"
+
     if isinstance(actions, torch.Tensor):
         if len(actions.shape) == 2:
             actions = actions[0]
-        actions = {
-            handler.robot.name: {
-                "dof_pos_target": _dof_tensor_to_dict(actions, handler.get_joint_names(handler.robot.name))
-            }
-        }
+        actions = {robot_name: {key: _dof_tensor_to_dict(actions, joint_names)}}
     elif isinstance(actions, np.ndarray):
         if len(actions.shape) == 2:
             actions = actions[0]
-        actions = {
-            handler.robot.name: {
-                "dof_pos_target": _dof_array_to_dict(actions, handler.get_joint_names(handler.robot.name))
-            }
-        }
+        actions = {robot_name: {key: _dof_array_to_dict(actions, joint_names)}}
     elif isinstance(actions, list):
         actions = actions[0]
     return actions

@@ -419,17 +419,18 @@ class GenesisHandler(BaseSimHandler):
         control_mode = self._get_control_mode(obj_name)
         sim_joint_names = self._get_joint_names(obj_name, sort=False)
 
-        # Fast-path: tensor input (VectorEnv). Assume position control.
+        # Fast-path: tensor input (VectorEnv). Interpret tensor in *sorted joint-name order*
+        # and apply either position targets or torques based on RobotCfg.control_type.
         if isinstance(actions, torch.Tensor):
-            # Map tensor joint order (RobotCfg order) -> simulator joint order
-            cfg_joint_order = list(self.object_dict[obj_name].joint_limits.keys())
-            idxs = [cfg_joint_order.index(jn) for jn in sim_joint_names if jn in cfg_joint_order]
+            sorted_joint_names = self._get_joint_names(obj_name, sort=True)
+            name_to_sorted_idx = {jn: i for i, jn in enumerate(sorted_joint_names)}
+            idxs = [name_to_sorted_idx[jn] for jn in sim_joint_names if jn in name_to_sorted_idx]
             if len(idxs) == 0:
                 return
             # Select and shape per Genesis expectations
             if actions.dim() == 1:
                 actions = actions.unsqueeze(0)
-            position = actions[:, idxs]
+            values = actions[:, idxs]
 
             dofs_idx_local: list[int] = []
             for j in obj_inst.joints:
@@ -437,7 +438,10 @@ class GenesisHandler(BaseSimHandler):
                     dofs_idx_local.extend(j.dofs_idx_local)
 
             if dofs_idx_local:
-                obj_inst.control_dofs_position(position=position, dofs_idx_local=dofs_idx_local)
+                if control_mode == "effort":
+                    obj_inst.control_dofs_force(force=values, dofs_idx_local=dofs_idx_local)
+                else:
+                    obj_inst.control_dofs_position(position=values, dofs_idx_local=dofs_idx_local)
             return
 
         # Dict/list input path
