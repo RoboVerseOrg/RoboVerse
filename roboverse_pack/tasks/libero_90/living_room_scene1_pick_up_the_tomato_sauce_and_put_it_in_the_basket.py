@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene1_pick_up_the_tomato_sauce_and_put_it_in_the_basket",
     "living_room_scene1_pick_up_the_tomato_sauce_and_put_it_in_the_basket",
 )
-class LiberoLivingRoomScene1PickUpTomatoSauceAndPutItInTheBasketTask(Libero90BaseTask):
+class LiberoLivingRoomScene1PickUpTheTomatoSauceAndPutItInTheBasketTask(Libero90BaseTask):
     """Configuration for the Libero living room scene1 pick up the tomato sauce and put it in the basket task.
 
     Objects:

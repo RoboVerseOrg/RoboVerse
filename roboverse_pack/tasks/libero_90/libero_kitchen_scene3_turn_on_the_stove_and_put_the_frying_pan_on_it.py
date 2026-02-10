@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene3_turn_on_the_stove_and_put_the_frying_pan_on_it",
     "kitchen_scene3_turn_on_the_stove_and_put_the_frying_pan_on_it",
 )
-class LiberoKitchenScene3TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
+class LiberoKitchenScene3TurnOnTheStoveAndPutTheFryingPanOnItTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene3 turn on the stove and put the frying pan on it task.
 
     This task is transferred from:
@@ -45,15 +45,15 @@ class LiberoKitchenScene3TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
             # Movable objects
             RigidObjCfg(
                 name="moka_pot",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/usd/moka_pot.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/urdf/moka_pot.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/moka_pot/mjcf/moka_pot.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
             RigidObjCfg(
                 name="chefmate_8_frypan",
-                # usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/usd/chefmate_8_frypan.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/urdf/chefmate_8_frypan.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/chefmate_8_frypan/mjcf/chefmate_8_frypan.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
@@ -61,8 +61,8 @@ class LiberoKitchenScene3TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
             ArticulationObjCfg(
                 name="flat_stove",
                 fix_base_link=True,
-                # usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
-                # urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
+                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/usd/flat_stove.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/urdf/flat_stove.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/flat_stove/mjcf/flat_stove.xml",
             ),
         ],
@@ -91,7 +91,7 @@ class LiberoKitchenScene3TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
 
         # 2. check if the frying pan is on the stove
         frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-        stove_center_single = self.handler.physics.named.data.site_xpos["flat_stove/burner"]  # (3,)
+        stove_center_single = self.handler.physics.named.data.site_xpos["flat_stove/cook_region"]  # (3,)
         N = frypan_pos.shape[0]
         stove_center_pos = (
             torch.tensor(stove_center_single, device=frypan_pos.device).reshape(1, 3).repeat(N, 1)

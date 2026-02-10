@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene1_pick_up_the_cream_cheese_box_and_put_it_in_the_basket",
     "living_room_scene1_pick_up_the_cream_cheese_box_and_put_it_in_the_basket",
 )
-class LiberoLivingRoomScene1PickUpCreamCheeseAndPutItInTheBasketTask(Libero90BaseTask):
+class LiberoLivingRoomScene1PickUpTheCreamCheeseBoxAndPutItInTheBasketTask(Libero90BaseTask):
     """Configuration for the Libero living room scene1 pick up the cream cheese box and put it in the basket task."""
 
     scenario = ScenarioCfg(

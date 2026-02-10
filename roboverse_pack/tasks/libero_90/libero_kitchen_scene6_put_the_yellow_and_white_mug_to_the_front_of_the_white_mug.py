@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene6_put_the_yellow_and_white_mug_to_the_front_of_the_white_mug",
     "kitchen_scene6_put_the_yellow_and_white_mug_to_the_front_of_the_white_mug",
 )
-class LiberoKitchenScene6PutYellowWhiteMugFrontWhiteMugTask(Libero90BaseTask):
+class LiberoKitchenScene6PutTheYellowAndWhiteMugToTheFrontOfTheWhiteMugTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene6 put the yellow and white mug to the front of the white mug task."""
 
     scenario = ScenarioCfg(

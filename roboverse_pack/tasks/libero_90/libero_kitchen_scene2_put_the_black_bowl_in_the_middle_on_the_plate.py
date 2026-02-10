@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene2_put_the_black_bowl_in_the_middle_on_the_plate",
     "kitchen_scene2_put_the_black_bowl_in_the_middle_on_the_plate",
 )
-class LiberoKitchenScene2PutBowlInMiddleOnPlateTask(Libero90BaseTask):
+class LiberoKitchenScene2PutTheBlackBowlInTheMiddleOnThePlateTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene2 put the black bowl in the middle on the plate task.
 
     This task is transferred from:

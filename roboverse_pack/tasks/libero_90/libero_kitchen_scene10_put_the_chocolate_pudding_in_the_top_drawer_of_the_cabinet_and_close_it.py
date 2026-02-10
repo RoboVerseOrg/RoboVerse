@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it",
     "kitchen_scene10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it",
 )
-class LiberoKitchenScene10PutChocolatePuddingInTopDrawerAndCloseTask(Libero90BaseTask):
+class LiberoKitchenScene10PutTheChocolatePuddingInTheTopDrawerOfTheCabinetAndCloseItTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene10 put the chocolate pudding in the top drawer of the cabinet and close it task.
 
     Task Description:

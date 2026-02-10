@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene4_put_the_wine_bottle_on_the_wine_rack",
     "kitchen_scene4_put_the_wine_bottle_on_the_wine_rack",
 )
-class LiberoKitchenScene4PutWineBottleOnWineRackTask(Libero90BaseTask):
+class LiberoKitchenScene4PutTheWineBottleOnTheWineRackTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene4 put the wine bottle on the wine rack task.
 
     This task is transferred from:

@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.kitchen_scene10_close_the_top_drawer_of_the_cabinet",
     "kitchen_scene10_close_the_top_drawer_of_the_cabinet",
 )
-class LiberoKitchenScene10CloseTopDrawerAndPutBowlOnTopTask(Libero90BaseTask):
+class LiberoKitchenScene10CloseTheTopDrawerOfTheCabinetTask(Libero90BaseTask):
     """Configuration for the Libero kitchen scene10 close the top drawer of the cabinet task.
 
     Task Description:

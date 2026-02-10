@@ -17,7 +17,7 @@ from .libero_90_base import Libero90BaseTask
     "libero_90.living_room_scene4_pick_up_the_black_bowl_on_the_left_and_put_it_in_the_tray",
     "living_room_scene4_pick_up_the_black_bowl_on_the_left_and_put_it_in_the_tray",
 )
-class LiberoLivingRoomScene4PickUpLeftBlackBowlTask(Libero90BaseTask):
+class LiberoLivingRoomScene4PickUpTheBlackBowlOnTheLeftAndPutItInTheTrayTask(Libero90BaseTask):
     """Configuration for the Libero living room scene4 pick up the black bowl on the left and put it in the tray task.
 
     Task Description:
