@@ -14,8 +14,11 @@ from PIL import Image
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
+import metasim
 from gymnasium import make_vec
 from metasim.scenario.cameras import PinholeCameraCfg
+
+metasim.register_gym_envs()
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver

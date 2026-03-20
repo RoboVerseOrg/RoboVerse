@@ -119,6 +119,11 @@ if __name__ == "__main__":
     ]
 
     log.info(f"Using simulator: {args.sim}")
+    if args.sim == "isaacsim":
+        # Enable timeout-guarded close in IsaacSim handler for one-shot script usage.
+        # GUI mode can also hang on SimulationApp.close() on some systems.
+        os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] = "1"
+        os.environ.setdefault("METASIM_CLOSE_TIMEOUT_SEC", "8")
     handler = get_handler(scenario)
     init_states = [
         {

@@ -4,7 +4,9 @@ from pathlib import Path
 import numpy as np
 from gymnasium import make_vec
 
-from metasim import task  # noqa
+import metasim
+
+metasim.register_gym_envs()
 
 if __name__ == "__main__":
     default_path = "/home/boshi/Documents/Science/calvin/dataset/calvin_debug_dataset/training"

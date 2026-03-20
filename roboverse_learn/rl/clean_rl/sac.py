@@ -26,7 +26,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 rootutils.setup_root(__file__, pythonpath=True)
 from gymnasium import make_vec
-import metasim  # noqa: F401
+import metasim
+
+metasim.register_gym_envs()
 
 from roboverse_learn.rl.clean_rl.buffer import ReplayBuffer
 from roboverse_learn.rl.episode_tracker import EpisodeTracker

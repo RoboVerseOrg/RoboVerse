@@ -26,7 +26,9 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 # from metasim.task.gym_registration import make_vec
 from gymnasium import make_vec
 
-import metasim  # noqa: F401
+import metasim
+
+metasim.register_gym_envs()
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.utils.obs_utils import ObsSaver
 

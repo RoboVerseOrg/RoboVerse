@@ -1,13 +1,14 @@
-"""All metasim packages.
+"""All metasim packages."""
 
-Importing this top-level package ensures tasks are discovered and registered
-with Gymnasium (single and vector) so users can call gymnasium.make and
-gymnasium.make_vec without manual registration calls.
-"""
+from __future__ import annotations
 
-# Trigger task discovery and Gymnasium registration on package import.
-try:  # pragma: no cover
-    import metasim.task  # noqa: F401
-except Exception:
-    # Best-effort; individual scripts can still register on-demand if needed.
-    pass
+
+def register_gym_envs() -> None:
+    """Discover task modules and register ``RoboVerse/<task>`` with Gymnasium.
+
+    Call this before ``gymnasium.make`` / ``make_vec`` with RoboVerse env ids.
+    Sim-only code paths do not need this.
+    """
+    from metasim.task.gym_registration import register_all_tasks_with_gym
+
+    register_all_tasks_with_gym()

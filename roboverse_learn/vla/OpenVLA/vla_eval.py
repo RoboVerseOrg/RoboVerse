@@ -17,6 +17,8 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 import metasim
 from gymnasium import make_vec
+
+metasim.register_gym_envs()
 from metasim.utils import configclass
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
