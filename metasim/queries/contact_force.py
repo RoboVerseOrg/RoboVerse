@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 try:
     import isaacgym
 except ImportError:
@@ -11,7 +13,9 @@ import numpy as np
 import torch
 
 from metasim.queries.base import BaseQueryType
-from metasim.sim.base import BaseSimHandler
+
+if TYPE_CHECKING:
+    from metasim.sim.base import BaseSimHandler
 
 try:
     import mujoco

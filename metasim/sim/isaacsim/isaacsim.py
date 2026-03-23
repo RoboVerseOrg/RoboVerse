@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import threading
 from copy import deepcopy
 
 import numpy as np
@@ -74,6 +75,10 @@ class IsaacsimHandler(BaseSimHandler):
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
         self._manual_pd_on = []
+        self._owns_simulation_app = False
+        self.simulation_app = None
+        self.scene = None
+        self.sim = None
 
         if self.headless:
             self._render_viewport = False
@@ -94,8 +99,10 @@ class IsaacsimHandler(BaseSimHandler):
             args.headless = self.headless
             app_launcher = AppLauncher(args)
             self.simulation_app = app_launcher.app
+            self._owns_simulation_app = True
         else:
             self.simulation_app = simulation_app
+            self._owns_simulation_app = False
 
         # physics context
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
@@ -216,7 +223,44 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            self.simulation_app.close()
+            force_exit_on_close_hang = os.getenv("METASIM_FORCE_EXIT_ON_CLOSE", "0") == "1"
+            close_timeout_s = float(os.getenv("METASIM_CLOSE_TIMEOUT_SEC", "8"))
+            simulation_app = getattr(self, "simulation_app", None)
+            owns_simulation_app = getattr(self, "_owns_simulation_app", False)
+
+            if simulation_app is not None and force_exit_on_close_hang and owns_simulation_app:
+                close_error: dict[str, Exception] = {}
+
+                def _close_sim_app() -> None:
+                    try:
+                        # Isaac Sim may hang on shutdown waiting for Replicator workers.
+                        simulation_app.close(wait_for_replicator=False)
+                    except TypeError:
+                        # Backward compatibility with versions where close() has no kwargs.
+                        simulation_app.close()
+                    except Exception as err:
+                        close_error["error"] = err
+
+                close_thread = threading.Thread(target=_close_sim_app, daemon=True)
+                close_thread.start()
+                close_thread.join(timeout=close_timeout_s)
+                if close_thread.is_alive():
+                    log.warning(
+                        f"SimulationApp.close() exceeded {close_timeout_s:.1f}s. "
+                        "Forcing process exit to avoid shutdown hang."
+                    )
+                    import sys
+
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    os._exit(0)
+                if "error" in close_error:
+                    raise close_error["error"]
+            elif simulation_app is not None:
+                try:
+                    simulation_app.close(wait_for_replicator=False)
+                except TypeError:
+                    simulation_app.close()
             if self.scene is not None:
                 del self.scene
             if self.sim is not None:

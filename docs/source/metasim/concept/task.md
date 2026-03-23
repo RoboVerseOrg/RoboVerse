@@ -87,8 +87,10 @@ env = task_cls(scenario=scenario, device=device)
 `make_vec` provides a standardized helper that wraps task instantiation in a **Gym‑compatible API**. It is the recommended entry point for creating environments.
 
 ```python
-import metasim # triggering the registration of tasks with Gymnasium
+import metasim
 from gymnasium import make_vec
+
+metasim.register_gym_envs()  # register RoboVerse/* with Gymnasium before make_vec
 
 env = make_vec(
     env_id,                      # e.g., "example.my_task"
@@ -109,14 +111,16 @@ env = make_vec(
 
 ---
 
-## 4. Task Registration & Auto‑Import
+## 4. Task Registration & Discovery
 
-### 4.1 Auto‑import paths
+### 4.1 Discovery paths
 
-Task modules under the following directories are **auto‑imported and registered** at runtime:
+Task modules under these packages are found when discovery runs (not on every `import metasim`):
 
 * `metasim/example/example_pack/tasks`
 * `roboverse_pack/tasks`
+
+Discovery is triggered by `get_task_class`, `list_tasks`, or `metasim.register_gym_envs()`.
 
 > For new project tasks, place modules under **`roboverse_pack/tasks`**.
 

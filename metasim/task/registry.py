@@ -86,7 +86,7 @@ def _discover_task_modules() -> None:
                 try:
                     import_module(module_name)
                 except Exception as e:
-                    log.error(f"Task discovery: failed to import module '{module_name}': {e}")
+                    log.debug(f"Task discovery: skip module '{module_name}': {e}")
         except Exception as e:
             log.error(f"Task discovery: error scanning package '{pkg_name}': {e}")
 
