@@ -131,6 +131,15 @@ class IsaacsimHandler(BaseSimHandler):
         if self.sim.has_gui():
             self._init_keyboard()
 
+    def _write_root_state_to_sim(self, obj_inst, pose, velocity, env_ids, *, kinematic: bool) -> None:
+        if isinstance(env_ids, torch.Tensor):
+            env_ids_t = env_ids
+        else:
+            env_ids_t = torch.tensor(env_ids, device=self.device)
+        obj_inst.write_root_pose_to_sim(pose, env_ids=env_ids_t)
+        if not kinematic:
+            obj_inst.write_root_velocity_to_sim(velocity, env_ids=env_ids_t)
+
     def _load_robots(self) -> None:
         for robot in self.robots:
             self._add_robot(robot)
@@ -348,8 +357,13 @@ class IsaacsimHandler(BaseSimHandler):
                 # Set root state (fix_base_link only affects physics, not manual state setting)
                 root_state = states.objects[obj.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
-                obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
-                obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
+                self._write_root_state_to_sim(
+                    obj_inst,
+                    root_state[env_ids, :7],
+                    root_state[env_ids, 7:],
+                    env_ids=env_ids,
+                    kinematic=bool(obj.fix_base_link),
+                )
                 # Set joint state for articulated objects
                 if isinstance(obj, ArticulationObjCfg):
                     joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
@@ -368,9 +382,12 @@ class IsaacsimHandler(BaseSimHandler):
                 robot_inst = self.scene.articulations[robot.name]
                 root_state = states.robots[robot.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
-                robot_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
-                robot_inst.write_root_velocity_to_sim(
-                    states.robots[robot.name].root_state[env_ids, 7:], env_ids=env_ids
+                self._write_root_state_to_sim(
+                    robot_inst,
+                    root_state[env_ids, :7],
+                    states.robots[robot.name].root_state[env_ids, 7:],
+                    env_ids=env_ids,
+                    kinematic=bool(robot.fix_base_link),
                 )
                 joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
                 robot_inst.write_joint_position_to_sim(
@@ -1510,10 +1527,12 @@ class IsaacsimHandler(BaseSimHandler):
             ],
             dim=-1,
         )
-        obj_inst.write_root_pose_to_sim(pose, env_ids=torch.tensor(env_ids, device=self.device))
-        obj_inst.write_root_velocity_to_sim(
+        self._write_root_state_to_sim(
+            obj_inst,
+            pose,
             torch.zeros((len(env_ids), 6), device=self.device, dtype=torch.float32),
             env_ids=torch.tensor(env_ids, device=self.device),
+            kinematic=bool(object.fix_base_link),
         )  # ! critical
         obj_inst.write_data_to_sim()
 
