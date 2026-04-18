@@ -66,7 +66,7 @@ You will get the following videos:
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 32%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/4_motion_planning_isaacsim.mp4" type="video/mp4">
             </video>
             <p style="margin-top: 5px;">IsaacSim</p>
         </div>

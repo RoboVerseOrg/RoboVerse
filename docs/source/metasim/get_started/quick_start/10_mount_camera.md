@@ -40,9 +40,9 @@ You will get the following Videos:
         </div>
         <div style="width: 42%; text-align: center;">
             <video width="100%" autoplay loop muted playsinline>
-                <source src="https://roboverse.wiki/_static/standard_output/10_mount_camera_isaaclab.mp4" type="video/mp4">
+                <source src="https://roboverse.wiki/_static/standard_output/10_mount_camera_isaacsim.mp4" type="video/mp4">
             </video>
-            <p style="margin-top: 5px;">Isaac Lab</p>
+            <p style="margin-top: 5px;">Isaac Sim</p>
         </div>
     </div>
 
