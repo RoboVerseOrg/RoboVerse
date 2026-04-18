@@ -40,9 +40,9 @@ python get_started/14_real_assets.py  --sim pybullet --headless
 
 You will get the following image:
 ---
-| Isaac Lab | Isaac Gym | Mujoco |
+| Isaac Sim | Isaac Gym | Mujoco |
 |:---:|:---:|:---:|
-| ![Isaac Lab](../../../_static/standard_output/14_real_assets_isaacsim.png) | ![Isaac Gym](../../../_static/standard_output/14_real_assets_isaacgym.png) | ![Mujoco](../../../_static/standard_output/14_real_assets_mujoco.png) |
+| ![Isaac Sim](../../../_static/standard_output/14_real_assets_isaacsim.png) | ![Isaac Gym](../../../_static/standard_output/14_real_assets_isaacgym.png) | ![Mujoco](../../../_static/standard_output/14_real_assets_mujoco.png) |
 
 | Genesis | Sapien | PyBullet |
 |:---:|:---:|:---:|
