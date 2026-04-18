@@ -1,4 +1,4 @@
-"""This script is used to test the static scene."""
+"""Control a robot with random joint targets and record a video across simulators."""
 
 from __future__ import annotations
 
