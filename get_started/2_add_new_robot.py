@@ -34,7 +34,6 @@ from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 
-
 if __name__ == "__main__":
 
     @configclass

@@ -35,7 +35,6 @@ from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 
-
 if __name__ == "__main__":
 
     @configclass
@@ -178,7 +177,8 @@ if __name__ == "__main__":
                 robot.name: {
                     "dof_pos_target": {
                         joint_name: (
-                            torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                            torch.rand(1).item()
+                            * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
                             + robot.joint_limits[joint_name][0]
                         )
                         for joint_name in robot.joint_limits.keys()
