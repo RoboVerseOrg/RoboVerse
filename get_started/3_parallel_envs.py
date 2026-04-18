@@ -28,8 +28,8 @@ from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 
-# The `if __name__ == "__main__"` guard is required for the parallel sim wrapper,
-# which uses multiprocessing and re-imports this module in child workers.
+# Please do not remove `if __name__ == "__main__":`.
+# This is required for the parallel sim wrapper to work.
 if __name__ == "__main__":
 
     @configclass
@@ -45,7 +45,6 @@ if __name__ == "__main__":
             "genesis",
             "pybullet",
             "mujoco",
-            "mjx",
             "sapien2",
             "sapien3",
             "newton",

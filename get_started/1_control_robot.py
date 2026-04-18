@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     @configclass
     class Args:
-        """Arguments for the static scene."""
+        """Arguments for the control-robot demo."""
 
         robot: str = "franka"
 
