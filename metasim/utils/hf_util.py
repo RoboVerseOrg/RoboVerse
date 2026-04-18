@@ -79,6 +79,9 @@ def check_and_download_single(filepath: str):
     Args:
         filepath: the filepath to check and download.
     """
+    if filepath is None:
+        log.warning("Received None filepath, skipping download check.")
+        return
     local_exists = os.path.exists(filepath)
     if local_exists:
         ## In this case, the runner has the file in their local machine.
@@ -238,22 +241,38 @@ class FileDownloader:
         #     self._add(traj_filepath)
 
     def _add_from_scene(self, scene: SceneCfg):
-        self._add(scene.file_name(self.scenario.simulator))
+        filepath = scene.file_name(self.scenario.simulator)
+        if filepath is not None:
+            self._add(filepath)
 
     def _add_from_object(self, obj: BaseObjCfg):
-        ## TODO: add a primitive base object class?
         if (
             isinstance(obj, PrimitiveCubeCfg)
             or isinstance(obj, PrimitiveCylinderCfg)
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return
-        self._add(obj.file_name(self.scenario.simulator))
+
+        sim = self.scenario.simulator
+        filepath = obj.file_name(sim)
+        if filepath is None:
+            file_type = obj.file_type[sim]
+            raise ValueError(
+                f"Object '{obj.name}' has no {file_type} asset path set for the '{sim}' simulator. "
+                f"Please set '{file_type}_path' on this object's config. "
+                f"Available paths: usd_path={getattr(obj, 'usd_path', None)}, "
+                f"urdf_path={getattr(obj, 'urdf_path', None)}, "
+                f"mjcf_path={getattr(obj, 'mjcf_path', None)}"
+            )
+        self._add(filepath)
 
         for extra_resource in obj.extra_resources:
             self._add(extra_resource)
 
     def _add(self, filepath: str):
+        if filepath is None:
+            log.warning("Skipping None filepath in FileDownloader._add")
+            return
         self.files_to_download.append(filepath)
 
     def do_it(self):
