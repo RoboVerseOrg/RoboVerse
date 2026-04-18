@@ -63,7 +63,7 @@ python get_started/0_static_scene.py  --sim newton
 
 
 You will get the following image:
----
+
 | Isaac Sim | Isaac Gym | Mujoco |
 |:---:|:---:|:---:|
 | ![Isaac Sim](../../../_static/standard_output/0_static_scene_isaacsim.png) | ![Isaac Gym](../../../_static/standard_output/0_static_scene_isaacgym.png) | ![Mujoco](../../../_static/standard_output/0_static_scene_mujoco.png) |
