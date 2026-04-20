@@ -70,7 +70,11 @@ class _FileBasedMixin:
     def file_name(self, sim_name):
         file_type = self.file_type[sim_name]
         if file_type == "usd":
-            return self.usd_path
+            if self.usd_path is not None:
+                return self.usd_path
+            if sim_name in {"isaacsim", "isaaclab"}:
+                return self.urdf_path
+            return None
         elif file_type == "urdf":
             return self.urdf_path
         elif file_type == "mjcf":

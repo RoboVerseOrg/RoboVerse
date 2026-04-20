@@ -28,6 +28,7 @@ from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
 from metasim.randomization.core.object_registry import ObjectMetadata, ObjectRegistry
+from metasim.utils.isaacsim_asset_util import convert_urdf_to_usd_cached
 from metasim.utils.configclass import configclass
 
 # =============================================================================
@@ -938,44 +939,8 @@ class SceneRandomizer(BaseRandomizerType):
         Returns:
             Path to converted USD file, or None if failed
         """
-        from pathlib import Path
-
         try:
-            urdf_path_obj = Path(urdf_path)
-            usd_output = urdf_path_obj.parent / (urdf_path_obj.stem + ".usd")
-
-            # If already converted, use existing
-            if usd_output.exists():
-                return str(usd_output)
-
-            logger.info(f"Converting URDF to USD: {urdf_path}")
-
-            # Use AssetConverterFactory with MESH source type
-            try:
-                from generation.asset_converter import AssetConverterFactory
-                from generation.enums import AssetType
-
-                converter = AssetConverterFactory.create(
-                    target_type=AssetType.USD,
-                    source_type=AssetType.MESH,  # KEY: MESH not URDF!
-                    simulation_app=None,  # Already running
-                    exit_close=False,
-                    force_usd_conversion=True,
-                    make_instanceable=True,
-                )
-
-                converter.convert(str(urdf_path), str(usd_output))
-
-                if not usd_output.exists():
-                    logger.error(f"USD not created: {usd_output}")
-                    return None
-
-                logger.info(f"Converted: {usd_output}")
-                return str(usd_output)
-
-            except Exception as e:
-                logger.error(f"Conversion failed: {e}")
-                return None
+            return convert_urdf_to_usd_cached(urdf_path)
 
         except Exception as e:
             logger.error(f"URDF conversion error: {e}")
