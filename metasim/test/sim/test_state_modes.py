@@ -139,6 +139,28 @@ def test_state_mode_multiple_calls(handler):
 
 
 @pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+def test_state_cache_mode_independence(handler):
+    """Regression: alternating modes must not invalidate or overwrite the other cache."""
+    tensor_a = handler.get_states(mode="tensor")
+    dict_a = handler.get_states(mode="dict")
+    tensor_b = handler.get_states(mode="tensor")
+    dict_b = handler.get_states(mode="dict")
+
+    # Same underlying objects returned across calls — cache reused, not rebuilt.
+    assert tensor_a is tensor_b, "tensor cache destroyed by intervening dict call"
+    assert dict_a is dict_b, "dict cache destroyed by intervening tensor call"
+
+    # simulate() must invalidate both caches.
+    handler.simulate()
+    tensor_c = handler.get_states(mode="tensor")
+    dict_c = handler.get_states(mode="dict")
+    assert tensor_c is not tensor_a, "simulate() did not invalidate tensor cache"
+    assert dict_c is not dict_a, "simulate() did not invalidate dict cache"
+
+    log.info(f"State cache mode independence test passed for {handler.scenario.simulator}")
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
 def test_dict_state_all_objects(handler):
     """Test that dict state includes all objects and robots."""
     dict_state = handler.get_states(mode="dict")

@@ -44,8 +44,8 @@ class BaseSimHandler(ABC):
         self.decimation = scenario.decimation
         self.headless = scenario.headless
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
-        self._state_cache_expire = True
-        self._states: TensorState | list[DictEnvState] = None
+        self._tensor_state_cache: TensorState | None = None
+        self._dict_state_cache: list[DictEnvState] | None = None
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -76,9 +76,14 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
+    def _invalidate_state_caches(self) -> None:
+        """Mark both tensor and dict state caches as stale."""
+        self._tensor_state_cache = None
+        self._dict_state_cache = None
+
     def set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
-        self._state_cache_expire = True
+        self._invalidate_state_caches()
         self._set_states(states, env_ids)
 
     @abstractmethod
@@ -116,15 +121,30 @@ class BaseSimHandler(ABC):
     def get_states(
         self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"
     ) -> TensorState | list[DictEnvState]:
-        """Get the states of the environment."""
-        if self._state_cache_expire:
-            self._states = self._get_states(env_ids=env_ids)
-            self._state_cache_expire = False
-        if isinstance(self._states, TensorState) and mode == "dict":
-            self._states = state_tensor_to_nested(self, self._states)
-        elif isinstance(self._states, list) and mode == "tensor":
-            self._states = list_state_to_tensor(self, self._states)
-        return self._states
+        """Get the states of the environment.
+
+        Maintains independent tensor and dict caches so alternating modes does not
+        destroy either representation. A cache miss on the requested mode is filled
+        lazily by converting from the other cache.
+        """
+        # Fetch fresh from sim only if both caches are stale.
+        if self._tensor_state_cache is None and self._dict_state_cache is None:
+            result = self._get_states(env_ids=env_ids)
+            if result is None:
+                return None  # handler does not implement _get_states (e.g. stub handlers)
+            if isinstance(result, TensorState):
+                self._tensor_state_cache = result
+            else:
+                self._dict_state_cache = result
+
+        if mode == "tensor":
+            if self._tensor_state_cache is None:
+                self._tensor_state_cache = list_state_to_tensor(self, self._dict_state_cache)
+            return self._tensor_state_cache
+        # mode == "dict"
+        if self._dict_state_cache is None:
+            self._dict_state_cache = state_tensor_to_nested(self, self._tensor_state_cache)
+        return self._dict_state_cache
 
     ############################################################
     ## Get extra queries
@@ -148,7 +168,7 @@ class BaseSimHandler(ABC):
 
     def simulate(self):
         """Simulate the environment."""
-        self._state_cache_expire = True
+        self._invalidate_state_caches()
         self._simulate()
 
     ############################################################
