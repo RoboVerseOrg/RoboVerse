@@ -13,6 +13,26 @@ from metasim.types import Action, TensorState
 from metasim.utils.state import state_tensor_to_nested
 
 
+def _extract_rgb_frame(tensor_state, view: str):
+    camera_state = tensor_state.cameras.get(view)
+    if camera_state is None or camera_state.rgb is None:
+        return None
+    frame = camera_state.rgb[0].detach().cpu().numpy()
+    if frame.ndim != 3 or frame.shape[-1] < 3:
+        return None
+    return frame[..., :3]
+
+
+def _preserve_physics_extras(physics_states: TensorState, render_states: TensorState) -> dict:
+    merged = {}
+    if isinstance(getattr(physics_states, "extras", None), dict):
+        merged.update(physics_states.extras)
+    if isinstance(getattr(render_states, "extras", None), dict):
+        for key, value in render_states.extras.items():
+            merged.setdefault(key, value)
+    return merged
+
+
 class HybridSimHandler(BaseSimHandler):
     """Hybrid simulation handler that uses one simulator for physics and another for rendering."""
 
@@ -36,6 +56,13 @@ class HybridSimHandler(BaseSimHandler):
     def render(self) -> None:
         """Render using the render handler."""
         self.render_handler.render()
+
+    def render_frame(self, view: str):
+        return _extract_rgb_frame(self.render_handler.get_states(mode="tensor"), view)
+
+    def render_frames(self, views):
+        tensor_state = self.render_handler.get_states(mode="tensor")
+        return {view: _extract_rgb_frame(tensor_state, view) for view in views}
 
     def close(self) -> None:
         """Close both physics and render simulations.
@@ -71,6 +98,7 @@ class HybridSimHandler(BaseSimHandler):
             objects=physics_states.objects,
             robots=physics_states.robots,
             cameras=render_states.cameras,  # Use camera data from render handler
+            extras=_preserve_physics_extras(physics_states, render_states),
         )
 
     def _simulate(self):
@@ -80,13 +108,14 @@ class HybridSimHandler(BaseSimHandler):
 
         # Get states from physics and sync to render
         physics_states = self.physics_handler._get_states()
-        states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
-        self.render_handler._set_states(states_nested)
+        try:
+            self.render_handler._set_states(physics_states)
+        except TypeError:
+            states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
+            self.render_handler._set_states(states_nested)
 
         # Update render and ensure camera data is refreshed
         self.render_handler.refresh_render()
-        # Also run a simulation step in render handler to update sensors
-        self.render_handler._simulate()
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get joint names from physics handler."""

@@ -52,6 +52,8 @@ class IsaacsimHandler(BaseSimHandler):
     This class extends BaseSimHandler to provide specific functionality for Isaac Lab.
     """
 
+    set_states_refreshes = True
+
     def __init__(self, scenario_cfg: ScenarioCfg, optional_queries: list[BaseQueryType] | None = None):
         super().__init__(scenario_cfg, optional_queries)
 
@@ -86,6 +88,14 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             self._render_viewport = True
 
+        self._sync_tensor_device_with_sim_device()
+
+    def _resolve_sim_device(self) -> str:
+        return os.environ.get("METASIM_EVAL_ISAACSIM_DEVICE", "cuda:0")
+
+    def _sync_tensor_device_with_sim_device(self) -> None:
+        self._device = torch.device(self._resolve_sim_device())
+
     def _init_scene(self, simulation_app=None, args=None) -> None:
         """
         Initializes the isaacsim simulation environment.
@@ -96,8 +106,9 @@ class IsaacsimHandler(BaseSimHandler):
             parser = argparse.ArgumentParser()
             AppLauncher.add_app_launcher_args(parser)
             args = parser.parse_args([])
-            args.enable_cameras = True
+            args.enable_cameras = bool(self.cameras)
             args.headless = self.headless
+            args.device = self._resolve_sim_device()
             app_launcher = AppLauncher(args)
             self.simulation_app = app_launcher.app
             self._owns_simulation_app = True
@@ -109,8 +120,10 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
+        sim_device = self._resolve_sim_device()
+        self._sync_tensor_device_with_sim_device()
         sim_config: SimulationCfg = SimulationCfg(
-            device="cuda:0",
+            device=sim_device,
             render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
@@ -183,6 +196,25 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
+    def _apply_robot_default_joint_positions(self) -> None:
+        env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
+        for robot in self.robots:
+            robot_inst = self.scene.articulations[robot.name]
+            joint_names = list(robot_inst.joint_names)
+            joint_pos = robot_inst.data.default_joint_pos[env_ids].clone()
+            for joint_index, joint_name in enumerate(joint_names):
+                if joint_name in robot.default_joint_positions:
+                    joint_pos[:, joint_index] = float(robot.default_joint_positions[joint_name])
+            joint_vel = torch.zeros_like(joint_pos)
+            robot_inst.set_joint_position_target(joint_pos, env_ids=env_ids)
+            robot_inst.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
+            robot_inst.write_data_to_sim()
+
+    def _initialize_physics_before_reset(self) -> None:
+        initialize_physics = getattr(self.sim, "initialize_physics", None)
+        if callable(initialize_physics):
+            initialize_physics()
+
     def launch(self, simulation_app=None, simulation_args=None) -> None:
         self._init_scene(simulation_app, simulation_args)
         self._load_robots()
@@ -196,9 +228,12 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
+        self._initialize_physics_before_reset()
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
+
+        self._apply_robot_default_joint_positions()
 
         # Update camera pose after scene reset to avoid being overridden
         self._update_camera_pose()
@@ -366,6 +401,9 @@ class IsaacsimHandler(BaseSimHandler):
                     obj_inst.write_joint_velocity_to_sim(
                         states.objects[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                     )
+                write_data = getattr(obj_inst, "write_data_to_sim", None)
+                if callable(write_data):
+                    write_data()
 
                 # For kinematic objects (fix_base_link=True), force update to sync visual mesh
                 if obj.fix_base_link:
@@ -386,8 +424,12 @@ class IsaacsimHandler(BaseSimHandler):
                 robot_inst.write_joint_velocity_to_sim(
                     states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                 )
+                joint_pos = states.robots[robot.name].joint_pos[env_ids, :][:, joint_ids_reindex]
+                robot_inst.set_joint_position_target(joint_pos, env_ids=env_ids)
+                robot_inst.write_data_to_sim()
 
             if len(self.cameras) > 0:
+                self._update_camera_pose()
                 self.refresh_render()
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
@@ -532,10 +574,11 @@ class IsaacsimHandler(BaseSimHandler):
             camera_inst = self.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
             depth_data = camera_inst.data.output.get("depth", None)
+            camera_info = self._camera_info_mapping(camera_inst)
             instance_seg_data = deep_get(camera_inst.data.output, "instance_segmentation_fast")
-            instance_seg_id2label = deep_get(camera_inst.data.info, "instance_segmentation_fast", "idToLabels")
+            instance_seg_id2label = deep_get(camera_info, "instance_segmentation_fast", "idToLabels")
             instance_id_seg_data = deep_get(camera_inst.data.output, "instance_id_segmentation_fast")
-            instance_id_seg_id2label = deep_get(camera_inst.data.info, "instance_id_segmentation_fast", "idToLabels")
+            instance_id_seg_id2label = deep_get(camera_info, "instance_id_segmentation_fast", "idToLabels")
             if instance_seg_data is not None:
                 instance_seg_data = instance_seg_data.squeeze(-1)
             if instance_id_seg_data is not None:
@@ -603,6 +646,12 @@ class IsaacsimHandler(BaseSimHandler):
             )
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
+
+    def _camera_info_mapping(self, camera_inst) -> dict:
+        info = getattr(getattr(camera_inst, "data", None), "info", None)
+        if isinstance(info, list):
+            return info[0] if info else {}
+        return info if isinstance(info, dict) else {}
 
     def _on_keyboard_event(self, event, *args, **kwargs):
         import carb
@@ -1602,7 +1651,37 @@ class IsaacsimHandler(BaseSimHandler):
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
 
     def refresh_render(self) -> None:
-        self.flush_visual_updates(settle_passes=1)
+        physics_dt = float(getattr(self, "physics_dt", 0.0))
+        if self.scene is not None:
+            try:
+                self.scene.update(dt=0.0)
+            except Exception as err:
+                log.debug(f"Scene update failed during visual refresh: {err}")
+        if self.sim is not None:
+            try:
+                self.sim.render()
+            except Exception as err:
+                log.debug(f"SimulationContext render failed during visual refresh: {err}")
+        sensors = getattr(self.scene, "sensors", {}) if self.scene is not None else {}
+        for sensor in sensors.values():
+            update = getattr(sensor, "update", None)
+            if callable(update):
+                try:
+                    update(dt=physics_dt)
+                except Exception as err:
+                    log.debug(f"Sensor update failed during visual refresh: {err}")
+        if self.sim is not None:
+            try:
+                self.sim.render()
+            except Exception as err:
+                log.debug(f"SimulationContext render failed during visual refresh second pass: {err}")
+        for sensor in sensors.values():
+            update = getattr(sensor, "update", None)
+            if callable(update):
+                try:
+                    update(dt=physics_dt)
+                except Exception as err:
+                    log.debug(f"Sensor update failed during visual refresh second pass: {err}")
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Drive SimulationApp/scene/sensors for a few frames to settle visual state.

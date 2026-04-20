@@ -30,6 +30,35 @@ from metasim.types import Action
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
 
 
+def _physics_mode_name(obj) -> str | None:
+    physics = getattr(obj, "physics", None)
+    if physics is None:
+        return None
+    return getattr(physics, "name", str(physics))
+
+
+def _primitive_is_kinematic(obj) -> bool:
+    if bool(getattr(obj, "fix_base_link", False)):
+        return True
+    if not bool(getattr(obj, "enabled_gravity", True)):
+        return True
+    return _physics_mode_name(obj) in {"XFORM", "GEOM"}
+
+
+def _primitive_is_site(obj) -> bool:
+    collision_enabled = getattr(obj, "collision_enabled", None)
+    if collision_enabled is not None:
+        return not bool(collision_enabled)
+    return _physics_mode_name(obj) == "XFORM"
+
+
+def _kinematic_primitive_default_root_state(obj, *, num_envs: int, device) -> torch.Tensor:
+    root_state = torch.zeros((num_envs, 13), dtype=torch.float32, device=device)
+    root_state[:, 0:3] = torch.tensor(obj.default_position, dtype=torch.float32, device=device)
+    root_state[:, 3:7] = torch.tensor(obj.default_orientation, dtype=torch.float32, device=device)
+    return root_state
+
+
 def wp2torch(arr: wp.array, dtype=torch.float32) -> torch.Tensor:
     """Convert Warp array to PyTorch tensor on the same device."""
     if arr is None:
@@ -433,48 +462,52 @@ class NewtonHandler(BaseSimHandler):
     ) -> None:
         """Add an object to the model builder."""
         if isinstance(obj, PrimitiveCubeCfg):
-            # Add box shape
-            body = builder.add_body(
-                xform=wp.transform(
-                    wp.vec3(*obj.default_position),
-                    wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
-                ),
-                key=obj.name,
+            xform = wp.transform(
+                wp.vec3(*obj.default_position),
+                wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
             )
+            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
             shape_idx = builder.add_shape_box(
                 body=body,
+                xform=xform if body == -1 else None,
                 hx=obj.half_size[0],
                 hy=obj.half_size[1],
                 hz=obj.half_size[2],
+                as_site=_primitive_is_site(obj),
             )
             if shape_colors is not None:
                 color = self._normalize_color(getattr(obj, "color", None))
                 if color is not None:
                     shape_colors[shape_idx] = color
         elif isinstance(obj, PrimitiveSphereCfg):
-            # Add sphere shape
-            body = builder.add_body(
-                xform=wp.transform(
-                    wp.vec3(*obj.default_position),
-                    wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
-                ),
-                key=obj.name,
+            xform = wp.transform(
+                wp.vec3(*obj.default_position),
+                wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
             )
-            shape_idx = builder.add_shape_sphere(body=body, radius=obj.radius)
+            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
+            shape_idx = builder.add_shape_sphere(
+                body=body,
+                xform=xform if body == -1 else None,
+                radius=obj.radius,
+                as_site=_primitive_is_site(obj),
+            )
             if shape_colors is not None:
                 color = self._normalize_color(getattr(obj, "color", None))
                 if color is not None:
                     shape_colors[shape_idx] = color
         elif isinstance(obj, PrimitiveCylinderCfg):
-            # Add capsule shape (Newton uses capsules, approximate cylinder)
-            body = builder.add_body(
-                xform=wp.transform(
-                    wp.vec3(*obj.default_position),
-                    wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
-                ),
-                key=obj.name,
+            xform = wp.transform(
+                wp.vec3(*obj.default_position),
+                wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
             )
-            shape_idx = builder.add_shape_capsule(body=body, radius=obj.radius, half_height=obj.height / 2)
+            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
+            shape_idx = builder.add_shape_capsule(
+                body=body,
+                xform=xform if body == -1 else None,
+                radius=obj.radius,
+                half_height=obj.height / 2,
+                as_site=_primitive_is_site(obj),
+            )
             if shape_colors is not None:
                 color = self._normalize_color(getattr(obj, "color", None))
                 if color is not None:
@@ -1458,6 +1491,16 @@ class NewtonHandler(BaseSimHandler):
                         joint_pos[row, col] = joint_q[q_start]
                     if joint_qd is not None:
                         joint_vel[row, col] = joint_qd[qd_start]
+
+        if isinstance(obj_cfg, (PrimitiveCubeCfg, PrimitiveSphereCfg, PrimitiveCylinderCfg)):
+            if _primitive_is_kinematic(obj_cfg):
+                missing_root = all(self._obj_to_root_body.get(env_id, {}).get(obj_name) is None for env_id in env_ids)
+                if missing_root:
+                    root_state = _kinematic_primitive_default_root_state(
+                        obj_cfg,
+                        num_envs=len(env_ids),
+                        device=self._device,
+                    )
 
         body_state = None
         if body_states and body_states[0] is not None:
