@@ -75,6 +75,28 @@ except ImportError:
     log.warning("RoboSplatter not available. GS background rendering will be disabled.")
 
 
+_DM_CONTROL_STRUCT_PATCHED = False
+
+
+def _filter_supported_array_sizes(struct, array_sizes: dict[str, tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
+    return {field_name: size_names for field_name, size_names in array_sizes.items() if hasattr(struct, field_name)}
+
+
+def apply_dm_control_struct_compat_patch() -> None:
+    global _DM_CONTROL_STRUCT_PATCHED
+    if _DM_CONTROL_STRUCT_PATCHED:
+        return
+
+    from dm_control.mujoco import wrapper
+    from dm_control.mujoco.wrapper.mjbindings import sizes
+
+    model = wrapper.MjModel.from_xml_string("<mujoco/>")
+    data = wrapper.MjData(model)
+    sizes.array_sizes["mjmodel"] = _filter_supported_array_sizes(model, sizes.array_sizes["mjmodel"])
+    sizes.array_sizes["mjdata"] = _filter_supported_array_sizes(data, sizes.array_sizes["mjdata"])
+    _DM_CONTROL_STRUCT_PATCHED = True
+
+
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
@@ -107,6 +129,7 @@ class MujocoHandler(BaseSimHandler):
         self._mj_model = None  # native mujoco.MjModel for offscreen rendering
         self._mj_data = None  # native mujoco.MjData  for offscreen rendering
         self.renderer = None  # mujoco.Renderer (offscreen)
+        self._split_render_physics_only = bool(self.headless) and len(self.cameras) == 0
 
     def _get_camera_params(self, camera_id: str, camera):
         """Get camera intrinsics and extrinsics from MuJoCo camera configuration.
@@ -188,8 +211,10 @@ class MujocoHandler(BaseSimHandler):
                 normalized_height_mat = (height_mat - z_min) / z_span
                 self.physics.model.hfield_data[:] = normalized_height_mat.flatten(order="C")
 
-        # Create a default-sized renderer (camera sizes can be applied on demand)
-        self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
+        # Create a default-sized renderer unless this handler is acting as a
+        # physics-only backend for split-render mode.
+        if not self._split_render_physics_only:
+            self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
 
         self.body_names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
         self.robot_body_names = []
