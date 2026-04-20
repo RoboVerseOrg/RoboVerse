@@ -58,6 +58,14 @@ class BaseSimHandler(ABC):
     def render(self) -> None:
         raise NotImplementedError
 
+    def refresh_render(self) -> None:
+        """Force the render pipeline to update from the current simulation state.
+
+        Default is a no-op. Handlers that drive a renderer independently from the
+        physics step (e.g. hybrid render backends) should override this.
+        """
+        return
+
     def close(self) -> None:
         """Close the simulation."""
         raise NotImplementedError
