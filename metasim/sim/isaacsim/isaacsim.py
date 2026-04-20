@@ -30,6 +30,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
+from metasim.utils.isaacsim_asset_util import resolve_isaacsim_file_path
 from metasim.utils.dict import deep_get
 from metasim.utils.gs_util import alpha_blend_rgba_torch
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
@@ -722,9 +723,10 @@ class IsaacsimHandler(BaseSimHandler):
         control_type = getattr(robot, "control_type", None)
         manual_pd = any(mode == "effort" for mode in control_type.values()) if control_type else False
         self._manual_pd_on.append(manual_pd)
+        asset_path = resolve_isaacsim_file_path(robot)
 
         spawn_cfg = sim_utils.UsdFileCfg(
-            usd_path=os.path.abspath(robot.usd_path),
+            usd_path=asset_path,
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=not robot.enabled_gravity,
@@ -789,10 +791,11 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Articulation object
         if isinstance(obj, ArticulationObjCfg):
+            asset_path = resolve_isaacsim_file_path(obj)
             articulation_cfg = ArticulationCfg(
                 prim_path=prim_path,
                 spawn=sim_utils.UsdFileCfg(
-                    usd_path=obj.usd_path,
+                    usd_path=asset_path,
                     scale=obj.scale,
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=not obj.enabled_gravity),
                     articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=obj.fix_base_link),
@@ -905,8 +908,9 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Rigid object
         if isinstance(obj, RigidObjCfg):
+            asset_path = resolve_isaacsim_file_path(obj)
             usd_file_cfg = sim_utils.UsdFileCfg(
-                usd_path=os.path.abspath(obj.usd_path),
+                usd_path=asset_path,
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
