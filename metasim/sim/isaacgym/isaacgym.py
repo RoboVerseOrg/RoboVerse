@@ -801,7 +801,7 @@ class IsaacgymHandler(BaseSimHandler):
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
 
-    def set_dof_targets(self, actions: list[Action] | torch.Tensor):
+    def _set_dof_targets(self, actions: list[Action] | torch.Tensor):
         self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0])
         if isinstance(actions, torch.Tensor):

@@ -630,7 +630,7 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
-    def set_dof_targets(self, actions: torch.Tensor) -> None:
+    def _set_dof_targets(self, actions: torch.Tensor) -> None:
         if isinstance(actions, torch.Tensor):
             actions_tensor = actions
         else:

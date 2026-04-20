@@ -93,6 +93,9 @@ class BlenderHandler(BaseSimHandler):
         exit()  # XXX: as a workaround to pass the test
         raise NotImplementedError("Blender does not support step")
 
+    def _set_dof_targets(self, actions: list[Action]) -> None:
+        raise NotImplementedError("BlenderHandler is render-only; _set_dof_targets is not supported.")
+
     def _add_camera(self):
         context = self.context
         delete_all(context, "CAMERA")
