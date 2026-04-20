@@ -42,7 +42,7 @@ class HybridSimHandler(BaseSimHandler):
         self.physics_handler.close()
         self.render_handler.close()
 
-    def set_dof_targets(self, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: list[Action]) -> None:
         """Set the dof targets of the robot in the physics handler."""
         self.physics_handler.set_dof_targets(actions)
 

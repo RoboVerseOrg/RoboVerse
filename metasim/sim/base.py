@@ -15,7 +15,6 @@ from metasim.types import Action, DictEnvState, TensorState
 from metasim.utils.gs_util import quaternion_multiply
 from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
-# from metasim.utils.hf_util import FileDownloader
 try:
     from robo_splatter.models.basic import GSInstance, RenderConfig
     from robo_splatter.models.gaussians import RigidsGaussians
@@ -33,7 +32,6 @@ class BaseSimHandler(ABC):
         self.scenario = scenario
         self.optional_queries = optional_queries
         scenario.check_assets()  # check if all assets are available
-        # FileDownloader(scenario).do_it()  # download any external assets
 
         ## For quick reference
         self.robots = scenario.robots
@@ -83,7 +81,7 @@ class BaseSimHandler(ABC):
         self._state_cache_expire = True
         self._set_states(states, env_ids)
 
-    # @abstractmethod
+    @abstractmethod
     def _set_dof_targets(self, actions: list[Action]) -> None:
         """Set the dof targets of the environment.
         For a new simulator, you should implement this method.

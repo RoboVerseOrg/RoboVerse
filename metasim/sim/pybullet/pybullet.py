@@ -319,7 +319,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
 
-    def set_dof_targets(self, actions: list[Action] | TensorState):
+    def _set_dof_targets(self, actions: list[Action] | TensorState):
         """Set the target joint positions for the object.
 
         Args:

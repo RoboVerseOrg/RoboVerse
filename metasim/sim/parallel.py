@@ -135,6 +135,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for remote in self.remotes:
                 remote.send(("launch", (None,)))
             self.waiting = False
+            self._check_error()
 
         def close(self):
             if self.closed:

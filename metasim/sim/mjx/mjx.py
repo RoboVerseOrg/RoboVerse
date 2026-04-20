@@ -384,7 +384,7 @@ class MJXHandler(BaseSimHandler):
         self._init_mjx()  # compile & allocate batched data
         self._mjx_done = True
 
-    def set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
+    def _set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
         """Accepts Tensor (N, sum(J)) or list[dict] -> writes ctrl for all robots."""
         self._actions_cache = actions
         data = self._data

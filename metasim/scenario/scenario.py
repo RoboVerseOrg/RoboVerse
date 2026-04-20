@@ -69,8 +69,6 @@ class ScenarioCfg:
         if isinstance(self.ground, str):
             self.ground = get_ground(self.ground)
 
-        # FileDownloader(self).do_it()  # download any external assets
-
     def check_assets(self):
         """Check if all assets are available."""
         FileDownloader(self).do_it()  # download any external assets

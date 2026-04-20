@@ -66,6 +66,9 @@ class PyrepHandler(BaseSimHandler):
         self.sim.stop()
         self.sim.shutdown()
 
+    def _set_dof_targets(self, actions: list[Action]) -> None:
+        raise NotImplementedError("PyrepHandler uses step(action); _set_dof_targets is not supported.")
+
     ############################################################
     ## Set states
     ############################################################

@@ -917,7 +917,7 @@ class MujocoHandler(BaseSimHandler):
             self.physics.data.xfrc_applied[body_id, 0:3] = force_vec
             self.physics.data.xfrc_applied[body_id, 3:6] = 0
 
-    def set_dof_targets(self, actions) -> None:
+    def _set_dof_targets(self, actions) -> None:
         """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
         self._actions_cache = actions
 
