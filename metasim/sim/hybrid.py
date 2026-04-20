@@ -38,9 +38,16 @@ class HybridSimHandler(BaseSimHandler):
         self.render_handler.render()
 
     def close(self) -> None:
-        """Close both physics and render simulations."""
-        self.physics_handler.close()
-        self.render_handler.close()
+        """Close both physics and render simulations.
+
+        Uses try/finally so the render handler's close — which owns the IsaacSim
+        app lifecycle (and its close-time hang watchdog) — always runs even if
+        the physics handler's close raises or hangs.
+        """
+        try:
+            self.physics_handler.close()
+        finally:
+            self.render_handler.close()
 
     def _set_dof_targets(self, actions: list[Action]) -> None:
         """Set the dof targets of the robot in the physics handler."""

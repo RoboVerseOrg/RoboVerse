@@ -232,8 +232,12 @@ class IsaacsimHandler(BaseSimHandler):
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
-            force_exit_on_close_hang = os.getenv("METASIM_FORCE_EXIT_ON_CLOSE", "0") == "1"
-            close_timeout_s = float(os.getenv("METASIM_CLOSE_TIMEOUT_SEC", "8"))
+            # Default ON: IsaacSim's Kit-app shutdown (Replicator workers, hydra
+            # delegates, GPU teardown) is known to hang upstream. Set
+            # METASIM_FORCE_EXIT_ON_CLOSE=0 to disable, e.g. if you call close()
+            # between episodes and need post-close code to run.
+            force_exit_on_close_hang = os.getenv("METASIM_FORCE_EXIT_ON_CLOSE", "1") == "1"
+            close_timeout_s = float(os.getenv("METASIM_CLOSE_TIMEOUT_SEC", "15"))
             simulation_app = getattr(self, "simulation_app", None)
             owns_simulation_app = getattr(self, "_owns_simulation_app", False)
 
@@ -262,7 +266,9 @@ class IsaacsimHandler(BaseSimHandler):
 
                     sys.stdout.flush()
                     sys.stderr.flush()
-                    os._exit(0)
+                    # Non-zero exit so CI/pipelines can distinguish watchdog-forced
+                    # exit from clean success.
+                    os._exit(1)
                 if "error" in close_error:
                     raise close_error["error"]
             elif simulation_app is not None:
