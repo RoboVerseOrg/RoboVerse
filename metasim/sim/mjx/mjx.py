@@ -126,7 +126,7 @@ class MJXHandler(BaseSimHandler):
         if not self.headless:
             self.refresh_render()
 
-    def _get_states(self, env_ids: list[int] | None = None):
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Return a structured snapshot of all robots / objects in the scene."""
         data = self._data  # mjx_env.Data  (N, …)
         N = data.qpos.shape[0]

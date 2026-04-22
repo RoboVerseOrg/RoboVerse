@@ -703,7 +703,7 @@ class IsaacgymHandler(BaseSimHandler):
             else state[..., [0, 1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 11, 12]]
         )
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[DictEnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         object_states = {}

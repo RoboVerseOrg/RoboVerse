@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, overload
 
 import torch
 
@@ -122,9 +122,15 @@ class BaseSimHandler(ABC):
             env_ids: List of environment ids to get the states from. If None, get the states of all environments.
 
         Returns:
-            dict: A dictionary containing the states of the environment
+            TensorState: The tensorized state of the environment.
         """
         raise NotImplementedError
+
+    @overload
+    def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor"] = "tensor") -> TensorState: ...
+
+    @overload
+    def get_states(self, env_ids: list[int] | None = None, mode: Literal["dict"] = "dict") -> list[DictEnvState]: ...
 
     def get_states(
         self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"

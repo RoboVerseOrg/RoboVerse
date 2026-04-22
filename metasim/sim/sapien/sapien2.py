@@ -404,7 +404,7 @@ class Sapien2Handler(BaseSimHandler):
 
         return link_name_list, link_state_tensor
 
-    def _get_states(self, env_ids=None) -> list[DictEnvState]:
+    def _get_states(self, env_ids=None) -> TensorState:
         object_states = {}
         for obj in self.objects:
             obj_inst = self.object_ids[obj.name]
