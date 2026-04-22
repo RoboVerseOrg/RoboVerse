@@ -395,7 +395,7 @@ class SinglePybulletHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def _get_states(self, env_ids=None) -> list[DictEnvState]:
+    def _get_states(self, env_ids=None) -> TensorState:
         """Get the states of the environment.
 
         Returns:

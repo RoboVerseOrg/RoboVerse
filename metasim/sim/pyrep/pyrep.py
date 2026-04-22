@@ -49,11 +49,7 @@ class PyrepHandler(BaseSimHandler):
     ## Gymnasium main methods
     ############################################################
     def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
-        action = action[0]["dof_pos_target"]
-        arm_action = [action[jd[self.robot.name][joint.get_name()]] for joint in self.arm.joints]
-        gripper_action = [action[jd[self.robot.name][joint.get_name()]] for joint in self.gripper.joints]
-        self.arm.set_joint_target_positions(arm_action)
-        self.gripper.set_joint_target_positions(gripper_action)
+        self._set_dof_targets(action)
         self.sim.step()
         self.arm.set_joint_target_positions(self.arm.get_joint_positions())
         self.gripper.set_joint_target_positions(self.gripper.get_joint_positions())
@@ -67,7 +63,15 @@ class PyrepHandler(BaseSimHandler):
         self.sim.shutdown()
 
     def _set_dof_targets(self, actions: list[Action]) -> None:
-        raise NotImplementedError("PyrepHandler uses step(action); _set_dof_targets is not supported.")
+        if len(actions) != 1:
+            raise ValueError("PyrepHandler only supports a single environment")
+
+        robot_name = self.robot.name
+        dof_targets = actions[0][robot_name]["dof_pos_target"]
+        arm_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.arm.joints]
+        gripper_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.gripper.joints]
+        self.arm.set_joint_target_positions(arm_action)
+        self.gripper.set_joint_target_positions(gripper_action)
 
     ############################################################
     ## Set states
@@ -96,5 +100,9 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Get states
     ############################################################
-    def _get_states(self) -> list[DictEnvState]:
+    def _get_states(self) -> TensorState:
         pass
+
+    @property
+    def robot(self):
+        return self.robots[0]

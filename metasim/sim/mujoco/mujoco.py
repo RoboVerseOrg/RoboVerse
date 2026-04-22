@@ -653,7 +653,7 @@ class MujocoHandler(BaseSimHandler):
     def _mirror_state_to_native(self):
         self._mj_data = self.physics._data._data
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get states of all objects and robots."""
         object_states = {}
 

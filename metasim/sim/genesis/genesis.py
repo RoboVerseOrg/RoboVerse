@@ -201,7 +201,7 @@ class GenesisHandler(BaseSimHandler):
         # Initialize GS background if enabled
         self._build_gs_background()
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[DictEnvState]:
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
