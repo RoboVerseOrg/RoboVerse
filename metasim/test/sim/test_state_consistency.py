@@ -64,7 +64,7 @@ def test_state_consistency(handler):
     init_states = _create_init_states(num_envs)
 
     handler.set_states(init_states)
-    states = state_tensor_to_nested(handler, handler.get_states())
+    states = state_tensor_to_nested(handler, handler.get_states(mode="tensor"))
 
     for i in range(num_envs):
         assert_close(states[i]["objects"]["cube"]["pos"], init_states[i]["objects"]["cube"]["pos"])

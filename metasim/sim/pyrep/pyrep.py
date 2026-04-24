@@ -10,7 +10,8 @@ from pyrep.robots.end_effectors.panda_gripper import PandaGripper
 from rlbench.backend.robot import Robot
 
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.types import ActionBatch, CompatActionInput, DictEnvState, Extra, Obs, Reward, Success, TimeOut
+from metasim.utils.state import action_input_to_dict_batch
 from metasim.utils import to_snake_case
 
 # TODO: try best to be independent from RLBench
@@ -48,7 +49,7 @@ class PyrepHandler(BaseSimHandler):
     ############################################################
     ## Gymnasium main methods
     ############################################################
-    def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
+    def step(self, action: CompatActionInput) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
         self._set_dof_targets(action)
         self.sim.step()
         self.arm.set_joint_target_positions(self.arm.get_joint_positions())
@@ -62,12 +63,15 @@ class PyrepHandler(BaseSimHandler):
         self.sim.stop()
         self.sim.shutdown()
 
-    def _set_dof_targets(self, actions: list[Action]) -> None:
-        if len(actions) != 1:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
+        action_batch: ActionBatch = action_input_to_dict_batch(self, actions)
+        if len(action_batch) != 1:
             raise ValueError("PyrepHandler only supports a single environment")
 
         robot_name = self.robot.name
-        dof_targets = actions[0][robot_name]["dof_pos_target"]
+        dof_targets = (action_batch[0].get(robot_name) or {}).get("dof_pos_target")
+        if dof_targets is None:
+            return
         arm_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.arm.joints]
         gripper_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.gripper.joints]
         self.arm.set_joint_target_positions(arm_action)

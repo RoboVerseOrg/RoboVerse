@@ -30,7 +30,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
+from metasim.types import Action, CompatActionInput, DictEnvState
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
 
@@ -338,7 +338,7 @@ class Sapien2Handler(BaseSimHandler):
         if vel_action is not None:
             instance.set_drive_velocity_target(vel_action)
 
-    def _set_dof_targets(self, actions: list[Action] | TensorState):
+    def _set_dof_targets(self, actions: CompatActionInput):
         actions = adapt_actions_to_dict(self, actions)
         for obj_name, action in actions.items():
             instance = self.object_ids[obj_name]

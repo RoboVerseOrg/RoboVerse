@@ -16,40 +16,33 @@ from metasim.sim.base import BaseSimHandler
 @pytest.mark.sim("isaacsim", "mujoco", "isaacgym", "mjx", "newton", "sapien2", "sapien3")
 def test_self_collision(handler: BaseSimHandler):
     """Test that joint limits are respected during simulation."""
+    robot_targets = {
+        "panda_joint1": 0.0,
+        "panda_joint2": 1.3,  # Self collision
+        "panda_joint3": 0.0,
+        "panda_joint4": -2.356194,
+        "panda_joint5": 0.0,
+        "panda_joint6": 1.0,  # Self collision
+        "panda_joint7": 0.785398,
+        "panda_finger_joint1": 0.04,
+        "panda_finger_joint2": 0.04,
+    }
+    settle_steps = 100
+
     dof_targets = [
         {
             "franka1": {
-                "dof_pos_target": {
-                    "panda_joint1": 0.0,
-                    "panda_joint2": 1.3,  # Self collision
-                    "panda_joint3": 0.0,
-                    "panda_joint4": -2.356194,
-                    "panda_joint5": 0.0,
-                    "panda_joint6": 1.0,  # Self collision
-                    "panda_joint7": 0.785398,
-                    "panda_finger_joint1": 0.04,
-                    "panda_finger_joint2": 0.04,
-                }
+                "dof_pos_target": robot_targets
             },
             "franka2": {
-                "dof_pos_target": {
-                    "panda_joint1": 0.0,
-                    "panda_joint2": 1.3,  # Self collision
-                    "panda_joint3": 0.0,
-                    "panda_joint4": -2.356194,
-                    "panda_joint5": 0.0,
-                    "panda_joint6": 1.0,  # Self collision
-                    "panda_joint7": 0.785398,
-                    "panda_finger_joint1": 0.04,
-                    "panda_finger_joint2": 0.04,
-                }
+                "dof_pos_target": robot_targets
             },
         }
     ] * handler.scenario.num_envs
     handler.set_dof_targets(dof_targets)
 
     # Simulate to let joints reach their targets (clamped by limits)
-    for _ in range(10):
+    for _ in range(settle_steps):
         handler.simulate()
 
     states_after = handler.get_states(mode="dict")

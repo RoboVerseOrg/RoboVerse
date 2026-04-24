@@ -9,7 +9,7 @@ from loguru import logger as log
 rootutils.setup_root(__file__, pythonpath=True)
 
 
-@pytest.mark.sim("mujoco", "newton")
+@pytest.mark.sim("mujoco", "newton", "isaacgym")
 def test_2_robots(handler):
     """Test that scenario correctly reports 2 robots."""
     handler.simulate()

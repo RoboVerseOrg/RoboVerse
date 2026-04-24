@@ -49,6 +49,7 @@ class ContactForces(BaseQueryType):
         if self.simulator in ["isaacgym", "mujoco"]:
             self.body_ids_reindex = handler._get_body_ids_reindex(self.robots[0].name)
         elif self.simulator == "isaacsim":
+            self.handler.init_contact_sensor(self.robots[0].name)
             sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
             self.body_ids_reindex = torch.tensor(
                 [self.handler.contact_sensor.body_names.index(name) for name in sorted_body_names],

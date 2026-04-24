@@ -14,6 +14,7 @@ from loguru import logger as log
 rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.test.test_utils import assert_close
+from metasim.utils.state import action_input_to_tensor
 
 
 @pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
@@ -181,3 +182,61 @@ def test_dict_state_all_objects(handler):
     assert "box_joint" in env0_state["objects"]["box_base"]["dof_pos"]
 
     log.info(f"Dict state all objects test passed for {handler.scenario.simulator}")
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+def test_handler_accepts_tensor_actions(handler):
+    """Handler accepts tensor actions in handler/API order."""
+    action_dim = sum(len(handler.get_joint_names(robot.name, sort=True)) for robot in handler.robots)
+    target = torch.zeros((handler.num_envs, action_dim), dtype=torch.float32, device=handler.device)
+
+    handler.set_dof_targets(target)
+    assert handler.actions_cache is not None
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+def test_handler_accepts_dict_actions(handler):
+    """Handler accepts dict-batch actions."""
+    dict_actions = [
+        {
+            robot.name: {
+                "dof_pos_target": {
+                    joint_name: 0.0 for joint_name in handler.get_joint_names(robot.name, sort=True)
+                }
+            }
+            for robot in handler.robots
+        }
+        for _ in range(handler.num_envs)
+    ]
+
+    handler.set_dof_targets(dict_actions)
+    assert handler.actions_cache is not None
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+def test_action_dict_and_tensor_use_same_handler_api_order(handler):
+    """Dict actions normalize to the documented handler/API tensor order."""
+    dict_actions = [
+        {
+            robot.name: {
+                "dof_pos_target": {
+                    joint_name: float(idx + 1)
+                    for idx, joint_name in enumerate(handler.get_joint_names(robot.name, sort=True))
+                }
+            }
+            for robot in handler.robots
+        }
+        for _ in range(handler.num_envs)
+    ]
+
+    tensor = action_input_to_tensor(handler, dict_actions, device=handler.device)
+
+    expected_rows = []
+    for _ in range(handler.num_envs):
+        row = []
+        for robot in handler.robots:
+            row.extend(float(idx + 1) for idx, _ in enumerate(handler.get_joint_names(robot.name, sort=True)))
+        expected_rows.append(row)
+    expected = torch.tensor(expected_rows, dtype=torch.float32, device=handler.device)
+
+    assert_close(tensor, expected, atol=1e-6, message="handler api tensor order")

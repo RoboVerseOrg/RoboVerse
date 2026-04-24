@@ -26,6 +26,12 @@ class HandlerContext:
         except Exception as e:
             log.error("An error occurred during handler launch: {}", e)
             log.error("Stack trace:\n{}", traceback.format_exc())
+            if self.scenario.simulator != "isaacsim":
+                try:
+                    self.handler.close()
+                except Exception:
+                    log.error("An error occurred during handler cleanup after failed launch.")
+                    log.error("Stack trace:\n{}", traceback.format_exc())
             raise
         return self.handler
 

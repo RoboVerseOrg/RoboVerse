@@ -146,7 +146,7 @@ init_states = [
     }
 ]
 handler.set_states(init_states)
-obs = handler.get_states()
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 save_path = f"get_started/output/multiple_cameras_{args.sim}.png"
 log.info(f"Saving image to {save_path}")

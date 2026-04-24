@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import gc
+import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING
 
 import torch
@@ -10,6 +12,7 @@ if TYPE_CHECKING:
 
 import math
 from collections import defaultdict
+from pathlib import Path
 
 import newton
 import numpy as np
@@ -26,8 +29,8 @@ from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
+from metasim.types import CompatActionInput
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor, state_tensor_to_nested
 
 
 def _physics_mode_name(obj) -> str | None:
@@ -129,7 +132,7 @@ class NewtonHandler(BaseSimHandler):
         self._gravity_vec = None
 
         # Actions cache
-        self._actions_cache: list[Action] | torch.Tensor | np.ndarray = []
+        self._actions_cache: CompatActionInput = []
 
         # Decimation for substeps
         if scenario.decimation is not None:
@@ -426,7 +429,7 @@ class NewtonHandler(BaseSimHandler):
     def _add_robot_to_builder(self, builder: newton.ModelBuilder, robot) -> None:
         """Add a robot to the model builder using URDF import."""
         # Try to import URDF
-        urdf_path = robot.urdf_path
+        urdf_path = self._sanitize_urdf(robot.urdf_path)
         if urdf_path is None:
             log.error(f"Robot {robot.name} has no URDF path defined")
             raise ValueError(f"Robot {robot.name} requires urdf_path for Newton")
@@ -514,7 +517,7 @@ class NewtonHandler(BaseSimHandler):
                     shape_colors[shape_idx] = color
         elif isinstance(obj, ArticulationObjCfg):
             # Load articulated object from URDF
-            urdf_path = obj.urdf_path
+            urdf_path = self._sanitize_urdf(obj.urdf_path)
             if urdf_path:
                 builder.add_urdf(
                     urdf_path,
@@ -529,8 +532,9 @@ class NewtonHandler(BaseSimHandler):
         else:
             # Try URDF for other file-based objects
             if hasattr(obj, "urdf_path") and obj.urdf_path:
+                urdf_path = self._sanitize_urdf(obj.urdf_path)
                 builder.add_urdf(
-                    obj.urdf_path,
+                    urdf_path,
                     xform=wp.transform(
                         wp.vec3(*obj.default_position),
                         wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
@@ -539,6 +543,62 @@ class NewtonHandler(BaseSimHandler):
                     ignore_inertial_definitions=False,
                     collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
                 )
+
+    def _sanitize_urdf(self, urdf_path: str | None) -> str | None:
+        """Patch URDF mesh paths into backend-readable absolute paths.
+
+        Newton's importer does not resolve local ``package://`` mesh URIs in the
+        Franka URDF used by the tests, which silently drops collision geometry and
+        makes self-collision settings ineffective.
+        """
+        if urdf_path is None:
+            return None
+
+        try:
+            src = Path(urdf_path)
+            if not src.exists():
+                return urdf_path
+
+            tree = ET.parse(src)
+            root = tree.getroot()
+            changed = False
+
+            for link in root.findall(".//link"):
+                for collision in list(link.findall("collision")):
+                    if collision.find("geometry") is None:
+                        link.remove(collision)
+                        changed = True
+
+            for mesh in root.findall(".//mesh"):
+                filename = mesh.get("filename")
+                if not filename:
+                    continue
+
+                candidates: list[Path] = []
+                if filename.startswith("package://"):
+                    rel_path = filename.split("package://", 1)[1]
+                    candidates.append(src.parent / rel_path)
+                else:
+                    candidates.append(src.parent / filename)
+
+                abs_path = next((candidate.resolve() for candidate in candidates if candidate.exists()), None)
+                if abs_path is None:
+                    continue
+
+                abs_path_str = str(abs_path)
+                if filename != abs_path_str:
+                    mesh.set("filename", abs_path_str)
+                    changed = True
+
+            if not changed:
+                return urdf_path
+
+            dst = src.with_suffix(".newton.urdf")
+            tree.write(dst, encoding="utf-8", xml_declaration=True)
+            return str(dst)
+        except Exception as exc:
+            log.warning(f"URDF sanitize failed for {urdf_path}: {exc}. Using original file.")
+            return urdf_path
 
     def _build_name_caches(self) -> None:
         """Build caches for looking up body and joint indices by name."""
@@ -1928,7 +1988,7 @@ class NewtonHandler(BaseSimHandler):
         if dirty_joints:
             eval_fk(self._model, self._state_0.joint_q, self._state_0.joint_qd, self._state_0)
 
-    def _set_dof_targets(self, actions: list[Action] | torch.Tensor | np.ndarray) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set DOF position/velocity targets for robot joints."""
         self._actions_cache = actions
 
@@ -1948,16 +2008,8 @@ class NewtonHandler(BaseSimHandler):
             if not self.robots:
                 return
 
-            # Prefer effort control if any joint is configured as effort (matches legged tasks)
-            robot = self.robots[0]
-            use_effort = False
-            if isinstance(robot, RobotCfg) and robot.control_type:
-                use_effort = any(mode == "effort" for mode in robot.control_type.values())
-
             target_device = None
-            if use_effort and joint_f is not None:
-                target_device = joint_f.device
-            elif joint_target_pos is not None:
+            if joint_target_pos is not None:
                 target_device = joint_target_pos.device
             elif joint_f is not None:
                 target_device = joint_f.device
@@ -1965,86 +2017,98 @@ class NewtonHandler(BaseSimHandler):
             if target_device is None:
                 return
 
-            action_tensor = torch.as_tensor(actions, dtype=torch.float32)
-            if action_tensor.ndim == 1:
-                action_tensor = action_tensor.unsqueeze(0)
-            if action_tensor.device != target_device:
-                action_tensor = action_tensor.to(target_device)
+            action_tensor = action_input_to_tensor(self, actions, device=target_device)
 
             # Broadcast single action across all envs if needed
             if action_tensor.shape[0] == 1 and self.num_envs > 1:
                 action_tensor = action_tensor.repeat(self.num_envs, 1)
 
-            robot_name = robot.name
-            qd_idx_all = self._obj_joint_qd_idx.get(robot_name)
-            valid_mask = self._obj_joint_valid.get(robot_name)
-
-            if qd_idx_all is not None and valid_mask is not None:
-                env_count = min(self.num_envs, action_tensor.shape[0], qd_idx_all.shape[0])
-                if env_count <= 0:
-                    return
-                max_joints = min(action_tensor.shape[1], qd_idx_all.shape[1])
-                if max_joints <= 0:
-                    return
-
-                qd_idx = qd_idx_all[:env_count, :max_joints]
-                if qd_idx.device != target_device:
-                    qd_idx = qd_idx.to(target_device)
-                action_slice = action_tensor[:env_count, :max_joints]
-
-                if isinstance(valid_mask, torch.Tensor):
-                    if valid_mask.ndim == 1:
-                        mask = valid_mask[:max_joints]
-                        if mask.device != target_device:
-                            mask = mask.to(target_device)
-                        qd_idx_sel = qd_idx[:, mask]
-                        action_sel = action_slice[:, mask]
-                        idx_flat = qd_idx_sel.reshape(-1)
-                        val_flat = action_sel.reshape(-1)
-                    else:
-                        mask = valid_mask[:env_count, :max_joints]
-                        if mask.device != target_device:
-                            mask = mask.to(target_device)
-                        idx_flat = qd_idx[mask]
-                        val_flat = action_slice[mask]
-                else:
-                    idx_flat = qd_idx.reshape(-1)
-                    val_flat = action_slice.reshape(-1)
-
-                if idx_flat.numel() == 0:
-                    return
-
-                if use_effort and joint_f is not None:
-                    joint_f[idx_flat] = val_flat
-                else:
-                    if joint_target_pos is not None:
-                        joint_target_pos[idx_flat] = val_flat
-                    if joint_target_vel is not None:
-                        joint_target_vel[idx_flat] = 0.0
+            offset = 0
+            env_count = min(self.num_envs, action_tensor.shape[0])
+            if env_count <= 0:
                 return
 
-            joint_names = self._get_joint_names(robot.name, sort=True)
-            max_joints = min(action_tensor.shape[1], len(joint_names))
+            for robot in self.robots:
+                robot_name = robot.name
+                joint_names = self._get_joint_names(robot_name, sort=True)
+                robot_width = len(joint_names)
+                if robot_width == 0:
+                    continue
 
-            for env_id in range(min(self.num_envs, action_tensor.shape[0])):
-                for col in range(max_joints):
-                    joint_name = joint_names[col]
-                    joint_idx = self._get_joint_index(env_id, robot.name, joint_name)
-                    if joint_idx is None:
-                        continue
-                    qd_start = self._joint_qd_starts[joint_idx]
-                    qd_end = self._joint_qd_starts[joint_idx + 1]
-                    if qd_end - qd_start != 1:
+                robot_actions = action_tensor[:env_count, offset : offset + robot_width]
+                offset += robot_width
+                if robot_actions.shape[1] == 0:
+                    continue
+
+                use_effort = False
+                if isinstance(robot, RobotCfg) and robot.control_type:
+                    use_effort = any(mode == "effort" for mode in robot.control_type.values())
+
+                qd_idx_all = self._obj_joint_qd_idx.get(robot_name)
+                valid_mask = self._obj_joint_valid.get(robot_name)
+
+                if qd_idx_all is not None and valid_mask is not None:
+                    robot_env_count = min(env_count, qd_idx_all.shape[0])
+                    max_joints = min(robot_actions.shape[1], qd_idx_all.shape[1])
+                    if robot_env_count <= 0 or max_joints <= 0:
                         continue
 
-                    value = action_tensor[env_id, col]
+                    qd_idx = qd_idx_all[:robot_env_count, :max_joints]
+                    if qd_idx.device != target_device:
+                        qd_idx = qd_idx.to(target_device)
+                    action_slice = robot_actions[:robot_env_count, :max_joints]
+
+                    if isinstance(valid_mask, torch.Tensor):
+                        if valid_mask.ndim == 1:
+                            mask = valid_mask[:max_joints]
+                            if mask.device != target_device:
+                                mask = mask.to(target_device)
+                            qd_idx_sel = qd_idx[:, mask]
+                            action_sel = action_slice[:, mask]
+                            idx_flat = qd_idx_sel.reshape(-1)
+                            val_flat = action_sel.reshape(-1)
+                        else:
+                            mask = valid_mask[:robot_env_count, :max_joints]
+                            if mask.device != target_device:
+                                mask = mask.to(target_device)
+                            idx_flat = qd_idx[mask]
+                            val_flat = action_slice[mask]
+                    else:
+                        idx_flat = qd_idx.reshape(-1)
+                        val_flat = action_slice.reshape(-1)
+
+                    if idx_flat.numel() == 0:
+                        continue
+
                     if use_effort and joint_f is not None:
-                        joint_f[qd_start] = value
+                        joint_f[idx_flat] = val_flat
                     else:
                         if joint_target_pos is not None:
-                            joint_target_pos[qd_start] = value
+                            joint_target_pos[idx_flat] = val_flat
                         if joint_target_vel is not None:
-                            joint_target_vel[qd_start] = 0.0
+                            joint_target_vel[idx_flat] = 0.0
+                    continue
+
+                max_joints = min(robot_actions.shape[1], len(joint_names))
+                for env_id in range(env_count):
+                    for col in range(max_joints):
+                        joint_name = joint_names[col]
+                        joint_idx = self._get_joint_index(env_id, robot_name, joint_name)
+                        if joint_idx is None:
+                            continue
+                        qd_start = self._joint_qd_starts[joint_idx]
+                        qd_end = self._joint_qd_starts[joint_idx + 1]
+                        if qd_end - qd_start != 1:
+                            continue
+
+                        value = robot_actions[env_id, col]
+                        if use_effort and joint_f is not None:
+                            joint_f[qd_start] = value
+                        else:
+                            if joint_target_pos is not None:
+                                joint_target_pos[qd_start] = value
+                            if joint_target_vel is not None:
+                                joint_target_vel[qd_start] = 0.0
             return
 
         for env_id, action in enumerate(actions):
@@ -2269,16 +2333,27 @@ class NewtonHandler(BaseSimHandler):
             self._viewer = None
         self._camera_groups = []
         self._use_tiled_camera = False
+        self._contacts = None
+        self._contact_sensor = None
+        self._shape_color_overrides = {}
         self._model = None
         self._state_0 = None
         self._state_1 = None
         self._control = None
         self._solver = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     @property
     def device(self) -> torch.device:
         """Return the device used for tensors."""
         return torch.device(self._device)
+
+    @property
+    def actions_cache(self) -> CompatActionInput:
+        """Expose the last action input through the shared handler contract."""
+        return self._actions_cache
 
     # Quaternion conversion utilities
     @staticmethod

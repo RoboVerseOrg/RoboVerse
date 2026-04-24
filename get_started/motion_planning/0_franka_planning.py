@@ -158,7 +158,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(4):
     log.debug(f"Step {step}")
-    states = handler.get_states()
+    states = handler.get_states(mode="tensor")
     rotation_transform_for_franka = torch.tensor(
         [
             [0.0, 0.0, 1.0],

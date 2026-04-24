@@ -10,7 +10,7 @@ def get_action(task_env: BaseTaskEnv, action: torch.Tensor) -> torch.Tensor:
 
     if task_env.manual_pd_on:  # manual PD control
         # Get current joint positions and velocities
-        env_states = task_env.handler.get_states()
+        env_states = task_env.handler.get_states(mode="tensor")
         sorted_dof_pos = env_states.robots[task_env.robot.name].joint_pos
         sorted_dof_vel = env_states.robots[task_env.robot.name].joint_vel
 

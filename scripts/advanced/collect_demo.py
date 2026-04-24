@@ -180,7 +180,7 @@ def ensure_clean_state(handler, expected_state=None):
 
     for step in range(max_steps):
         handler.simulate()
-        current_state = handler.get_states()
+        current_state = handler.get_states(mode="tensor")
 
         if step >= min_steps:
             if prev_state is not None:
@@ -212,12 +212,12 @@ def ensure_clean_state(handler, expected_state=None):
             prev_state = current_state
 
     if expected_state is not None:
-        final_state = handler.get_states()
+        final_state = handler.get_states(mode="tensor")
         is_final_correct = _validate_state_correctness(final_state, expected_state)
         if not is_final_correct:
             log.warning(f"State validation failed after {max_steps} steps - reset may not have taken full effect")
 
-    handler.get_states()
+    handler.get_states(mode="tensor")
 
 
 def _validate_state_correctness(current_state, expected_state):
@@ -563,7 +563,7 @@ def main():
             env._episode_steps[env_id] = 0
 
     ## Record the clean, stabilized initial state
-    obs = env.handler.get_states()
+    obs = env.handler.get_states(mode="tensor")
     obs = state_tensor_to_nested(env.handler, obs)
 
     for env_id, demo_idx in enumerate(demo_idxs):
@@ -628,7 +628,7 @@ def main():
                     randomization_manager.apply_camera_randomization()  # Apply camera randomization
                     force_reset_to_state(env, init_states[new_demo_idx], env_id)
 
-                    obs = env.handler.get_states()
+                    obs = env.handler.get_states(mode="tensor")
                     obs = state_tensor_to_nested(env.handler, obs)
                     collector.create(new_demo_idx, obs[env_id])
                     demo_indexer.move_on()
@@ -654,7 +654,7 @@ def main():
                 randomization_manager.apply_camera_randomization()  # Apply camera randomization
                 force_reset_to_state(env, init_states[demo_idx], env_id)
 
-                obs = env.handler.get_states()
+                obs = env.handler.get_states(mode="tensor")
                 obs = state_tensor_to_nested(env.handler, obs)
                 collector.create(demo_idx, obs[env_id])
             else:
@@ -673,7 +673,7 @@ def main():
                     randomization_manager.apply_camera_randomization()  # Apply camera randomization
                     force_reset_to_state(env, init_states[new_demo_idx], env_id)
 
-                    obs = env.handler.get_states()
+                    obs = env.handler.get_states(mode="tensor")
                     obs = state_tensor_to_nested(env.handler, obs)
                     collector.create(new_demo_idx, obs[env_id])
                     demo_indexer.move_on()

@@ -67,7 +67,7 @@ class MetaSimGymEnv(gym.Env):
 
     def _get_obs(self):
         """Get current observations for all environments"""
-        states = self.env.handler.get_states()
+        states = self.env.handler.get_states(mode="tensor")
         states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         joint_pos = np.array([
             [state[self.env.handler.robot.name]["dof_pos"][j] for j in self.env.handler.robot.joint_limits.keys()]
@@ -81,7 +81,7 @@ class MetaSimGymEnv(gym.Env):
 
     def _calculate_rewards(self):
         """Calculate rewards based on distance to origin"""
-        states = self.env.handler.get_states()
+        states = self.env.handler.get_states(mode="tensor")
         states = [{**state["robots"], **state["objects"]} for state in states]  # XXX: compatible with old states format
         ee_pos = np.array([state["metasim_body_panda_hand"]["pos"] for state in states])
         distances = np.linalg.norm(ee_pos, axis=1)

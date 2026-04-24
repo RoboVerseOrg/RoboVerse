@@ -88,7 +88,7 @@ class AgentTask(RLTaskEnv):
     # ------------------------------------------------------------------ #
     def get_states(self) -> TensorState:
         """Get the current simulator state."""
-        return self.handler.get_states()
+        return self.handler.get_states(mode="tensor")
 
     def set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set simulator state for selected env indices."""
@@ -98,7 +98,7 @@ class AgentTask(RLTaskEnv):
         """Issue low-level actions and simulate one physics step."""
         self.handler.set_dof_targets(actions)
         self.handler.simulate()  # decimation control in task_env level
-        return self.handler.get_states()
+        return self.handler.get_states(mode="tensor")
 
     def _reward(self, env_states: TensorState) -> Reward:
         raise NotImplementedError

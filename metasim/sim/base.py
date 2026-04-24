@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, overload
 
+import numpy as np
 import torch
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
-from metasim.types import Action, DictEnvState, TensorState
+from metasim.types import CompatActionInput, DictStateBatch, StateMode, StateOutput, TensorState
 from metasim.utils.gs_util import quaternion_multiply
 from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
 
@@ -45,7 +46,7 @@ class BaseSimHandler(ABC):
         self.headless = scenario.headless
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
         self._tensor_state_cache: TensorState | None = None
-        self._dict_state_cache: list[DictEnvState] | None = None
+        self._dict_state_cache: DictStateBatch | None = None
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -74,7 +75,7 @@ class BaseSimHandler(ABC):
     ## Set states
     ############################################################
     @abstractmethod
-    def _set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment.
         For a new simulator, you should implement this method.
 
@@ -89,24 +90,27 @@ class BaseSimHandler(ABC):
         self._tensor_state_cache = None
         self._dict_state_cache = None
 
-    def set_states(self, states: TensorState | list[DictEnvState], env_ids: list[int] | None = None) -> None:
+    def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
         self._invalidate_state_caches()
         self._set_states(states, env_ids)
 
     @abstractmethod
-    def _set_dof_targets(self, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set the dof targets of the environment.
         For a new simulator, you should implement this method.
         """
         raise NotImplementedError
 
-    def set_dof_targets(self, actions: list[Action]) -> None:
+    def set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set the dof targets of the robot.
 
+        Dict actions are name-based. Tensor actions use ``get_joint_names(robot.name, sort=True)``
+        within each robot slice. Backends may remap from handler/API order to simulator-local
+        order internally.
+
         Args:
-            obj_name (str): The name of the robot
-            actions (list[Action]): The target actions for the robot
+            actions: The target actions for the robot.
         """
         self._set_dof_targets(actions)
 
@@ -130,11 +134,9 @@ class BaseSimHandler(ABC):
     def get_states(self, env_ids: list[int] | None = None, mode: Literal["tensor"] = "tensor") -> TensorState: ...
 
     @overload
-    def get_states(self, env_ids: list[int] | None = None, mode: Literal["dict"] = "dict") -> list[DictEnvState]: ...
+    def get_states(self, env_ids: list[int] | None = None, mode: Literal["dict"] = "dict") -> DictStateBatch: ...
 
-    def get_states(
-        self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"
-    ) -> TensorState | list[DictEnvState]:
+    def get_states(self, env_ids: list[int] | None = None, mode: StateMode = "dict") -> StateOutput:
         """Get the states of the environment.
 
         Maintains independent tensor and dict caches so alternating modes does not
@@ -208,6 +210,14 @@ class BaseSimHandler(ABC):
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object."""
         return self._get_joint_names(obj_name, sort)
+
+    def get_action_joint_names(self) -> dict[str, list[str]]:
+        """Get the handler/API joint order used for tensor actions."""
+        return {robot.name: self.get_joint_names(robot.name, sort=True) for robot in self.robots}
+
+    def get_action_dim(self) -> int:
+        """Get the total flattened action dimension across all robots."""
+        return sum(len(joint_names) for joint_names in self.get_action_joint_names().values())
 
     def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
         """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.

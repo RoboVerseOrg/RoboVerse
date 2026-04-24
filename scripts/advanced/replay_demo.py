@@ -222,7 +222,7 @@ def main():
             states = get_states(all_states, step, num_envs)
             env.handler.set_states(states)
             env.handler.refresh_render()
-            obs = env.handler.get_states()
+            obs = env.handler.get_states(mode="tensor")
 
             ## XXX: hack
             success = env.checker.check(env.handler, obs)

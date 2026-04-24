@@ -12,7 +12,7 @@ from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler, EnvWrapper, IdentityEnvWrapper
-from metasim.types import Action, DictEnvState, Extra, Obs, Reward, Success, Termination
+from metasim.types import CompatActionInput, DictEnvState, Extra, Obs, Reward, Success, Termination
 from metasim.utils.camera_util import get_cam_params
 from metasim.utils.math import matrix_from_quat
 
@@ -89,12 +89,13 @@ class BlenderHandler(BaseSimHandler):
         obs = self._get_observation()
         return obs, None
 
-    def step(self, action: list[Action]) -> tuple[Obs, Reward, Success, Termination, Extra]:
-        exit()  # XXX: as a workaround to pass the test
-        raise NotImplementedError("Blender does not support step")
+    def step(self, action: CompatActionInput) -> tuple[Obs, Reward, Success, Termination, Extra]:
+        _ = action
+        raise NotImplementedError("BlenderHandler is render-only; step is not supported.")
 
-    def _set_dof_targets(self, actions: list[Action]) -> None:
-        raise NotImplementedError("BlenderHandler is render-only; _set_dof_targets is not supported.")
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
+        _ = actions
+        return
 
     def _add_camera(self):
         context = self.context

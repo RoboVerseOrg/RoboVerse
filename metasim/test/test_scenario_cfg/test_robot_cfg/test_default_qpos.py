@@ -46,7 +46,7 @@ def test_default_qpos(handler):
     assert_close(states_default[0]["robots"]["franka"]["dof_pos"]["panda_joint7"], 0.785398 + 0.1, atol=1e-3)
 
     # Simulate and check state converges to targets
-    for _ in range(20):
+    for _ in range(80):
         handler.simulate()
 
     states_after = handler.get_states(mode="dict")

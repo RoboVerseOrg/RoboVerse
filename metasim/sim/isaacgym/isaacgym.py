@@ -34,15 +34,15 @@ from metasim.scenario.objects import (
 # NOTE domain randomization for robots
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.types import Action, CompatActionInput, DictEnvState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor
 from metasim.utils.terrain_utils import TerrainGenerator
 
 
 class IsaacgymHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
-        self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
         self._robot_names = {robot.name for robot in self.robots}
         self._robot_init_pos = {robot.name: robot.default_position for robot in self.robots}
         self._robot_init_quat = {robot.name: robot.default_orientation for robot in self.robots}
@@ -61,8 +61,16 @@ class IsaacgymHandler(BaseSimHandler):
         self._asset_dict_dict: dict = {}  # dict of object link index dict
         self._articulated_asset_dict_dict: dict = {}  # dict of articulated object link index dict
         self._articulated_joint_dict_dict: dict = {}  # dict of articulated object joint index dict
-        self._robot_link_dict: dict = {}  # dict of robot link index dict
-        self._robot_joint_dict: dict = {}  # dict of robot joint index dict
+        self._robot_assets: dict[str, object] = {}
+        self._robot_link_dicts: dict[str, dict] = {}
+        self._robot_joint_dicts: dict[str, dict] = {}
+        self._robot_dof_props: dict[str, np.ndarray] = {}
+        self._robot_num_dofs: dict[str, int] = {}
+        self._robot_default_dof_pos_by_name: dict[str, torch.Tensor] = {}
+        self._robot_action_dims: dict[str, int] = {}
+        self._robot_manual_pd_on: dict[str, bool] = {}
+        self._robot_sorted_joint_names: dict[str, list[str]] = {}
+        self._robot_local_joint_names: dict[str, list[str]] = {}
         self._joint_info: dict = {}  # dict of joint names of each env
         self._num_joints: int = 0
         self._body_info: dict = {}  # dict of body names of each env
@@ -72,7 +80,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._envs: list = []
         self._obj_handles: list = []  # 2 dim list: list in list, each list contains object handles of each env
         self._articulated_obj_handles: list = []  # 2 dim list: list in list, each list contains articulated object handles of each env
-        self._robot_handles: list = []  # 2 dim list: list of robot handles of each env
+        self._robot_handles: list = []  # 2 dim list: dict of robot handles of each env
 
         # environment related tensor indices
         self._env_rigid_body_global_indices: list = []  # 2 dim list: list in list, each list contains global indices of each env
@@ -85,7 +93,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._contact_forces: torch.Tensor | None = None
 
         # control related
-        self._robot_num_dof: int  # number of robot dof
+        self._robot_num_dof: int = 0  # total number of robot dof across all robots
         self._obj_num_dof: int = 0  # number of object dof
         self._actions: torch.Tensor | None = None
         self._action_scale: torch.Tensor | None = (
@@ -101,7 +109,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._effort: torch.Tensor | None = None  # output of pd controller, used for effort control
         self._dof_force: torch.Tensor | None = None  # measured DOF forces from simulator
         self._pos_ctrl_dof_dix = []  # joint index in dof state, built-in position control mode
-        self._manual_pd_on: bool = False  # turn on maunual pd controller if effort joint exist
+        self._manual_pd_on: bool = False  # turn on maunual pd controller if any robot has effort joints
 
     def launch(self) -> None:
         ## IsaacGym Initialization
@@ -131,6 +139,7 @@ class IsaacgymHandler(BaseSimHandler):
         self.gym.refresh_net_contact_force_tensor(self.sim)
         # refresh measured dof forces if available
         self.gym.refresh_dof_force_tensor(self.sim)
+        self._apply_default_joint_positions()
 
         # if self.optional_queries is None:
         #     self.optional_queries = {}
@@ -325,12 +334,13 @@ class IsaacgymHandler(BaseSimHandler):
                 camera_lookat = gymapi.Vec3(*cam_cfg.look_at)
                 self.gym.set_camera_location(camera_handle, self._envs[i_env], camera_eye, camera_lookat)
                 if cam_cfg.mount_to is not None:
+                    robot_name = cam_cfg.mount_to[0] if isinstance(cam_cfg.mount_to, tuple) else cam_cfg.mount_to
                     if isinstance(cam_cfg.mount_link, str):
-                        mount_handle = self._robot_link_dict[
+                        mount_handle = self._robot_link_dicts[robot_name][
                             cam_cfg.mount_link.split("/")[-1]
                         ]  # isaacgym requires the leaf prim
                     elif isinstance(cam_cfg.mount_link, tuple):
-                        mount_handle = self._robot_link_dict[
+                        mount_handle = self._robot_link_dicts[robot_name][
                             cam_cfg.mount_link[1].split("/")[-1]
                         ]  # isaacgym requires the leaf prim
                     camera_pose = gymapi.Transform(
@@ -414,97 +424,108 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _load_robot_assets(self) -> None:
         asset_root = "."
-        # FIXME: hard code for only one robot
-        assert len(self.robots) == 1, "Only support one robot for now"
-        robot_asset_file = self.robots[0].file_name("isaacgym")
-        asset_options = gymapi.AssetOptions()
-        asset_options.armature = getattr(self.robots[0], "armature", 0.01)
-        asset_options.fix_base_link = self.robots[0].fix_base_link
-        asset_options.disable_gravity = not self.robots[0].enabled_gravity
-        asset_options.flip_visual_attachments = self.robots[0].isaacgym_flip_visual_attachments
-        asset_options.collapse_fixed_joints = getattr(self.robots[0], "collapse_fixed_joints", False)
-        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
-        asset_options.replace_cylinder_with_capsule = self.scenario.sim_params.replace_cylinder_with_capsule
-        robot_asset = self.gym.load_asset(self.sim, asset_root, robot_asset_file, asset_options)
-        # configure robot dofs
-        robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
-        self._robot_num_dof = robot_num_dofs
 
         # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
         self._action_scale = torch.tensor(1.0, device=self.device)
         self._action_offset = torch.tensor(0.0, device=self.device)
 
-        self._torque_limits = torch.zeros(
-            self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device, requires_grad=False
-        )
+        total_num_actions = 0
+        total_robot_num_dofs = 0
+        total_torque_limits = []
+        self._manual_pd_on = False
 
-        robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
+        for robot in self.robots:
+            robot_asset_file = robot.file_name("isaacgym")
+            asset_options = gymapi.AssetOptions()
+            asset_options.armature = getattr(robot, "armature", 0.01)
+            asset_options.fix_base_link = robot.fix_base_link
+            asset_options.disable_gravity = not robot.enabled_gravity
+            asset_options.flip_visual_attachments = robot.isaacgym_flip_visual_attachments
+            asset_options.collapse_fixed_joints = getattr(robot, "collapse_fixed_joints", False)
+            asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
+            asset_options.replace_cylinder_with_capsule = self.scenario.sim_params.replace_cylinder_with_capsule
+            robot_asset = self.gym.load_asset(self.sim, asset_root, robot_asset_file, asset_options)
 
-        robot_lower_limits = robot_dof_props["lower"]
-        robot_upper_limits = robot_dof_props["upper"]
-        robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
-        num_actions = 0
-        default_dof_pos = []
+            robot_num_dofs = self.gym.get_asset_dof_count(robot_asset)
+            robot_dof_props = self.gym.get_asset_dof_properties(robot_asset)
+            robot_lower_limits = robot_dof_props["lower"]
+            robot_upper_limits = robot_dof_props["upper"]
+            robot_mids = 0.3 * (robot_upper_limits + robot_lower_limits)
+            default_dof_pos = []
+            num_actions = 0
 
-        assert self.robots[0].control_type is not None, "Control type is required for robot"
-        self._manual_pd_on = any(mode == "effort" for mode in self.robots[0].control_type.values())
+            assert robot.control_type is not None, "Control type is required for robot"
+            robot_manual_pd_on = any(mode == "effort" for mode in robot.control_type.values())
+            self._manual_pd_on = self._manual_pd_on or robot_manual_pd_on
 
-        dof_names = self.gym.get_asset_dof_names(robot_asset)
-        for i, dof_name in enumerate(dof_names):
-            # get config
-            i_actuator_cfg = self.robots[0].actuators[dof_name]
-            i_control_mode = (
-                self.robots[0].control_type[dof_name] if dof_name in self.robots[0].control_type else "position"
+            dof_names = self.gym.get_asset_dof_names(robot_asset)
+            self._robot_local_joint_names[robot.name] = list(dof_names)
+            self._robot_sorted_joint_names[robot.name] = sorted(dof_names)
+            for i, dof_name in enumerate(dof_names):
+                actuator_cfg = robot.actuators[dof_name]
+                control_mode = robot.control_type[dof_name] if dof_name in robot.control_type else "position"
+
+                if not actuator_cfg.is_ee:
+                    default_dof_pos_i = (
+                        robot.default_joint_positions[dof_name]
+                        if dof_name in robot.default_joint_positions
+                        else robot_mids[i]
+                    )
+                    default_dof_pos.append(default_dof_pos_i)
+                else:
+                    default_dof_pos.append(robot_upper_limits[i])
+
+                if control_mode == "effort":
+                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
+                    robot_dof_props["stiffness"][i] = 0.0
+                    robot_dof_props["damping"][i] = 0.0
+                    robot_dof_props["armature"][i] = getattr(robot, "armature", 0.01)
+                elif control_mode == "position":
+                    robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
+                    if actuator_cfg.stiffness is not None:
+                        robot_dof_props["stiffness"][i] = actuator_cfg.stiffness
+                    else:
+                        robot_dof_props["stiffness"][i] = 400.0
+                    if actuator_cfg.damping is not None:
+                        robot_dof_props["damping"][i] = actuator_cfg.damping
+                    else:
+                        robot_dof_props["damping"][i] = 40.0
+                    self._pos_ctrl_dof_dix.append(self._obj_num_dof + total_robot_num_dofs + i)
+                else:
+                    log.error(f"Unknown actuator control mode: {control_mode}, only support effort and position")
+                    raise ValueError
+
+                if actuator_cfg.fully_actuated:
+                    num_actions += 1
+
+            self._robot_assets[robot.name] = robot_asset
+            self._robot_dof_props[robot.name] = robot_dof_props
+            self._robot_num_dofs[robot.name] = robot_num_dofs
+            self._robot_default_dof_pos_by_name[robot.name] = torch.tensor(
+                default_dof_pos, dtype=torch.float32, device=self.device
             )
+            self._robot_action_dims[robot.name] = num_actions
+            self._robot_manual_pd_on[robot.name] = robot_manual_pd_on
+            self._robot_link_dicts[robot.name] = self.gym.get_asset_rigid_body_dict(robot_asset)
+            self._robot_joint_dicts[robot.name] = self.gym.get_asset_dof_dict(robot_asset)
 
-            # task default position from cfg if exist, otherwise use 0.3*(uppper + lower) as default
-            if not i_actuator_cfg.is_ee:
-                default_dof_pos_i = (
-                    self.robots[0].default_joint_positions[dof_name]
-                    if dof_name in self.robots[0].default_joint_positions
-                    else robot_mids[i]
-                )
-                default_dof_pos.append(default_dof_pos_i)
-            # for end effector, always use open as default position
-            else:
-                default_dof_pos.append(robot_upper_limits[i])
-            # pd control effort mode
-            if i_control_mode == "effort":
-                # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
+            total_torque_limits.append(torch.zeros(self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device))
+            total_num_actions += num_actions
+            total_robot_num_dofs += robot_num_dofs
 
-                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
-                robot_dof_props["stiffness"][i] = 0.0
-                robot_dof_props["damping"][i] = 0.0
-                robot_dof_props["armature"][i] = getattr(self.robots[0], "armature", 0.01)
-
-            # built-in position mode
-            elif i_control_mode == "position":
-                robot_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
-                if i_actuator_cfg.stiffness is not None:
-                    robot_dof_props["stiffness"][i] = i_actuator_cfg.stiffness
-                else:
-                    robot_dof_props["stiffness"][i] = 400.0
-                if i_actuator_cfg.damping is not None:
-                    robot_dof_props["damping"][i] = i_actuator_cfg.damping
-                else:
-                    robot_dof_props["damping"][i] = 40.0
-                self._pos_ctrl_dof_dix.append(i + self._obj_num_dof)
-            else:
-                log.error(f"Unknown actuator control mode: {i_control_mode}, only support effort and position")
-                raise ValueError
-
-            if i_actuator_cfg.fully_actuated:
-                num_actions += 1
-
-        # joint_reindex = self.get_joint_reindex(self.robot.name)
-        self._robot_default_dof_pos = torch.tensor(default_dof_pos, device=self.device).unsqueeze(0)
-        self.actions = torch.zeros([self._num_envs, num_actions], device=self.device)
-
-        # # get link index of panda hand, which we will use as end effector
-        self._robot_link_dict = self.gym.get_asset_rigid_body_dict(robot_asset)
-        self._robot_joint_dict = self.gym.get_asset_dof_dict(robot_asset)
-
-        return robot_asset, robot_dof_props
+        self._robot_num_dof = total_robot_num_dofs
+        self._torque_limits = (
+            torch.cat(total_torque_limits, dim=1) if total_torque_limits else torch.zeros(self._num_envs, 0, device=self.device)
+        )
+        self._robot_default_dof_pos = (
+            torch.cat(
+                [self._robot_default_dof_pos_by_name[robot.name] for robot in self.robots],
+                dim=0,
+            ).unsqueeze(0)
+            if self.robots
+            else torch.zeros(1, 0, dtype=torch.float32, device=self.device)
+        )
+        self.actions = torch.zeros([self._num_envs, total_num_actions], device=self.device)
 
     def _make_envs(
         self,
@@ -516,21 +537,12 @@ class IsaacgymHandler(BaseSimHandler):
         env_upper = gymapi.Vec3(spacing, spacing, spacing)
         log.info("Creating %d environments" % self.num_envs)
 
-        # FIXME: hard code for only one robot
-        assert len(self._robot_init_pos) == 1, "Only support one robot for now"
-        robot_pose = gymapi.Transform()
-        robot_pose.p = gymapi.Vec3(*self._robot_init_pos[self.robots[0].name])
-        robot_pose.r = gymapi.Quat(
-            *self._robot_init_quat[self.robots[0].name][1:], self._robot_init_quat[self.robots[0].name][0]
-        )  # x, y, z, w order for gymapi.Quat
-
         # add ground plane
         self._add_ground()
 
         # get object and robot asset
         obj_assets_list = [self._load_object_asset(obj) for obj in self.objects]
-        robot_asset, robot_dof_props = self._load_robot_assets()
-        # robot_rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
+        self._load_robot_assets()
 
         #### Joint Info ####
         for art_obj_name, art_obj_joint_dict in self._articulated_joint_dict_dict.items():
@@ -549,21 +561,22 @@ class IsaacgymHandler(BaseSimHandler):
             self._num_joints += num_joints
             self._joint_info[art_obj_name] = joint_info_
 
-        # robot
-        num_joints = len(self._robot_joint_dict)
-        joint_names_ = []
-        for joint_i in range(num_joints):
-            for joint_name, joint_idx in self._robot_joint_dict.items():
-                if joint_idx == joint_i:
-                    joint_names_.append(joint_name)
+        for robot in self.robots:
+            robot_joint_dict = self._robot_joint_dicts[robot.name]
+            num_joints = len(robot_joint_dict)
+            joint_names_ = []
+            for joint_i in range(num_joints):
+                for joint_name, joint_idx in robot_joint_dict.items():
+                    if joint_idx == joint_i:
+                        joint_names_.append(joint_name)
 
-        assert len(joint_names_) == num_joints
-        joint_info_ = {}
-        joint_info_["names"] = joint_names_
-        joint_info_["local_indices"] = self._robot_joint_dict
-        joint_info_["global_indices"] = {k_: v_ + self._num_joints for k_, v_ in self._robot_joint_dict.items()}
-        self._joint_info[self.robots[0].name] = joint_info_
-        self._num_joints += num_joints
+            assert len(joint_names_) == num_joints
+            joint_info_ = {}
+            joint_info_["names"] = joint_names_
+            joint_info_["local_indices"] = robot_joint_dict
+            joint_info_["global_indices"] = {k_: v_ + self._num_joints for k_, v_ in robot_joint_dict.items()}
+            self._joint_info[robot.name] = joint_info_
+            self._num_joints += num_joints
 
         ###################
         #### Body Info ####
@@ -582,20 +595,22 @@ class IsaacgymHandler(BaseSimHandler):
             self._body_info[obj_name] = body_info_
             self._num_bodies += num_bodies
 
-        num_bodies = len(self._robot_link_dict)
-        rigid_body_names = []
-        for i in range(num_bodies):
-            for rigid_body_name, rigid_body_idx in self._robot_link_dict.items():
-                if rigid_body_idx == i:
-                    rigid_body_names.append(rigid_body_name)
+        for robot in self.robots:
+            robot_link_dict = self._robot_link_dicts[robot.name]
+            num_bodies = len(robot_link_dict)
+            rigid_body_names = []
+            for i in range(num_bodies):
+                for rigid_body_name, rigid_body_idx in robot_link_dict.items():
+                    if rigid_body_idx == i:
+                        rigid_body_names.append(rigid_body_name)
 
-        assert len(rigid_body_names) == num_bodies
-        rigid_body_info_ = {}
-        rigid_body_info_["names"] = rigid_body_names
-        rigid_body_info_["local_indices"] = self._robot_link_dict
-        rigid_body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in self._robot_link_dict.items()}
-        self._body_info[self.robots[0].name] = rigid_body_info_
-        self._num_bodies += num_bodies
+            assert len(rigid_body_names) == num_bodies
+            rigid_body_info_ = {}
+            rigid_body_info_["names"] = rigid_body_names
+            rigid_body_info_["local_indices"] = robot_link_dict
+            rigid_body_info_["global_indices"] = {k_: v_ + self._num_bodies for k_, v_ in robot_link_dict.items()}
+            self._body_info[robot.name] = rigid_body_info_
+            self._num_bodies += num_bodies
 
         #################
 
@@ -608,6 +623,7 @@ class IsaacgymHandler(BaseSimHandler):
             self._obj_handles.append([])
             self._env_rigid_body_global_indices.append({})
             self._articulated_obj_handles.append([])
+            self._robot_handles.append({})
             ####################
 
             # carefully set each object
@@ -664,25 +680,35 @@ class IsaacgymHandler(BaseSimHandler):
 
                 self._env_rigid_body_global_indices[-1][self.objects[obj_i].name] = object_rigid_body_indices
 
-            # # carefully add robot
-            robot_segmentation_id = len(self.objects) + 1
-            _enabled_self_collisions = 0 if self.robots[0].enabled_self_collisions else 2
-            robot_handle = self.gym.create_actor(
-                env, robot_asset, robot_pose, "robot", i, _enabled_self_collisions, robot_segmentation_id
-            )
-            assert self.robots[0].scale[0] == 1.0 and self.robots[0].scale[1] == 1.0 and self.robots[0].scale[2] == 1.0
-            self._robot_handles.append(robot_handle)
-            # set dof properties
-            self.gym.set_actor_dof_properties(env, robot_handle, robot_dof_props)
-
-            robot_rigid_body_indices = {}
-            for rigid_body_name, rigid_body_idx in self._robot_link_dict.items():
-                rigid_body_idx = self.gym.find_actor_rigid_body_index(
-                    env, robot_handle, rigid_body_name, gymapi.DOMAIN_SIM
+            for robot_idx, robot in enumerate(self.robots):
+                robot_pose = gymapi.Transform()
+                robot_pose.p = gymapi.Vec3(*self._robot_init_pos[robot.name])
+                robot_pose.r = gymapi.Quat(
+                    *self._robot_init_quat[robot.name][1:], self._robot_init_quat[robot.name][0]
                 )
-                robot_rigid_body_indices[rigid_body_name] = rigid_body_idx
+                robot_segmentation_id = len(self.objects) + robot_idx + 1
+                enabled_self_collisions = 0 if robot.enabled_self_collisions else 2
+                robot_handle = self.gym.create_actor(
+                    env,
+                    self._robot_assets[robot.name],
+                    robot_pose,
+                    robot.name,
+                    i,
+                    enabled_self_collisions,
+                    robot_segmentation_id,
+                )
+                assert robot.scale[0] == 1.0 and robot.scale[1] == 1.0 and robot.scale[2] == 1.0
+                self._robot_handles[-1][robot.name] = robot_handle
+                self.gym.set_actor_dof_properties(env, robot_handle, self._robot_dof_props[robot.name])
 
-            self._env_rigid_body_global_indices[-1]["robot"] = robot_rigid_body_indices
+                robot_rigid_body_indices = {}
+                for rigid_body_name in self._robot_link_dicts[robot.name]:
+                    rigid_body_idx = self.gym.find_actor_rigid_body_index(
+                        env, robot_handle, rigid_body_name, gymapi.DOMAIN_SIM
+                    )
+                    robot_rigid_body_indices[rigid_body_name] = rigid_body_idx
+
+                self._env_rigid_body_global_indices[-1][robot.name] = robot_rigid_body_indices
 
         # GET initial state, copy for reset later
         self._initial_state = np.copy(self.gym.get_sim_rigid_body_states(self.sim, gymapi.STATE_ALL))
@@ -787,13 +813,17 @@ class IsaacgymHandler(BaseSimHandler):
 
         for action_data in actions:
             flat_vals = []
-            for joint_i, joint_name in enumerate(self._joint_info[self.robots[0].name]["names"]):
-                if self.robots[0].actuators[joint_name].fully_actuated:
-                    flat_vals.append(
-                        action_data[self.robots[0].name]["dof_pos_target"][joint_name]
-                    )  # TODO: support other actions
+            for robot in self.robots:
+                robot_action = action_data.get(robot.name) or {}
+                if self._manual_pd_on:
+                    robot_targets = robot_action.get("dof_effort_target") or {}
                 else:
-                    flat_vals.append(0.0)  # place holder for under-actuated joints
+                    robot_targets = robot_action.get("dof_pos_target") or {}
+                for joint_name in self._joint_info[robot.name]["names"]:
+                    if robot.actuators[joint_name].fully_actuated:
+                        flat_vals.append(float(robot_targets.get(joint_name, 0.0)))
+                    else:
+                        flat_vals.append(0.0)  # place holder for under-actuated joints
 
             action_array = torch.tensor(flat_vals, dtype=torch.float32, device=self.device).unsqueeze(0)
 
@@ -801,16 +831,20 @@ class IsaacgymHandler(BaseSimHandler):
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
 
-    def _set_dof_targets(self, actions: list[Action] | torch.Tensor):
+    def _set_dof_targets(self, actions: CompatActionInput):
         self._actions_cache = actions
         action_input = torch.zeros_like(self._dof_states[:, 0])
-        if isinstance(actions, torch.Tensor):
-            # reverse sorted joint indices
-            # TODO: support multiple robots
-            reverse_reindex = self.get_joint_reindex(obj_name=self.robots[0].name, inverse=True)
-            self._actions_cache = actions[:, reverse_reindex]
-            action_array_all = self._actions_cache
-
+        if isinstance(actions, (torch.Tensor, np.ndarray)):
+            action_tensor = action_input_to_tensor(self, actions, device=self.device)
+            per_robot_actions = []
+            offset = 0
+            for robot in self.robots:
+                sorted_joint_names = self.get_joint_names(robot.name, sort=True)
+                robot_actions_sorted = action_tensor[:, offset : offset + len(sorted_joint_names)]
+                reverse_reindex = self.get_joint_reindex(obj_name=robot.name, inverse=True)
+                per_robot_actions.append(robot_actions_sorted[:, reverse_reindex])
+                offset += len(sorted_joint_names)
+            action_array_all = torch.cat(per_robot_actions, dim=1) if per_robot_actions else action_tensor[:, :0]
         else:
             action_array_all = self._get_action_array_all(actions)
 
@@ -818,14 +852,7 @@ class IsaacgymHandler(BaseSimHandler):
             action_input.shape[0] % self._num_envs == 0
         )  # WARNING: obj dim(env0), robot dim(env0), obj dim(env1), robot dim(env1) ...
 
-        if not hasattr(self, "_robot_dim_index"):
-            robot_dim = action_array_all.shape[1]
-            chunk_size = action_input.shape[0] // self._num_envs
-            self._robot_dim_index = [
-                i * chunk_size + offset
-                for i in range(self.num_envs)
-                for offset in range(chunk_size - robot_dim, chunk_size)
-            ]
+        self._ensure_robot_dim_index(action_array_all.shape[1])
         action_input[self._robot_dim_index] = action_array_all.float().to(self.device).reshape(-1)
 
         # if any effort joint exist, set pd controller's target position for later effort calculation
@@ -844,12 +871,7 @@ class IsaacgymHandler(BaseSimHandler):
     def set_actions(self, actions: torch.Tensor) -> None:
         action_input = torch.zeros_like(self._dof_states[:, 0])
 
-        if not hasattr(self, "_robot_dim_index"):
-            chunk = action_input.shape[0] // self._num_envs
-            robot_dim = actions.shape[1]
-            self._robot_dim_index = [
-                env * chunk + (chunk - robot_dim) + i for env in range(self._num_envs) for i in range(robot_dim)
-            ]
+        self._ensure_robot_dim_index(actions.shape[1])
 
         action_input[self._robot_dim_index] = actions.to(self.device).reshape(-1)
 
@@ -861,6 +883,35 @@ class IsaacgymHandler(BaseSimHandler):
                 self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
         else:
             self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(action_input))
+
+    def _ensure_robot_dim_index(self, robot_dim: int) -> None:
+        if hasattr(self, "_robot_dim_index"):
+            return
+
+        chunk_size = self._dof_states.shape[0] // self._num_envs
+        self._robot_dim_index = [
+            env * chunk_size + offset
+            for env in range(self.num_envs)
+            for offset in range(chunk_size - robot_dim, chunk_size)
+        ]
+
+    def _apply_default_joint_positions(self) -> None:
+        if self._robot_default_dof_pos is None:
+            return
+
+        robot_default_dof_pos = self._robot_default_dof_pos.repeat(self._num_envs, 1)
+        self._ensure_robot_dim_index(robot_default_dof_pos.shape[1])
+
+        robot_dim_index = torch.tensor(self._robot_dim_index, dtype=torch.int64, device=self.device)
+        new_dof_states = self._dof_states.clone()
+        new_dof_states[robot_dim_index, 0] = robot_default_dof_pos.reshape(-1)
+        new_dof_states[robot_dim_index, 1] = 0.0
+        self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(new_dof_states))
+
+        default_targets = torch.zeros_like(self._dof_states[:, 0])
+        default_targets[self._robot_dim_index] = robot_default_dof_pos.reshape(-1)
+        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(default_targets))
+        self.gym.refresh_dof_state_tensor(self.sim)
 
     def _simulate_one_physics_step(self):
         self.gym.simulate(self.sim)
@@ -943,22 +994,24 @@ class IsaacgymHandler(BaseSimHandler):
                                 obj_joint_q[joint_idx] = 0.0
                         q_list_i.append(obj_joint_q)
 
-                pos_list_i.append(np.array(state[self.robots[0].name].get("pos", [0.0, 0.0, 0.0])))
-                rot = np.array(state[self.robots[0].name].get("rot", [1.0, 0.0, 0.0, 0.0]))
-                robot_quat = [rot[1], rot[2], rot[3], rot[0]]
-                rot_list_i.append(robot_quat)
+                for robot in self.robots:
+                    pos_list_i.append(np.array(state[robot.name].get("pos", [0.0, 0.0, 0.0])))
+                    rot = np.array(state[robot.name].get("rot", [1.0, 0.0, 0.0, 0.0]))
+                    robot_quat = [rot[1], rot[2], rot[3], rot[0]]
+                    rot_list_i.append(robot_quat)
 
-                robot_dof_state_i = np.zeros(len(self._robot_joint_dict))
-                if "dof_pos" in state[self.robots[0].name]:
-                    for joint_name, joint_idx in self._robot_joint_dict.items():
-                        robot_dof_state_i[joint_idx] = state[self.robots[0].name]["dof_pos"][joint_name]
-                else:
-                    for joint_name, joint_idx in self._robot_joint_dict.items():
-                        robot_dof_state_i[joint_idx] = (
-                            self.robots[0].joint_limits[joint_name][0] + self.robots[0].joint_limits[joint_name][1]
-                        ) / 2
+                    robot_joint_dict = self._robot_joint_dicts[robot.name]
+                    robot_dof_state_i = np.zeros(len(robot_joint_dict))
+                    if "dof_pos" in state[robot.name]:
+                        for joint_name, joint_idx in robot_joint_dict.items():
+                            robot_dof_state_i[joint_idx] = state[robot.name]["dof_pos"][joint_name]
+                    else:
+                        for joint_name, joint_idx in robot_joint_dict.items():
+                            robot_dof_state_i[joint_idx] = (
+                                robot.joint_limits[joint_name][0] + robot.joint_limits[joint_name][1]
+                            ) / 2
 
-                q_list_i.append(robot_dof_state_i)
+                    q_list_i.append(robot_dof_state_i)
                 pos_list.append(pos_list_i)
                 rot_list.append(rot_list_i)
                 q_list.append(q_list_i)
@@ -1049,11 +1102,12 @@ class IsaacgymHandler(BaseSimHandler):
     def _set_actor_root_state(self, position_list, rotation_list, env_ids):
         new_root_states = self._root_states.clone()
         actor_indices = []
+        actors_per_env = len(self.objects) + len(self.robots)
 
         # Only modify the positions and rotations for the specified env_ids
         for i, env_id in enumerate(env_ids):
-            env_offset = env_id * (len(self.objects) + 1)  # objects + robot
-            for j in range(len(self.objects) + 1):
+            env_offset = env_id * actors_per_env
+            for j in range(actors_per_env):
                 actor_idx = env_offset + j
                 new_root_states[actor_idx, :3] = torch.tensor(
                     position_list[i][j], dtype=torch.float32, device=self.device
@@ -1062,7 +1116,7 @@ class IsaacgymHandler(BaseSimHandler):
                     rotation_list[i][j], dtype=torch.float32, device=self.device
                 )
                 new_root_states[actor_idx, 7:13] = torch.zeros(6, dtype=torch.float32, device=self.device)
-            actor_indices.extend(range(env_offset, env_offset + len(self.objects) + 1))
+            actor_indices.extend(range(env_offset, env_offset + actors_per_env))
 
         # Convert the actor indices to a tensor
         root_reset_actors_indices = torch.tensor(actor_indices, dtype=torch.int32, device=self.device)
@@ -1114,14 +1168,16 @@ class IsaacgymHandler(BaseSimHandler):
 
     def close(self) -> None:
         try:
-            self.gym.destroy_sim(self.sim)
-            self.gym.destroy_viewer(self.viewer)
+            if self.gym is not None and self.viewer is not None:
+                self.gym.destroy_viewer(self.viewer)
+            if self.gym is not None and self.sim is not None:
+                self.gym.destroy_sim(self.sim)
+        except Exception as e:
+            log.error(f"Error closing IsaacGym environment: {e}")
+        finally:
             self.gym = None
             self.sim = None
             self.viewer = None
-        except Exception as e:
-            log.error(f"Error closing IsaacGym environment: {e}")
-            pass
 
     ############################################################
     ## Utils
@@ -1215,7 +1271,7 @@ class IsaacgymHandler(BaseSimHandler):
         return self._num_envs
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property

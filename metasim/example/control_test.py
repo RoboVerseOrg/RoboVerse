@@ -91,7 +91,7 @@ if __name__ == "__main__":
             for _ in range(scenario.num_envs)
         ]
         flatten_obs, reward, terminated, time_out, info = env.step(actions)
-        raw_obs = env.handler.get_states()
+        raw_obs = env.handler.get_states(mode="tensor")
         obs_saver.add(raw_obs)
         step += 1
 

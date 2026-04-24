@@ -196,7 +196,7 @@ step = 0
 robot_joint_limits = scenario.robots[0].joint_limits
 for step in range(1):
     log.debug(f"Step {step}")
-    states = handler.get_states()
+    states = handler.get_states(mode="tensor")
     curr_robot_q = states.robots[robot.name].joint_pos[:, inverse_reorder_idx].cuda()
 
     pcd = get_point_cloud_from_obs(obs)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from copy import deepcopy
 
 import pytest
@@ -62,7 +63,8 @@ def test_set_dof_targets_basic(handler):
     handler.set_dof_targets(actions)
 
     # Simulate to let PD controller apply targets
-    for _ in range(50):
+    settle_steps = 100 if handler.scenario.simulator == "mujoco" else 50
+    for _ in range(settle_steps):
         handler.simulate()
 
     states = handler.get_states(mode="dict")

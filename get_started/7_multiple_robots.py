@@ -190,7 +190,7 @@ def main():
 
         # Save observations for video
         if obs_saver is not None:
-            states = handler.get_states()
+            states = handler.get_states(mode="tensor")
             obs_saver.add(states)
 
         step += 1

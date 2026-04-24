@@ -51,7 +51,7 @@ def terrain_levels_vel(env: EnvTypes, env_ids: Sequence[int]) -> torch.Tensor:
         The mean terrain level for the given environment ids.
     """
     # extract the used quantities (to enable type-hinting)
-    env_states = env.get_states()
+    env_states = env.get_states(mode="tensor")
     base = env_states.robots[env.name]
     terrain = env.handler.terrain
     command = env.commands_manager.value

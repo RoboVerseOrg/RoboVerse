@@ -33,7 +33,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
+from metasim.types import Action, CompatActionInput, DictEnvState
 from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
@@ -146,7 +146,7 @@ class Sapien3Handler(BaseSimHandler):
         log.warning("Sapien3 is still under development, some metasim apis yet don't have sapien3 support")
         super().__init__(scenario, optional_queries)
         self.headless = scenario.headless
-        self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
 
     def _build_sapien(self):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
@@ -452,7 +452,7 @@ class Sapien3Handler(BaseSimHandler):
                 joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
-    def _set_dof_targets(self, targets: list[Action] | TensorState):
+    def _set_dof_targets(self, targets: CompatActionInput):
         targets = adapt_actions_to_dict(self, targets)
 
         for obj_name, action in targets.items():
@@ -654,7 +654,7 @@ class Sapien3Handler(BaseSimHandler):
             obj_id.set_pose(sapien_core.Pose(p=val["pos"], q=val["rot"]))
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property

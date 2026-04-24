@@ -21,7 +21,7 @@ from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, Primi
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
+from metasim.types import Action, CompatActionInput, DictEnvState
 
 # Optional: RoboSplatter imports for GS background rendering
 from metasim.utils.gs_util import alpha_blend_rgba
@@ -58,7 +58,7 @@ class SinglePybulletHandler(BaseSimHandler):
             headless: Whether to run the simulation in headless mode
         """
         super().__init__(scenario, optional_queries)
-        self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
 
     def _get_camera_params(self, view_matrix, projection_matrix, width, height):
         """Get camera intrinsics and extrinsics directly from PyBullet matrices.
@@ -319,7 +319,7 @@ class SinglePybulletHandler(BaseSimHandler):
             object, range(action.shape[0]), controlMode=p.POSITION_CONTROL, targetPositions=action
         )
 
-    def _set_dof_targets(self, actions: list[Action] | TensorState):
+    def _set_dof_targets(self, actions: CompatActionInput):
         """Set the target joint positions for the object.
 
         Args:
@@ -331,7 +331,10 @@ class SinglePybulletHandler(BaseSimHandler):
         self._actions_cache = actions
 
         for obj_name, action in actions.items():
-            action_arr = np.array([action["dof_pos_target"][name] for name in self.object_joint_order[obj_name]])
+            dof_pos_target = action.get("dof_pos_target")
+            if dof_pos_target is None:
+                continue
+            action_arr = np.array([dof_pos_target[name] for name in self.object_joint_order[obj_name]])
             self._apply_action(action_arr, self.object_ids[obj_name])
 
     def _simulate(self):
@@ -522,7 +525,7 @@ class SinglePybulletHandler(BaseSimHandler):
             return []
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property

@@ -13,13 +13,14 @@ from typing import TYPE_CHECKING
 
 import torch
 from loguru import logger as log
+import numpy as np
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, DictEnvState, TensorState
+from metasim.types import CompatActionInput, DictEnvState, TensorState
 from metasim.utils.state import join_tensor_states
 
 
@@ -51,7 +52,7 @@ def _worker(
             elif cmd == "simulate":
                 env.simulate()
             elif cmd == "get_joint_names":
-                names = env.get_joint_names(data[0])
+                names = env.get_joint_names(data[0], data[1])
                 remote.send(names)
             elif cmd == "get_body_names":
                 names = env.get_body_names(data[0])
@@ -178,9 +179,32 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             concat_states = join_tensor_states(states_list)
             return concat_states
 
-        def _set_dof_targets(self, actions: list[Action]) -> None:
+        def _set_dof_targets(self, actions: CompatActionInput) -> None:
+            if isinstance(actions, list):
+                action_batch = actions
+                if len(action_batch) == 1 and len(self.remotes) > 1:
+                    action_batch = action_batch * len(self.remotes)
+                if len(action_batch) != len(self.remotes):
+                    raise ValueError(
+                        f"Expected {len(self.remotes)} per-env actions, got {len(action_batch)} after normalization."
+                    )
+                for i, remote in enumerate(self.remotes):
+                    remote.send(("set_dof_targets", ([action_batch[i]],)))
+                return
+
+            action_tensor = torch.as_tensor(actions)
+            if action_tensor.ndim == 1:
+                action_tensor = action_tensor.unsqueeze(0)
+            if action_tensor.shape[0] == 1 and len(self.remotes) > 1:
+                for remote in self.remotes:
+                    remote.send(("set_dof_targets", (action_tensor.clone(),)))
+                return
+            if action_tensor.shape[0] != len(self.remotes):
+                raise ValueError(
+                    f"Expected tensor batch size {len(self.remotes)}, got {action_tensor.shape[0]}."
+                )
             for i, remote in enumerate(self.remotes):
-                remote.send(("set_dof_targets", (actions[i],)))
+                remote.send(("set_dof_targets", (action_tensor[i : i + 1].clone(),)))
 
         def _simulate(self):
             for remote in self.remotes:
@@ -189,8 +213,8 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def refresh_render(self):
             log.error("Rendering not supported in parallel mode")
 
-        def get_joint_names(self, obj_name: str) -> list[str]:
-            self.remotes[0].send(("get_joint_names", (obj_name,)))
+        def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            self.remotes[0].send(("get_joint_names", (obj_name, sort)))
             names = self.remotes[0].recv()
             return names
 
