@@ -12,6 +12,11 @@ from metasim.task.base import BaseTaskEnv
 # Global registry mapping lowercase names to task wrapper classes
 TASK_REGISTRY = {}
 
+# Failures encountered during task discovery: module_name -> short error string.
+# Surfaced in get_task_class() KeyError so users see import problems right when
+# they look up a missing task, rather than having to enable DEBUG logging.
+_DISCOVERY_FAILURES: dict[str, str] = {}
+
 
 def register_task(*names):
     """Class decorator to register a task under one or more names.
@@ -86,7 +91,9 @@ def _discover_task_modules() -> None:
                 try:
                     import_module(module_name)
                 except Exception as e:
-                    log.debug(f"Task discovery: skip module '{module_name}': {e}")
+                    err_str = f"{type(e).__name__}: {e}"
+                    _DISCOVERY_FAILURES[module_name] = err_str
+                    log.debug(f"Task discovery: skip module '{module_name}': {err_str}")
         except Exception as e:
             log.error(f"Task discovery: error scanning package '{pkg_name}': {e}")
 
@@ -105,7 +112,13 @@ def get_task_class(name: str) -> type[BaseTaskEnv]:
         return TASK_REGISTRY[key]
     except KeyError as exc:
         available = ", ".join(sorted(TASK_REGISTRY.keys())) or "<none>"
-        raise KeyError(f"Unknown task '{name}' ") from exc
+        msg = f"Unknown task '{name}'. Registered tasks: {available}"
+        if _DISCOVERY_FAILURES:
+            # Surface import errors so users can see if the task they want
+            # failed to register because its module raised during import.
+            failures = "\n  ".join(f"{m}: {e}" for m, e in sorted(_DISCOVERY_FAILURES.items()))
+            msg += f"\n\n{len(_DISCOVERY_FAILURES)} task module(s) failed to import during discovery:\n  {failures}"
+        raise KeyError(msg) from exc
 
 
 def list_tasks():
