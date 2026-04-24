@@ -12,7 +12,7 @@ from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, Info, Obs, Reward, Success, Termination, TimeOut
+from metasim.types import CompatActionInput, Info, Obs, Reward, Success, Termination, TimeOut
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.setup_util import get_sim_handler_class
 
@@ -128,7 +128,7 @@ class BaseTaskEnv:
         """Timeout flags."""
         return self._episode_steps >= self.max_episode_steps
 
-    def step(self, actions: Action) -> tuple[Obs, Reward, Success, TimeOut, Info | None]:
+    def step(self, actions: CompatActionInput) -> tuple[Obs, Reward, Success, TimeOut, Info | None]:
         """Step the environment.
 
         Args:
@@ -146,12 +146,11 @@ class BaseTaskEnv:
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
-        for robot in self.handler.robots:
-            self.handler.set_dof_targets(actions)
+        self.handler.set_dof_targets(actions)
 
         self.handler.simulate()
 
-        env_states = self.handler.get_states()
+        env_states = self.handler.get_states(mode="tensor")
 
         for callback in self.post_physics_step_callback:
             callback(env_states)
@@ -196,7 +195,7 @@ class BaseTaskEnv:
         states_to_set = self._initial_states if states is None else states
         self.handler.set_states(states=states_to_set, env_ids=env_ids)
         self.handler.refresh_render()
-        env_states = self.handler.get_states(env_ids=env_ids)
+        env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),
         }

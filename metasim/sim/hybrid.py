@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 import torch
 
 if TYPE_CHECKING:
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim.base import BaseSimHandler
-from metasim.types import Action, TensorState
+from metasim.types import CompatActionInput, TensorState
 from metasim.utils.state import state_tensor_to_nested
 
 
@@ -76,7 +77,7 @@ class HybridSimHandler(BaseSimHandler):
         finally:
             self.render_handler.close()
 
-    def _set_dof_targets(self, actions: list[Action]) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set the dof targets of the robot in the physics handler."""
         self.physics_handler.set_dof_targets(actions)
 

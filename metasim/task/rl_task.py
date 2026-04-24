@@ -7,6 +7,7 @@ from torchvision.utils import make_grid
 
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.types import CompatActionInput, Info
 from metasim.utils.state import list_state_to_tensor
 
 
@@ -46,19 +47,21 @@ class RLTaskEnv(BaseTaskEnv):
         self.reset(env_ids=list(range(self.num_envs)))
 
         # obs size
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states)
         self.num_obs = first_obs.shape[-1]
 
-        # action bounds from joint limits (ordered by joint_names)
-        limits = self.robot.joint_limits
-        self.joint_names = self.handler.get_joint_names(self.robot.name)
-        self._action_low = torch.tensor(
-            [limits[j][0] for j in self.joint_names], dtype=torch.float32, device=self.device
-        )
-        self._action_high = torch.tensor(
-            [limits[j][1] for j in self.joint_names], dtype=torch.float32, device=self.device
-        )
+        # action bounds from joint limits in handler/API tensor order
+        self.joint_names_by_robot = {robot.name: self.handler.get_joint_names(robot.name, sort=True) for robot in self.robots}
+        action_low = []
+        action_high = []
+        for robot in self.robots:
+            limits = robot.joint_limits
+            joint_names = self.joint_names_by_robot[robot.name]
+            action_low.extend(limits[j][0] for j in joint_names)
+            action_high.extend(limits[j][1] for j in joint_names)
+        self._action_low = torch.tensor(action_low, dtype=torch.float32, device=self.device)
+        self._action_high = torch.tensor(action_high, dtype=torch.float32, device=self.device)
         self.num_actions = self._action_low.shape[0]
 
     # -------------------------------------------------------------------------
@@ -96,7 +99,7 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # env api
     # -------------------------------------------------------------------------
-    def reset(self, states=None, env_ids=None) -> tuple[torch.Tensor, dict]:
+    def reset(self, states=None, env_ids=None) -> tuple[torch.Tensor, Info]:
         """Reset selected envs.
 
         Args:
@@ -114,7 +117,7 @@ class RLTaskEnv(BaseTaskEnv):
         states_to_set = self._prepare_states(raw_states, env_ids)
         self.handler.set_states(states=states_to_set, env_ids=env_ids)
 
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states).to(self.device)
         self._raw_observation_cache = first_obs.clone()
         priv_obs = self._privileged_observation(states)
@@ -131,20 +134,23 @@ class RLTaskEnv(BaseTaskEnv):
 
     def step(
         self,
-        actions,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+        actions: CompatActionInput,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
         """One step with joint-space actions (auto-clamped)."""
         self._episode_steps += 1
 
-        if not isinstance(actions, torch.Tensor):
-            actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
-        if actions.ndim == 1:
-            actions = actions.unsqueeze(0)
+        if isinstance(actions, (torch.Tensor, np.ndarray)):
+            if not isinstance(actions, torch.Tensor):
+                actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
+            if actions.ndim == 1:
+                actions = actions.unsqueeze(0)
 
-        real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
-        self.handler.set_dof_targets(real_actions)
+            real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
+            self.handler.set_dof_targets(real_actions)
+        else:
+            self.handler.set_dof_targets(actions)
         self.handler.simulate()
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
         reward = self._reward(states)
@@ -168,7 +174,7 @@ class RLTaskEnv(BaseTaskEnv):
         done_indices = episode_done.nonzero(as_tuple=False).squeeze(-1)
         if done_indices.numel():
             self.reset(env_ids=done_indices.tolist())
-            states_after = self.handler.get_states()
+            states_after = self.handler.get_states(mode="tensor")
             obs_after = self._observation(states_after).to(self.device)
             obs[done_indices] = obs_after[done_indices]
             self._raw_observation_cache[done_indices] = obs_after[done_indices]
@@ -180,7 +186,7 @@ class RLTaskEnv(BaseTaskEnv):
 
     def render(self) -> np.ndarray:
         """Return an RGB grid image."""
-        state = self.handler.get_states()
+        state = self.handler.get_states(mode="tensor")
         rgb = next(iter(state.cameras.values())).rgb  # (N, H, W, C)
         if make_grid is not None:
             grid = make_grid((rgb.permute(0, 3, 1, 2) / 255.0), nrow=int(max(1, rgb.shape[0] ** 0.5)))
@@ -228,7 +234,7 @@ class RLTaskEnv(BaseTaskEnv):
         """
         if self._obs_buf is None:
             # Lazy initialization on first access
-            states = self.handler.get_states()
+            states = self.handler.get_states(mode="tensor")
             self._obs_buf = self._observation(states).to(self.device)
         return self._obs_buf
 
@@ -241,7 +247,7 @@ class RLTaskEnv(BaseTaskEnv):
         """
         if self._priv_obs_buf is None:
             # Lazy initialization on first access
-            states = self.handler.get_states()
+            states = self.handler.get_states(mode="tensor")
             priv_obs = self._privileged_observation(states)
             if isinstance(priv_obs, torch.Tensor):
                 self._priv_obs_buf = priv_obs.to(self.device)

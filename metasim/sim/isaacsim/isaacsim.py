@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import math
 import os
 import threading
@@ -29,11 +30,11 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import DictEnvState
+from metasim.types import ActionBatch, CompatActionInput, DictEnvState
 from metasim.utils.isaacsim_asset_util import resolve_isaacsim_file_path
 from metasim.utils.dict import deep_get
 from metasim.utils.gs_util import alpha_blend_rgba_torch
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor
 from metasim.utils.terrain_utils import TerrainGenerator
 
 try:
@@ -57,7 +58,7 @@ class IsaacsimHandler(BaseSimHandler):
     def __init__(self, scenario_cfg: ScenarioCfg, optional_queries: list[BaseQueryType] | None = None):
         super().__init__(scenario_cfg, optional_queries)
 
-        # self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
         self._robot_names = {robot.name for robot in self.robots}
         self._robot_init_pos = {robot.name: robot.default_position for robot in self.robots}
         self._robot_init_quat = {robot.name: robot.default_orientation for robot in self.robots}
@@ -82,6 +83,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.simulation_app = None
         self.scene = None
         self.sim = None
+        self.contact_sensor = None
 
         if self.headless:
             self._render_viewport = False
@@ -268,6 +270,42 @@ class IsaacsimHandler(BaseSimHandler):
             simulation_app = getattr(self, "simulation_app", None)
             owns_simulation_app = getattr(self, "_owns_simulation_app", False)
 
+            if self.sim is not None:
+                try:
+                    # Match IsaacLab's own test teardown pattern before
+                    # clearing the singleton simulation context.
+                    self.sim._disable_app_control_on_stop_handle = True
+                except Exception:
+                    pass
+
+                stop_fn = getattr(self.sim, "stop", None)
+                if callable(stop_fn):
+                    try:
+                        stop_fn()
+                    except Exception as err:
+                        log.debug(f"SimulationContext.stop() failed during close: {err}")
+                else:
+                    timeline = getattr(self.sim, "_timeline", None)
+                    if timeline is not None:
+                        try:
+                            timeline.stop()
+                        except Exception as err:
+                            log.debug(f"SimulationContext timeline.stop() failed during close: {err}")
+
+                clear_callbacks = getattr(self.sim, "clear_all_callbacks", None)
+                if callable(clear_callbacks):
+                    try:
+                        clear_callbacks()
+                    except Exception as err:
+                        log.debug(f"SimulationContext.clear_all_callbacks() failed during close: {err}")
+
+                clear_instance = getattr(self.sim, "clear_instance", None)
+                if callable(clear_instance):
+                    try:
+                        clear_instance()
+                    except Exception as err:
+                        log.debug(f"SimulationContext.clear_instance() failed during close: {err}")
+
             if simulation_app is not None and force_exit_on_close_hang and owns_simulation_app:
                 close_error: dict[str, Exception] = {}
 
@@ -298,17 +336,77 @@ class IsaacsimHandler(BaseSimHandler):
                     os._exit(1)
                 if "error" in close_error:
                     raise close_error["error"]
-            elif simulation_app is not None:
+            elif simulation_app is not None and owns_simulation_app:
                 try:
                     simulation_app.close(wait_for_replicator=False)
                 except TypeError:
                     simulation_app.close()
+            if self.contact_sensor is not None:
+                try:
+                    clear_callbacks = getattr(self.contact_sensor, "_clear_callbacks", None)
+                    if callable(clear_callbacks):
+                        clear_callbacks()
+                    invalidate = getattr(self.contact_sensor, "_invalidate_initialize_callback", None)
+                    if callable(invalidate):
+                        invalidate(None)
+                    for attr_name in (
+                        "_body_physx_view",
+                        "_contact_physx_view",
+                        "_physics_sim_view",
+                        "_data",
+                        "_is_outdated",
+                        "_timestamp",
+                        "_timestamp_last_update",
+                        "stage",
+                    ):
+                        if hasattr(self.contact_sensor, attr_name):
+                            setattr(self.contact_sensor, attr_name, None)
+                except Exception as err:
+                    log.debug(f"Contact sensor cleanup failed during close: {err}")
+                if self.scene is not None:
+                    try:
+                        self.scene.sensors.pop("contact_sensor", None)
+                    except Exception as err:
+                        log.debug(f"Failed to detach contact sensor from scene: {err}")
             if self.scene is not None:
                 del self.scene
             if self.sim is not None:
                 del self.sim
             if self.simulation_app is not None:
                 del self.simulation_app
+
+            # Drop handler-owned references that can otherwise keep IsaacSim
+            # sensor / stage resources alive across suite-local handler restarts.
+            if hasattr(self, "contact_sensor"):
+                self.contact_sensor = None
+            if hasattr(self, "terrain"):
+                self.terrain = None
+            if hasattr(self, "_ground_mesh_vertices"):
+                self._ground_mesh_vertices = None
+            if hasattr(self, "_ground_mesh_triangles"):
+                self._ground_mesh_triangles = None
+            if hasattr(self, "_height_mat"):
+                self._height_mat = None
+            if hasattr(self, "_appwindow"):
+                self._appwindow = None
+            if hasattr(self, "_input"):
+                self._input = None
+            if hasattr(self, "_keyboard"):
+                self._keyboard = None
+            if hasattr(self, "_keyboard_sub"):
+                self._keyboard_sub = None
+
+            if simulation_app is not None and not owns_simulation_app:
+                try:
+                    import isaacsim.core.utils.stage as stage_utils
+
+                    stage_utils.close_stage()
+                except Exception as err:
+                    log.debug(f"Stage close failed during shared-app cleanup: {err}")
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             self._is_closed = True
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
@@ -669,35 +767,18 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
-    def _set_dof_targets(self, actions: torch.Tensor) -> None:
-        if isinstance(actions, torch.Tensor):
-            actions_tensor = actions
-        else:
-            per_robot_tensors = []
-            for robot in self.robots:
-                sorted_joint_names = self.get_joint_names(robot.name, sort=True)
-                robot_tensor = torch.zeros((self.num_envs, len(sorted_joint_names)), device=self.device)
-                for env_id in range(self.num_envs):
-                    joint_targets = actions[env_id][robot.name]["dof_pos_target"]
-                    for j, joint_name in enumerate(sorted_joint_names):
-                        robot_tensor[env_id, j] = torch.tensor(
-                            joint_targets[joint_name],
-                            device=self.device,
-                        )
-                per_robot_tensors.append(robot_tensor)
-            actions_tensor = torch.cat(per_robot_tensors, dim=-1)
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
+        self._actions_cache = actions
+        dict_action_batch: ActionBatch | None = actions if isinstance(actions, list) else None
+        actions_tensor = None if dict_action_batch is not None else action_input_to_tensor(self, actions, device=self.device)
+        if dict_action_batch is not None and len(dict_action_batch) != self.num_envs:
+            raise ValueError(f"Expected {self.num_envs} dict actions, got {len(dict_action_batch)}.")
 
         offset = 0
         for i, robot in enumerate(self.robots):
             robot_inst = self.scene.articulations[robot.name]
             sorted_joint_names = self.get_joint_names(robot.name, sort=True)
             joint_count = len(sorted_joint_names)
-
-            if offset + joint_count > actions_tensor.shape[1]:
-                raise ValueError("Mismatch between provided actions and expected joint count.")
-
-            robot_actions_sorted = actions_tensor[:, offset : offset + joint_count]
-            offset += joint_count
 
             name_to_sorted_idx = {name: idx for idx, name in enumerate(sorted_joint_names)}
 
@@ -711,7 +792,24 @@ class IsaacsimHandler(BaseSimHandler):
             if not joint_ids:
                 continue
 
-            joint_targets = robot_actions_sorted[:, action_indices]
+            if dict_action_batch is not None:
+                robot_targets_sorted = torch.zeros((self.num_envs, joint_count), dtype=torch.float32, device=self.device)
+                for env_id, env_action in enumerate(dict_action_batch):
+                    robot_action = env_action.get(robot.name) or {}
+                    if self._manual_pd_on[i] and robot_action.get("dof_effort_target") is not None:
+                        source_targets = robot_action["dof_effort_target"] or {}
+                    else:
+                        source_targets = robot_action.get("dof_pos_target") or {}
+                    for joint_name, sorted_idx in name_to_sorted_idx.items():
+                        if joint_name in source_targets:
+                            robot_targets_sorted[env_id, sorted_idx] = float(source_targets[joint_name])
+            else:
+                if offset + joint_count > actions_tensor.shape[1]:
+                    raise ValueError("Mismatch between provided actions and expected joint count.")
+                robot_targets_sorted = actions_tensor[:, offset : offset + joint_count]
+                offset += joint_count
+
+            joint_targets = robot_targets_sorted[:, action_indices]
 
             if self._manual_pd_on[i]:
                 # torque / effort control
@@ -802,7 +900,8 @@ class IsaacsimHandler(BaseSimHandler):
         )
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
         init_state = ArticulationCfg.InitialStateCfg(
-            pos=getattr(robot, "default_pos", [0.0, 0.0, 0.0]),
+            pos=robot.default_position,
+            rot=robot.default_orientation,
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )
@@ -1289,10 +1388,21 @@ class IsaacsimHandler(BaseSimHandler):
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
 
     def _load_sensors(self) -> None:
+        # Contact sensing is initialized lazily via `init_contact_sensor()` so
+        # scenarios that never query contact forces do not pay the extra PhysX
+        # memory cost.
+        return
+
+    def init_contact_sensor(self, robot_name: str) -> None:
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
 
+        if self.contact_sensor is not None:
+            return
+        if self.scene is None:
+            raise RuntimeError("Scene is not initialized. Launch the handler before creating a contact sensor.")
+
         contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
-            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/.*",
+            prim_path=f"/World/envs/env_.*/{robot_name}/.*",
             history_length=3,
             update_period=0.005,
             force_threshold=10.0,
@@ -1300,6 +1410,9 @@ class IsaacsimHandler(BaseSimHandler):
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
+        if hasattr(self.contact_sensor, "_initialize_callback"):
+            self.contact_sensor._initialize_callback(None)
+        self.contact_sensor.update(dt=0.0)
 
     def _load_lights(self) -> None:
         import isaaclab.sim as sim_utils
@@ -1682,6 +1795,10 @@ class IsaacsimHandler(BaseSimHandler):
                     update(dt=physics_dt)
                 except Exception as err:
                     log.debug(f"Sensor update failed during visual refresh second pass: {err}")
+
+    @property
+    def actions_cache(self) -> CompatActionInput:
+        return self._actions_cache
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Drive SimulationApp/scene/sensors for a few frames to settle visual state.

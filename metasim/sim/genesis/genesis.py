@@ -25,9 +25,9 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, DictEnvState
+from metasim.types import Action, CompatActionInput, DictEnvState
 from metasim.utils.gs_util import alpha_blend_rgba
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor
 
 # Apply IGL compatibility patch
 try:
@@ -61,7 +61,7 @@ except ImportError:
 class GenesisHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
-        self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
         self.object_inst_dict: dict[str, RigidEntity] = {}
         self.camera_inst_dict: dict[str, Camera] = {}
         self.robot = self.robots[0] if self.robots else None
@@ -408,93 +408,115 @@ class GenesisHandler(BaseSimHandler):
         if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
             self.scene_inst.viewer.update()
 
-    def _set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         self._actions_cache = actions
 
-        if not self.robot:
+        if not self.robots:
             return
 
-        obj_name = self.robot.name
-        obj_inst = self.object_inst_dict[obj_name]
-        control_mode = self._get_control_mode(obj_name)
-        sim_joint_names = self._get_joint_names(obj_name, sort=False)
+        # Fast-path: tensor input (VectorEnv) in handler/API order across all robots.
+        if isinstance(actions, (torch.Tensor, np.ndarray)):
+            actions_tensor = action_input_to_tensor(self, actions, device=self.device)
+            offset = 0
+            for robot in self.robots:
+                obj_name = robot.name
+                obj_inst = self.object_inst_dict[obj_name]
+                control_mode = self._get_control_mode(obj_name)
+                sim_joint_names = self._get_joint_names(obj_name, sort=False)
+                sorted_joint_names = self._get_joint_names(obj_name, sort=True)
+                robot_width = len(sorted_joint_names)
 
-        # Fast-path: tensor input (VectorEnv). Assume position control.
-        if isinstance(actions, torch.Tensor):
-            # Map tensor joint order (RobotCfg order) -> simulator joint order
-            cfg_joint_order = list(self.object_dict[obj_name].joint_limits.keys())
-            idxs = [cfg_joint_order.index(jn) for jn in sim_joint_names if jn in cfg_joint_order]
-            if len(idxs) == 0:
-                return
-            # Select and shape per Genesis expectations
-            if actions.dim() == 1:
-                actions = actions.unsqueeze(0)
-            position = actions[:, idxs]
+                if robot_width == 0:
+                    continue
 
-            dofs_idx_local: list[int] = []
-            for j in obj_inst.joints:
-                if j.name in sim_joint_names and j.dofs_idx_local is not None:
-                    dofs_idx_local.extend(j.dofs_idx_local)
+                robot_actions = actions_tensor[:, offset : offset + robot_width]
+                offset += robot_width
+                if robot_actions.shape[1] == 0:
+                    continue
 
-            if dofs_idx_local:
-                obj_inst.control_dofs_position(position=position, dofs_idx_local=dofs_idx_local)
+                name_to_sorted_idx = {joint_name: idx for idx, joint_name in enumerate(sorted_joint_names)}
+                action_indices = [
+                    name_to_sorted_idx[joint_name] for joint_name in sim_joint_names if joint_name in name_to_sorted_idx
+                ]
+                if not action_indices:
+                    continue
+
+                action_values = robot_actions[:, action_indices]
+
+                dofs_idx_local: list[int] = []
+                for j in obj_inst.joints:
+                    if j.name in sim_joint_names and j.dofs_idx_local is not None:
+                        dofs_idx_local.extend(j.dofs_idx_local)
+
+                if not dofs_idx_local:
+                    continue
+
+                if control_mode == "effort":
+                    obj_inst.control_dofs_force(force=action_values, dofs_idx_local=dofs_idx_local)
+                else:
+                    obj_inst.control_dofs_position(position=action_values, dofs_idx_local=dofs_idx_local)
             return
 
         # Dict/list input path
-        joint_names = sim_joint_names
+        for robot in self.robots:
+            obj_name = robot.name
+            obj_inst = self.object_inst_dict[obj_name]
+            control_mode = self._get_control_mode(obj_name)
+            sim_joint_names = self._get_joint_names(obj_name, sort=False)
+            joint_names = sim_joint_names
 
-        if control_mode == "effort":
-            if (
-                isinstance(actions, list)
-                and len(actions) > 0
-                and obj_name in actions[0]
-                and "dof_effort_target" in actions[0][obj_name]
-            ):
-                available_joints = set(actions[0][obj_name]["dof_effort_target"].keys())
-                joint_names = [jn for jn in joint_names if jn in available_joints]
+            if control_mode == "effort":
+                available_joints = set()
+                for env_action in actions:
+                    robot_action = env_action.get(obj_name) or {}
+                    effort_targets = robot_action.get("dof_effort_target") or {}
+                    available_joints.update(effort_targets.keys())
+                if available_joints:
+                    joint_names = [jn for jn in joint_names if jn in available_joints]
 
-            effort = [
-                [actions[env_id][obj_name]["dof_effort_target"][jn] for jn in joint_names]
-                for env_id in range(self.num_envs)
-            ]
+                effort = []
+                for env_id in range(self.num_envs):
+                    robot_action = (actions[env_id].get(obj_name) or {})
+                    effort_targets = robot_action.get("dof_effort_target") or {}
+                    effort.append([effort_targets.get(jn, 0.0) for jn in joint_names])
 
-            dofs_idx_local = []
-            for j in obj_inst.joints:
-                if j.dofs_idx_local is not None and j.name in joint_names:
-                    dofs_idx_local.extend(j.dofs_idx_local)
+                dofs_idx_local = []
+                for j in obj_inst.joints:
+                    if j.dofs_idx_local is not None and j.name in joint_names:
+                        dofs_idx_local.extend(j.dofs_idx_local)
 
-            if dofs_idx_local:
-                obj_inst.control_dofs_force(
-                    force=effort,
-                    dofs_idx_local=dofs_idx_local,
-                )
-        else:
-            if (
-                isinstance(actions, list)
-                and len(actions) > 0
-                and obj_name in actions[0]
-                and "dof_pos_target" in actions[0][obj_name]
-            ):
-                available_joints = set(actions[0][obj_name]["dof_pos_target"].keys())
-                joint_names = [jn for jn in joint_names if jn in available_joints]
+                if dofs_idx_local:
+                    obj_inst.control_dofs_force(
+                        force=effort,
+                        dofs_idx_local=dofs_idx_local,
+                    )
+            else:
+                available_joints = set()
+                for env_action in actions:
+                    robot_action = env_action.get(obj_name) or {}
+                    pos_targets = robot_action.get("dof_pos_target") or {}
+                    available_joints.update(pos_targets.keys())
+                if available_joints:
+                    joint_names = [jn for jn in joint_names if jn in available_joints]
 
-            position = [
-                [actions[env_id][obj_name]["dof_pos_target"][jn] for jn in joint_names]
-                for env_id in range(self.num_envs)
-            ]
+                position = []
+                for env_id in range(self.num_envs):
+                    robot_action = (actions[env_id].get(obj_name) or {})
+                    pos_targets = robot_action.get("dof_pos_target") or {}
+                    position.append([pos_targets.get(jn, 0.0) for jn in joint_names])
 
-            dofs_idx_local = []
-            for j in obj_inst.joints:
-                if j.dofs_idx_local is not None and j.name in joint_names:
-                    dofs_idx_local.extend(j.dofs_idx_local)
+                dofs_idx_local = []
+                for j in obj_inst.joints:
+                    if j.dofs_idx_local is not None and j.name in joint_names:
+                        dofs_idx_local.extend(j.dofs_idx_local)
 
-            if dofs_idx_local:
-                if self.num_envs == 1:
-                    position = position[0]
-                obj_inst.control_dofs_position(
-                    position=position,
-                    dofs_idx_local=dofs_idx_local,
-                )
+                if dofs_idx_local:
+                    if self.num_envs == 1:
+                        position = position[0]
+                    obj_inst.control_dofs_position(
+                        position=position,
+                        dofs_idx_local=dofs_idx_local,
+                    )
 
     def _simulate(self):
         for _ in range(self.scenario.decimation):
@@ -562,7 +584,7 @@ class GenesisHandler(BaseSimHandler):
         return self.scene_inst.n_envs
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property

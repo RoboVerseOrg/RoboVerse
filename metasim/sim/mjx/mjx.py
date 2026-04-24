@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
-from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, list_state_to_tensor
+from metasim.types import CompatActionInput
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor, list_state_to_tensor
 
 from .mjx_helper import (
     j2t,
@@ -384,48 +384,29 @@ class MJXHandler(BaseSimHandler):
         self._init_mjx()  # compile & allocate batched data
         self._mjx_done = True
 
-    def _set_dof_targets(self, actions: list[Action] | torch.Tensor) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Accepts Tensor (N, sum(J)) or list[dict] -> writes ctrl for all robots."""
         self._actions_cache = actions
         data = self._data
+        if isinstance(actions, list):
+            for env_action in actions:
+                for robot in self.robots:
+                    robot_action = env_action.get(robot.name) or {}
+                    if robot_action.get("dof_effort_target") is not None or robot_action.get("dof_vel_target") is not None:
+                        raise NotImplementedError("MJX dict actions currently support only dof_pos_target.")
+        tgt_t = action_input_to_tensor(self, actions, device="cpu")
 
-        if isinstance(actions, torch.Tensor):
-            tgt_t = actions.to(torch.float32)
-            if tgt_t.ndim == 1:
-                tgt_t = tgt_t.unsqueeze(0)
+        off = 0
+        for robot in self.robots:
+            jnames = self._get_joint_names(robot.name, sort=True)
+            joint_count = len(jnames)
+            chunk = tgt_t[:, off : off + joint_count]
+            if chunk.shape != (tgt_t.shape[0], joint_count):
+                raise ValueError(f"{robot.name}: Expected shape {(tgt_t.shape[0], joint_count)}, got {tuple(chunk.shape)}")
 
-            off = 0
-            for robot in self.robots:
-                jnames = self._get_joint_names(robot.name, sort=True)
-                J = len(jnames)
-                a_ids = self._robot_act_ids[robot.name]
-                chunk = tgt_t[:, off : off + J]
-                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(chunk)))
-                off += J
-
-        else:
-            if isinstance(actions, list):
-                action_map = actions
-            else:
-                raise TypeError("Unsupported actions type")
-
-            for robot in self.robots:
-                rname = robot.name
-                jnames = self._get_joint_names(rname, sort=True)
-                tgt_t = torch.stack(
-                    [
-                        torch.tensor([action_map[e][rname]["dof_pos_target"][jn] for jn in jnames], dtype=torch.float32)
-                        for e in range(self.num_envs)
-                    ],
-                    dim=0,
-                )
-                if tgt_t.shape != (self.num_envs, len(jnames)):
-                    raise ValueError(
-                        f"{rname}: Expected shape {(self.num_envs, len(jnames))}, got {tuple(tgt_t.shape)}"
-                    )
-
-                a_ids = self._robot_act_ids[rname]
-                data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(tgt_t)))
+            a_ids = self._robot_act_ids[robot.name]
+            data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(chunk)))
+            off += joint_count
 
         self._data = data
 
@@ -679,7 +660,7 @@ class MJXHandler(BaseSimHandler):
         return [self._episode_length_buf]
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property

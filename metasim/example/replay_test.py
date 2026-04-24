@@ -163,7 +163,7 @@ def main():  # noqa: D103
     obs, _ = env.reset()
     saver_act.add(obs)
 
-    captured_states.append(env.handler.get_states())
+    captured_states.append(env.handler.get_states(mode="tensor"))
 
     step = 0
     while True:
@@ -177,9 +177,9 @@ def main():  # noqa: D103
         saver_act.add(obs)
 
         try:
-            captured_states.append(env.handler.get_states())
+            captured_states.append(env.handler.get_states(mode="tensor"))
         except Exception:
-            captured_states.append(env.handler.get_states())
+            captured_states.append(env.handler.get_states(mode="tensor"))
 
         if success.any():
             log.info(f"[ACT] Env {success.nonzero().squeeze(-1).tolist()} succeeded!")
@@ -210,7 +210,7 @@ def main():  # noqa: D103
         env.handler.set_states(states_i)
 
         env.handler.refresh_render()
-        obs = env.handler.get_states()
+        obs = env.handler.get_states(mode="tensor")
         saver_state.add(obs)
 
         try:

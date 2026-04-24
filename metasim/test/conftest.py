@@ -26,6 +26,7 @@ from metasim.sim.sim_context import HandlerContext
 from metasim.test.test_utils import get_test_parameters
 
 _SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "newton", "sapien3"}
+_SINGLE_ACTIVE_HANDLER_SIMS = {"isaacgym", "isaacsim"}
 
 # pkg_prefix -> scenario_fn
 _SUITE_REGISTRY: dict[str, Callable[[str, int], ScenarioCfg]] = {}
@@ -125,20 +126,40 @@ def _clear_isaacsim_context():
 
 
 def _create_isaacsim_context():
-    """Create a new IsaacSim simulation context."""
-    import isaaclab.sim as sim_utils
+    """Reset IsaacSim stage before handler launch.
+
+    The handler creates and owns its SimulationContext. Creating another one
+    here can invalidate IsaacLab's global physics view and break asset
+    initialization.
+    """
     import isaacsim.core.utils.stage as stage_utils
 
     log.debug("Creating new IsaacSim stage")
     stage_utils.create_new_stage()
     log.debug("New IsaacSim stage created")
 
-    sim_cfg = sim_utils.SimulationCfg()
-    sim_context = sim_utils.SimulationContext(sim_cfg)
-    sim_context._app_control_on_stop_handle = None
 
-    _isaacsim_context["sim_context"] = sim_context
-    return sim_context
+def _cleanup_handler_key(key: tuple, sim: str) -> None:
+    """Close and forget a cached handler context."""
+    ctx = _shared_handler_contexts.get(key)
+    if ctx is None:
+        return
+
+    log.info(f"[handler] Cleaning up handler for {key}")
+    try:
+        if sim == "isaacsim" and getattr(ctx, "handler", None) is not None:
+            try:
+                ctx.handler.close()
+            except Exception:
+                log.exception(f"[handler] Error during IsaacSim handler.close() for {key}")
+        ctx.__exit__(None, None, None)
+        if sim == "isaacsim":
+            _clear_isaacsim_context()
+        log.info(f"[handler] Handler for {key} cleaned up")
+    except Exception:
+        log.exception(f"[handler] Error cleaning up handler for {key}")
+    finally:
+        _shared_handler_contexts.pop(key, None)
 
 
 def _get_or_create_handler(param, request, isaacsim_app):
@@ -156,6 +177,11 @@ def _get_or_create_handler(param, request, isaacsim_app):
     key = (scenario_fn.__module__, scenario_fn.__name__, sim, num_envs)
 
     if key not in _shared_handler_contexts:
+        if sim in _SINGLE_ACTIVE_HANDLER_SIMS:
+            stale_keys = [existing_key for existing_key in _shared_handler_contexts if existing_key[2] == sim and existing_key != key]
+            for stale_key in stale_keys:
+                _cleanup_handler_key(stale_key, sim)
+
         # Pre-flight asset check
         try:
             scenario = scenario_fn(sim, num_envs)
@@ -179,20 +205,7 @@ def _get_or_create_handler(param, request, isaacsim_app):
         _shared_handler_contexts[key] = handler_context
 
         def _cleanup():
-            ctx = _shared_handler_contexts.get(key)
-            if ctx is None:
-                return
-            log.info(f"[handler] Cleaning up handler for {key}")
-            try:
-                # Use HandlerContext's __exit__ for proper cleanup
-                ctx.__exit__(None, None, None)
-                if sim == "isaacsim":
-                    _clear_isaacsim_context()
-                log.info(f"[handler] Handler for {key} cleaned up")
-            except Exception:
-                log.exception(f"[handler] Error cleaning up handler for {key}")
-            finally:
-                _shared_handler_contexts.pop(key, None)
+            _cleanup_handler_key(key, sim)
 
         request.addfinalizer(_cleanup)
 

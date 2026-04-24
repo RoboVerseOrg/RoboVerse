@@ -7,7 +7,7 @@ from itertools import chain
 import numpy as np
 import torch
 
-from metasim.types import Action, CameraState, DictEnvState, ObjectState, RobotState, TensorState
+from metasim.types import Action, ActionBatch, ActionInput, CameraState, CompatActionInput, DictEnvState, ObjectState, RobotState, TensorState
 
 try:
     from metasim.sim.base import BaseSimHandler
@@ -119,6 +119,71 @@ def _dof_array_to_dict(dof_array, joint_names: list[str]) -> dict[str, float]:
     assert isinstance(dof_array, (list, np.ndarray))
     joint_names = sorted(joint_names)
     return {jn: dof_array[i] for i, jn in enumerate(joint_names)}
+
+
+def action_input_to_tensor(
+    handler: BaseSimHandler, actions: CompatActionInput, device: str | torch.device = "cpu"
+) -> torch.Tensor:
+    """Normalize supported action inputs into a batched position-target tensor in handler/API order.
+
+    For dict-batch inputs, this helper reads only ``dof_pos_target`` and ignores
+    ``dof_vel_target`` / ``dof_effort_target``. Backends that need non-position
+    semantics on dict actions must handle that path explicitly instead of routing
+    those actions through this helper.
+    """
+    if isinstance(actions, torch.Tensor):
+        action_tensor = actions.to(device=device, dtype=torch.float32)
+    elif isinstance(actions, np.ndarray):
+        action_tensor = torch.as_tensor(actions, dtype=torch.float32, device=device)
+    elif isinstance(actions, list):
+        joint_names_by_robot = {robot.name: handler.get_joint_names(robot.name, sort=True) for robot in handler.robots}
+        action_dim = sum(len(joint_names) for joint_names in joint_names_by_robot.values())
+        action_tensor = torch.zeros((len(actions), action_dim), dtype=torch.float32, device=device)
+
+        for env_id, action in enumerate(actions):
+            offset = 0
+            for robot in handler.robots:
+                joint_names = joint_names_by_robot[robot.name]
+                joint_targets = (action.get(robot.name) or {}).get("dof_pos_target") or {}
+                for joint_id, joint_name in enumerate(joint_names):
+                    if joint_name in joint_targets:
+                        action_tensor[env_id, offset + joint_id] = float(joint_targets[joint_name])
+                offset += len(joint_names)
+    else:
+        raise TypeError(f"Unsupported action type: {type(actions)!r}")
+
+    if action_tensor.ndim == 1:
+        action_tensor = action_tensor.unsqueeze(0)
+    elif action_tensor.ndim != 2:
+        raise ValueError(f"Expected actions with rank 1 or 2, got shape {tuple(action_tensor.shape)}")
+
+    expected_dim = sum(len(handler.get_joint_names(robot.name, sort=True)) for robot in handler.robots)
+    if action_tensor.shape[1] != expected_dim:
+        raise ValueError(f"Expected action width {expected_dim}, got {action_tensor.shape[1]}.")
+
+    return action_tensor
+
+
+def action_input_to_dict_batch(handler: BaseSimHandler, actions: CompatActionInput) -> ActionBatch:
+    """Normalize supported action inputs into a batched list of dict actions."""
+    if isinstance(actions, list):
+        return actions
+
+    action_tensor = action_input_to_tensor(handler, actions, device="cpu").detach().cpu()
+    action_batch: ActionBatch = []
+
+    for env_id in range(action_tensor.shape[0]):
+        env_action: Action = {}
+        offset = 0
+        for robot in handler.robots:
+            joint_names = handler.get_joint_names(robot.name, sort=True)
+            env_action[robot.name] = {
+                "dof_pos_target": _dof_tensor_to_dict(action_tensor[env_id, offset : offset + len(joint_names)], joint_names)
+            }
+            offset += len(joint_names)
+        action_batch.append(env_action)
+
+    return action_batch
 
 
 def _body_tensor_to_dict(body_tensor: torch.Tensor, body_names: list[str]) -> dict[str, float]:
@@ -366,7 +431,7 @@ def list_state_to_tensor(
 
 
 def adapt_actions_to_dict(
-    handler: BaseSimHandler, actions: list[Action] | TensorState
+    handler: BaseSimHandler, actions: CompatActionInput
 ) -> dict[str, dict[str, dict[str, float]]]:
     """Adapt actions to the format of single env handlers.
 
@@ -374,22 +439,5 @@ def adapt_actions_to_dict(
         handler: The handler of the simulation.
         actions: The actions to adapt.
     """
-    if isinstance(actions, torch.Tensor):
-        if len(actions.shape) == 2:
-            actions = actions[0]
-        actions = {
-            handler.robot.name: {
-                "dof_pos_target": _dof_tensor_to_dict(actions, handler.get_joint_names(handler.robot.name))
-            }
-        }
-    elif isinstance(actions, np.ndarray):
-        if len(actions.shape) == 2:
-            actions = actions[0]
-        actions = {
-            handler.robot.name: {
-                "dof_pos_target": _dof_array_to_dict(actions, handler.get_joint_names(handler.robot.name))
-            }
-        }
-    elif isinstance(actions, list):
-        actions = actions[0]
-    return actions
+    action_batch = action_input_to_dict_batch(handler, actions)
+    return action_batch[0] if action_batch else {}

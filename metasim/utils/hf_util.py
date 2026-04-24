@@ -92,10 +92,17 @@ def check_and_download_single(filepath: str):
         # Use POSIX-style paths for the HF dataset API (Windows uses backslashes by default)
         relpath = os.path.relpath(filepath, LOCAL_DIR)
         relpath_posix = relpath.replace(os.sep, "/")
-        hf_exists = hf_api.file_exists(REPO_ID, relpath_posix, repo_type="dataset")
+        is_optional_file = filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga"))
+        try:
+            hf_exists = hf_api.file_exists(REPO_ID, relpath_posix, repo_type="dataset")
+        except Exception as e:
+            if is_optional_file:
+                log.warning(f"Optional file {filepath} could not be checked in HuggingFace dataset ({e}), skipping.")
+                return
+            raise
 
         if not hf_exists:
-            if filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga")):
+            if is_optional_file:
                 log.warning(f"Optional file {filepath} not found in HuggingFace dataset, skipping.")
                 return
 

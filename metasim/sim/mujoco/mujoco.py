@@ -52,8 +52,8 @@ import threading
 
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
-from metasim.types import Action
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, state_tensor_to_nested
+from metasim.types import CompatActionInput
+from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_dict_batch, state_tensor_to_nested
 from metasim.utils.terrain_utils import TerrainGenerator
 
 try:
@@ -100,7 +100,7 @@ def apply_dm_control_struct_compat_patch() -> None:
 class MujocoHandler(BaseSimHandler):
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
-        self._actions_cache: list[Action] = []
+        self._actions_cache: CompatActionInput = []
 
         if scenario.num_envs > 1:
             raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
@@ -235,29 +235,39 @@ class MujocoHandler(BaseSimHandler):
         return super().launch()
 
     def _init_torque_control(self):
-        """Initialize torque control parameters based on robot configuration."""
+        """Initialize position actuators from config first, asset second."""
         for robot_idx, robot in enumerate(self.robots):
             joint_names = self._get_joint_names(robot.name, sort=True)
             self._robot_num_dofs.append(len(joint_names))
-            for i, joint_name in enumerate(joint_names):
+            for joint_name in joint_names:
                 # Resolve control mode from this robot's config
                 i_control_mode = robot.control_type.get(joint_name, "position") if robot.control_type else "position"
-                # if i_control_mode == "position":
-                #     # Set stiffness (kp) for position actuators and joint damping if provided in the robot config.
-                #     # Note: MuJoCo uses actuator_gainprm[..., 0] for position actuator kp, and dof_damping for joint damping.
-                #     actuator_cfg = robot.actuators.get(joint_name) if robot.actuators else None
-                #     full_name = f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
-                #     if actuator_cfg is not None:
-                #         # Apply actuator stiffness (kp) to the corresponding position actuator
-                #         if actuator_cfg.stiffness is not None:
-                #             actuator = self.physics.model.actuator(full_name)
-                #             self.physics.model.actuator_gainprm[actuator.id, 0] = actuator_cfg.stiffness
+                if i_control_mode != "position":
+                    continue
 
-                #         # Apply joint damping to the corresponding DOF
-                #         if actuator_cfg.damping is not None:
-                #             j = self.physics.model.joint(full_name)
-                #             dof_adr = self.physics.model.jnt_dofadr[j.id]
-                #             self.physics.model.dof_damping[dof_adr] = actuator_cfg.damping
+                actuator_cfg = robot.actuators.get(joint_name) if robot.actuators else None
+                if actuator_cfg is None:
+                    continue
+
+                full_name = f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
+                actuator = self.physics.model.actuator(full_name)
+                actuator_id = actuator.id
+
+                # MuJoCo actuators loaded from the MJCF asset already encode a
+                # servo law. Override those runtime parameters from the MetaSim
+                # config when explicit values are provided, and otherwise keep
+                # the asset-authored values.
+                if actuator_cfg.stiffness is not None:
+                    stiffness = float(actuator_cfg.stiffness)
+                    self.physics.model.actuator_gainprm[actuator_id, 0] = stiffness
+                    self.physics.model.actuator_biasprm[actuator_id, 1] = -stiffness
+
+                if actuator_cfg.damping is not None:
+                    self.physics.model.actuator_biasprm[actuator_id, 2] = -float(actuator_cfg.damping)
+
+                if actuator_cfg.effort_limit_sim is not None:
+                    force_limit = float(actuator_cfg.effort_limit_sim)
+                    self.physics.model.actuator_forcerange[actuator.id] = [-force_limit, force_limit]
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):
         """Apply scale to all geoms, bodies, and sites in the MJCF model."""
@@ -368,6 +378,7 @@ class MujocoHandler(BaseSimHandler):
         """Initialize MuJoCo model with optional scene support."""
 
         mjcf_model = self._init_scene()
+        self._configure_self_collision_policy(mjcf_model)
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
@@ -390,6 +401,17 @@ class MujocoHandler(BaseSimHandler):
         else:
             mjcf_model = mjcf.RootElement()
         return mjcf_model
+
+    def _configure_self_collision_policy(self, mjcf_model: mjcf.RootElement) -> None:
+        """Use MuJoCo's native dynamic contact pipeline for robot self-collision.
+
+        MuJoCo filters parent-child contacts by default. When any robot enables
+        self-collision, disable that global filter so same-tree collisions are
+        handled dynamically. Robots that disable self-collision are handled with
+        body-pair excludes in `_exclude_robot_self_collisions`.
+        """
+        if any(robot.enabled_self_collisions for robot in self.robots):
+            mjcf_model.option.flag.filterparent = "disable"
 
     def _add_ground(self, mjcf_model: mjcf.RootElement) -> None:
         if self.scenario.ground is not None:
@@ -587,8 +609,17 @@ class MujocoHandler(BaseSimHandler):
                 robot_attached.pos = list(robot.default_position)
             if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
                 robot_attached.quat = robot.default_orientation
+            if not robot.enabled_self_collisions:
+                self._exclude_robot_self_collisions(mjcf_model, robot_attached)
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
+
+    def _exclude_robot_self_collisions(self, mjcf_model: mjcf.RootElement, robot_attached) -> None:
+        """Disable all same-robot contacts for robots that opt out of self-collision."""
+        robot_bodies = [body for body in robot_attached.find_all("body") if body.name]
+        for i, body1 in enumerate(robot_bodies):
+            for body2 in robot_bodies[i + 1 :]:
+                mjcf_model.contact.add("exclude", body1=body1.full_identifier, body2=body2.full_identifier)
 
     def _get_actuator_states(self, obj_name):
         """Get actuator states (targets and forces)."""
@@ -942,25 +973,13 @@ class MujocoHandler(BaseSimHandler):
             self.physics.data.xfrc_applied[body_id, 0:3] = force_vec
             self.physics.data.xfrc_applied[body_id, 3:6] = 0
 
-    def _set_dof_targets(self, actions) -> None:
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
         self._actions_cache = actions
-
-        # Fast path: tensor-like controls
-        if isinstance(actions, torch.Tensor):
-            actions = actions.squeeze()
-            vec = actions.detach().to(dtype=torch.float32, device="cpu").numpy()
-            robot_idx = 0
-            joint_names = self.get_joint_names(self.robot.name, sort=True)
-            for i in range(self._robot_num_dofs[robot_idx]):
-                joint_name = joint_names[i]
-                actuator_id = self.physics.model.actuator(f"{self._mujoco_robot_names[robot_idx]}{joint_name}").id
-                self.physics.data.ctrl[actuator_id] = vec[i]
+        action_batch = action_input_to_dict_batch(self, actions)
+        if not action_batch:
             return
-
-        # Dict-list path
-        if isinstance(actions, list):  # Handling single-env parallell case
-            actions = actions[0]
+        actions = action_batch[0]
         for robot_idx, robot in enumerate(self.robots):
             payload = actions[robot.name]
 
@@ -976,7 +995,7 @@ class MujocoHandler(BaseSimHandler):
                 self._current_vel_target = None
 
             # Position targets
-            joint_targets = payload["dof_pos_target"]
+            joint_targets = payload.get("dof_pos_target") or {}
             jnames = self._get_joint_names(robot.name, sort=True)
             self._current_action = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
             for i, jn in enumerate(jnames):
@@ -1196,7 +1215,7 @@ class MujocoHandler(BaseSimHandler):
         return [self._episode_length_buf]
 
     @property
-    def actions_cache(self) -> list[Action]:
+    def actions_cache(self) -> CompatActionInput:
         return self._actions_cache
 
     @property
