@@ -7,7 +7,16 @@ from itertools import chain
 import numpy as np
 import torch
 
-from metasim.types import Action, ActionBatch, ActionInput, CameraState, CompatActionInput, DictEnvState, ObjectState, RobotState, TensorState
+from metasim.types import (
+    Action,
+    ActionBatch,
+    CameraState,
+    CompatActionInput,
+    DictEnvState,
+    ObjectState,
+    RobotState,
+    TensorState,
+)
 
 try:
     from metasim.sim.base import BaseSimHandler
@@ -178,7 +187,9 @@ def action_input_to_dict_batch(handler: BaseSimHandler, actions: CompatActionInp
         for robot in handler.robots:
             joint_names = handler.get_joint_names(robot.name, sort=True)
             env_action[robot.name] = {
-                "dof_pos_target": _dof_tensor_to_dict(action_tensor[env_id, offset : offset + len(joint_names)], joint_names)
+                "dof_pos_target": _dof_tensor_to_dict(
+                    action_tensor[env_id, offset : offset + len(joint_names)], joint_names
+                )
             }
             offset += len(joint_names)
         action_batch.append(env_action)

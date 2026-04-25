@@ -33,7 +33,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, CompatActionInput, DictEnvState
+from metasim.types import CompatActionInput
 from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict

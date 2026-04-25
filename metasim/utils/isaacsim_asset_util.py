@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import tempfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from loguru import logger as log
 
@@ -26,15 +26,13 @@ def _patch_urdf_mesh_paths_to_absolute(urdf_path: Path) -> str:
         if filename.startswith("package://"):
             rel_path = filename.split("package://", 1)[1]
             candidates.append(urdf_path.parent / rel_path)
-        candidates.extend(
-            [
-                urdf_path.parent / filename,
-                urdf_path.parent / "meshes" / filename,
-                urdf_path.parent / "visual" / filename,
-                urdf_path.parent / "collision" / filename,
-                urdf_path.parent.parent / "meshes" / filename,
-            ]
-        )
+        candidates.extend([
+            urdf_path.parent / filename,
+            urdf_path.parent / "meshes" / filename,
+            urdf_path.parent / "visual" / filename,
+            urdf_path.parent / "collision" / filename,
+            urdf_path.parent.parent / "meshes" / filename,
+        ])
 
         resolved = next((candidate.resolve() for candidate in candidates if candidate.exists()), None)
         if resolved is None:
@@ -57,7 +55,6 @@ def convert_urdf_to_usd_cached(urdf_path: str) -> str:
     The generated USD is placed next to the URDF, matching the existing
     SceneRandomizer convention.
     """
-
     urdf_path_obj = Path(urdf_path).expanduser().resolve()
     if not urdf_path_obj.is_file():
         raise FileNotFoundError(f"URDF file not found: {urdf_path_obj}")
@@ -106,7 +103,6 @@ def convert_urdf_to_usd_cached(urdf_path: str) -> str:
 
 def resolve_isaacsim_file_path(cfg) -> str:
     """Resolve the concrete file path IsaacSim should load for a config object."""
-
     usd_path = getattr(cfg, "usd_path", None)
     if usd_path:
         return str(Path(os.path.expanduser(str(usd_path))).resolve())

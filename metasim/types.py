@@ -114,7 +114,7 @@ def _validate_num_envs(name: str, value: torch.Tensor | None, num_envs: int) -> 
     return tensor
 
 
-def _maybe_num_envs_from_camera_state(state: "CameraState") -> int | None:
+def _maybe_num_envs_from_camera_state(state: CameraState) -> int | None:
     for tensor in (
         state.rgb,
         state.depth,
@@ -204,7 +204,9 @@ class RobotState:
         joint_pos = _validate_num_envs("joint_pos", _validate_rank("joint_pos", self.joint_pos, 2), num_envs)
         joint_vel = _validate_num_envs("joint_vel", _validate_rank("joint_vel", self.joint_vel, 2), num_envs)
         if joint_vel.shape != joint_pos.shape:
-            raise ValueError(f"joint_vel must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(joint_vel.shape)}")
+            raise ValueError(
+                f"joint_vel must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(joint_vel.shape)}"
+            )
 
         for name, target in (
             ("joint_pos_target", self.joint_pos_target),
@@ -215,7 +217,9 @@ class RobotState:
                 continue
             target_tensor = _validate_num_envs(name, _validate_rank(name, target, 2), num_envs)
             if target_tensor.shape != joint_pos.shape:
-                raise ValueError(f"{name} must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(target_tensor.shape)}")
+                raise ValueError(
+                    f"{name} must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(target_tensor.shape)}"
+                )
 
 
 @dataclass
@@ -355,7 +359,9 @@ class TensorState:
             if inferred_num_envs is None:
                 inferred_num_envs = camera_num_envs
             elif camera_num_envs != inferred_num_envs:
-                raise ValueError(f"TensorState cameras must agree on num_envs={inferred_num_envs}, got {camera_num_envs}")
+                raise ValueError(
+                    f"TensorState cameras must agree on num_envs={inferred_num_envs}, got {camera_num_envs}"
+                )
 
         if isinstance(self.extras, dict) and inferred_num_envs is not None:
             for key, value in self.extras.items():

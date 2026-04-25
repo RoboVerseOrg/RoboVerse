@@ -31,12 +31,8 @@ def test_self_collision(handler: BaseSimHandler):
 
     dof_targets = [
         {
-            "franka1": {
-                "dof_pos_target": robot_targets
-            },
-            "franka2": {
-                "dof_pos_target": robot_targets
-            },
+            "franka1": {"dof_pos_target": robot_targets},
+            "franka2": {"dof_pos_target": robot_targets},
         }
     ] * handler.scenario.num_envs
     handler.set_dof_targets(dof_targets)

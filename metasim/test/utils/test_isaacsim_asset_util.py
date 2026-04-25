@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pathlib
-import sys
-from dataclasses import dataclass
 
 import pytest
 import rootutils

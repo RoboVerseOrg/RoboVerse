@@ -25,7 +25,7 @@ from metasim.scenario.objects import (
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, CompatActionInput, DictEnvState
+from metasim.types import CompatActionInput, DictEnvState
 from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor
 
@@ -476,7 +476,7 @@ class GenesisHandler(BaseSimHandler):
 
                 effort = []
                 for env_id in range(self.num_envs):
-                    robot_action = (actions[env_id].get(obj_name) or {})
+                    robot_action = actions[env_id].get(obj_name) or {}
                     effort_targets = robot_action.get("dof_effort_target") or {}
                     effort.append([effort_targets.get(jn, 0.0) for jn in joint_names])
 
@@ -501,7 +501,7 @@ class GenesisHandler(BaseSimHandler):
 
                 position = []
                 for env_id in range(self.num_envs):
-                    robot_action = (actions[env_id].get(obj_name) or {})
+                    robot_action = actions[env_id].get(obj_name) or {}
                     pos_targets = robot_action.get("dof_pos_target") or {}
                     position.append([pos_targets.get(jn, 0.0) for jn in joint_names])
 

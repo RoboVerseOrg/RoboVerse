@@ -178,7 +178,11 @@ def _get_or_create_handler(param, request, isaacsim_app):
 
     if key not in _shared_handler_contexts:
         if sim in _SINGLE_ACTIVE_HANDLER_SIMS:
-            stale_keys = [existing_key for existing_key in _shared_handler_contexts if existing_key[2] == sim and existing_key != key]
+            stale_keys = [
+                existing_key
+                for existing_key in _shared_handler_contexts
+                if existing_key[2] == sim and existing_key != key
+            ]
             for stale_key in stale_keys:
                 _cleanup_handler_key(stale_key, sim)
 

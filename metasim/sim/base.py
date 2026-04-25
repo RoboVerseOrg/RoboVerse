@@ -3,7 +3,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, overload
 
-import numpy as np
 import torch
 
 if TYPE_CHECKING:

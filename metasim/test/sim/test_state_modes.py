@@ -200,9 +200,7 @@ def test_handler_accepts_dict_actions(handler):
     dict_actions = [
         {
             robot.name: {
-                "dof_pos_target": {
-                    joint_name: 0.0 for joint_name in handler.get_joint_names(robot.name, sort=True)
-                }
+                "dof_pos_target": {joint_name: 0.0 for joint_name in handler.get_joint_names(robot.name, sort=True)}
             }
             for robot in handler.robots
         }

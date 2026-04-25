@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import torch
 from loguru import logger as log
-import numpy as np
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -200,9 +199,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                     remote.send(("set_dof_targets", (action_tensor.clone(),)))
                 return
             if action_tensor.shape[0] != len(self.remotes):
-                raise ValueError(
-                    f"Expected tensor batch size {len(self.remotes)}, got {action_tensor.shape[0]}."
-                )
+                raise ValueError(f"Expected tensor batch size {len(self.remotes)}, got {action_tensor.shape[0]}.")
             for i, remote in enumerate(self.remotes):
                 remote.send(("set_dof_targets", (action_tensor[i : i + 1].clone(),)))
 

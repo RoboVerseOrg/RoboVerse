@@ -30,7 +30,14 @@ from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, Primi
 from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import CompatActionInput
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor, state_tensor_to_nested
+from metasim.utils.state import (
+    CameraState,
+    ObjectState,
+    RobotState,
+    TensorState,
+    action_input_to_tensor,
+    state_tensor_to_nested,
+)
 
 
 def _physics_mode_name(obj) -> str | None:
