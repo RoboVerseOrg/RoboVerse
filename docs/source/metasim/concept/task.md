@@ -115,14 +115,32 @@ env = make_vec(
 
 ### 4.1 Discovery paths
 
-Task modules under these packages are found when discovery runs (not on every `import metasim`):
+Task modules under the built-in example package are found when discovery runs (not on every `import metasim`):
 
-* `metasim/example/example_pack/tasks`
-* `roboverse_pack/tasks`
+* `metasim.example.example_pack.tasks`
+
+Additional task packages are opt-in. MetaSim discovers them from, in order:
+
+* installed entry points in the `metasim.packages` or `metasim.tasks` groups
+* `metasim.toml` or `[tool.metasim.packages]` in `pyproject.toml`
+* the file pointed to by `METASIM_CONFIG`
+* `METASIM_PACKAGES` or `METASIM_TASK_PACKAGES`
 
 Discovery is triggered by `get_task_class`, `list_tasks`, or `metasim.register_gym_envs()`.
 
-> For new project tasks, place modules under **`roboverse_pack/tasks`**.
+For source-checkout development in this repository, the root `metasim.toml` opts in `roboverse_pack` as a content package:
+
+```toml
+[packages]
+roots = ["roboverse_pack"]
+```
+
+For a separate project, either install a package with entry points or add a local `metasim.toml`:
+
+```toml
+[packages]
+tasks = ["my_project.tasks"]
+```
 
 ### 4.2 How to register a task
 
@@ -148,7 +166,7 @@ class MyExampleTask(BaseTaskEnv):
 
 ### 4.3 Using the Task Template
 
-For quickly creating a new task, we provide a **task template** at `roboverse_pack/tasks/task_template.py`.
+For quickly creating a new task, this repository includes a **task template** at `roboverse_pack/tasks/task_template.py`.
 
 The template includes:
 
@@ -159,11 +177,12 @@ The template includes:
 
 **Usage:**
 
-1. Copy `task_template.py` to your desired location under `roboverse_pack/tasks/`
+1. Copy `task_template.py` to your desired task package, for example `my_project/tasks/`
 2. Rename the file and class to match your task name
 3. Update the `@register_task()` decorator with your task ID
-4. Modify the scenario, reward, observation logic as needed
-5. The task will be auto-imported and registered
+4. Add the task package to entry points, `metasim.toml`, or `METASIM_TASK_PACKAGES`
+5. Modify the scenario, reward, observation logic as needed
+6. The task will be imported and registered when task discovery runs
 
 ---
 

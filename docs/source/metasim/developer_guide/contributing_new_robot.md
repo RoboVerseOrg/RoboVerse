@@ -1,7 +1,7 @@
 # Contributing New Robots
 
 ## 1. Create a Robot Configuration File
-Define a new robot in `roboverse_pack/robots/{robot_name}_cfg.py`.
+Define a new robot configuration in a Python package, for example `my_project/robots/{robot_name}_cfg.py`.
 
 Remember you can always inherit the base robot config class `metasim/scenario/robot.py:RobotCfg`, and add new fields to the robot configs and use it in your own usecase. If you want to add new features to the base config class, be carefull and make sure the feature will be globally available, used by all simulators and multiple scenarios.
 
@@ -27,10 +27,27 @@ The following terms are needed if you want to use end-effector control:
 - ``curobo_tcp_rel_rot``
 
 
-A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/roboverse_pack/robots/franka_cfg.py) and [h1_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/roboverse_pack/robots/h1_cfg.py), which are both well-tested.
-<!-- A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/franka_cfg.py) and [h1_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/cfg/robots/h1_cfg.py), which are both well-tested. -->
+A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/example/example_pack/robots/franka_cfg.py), which is used by the built-in example package.
 
-Also, please import the robot configuration class in `metasim/cfg/robots/__init__.py`. Please make sure the robot class name is in [camel case](https://en.wikipedia.org/wiki/Camel_case) (e.g. `FrankaPandaCfg`).
+Also, please import the robot configuration class from your robot package's `__init__.py`. Please make sure the robot class name is in [camel case](https://en.wikipedia.org/wiki/Camel_case) (e.g. `FrankaPandaCfg`).
+
+MetaSim discovers built-in example robots by default. Additional robot packages are opt-in through entry points, `metasim.toml`, `[tool.metasim.packages]`, or environment variables.
+
+For local development, add a `metasim.toml` file at your project root:
+
+```toml
+[packages]
+robots = ["my_project.robots"]
+```
+
+If your package follows the same layout for multiple content types, use a package root instead:
+
+```toml
+[packages]
+roots = ["my_project"]
+```
+
+`roots` expands to `my_project.tasks`, `my_project.robots`, `my_project.scenes`, and `my_project.grounds`.
 
 ## 2. Test the Reliability
 Run the following command to test the reliability of the robot:

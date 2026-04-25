@@ -8,7 +8,7 @@ from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 
-from roboverse_pack.robots.franka_cfg import FrankaCfg
+from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
 
 
 # Comment: newton simulator does not have hard joint limit enforcement so we skip it

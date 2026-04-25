@@ -14,6 +14,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.sim.parallel import ParallelSimWrapper
 from metasim.utils import is_camel_case, is_snake_case, to_camel_case
+from metasim.utils.package_discovery import get_package_candidates
 
 
 def get_handler(scenario, device=None):
@@ -152,6 +153,35 @@ def get_sim_handler_class(sim: SimType):
         raise ValueError(f"Invalid simulator type: {sim}")
 
 
+def _local_python_modules(cwd: str) -> list[str]:
+    return [
+        os.path.splitext(fname)[0]
+        for fname in os.listdir(cwd)
+        if fname.endswith(".py") and not fname.startswith("_")
+    ]
+
+
+def _lookup_cfg(attr_name: str, candidate_packages: list[str], cfg_kind: str):
+    errors: list[str] = []
+    for pkg_name in candidate_packages:
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except Exception as e:
+            errors.append(f"{pkg_name}: import failed ({e})")
+            continue
+
+        try:
+            cfg_cls = getattr(pkg, attr_name)
+            return cfg_cls()
+        except AttributeError:
+            continue
+        except Exception as e:
+            errors.append(f"{pkg_name}: lookup failed ({e})")
+
+    searched_in = ", ".join(candidate_packages)
+    raise ValueError(f"{cfg_kind} config class '{attr_name}' not found in [{searched_in}]. Errors: {errors}")
+
+
 def get_robot(robot_name: str) -> RobotCfg:
     """Get the robot cfg instance from the robot name.
 
@@ -168,43 +198,18 @@ def get_robot(robot_name: str) -> RobotCfg:
     else:
         raise ValueError(f"Invalid robot name: {robot_name}, should be in either camel case or snake case")
 
-    # Search across both official and example robot config packages (union)
-    candidate_packages = [
-        "roboverse_pack.robots",
-        "metasim.example.example_pack.robots",
-    ]
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
     attr_name = f"{RobotName}Cfg"
-    errors: list[str] = []
-
-    for fname in os.listdir(cwd):
-        if fname.endswith(".py") and not fname.startswith("_"):
-            modname = os.path.splitext(fname)[0]
-            candidate_packages.append(modname)
-
-    for pkg_name in candidate_packages:
-        try:
-            pkg = importlib.import_module(pkg_name)
-        except Exception as e:
-            errors.append(f"{pkg_name}: import failed ({e})")
-            continue
-
-        # Fast path: attribute re-exported from package __init__
-        try:
-            robot_cls = getattr(pkg, attr_name)
-            return robot_cls()
-        except AttributeError:
-            pass
-
-        except Exception as e:
-            errors.append(f"{pkg_name}: scan failed ({e})")
-
-    # Not found in any package
-    searched_in = ", ".join(candidate_packages)
-    raise ValueError(f"Robot config class '{attr_name}' not found in [{searched_in}]. Errors: {errors}")
+    candidate_packages = get_package_candidates(
+        "robots",
+        defaults=["metasim.example.example_pack.robots"],
+        local_modules=_local_python_modules(cwd),
+        cwd=cwd,
+    )
+    return _lookup_cfg(attr_name, candidate_packages, "Robot")
 
 
 def get_scene(scene_name: str) -> SceneCfg:
@@ -226,32 +231,17 @@ def get_scene(scene_name: str) -> SceneCfg:
     else:
         raise ValueError(f"Invalid scene name: {scene_name}")
 
-    candidate_packages = [
-        "roboverse_pack.scenes",
-    ]
-
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    for fname in os.listdir(cwd):
-        if fname.endswith(".py") and not fname.startswith("_"):
-            candidate_packages.append(os.path.splitext(fname)[0])
-
     attr_name = f"{SceneName}Cfg"
-    errors: list[str] = []
-    for pkg_name in candidate_packages:
-        try:
-            pkg = importlib.import_module(pkg_name)
-            scene_cls = getattr(pkg, attr_name)
-            return scene_cls()
-        except AttributeError:
-            continue
-        except Exception as e:
-            errors.append(f"{pkg_name}: {e}")
-            continue
-
-    raise ValueError(f"Scene config class '{attr_name}' not found in {candidate_packages}. Errors: {errors}")
+    candidate_packages = get_package_candidates(
+        "scenes",
+        local_modules=_local_python_modules(cwd),
+        cwd=cwd,
+    )
+    return _lookup_cfg(attr_name, candidate_packages, "Scene")
 
 
 def get_ground(ground_name: str) -> GroundCfg:
@@ -263,29 +253,14 @@ def get_ground(ground_name: str) -> GroundCfg:
     else:
         raise ValueError(f"Invalid ground name: {ground_name}")
 
-    candidate_packages = [
-        "roboverse_pack.grounds",
-    ]
-
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    for fname in os.listdir(cwd):
-        if fname.endswith(".py") and not fname.startswith("_"):
-            candidate_packages.append(os.path.splitext(fname)[0])
-
     attr_name = f"{GroundName}Cfg"
-    errors: list[str] = []
-
-    for pkg_name in candidate_packages:
-        try:
-            pkg = importlib.import_module(pkg_name)
-            ground_cls = getattr(pkg, attr_name)
-            return ground_cls()
-        except AttributeError:
-            continue
-        except Exception as e:
-            errors.append(f"{pkg_name}: {e}")
-
-    raise ValueError(f"Ground config class '{attr_name}' not found in {candidate_packages}. Errors: {errors}")
+    candidate_packages = get_package_candidates(
+        "grounds",
+        local_modules=_local_python_modules(cwd),
+        cwd=cwd,
+    )
+    return _lookup_cfg(attr_name, candidate_packages, "Ground")

@@ -14,10 +14,10 @@ def get_randomization_scenario(sim: str, num_envs: int) -> ScenarioCfg:
         raise ValueError(f"Unsupported simulator '{sim}' for randomization tests")
 
     from metasim.constants import PhysicStateType
+    from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
     from metasim.scenario.cameras import PinholeCameraCfg
     from metasim.scenario.lights import DiskLightCfg
     from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
-    from roboverse_pack.robots.franka_cfg import FrankaCfg
 
     return ScenarioCfg(
         simulator=sim,

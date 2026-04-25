@@ -15,6 +15,7 @@ dependencies = [
     "torchvision",
     "tqdm",
     "tyro",
+    "tomli; python_version < '3.11'",
     "portalocker",
     "dataclasses-json",
     "trimesh",
@@ -122,8 +123,8 @@ extend-exclude = [
     "docker"
 ]
 
-[tool.setuptools]
-packages = ["metasim", "roboverse_pack", "roboverse_learn"]
+[tool.setuptools.packages.find]
+include = ["metasim", "metasim.*"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
