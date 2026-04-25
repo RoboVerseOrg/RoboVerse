@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.test.conftest import _SUPPORTED_SIMS, register_shared_suite
-from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 
 def get_1_robot_scenario(sim: str, num_envs: int) -> ScenarioCfg:

@@ -11,9 +11,9 @@ def get_query_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     if sim not in _SUPPORTED_SIMS:
         raise ValueError(f"Unsupported simulator '{sim}' for query tests")
 
+    from metasim.example.example_pack.robots.g1_cfg import G1Dof29Cfg
     from metasim.scenario.lights import DomeLightCfg
     from metasim.scenario.simulator_params import SimParamCfg
-    from roboverse_pack.robots.g1_cfg import G1Dof29Cfg
 
     sim_params = SimParamCfg(
         dt=0.005,

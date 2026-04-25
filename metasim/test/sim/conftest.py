@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from metasim.constants import PhysicStateType
+from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.test.conftest import _SUPPORTED_SIMS, register_shared_suite
-from roboverse_pack.robots.franka_cfg import FrankaCfg
 
 
 def get_state_consistency_scenario(sim: str, num_envs: int) -> ScenarioCfg:

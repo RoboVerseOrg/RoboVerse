@@ -8,6 +8,7 @@ from importlib import import_module
 from loguru import logger as log
 
 from metasim.task.base import BaseTaskEnv
+from metasim.utils.package_discovery import get_package_candidates
 
 # Global registry mapping lowercase names to task wrapper classes
 TASK_REGISTRY = {}
@@ -46,39 +47,31 @@ def register_task(*names):
 
 
 def _discover_task_modules() -> None:
-    """Import modules from known task packages so @register_task runs.
-
-    Scans these packages (if available):
-      - metasim.example.example_pack.tasks
-      - roboverse_pack.tasks
-
-
-    Safe to call multiple times; import errors are ignored to avoid breaking
-    discovery due to one bad module.
-    """
-    packages_to_scan = [
-        "metasim.example.example_pack.tasks",
-        "roboverse_pack.tasks",
-    ]
-    if os.environ.get("METASIM_TASK_PACKAGES", None):
-        packages = os.environ["METASIM_TASK_PACKAGES"].split(":")
-        log.info(f"Scanning additional task packages: {packages}")
-        packages_to_scan.extend(packages)
-
+    """Import configured task packages so @register_task decorators run."""
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    for fname in os.listdir(cwd):
-        if fname.endswith("task.py") and fname.startswith("_"):
-            modname = os.path.splitext(fname)[0]
-            packages_to_scan.append(modname)
+    local_task_modules = [
+        os.path.splitext(fname)[0]
+        for fname in os.listdir(cwd)
+        if fname.endswith("task.py") and fname.startswith("_")
+    ]
+    packages_to_scan = get_package_candidates(
+        "tasks",
+        defaults=["metasim.example.example_pack.tasks"],
+        local_modules=local_task_modules,
+        cwd=cwd,
+    )
+
     for pkg_name in packages_to_scan:
         try:
             # Import the root package
             pkg = import_module(pkg_name)
         except Exception as e:
-            log.error(f"Task discovery: failed to import package '{pkg_name}': {e}")
+            err_str = f"{type(e).__name__}: {e}"
+            _DISCOVERY_FAILURES[pkg_name] = err_str
+            log.error(f"Task discovery: failed to import package '{pkg_name}': {err_str}")
             continue
 
         try:

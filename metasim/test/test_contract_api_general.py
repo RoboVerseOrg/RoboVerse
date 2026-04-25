@@ -100,16 +100,6 @@ def test_task_info_alias_is_used_in_public_task_apis():
                 "step": "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]",
             }
         },
-        "roboverse_pack/tasks/humanoid/base/base_legged_robot.py": {
-            "LeggedRobotTask": {
-                "step": "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]",
-            }
-        },
-        "roboverse_pack/tasks/beyondmimic/metasim/envs/base_legged_robot.py": {
-            "LeggedRobotTask": {
-                "step": "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]",
-            }
-        },
     }
 
     for path, class_expectations in expectations.items():
