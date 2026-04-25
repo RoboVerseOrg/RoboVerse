@@ -53,7 +53,14 @@ import threading
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import CompatActionInput
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_dict_batch, state_tensor_to_nested
+from metasim.utils.state import (
+    CameraState,
+    ObjectState,
+    RobotState,
+    TensorState,
+    action_input_to_dict_batch,
+    state_tensor_to_nested,
+)
 from metasim.utils.terrain_utils import TerrainGenerator
 
 try:

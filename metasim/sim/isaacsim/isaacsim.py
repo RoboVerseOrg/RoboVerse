@@ -31,9 +31,9 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import ActionBatch, CompatActionInput, DictEnvState
-from metasim.utils.isaacsim_asset_util import resolve_isaacsim_file_path
 from metasim.utils.dict import deep_get
 from metasim.utils.gs_util import alpha_blend_rgba_torch
+from metasim.utils.isaacsim_asset_util import resolve_isaacsim_file_path
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor
 from metasim.utils.terrain_utils import TerrainGenerator
 
@@ -770,7 +770,9 @@ class IsaacsimHandler(BaseSimHandler):
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
         self._actions_cache = actions
         dict_action_batch: ActionBatch | None = actions if isinstance(actions, list) else None
-        actions_tensor = None if dict_action_batch is not None else action_input_to_tensor(self, actions, device=self.device)
+        actions_tensor = (
+            None if dict_action_batch is not None else action_input_to_tensor(self, actions, device=self.device)
+        )
         if dict_action_batch is not None and len(dict_action_batch) != self.num_envs:
             raise ValueError(f"Expected {self.num_envs} dict actions, got {len(dict_action_batch)}.")
 
@@ -793,7 +795,9 @@ class IsaacsimHandler(BaseSimHandler):
                 continue
 
             if dict_action_batch is not None:
-                robot_targets_sorted = torch.zeros((self.num_envs, joint_count), dtype=torch.float32, device=self.device)
+                robot_targets_sorted = torch.zeros(
+                    (self.num_envs, joint_count), dtype=torch.float32, device=self.device
+                )
                 for env_id, env_action in enumerate(dict_action_batch):
                     robot_action = env_action.get(robot.name) or {}
                     if self._manual_pd_on[i] and robot_action.get("dof_effort_target") is not None:

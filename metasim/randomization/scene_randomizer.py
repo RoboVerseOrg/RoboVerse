@@ -28,8 +28,8 @@ from loguru import logger
 
 from metasim.randomization.base import BaseRandomizerType
 from metasim.randomization.core.object_registry import ObjectMetadata, ObjectRegistry
-from metasim.utils.isaacsim_asset_util import convert_urdf_to_usd_cached
 from metasim.utils.configclass import configclass
+from metasim.utils.isaacsim_asset_util import convert_urdf_to_usd_cached
 
 # =============================================================================
 # Scene Element Configurations

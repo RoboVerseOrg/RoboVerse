@@ -509,13 +509,17 @@ class IsaacgymHandler(BaseSimHandler):
             self._robot_link_dicts[robot.name] = self.gym.get_asset_rigid_body_dict(robot_asset)
             self._robot_joint_dicts[robot.name] = self.gym.get_asset_dof_dict(robot_asset)
 
-            total_torque_limits.append(torch.zeros(self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device))
+            total_torque_limits.append(
+                torch.zeros(self._num_envs, robot_num_dofs, dtype=torch.float, device=self.device)
+            )
             total_num_actions += num_actions
             total_robot_num_dofs += robot_num_dofs
 
         self._robot_num_dof = total_robot_num_dofs
         self._torque_limits = (
-            torch.cat(total_torque_limits, dim=1) if total_torque_limits else torch.zeros(self._num_envs, 0, device=self.device)
+            torch.cat(total_torque_limits, dim=1)
+            if total_torque_limits
+            else torch.zeros(self._num_envs, 0, device=self.device)
         )
         self._robot_default_dof_pos = (
             torch.cat(
@@ -683,9 +687,7 @@ class IsaacgymHandler(BaseSimHandler):
             for robot_idx, robot in enumerate(self.robots):
                 robot_pose = gymapi.Transform()
                 robot_pose.p = gymapi.Vec3(*self._robot_init_pos[robot.name])
-                robot_pose.r = gymapi.Quat(
-                    *self._robot_init_quat[robot.name][1:], self._robot_init_quat[robot.name][0]
-                )
+                robot_pose.r = gymapi.Quat(*self._robot_init_quat[robot.name][1:], self._robot_init_quat[robot.name][0])
                 robot_segmentation_id = len(self.objects) + robot_idx + 1
                 enabled_self_collisions = 0 if robot.enabled_self_collisions else 2
                 robot_handle = self.gym.create_actor(

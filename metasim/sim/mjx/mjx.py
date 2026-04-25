@@ -34,7 +34,14 @@ if TYPE_CHECKING:
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import CompatActionInput
-from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, action_input_to_tensor, list_state_to_tensor
+from metasim.utils.state import (
+    CameraState,
+    ObjectState,
+    RobotState,
+    TensorState,
+    action_input_to_tensor,
+    list_state_to_tensor,
+)
 
 from .mjx_helper import (
     j2t,
@@ -392,7 +399,10 @@ class MJXHandler(BaseSimHandler):
             for env_action in actions:
                 for robot in self.robots:
                     robot_action = env_action.get(robot.name) or {}
-                    if robot_action.get("dof_effort_target") is not None or robot_action.get("dof_vel_target") is not None:
+                    if (
+                        robot_action.get("dof_effort_target") is not None
+                        or robot_action.get("dof_vel_target") is not None
+                    ):
                         raise NotImplementedError("MJX dict actions currently support only dof_pos_target.")
         tgt_t = action_input_to_tensor(self, actions, device="cpu")
 
@@ -402,7 +412,9 @@ class MJXHandler(BaseSimHandler):
             joint_count = len(jnames)
             chunk = tgt_t[:, off : off + joint_count]
             if chunk.shape != (tgt_t.shape[0], joint_count):
-                raise ValueError(f"{robot.name}: Expected shape {(tgt_t.shape[0], joint_count)}, got {tuple(chunk.shape)}")
+                raise ValueError(
+                    f"{robot.name}: Expected shape {(tgt_t.shape[0], joint_count)}, got {tuple(chunk.shape)}"
+                )
 
             a_ids = self._robot_act_ids[robot.name]
             data = data.replace(ctrl=data.ctrl.at[:, a_ids].set(t2j(chunk)))

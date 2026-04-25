@@ -11,8 +11,8 @@ from rlbench.backend.robot import Robot
 
 from metasim.sim import BaseSimHandler
 from metasim.types import ActionBatch, CompatActionInput, DictEnvState, Extra, Obs, Reward, Success, TimeOut
-from metasim.utils.state import action_input_to_dict_batch
 from metasim.utils import to_snake_case
+from metasim.utils.state import action_input_to_dict_batch
 
 # TODO: try best to be independent from RLBench
 

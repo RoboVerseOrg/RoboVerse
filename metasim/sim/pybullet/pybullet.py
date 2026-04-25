@@ -21,7 +21,7 @@ from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, Primi
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.types import Action, CompatActionInput, DictEnvState
+from metasim.types import CompatActionInput
 
 # Optional: RoboSplatter imports for GS background rendering
 from metasim.utils.gs_util import alpha_blend_rgba

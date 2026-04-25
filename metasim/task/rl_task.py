@@ -52,7 +52,9 @@ class RLTaskEnv(BaseTaskEnv):
         self.num_obs = first_obs.shape[-1]
 
         # action bounds from joint limits in handler/API tensor order
-        self.joint_names_by_robot = {robot.name: self.handler.get_joint_names(robot.name, sort=True) for robot in self.robots}
+        self.joint_names_by_robot = {
+            robot.name: self.handler.get_joint_names(robot.name, sort=True) for robot in self.robots
+        }
         action_low = []
         action_high = []
         for robot in self.robots:
