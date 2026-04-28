@@ -116,6 +116,7 @@ concept/architecture
 concept/state
 concept/config
 concept/handler
+concept/protocol_sim
 concept/task
 concept/get_extras
 concept/randomization

@@ -13,19 +13,16 @@ dependencies = [
     "huggingface-hub",
     "imageio[ffmpeg]",
     "loguru",
-    "opencv-python",
-    "rich",
-    "rootutils",
+    "numpy",
+    "numpy-quaternion",
+    "opencv-python>=4.11,<4.12",
+    "pillow",
+    "portalocker",
+    "pyyaml",
+    "scipy",
+    "tomli; python_version < '3.11'",
     "torch",
     "torchvision",
-    "tqdm",
-    "tyro",
-    "tomli; python_version < '3.11'",
-    "portalocker",
-    "dataclasses-json",
-    "trimesh",
-    "scipy",
-    "numpy-quaternion",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +31,9 @@ dev = [
     "pytest-cov",
     "ruff",
 ]
+examples = ["rich", "rootutils", "tyro"]
+teleop = ["pygame"]
+visualization = ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
 # Simulator extras are intended for the per-simulator Python environments documented in
 # docs/source/metasim/get_started/installation.rst, not as an arbitrary co-installable matrix.
 isaacsim = [

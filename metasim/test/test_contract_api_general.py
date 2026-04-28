@@ -119,6 +119,38 @@ def test_pyproject_runtime_dependencies_are_not_test_or_roboverse_content_depend
 
 
 @pytest.mark.general
+def test_pyproject_runtime_dependencies_are_metasim_owned():
+    pyproject = _load_pyproject()
+
+    assert pyproject["project"]["dependencies"] == [
+        "gymnasium",
+        "huggingface-hub",
+        "imageio[ffmpeg]",
+        "loguru",
+        "numpy",
+        "numpy-quaternion",
+        "opencv-python>=4.11,<4.12",
+        "pillow",
+        "portalocker",
+        "pyyaml",
+        "scipy",
+        "tomli; python_version < '3.11'",
+        "torch",
+        "torchvision",
+    ]
+
+
+@pytest.mark.general
+def test_pyproject_optional_dependencies_separate_examples_and_visualization():
+    optional = _load_pyproject()["project"]["optional-dependencies"]
+
+    assert optional["dev"] == ["pytest", "pytest-cov", "ruff"]
+    assert optional["examples"] == ["rich", "rootutils", "tyro"]
+    assert optional["teleop"] == ["pygame"]
+    assert optional["visualization"] == ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
+
+
+@pytest.mark.general
 def test_metasim_task_package_does_not_ship_ad_hoc_test_module():
     assert not (REPO_ROOT / "metasim/task/test.py").exists()
 
