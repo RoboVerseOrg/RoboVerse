@@ -141,9 +141,12 @@ RUN export CONDA_PREFIX=${HOME}/conda/envs/metasim_isaacgym \
     && echo "export OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH && export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:\$LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh \
     && mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d \
     && echo "export LD_LIBRARY_PATH=\$OLD_LD_LIBRARY_PATH && unset OLD_LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
-## Fix error: No such file or directory: '.../lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'
-RUN mkdir -p ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src \
-    && cp -r ${HOME}/packages/isaacgym/python/isaacgym/_bindings/src/gymtorch ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
+## Fix error: No such file or directory: '.../site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'
+RUN eval "$(mamba shell hook --shell bash)" \
+    && mamba activate metasim_isaacgym \
+    && ISAACGYM_SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])") \
+    && mkdir -p "${ISAACGYM_SITE_PACKAGES}/isaacgym/_bindings/src" \
+    && cp -r ${HOME}/packages/isaacgym/python/isaacgym/_bindings/src/gymtorch "${ISAACGYM_SITE_PACKAGES}/isaacgym/_bindings/src/"
 
 ########################################################
 ## Helpful message

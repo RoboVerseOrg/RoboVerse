@@ -24,10 +24,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Simulator extras are intended for the per-simulator Python environments documented in
+# docs/source/metasim/get_started/installation.rst, not as an arbitrary co-installable matrix.
 isaacsim = [
     "torch==2.7.0+cu128",
     "torchvision==0.22.0+cu128",
     "isaacsim[all,extscache]==5.0.0",
+]
+isaacsim211 = [
+    "torch==2.5.1+cu118",
+    "torchvision==0.20.1+cu118",
+    "isaacsim[all,extscache]==4.5.0",
 ]
 isaacgym = [
     "numpy<2",
@@ -125,6 +132,9 @@ extend-exclude = [
 
 [tool.setuptools.packages.find]
 include = ["metasim", "metasim.*"]
+
+[tool.setuptools.package-data]
+metasim = ["data/**/*"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
