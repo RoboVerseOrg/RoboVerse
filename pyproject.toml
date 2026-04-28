@@ -131,11 +131,9 @@ lint.ignore = [
     "PLE0604", # allow __all__ to be nested but still all elements are strings
 ]
 extend-exclude = [
-    "roboverse_learn",
     "wandb",
     "third_party",
     "tmp",
-    "roboverse_data",
     "assets",
     "docker"
 ]
@@ -148,51 +146,15 @@ metasim = ["data/**/*"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
-## For normal scripts, allow print statements, allow no docstrings
-"scripts/**.py" = ["T20", "D"]
-"metasim/scripts/_private/**.py" = ["T20", "D"]
-"metasim/scripts/RL/**.py" = ["T20", "D"]
-"metasim/scripts/gpt_gen.py" = ["T20", "D"]
-"roboverse_pack/tasks/open6dor/utils/**.py" = ["T20", "D"]
-"roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
-## For long-term-support scripts, allow no docstrings
-"metasim/scripts/**.py" = ["D"]
-## For get_started scripts, allow no docstrings
-"get_started/**.py" = ["D"]
 ## For unit test, allow no docstrings
 "metasim/test/**.py" = ["D"]
-## For special tasks, allow no docstrings
-"roboverse_pack/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
-"roboverse_pack/tasks/open6dor/task/**.py" = ["D"]
-## For python files in docs and dashboard folder, allow no docstrings
+## For python files in docs, allow no docstrings
 "docs/**.py" = ["D"]
-"dashboard/**.py" = ["D"]
-## For tasks, allow no docstrings in public modules
-"roboverse_pack/tasks/**/*.py" = ["D100"]
-## For roboverse_learn, allow no docstrings, allow print
-"roboverse_learn/**.py" = ["D", "T20"]
-## Temporary disable linting for quick testing
-"roboverse_pack/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
-"roboverse_pack/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this
-"roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/debug/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/dmcontrol/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/fetch/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/gapartnet/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/isaacgym_envs/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
-"roboverse_pack/tasks/open6dor/**.py" = ["D"]  # FIXME: Haoran and Yufei add docstring and remove this
-"roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
-"roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"roboverse_pack/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 "metasim/sim/**.py" = ["D"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 
 [tool.ruff.lint.isort]
-known-first-party = ["metasim", "scripts"]
+known-first-party = ["metasim"]
 known-third-party = ["wandb", "isaacsim"]
 
 [tool.ruff.lint.pydocstyle]

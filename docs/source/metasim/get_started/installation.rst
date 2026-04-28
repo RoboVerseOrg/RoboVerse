@@ -1,13 +1,13 @@
 ⚙️ Direct Installation
 ======================
 
-First, clone the RoboVerse project. In this monorepo, the root editable install builds the ``metasim`` Python package. RoboVerse task, robot, scene, and ground packs remain outside the MetaSim package and are discovered through the repository's ``metasim.toml`` during source-checkout development.
+First, clone the MetaSim project. The root editable install builds the ``metasim`` Python package. RoboVerse task, robot, scene, and ground packs remain outside the MetaSim package and are discovered from downstream packages through entry points, ``metasim.toml``, ``[tool.metasim.packages]``, or ``METASIM_*_PACKAGES`` environment variables.
 
 .. code-block:: bash
 
-    git clone git@github.com:RoboVerseOrg/RoboVerse.git && cd RoboVerse
+    git clone git@github.com:RoboVerseOrg/MetaSim.git && cd MetaSim
 
-RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To install it, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
+MetaSim uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To install it, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
 
 .. code-block:: bash
 
@@ -83,7 +83,7 @@ Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
 .. code-block:: bash
 
     uv pip install -e ".[isaacsim]"
-    cd third_party
+    mkdir -p third_party && cd third_party
     git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
 
@@ -102,7 +102,7 @@ Install IsaacSim v4.5.0 (IsaacLab v2.1.1)
         --index-url https://download.pytorch.org/whl/cu118 \
         --extra-index-url https://pypi.org/simple \
         --extra-index-url https://pypi.nvidia.com
-    cd third_party
+    mkdir -p third_party && cd third_party
     git clone --depth 1 --branch v2.1.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab211 && cd IsaacLab211
     ./isaaclab.sh -i none
 
@@ -123,7 +123,7 @@ Then:
 
 .. code-block:: bash
 
-    cd third_party
+    mkdir -p third_party && cd third_party
     wget https://developer.nvidia.com/isaac-gym-preview-4 \
         && tar -xf isaac-gym-preview-4 \
         && rm isaac-gym-preview-4
