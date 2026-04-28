@@ -8,6 +8,7 @@ import math
 import os
 import threading
 from copy import deepcopy
+from importlib import resources
 
 import numpy as np
 import torch
@@ -45,6 +46,24 @@ try:
 except ImportError:
     ROBO_SPLATTER_AVAILABLE = False
     log.warning("RoboSplatter not available. GS background rendering will be disabled.")
+
+
+def _world_state_to_env_local(state_w: torch.Tensor, env_origins: torch.Tensor) -> torch.Tensor:
+    """Return an env-local copy of an IsaacLab world-frame state tensor."""
+    local_state = state_w.clone()
+    env_origins = env_origins.to(device=local_state.device, dtype=local_state.dtype)
+    if local_state.ndim == 2:
+        local_state[:, 0:3] -= env_origins
+    elif local_state.ndim == 3:
+        local_state[:, :, 0:3] -= env_origins[:, None, :]
+    else:
+        raise ValueError(f"Expected state tensor rank 2 or 3, got shape {tuple(local_state.shape)}")
+    return local_state
+
+
+def _primitive_frame_usd_path() -> str:
+    """Return the packaged USD used for PrimitiveFrameCfg."""
+    return str(resources.files("metasim").joinpath("data/quick_start/assets/COMMON/frame/usd/frame.usd"))
 
 
 class IsaacsimHandler(BaseSimHandler):
@@ -621,21 +640,20 @@ class IsaacsimHandler(BaseSimHandler):
                 obj_inst = self.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
                 body_reindex = self.get_body_reindex(obj.name)
-                root_state = obj_inst.data.root_state_w
-                root_state[:, 0:3] -= self.scene.env_origins
-                body_state = obj_inst.data.body_state_w[:, body_reindex]
-                body_state[:, :, 0:3] -= self.scene.env_origins[:, None, :]
+                root_state = _world_state_to_env_local(obj_inst.data.root_state_w, self.scene.env_origins)
+                body_state = _world_state_to_env_local(
+                    obj_inst.data.body_state_w[:, body_reindex], self.scene.env_origins
+                )
                 state = ObjectState(
                     root_state=root_state,
                     body_names=self._get_body_names(obj.name),
                     body_state=body_state,
-                    joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
-                    joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
+                    joint_pos=obj_inst.data.joint_pos[:, joint_reindex].clone(),
+                    joint_vel=obj_inst.data.joint_vel[:, joint_reindex].clone(),
                 )
             else:
                 obj_inst = self.scene.rigid_objects[obj.name]
-                root_state = obj_inst.data.root_state_w
-                root_state[:, 0:3] -= self.scene.env_origins
+                root_state = _world_state_to_env_local(obj_inst.data.root_state_w, self.scene.env_origins)
                 state = ObjectState(
                     root_state=root_state,
                 )
@@ -647,19 +665,19 @@ class IsaacsimHandler(BaseSimHandler):
             obj_inst = self.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)
-            root_state = obj_inst.data.root_state_w
-            root_state[:, 0:3] -= self.scene.env_origins
-            body_state = obj_inst.data.body_state_w[:, body_reindex]
-            body_state[:, :, 0:3] -= self.scene.env_origins[:, None, :]
+            root_state = _world_state_to_env_local(obj_inst.data.root_state_w, self.scene.env_origins)
+            body_state = _world_state_to_env_local(
+                obj_inst.data.body_state_w[:, body_reindex], self.scene.env_origins
+            )
             state = RobotState(
                 root_state=root_state,
                 body_names=self._get_body_names(obj.name),
                 body_state=body_state,
-                joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
-                joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
-                joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex],
-                joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex],
-                joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex],
+                joint_pos=obj_inst.data.joint_pos[:, joint_reindex].clone(),
+                joint_vel=obj_inst.data.joint_vel[:, joint_reindex].clone(),
+                joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex].clone(),
+                joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex].clone(),
+                joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex].clone(),
             )
             robot_states[obj.name] = state
 
@@ -738,8 +756,8 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_id2label=instance_seg_id2label,
                 instance_id_seg=instance_id_seg_data,
                 instance_id_seg_id2label=instance_id_seg_id2label,
-                pos=camera_inst.data.pos_w,
-                quat_world=camera_inst.data.quat_w_world,
+                pos=camera_inst.data.pos_w.clone(),
+                quat_world=camera_inst.data.quat_w_world.clone(),
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
         extras = self.get_extra()
@@ -1026,11 +1044,12 @@ class IsaacsimHandler(BaseSimHandler):
             )
             return
         if isinstance(obj, PrimitiveFrameCfg):
+            usd_path = obj.usd_path or _primitive_frame_usd_path()
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
                     spawn=sim_utils.UsdFileCfg(
-                        usd_path="metasim/data/quick_start/assets/COMMON/frame/usd/frame.usd",
+                        usd_path=usd_path,
                         rigid_props=sim_utils.RigidBodyPropertiesCfg(
                             disable_gravity=True, kinematic_enabled=True
                         ),  # fixed

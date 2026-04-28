@@ -10,7 +10,13 @@ import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from loguru import logger as log
 
-from metasim.scenario.objects import BaseObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import (
+    BaseObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveCylinderCfg,
+    PrimitiveFrameCfg,
+    PrimitiveSphereCfg,
+)
 from metasim.scenario.scene import SceneCfg
 
 from .parse_util import extract_mesh_paths_from_urdf, extract_paths_from_mjcf
@@ -256,6 +262,7 @@ class FileDownloader:
         if (
             isinstance(obj, PrimitiveCubeCfg)
             or isinstance(obj, PrimitiveCylinderCfg)
+            or (isinstance(obj, PrimitiveFrameCfg) and obj.file_name(self.scenario.simulator) is None)
             or isinstance(obj, PrimitiveSphereCfg)
         ):
             return

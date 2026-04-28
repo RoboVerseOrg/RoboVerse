@@ -7,7 +7,7 @@ from loguru import logger as log
 
 def assert_close(a, b, atol=1e-3, message="Consistency Error"):
     if isinstance(a, torch.Tensor):
-        b = torch.tensor(b)
+        b = torch.as_tensor(b, dtype=a.dtype, device=a.device)
         assert torch.allclose(a, b, atol=atol), f"a: {a} != b: {b} " + message
     elif isinstance(a, float):
         b = float(b)

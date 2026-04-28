@@ -16,7 +16,7 @@ RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To ins
 Installation Commands
 ---------------------
 
-MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``uv pip install -e ".[<simulator>]"``. However, IsaacLab and IsaacGym must be installed manually.
+MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``uv pip install -e ".[<simulator>]"``. IsaacSim/IsaacLab and IsaacGym use simulator-specific Python environments and include manual setup steps below.
 
 .. list-table::
    :header-rows: 1
@@ -66,6 +66,9 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 .. note::
    Recommended Python versions are guaranteed to work. For other Python versions, the RoboVerse team hasn't fully tested MetaSim. Please let us know if you encounter any issues.
 
+.. note::
+   Install simulator extras in environments that match the Python version in the table. ``requires-python`` in ``pyproject.toml`` describes the base package floor; simulator extras such as IsaacSim, MJX, and IsaacGym add narrower Python, PyTorch, CUDA, or NumPy constraints and are not guaranteed to be co-installable.
+
 Please also check the `prerequisites <./prerequisite.html>`_ for supported platforms.
 
 Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
@@ -84,12 +87,15 @@ Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
 .. note::
    If you encounter an error such as 'GLIBCXX_3.4.30' not found when running Isaac Sim in a conda environment, try installing GCC 12.1.0 with ``conda install -c conda-forge gcc=12.1.0``. See `Stack Overflow thread <https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin>`_ for more details.
 
-Install Isaacsim v4.5.0 (IsaacLab v2.1.1)
+Install IsaacSim v4.5.0 (IsaacLab v2.1.1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaacsim211]"
+    uv pip install -e ".[isaacsim211]" \
+        --index-url https://download.pytorch.org/whl/cu118 \
+        --extra-index-url https://pypi.org/simple \
+        --extra-index-url https://pypi.nvidia.com
     cd third_party
     git clone --depth 1 --branch v2.1.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab211 && cd IsaacLab211
     ./isaaclab.sh -i none
@@ -117,18 +123,19 @@ Then:
         && rm isaac-gym-preview-4
     find isaacgym/python -type f -name "*.py" -exec sed -i 's/np\.float/np.float32/g' {} +
     cd ..
-    uv pip install -e ".[isaacgym]" 'isaacgym @ file:${PROJECT_ROOT}/third_party/isaacgym/python'
+    uv pip install -e ".[isaacgym]" "isaacgym @ file://${PWD}/third_party/isaacgym/python"
 
 .. note::
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, you can refer to the `clone <https://docs.robotsfan.com/isaacgym/install.html>`_ of the official guide.
 
 .. tip::
-   If you encounter the error ``FileNotFoundError: [Errno 2] No such file or directory: '.../lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'``, you can try to run the following command:
+   If you encounter the error ``FileNotFoundError: [Errno 2] No such file or directory: '.../site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'``, you can try to run the following command:
 
    .. code-block:: bash
 
-      mkdir -p $CONDA_PREFIX/lib/python3.8/site-packages/isaacgym/_bindings/src
-      cp -r third_party/isaacgym/python/isaacgym/_bindings/src/gymtorch $CONDA_PREFIX/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
+      ISAACGYM_SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+      mkdir -p "${ISAACGYM_SITE_PACKAGES}/isaacgym/_bindings/src"
+      cp -r third_party/isaacgym/python/isaacgym/_bindings/src/gymtorch "${ISAACGYM_SITE_PACKAGES}/isaacgym/_bindings/src/"
 
    If you encounter the error ``ImportError: libpython3.8.so.1.0: cannot open shared object file: No such file or directory``, you can try to run the following command:
 
@@ -142,17 +149,14 @@ Then:
 Install Multiple Simulators
 ---------------------------
 
-Feel free to combine the above commands to install multiple simulators in one environment. For example, to install MuJoCo and IsaacSim at the same time, you can run:
+Only combine simulator extras that target the same Python and dependency stack. For example, to install MuJoCo, SAPIEN3, and PyBullet in one environment, run:
 
 .. code-block:: bash
 
-    uv pip install -e ".[mujoco,isaaclab221]"
-    cd third_party
-    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
-    ./isaaclab.sh -i none
+    uv pip install -e ".[mujoco,sapien3,pybullet]"
 
 .. note::
-   Every time you install multiple simulators, you need to use one single command to deal with dependencies correctly. For example, to install MuJoCo, SAPIEN3, and Genesis at the same time, you should run:
+   Every time you install multiple compatible simulators in the same environment, use one single command to resolve dependencies together. For example, to install MuJoCo, SAPIEN3, and Genesis at the same time, run:
 
    .. code-block:: bash
 

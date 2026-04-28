@@ -1,6 +1,20 @@
 from typing import Any
 
 
+def _download_scenario_urdf_files(scenario: Any) -> None:
+    """Download URDF assets needed by Viser visualization."""
+    urdf_paths = []
+    for item in list(getattr(scenario, "objects", [])) + list(getattr(scenario, "robots", [])):
+        urdf_path = getattr(item, "urdf_path", None)
+        if urdf_path:
+            urdf_paths.append(urdf_path)
+
+    if urdf_paths:
+        from metasim.utils.hf_util import check_and_download_recursive
+
+        check_and_download_recursive(urdf_paths, n_processes=16)
+
+
 class TaskViserWrapper:
     """Simple wrapper for RLTaskEnv with real-time Viser visualization.
 
@@ -43,10 +57,7 @@ class TaskViserWrapper:
         self.visualizer.add_grid()
         self.visualizer.add_frame("/world_frame")
 
-        # Download URDF files for visualization
-        from get_started.viser.viser_demo import download_urdf_files
-
-        download_urdf_files(self.env.scenario)
+        _download_scenario_urdf_files(self.env.scenario)
 
         # Get initial states using handler
         if self.handler is None:
