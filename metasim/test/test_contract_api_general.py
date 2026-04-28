@@ -10,6 +10,16 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _load_pyproject() -> dict:
+    try:
+        import tomllib
+    except ImportError:  # pragma: no cover - Python < 3.11
+        import tomli as tomllib
+
+    with (REPO_ROOT / "pyproject.toml").open("rb") as f:
+        return tomllib.load(f)
+
+
 def _parse_module(path: str) -> tuple[ast.Module, str]:
     source_path = REPO_ROOT / path
     source = source_path.read_text(encoding="utf-8")
@@ -77,6 +87,38 @@ def test_metasim_production_code_does_not_import_monorepo_siblings():
 
 
 @pytest.mark.general
+def test_pyproject_builds_metasim_distribution_only():
+    pyproject = _load_pyproject()
+
+    assert pyproject["build-system"]["requires"] == ["setuptools>=61.0", "wheel"]
+    assert pyproject["build-system"]["build-backend"] == "setuptools.build_meta"
+
+    project = pyproject["project"]
+    assert project["name"] == "metasim"
+    assert project["description"] == "MetaSim: A unified simulation framework for robotics"
+    assert project["license"] == {"file": "LICENSE"}
+    assert project["requires-python"] == ">=3.8"
+
+    package_find = pyproject["tool"]["setuptools"]["packages"]["find"]
+    assert package_find["include"] == ["metasim", "metasim.*"]
+    assert "where" not in package_find
+
+    assert pyproject["tool"]["setuptools"]["package-data"]["metasim"] == ["data/**/*"]
+
+
+@pytest.mark.general
+def test_pyproject_runtime_dependencies_are_not_test_or_roboverse_content_dependencies():
+    pyproject = _load_pyproject()
+    runtime_deps = set(pyproject["project"]["dependencies"])
+
+    assert "pytest" not in runtime_deps
+    assert not any(dep.startswith("roboverse") for dep in runtime_deps)
+
+    dev_deps = set(pyproject["project"]["optional-dependencies"]["dev"])
+    assert {"pytest", "pytest-cov", "ruff"}.issubset(dev_deps)
+
+
+@pytest.mark.general
 def test_metasim_task_package_does_not_ship_ad_hoc_test_module():
     assert not (REPO_ROOT / "metasim/task/test.py").exists()
 
@@ -99,11 +141,11 @@ def test_primitive_frame_is_a_builtin_asset_not_an_external_download():
 
 @pytest.mark.general
 def test_primitive_frame_builtin_usd_is_packaged_with_metasim():
-    from importlib import resources
+    import pkgutil
 
-    frame_usd = resources.files("metasim").joinpath("data/quick_start/assets/COMMON/frame/usd/frame.usd")
+    frame_usd = pkgutil.get_data("metasim", "data/quick_start/assets/COMMON/frame/usd/frame.usd")
 
-    assert frame_usd.is_file()
+    assert frame_usd is not None
 
 
 @pytest.mark.general

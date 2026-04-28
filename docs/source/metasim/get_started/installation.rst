@@ -1,7 +1,7 @@
 ⚙️ Direct Installation
 ======================
 
-First, clone the RoboVerse project:
+First, clone the RoboVerse project. In this monorepo, the root editable install builds the ``metasim`` Python package. RoboVerse task, robot, scene, and ground packs remain outside the MetaSim package and are discovered through the repository's ``metasim.toml`` during source-checkout development.
 
 .. code-block:: bash
 
@@ -12,6 +12,12 @@ RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To ins
 .. code-block:: bash
 
     pip install uv
+
+For MetaSim development and tests, install the development extra together with the simulator extra you need:
+
+.. code-block:: bash
+
+    uv pip install -e ".[dev,mujoco]"
 
 Installation Commands
 ---------------------

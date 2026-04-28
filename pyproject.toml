@@ -1,14 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "roboverse-py"
+name = "metasim"
 version = "0.1.17"
+description = "MetaSim: A unified simulation framework for robotics"
 requires-python = ">=3.8"
+license = { file = "LICENSE" }
 dependencies = [
     "gymnasium",
     "huggingface-hub",
     "imageio[ffmpeg]",
     "loguru",
     "opencv-python",
-    "pytest",
     "rich",
     "rootutils",
     "torch",
@@ -20,10 +25,15 @@ dependencies = [
     "dataclasses-json",
     "trimesh",
     "scipy",
-    "numpy-quaternion"
+    "numpy-quaternion",
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
 # Simulator extras are intended for the per-simulator Python environments documented in
 # docs/source/metasim/get_started/installation.rst, not as an arbitrary co-installable matrix.
 isaacsim = [
