@@ -10,7 +10,7 @@ import torch
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.rl_task import RLTaskEnv
-from metasim.types import Info
+from metasim.types import Info, StateMode, StateOutput
 from metasim.utils.state import TensorState, list_state_to_tensor
 from roboverse_pack.robots.g1_tracking import G1TrackingCfg
 from roboverse_pack.tasks.beyondmimic.metasim.configs.cfg_base import BaseEnvCfg, CallbacksCfg
@@ -378,9 +378,9 @@ class LeggedRobotTask(RLTaskEnv):
         }
         return [deepcopy(template) for _ in range(self.scenario.num_envs)]
 
-    def get_states(self) -> TensorState:
-        """Get the current simulator state."""
-        return self.handler.get_states(mode="tensor")
+    def get_states(self, env_ids: list[int] | None = None, mode: StateMode = "dict") -> StateOutput:
+        """Get the current simulator state through the handler state-mode contract."""
+        return self.handler.get_states(env_ids=env_ids, mode=mode)
 
     def set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set simulator state for selected env indexes."""

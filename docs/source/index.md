@@ -16,7 +16,9 @@
 
 ## What is RoboVerse?
 
-**RoboVerse** is a unified platform for scalable and generalizable robot learning. See the [project page](https://roboverseorg.github.io) and [paper](https://arxiv.org/abs/2504.18904) for more details.
+**RoboVerse** is a unified platform for scalable and generalizable robot learning. This repository now builds the downstream `roboverse-py` package: task packs, robot and scene assets, learning code, and examples. The core `metasim` Python package lives in the standalone [MetaSim repository](https://github.com/RoboVerseOrg/MetaSim) and is installed as a dependency.
+
+See the [project page](https://roboverseorg.github.io) and [paper](https://arxiv.org/abs/2504.18904) for more details.
 
 ---
 
@@ -68,7 +70,7 @@ Train RL/IL policies on tasks
 :link: metasim/index
 :link-type: doc
 
-Core simulation framework documentation including installation, tutorials, concepts, and development guides.
+MetaSim usage documentation for RoboVerse workflows, including installation, tutorials, concepts, and development guides.
 :::
 
 :::{grid-item-card} Dataset & Benchmark
@@ -89,7 +91,7 @@ Learning algorithms: Imitation Learning (ACT, Diffusion Policy, VLA) and Reinfor
 :link: API/index
 :link-type: doc
 
-Complete API documentation for MetaSim modules.
+API reference for the external MetaSim package used by RoboVerse.
 :::
 
 ::::
@@ -106,8 +108,8 @@ Complete API documentation for MetaSim modules.
 
 The RoboVerse ecosystem consists of three main components:
 
-- **MetaSim**: Core simulation framework with unified API across simulators
-- **RoboVerse Pack**: Pre-configured robots, tasks, and scene assets
+- **MetaSim**: Standalone core simulation framework with a unified API across simulators
+- **RoboVerse Pack**: Pre-configured robots, tasks, scene assets, and package-discovery entry points
 - **RoboVerse Learn**: Integrated learning algorithms (IL & RL)
 
 Learn more about the architecture in the [Architecture Overview](metasim/concept/architecture.md).
@@ -143,9 +145,9 @@ If you find this work useful in your research, please consider citing:
 :hidden:
 :titlesonly:
 
-metasim/index
-dataset_benchmark/index
-roboverse_learn/index
-API/index
-FAQ/index
+MetaSim <metasim/index>
+Dataset <dataset_benchmark/index>
+Learn <roboverse_learn/index>
+API <API/index>
+FAQ <FAQ/index>
 ```

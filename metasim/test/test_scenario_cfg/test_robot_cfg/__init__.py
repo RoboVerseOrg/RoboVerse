@@ -1,1 +1,0 @@
-# Robot config tests package.

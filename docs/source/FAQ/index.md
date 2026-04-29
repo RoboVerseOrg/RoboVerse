@@ -47,8 +47,8 @@ cd RoboVerse
 conda create -n roboverse python=3.10
 conda activate roboverse
 
-# Install MetaSim
-pip install -e .
+# Install RoboVerse and the MetaSim simulator extra you need
+python -m pip install -e ".[mujoco]"
 ```
 
 See the [Installation Guide](../metasim/get_started/installation.rst) for detailed instructions.
@@ -69,17 +69,17 @@ See [Docker Guide](../metasim/get_started/docker.md) for more details.
 Different features require additional packages:
 
 ```bash
+# For development tools and MuJoCo support
+python -m pip install -e ".[dev,mujoco]"
+
 # For Isaac Sim support
-pip install -e ".[isaacsim]"
+python -m pip install -e ".[isaacsim]"
 
-# For motion planning
-pip install -e ".[curobo]"
+# For learning dependencies
+python -m pip install -e ".[learn]"
 
-# For imitation learning
-pip install -e ".[il]"
-
-# For reinforcement learning
-pip install -e ".[rl]"
+# For VLA dependencies
+python -m pip install -e ".[vla]"
 ```
 
 See [Advanced Installation](../metasim/get_started/advanced_installation/index.md) for all options.

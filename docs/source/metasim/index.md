@@ -1,6 +1,8 @@
 # MetaSim User Guide
 
-**MetaSim** is the core simulation framework of RoboVerse, providing a unified interface for robotic simulation across multiple physics engines.
+**MetaSim** is the standalone core simulation framework used by RoboVerse, providing a unified interface for robotic simulation across multiple physics engines.
+
+In the current split layout, the `metasim` Python package is maintained in the standalone [MetaSim repository](https://github.com/RoboVerseOrg/MetaSim). This RoboVerse repository installs MetaSim as a dependency and contributes tasks, robots, scenes, assets, learning code, and examples through package discovery.
 
 ---
 
@@ -73,7 +75,7 @@ Learn to create custom tasks
 :::{grid-item-card} Contributing
 :text-align: center
 
-Help improve MetaSim
+Help improve RoboVerse content and MetaSim workflows
 
 1. [Development Guide](developer_guide/autotest)
 2. [Adding Robots](developer_guide/contributing_new_robot)

@@ -1,17 +1,44 @@
 ⚙️ Direct Installation
 ======================
 
-First, clone the RoboVerse project:
+Install RoboVerse with the simulator extra you plan to use. RoboVerse forwards simulator extras to the standalone MetaSim package on GitHub, while RoboVerse itself provides task, robot, scene, ground, learning, and example packages that MetaSim discovers through package entry points and ``metasim.toml`` during source-checkout development.
 
 .. code-block:: bash
 
-    git clone git@github.com:RoboVerseOrg/RoboVerse.git && cd RoboVerse
+    git clone https://github.com/RoboVerseOrg/RoboVerse.git
+    cd RoboVerse
+    uv pip install -e ".[mujoco]"
+
+If you only need the base packages without a simulator extra:
+
+.. code-block:: bash
+
+    uv pip install -e .
+
+For RoboVerse development and tests, include the ``dev`` extra together with the simulator extra:
+
+.. code-block:: bash
+
+    uv pip install -e ".[dev,mujoco]"
 
 RoboVerse uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies. To install it, please refer to the `official guide <https://docs.astral.sh/uv/getting-started/installation/>`_, or run:
 
 .. code-block:: bash
 
     pip install uv
+
+If you are editing MetaSim and RoboVerse locally at the same time, install MetaSim from the local checkout first, then install RoboVerse without re-resolving dependencies. This keeps your local MetaSim checkout editable instead of replacing it with the GitHub dependency:
+
+.. code-block:: bash
+
+    git clone https://github.com/RoboVerseOrg/MetaSim.git
+    git clone https://github.com/RoboVerseOrg/RoboVerse.git
+
+    cd MetaSim
+    uv pip install -e ".[dev,mujoco]"
+
+    cd ../RoboVerse
+    uv pip install -e . --no-deps
 
 Installation Commands
 ---------------------
