@@ -308,8 +308,8 @@ The recording shows:
 | `get_started/rerun/replay_task_demo.py` | Replay pre-recorded task trajectories |
 | `get_started/rerun/save_trajectory_simple.py` | CPU-only trajectory recording |
 | `get_started/rerun/rerun_demo.py` | Full demo with IK solver |
-| `metasim/utils/rerun/rerun_util.py` | Core RerunVisualizer class |
-| `metasim/utils/rerun/rerun_env_wrapper.py` | RL environment wrapper |
+| MetaSim `metasim/utils/rerun/rerun_util.py` | Core RerunVisualizer class |
+| MetaSim `metasim/utils/rerun/rerun_env_wrapper.py` | RL environment wrapper |
 
 ## Next Steps
 
@@ -317,4 +317,3 @@ The recording shows:
 - Add Rerun visualization to your own training loop
 - Explore the [Rerun documentation](https://rerun.io/docs) for advanced features
 - Check out the [Viser integration](../advanced/viser/usage.md) for web-based visualization
-

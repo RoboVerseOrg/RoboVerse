@@ -161,3 +161,55 @@ def test_roboverse_optional_dependencies_forward_metasim_extras():
 
     for extra in METASIM_SIMULATOR_EXTRAS:
         assert optional[extra] == [f"metasim[{extra}] @ {METASIM_GITHUB_REF}"]
+
+
+def test_active_scripts_do_not_reference_removed_metasim_script_paths():
+    repo_root = Path(__file__).resolve().parents[1]
+    checked_roots = [
+        repo_root / "scripts",
+        repo_root / "docs/source/metasim/features",
+        repo_root / "docs/source/metasim/get_started/quick_start",
+    ]
+    offenders = []
+
+    for root in checked_roots:
+        paths = root.rglob("*") if root.is_dir() else [root]
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "metasim/scripts/" in text:
+                offenders.append(path.relative_to(repo_root).as_posix())
+
+    assert offenders == []
+
+
+def test_runtime_generators_do_not_write_into_removed_metasim_cfg_tree():
+    repo_root = Path(__file__).resolve().parents[1]
+    checked_paths = [
+        repo_root / "scripts/advanced/gpt_gen.py",
+        repo_root / "docs/source/dataset_benchmark/tasks/generate_task_docs.py",
+    ]
+
+    offenders = [
+        path.relative_to(repo_root).as_posix()
+        for path in checked_paths
+        if "metasim/cfg/tasks" in path.read_text(encoding="utf-8", errors="ignore")
+    ]
+
+    assert offenders == []
+
+
+def test_legacy_release_metadata_does_not_package_metasim_core():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert not (repo_root / "release/pyproject.toml").exists()
+    assert not (repo_root / "release/MANIFEST.in").exists()
+
+
+def test_pull_request_template_does_not_require_removed_precommit_config():
+    repo_root = Path(__file__).resolve().parents[1]
+    template = (repo_root / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+
+    assert "pre-commit run" not in template
+    assert "precommit_hooks" not in template

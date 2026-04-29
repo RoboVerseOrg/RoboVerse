@@ -49,9 +49,9 @@ random.shuffle(tasks_list)
 # tasks_list = ["stack_cube"]
 
 for task, level, name in already_rendered:
-    command = f"python metasim/scripts/collect_demo.py --run_unfinished --task={task} --sim=isaaclab --headless --cust_name {name} --random.level {level}"
+    command = f"python scripts/advanced/collect_demo.py --run_unfinished --task={task} --sim=isaaclab --headless --cust_name {name} --random.level {level}"
     print(command)
     os.system(command)
-    command = f"/isaac-sim/python.sh metasim/scripts/collect_demo.py --run_unfinished --task={task} --sim=isaaclab --headless --cust_name {name} --random.level {level}"
+    command = f"/isaac-sim/python.sh scripts/advanced/collect_demo.py --run_unfinished --task={task} --sim=isaaclab --headless --cust_name {name} --random.level {level}"
     print(command)
     os.system(command)

@@ -193,7 +193,7 @@ python roboverse_learn/rl/fast_td3/train.py --config your_config.yaml
 
 ## V-HACD (Volumetric Hierarchical Approximate Convex Decomposition)
 
-Add the following code in RoboVerse/metasim/sim/isaacgym/isaacgym.py
+Add the following code in the standalone MetaSim checkout at `metasim/sim/isaacgym/isaacgym.py`.
 
 
 ```python

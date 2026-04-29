@@ -4,7 +4,7 @@ RoboVerse provides a diverse set of tasks for robots to learn and evaluate their
 
 ## Task Organization
 
-We organize the tasks with our standard metasim configuration, as shown in `metasim/cfg/tasks`. You can easily use them to instantiate simulations, or inherit them to create modified tasks.
+We organize the tasks with our standard metasim configuration, as shown in `roboverse_pack/tasks`. You can easily use them to instantiate simulations, or inherit them to create modified tasks.
 
 When instantiating tasks, you can specify the task name at config level. The task is a preset to be loaded into your `ScenarioCfg`.
 

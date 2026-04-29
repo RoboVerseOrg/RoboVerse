@@ -5,7 +5,7 @@ import re
 import shutil
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../metasim/cfg/tasks"))
+TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../roboverse_pack/tasks"))
 OUTPUT_DIR = os.path.join(CUR_DIR, "tasks_md")
 VIDEO_BASE = "https://videos.example.com"
 DEFAULT_DESC = "No description provided."

@@ -27,7 +27,7 @@ The following terms are needed if you want to use end-effector control:
 - ``curobo_tcp_rel_rot``
 
 
-A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/RoboVerse/blob/main/metasim/example/example_pack/robots/franka_cfg.py), which is used by the built-in example package.
+A good example is [franka_cfg.py](https://github.com/RoboVerseOrg/MetaSim/blob/main/metasim/example/example_pack/robots/franka_cfg.py), which is used by the built-in example package.
 
 Also, please import the robot configuration class from your robot package's `__init__.py`. Please make sure the robot class name is in [camel case](https://en.wikipedia.org/wiki/Camel_case) (e.g. `FrankaPandaCfg`).
 

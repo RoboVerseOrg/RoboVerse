@@ -158,7 +158,7 @@ def main():
 
     import tqdm
 
-    # paths = glob.glob("metasim/cfg/tasks/gapartnet/GAPartNet/assets/*/mobility_annotation_gapartnet.urdf")
+    # paths = glob.glob("roboverse_pack/tasks/gapartnet/GAPartNet/assets/*/mobility_annotation_gapartnet.urdf")
     paths = glob.glob("roboverse_data/assets/gapartnet/*/mobility_annotation_gapartnet.urdf")
     available_gapart_ids = []
     for path in tqdm.tqdm(paths, total=len(paths)):

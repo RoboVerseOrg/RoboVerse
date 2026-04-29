@@ -226,7 +226,7 @@ You need to install `XRoboToolkit-PC-Service` on PC and `XRoboToolkit-PICO` app 
 ### Play in Simulation
 
 ```bash
-python metasim/scripts/teleop_xr.py --task=PickCube
+python scripts/advanced/teleop_xr.py --task=PickCube
 ```
 
 Available tasks: `PickCube`, `StackCube`, `CloseBox`, `BasketballInHoop`

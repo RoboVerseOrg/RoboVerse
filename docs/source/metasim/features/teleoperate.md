@@ -276,7 +276,7 @@ You need to install `XRoboToolkit-PC-Service` on PC and `XRoboToolkit-PICO` app 
 ### Play in Simulation
    - Run the XR teleoperation demo
       ```bash
-      python metasim/scripts/teleop_xr.py --task=PickCube
+      python scripts/advanced/teleop_xr.py --task=PickCube
       ```
 
 task could also be:

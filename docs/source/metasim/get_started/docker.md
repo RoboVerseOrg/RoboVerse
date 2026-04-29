@@ -1,12 +1,16 @@
 # 🐳 Docker
 
+Docker support for the core simulator environment is maintained in the standalone
+MetaSim repository. The commands on this page assume you are in a MetaSim
+checkout, not the RoboVerse downstream content repository.
+
 ## Prerequisites
 
 Please make sure you have installed `docker` in the officially recommended way. Otherwise, please refer to the [official guide](https://docs.docker.com/engine/install/ubuntu/).
 
 Please install [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) following the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
-Please create and add the docker user information to `.env` file. To use the same user information as the host machine, run in project root:
+Please create and add the docker user information to `.env` file. To use the same user information as the host machine, run in the MetaSim project root:
 ```bash
 printf "DOCKER_UID=$(id -u $USER)\nDOCKER_GID=$(id -g $USER)\nDOCKER_USER=$USER\n" > .env
 ```
@@ -17,7 +21,7 @@ Build the docker image and attach to the container bash:
 ```bash
 docker compose up --build -d && docker exec -it metasim bash
 ```
-This will automatically build docker image `roboverse-metasim`.
+This will automatically build the MetaSim docker image.
 
 It may take ~10mins when the network speed is ~25MB/s. The docker image size would be 35~40GB.
 
