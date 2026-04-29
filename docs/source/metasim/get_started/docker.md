@@ -17,7 +17,7 @@ Build the docker image and attach to the container bash:
 ```bash
 docker compose up --build -d && docker exec -it metasim bash
 ```
-This will automatically build docker image `roboverse-metasim`.
+This will automatically build the MetaSim docker image.
 
 It may take ~10mins when the network speed is ~25MB/s. The docker image size would be 35~40GB.
 
@@ -172,17 +172,17 @@ Currently, the IsaacGym does not support the NVIDIA RTX50 series GPUs, as it is 
     apt-get update && apt-get install -y --no-install-recommends build-essential cmake git curl wget ca-certificates pkg-config software-properties-common unzip nano sudo
     ```
 
-    Then, setup the conda environment with `python==3.10` for RoboVerse:
+    Then, setup the conda environment with `python==3.10` for MetaSim:
     ```bash
-    conda create -n roboverse python=3.10
+    conda create -n metasim python=3.10
     ```
-3. Setup RoboVerse-IsaacLab environments.
+3. Setup MetaSim-IsaacLab environments.
 
-    Please pull the RoboVerse official code repository:
+    Please pull the MetaSim official code repository:
     ```bash
-    git clone https://github.com/RoboVerseOrg/RoboVerse.git
+    git clone https://github.com/RoboVerseOrg/MetaSim.git
 
-    cd RoboVerse
+    cd MetaSim
     ```
 
     The environment in the `pyproject.toml` is currently not compatible for NVIDIA RTX50 series GPUs. Please use `pip` to install isaacsim manually.
@@ -222,16 +222,16 @@ Currently, the IsaacGym does not support the NVIDIA RTX50 series GPUs, as it is 
     pip install loguru
     pip install open3d
     ```
-4. Setup RoboVerse-Mujoco environments.
+4. Setup MetaSim-MuJoCo environments.
 
     After setting up issaclab, mujoco can be easily installed with the following command:
     ```bash
     pip install mujoco
     pip install dm-control
     ```
-5. Setup RoboVerse-Reinforcement Learning environments.
+5. Setup MetaSim reinforcement learning environments.
 
-    RoboVerse provides two reinforcement learning demos: [PPO Reaching](https://roboverse.wiki/metasim/get_started/advanced/rl_example/0_ppo_reaching#ppo-reaching) and [FastTD3 Humanoid](https://roboverse.wiki/metasim/get_started/advanced/rl_example/1_fttd3_humanoid). To run these two demos, please follow the steps below to setup your environments.
+    MetaSim provides two reinforcement learning demos: [PPO Reaching](https://roboverse.wiki/metasim/get_started/advanced/rl_example/0_ppo_reaching#ppo-reaching) and [FastTD3 Humanoid](https://roboverse.wiki/metasim/get_started/advanced/rl_example/1_fttd3_humanoid). To run these two demos, please follow the steps below to setup your environments.
 
     Setup the PPO environments.
     ```bash

@@ -9,8 +9,8 @@ Each protocol tick follows this sequence:
 1. Read the current MetaSim tensor state.
 2. Sample the latest inbound command from a transport.
 3. Decode the command only when the transport reports a new command token.
-4. Convert the latest decoded command into a MetaSim action.
-5. Apply the action, step the simulator, and advance protocol time.
+4. Convert the latest decoded command into a MetaSim action, or no action if the command should not change targets.
+5. Apply the action when one is returned, step the simulator, and advance protocol time.
 6. Encode outbound state messages and publish them through the transport.
 
 If the controller sends commands more slowly than the simulator steps, the server reuses the latest decoded command on later simulator ticks.
@@ -21,7 +21,7 @@ If the controller sends commands more slowly than the simulator steps, the serve
 
 `ProtocolCodec` converts between transport messages and decoded protocol objects. The core does not prescribe a wire format or command schema.
 
-`CommandAdapter` converts a decoded command plus current `TensorState` into MetaSim `CompatActionInput`. This is where downstream packages choose position, velocity, effort, or mixed control semantics.
+`CommandAdapter` converts a decoded command plus current `TensorState` into MetaSim `CompatActionInput` or `None`. Returning `None` lets the server step the simulator without applying new targets. This is where downstream packages choose position, velocity, effort, mixed control semantics, or no-action behavior.
 
 `MetaSimProtocolAdapter` wraps an existing MetaSim handler by delegating to `get_states(mode="tensor")`, `set_dof_targets()`, `simulate()`, and `close()`.
 

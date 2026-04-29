@@ -82,10 +82,18 @@ Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
 
 .. code-block:: bash
 
-    uv pip install -e ".[isaacsim]"
+    uv pip install -e ".[dev,isaacsim]"
     mkdir -p third_party && cd third_party
     git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
     ./isaaclab.sh -i none
+
+If you use plain ``pip`` instead of ``uv``, pass the indexes that ``uv`` reads from ``pyproject.toml`` explicitly:
+
+.. code-block:: bash
+
+    python -m pip install -e ".[dev,isaacsim]" \
+        --extra-index-url https://download.pytorch.org/whl/cu128 \
+        --extra-index-url https://pypi.nvidia.com
 
 .. note::
    This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`_.

@@ -4,14 +4,27 @@ MetaSim is a unified simulation framework for robotics. It provides the core sim
 
 ## Install
 
+MetaSim uses `uv` for dependency resolution:
+
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install uv
+uv pip install -e .
+```
+
+If you are a developer of MetaSim please use
+```bash
+python -m pip install uv
+uv pip install -e ".[dev]"
 ```
 
 Install a simulator extra for the backend you need:
 
 ```bash
-python -m pip install -e ".[dev,mujoco]"
+uv pip install -e ".[mujoco]"
+```
+or multiple simulators in one env (Note: isaacgym requires `python==3.8` thus it's usually not compatible with other simulators in one python environment):
+```bash
+uv pip install -e ".[mujoco,isaacsim]"
 ```
 
 ## Content Packages
