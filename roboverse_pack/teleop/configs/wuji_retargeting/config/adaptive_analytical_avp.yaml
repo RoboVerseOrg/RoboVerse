@@ -1,0 +1,23 @@
+optimizer:
+  type: "AdaptiveOptimizerAnalytical"
+
+retarget:
+  huber_delta: 2.0
+  huber_delta_dir: 0.5
+  w_pos: 1.0
+  w_dir: 10.0
+  w_full_hand: 1.0
+  norm_delta: 0.04
+  scaling: 1.0
+  segment_scaling:
+    thumb: [1.0, 1.0, 1.0]
+    index: [1.0, 1.03, 1.05]
+    middle: [1.0, 1.0, 1.0]
+    ring: [1.0, 1.0, 1.0]
+    pinky: [1.05, 1.15, 1.15]
+  pinch_thresholds:
+    index: {d1: 2.0, d2: 4.0}
+    middle: {d1: 2.0, d2: 4.0}
+    ring: {d1: 2.0, d2: 4.0}
+    pinky: {d1: 2.0, d2: 4.0}
+  lp_alpha: 0.2
