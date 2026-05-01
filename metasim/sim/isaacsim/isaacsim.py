@@ -240,7 +240,6 @@ class IsaacsimHandler(BaseSimHandler):
         self._init_scene(simulation_app, simulation_args)
         self._load_robots()
         self._load_sensors()
-        self._load_cameras()
         if self.scenario.scene is None:
             self._load_terrain()
         self._load_scene()
@@ -249,6 +248,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
+        self._load_cameras()
         self._initialize_physics_before_reset()
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
@@ -1750,7 +1750,7 @@ class IsaacsimHandler(BaseSimHandler):
 
     def _add_pinhole_camera(self, camera: PinholeCameraCfg) -> None:
         import isaaclab.sim as sim_utils
-        from isaaclab.sensors import TiledCamera, TiledCameraCfg
+        from isaaclab.sensors.camera import Camera, CameraCfg
 
         data_type_map = {
             "rgb": "rgb",
@@ -1761,13 +1761,13 @@ class IsaacsimHandler(BaseSimHandler):
         if camera.mount_to is None:
             prim_path = f"/World/envs/env_.*/{camera.name}"
             # Use default offset, will be set by set_world_poses_from_view later
-            offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+            offset = CameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
-            offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+            offset = CameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
 
-        camera_inst = TiledCamera(
-            TiledCameraCfg(
+        camera_inst = Camera(
+            CameraCfg(
                 prim_path=prim_path,
                 offset=offset,
                 data_types=[data_type_map[dt] for dt in camera.data_types],
