@@ -1,0 +1,493 @@
+from __future__ import annotations
+
+import pytest
+import torch
+
+pytest.importorskip("bpy")
+
+
+@pytest.mark.general
+def test_blender_name_normalization_removes_numeric_suffix() -> None:
+    from metasim.sim.blender.blender import _normalized_blender_name
+
+    assert _normalized_blender_name("left_palm_link") == "left_palm_link"
+    assert _normalized_blender_name("left_palm_link.001") == "left_palm_link"
+    assert _normalized_blender_name("mesh.123") == "mesh"
+    assert _normalized_blender_name("joint.abc") == "joint.abc"
+
+
+@pytest.mark.general
+def test_blender_body_object_selection_prefers_empty_with_children() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _choose_body_object
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    empty = bpy.data.objects.new("left_palm_link", None)
+    mesh_data = bpy.data.meshes.new("left_palm_link_mesh_data")
+    mesh = bpy.data.objects.new("left_palm_link.001", mesh_data)
+    child_mesh = bpy.data.objects.new("left_palm_link_visual", bpy.data.meshes.new("visual_mesh_data"))
+
+    bpy.context.collection.objects.link(empty)
+    bpy.context.collection.objects.link(mesh)
+    bpy.context.collection.objects.link(child_mesh)
+    child_mesh.parent = empty
+
+    assert _choose_body_object([mesh, empty]) is empty
+
+
+@pytest.mark.general
+def test_blender_matrix_from_root_state_uses_wxyz_quaternion() -> None:
+    from metasim.sim.blender.blender import _matrix_from_root_state
+
+    root_state = torch.tensor([1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0])
+    matrix = _matrix_from_root_state(root_state)
+
+    assert tuple(round(value, 5) for value in matrix.translation) == (1.0, 2.0, 3.0)
+    assert matrix.to_quaternion().w == pytest.approx(1.0)
+    assert matrix.to_quaternion().x == pytest.approx(0.0)
+    assert matrix.to_quaternion().y == pytest.approx(0.0)
+    assert matrix.to_quaternion().z == pytest.approx(0.0)
+
+
+@pytest.mark.general
+def test_blender_apply_root_state_sets_world_pose_for_parented_object() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _apply_root_state_to_object
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    parent = bpy.data.objects.new("parent", None)
+    child = bpy.data.objects.new("child", None)
+    bpy.context.collection.objects.link(parent)
+    bpy.context.collection.objects.link(child)
+    parent.location = (10.0, 0.0, 0.0)
+    child.parent = parent
+    child.scale = (2.0, 3.0, 4.0)
+    bpy.context.view_layer.update()
+    initial_world_scale = tuple(round(value, 5) for value in child.matrix_world.to_scale())
+
+    root_state = torch.tensor([1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0], dtype=torch.float32)
+    _apply_root_state_to_object(child, root_state)
+
+    assert tuple(round(value, 5) for value in child.matrix_world.translation) == (1.0, 2.0, 3.0)
+    assert tuple(round(value, 5) for value in child.matrix_world.to_scale()) == initial_world_scale
+
+
+@pytest.mark.general
+def test_blender_handler_applies_robot_body_state_to_body_objects() -> None:
+    import bpy
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import RobotState
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    body_obj = bpy.data.objects.new("left_palm_link", None)
+    bpy.context.collection.objects.link(body_obj)
+
+    handler = object.__new__(BlenderHandler)
+    handler._body_objs = {"robot": {"left_palm_link": body_obj}}
+
+    robot_state = RobotState(
+        root_state=torch.zeros((1, 13), dtype=torch.float32),
+        body_names=["left_palm_link"],
+        body_state=torch.tensor(
+            [[[1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]]], dtype=torch.float32
+        ),
+        joint_pos=torch.zeros((1, 0), dtype=torch.float32),
+        joint_vel=torch.zeros((1, 0), dtype=torch.float32),
+        joint_pos_target=None,
+        joint_vel_target=None,
+        joint_effort_target=None,
+    )
+
+    handler._apply_robot_body_state("robot", robot_state)
+
+    assert tuple(round(value, 5) for value in body_obj.location) == (1.0, 2.0, 3.0)
+
+
+@pytest.mark.general
+def test_blender_handler_maps_wuji_hand_body_names_to_usd_names() -> None:
+    import bpy
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import RobotState
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    finger_obj = bpy.data.objects.new("left_finger1_link1", None)
+    palm_obj = bpy.data.objects.new("left_palm_link", None)
+    bpy.context.collection.objects.link(finger_obj)
+    bpy.context.collection.objects.link(palm_obj)
+
+    handler = object.__new__(BlenderHandler)
+    handler._body_objs = {"robot": {"left_finger1_link1": finger_obj, "left_palm_link": palm_obj}}
+
+    robot_state = RobotState(
+        root_state=torch.zeros((1, 13), dtype=torch.float32),
+        body_names=["left_hand_finger1_link1", "left_hand_palm_link"],
+        body_state=torch.tensor(
+            [
+                [
+                    [1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0],
+                    [4.0, 5.0, 6.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0],
+                ]
+            ],
+            dtype=torch.float32,
+        ),
+        joint_pos=torch.zeros((1, 0), dtype=torch.float32),
+        joint_vel=torch.zeros((1, 0), dtype=torch.float32),
+        joint_pos_target=None,
+        joint_vel_target=None,
+        joint_effort_target=None,
+    )
+
+    handler._apply_robot_body_state("robot", robot_state)
+
+    assert tuple(round(value, 5) for value in finger_obj.location) == (1.0, 2.0, 3.0)
+    assert tuple(round(value, 5) for value in palm_obj.location) == (4.0, 5.0, 6.0)
+
+
+@pytest.mark.general
+def test_blender_handler_renders_primitive_cube_rgb(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import ObjectState, TensorState
+
+    monkeypatch.chdir(tmp_path)
+
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=[0.2, 0.2, 0.2],
+                mass=1.0,
+                physics=PhysicStateType.XFORM,
+                color=[0.8, 0.1, 0.1],
+                default_position=(0.0, 0.0, 0.0),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            )
+        ],
+        cameras=[
+            PinholeCameraCfg(
+                name="overview",
+                data_types=["rgb"],
+                width=32,
+                height=24,
+                pos=(0.6, -1.0, 0.5),
+                look_at=(0.0, 0.0, 0.0),
+                focal_length=24.0,
+                horizontal_aperture=24.0,
+            )
+        ],
+        simulator="blender",
+        headless=True,
+    )
+    state = TensorState(
+        objects={
+            "cube": ObjectState(
+                root_state=torch.tensor([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]], dtype=torch.float32)
+            )
+        },
+        robots={},
+        cameras={},
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        handler.set_states(state)
+        rendered = handler.get_states(mode="tensor")
+    finally:
+        handler.close()
+
+    assert set(rendered.cameras) == {"overview"}
+    rgb = rendered.cameras["overview"].rgb
+    assert rgb is not None
+    assert rgb.shape == (1, 24, 32, 3)
+    assert rgb.dtype == torch.uint8
+    assert int(rgb.max()) > int(rgb.min())
+
+
+@pytest.mark.general
+def test_blender_handler_get_states_retains_tensor_state_objects_and_robots(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import bpy
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import ObjectState, RobotState, TensorState
+
+    monkeypatch.chdir(tmp_path)
+
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=[0.2, 0.2, 0.2],
+                mass=1.0,
+                physics=PhysicStateType.XFORM,
+                color=[0.8, 0.1, 0.1],
+                default_position=(0.0, 0.0, 0.0),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            )
+        ],
+        cameras=[
+            PinholeCameraCfg(
+                name="overview",
+                data_types=["rgb"],
+                width=32,
+                height=24,
+                pos=(0.6, -1.0, 0.5),
+                look_at=(0.0, 0.0, 0.0),
+                focal_length=24.0,
+                horizontal_aperture=24.0,
+            )
+        ],
+        simulator="blender",
+        headless=True,
+    )
+    state = TensorState(
+        objects={
+            "cube": ObjectState(
+                root_state=torch.tensor([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]], dtype=torch.float32)
+            )
+        },
+        robots={
+            "robot": RobotState(
+                root_state=torch.zeros((1, 13), dtype=torch.float32),
+                body_names=["body"],
+                body_state=torch.tensor([[[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]]], dtype=torch.float32),
+                joint_pos=torch.zeros((1, 0), dtype=torch.float32),
+                joint_vel=torch.zeros((1, 0), dtype=torch.float32),
+                joint_pos_target=None,
+                joint_vel_target=None,
+                joint_effort_target=None,
+            )
+        },
+        cameras={},
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        body_obj = bpy.data.objects.new("body", None)
+        bpy.context.collection.objects.link(body_obj)
+        handler._body_objs = {"robot": {"body": body_obj}}
+        handler.set_states(state)
+        rendered = handler.get_states(mode="tensor")
+    finally:
+        handler.close()
+
+    assert set(rendered.objects) == {"cube"}
+    assert set(rendered.robots) == {"robot"}
+    assert set(rendered.cameras) == {"overview"}
+
+
+@pytest.mark.general
+def test_blender_handler_default_get_states_returns_camera_tensor_state(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import ObjectState, TensorState
+
+    monkeypatch.chdir(tmp_path)
+
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=[0.2, 0.2, 0.2],
+                mass=1.0,
+                physics=PhysicStateType.XFORM,
+                color=[0.8, 0.1, 0.1],
+                default_position=(0.0, 0.0, 0.0),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            )
+        ],
+        cameras=[
+            PinholeCameraCfg(
+                name="overview",
+                data_types=["rgb"],
+                width=32,
+                height=24,
+                pos=(0.6, -1.0, 0.5),
+                look_at=(0.0, 0.0, 0.0),
+                focal_length=24.0,
+                horizontal_aperture=24.0,
+            )
+        ],
+        simulator="blender",
+        headless=True,
+    )
+    state = TensorState(
+        objects={
+            "cube": ObjectState(
+                root_state=torch.tensor([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]], dtype=torch.float32)
+            )
+        },
+        robots={},
+        cameras={},
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        handler.set_states(state)
+        rendered = handler.get_states()
+    finally:
+        handler.close()
+
+    assert isinstance(rendered, TensorState)
+    assert rendered.cameras["overview"].rgb is not None
+
+
+@pytest.mark.general
+@pytest.mark.parametrize("refresh_method", ["refresh_render", "render"])
+def test_blender_handler_refresh_invalidates_cached_camera_state(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, refresh_method: str
+) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import ObjectState, TensorState
+
+    monkeypatch.chdir(tmp_path)
+
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=[0.2, 0.2, 0.2],
+                mass=1.0,
+                physics=PhysicStateType.XFORM,
+                color=[0.8, 0.1, 0.1],
+                default_position=(0.0, 0.0, 0.0),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            )
+        ],
+        cameras=[
+            PinholeCameraCfg(
+                name="overview",
+                data_types=["rgb"],
+                width=32,
+                height=24,
+                pos=(0.6, -1.0, 0.5),
+                look_at=(0.0, 0.0, 0.0),
+                focal_length=24.0,
+                horizontal_aperture=24.0,
+            )
+        ],
+        simulator="blender",
+        headless=True,
+    )
+    state = TensorState(
+        objects={
+            "cube": ObjectState(
+                root_state=torch.tensor([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]], dtype=torch.float32)
+            )
+        },
+        robots={},
+        cameras={},
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        handler.set_states(state)
+        first_camera_state = handler.get_states(mode="tensor").cameras["overview"]
+        handler._objs["cube"].location.x = 0.2
+        getattr(handler, refresh_method)()
+        second_camera_state = handler.get_states(mode="tensor").cameras["overview"]
+    finally:
+        handler.close()
+
+    assert second_camera_state is not first_camera_state
+
+
+@pytest.mark.general
+def test_blender_handler_set_dof_targets_fails_fast() -> None:
+    from metasim.sim.blender import BlenderHandler
+
+    handler = object.__new__(BlenderHandler)
+
+    with pytest.raises(NotImplementedError, match="render-only"):
+        handler.set_dof_targets([])
+
+
+@pytest.mark.general
+def test_blender_offline_renderer_writes_camera_frames(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderOfflineRenderCfg, render_state_sequence
+    from metasim.types import ObjectState, TensorState
+
+    monkeypatch.chdir(tmp_path)
+
+    scenario = ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube",
+                size=[0.2, 0.2, 0.2],
+                mass=1.0,
+                physics=PhysicStateType.XFORM,
+                color=[0.8, 0.1, 0.1],
+                default_position=(0.0, 0.0, 0.0),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            )
+        ],
+        cameras=[
+            PinholeCameraCfg(
+                name="overview",
+                data_types=["rgb"],
+                width=32,
+                height=24,
+                pos=(0.6, -1.0, 0.5),
+                look_at=(0.0, 0.0, 0.0),
+                focal_length=24.0,
+                horizontal_aperture=24.0,
+            )
+        ],
+        simulator="mujoco",
+        headless=True,
+    )
+    states = [
+        TensorState(
+            objects={
+                "cube": ObjectState(
+                    root_state=torch.tensor(
+                        [[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]], dtype=torch.float32
+                    )
+                )
+            },
+            robots={},
+            cameras={},
+        )
+    ]
+
+    outputs = render_state_sequence(
+        scenario,
+        states,
+        BlenderOfflineRenderCfg(output_dir=tmp_path / "renders", samples=8, device="CPU"),
+    )
+
+    assert outputs == [tmp_path / "renders" / "overview" / "frame_000000.png"]
+    assert outputs[0].is_file()
+    assert outputs[0].stat().st_size > 0
