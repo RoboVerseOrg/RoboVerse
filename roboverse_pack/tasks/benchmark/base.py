@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, replace
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
@@ -92,6 +93,81 @@ def build_benchmark_scenario(
     )
 
 
+def _apply_dm_control_struct_compat_patch() -> None:
+    from metasim.sim.mujoco.mujoco import apply_dm_control_struct_compat_patch
+
+    apply_dm_control_struct_compat_patch()
+
+
+def _get_handler_with_mujoco_compat(scenario: ScenarioCfg):
+    if scenario.simulator == "mujoco":
+        if getattr(scenario, "headless", False):
+            os.environ.setdefault("MUJOCO_GL", "egl")
+        _apply_dm_control_struct_compat_patch()
+    return get_handler(scenario)
+
+
+def _maybe_to_device(value, device):
+    if value is None or not hasattr(value, "to"):
+        return value
+    return value.to(device=device)
+
+
+def _prepare_tensor_state_for_render_handler(physics_state, render_handler):
+    render_device = getattr(render_handler, "device", None)
+    if render_device is None:
+        return physics_state
+
+    objects = {
+        name: replace(
+            obj_state,
+            root_state=_maybe_to_device(obj_state.root_state, render_device),
+            body_state=_maybe_to_device(obj_state.body_state, render_device),
+            joint_pos=_maybe_to_device(obj_state.joint_pos, render_device),
+            joint_vel=_maybe_to_device(obj_state.joint_vel, render_device),
+        )
+        for name, obj_state in physics_state.objects.items()
+    }
+    robots = {
+        name: replace(
+            robot_state,
+            root_state=_maybe_to_device(robot_state.root_state, render_device),
+            body_state=_maybe_to_device(robot_state.body_state, render_device),
+            joint_pos=_maybe_to_device(robot_state.joint_pos, render_device),
+            joint_vel=_maybe_to_device(robot_state.joint_vel, render_device),
+            joint_pos_target=_maybe_to_device(robot_state.joint_pos_target, render_device),
+            joint_vel_target=_maybe_to_device(robot_state.joint_vel_target, render_device),
+            joint_effort_target=_maybe_to_device(robot_state.joint_effort_target, render_device),
+        )
+        for name, robot_state in physics_state.robots.items()
+    }
+    extras = {
+        key: _maybe_to_device(value, render_device)
+        for key, value in getattr(physics_state, "extras", {}).items()
+    }
+    return replace(physics_state, objects=objects, robots=robots, cameras={}, extras=extras)
+
+
+def _sync_render_from_physics(physics_handler, render_handler):
+    physics_state = physics_handler.get_states(mode="tensor")
+    try:
+        render_handler.set_states(_prepare_tensor_state_for_render_handler(physics_state, render_handler))
+    except TypeError:
+        from metasim.utils.state import state_tensor_to_nested
+
+        render_handler.set_states(state_tensor_to_nested(physics_handler, physics_state))
+
+    if getattr(render_handler, "set_states_refreshes", False):
+        return physics_state
+
+    for hook_name in ("refresh_render", "render", "simulate", "update"):
+        hook = getattr(render_handler, hook_name, None)
+        if callable(hook):
+            hook()
+            break
+    return physics_state
+
+
 def _primary_robot_cfg(handler):
     if len(handler.robots) != 1:
         raise ValueError(f"expected a single robot configuration, got {len(handler.robots)}")
@@ -121,6 +197,31 @@ def _default_joint_targets(robot_cfg, joint_names: list[str]) -> list[float]:
     if defaults is None:
         raise ValueError(f"robot {robot_cfg.name} is missing default_joint_positions for hold")
     return [float(defaults[joint_name]) for joint_name in joint_names]
+
+
+def _first_env_joint_values(joint_pos) -> list[float]:
+    try:
+        first_env = joint_pos[0]
+    except Exception:
+        first_env = joint_pos
+    if hasattr(first_env, "detach"):
+        first_env = first_env.detach().cpu().tolist()
+    elif hasattr(first_env, "tolist"):
+        first_env = first_env.tolist()
+    return [float(value) for value in first_env]
+
+
+def _current_joint_targets(handler, robot_cfg, joint_names: list[str]) -> tuple[float, ...]:
+    states = handler.get_states(mode="tensor")
+    robot_state = states.robots[robot_cfg.name]
+    sorted_joint_names = handler.get_joint_names(robot_cfg.name, sort=True)
+    joint_values = _first_env_joint_values(robot_state.joint_pos)
+    _expect_length(joint_values, len(sorted_joint_names), label="current joint state", robot_name=robot_cfg.name)
+    joint_value_by_name = {
+        joint_name: joint_values[index]
+        for index, joint_name in enumerate(sorted_joint_names)
+    }
+    return tuple(joint_value_by_name[joint_name] for joint_name in joint_names)
 
 
 def _normalized_to_joint_target(normalized_value: float, default_value: float, lower: float, upper: float) -> float:
@@ -179,12 +280,13 @@ class NativeBenchmarkSession:
     scenario: ScenarioCfg
 
     def __post_init__(self) -> None:
-        self.handler = get_handler(self.scenario)
+        self.handler = _get_handler_with_mujoco_compat(self.scenario)
+        self.backend_label = f"{self.scenario.simulator}+native"
 
     def reset(self):
         """Return the current handler state as the reset observation."""
         states = self.handler.get_states(mode="tensor")
-        return states, {"backend": f"{self.scenario.simulator}+native"}
+        return states, {"backend": self.backend_label}
 
     def step(self, control: ControlCommand) -> StepResult:
         """Apply one teleop command and step native simulation."""
@@ -195,15 +297,83 @@ class NativeBenchmarkSession:
             refresh_render()
         return StepResult(
             observation=self.handler.get_states(mode="tensor"),
-            info={"backend": f"{self.scenario.simulator}+native", "controller": control.source},
+            info={"backend": self.backend_label, "controller": control.source},
         )
+
+    def restore_state(self, state) -> StepResult:
+        """Restore a previously captured state without advancing physics."""
+        self.handler.set_states(state)
+        refresh_render = getattr(self.handler, "refresh_render", None)
+        if callable(refresh_render):
+            refresh_render()
+        return StepResult(
+            observation=self.handler.get_states(mode="tensor"),
+            info={"backend": self.backend_label, "controller": "script:initial_pose"},
+        )
+
+    def current_joint_targets(self) -> tuple[float, ...]:
+        """Return current joints in the same order expected by joint-target commands."""
+        robot_cfg = _primary_robot_cfg(self.handler)
+        joint_names = _canonical_control_joint_names(self.handler, robot_cfg)
+        return _current_joint_targets(self.handler, robot_cfg, joint_names)
 
     def close(self) -> None:
         """Close the underlying MetaSim handler."""
         self.handler.close()
 
 
+@dataclass
+class HybridBenchmarkSession:
+    """Benchmark session using separate MetaSim physics and render handlers."""
+
+    physics_scenario: ScenarioCfg
+    render_scenario: ScenarioCfg
+
+    def __post_init__(self) -> None:
+        self.physics_handler = _get_handler_with_mujoco_compat(self.physics_scenario)
+        self.render_handler = _get_handler_with_mujoco_compat(self.render_scenario)
+        self.backend_label = f"{self.physics_scenario.simulator}+{self.render_scenario.simulator}"
+
+    def reset(self):
+        """Return the current hybrid handler state as the reset observation."""
+        states = _sync_render_from_physics(self.physics_handler, self.render_handler)
+        return states, {"backend": self.backend_label}
+
+    def step(self, control: ControlCommand) -> StepResult:
+        """Apply one teleop command to physics and sync the render handler."""
+        self.physics_handler.set_dof_targets(control_command_to_metasim_actions(self.physics_handler, control))
+        self.physics_handler.simulate()
+        states = _sync_render_from_physics(self.physics_handler, self.render_handler)
+        return StepResult(
+            observation=states,
+            info={"backend": self.backend_label, "controller": control.source},
+        )
+
+    def restore_state(self, state) -> StepResult:
+        """Restore physics state and sync the render handler without advancing physics."""
+        self.physics_handler.set_states(state)
+        states = _sync_render_from_physics(self.physics_handler, self.render_handler)
+        return StepResult(
+            observation=states,
+            info={"backend": self.backend_label, "controller": "script:initial_pose"},
+        )
+
+    def current_joint_targets(self) -> tuple[float, ...]:
+        """Return current physics joints in the same order expected by joint-target commands."""
+        robot_cfg = _primary_robot_cfg(self.physics_handler)
+        joint_names = _canonical_control_joint_names(self.physics_handler, robot_cfg)
+        return _current_joint_targets(self.physics_handler, robot_cfg, joint_names)
+
+    def close(self) -> None:
+        """Close both hybrid handlers."""
+        try:
+            self.physics_handler.close()
+        finally:
+            self.render_handler.close()
+
+
 __all__ = [
+    "HybridBenchmarkSession",
     "NativeBenchmarkSession",
     "build_benchmark_scenario",
     "control_command_to_metasim_actions",

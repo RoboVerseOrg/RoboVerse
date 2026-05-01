@@ -173,16 +173,54 @@ def _decode_targets(teleop_runtime: CanonicalTeleopRuntime, packet: object) -> C
     return teleop_runtime.decode_packet(packet)
 
 
-def _validate_native_request(task_spec: BenchmarkTaskSpec, robot: str, simulator: str) -> None:
+def _initial_pose_control(baseline_joint_targets: Sequence[float] | None) -> ControlCommand:
+    if baseline_joint_targets is None:
+        return ControlCommand(mode="hold", source="script:initial_pose")
+    return ControlCommand.from_joint_targets(baseline_joint_targets, source="script:initial_pose")
+
+
+def _session_joint_targets(session, observation: object) -> tuple[float, ...] | None:
+    current_joint_targets = getattr(session, "current_joint_targets", None)
+    if callable(current_joint_targets):
+        return tuple(float(value) for value in current_joint_targets())
+    return _baseline_joint_targets(observation)
+
+
+def _validate_native_request(task_spec: BenchmarkTaskSpec, robot: str, simulator: str, renderer: str | None = None) -> None:
     if simulator not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
         raise ValueError(f"task {task_spec.name} does not support simulator {simulator!r}; supported: {supported}")
+    if renderer is not None and renderer not in task_spec.supported_simulators:
+        supported = ", ".join(task_spec.supported_simulators)
+        raise ValueError(f"task {task_spec.name} does not support renderer {renderer!r}; supported: {supported}")
     task_spec.robot_profile(robot)
 
 
-def _create_native_session(task_spec: BenchmarkTaskSpec, robot: str, simulator: str, *, headless: bool):
-    from roboverse_pack.tasks.benchmark.base import NativeBenchmarkSession, build_benchmark_scenario
+def _create_native_session(
+    task_spec: BenchmarkTaskSpec,
+    robot: str,
+    simulator: str,
+    *,
+    renderer: str | None,
+    headless: bool,
+    physics_viewer: bool = False,
+):
+    from roboverse_pack.tasks.benchmark.base import (
+        HybridBenchmarkSession,
+        NativeBenchmarkSession,
+        build_benchmark_scenario,
+    )
 
+    if renderer is not None and renderer != simulator:
+        physics_scenario = build_benchmark_scenario(
+            task_spec,
+            robot=robot,
+            simulator=simulator,
+            headless=not physics_viewer,
+            camera_names=(),
+        )
+        render_scenario = build_benchmark_scenario(task_spec, robot=robot, simulator=renderer, headless=headless)
+        return HybridBenchmarkSession(physics_scenario, render_scenario)
     scenario = build_benchmark_scenario(task_spec, robot=robot, simulator=simulator, headless=headless)
     return NativeBenchmarkSession(scenario)
 
@@ -192,11 +230,14 @@ def run_native_task_teleop_flow(
     task: str,
     robot: str | None = None,
     simulator: str,
+    renderer: str | None = None,
     packets: Iterable[object] = (),
     session=None,
     teleop_runtime: CanonicalTeleopRuntime | None = None,
     record_run: bool = False,
     headless: bool = True,
+    physics_viewer: bool = False,
+    hold_initial_pose: bool = False,
 ) -> dict[str, Any]:
     """Run native-only benchmark teleop packets through one simulation session."""
     if record_run:
@@ -204,11 +245,19 @@ def run_native_task_teleop_flow(
 
     task_spec = get_benchmark_task_spec(task)
     selected_robot = task_spec.default_robot if robot is None else str(robot)
-    _validate_native_request(task_spec, selected_robot, simulator)
+    selected_renderer = None if renderer is None else str(renderer)
+    _validate_native_request(task_spec, selected_robot, simulator, selected_renderer)
 
     owns_session = session is None
     if session is None:
-        session = _create_native_session(task_spec, selected_robot, simulator, headless=headless)
+        session = _create_native_session(
+            task_spec,
+            selected_robot,
+            simulator,
+            renderer=selected_renderer,
+            headless=headless,
+            physics_viewer=physics_viewer,
+        )
 
     try:
         initial_observation, _ = session.reset()
@@ -219,20 +268,36 @@ def run_native_task_teleop_flow(
             )
 
         frame_count = 0
-        baseline_joint_targets = _baseline_joint_targets(initial_observation)
+        restore_initial_state = getattr(session, "restore_state", None) if hold_initial_pose else None
+        baseline_joint_targets = (
+            None
+            if callable(restore_initial_state)
+            else _session_joint_targets(session, initial_observation)
+        )
+        initial_joint_targets = baseline_joint_targets
         for packet in packets:
-            targets = _decode_targets(teleop_runtime, packet)
-            control = teleop_targets_to_control_command(task_spec, selected_robot, targets, baseline_joint_targets)
-            step_result = session.step(control)
+            if callable(restore_initial_state):
+                step_result = restore_initial_state(initial_observation)
+            elif hold_initial_pose:
+                control = _initial_pose_control(initial_joint_targets)
+                step_result = session.step(control)
+            else:
+                targets = _decode_targets(teleop_runtime, packet)
+                control = teleop_targets_to_control_command(task_spec, selected_robot, targets, baseline_joint_targets)
+                step_result = session.step(control)
             observation = getattr(step_result, "observation", step_result[0] if isinstance(step_result, tuple) else None)
-            baseline_joint_targets = _baseline_joint_targets(observation) or baseline_joint_targets
+            if not hold_initial_pose:
+                baseline_joint_targets = _session_joint_targets(session, observation) or baseline_joint_targets
             frame_count += 1
 
         return {
             "task": task_spec.name,
             "robot": selected_robot,
             "simulator": simulator,
-            "backend": f"{simulator}+native",
+            "renderer": selected_renderer,
+            "backend": f"{simulator}+{selected_renderer}" if selected_renderer is not None else f"{simulator}+native",
+            "physics_viewer": bool(physics_viewer and selected_renderer is not None and selected_renderer != simulator),
+            "control_mode": "initial_pose" if hold_initial_pose else "teleop",
             "frame_count": frame_count,
         }
     finally:
