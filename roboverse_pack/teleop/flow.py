@@ -3,7 +3,8 @@ from __future__ import annotations
 """Native-only teleoperation flow for benchmark tasks."""
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
+from pathlib import Path
 from typing import Any, Literal
 
 from roboverse_pack.benchmark import BenchmarkTaskSpec, get_benchmark_task_spec
@@ -186,6 +187,54 @@ def _session_joint_targets(session, observation: object) -> tuple[float, ...] | 
     return _baseline_joint_targets(observation)
 
 
+def _cpu_copy_for_recording(value: object) -> object:
+    if hasattr(value, "detach"):
+        return value.detach().cpu().clone()
+    if is_dataclass(value) and not isinstance(value, type):
+        return replace(
+            value,
+            **{field.name: _cpu_copy_for_recording(getattr(value, field.name)) for field in fields(value)},
+        )
+    if isinstance(value, dict):
+        return {key: _cpu_copy_for_recording(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_cpu_copy_for_recording(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_cpu_copy_for_recording(item) for item in value)
+    return value
+
+
+def _state_for_recording(observation: object) -> object:
+    return _cpu_copy_for_recording(observation)
+
+
+def _write_recorded_states(
+    path: str | Path,
+    *,
+    task: str,
+    robot: str,
+    simulator: str,
+    renderer: str | None,
+    states: list[object],
+) -> None:
+    import torch
+
+    output_path = Path(path).expanduser()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "format": "roboverse_benchmark_tensor_states_v1",
+            "task": task,
+            "robot": robot,
+            "simulator": simulator,
+            "renderer": renderer,
+            "frame_count": len(states),
+            "states": states,
+        },
+        output_path,
+    )
+
+
 def _validate_native_request(task_spec: BenchmarkTaskSpec, robot: str, simulator: str, renderer: str | None = None) -> None:
     if simulator not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
@@ -235,6 +284,7 @@ def run_native_task_teleop_flow(
     session=None,
     teleop_runtime: CanonicalTeleopRuntime | None = None,
     record_run: bool = False,
+    record_states_path: str | Path | None = None,
     headless: bool = True,
     physics_viewer: bool = False,
     hold_initial_pose: bool = False,
@@ -261,6 +311,9 @@ def run_native_task_teleop_flow(
 
     try:
         initial_observation, _ = session.reset()
+        recorded_states: list[object] = []
+        if record_states_path is not None:
+            recorded_states.append(_state_for_recording(initial_observation))
         if teleop_runtime is None:
             teleop_runtime = CanonicalTeleopRuntime(
                 reference_pose_provider=_reference_pose_provider,
@@ -286,11 +339,13 @@ def run_native_task_teleop_flow(
                 control = teleop_targets_to_control_command(task_spec, selected_robot, targets, baseline_joint_targets)
                 step_result = session.step(control)
             observation = getattr(step_result, "observation", step_result[0] if isinstance(step_result, tuple) else None)
+            if record_states_path is not None:
+                recorded_states.append(_state_for_recording(observation))
             if not hold_initial_pose:
                 baseline_joint_targets = _session_joint_targets(session, observation) or baseline_joint_targets
             frame_count += 1
 
-        return {
+        result = {
             "task": task_spec.name,
             "robot": selected_robot,
             "simulator": simulator,
@@ -300,6 +355,17 @@ def run_native_task_teleop_flow(
             "control_mode": "initial_pose" if hold_initial_pose else "teleop",
             "frame_count": frame_count,
         }
+        if record_states_path is not None:
+            _write_recorded_states(
+                record_states_path,
+                task=task_spec.name,
+                robot=selected_robot,
+                simulator=simulator,
+                renderer=selected_renderer,
+                states=recorded_states,
+            )
+            result["record_states_path"] = str(Path(record_states_path).expanduser())
+        return result
     finally:
         if owns_session or session is not None:
             session.close()

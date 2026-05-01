@@ -3,6 +3,7 @@ from __future__ import annotations
 # ruff: noqa: D103
 import importlib.util
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -550,3 +551,192 @@ def test_native_teleop_flow_rejects_unsupported_simulator_for_task() -> None:
             session=_FakeSession(),
             record_run=False,
         )
+
+
+def test_native_teleop_flow_records_reset_and_step_states(tmp_path: Path) -> None:
+    class _RecordingFakeSession(_FakeSession):
+        def __init__(self) -> None:
+            super().__init__()
+            self.observations = []
+
+        def step(self, control):
+            result = super().step(control)
+            self.observations.append(result.observation)
+            return result
+
+    session = _RecordingFakeSession()
+    output_path = tmp_path / "states.pt"
+
+    result = run_native_task_teleop_flow(
+        task="benchmark.cube_reach",
+        robot="openarm_bimanual_wuji",
+        simulator="isaacsim",
+        packets=[
+            CanonicalTeleopTargets(
+                left_work_pose_cm_xyzw=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                right_work_pose_cm_xyzw=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                left_close_ratio=0.0,
+                right_close_ratio=1.0,
+            ),
+            CanonicalTeleopTargets(
+                left_work_pose_cm_xyzw=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                right_work_pose_cm_xyzw=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                left_close_ratio=1.0,
+                right_close_ratio=0.0,
+            ),
+        ],
+        session=session,
+        record_run=False,
+        record_states_path=output_path,
+    )
+
+    import torch
+
+    payload = torch.load(output_path, weights_only=False)
+    assert payload["format"] == "roboverse_benchmark_tensor_states_v1"
+    assert payload["task"] == "benchmark.cube_reach"
+    assert payload["robot"] == "openarm_bimanual_wuji"
+    assert payload["simulator"] == "isaacsim"
+    assert payload["renderer"] is None
+    assert payload["frame_count"] == 3
+    assert payload["states"] == [session.reset_observation, *session.observations]
+    assert result["record_states_path"] == str(output_path)
+
+
+def test_bidexbench_cube_reach_runner_accepts_offline_blender_render_options() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    parser = module._build_parser()
+    args = parser.parse_args(
+        [
+            "--sim",
+            "mujoco",
+            "--steps",
+            "3",
+            "--record-states",
+            "/tmp/cube_reach_states.pt",
+            "--offline-renderer",
+            "blender",
+            "--render-output",
+            "/tmp/cube_reach_blender",
+            "--render-samples",
+            "8",
+            "--render-device",
+            "CPU",
+        ]
+    )
+
+    assert args.record_states == Path("/tmp/cube_reach_states.pt")
+    assert args.offline_renderer == "blender"
+    assert args.render_output == Path("/tmp/cube_reach_blender")
+    assert args.render_samples == 8
+    assert args.render_device == "CPU"
+
+
+def test_bidexbench_cube_reach_runner_calls_blender_offline_renderer(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach_offline", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    import torch
+
+    calls = []
+
+    class _FakeBlenderOfflineRenderCfg:
+        def __init__(self, *, output_dir, samples, device) -> None:
+            self.output_dir = output_dir
+            self.samples = samples
+            self.device = device
+
+    def _fake_render_state_sequence(scenario, states, cfg):
+        calls.append((scenario, states, cfg))
+        return [Path(cfg.output_dir) / "frame_0000.png"]
+
+    fake_offline_module = SimpleNamespace(
+        BlenderOfflineRenderCfg=_FakeBlenderOfflineRenderCfg,
+        render_state_sequence=_fake_render_state_sequence,
+    )
+    monkeypatch.setitem(sys.modules, "metasim.sim.blender.offline", fake_offline_module)
+
+    def _fake_flow(**kwargs):
+        kwargs["record_states_path"].parent.mkdir(parents=True, exist_ok=True)
+        torch.save({"states": ["reset-state", "step-state"]}, kwargs["record_states_path"])
+        return {"frame_count": 1, "record_states_path": str(kwargs["record_states_path"])}
+
+    monkeypatch.setattr(module, "run_native_task_teleop_flow", _fake_flow)
+
+    built_scenarios = []
+
+    def _fake_build_benchmark_scenario(task_spec, *, robot, simulator, headless):
+        scenario = SimpleNamespace(task=task_spec.name, robot=robot, simulator=simulator, headless=headless)
+        built_scenarios.append(scenario)
+        return scenario
+
+    import roboverse_pack.tasks.benchmark.base as benchmark_base
+
+    monkeypatch.setattr(benchmark_base, "build_benchmark_scenario", _fake_build_benchmark_scenario)
+
+    output_dir = tmp_path / "frames"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_bidexbench_cube_reach.py",
+            "--steps",
+            "1",
+            "--offline-renderer",
+            "blender",
+            "--render-output",
+            str(output_dir),
+            "--render-samples",
+            "8",
+            "--render-device",
+            "CPU",
+        ],
+    )
+
+    module.main()
+
+    assert len(calls) == 1
+    scenario, states, cfg = calls[0]
+    assert built_scenarios == [scenario]
+    assert scenario.task == "benchmark.cube_reach"
+    assert scenario.robot == "openarm_bimanual_wuji"
+    assert scenario.simulator == "isaacsim"
+    assert scenario.headless is True
+    assert states == ["reset-state", "step-state"]
+    assert cfg.output_dir == output_dir
+    assert cfg.samples == 8
+    assert cfg.device == "CPU"
+
+
+def test_openarm_bimanual_wuji_usd_imports_in_blender_when_bpy_available() -> None:
+    bpy = pytest.importorskip("bpy")
+
+    robot = OpenarmBimanualWujiCfg()
+    usd_path = Path(robot.usd_path)
+    if not usd_path.is_absolute():
+        usd_path = ROOT / usd_path
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+    result = bpy.ops.wm.usd_import(filepath=str(usd_path))
+
+    mesh_count = sum(1 for obj in bpy.data.objects if obj.type == "MESH")
+    named_links = {obj.name.split(".")[0] for obj in bpy.data.objects}
+
+    assert "FINISHED" in result
+    assert mesh_count > 0
+    assert "left_palm_link" in named_links
+    assert "right_palm_link" in named_links
