@@ -38,6 +38,35 @@ def test_blender_body_object_selection_prefers_empty_with_children() -> None:
 
 
 @pytest.mark.general
+def test_blender_body_object_selection_prefers_visible_import_instance() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _choose_body_object
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    prototype = bpy.data.objects.new("left_palm_link", None)
+    prototype_child = bpy.data.objects.new("mesh", bpy.data.meshes.new("prototype_mesh"))
+    instance = bpy.data.objects.new("left_palm_link.001", None)
+    instance_child = bpy.data.objects.new("visuals", None)
+    proto_collection = bpy.data.collections.new("proto")
+    instance_child.instance_type = "COLLECTION"
+    instance_child.instance_collection = proto_collection
+
+    bpy.context.collection.objects.link(instance)
+    bpy.context.collection.objects.link(instance_child)
+    prototype_child.parent = prototype
+    instance_child.parent = instance
+
+    # USD instance prototypes are not linked into the active scene collection,
+    # but they can share the body name with the visible instance transform.
+    assert prototype.visible_get() is False
+    assert instance.visible_get() is True
+
+    assert _choose_body_object([prototype, instance]) is instance
+
+
+@pytest.mark.general
 def test_blender_matrix_from_root_state_uses_wxyz_quaternion() -> None:
     from metasim.sim.blender.blender import _matrix_from_root_state
 
@@ -107,6 +136,86 @@ def test_blender_handler_applies_robot_body_state_to_body_objects() -> None:
     handler._apply_robot_body_state("robot", robot_state)
 
     assert tuple(round(value, 5) for value in body_obj.location) == (1.0, 2.0, 3.0)
+
+
+@pytest.mark.general
+def test_blender_handler_strips_usd_unit_scale_for_robot_body_pose() -> None:
+    import bpy
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import RobotState
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    body_obj = bpy.data.objects.new("body", None)
+    visual = bpy.data.objects.new("visuals", None)
+    proto = bpy.data.collections.new("proto")
+    visual.instance_type = "COLLECTION"
+    visual.instance_collection = proto
+    bpy.context.collection.objects.link(body_obj)
+    bpy.context.collection.objects.link(visual)
+    visual.parent = body_obj
+    body_obj.scale = (0.01, 0.01, 0.01)
+
+    handler = object.__new__(BlenderHandler)
+    handler._body_objs = {"robot": {"body": body_obj}}
+
+    robot_state = RobotState(
+        root_state=torch.zeros((1, 13), dtype=torch.float32),
+        body_names=["body"],
+        body_state=torch.tensor(
+            [[[1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]]], dtype=torch.float32
+        ),
+        joint_pos=torch.zeros((1, 0), dtype=torch.float32),
+        joint_vel=torch.zeros((1, 0), dtype=torch.float32),
+        joint_pos_target=None,
+        joint_vel_target=None,
+        joint_effort_target=None,
+    )
+
+    handler._apply_robot_body_state("robot", robot_state)
+
+    assert tuple(round(value, 5) for value in body_obj.matrix_world.translation) == (1.0, 2.0, 3.0)
+    assert tuple(round(value, 5) for value in body_obj.matrix_world.to_scale()) == (1.0, 1.0, 1.0)
+
+
+@pytest.mark.general
+def test_blender_handler_uses_renderable_visual_object_for_body_pose() -> None:
+    import bpy
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import RobotState
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    body_obj = bpy.data.objects.new("openarm_left_link1", None)
+    visual_obj = bpy.data.objects.new("openarm_left_link1_visual", None)
+    visual_mesh = bpy.data.objects.new("mesh", bpy.data.meshes.new("visual_mesh"))
+    bpy.context.collection.objects.link(body_obj)
+    bpy.context.collection.objects.link(visual_obj)
+    bpy.context.collection.objects.link(visual_mesh)
+    visual_mesh.parent = visual_obj
+
+    handler = object.__new__(BlenderHandler)
+    handler._body_objs = {"robot": {"openarm_left_link1": body_obj, "openarm_left_link1_visual": visual_obj}}
+
+    robot_state = RobotState(
+        root_state=torch.zeros((1, 13), dtype=torch.float32),
+        body_names=["openarm_left_link1"],
+        body_state=torch.tensor(
+            [[[1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]]], dtype=torch.float32
+        ),
+        joint_pos=torch.zeros((1, 0), dtype=torch.float32),
+        joint_vel=torch.zeros((1, 0), dtype=torch.float32),
+        joint_pos_target=None,
+        joint_vel_target=None,
+        joint_effort_target=None,
+    )
+
+    handler._apply_robot_body_state("robot", robot_state)
+
+    assert tuple(round(value, 5) for value in body_obj.matrix_world.translation) == (0.0, 0.0, 0.0)
+    assert tuple(round(value, 5) for value in visual_obj.matrix_world.translation) == (1.0, 2.0, 3.0)
 
 
 @pytest.mark.general

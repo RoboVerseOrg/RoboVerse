@@ -62,20 +62,53 @@ def _normalized_blender_name(name: str) -> str:
     return _BLENDER_NUMERIC_SUFFIX_RE.sub("", name)
 
 
+def _is_visible_object(obj) -> bool:
+    try:
+        return bool(obj.visible_get())
+    except RuntimeError:
+        return False
+
+
+def _has_collection_instance_child(obj) -> bool:
+    return any(
+        getattr(child, "instance_type", None) == "COLLECTION" and getattr(child, "instance_collection", None) is not None
+        for child in getattr(obj, "children", ())
+    )
+
+
+def _has_renderable_descendant(obj) -> bool:
+    if getattr(obj, "type", None) == "MESH":
+        return True
+    if _has_collection_instance_child(obj):
+        return True
+    return any(_has_renderable_descendant(child) for child in getattr(obj, "children", ()))
+
+
 def _choose_body_object(candidates: list) -> object:
     """Choose the transform object that should receive a MetaSim body pose."""
     if not candidates:
         raise ValueError("cannot choose from an empty body object candidate list")
 
-    empty_with_children = [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY" and len(obj.children) > 0]
-    if empty_with_children:
-        return sorted(empty_with_children, key=lambda obj: obj.name)[0]
+    candidate_groups = [
+        [
+            obj
+            for obj in candidates
+            if _is_visible_object(obj)
+            and getattr(obj, "type", None) == "EMPTY"
+            and _has_renderable_descendant(obj)
+        ],
+        [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY" and _has_renderable_descendant(obj)],
+        [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY" and len(obj.children) > 0],
+        [obj for obj in candidates if _is_visible_object(obj) and getattr(obj, "type", None) == "EMPTY"],
+        [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY"],
+        [obj for obj in candidates if _is_visible_object(obj)],
+        candidates,
+    ]
+    for group in candidate_groups:
+        if group:
+            return sorted(group, key=lambda obj: obj.name)[0]
 
-    empties = [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY"]
-    if empties:
-        return sorted(empties, key=lambda obj: obj.name)[0]
-
-    return sorted(candidates, key=lambda obj: obj.name)[0]
+    raise RuntimeError("unreachable")
 
 
 def _matrix_from_root_state(root_state: torch.Tensor) -> Matrix:
@@ -86,17 +119,45 @@ def _matrix_from_root_state(root_state: torch.Tensor) -> Matrix:
     return Matrix.Translation(position) @ quat.to_matrix().to_4x4()
 
 
-def _apply_root_state_to_object(obj, root_state: torch.Tensor) -> None:
+def _apply_root_state_to_object(obj, root_state: torch.Tensor, scale_override: Vector | None = None) -> None:
     """Apply translation and rotation while preserving the object's visual scale."""
     bpy.context.view_layer.update()
     matrix = _matrix_from_root_state(root_state)
-    world_scale = obj.matrix_world.to_scale()
+    world_scale = scale_override if scale_override is not None else obj.matrix_world.to_scale()
     desired_world = matrix @ Matrix.Diagonal((world_scale.x, world_scale.y, world_scale.z, 1.0))
     if obj.parent is None:
         obj.matrix_world = desired_world
     else:
         obj.matrix_basis = obj.parent.matrix_world.inverted() @ desired_world
     bpy.context.view_layer.update()
+
+
+def _robot_body_pose_scale(obj) -> Vector:
+    """Return the world scale to use when replaying a simulator body pose."""
+    bpy.context.view_layer.update()
+    world_scale = obj.matrix_world.to_scale()
+    if getattr(obj, "type", None) == "EMPTY" and _has_collection_instance_child(obj):
+        max_scale = max(abs(world_scale.x), abs(world_scale.y), abs(world_scale.z))
+        min_scale = min(abs(world_scale.x), abs(world_scale.y), abs(world_scale.z))
+        if max_scale <= 0.1 and abs(max_scale - min_scale) <= 1e-6:
+            return Vector((1.0, 1.0, 1.0))
+    return world_scale
+
+
+def _resolve_robot_body_object(body_map: dict[str, object], body_name: str) -> object | None:
+    alias = _blender_body_name_alias(body_name)
+    exact_candidates = [body_map.get(name) for name in (body_name, alias)]
+    visual_candidates = [body_map.get(f"{name}_visual") for name in (alias, body_name)]
+    for obj in exact_candidates:
+        if obj is not None and _has_renderable_descendant(obj):
+            return obj
+    for obj in visual_candidates:
+        if obj is not None and _has_renderable_descendant(obj):
+            return obj
+    for obj in exact_candidates:
+        if obj is not None:
+            return obj
+    return next((obj for obj in visual_candidates if obj is not None), None)
 
 
 def _blender_body_name_alias(body_name: str) -> str:
@@ -247,6 +308,7 @@ class BlenderHandler(BaseSimHandler):
         self._register_body_objects(obj_cfg.name, imported)
 
     def _register_body_objects(self, obj_name: str, imported: list) -> None:
+        bpy.context.view_layer.update()
         grouped: dict[str, list] = {}
         for obj in imported:
             grouped.setdefault(_normalized_blender_name(obj.name), []).append(obj)
@@ -300,13 +362,11 @@ class BlenderHandler(BaseSimHandler):
         body_map = self._body_objs.get(robot_name, {})
         missing = []
         for body_index, body_name in enumerate(robot_state.body_names):
-            obj = body_map.get(body_name)
-            if obj is None:
-                obj = body_map.get(_blender_body_name_alias(body_name))
+            obj = _resolve_robot_body_object(body_map, body_name)
             if obj is None:
                 missing.append(body_name)
                 continue
-            _apply_root_state_to_object(obj, robot_state.body_state[0, body_index])
+            _apply_root_state_to_object(obj, robot_state.body_state[0, body_index], _robot_body_pose_scale(obj))
         if missing:
             raise ValueError(f"Blender could not map bodies for {robot_name}: {missing[:10]}")
 
