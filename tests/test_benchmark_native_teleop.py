@@ -85,6 +85,23 @@ def test_benchmark_cube_reach_spec_separates_task_and_openarm_robot_profile() ->
     assert profile.joint_slices["right_hand"] == (34, 54)
 
 
+def test_benchmark_cube_reach_chest_camera_points_at_task_volume() -> None:
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="mujoco", headless=True)
+    chest = next(camera for camera in scenario.cameras if camera.name == "chest")
+    cube = next(obj for obj in scenario.objects if obj.name == "cube")
+
+    camera_direction = tuple(chest.look_at[index] - chest.pos[index] for index in range(3))
+    cube_direction = tuple(cube.default_position[index] - chest.pos[index] for index in range(3))
+    dot = sum(camera_direction[index] * cube_direction[index] for index in range(3))
+    camera_norm = sum(value * value for value in camera_direction) ** 0.5
+    cube_norm = sum(value * value for value in cube_direction) ** 0.5
+
+    assert dot / (camera_norm * cube_norm) > 0.65
+
+
 def test_openarm_bimanual_wuji_robot_cfg_uses_roboverse_data_assets() -> None:
     robot = OpenarmBimanualWujiCfg()
 
