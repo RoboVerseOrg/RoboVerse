@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -56,18 +57,6 @@ def import_mesh(path):
 
 _BLENDER_NUMERIC_SUFFIX_RE = re.compile(r"\.\d{3}$")
 _MATERIAL_HEX_COLOR_RE = re.compile(r"([0-9A-Fa-f]{6})(?:\.\d{3})?$")
-_OPENARM_LINK_RE = re.compile(r"openarm_(?:left|right)_link(\d+)$")
-_OPENARM_MATERIAL_INDEX_RE = re.compile(r"mat_(\d+)")
-_OPENARM_MATTE_BLACK_RGBA = (0.24705882, 0.24705882, 0.24705882, 1.0)
-_OPENARM_METAL_SILVER_RGBA = (0.79607843, 0.79607843, 0.79607843, 1.0)
-_WUJI_HAND_RGBA = (0.89804, 0.91765, 0.92941, 1.0)
-_OPENARM_SILVER_MATERIAL_INDICES = {
-    "body": {1, 4},
-    3: {2},
-    4: {1},
-    5: {1},
-    6: {1},
-}
 
 
 def _srgb_channel_to_linear(value: float) -> float:
@@ -88,6 +77,18 @@ def _rgba_srgb_to_linear(rgba: tuple[float, float, float, float]) -> tuple[float
 def _normalized_blender_name(name: str) -> str:
     """Return a Blender object name without Blender's duplicate numeric suffix."""
     return _BLENDER_NUMERIC_SUFFIX_RE.sub("", name)
+
+
+def _normalized_material_name(name: str) -> str:
+    """Return a material key shared by Blender names and asset-file names."""
+    return _normalized_blender_name(name).replace(".", "_")
+
+
+def _material_name_candidates(name: str) -> tuple[str, ...]:
+    normalized = _normalized_material_name(name)
+    if normalized.endswith("-material"):
+        return (normalized, normalized.removesuffix("-material"))
+    return (normalized,)
 
 
 def _is_visible_object(obj) -> bool:
@@ -202,6 +203,147 @@ def _rgba_from_material(material) -> tuple[float, float, float, float]:
     return _rgba_srgb_to_linear((0.7, 0.7, 0.7, 1.0))
 
 
+def _rgba_from_text(text: str) -> tuple[float, float, float, float] | None:
+    values = [float(value) for value in text.split()]
+    if len(values) < 3:
+        return None
+    rgba = tuple(values[:4]) if len(values) >= 4 else tuple(values[:3]) + (1.0,)
+    return _rgba_srgb_to_linear(rgba)
+
+
+def _resolve_asset_path(path: str | Path, base_dir: Path | None = None) -> Path | None:
+    raw_path = str(path)
+    if raw_path.startswith("file://"):
+        raw_path = raw_path[len("file://") :]
+    elif raw_path.startswith("package://"):
+        raw_path = raw_path[len("package://") :]
+
+    candidate = Path(raw_path)
+    candidates = []
+    if candidate.is_absolute():
+        candidates.append(candidate)
+    if base_dir is not None and not candidate.is_absolute():
+        candidates.append(base_dir / candidate)
+    if not candidate.is_absolute():
+        candidates.append(Path.cwd() / candidate)
+
+    for resolved in candidates:
+        if resolved.exists():
+            return resolved.resolve()
+    return None
+
+
+def _material_rgba_from_collada(collada_path: str | Path) -> dict[str, tuple[float, float, float, float]]:
+    path = Path(collada_path)
+    root = ET.parse(path).getroot()
+    effect_colors: dict[str, tuple[float, float, float, float]] = {}
+    material_colors: dict[str, tuple[float, float, float, float]] = {}
+
+    for effect in root.findall(".//{*}library_effects/{*}effect"):
+        effect_id = effect.get("id")
+        color_element = effect.find(".//{*}diffuse/{*}color")
+        if effect_id is None or color_element is None or color_element.text is None:
+            continue
+        rgba = _rgba_from_text(color_element.text)
+        if rgba is not None:
+            effect_colors[effect_id] = rgba
+
+    for material in root.findall(".//{*}library_materials/{*}material"):
+        instance_effect = material.find("{*}instance_effect")
+        if instance_effect is None:
+            continue
+        effect_id = (instance_effect.get("url") or "").lstrip("#")
+        rgba = effect_colors.get(effect_id)
+        if rgba is None:
+            continue
+        for name in (material.get("name"), material.get("id")):
+            if name:
+                material_name = _normalized_material_name(name.removesuffix("-material"))
+                if material_name:
+                    material_colors[material_name] = rgba
+
+    return material_colors
+
+
+def _material_rgba_from_urdf(urdf_path: str | Path) -> dict[str, tuple[float, float, float, float]]:
+    path = Path(urdf_path)
+    root = ET.parse(path).getroot()
+    material_colors: dict[str, tuple[float, float, float, float]] = {}
+
+    for material in root.findall(".//{*}material"):
+        name = material.get("name")
+        color = material.find("{*}color")
+        if name is None or color is None:
+            continue
+        rgba_text = color.get("rgba")
+        if rgba_text is None:
+            continue
+        rgba = _rgba_from_text(rgba_text)
+        if rgba is not None:
+            material_colors[_normalized_material_name(name)] = rgba
+
+    for mesh in root.findall(".//{*}visual/{*}geometry/{*}mesh"):
+        filename = mesh.get("filename")
+        if not filename:
+            continue
+        mesh_path = _resolve_asset_path(filename, path.parent)
+        if mesh_path is not None and mesh_path.suffix.lower() == ".dae":
+            material_colors.update(_material_rgba_from_collada(mesh_path))
+
+    return material_colors
+
+
+def _material_rgba_from_mjcf(mjcf_path: str | Path) -> dict[str, tuple[float, float, float, float]]:
+    path = Path(mjcf_path)
+    root = ET.parse(path).getroot()
+    material_colors: dict[str, tuple[float, float, float, float]] = {}
+
+    for material in root.findall(".//material"):
+        name = material.get("name")
+        rgba_text = material.get("rgba")
+        if name is None or rgba_text is None:
+            continue
+        rgba = _rgba_from_text(rgba_text)
+        if rgba is not None:
+            material_colors[_normalized_material_name(name)] = rgba
+
+    for mesh in root.findall(".//mesh"):
+        filename = mesh.get("file")
+        if not filename:
+            continue
+        mesh_path = _resolve_asset_path(filename, path.parent)
+        if mesh_path is not None and mesh_path.suffix.lower() == ".dae":
+            material_colors.update(_material_rgba_from_collada(mesh_path))
+
+    return material_colors
+
+
+def _asset_material_rgba(obj_cfg: ArticulationObjCfg | RigidObjCfg) -> dict[str, tuple[float, float, float, float]]:
+    material_colors: dict[str, tuple[float, float, float, float]] = {}
+    for asset_path, parser in (
+        (getattr(obj_cfg, "mjcf_path", None), _material_rgba_from_mjcf),
+        (getattr(obj_cfg, "urdf_path", None), _material_rgba_from_urdf),
+    ):
+        if not asset_path:
+            continue
+        resolved = _resolve_asset_path(asset_path)
+        if resolved is not None:
+            material_colors.update(parser(resolved))
+
+    for asset_path in getattr(obj_cfg, "extra_resources", ()):
+        resolved = _resolve_asset_path(asset_path)
+        if resolved is None:
+            continue
+        if resolved.suffix.lower() == ".dae":
+            material_colors.update(_material_rgba_from_collada(resolved))
+        elif resolved.suffix.lower() == ".urdf":
+            material_colors.update(_material_rgba_from_urdf(resolved))
+        elif resolved.suffix.lower() in {".xml", ".mjcf"}:
+            material_colors.update(_material_rgba_from_mjcf(resolved))
+
+    return material_colors
+
+
 def _material_has_surface_shader(material) -> bool:
     if not getattr(material, "use_nodes", False) or material.node_tree is None:
         return False
@@ -249,86 +391,42 @@ def _repair_material_surface_shader(material, rgba: tuple[float, float, float, f
         material.blend_method = "OPAQUE"
 
 
-def _openarm_material_index(material_name: str) -> int | None:
-    match = _OPENARM_MATERIAL_INDEX_RE.match(_normalized_blender_name(material_name))
-    if match:
-        return int(match.group(1))
-    return None
-
-
-def _imported_material_rgba_override(
-    context_names: tuple[str, ...], material_name: str | None = None
-) -> tuple[float, float, float, float] | None:
-    material_index = _openarm_material_index(material_name) if material_name is not None else None
-    for name in reversed(context_names):
-        if name.startswith(("left_", "right_")):
-            return _WUJI_HAND_RGBA
-        if name == "openarm_body_link0":
-            if material_index in _OPENARM_SILVER_MATERIAL_INDICES["body"]:
-                return _OPENARM_METAL_SILVER_RGBA
-            return _OPENARM_MATTE_BLACK_RGBA
-        match = _OPENARM_LINK_RE.match(name)
-        if match:
-            link_index = int(match.group(1))
-            if link_index == 7 or material_index in _OPENARM_SILVER_MATERIAL_INDICES.get(link_index, set()):
-                return _OPENARM_METAL_SILVER_RGBA
-            return _OPENARM_MATTE_BLACK_RGBA
-    return None
-
-
-def _material_for_context(
-    material,
-    rgba_override: tuple[float, float, float, float] | None,
-    repaired_materials: dict[tuple[str, tuple[float, float, float, float]], object],
-):
-    linear_rgba = _rgba_srgb_to_linear(rgba_override) if rgba_override is not None else None
-    if rgba_override is None:
-        _repair_material_surface_shader(material)
-        return material
-
-    source_name = str(material.get("_metasim_source_material_name", material.name))
-    key = (source_name, rgba_override)
-    repaired = repaired_materials.get(key)
-    if repaired is None:
-        repaired = material.copy()
-        repaired.name = f"{material.name}_{rgba_override[0]:.3f}_{rgba_override[1]:.3f}_{rgba_override[2]:.3f}"
-        repaired["_metasim_source_material_name"] = source_name
-        _repair_material_surface_shader(repaired, linear_rgba)
-        repaired_materials[key] = repaired
-    return repaired
-
-
-def _repair_imported_materials(imported: list) -> None:
-    seen_objects: set[tuple[str, tuple[str, ...]]] = set()
-    seen_collections: set[tuple[str, tuple[str, ...]]] = set()
+def _repair_imported_materials(
+    imported: list, asset_material_rgba: dict[str, tuple[float, float, float, float]] | None = None
+) -> None:
+    seen_objects: set[str] = set()
+    seen_collections: set[str] = set()
     seen_materials: set[str] = set()
-    repaired_materials: dict[tuple[str, tuple[float, float, float, float]], object] = {}
+    asset_material_rgba = asset_material_rgba or {}
 
-    def visit_object(obj, context_names: tuple[str, ...] = ()) -> None:
-        object_key = (obj.name, context_names)
-        if object_key in seen_objects:
+    def visit_object(obj) -> None:
+        if obj.name in seen_objects:
             return
-        seen_objects.add(object_key)
-        next_context = context_names + (_normalized_blender_name(obj.name),)
+        seen_objects.add(obj.name)
         if getattr(obj, "type", None) == "MESH":
             for slot in obj.material_slots:
                 material = slot.material
                 if material is None:
                     continue
-                rgba_override = _imported_material_rgba_override(next_context, material.name)
-                if rgba_override is not None:
-                    slot.material = _material_for_context(material, rgba_override, repaired_materials)
-                elif material.name not in seen_materials:
-                    seen_materials.add(material.name)
-                    _repair_material_surface_shader(material)
+                if material.name in seen_materials:
+                    continue
+                seen_materials.add(material.name)
+                rgba = next(
+                    (
+                        asset_material_rgba[name]
+                        for name in _material_name_candidates(material.name)
+                        if name in asset_material_rgba
+                    ),
+                    None,
+                )
+                _repair_material_surface_shader(material, rgba)
         collection = getattr(obj, "instance_collection", None)
-        collection_key = (collection.name, next_context) if collection is not None else None
-        if collection is not None and collection_key not in seen_collections:
-            seen_collections.add(collection_key)
+        if collection is not None and collection.name not in seen_collections:
+            seen_collections.add(collection.name)
             for child in collection.objects:
-                visit_object(child, next_context)
+                visit_object(child)
         for child in getattr(obj, "children", ()):
-            visit_object(child, next_context)
+            visit_object(child)
 
     for obj in imported:
         visit_object(obj)
@@ -472,6 +570,7 @@ class BlenderHandler(BaseSimHandler):
         usd_path = obj_cfg.file_name("blender")
         if not usd_path:
             raise ValueError(f"{type(obj_cfg).__name__} {obj_cfg.name!r} requires usd_path for Blender")
+        asset_material_rgba = _asset_material_rgba(obj_cfg)
         before_names = set(bpy.data.objects.keys())
         result = bpy.ops.wm.usd_import(filepath=str(usd_path))
         if "FINISHED" not in result:
@@ -479,7 +578,7 @@ class BlenderHandler(BaseSimHandler):
         imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
         if not imported:
             raise RuntimeError(f"USD import for {obj_cfg.name!r} produced no Blender objects")
-        _repair_imported_materials(imported)
+        _repair_imported_materials(imported, asset_material_rgba)
         self._register_body_objects(obj_cfg.name, imported)
 
     def _register_body_objects(self, obj_name: str, imported: list) -> None:
