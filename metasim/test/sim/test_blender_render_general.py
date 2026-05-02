@@ -219,6 +219,172 @@ def test_blender_handler_uses_renderable_visual_object_for_body_pose() -> None:
 
 
 @pytest.mark.general
+def test_blender_repairs_empty_imported_material_node_tree() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    mesh_obj = bpy.data.objects.new("mesh", bpy.data.meshes.new("mesh_data"))
+    material = bpy.data.materials.new("material_A0A0A0")
+    material.use_nodes = True
+    material.node_tree.nodes.clear()
+    mesh_obj.data.materials.append(material)
+    bpy.context.collection.objects.link(mesh_obj)
+
+    _repair_imported_materials([mesh_obj])
+
+    output = next(node for node in material.node_tree.nodes if node.bl_idname == "ShaderNodeOutputMaterial")
+    surface = output.inputs["Surface"]
+    expected_color = _rgba_srgb_to_linear((0.6274509803921569, 0.6274509803921569, 0.6274509803921569, 1.0))
+    assert len(surface.links) == 1
+    bsdf = surface.links[0].from_node
+    assert bsdf.bl_idname == "ShaderNodeBsdfPrincipled"
+    assert tuple(round(value, 5) for value in bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_color
+    )
+
+
+@pytest.mark.general
+def test_blender_repairs_openarm_materials_without_recoloring_hands() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    shared_material = bpy.data.materials.new("material_E5EAED")
+    shared_material.use_nodes = True
+    shared_material.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.8, 0.8, 0.8, 1.0)
+
+    arm = bpy.data.objects.new("openarm_left_link1", None)
+    arm_mesh = bpy.data.objects.new("arm_mesh", bpy.data.meshes.new("arm_mesh_data"))
+    hand = bpy.data.objects.new("left_palm_link", None)
+    hand_mesh = bpy.data.objects.new("hand_mesh", bpy.data.meshes.new("hand_mesh_data"))
+    arm_mesh.data.materials.append(shared_material)
+    hand_mesh.data.materials.append(shared_material)
+    for obj in (arm, arm_mesh, hand, hand_mesh):
+        bpy.context.collection.objects.link(obj)
+    arm_mesh.parent = arm
+    hand_mesh.parent = hand
+
+    _repair_imported_materials([arm, hand])
+
+    arm_bsdf = next(
+        node
+        for node in arm_mesh.material_slots[0].material.node_tree.nodes
+        if node.bl_idname == "ShaderNodeBsdfPrincipled"
+    )
+    hand_bsdf = next(
+        node
+        for node in hand_mesh.material_slots[0].material.node_tree.nodes
+        if node.bl_idname == "ShaderNodeBsdfPrincipled"
+    )
+
+    expected_arm_color = _rgba_srgb_to_linear((0.24705882, 0.24705882, 0.24705882, 1.0))
+    expected_hand_color = _rgba_srgb_to_linear((0.89804, 0.91765, 0.92941, 1.0))
+
+    assert arm_mesh.material_slots[0].material is not hand_mesh.material_slots[0].material
+    assert tuple(round(value, 5) for value in arm_bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_arm_color
+    )
+    assert tuple(round(value, 5) for value in hand_bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_hand_color
+    )
+
+
+@pytest.mark.general
+def test_blender_uses_openarm_silver_material_slots() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    black_slot_material = bpy.data.materials.new("mat_0_004")
+    silver_slot_material = bpy.data.materials.new("mat_1_004")
+    for material in (black_slot_material, silver_slot_material):
+        material.use_nodes = True
+        material.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.8, 0.8, 0.8, 1.0)
+
+    link = bpy.data.objects.new("openarm_left_link4", None)
+    mesh = bpy.data.objects.new("mesh", bpy.data.meshes.new("mesh_data"))
+    mesh.data.materials.append(black_slot_material)
+    mesh.data.materials.append(silver_slot_material)
+    for obj in (link, mesh):
+        bpy.context.collection.objects.link(obj)
+    mesh.parent = link
+
+    _repair_imported_materials([link])
+
+    black_bsdf = next(
+        node
+        for node in mesh.material_slots[0].material.node_tree.nodes
+        if node.bl_idname == "ShaderNodeBsdfPrincipled"
+    )
+    silver_bsdf = next(
+        node
+        for node in mesh.material_slots[1].material.node_tree.nodes
+        if node.bl_idname == "ShaderNodeBsdfPrincipled"
+    )
+    expected_black = _rgba_srgb_to_linear((0.24705882, 0.24705882, 0.24705882, 1.0))
+    expected_silver = _rgba_srgb_to_linear((0.79607843, 0.79607843, 0.79607843, 1.0))
+
+    assert tuple(round(value, 5) for value in black_bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_black
+    )
+    assert tuple(round(value, 5) for value in silver_bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_silver
+    )
+
+
+@pytest.mark.general
+def test_blender_reuses_context_material_for_revisited_usd_prototype_mesh() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    source_material = bpy.data.materials.new("matte_source")
+    source_material.use_nodes = True
+    source_material.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.8, 0.8, 0.8, 1.0)
+
+    link = bpy.data.objects.new("openarm_left_link1", None)
+    instance = bpy.data.objects.new("visuals", None)
+    visual_root = bpy.data.objects.new("openarm_left_link1_visual", None)
+    mesh = bpy.data.objects.new("mesh", bpy.data.meshes.new("mesh_data"))
+    prototype_collection = bpy.data.collections.new("proto")
+    for obj in (link, instance):
+        bpy.context.collection.objects.link(obj)
+    for obj in (mesh, visual_root):
+        prototype_collection.objects.link(obj)
+    mesh.data.materials.append(source_material)
+    instance.parent = link
+    instance.instance_type = "COLLECTION"
+    instance.instance_collection = prototype_collection
+    mesh.parent = visual_root
+
+    _repair_imported_materials([link])
+
+    context_materials = [
+        material for material in bpy.data.materials if material.get("_metasim_source_material_name") == "matte_source"
+    ]
+    expected_color = _rgba_srgb_to_linear((0.24705882, 0.24705882, 0.24705882, 1.0))
+    bsdf = next(
+        node
+        for node in mesh.material_slots[0].material.node_tree.nodes
+        if node.bl_idname == "ShaderNodeBsdfPrincipled"
+    )
+
+    assert len(context_materials) == 1
+    assert tuple(round(value, 5) for value in bsdf.inputs["Base Color"].default_value) == tuple(
+        round(value, 5) for value in expected_color
+    )
+
+
+@pytest.mark.general
 def test_blender_handler_maps_wuji_hand_body_names_to_usd_names() -> None:
     import bpy
     from metasim.sim.blender import BlenderHandler

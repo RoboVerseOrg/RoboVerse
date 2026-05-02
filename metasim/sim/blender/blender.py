@@ -55,6 +55,34 @@ def import_mesh(path):
 
 
 _BLENDER_NUMERIC_SUFFIX_RE = re.compile(r"\.\d{3}$")
+_MATERIAL_HEX_COLOR_RE = re.compile(r"([0-9A-Fa-f]{6})(?:\.\d{3})?$")
+_OPENARM_LINK_RE = re.compile(r"openarm_(?:left|right)_link(\d+)$")
+_OPENARM_MATERIAL_INDEX_RE = re.compile(r"mat_(\d+)")
+_OPENARM_MATTE_BLACK_RGBA = (0.24705882, 0.24705882, 0.24705882, 1.0)
+_OPENARM_METAL_SILVER_RGBA = (0.79607843, 0.79607843, 0.79607843, 1.0)
+_WUJI_HAND_RGBA = (0.89804, 0.91765, 0.92941, 1.0)
+_OPENARM_SILVER_MATERIAL_INDICES = {
+    "body": {1, 4},
+    3: {2},
+    4: {1},
+    5: {1},
+    6: {1},
+}
+
+
+def _srgb_channel_to_linear(value: float) -> float:
+    if value <= 0.04045:
+        return value / 12.92
+    return ((value + 0.055) / 1.055) ** 2.4
+
+
+def _rgba_srgb_to_linear(rgba: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    return (
+        _srgb_channel_to_linear(rgba[0]),
+        _srgb_channel_to_linear(rgba[1]),
+        _srgb_channel_to_linear(rgba[2]),
+        rgba[3],
+    )
 
 
 def _normalized_blender_name(name: str) -> str:
@@ -158,6 +186,152 @@ def _resolve_robot_body_object(body_map: dict[str, object], body_name: str) -> o
         if obj is not None:
             return obj
     return next((obj for obj in visual_candidates if obj is not None), None)
+
+
+def _rgba_from_material(material) -> tuple[float, float, float, float]:
+    match = _MATERIAL_HEX_COLOR_RE.search(material.name)
+    if match:
+        color = match.group(1)
+        rgba = tuple(int(color[index : index + 2], 16) / 255.0 for index in (0, 2, 4)) + (1.0,)
+        return _rgba_srgb_to_linear(rgba)
+    diffuse = tuple(float(value) for value in getattr(material, "diffuse_color", (0.7, 0.7, 0.7, 1.0)))
+    if len(diffuse) >= 4:
+        return _rgba_srgb_to_linear(diffuse[:4])
+    if len(diffuse) >= 3:
+        return _rgba_srgb_to_linear(diffuse[:3] + (1.0,))
+    return _rgba_srgb_to_linear((0.7, 0.7, 0.7, 1.0))
+
+
+def _material_has_surface_shader(material) -> bool:
+    if not getattr(material, "use_nodes", False) or material.node_tree is None:
+        return False
+    for node in material.node_tree.nodes:
+        if node.bl_idname != "ShaderNodeOutputMaterial":
+            continue
+        surface = node.inputs.get("Surface")
+        if surface is not None and surface.links:
+            return True
+    return False
+
+
+def _repair_material_surface_shader(material, rgba: tuple[float, float, float, float] | None = None) -> None:
+    rgba = rgba if rgba is not None else _rgba_from_material(material)
+    if _material_has_surface_shader(material):
+        if rgba is not None:
+            for node in material.node_tree.nodes:
+                if node.bl_idname != "ShaderNodeBsdfPrincipled":
+                    continue
+                node.inputs["Base Color"].default_value = rgba
+                node.inputs["Roughness"].default_value = 0.55
+                if "Metallic" in node.inputs:
+                    node.inputs["Metallic"].default_value = 0.0
+                if "Alpha" in node.inputs:
+                    node.inputs["Alpha"].default_value = rgba[3]
+        material.diffuse_color = rgba
+        if rgba[3] >= 1.0:
+            material.blend_method = "OPAQUE"
+        return
+    material.use_nodes = True
+    material.node_tree.nodes.clear()
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
+    output = nodes.new(type="ShaderNodeOutputMaterial")
+    bsdf.inputs["Base Color"].default_value = rgba
+    bsdf.inputs["Roughness"].default_value = 0.55
+    if "Metallic" in bsdf.inputs:
+        bsdf.inputs["Metallic"].default_value = 0.0
+    if "Alpha" in bsdf.inputs:
+        bsdf.inputs["Alpha"].default_value = rgba[3]
+    links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    material.diffuse_color = rgba
+    if rgba[3] >= 1.0:
+        material.blend_method = "OPAQUE"
+
+
+def _openarm_material_index(material_name: str) -> int | None:
+    match = _OPENARM_MATERIAL_INDEX_RE.match(_normalized_blender_name(material_name))
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def _imported_material_rgba_override(
+    context_names: tuple[str, ...], material_name: str | None = None
+) -> tuple[float, float, float, float] | None:
+    material_index = _openarm_material_index(material_name) if material_name is not None else None
+    for name in reversed(context_names):
+        if name.startswith(("left_", "right_")):
+            return _WUJI_HAND_RGBA
+        if name == "openarm_body_link0":
+            if material_index in _OPENARM_SILVER_MATERIAL_INDICES["body"]:
+                return _OPENARM_METAL_SILVER_RGBA
+            return _OPENARM_MATTE_BLACK_RGBA
+        match = _OPENARM_LINK_RE.match(name)
+        if match:
+            link_index = int(match.group(1))
+            if link_index == 7 or material_index in _OPENARM_SILVER_MATERIAL_INDICES.get(link_index, set()):
+                return _OPENARM_METAL_SILVER_RGBA
+            return _OPENARM_MATTE_BLACK_RGBA
+    return None
+
+
+def _material_for_context(
+    material,
+    rgba_override: tuple[float, float, float, float] | None,
+    repaired_materials: dict[tuple[str, tuple[float, float, float, float]], object],
+):
+    linear_rgba = _rgba_srgb_to_linear(rgba_override) if rgba_override is not None else None
+    if rgba_override is None:
+        _repair_material_surface_shader(material)
+        return material
+
+    source_name = str(material.get("_metasim_source_material_name", material.name))
+    key = (source_name, rgba_override)
+    repaired = repaired_materials.get(key)
+    if repaired is None:
+        repaired = material.copy()
+        repaired.name = f"{material.name}_{rgba_override[0]:.3f}_{rgba_override[1]:.3f}_{rgba_override[2]:.3f}"
+        repaired["_metasim_source_material_name"] = source_name
+        _repair_material_surface_shader(repaired, linear_rgba)
+        repaired_materials[key] = repaired
+    return repaired
+
+
+def _repair_imported_materials(imported: list) -> None:
+    seen_objects: set[tuple[str, tuple[str, ...]]] = set()
+    seen_collections: set[tuple[str, tuple[str, ...]]] = set()
+    seen_materials: set[str] = set()
+    repaired_materials: dict[tuple[str, tuple[float, float, float, float]], object] = {}
+
+    def visit_object(obj, context_names: tuple[str, ...] = ()) -> None:
+        object_key = (obj.name, context_names)
+        if object_key in seen_objects:
+            return
+        seen_objects.add(object_key)
+        next_context = context_names + (_normalized_blender_name(obj.name),)
+        if getattr(obj, "type", None) == "MESH":
+            for slot in obj.material_slots:
+                material = slot.material
+                if material is None:
+                    continue
+                rgba_override = _imported_material_rgba_override(next_context, material.name)
+                if rgba_override is not None:
+                    slot.material = _material_for_context(material, rgba_override, repaired_materials)
+                elif material.name not in seen_materials:
+                    seen_materials.add(material.name)
+                    _repair_material_surface_shader(material)
+        collection = getattr(obj, "instance_collection", None)
+        collection_key = (collection.name, next_context) if collection is not None else None
+        if collection is not None and collection_key not in seen_collections:
+            seen_collections.add(collection_key)
+            for child in collection.objects:
+                visit_object(child, next_context)
+        for child in getattr(obj, "children", ()):
+            visit_object(child, next_context)
+
+    for obj in imported:
+        visit_object(obj)
 
 
 def _blender_body_name_alias(body_name: str) -> str:
@@ -305,6 +479,7 @@ class BlenderHandler(BaseSimHandler):
         imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
         if not imported:
             raise RuntimeError(f"USD import for {obj_cfg.name!r} produced no Blender objects")
+        _repair_imported_materials(imported)
         self._register_body_objects(obj_cfg.name, imported)
 
     def _register_body_objects(self, obj_name: str, imported: list) -> None:
