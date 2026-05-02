@@ -721,6 +721,85 @@ def test_bidexbench_cube_reach_runner_calls_blender_offline_renderer(
     assert cfg.device == "CPU"
 
 
+def test_bidexbench_cube_reach_runner_treats_renderer_blender_as_offline_renderer(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach_renderer_blender", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    import torch
+
+    flow_calls = []
+    render_calls = []
+
+    class _FakeBlenderOfflineRenderCfg:
+        def __init__(self, *, output_dir, samples, device) -> None:
+            self.output_dir = output_dir
+            self.samples = samples
+            self.device = device
+
+    def _fake_render_state_sequence(scenario, states, cfg):
+        render_calls.append((scenario, states, cfg))
+        return [Path(cfg.output_dir) / "overview" / "frame_000000.png"]
+
+    fake_offline_module = SimpleNamespace(
+        BlenderOfflineRenderCfg=_FakeBlenderOfflineRenderCfg,
+        render_state_sequence=_fake_render_state_sequence,
+    )
+    monkeypatch.setitem(sys.modules, "metasim.sim.blender.offline", fake_offline_module)
+
+    def _fake_flow(**kwargs):
+        flow_calls.append(kwargs)
+        kwargs["record_states_path"].parent.mkdir(parents=True, exist_ok=True)
+        torch.save({"states": ["reset-state"]}, kwargs["record_states_path"])
+        return {"frame_count": 0, "record_states_path": str(kwargs["record_states_path"])}
+
+    monkeypatch.setattr(module, "run_native_task_teleop_flow", _fake_flow)
+
+    built_scenarios = []
+
+    def _fake_build_benchmark_scenario(task_spec, *, robot, simulator, headless):
+        scenario = SimpleNamespace(task=task_spec.name, robot=robot, simulator=simulator, headless=headless)
+        built_scenarios.append(scenario)
+        return scenario
+
+    import roboverse_pack.tasks.benchmark.base as benchmark_base
+
+    monkeypatch.setattr(benchmark_base, "build_benchmark_scenario", _fake_build_benchmark_scenario)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_bidexbench_cube_reach.py",
+            "--sim",
+            "mujoco",
+            "--renderer",
+            "blender",
+            "--hold-initial-pose",
+            "--steps",
+            "1000",
+        ],
+    )
+
+    module.main()
+
+    assert len(flow_calls) == 1
+    assert flow_calls[0]["simulator"] == "mujoco"
+    assert flow_calls[0]["renderer"] is None
+    assert flow_calls[0]["record_states_path"] == Path("outputs") / "bidexbench_cube_reach_blender" / "states.pt"
+    assert len(render_calls) == 1
+    scenario, states, cfg = render_calls[0]
+    assert built_scenarios == [scenario]
+    assert states == ["reset-state"]
+    assert cfg.output_dir == Path("outputs") / "bidexbench_cube_reach_blender"
+
+
 def test_openarm_bimanual_wuji_usd_imports_in_blender_when_bpy_available() -> None:
     bpy = pytest.importorskip("bpy")
 

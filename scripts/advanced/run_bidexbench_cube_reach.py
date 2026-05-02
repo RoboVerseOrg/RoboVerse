@@ -34,6 +34,8 @@ from roboverse_pack.benchmark import get_benchmark_task_spec
 from roboverse_pack.teleop.flow import run_native_task_teleop_flow
 from roboverse_pack.teleop.runtime import CanonicalTeleopTargets
 
+DEFAULT_BLENDER_RENDER_OUTPUT = Path("outputs") / "bidexbench_cube_reach_blender"
+
 
 def _read_jsonl_packets(path: Path) -> Iterator[dict[str, Any]]:
     with path.open("r", encoding="utf-8") as f:
@@ -84,8 +86,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--renderer",
         default=None,
-        choices=("isaacsim", "mujoco"),
-        help="Optional render backend. Use --sim mujoco --renderer isaacsim for hybrid rendering.",
+        choices=("isaacsim", "mujoco", "blender"),
+        help=(
+            "Optional render backend. Use --sim mujoco --renderer isaacsim for hybrid rendering, "
+            "or --renderer blender for offline Blender/Cycles replay."
+        ),
     )
     parser.add_argument("--steps", type=int, default=120, help="Synthetic teleop packet count.")
     parser.add_argument(
@@ -140,9 +145,20 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _configure_rendering_args(args: argparse.Namespace) -> str | None:
+    """Normalize live and offline renderer options before launching physics."""
+    selected_renderer = args.renderer
+    if args.renderer == "blender":
+        args.offline_renderer = "blender"
+        selected_renderer = None
+    if args.offline_renderer == "blender" and args.render_output is None:
+        args.render_output = DEFAULT_BLENDER_RENDER_OUTPUT
+    return selected_renderer
+
+
 def _render_recorded_states_with_blender(args: argparse.Namespace, state_path: Path) -> list[str]:
     if args.render_output is None:
-        raise ValueError("--render-output is required when --offline-renderer blender is used")
+        raise ValueError("--render-output is required when offline Blender rendering is used")
 
     import torch
     from metasim.sim.blender.offline import BlenderOfflineRenderCfg, render_state_sequence
@@ -175,6 +191,7 @@ def main() -> None:
 
     task_spec = get_benchmark_task_spec(args.task)
     task_spec.robot_profile(args.robot)
+    selected_renderer = _configure_rendering_args(args)
 
     if args.dry_run:
         print(
@@ -183,7 +200,7 @@ def main() -> None:
                     "task": task_spec.name,
                     "robot": args.robot,
                     "simulator": args.sim,
-                    "renderer": args.renderer,
+                    "renderer": selected_renderer,
                     "headless": args.headless,
                     "packet_source": str(args.packet_jsonl) if args.packet_jsonl is not None else "synthetic",
                     "steps": None if args.packet_jsonl is not None else args.steps,
@@ -203,15 +220,14 @@ def main() -> None:
 
     record_states_path = args.record_states
     if args.offline_renderer == "blender" and record_states_path is None:
-        if args.render_output is None:
-            raise ValueError("--render-output is required when --offline-renderer blender is used")
+        assert args.render_output is not None
         record_states_path = args.render_output / "states.pt"
 
     result = run_native_task_teleop_flow(
         task=task_spec.name,
         robot=args.robot,
         simulator=args.sim,
-        renderer=args.renderer,
+        renderer=selected_renderer,
         packets=_packet_source(args),
         record_states_path=record_states_path,
         headless=args.headless,
