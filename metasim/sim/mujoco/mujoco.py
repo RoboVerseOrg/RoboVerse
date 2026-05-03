@@ -264,16 +264,28 @@ class MujocoHandler(BaseSimHandler):
                 # servo law. Override those runtime parameters from the MetaSim
                 # config when explicit values are provided, and otherwise keep
                 # the asset-authored values.
-                if actuator_cfg.stiffness is not None:
-                    stiffness = float(actuator_cfg.stiffness)
+                if actuator_cfg.stiffness is not None or actuator_cfg.damping is not None:
+                    stiffness = (
+                        float(actuator_cfg.stiffness)
+                        if actuator_cfg.stiffness is not None
+                        else float(self.physics.model.actuator_gainprm[actuator_id, 0])
+                    )
+                    damping = (
+                        float(actuator_cfg.damping)
+                        if actuator_cfg.damping is not None
+                        else max(0.0, -float(self.physics.model.actuator_biasprm[actuator_id, 2]))
+                    )
+                    self.physics.model.actuator_gaintype[actuator_id] = mujoco.mjtGain.mjGAIN_FIXED
+                    self.physics.model.actuator_biastype[actuator_id] = mujoco.mjtBias.mjBIAS_AFFINE
+                    self.physics.model.actuator_gainprm[actuator_id, :] = 0.0
+                    self.physics.model.actuator_biasprm[actuator_id, :] = 0.0
                     self.physics.model.actuator_gainprm[actuator_id, 0] = stiffness
                     self.physics.model.actuator_biasprm[actuator_id, 1] = -stiffness
-
-                if actuator_cfg.damping is not None:
-                    self.physics.model.actuator_biasprm[actuator_id, 2] = -float(actuator_cfg.damping)
+                    self.physics.model.actuator_biasprm[actuator_id, 2] = -damping
 
                 if actuator_cfg.effort_limit_sim is not None:
                     force_limit = float(actuator_cfg.effort_limit_sim)
+                    self.physics.model.actuator_forcelimited[actuator.id] = 1
                     self.physics.model.actuator_forcerange[actuator.id] = [-force_limit, force_limit]
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):

@@ -12,3 +12,5 @@ class RenderCfg:
     """Render configuration."""
 
     mode: Literal["rasterization", "raytracing", "pathtracing"] = "raytracing"
+    samples: int | None = None
+    device: str = "AUTO"

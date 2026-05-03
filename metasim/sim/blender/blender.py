@@ -5,6 +5,7 @@ import re
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
+from math import cos, sin, tau
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,7 @@ from metasim.types import (
 
 
 def import_mesh(path):
+    before_names = set(bpy.data.objects.keys())
     _, extension = os.path.splitext(path)
     extension = extension.lower()
     if extension == ".ply":
@@ -52,11 +54,34 @@ def import_mesh(path):
     else:
         raise ValueError("bad mesh extension")
 
-    return bpy.context.object
+    imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
+    active = bpy.context.object
+    if active in imported:
+        return active
+    mesh_objects = [obj for obj in imported if getattr(obj, "type", None) == "MESH"]
+    if mesh_objects:
+        return mesh_objects[0]
+    return active
 
 
 _BLENDER_NUMERIC_SUFFIX_RE = re.compile(r"\.\d{3}$")
 _MATERIAL_HEX_COLOR_RE = re.compile(r"([0-9A-Fa-f]{6})(?:\.\d{3})?$")
+_TRANSMISSIVE_ALPHA_EPSILON = 1e-6
+_CYCLES_GPU_DEVICE_PREFERENCE = ("OPTIX", "CUDA", "HIP", "ONEAPI", "METAL")
+_BLENDER_RGB_READBACK_FORMAT = "BMP"
+_BLENDER_RGB_READBACK_SUFFIX = "bmp"
+_CYCLES_FINAL_RENDER_SETTINGS = {
+    "samples": 128,
+    "denoising_prefilter": "ACCURATE",
+    "denoising_quality": "HIGH",
+    "max_bounces": 10,
+    "diffuse_bounces": 4,
+    "glossy_bounces": 4,
+    "transmission_bounces": 10,
+    "transparent_max_bounces": 10,
+    "caustics_reflective": True,
+    "caustics_refractive": True,
+}
 
 
 def _srgb_channel_to_linear(value: float) -> float:
@@ -356,22 +381,66 @@ def _material_has_surface_shader(material) -> bool:
     return False
 
 
+def _is_transmissive_rgba(rgba: tuple[float, float, float, float]) -> bool:
+    return rgba[3] < 1.0 - _TRANSMISSIVE_ALPHA_EPSILON
+
+
+def _ior_for_transmissive_material(name: str) -> float:
+    key = _normalized_material_name(name).lower()
+    if "water" in key:
+        return 1.333
+    if "acrylic" in key or "plexiglass" in key:
+        return 1.49
+    if "wine" in key or "liquid" in key:
+        return 1.36
+    return 1.45
+
+
+def _roughness_for_transmissive_material(name: str) -> float:
+    key = _normalized_material_name(name).lower()
+    if "frosted" in key or "lens" in key:
+        return 0.18
+    if "smoked" in key:
+        return 0.04
+    if "water" in key or "wine" in key or "liquid" in key:
+        return 0.0
+    return 0.01
+
+
+def _set_principled_input(node, input_name: str, value: float | tuple[float, float, float, float]) -> None:
+    if input_name in node.inputs:
+        node.inputs[input_name].default_value = value
+
+
+def _apply_principled_material_inputs(node, material_name: str, rgba: tuple[float, float, float, float]) -> None:
+    transmissive = _is_transmissive_rgba(rgba)
+    shader_rgba = (rgba[0], rgba[1], rgba[2], 1.0) if transmissive else rgba
+    _set_principled_input(node, "Base Color", shader_rgba)
+    _set_principled_input(node, "Roughness", _roughness_for_transmissive_material(material_name) if transmissive else 0.55)
+    _set_principled_input(node, "Metallic", 0.0)
+    _set_principled_input(node, "Alpha", shader_rgba[3])
+    _set_principled_input(node, "Transmission Weight", 1.0 if transmissive else 0.0)
+    if transmissive:
+        _set_principled_input(node, "IOR", _ior_for_transmissive_material(material_name))
+        _set_principled_input(node, "Specular IOR Level", 1.0)
+
+
 def _repair_material_surface_shader(material, rgba: tuple[float, float, float, float] | None = None) -> None:
     rgba = rgba if rgba is not None else _rgba_from_material(material)
+    transmissive = _is_transmissive_rgba(rgba)
+    material_rgba = (rgba[0], rgba[1], rgba[2], 1.0) if transmissive else rgba
     if _material_has_surface_shader(material):
         if rgba is not None:
             for node in material.node_tree.nodes:
                 if node.bl_idname != "ShaderNodeBsdfPrincipled":
                     continue
-                node.inputs["Base Color"].default_value = rgba
-                node.inputs["Roughness"].default_value = 0.55
-                if "Metallic" in node.inputs:
-                    node.inputs["Metallic"].default_value = 0.0
-                if "Alpha" in node.inputs:
-                    node.inputs["Alpha"].default_value = rgba[3]
-        material.diffuse_color = rgba
-        if rgba[3] >= 1.0:
-            material.blend_method = "OPAQUE"
+                _apply_principled_material_inputs(node, material.name, rgba)
+        material.diffuse_color = material_rgba
+        material.blend_method = "OPAQUE"
+        if hasattr(material, "use_screen_refraction"):
+            material.use_screen_refraction = transmissive
+        if hasattr(material, "show_transparent_back"):
+            material.show_transparent_back = False
         return
     material.use_nodes = True
     material.node_tree.nodes.clear()
@@ -379,16 +448,225 @@ def _repair_material_surface_shader(material, rgba: tuple[float, float, float, f
     links = material.node_tree.links
     bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     output = nodes.new(type="ShaderNodeOutputMaterial")
-    bsdf.inputs["Base Color"].default_value = rgba
-    bsdf.inputs["Roughness"].default_value = 0.55
-    if "Metallic" in bsdf.inputs:
-        bsdf.inputs["Metallic"].default_value = 0.0
-    if "Alpha" in bsdf.inputs:
-        bsdf.inputs["Alpha"].default_value = rgba[3]
+    _apply_principled_material_inputs(bsdf, material.name, rgba)
     links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
-    material.diffuse_color = rgba
-    if rgba[3] >= 1.0:
-        material.blend_method = "OPAQUE"
+    material.diffuse_color = material_rgba
+    material.blend_method = "OPAQUE"
+    if hasattr(material, "use_screen_refraction"):
+        material.use_screen_refraction = transmissive
+    if hasattr(material, "show_transparent_back"):
+        material.show_transparent_back = False
+
+
+def _new_material_from_rgba(name: str, rgba: tuple[float, float, float, float]):
+    material = bpy.data.materials.new(name=name)
+    _repair_material_surface_shader(material, rgba)
+    return material
+
+
+def _float_tuple(text: str | None, default: tuple[float, ...]) -> tuple[float, ...]:
+    if not text:
+        return default
+    return tuple(float(value) for value in text.split())
+
+
+def _mjcf_local_quat(element: ET.Element) -> Quaternion:
+    quat = _float_tuple(element.get("quat"), (1.0, 0.0, 0.0, 0.0))
+    return Quaternion((quat[0], quat[1], quat[2], quat[3]))
+
+
+def _set_local_transform(obj, pos: tuple[float, ...], quat: Quaternion) -> None:
+    obj.location = tuple(float(value) for value in pos[:3])
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = quat
+
+
+def _mjcf_material_rgba(root: ET.Element) -> dict[str, tuple[float, float, float, float]]:
+    materials: dict[str, tuple[float, float, float, float]] = {}
+    for material in root.findall(".//material"):
+        name = material.get("name")
+        rgba_text = material.get("rgba")
+        if name is None or rgba_text is None:
+            continue
+        rgba = _rgba_from_text(rgba_text)
+        if rgba is not None:
+            materials[name] = rgba
+    return materials
+
+
+def _mjcf_geom_material(
+    geom: ET.Element, materials: dict[str, tuple[float, float, float, float]]
+) -> tuple[tuple[float, float, float, float], str | None]:
+    material_name = geom.get("material")
+    if material_name is not None and material_name in materials:
+        return materials[material_name], material_name
+    rgba_text = geom.get("rgba")
+    if rgba_text:
+        rgba = _rgba_from_text(rgba_text)
+        if rgba is not None:
+            return rgba, material_name
+    return _rgba_srgb_to_linear((0.7, 0.7, 0.7, 1.0)), material_name
+
+
+def _is_solid_transmissive_volume(name: str) -> bool:
+    key = _normalized_material_name(name).lower()
+    return any(token in key for token in ("water", "wine", "liquid"))
+
+
+def _transmissive_bevel_amount(size: tuple[float, ...]) -> float:
+    min_extent = min(abs(float(value)) for value in size if abs(float(value)) > 0.0)
+    return min(max(min_extent * 0.08, 0.0006), 0.004)
+
+
+def _polish_transmissive_visual(obj, *, bevel_amount: float) -> None:
+    if getattr(obj, "type", None) != "MESH":
+        return
+    for polygon in obj.data.polygons:
+        polygon.use_smooth = True
+    bevel = obj.modifiers.new(name="metasim_transmissive_bevel", type="BEVEL")
+    bevel.width = bevel_amount
+    bevel.segments = 3
+    if hasattr(bevel, "harden_normals"):
+        bevel.harden_normals = True
+    weighted_normal = obj.modifiers.new(name="metasim_transmissive_weighted_normals", type="WEIGHTED_NORMAL")
+    if hasattr(weighted_normal, "keep_sharp"):
+        weighted_normal.keep_sharp = True
+
+
+def _create_hollow_cylinder_visual(name: str, *, radius: float, half_height: float):
+    segments = 96
+    wall_thickness = min(max(radius * 0.08, 0.0015), radius * 0.25)
+    bottom_thickness = min(max(half_height * 0.08, 0.002), half_height * 0.25)
+    inner_radius = max(radius - wall_thickness, radius * 0.4)
+    bottom_z = -half_height
+    inner_bottom_z = bottom_z + bottom_thickness
+    top_z = half_height
+
+    vertices: list[tuple[float, float, float]] = []
+    for ring_radius, z in (
+        (radius, bottom_z),
+        (radius, top_z),
+        (inner_radius, inner_bottom_z),
+        (inner_radius, top_z),
+    ):
+        for index in range(segments):
+            angle = tau * index / segments
+            vertices.append((ring_radius * cos(angle), ring_radius * sin(angle), z))
+
+    outer_bottom = 0
+    outer_top = segments
+    inner_bottom = 2 * segments
+    inner_top = 3 * segments
+    faces: list[tuple[int, ...]] = []
+    for index in range(segments):
+        next_index = (index + 1) % segments
+        faces.append((outer_bottom + index, outer_bottom + next_index, outer_top + next_index, outer_top + index))
+        faces.append((inner_bottom + next_index, inner_bottom + index, inner_top + index, inner_top + next_index))
+        faces.append((outer_top + index, outer_top + next_index, inner_top + next_index, inner_top + index))
+        faces.append((outer_bottom + next_index, outer_bottom + index, inner_bottom + index, inner_bottom + next_index))
+    faces.append(tuple(reversed(range(outer_bottom, outer_bottom + segments))))
+    faces.append(tuple(range(inner_bottom, inner_bottom + segments)))
+
+    mesh = bpy.data.meshes.new(f"{name}_mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
+def _create_mjcf_geom_visual(
+    geom: ET.Element,
+    *,
+    body_name: str,
+    material_rgba,
+    material_name: str | None,
+    parent,
+):
+    geom_type = (geom.get("type") or "sphere").lower()
+    size = _float_tuple(geom.get("size"), (0.05,))
+    name = geom.get("name") or f"{body_name}_{geom_type}"
+    pos = _float_tuple(geom.get("pos"), (0.0, 0.0, 0.0))
+    quat = _mjcf_local_quat(geom)
+    transmissive = _is_transmissive_rgba(material_rgba)
+    visual_name = f"{name} {material_name or ''}"
+
+    if geom_type == "box":
+        bpy.ops.mesh.primitive_cube_add(size=1.0)
+        obj = bpy.context.object
+        obj.dimensions = (2.0 * size[0], 2.0 * size[1], 2.0 * size[2])
+        bpy.context.view_layer.update()
+    elif geom_type == "cylinder":
+        if transmissive and not _is_solid_transmissive_volume(visual_name):
+            obj = _create_hollow_cylinder_visual(name, radius=float(size[0]), half_height=float(size[1]))
+        else:
+            bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=float(size[0]), depth=2.0 * float(size[1]))
+            obj = bpy.context.object
+    elif geom_type == "sphere":
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=32, radius=float(size[0]))
+        obj = bpy.context.object
+    else:
+        raise ValueError(f"Unsupported MJCF geom type for Blender visual import: {geom_type!r}")
+
+    obj.name = name
+    obj.parent = parent
+    _set_local_transform(obj, pos, quat)
+    obj.data.materials.append(_new_material_from_rgba(material_name or f"{name}_material", material_rgba))
+    if transmissive:
+        _polish_transmissive_visual(obj, bevel_amount=_transmissive_bevel_amount(size))
+    return obj
+
+
+def _import_mjcf_visual_tree(
+    mjcf_path: str | Path,
+    *,
+    root_name: str,
+    default_position: tuple[float, float, float],
+    default_orientation: tuple[float, float, float, float],
+) -> tuple[object, dict[str, object]]:
+    root = ET.parse(mjcf_path).getroot()
+    materials = _mjcf_material_rgba(root)
+    root_empty = bpy.data.objects.new(root_name, None)
+    bpy.context.collection.objects.link(root_empty)
+    _set_local_transform(root_empty, default_position, Quaternion(default_orientation))
+
+    body_objects: dict[str, object] = {}
+
+    def visit_body(body: ET.Element, parent) -> None:
+        body_name = body.get("name")
+        body_parent = parent
+        if body_name:
+            body_empty = bpy.data.objects.new(body_name, None)
+            bpy.context.collection.objects.link(body_empty)
+            body_empty.parent = parent
+            _set_local_transform(
+                body_empty,
+                _float_tuple(body.get("pos"), (0.0, 0.0, 0.0)),
+                _mjcf_local_quat(body),
+            )
+            body_objects[body_name] = body_empty
+            body_parent = body_empty
+
+        for geom in body.findall("geom"):
+            material_rgba, material_name = _mjcf_geom_material(geom, materials)
+            _create_mjcf_geom_visual(
+                geom,
+                body_name=body_name or root_name,
+                material_rgba=material_rgba,
+                material_name=material_name,
+                parent=body_parent,
+            )
+        for child in body.findall("body"):
+            visit_body(child, body_parent)
+
+    worldbody = root.find("worldbody")
+    if worldbody is None:
+        raise ValueError(f"MJCF asset {mjcf_path!s} has no worldbody")
+    for body in worldbody.findall("body"):
+        visit_body(body, root_empty)
+
+    bpy.context.view_layer.update()
+    return root_empty, body_objects
 
 
 def _repair_imported_materials(
@@ -404,6 +682,9 @@ def _repair_imported_materials(
             return
         seen_objects.add(obj.name)
         if getattr(obj, "type", None) == "MESH":
+            if not obj.material_slots and len(asset_material_rgba) == 1:
+                material_name, rgba = next(iter(asset_material_rgba.items()))
+                obj.data.materials.append(_new_material_from_rgba(material_name, rgba))
             for slot in obj.material_slots:
                 material = slot.material
                 if material is None:
@@ -486,38 +767,91 @@ class BlenderHandler(BaseSimHandler):
 
     def _configure_render(self) -> None:
         scene = self.context.scene
+        render_cfg = getattr(self.scenario, "render", None)
         scene.render.engine = "CYCLES"
-        scene.cycles.samples = int(getattr(getattr(self.scenario, "render", None), "samples", 64) or 64)
+        settings = _CYCLES_FINAL_RENDER_SETTINGS
+        scene.cycles.samples = int(getattr(render_cfg, "samples", None) or settings["samples"])
+        selected_device = self._configure_cycles_device(str(getattr(render_cfg, "device", "AUTO") or "AUTO"))
+        scene.render.use_persistent_data = True
+        scene.render.use_compositing = False
+        scene.render.use_sequencer = False
+        scene.render.image_settings.file_format = _BLENDER_RGB_READBACK_FORMAT
+        scene.render.image_settings.color_mode = "RGB"
+        scene.render.image_settings.color_depth = "8"
         scene.cycles.use_denoising = True
-        scene.view_settings.view_transform = "Standard"
+        if hasattr(scene.cycles, "denoising_use_gpu"):
+            scene.cycles.denoising_use_gpu = selected_device != "CPU"
+        for attr in ("denoising_prefilter", "denoising_quality"):
+            if hasattr(scene.cycles, attr):
+                setattr(scene.cycles, attr, settings[attr])
+        for attr, value in (
+            ("max_bounces", settings["max_bounces"]),
+            ("diffuse_bounces", settings["diffuse_bounces"]),
+            ("glossy_bounces", settings["glossy_bounces"]),
+            ("transmission_bounces", settings["transmission_bounces"]),
+            ("transparent_max_bounces", settings["transparent_max_bounces"]),
+            ("caustics_reflective", settings["caustics_reflective"]),
+            ("caustics_refractive", settings["caustics_refractive"]),
+            ("use_transparent_shadows", True),
+        ):
+            if hasattr(scene.cycles, attr):
+                setattr(scene.cycles, attr, value)
+        try:
+            scene.view_settings.view_transform = "Standard"
+        except TypeError:
+            pass
+        scene.view_settings.exposure = -0.55
+        scene.view_settings.gamma = 1.0
         scene.render.film_transparent = False
-        self._configure_cycles_device(str(getattr(getattr(self.scenario, "render", None), "device", "CPU") or "CPU"))
 
-    def _configure_cycles_device(self, device: str) -> None:
+    def _configure_cycles_device(self, device: str) -> str:
         scene = self.context.scene
         normalized = device.upper()
         if normalized == "CPU":
             scene.cycles.device = "CPU"
-            return
+            return "CPU"
+        if normalized == "AUTO":
+            for candidate in _CYCLES_GPU_DEVICE_PREFERENCE:
+                if self._try_enable_cycles_device(candidate):
+                    scene.cycles.device = "GPU"
+                    return candidate
+            scene.cycles.device = "CPU"
+            return "CPU"
 
+        if self._try_enable_cycles_device(normalized):
+            scene.cycles.device = "GPU"
+            return normalized
+        raise RuntimeError(f"Requested Blender/Cycles device {normalized!r} is not available")
+
+    def _try_enable_cycles_device(self, device: str) -> bool:
         prefs = bpy.context.preferences.addons["cycles"].preferences
-        prefs.compute_device_type = normalized
-        prefs.get_devices()
+        try:
+            prefs.compute_device_type = device
+            prefs.get_devices()
+        except TypeError:
+            return False
         enabled = 0
         for blender_device in prefs.devices:
-            use_device = blender_device.type == normalized
+            use_device = blender_device.type == device
             blender_device.use = use_device
             enabled += int(use_device)
-        if enabled == 0:
-            raise RuntimeError(f"Requested Blender/Cycles device {normalized!r} is not available")
-        scene.cycles.device = "GPU"
+        return enabled > 0
 
     def _add_lights(self) -> None:
-        bpy.ops.object.light_add(type="AREA", location=(0.0, -2.0, 3.0))
-        light = bpy.context.object
-        light.name = "metasim_key_area_light"
-        light.data.energy = 500
-        light.data.size = 4.0
+        scene = self.context.scene
+        if scene.world is None:
+            scene.world = bpy.data.worlds.new("metasim_world")
+        scene.world.color = (0.02, 0.02, 0.025)
+        for name, location, energy, size in (
+            ("metasim_key_area_light", (0.0, -2.2, 3.0), 300.0, 5.0),
+            ("metasim_fill_area_light", (-2.2, 0.4, 1.8), 45.0, 5.0),
+            ("metasim_rim_area_light", (1.8, 0.6, 2.4), 70.0, 2.4),
+        ):
+            bpy.ops.object.light_add(type="AREA", location=location)
+            light = bpy.context.object
+            light.name = name
+            light.data.energy = energy
+            light.data.size = size
 
     def _make_material(self, name: str, color: list[float] | None):
         mat = bpy.data.materials.new(name=f"{name}_material")
@@ -560,6 +894,15 @@ class BlenderHandler(BaseSimHandler):
         return obj
 
     def _import_rigid_object(self, obj_cfg: RigidObjCfg):
+        blender_path = obj_cfg.file_name("blender")
+        if blender_path and Path(blender_path).suffix.lower() in {".xml", ".mjcf"}:
+            root, _ = _import_mjcf_visual_tree(
+                blender_path,
+                root_name=obj_cfg.name,
+                default_position=obj_cfg.default_position,
+                default_orientation=obj_cfg.default_orientation,
+            )
+            return root
         if obj_cfg.mesh_path is None:
             raise ValueError(f"Rigid object {obj_cfg.name!r} requires mesh_path for Blender")
         obj = import_mesh(obj_cfg.mesh_path)
@@ -570,6 +913,16 @@ class BlenderHandler(BaseSimHandler):
         usd_path = obj_cfg.file_name("blender")
         if not usd_path:
             raise ValueError(f"{type(obj_cfg).__name__} {obj_cfg.name!r} requires usd_path for Blender")
+        if Path(usd_path).suffix.lower() in {".xml", ".mjcf"}:
+            _, body_objects = _import_mjcf_visual_tree(
+                usd_path,
+                root_name=obj_cfg.name,
+                default_position=obj_cfg.default_position,
+                default_orientation=obj_cfg.default_orientation,
+            )
+            self._body_objs[obj_cfg.name] = body_objects
+            self._body_names[obj_cfg.name] = sorted(body_objects)
+            return
         asset_material_rgba = _asset_material_rgba(obj_cfg)
         before_names = set(bpy.data.objects.keys())
         result = bpy.ops.wm.usd_import(filepath=str(usd_path))
@@ -629,20 +982,29 @@ class BlenderHandler(BaseSimHandler):
         for obj_name, obj_state in state.objects.items():
             if obj_name in self._objs:
                 _apply_root_state_to_object(self._objs[obj_name], obj_state.root_state[0])
+            elif obj_name in self._body_objs:
+                self._apply_body_state(obj_name, obj_state, use_robot_aliases=False)
         for robot_name, robot_state in state.robots.items():
             self._apply_robot_body_state(robot_name, robot_state)
 
     def _apply_robot_body_state(self, robot_name: str, robot_state: RobotState) -> None:
-        body_map = self._body_objs.get(robot_name, {})
+        self._apply_body_state(robot_name, robot_state, use_robot_aliases=True)
+
+    def _apply_body_state(self, obj_name: str, obj_state, *, use_robot_aliases: bool) -> None:
+        body_map = self._body_objs.get(obj_name, {})
         missing = []
-        for body_index, body_name in enumerate(robot_state.body_names):
-            obj = _resolve_robot_body_object(body_map, body_name)
+        for body_index, body_name in enumerate(obj_state.body_names):
+            obj = (
+                _resolve_robot_body_object(body_map, body_name)
+                if use_robot_aliases
+                else body_map.get(body_name)
+            )
             if obj is None:
                 missing.append(body_name)
                 continue
-            _apply_root_state_to_object(obj, robot_state.body_state[0, body_index], _robot_body_pose_scale(obj))
+            _apply_root_state_to_object(obj, obj_state.body_state[0, body_index], _robot_body_pose_scale(obj))
         if missing:
-            raise ValueError(f"Blender could not map bodies for {robot_name}: {missing[:10]}")
+            raise ValueError(f"Blender could not map bodies for {obj_name}: {missing[:10]}")
 
     def _apply_dict_state(self, state: DictEnvState) -> None:
         for obj_name, obj_state in state["objects"].items():
@@ -696,7 +1058,7 @@ class BlenderHandler(BaseSimHandler):
         scene.render.resolution_x = int(camera.width)
         scene.render.resolution_y = int(camera.height)
         scene.render.resolution_percentage = 100
-        image_path = self._tmp_dir / f"{camera.name}.png"
+        image_path = self._tmp_dir / f"{camera.name}.{_BLENDER_RGB_READBACK_SUFFIX}"
         scene.render.filepath = str(image_path)
         bpy.ops.render.render(write_still=True)
         rgb_np = np.asarray(iio.imread(image_path))[..., :3].copy()

@@ -82,6 +82,8 @@ class _FileBasedMixin:
             return self.mjcf_path
         elif file_type == "mjx_mjcf":
             return self.mjx_mjcf_path
+        elif file_type == "mesh":
+            return self.mesh_path
         else:
             raise ValueError(f"Invalid file type: {file_type}")
 

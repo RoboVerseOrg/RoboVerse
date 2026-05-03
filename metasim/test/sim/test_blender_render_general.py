@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 import torch
 
@@ -281,6 +283,32 @@ def test_blender_repairs_materials_from_asset_color_map_without_robot_context() 
 
 
 @pytest.mark.general
+def test_blender_repairs_materialless_mesh_from_single_asset_color() -> None:
+    import bpy
+    from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    mesh_obj = bpy.data.objects.new("pane", bpy.data.meshes.new("pane_data"))
+    bpy.context.collection.objects.link(mesh_obj)
+    rgba = _rgba_srgb_to_linear((0.62, 0.88, 1.0, 0.32))
+
+    _repair_imported_materials([mesh_obj], {"Material": rgba})
+
+    assert len(mesh_obj.material_slots) == 1
+    material = mesh_obj.material_slots[0].material
+    assert material is not None
+    assert material.blend_method != "BLEND"
+    assert tuple(round(value, 5) for value in material.diffuse_color) == tuple(
+        round(value, 5) for value in (rgba[0], rgba[1], rgba[2], 1.0)
+    )
+    bsdf = next(node for node in material.node_tree.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled")
+    assert bsdf.inputs["Alpha"].default_value == pytest.approx(1.0)
+    assert bsdf.inputs["Transmission Weight"].default_value == pytest.approx(1.0)
+
+
+@pytest.mark.general
 def test_blender_matches_collada_material_suffix_on_imported_materials() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -480,6 +508,269 @@ def test_blender_handler_maps_wuji_hand_body_names_to_usd_names() -> None:
 
     assert tuple(round(value, 5) for value in finger_obj.location) == (1.0, 2.0, 3.0)
     assert tuple(round(value, 5) for value in palm_obj.location) == (4.0, 5.0, 6.0)
+
+
+@pytest.mark.general
+def test_blender_handler_applies_articulated_object_body_states() -> None:
+    import bpy
+
+    from metasim.sim.blender import BlenderHandler
+    from metasim.types import ObjectState, TensorState
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    lid_obj = bpy.data.objects.new("lid", None)
+    bpy.context.collection.objects.link(lid_obj)
+
+    handler = object.__new__(BlenderHandler)
+    handler._objs = {}
+    handler._body_objs = {"prop": {"lid": lid_obj}}
+
+    state = TensorState(
+        objects={
+            "prop": ObjectState(
+                root_state=torch.zeros((1, 13), dtype=torch.float32),
+                body_names=["lid"],
+                body_state=torch.tensor([[[0.2, -0.3, 0.4, 1.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0]]]),
+                joint_pos=torch.zeros((1, 1), dtype=torch.float32),
+                joint_vel=torch.zeros((1, 1), dtype=torch.float32),
+            )
+        },
+        robots={},
+        cameras={},
+    )
+
+    handler._apply_tensor_state(state)
+
+    assert tuple(round(value, 5) for value in lid_obj.location) == (0.2, -0.3, 0.4)
+
+
+@pytest.mark.general
+def test_blender_handler_imports_mjcf_rigid_object_visuals(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+
+    monkeypatch.chdir(tmp_path)
+    asset_path = tmp_path / "clear_block.xml"
+    asset_path.write_text(
+        """
+<mujoco model="clear_block">
+  <asset>
+    <material name="glass" rgba="0.6 0.85 1.0 0.35"/>
+  </asset>
+  <worldbody>
+    <body name="clear_block_body">
+      <geom name="clear_panel" type="box" size="0.1 0.05 0.02" pos="0 0 0.02" material="glass"/>
+    </body>
+  </worldbody>
+</mujoco>
+""".strip(),
+        encoding="utf-8",
+    )
+    file_type = dict(RigidObjCfg.file_type)
+    file_type["blender"] = "mjcf"
+    scenario = ScenarioCfg(
+        objects=[
+            RigidObjCfg(
+                name="clear_block",
+                physics=PhysicStateType.RIGIDBODY,
+                mjcf_path=str(asset_path),
+                file_type=file_type,
+            )
+        ],
+        robots=[],
+        cameras=[],
+        simulator="blender",
+        headless=True,
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        root = handler._objs["clear_block"]
+        body = root.children[0]
+        mesh = body.children[0]
+    finally:
+        handler.close()
+
+    assert root.type == "EMPTY"
+    assert body.name == "clear_block_body"
+    assert mesh.name == "clear_panel"
+    material = mesh.material_slots[0].material
+    bsdf = next(node for node in material.node_tree.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled")
+    assert material.blend_method != "BLEND"
+    assert material.diffuse_color[3] == pytest.approx(1.0)
+    assert bsdf.inputs["Alpha"].default_value == pytest.approx(1.0)
+    assert bsdf.inputs["Transmission Weight"].default_value == pytest.approx(1.0)
+    assert any(modifier.type == "BEVEL" for modifier in mesh.modifiers)
+    assert any(modifier.type == "WEIGHTED_NORMAL" for modifier in mesh.modifiers)
+
+
+@pytest.mark.general
+def test_blender_handler_imports_transparent_mjcf_cylinders_as_hollow_visual_shells(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+
+    monkeypatch.chdir(tmp_path)
+    asset_path = tmp_path / "glass_cup.xml"
+    asset_path.write_text(
+        """
+<mujoco model="glass_cup">
+  <asset>
+    <material name="clear_glass" rgba="0.72 0.9 1.0 0.32"/>
+  </asset>
+  <worldbody>
+    <body name="glass_cup_body">
+      <geom name="cup_glass" type="cylinder" size="0.05 0.08" pos="0 0 0.08" material="clear_glass"/>
+    </body>
+  </worldbody>
+</mujoco>
+""".strip(),
+        encoding="utf-8",
+    )
+    file_type = dict(RigidObjCfg.file_type)
+    file_type["blender"] = "mjcf"
+    scenario = ScenarioCfg(
+        objects=[
+            RigidObjCfg(
+                name="glass_cup",
+                physics=PhysicStateType.RIGIDBODY,
+                mjcf_path=str(asset_path),
+                file_type=file_type,
+            )
+        ],
+        robots=[],
+        cameras=[],
+        simulator="blender",
+        headless=True,
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        root = handler._objs["glass_cup"]
+        body = root.children[0]
+        mesh = body.children[0]
+    finally:
+        handler.close()
+
+    nonzero_radii = sorted(
+        {
+            round((vertex.co.x**2 + vertex.co.y**2) ** 0.5, 4)
+            for vertex in mesh.data.vertices
+            if (vertex.co.x**2 + vertex.co.y**2) ** 0.5 > 1e-4
+        }
+    )
+
+    assert mesh.name == "cup_glass"
+    assert len(nonzero_radii) >= 2
+    assert nonzero_radii[-2] < nonzero_radii[-1]
+
+
+@pytest.mark.general
+def test_blender_handler_uses_more_realistic_default_render_settings() -> None:
+    import bpy
+
+    from metasim.sim.blender import BlenderHandler
+
+    handler = object.__new__(BlenderHandler)
+    handler.context = bpy.context
+    handler.scenario = SimpleNamespace(render=SimpleNamespace(samples=None, device="CPU"))
+
+    handler._configure_render()
+
+    scene = bpy.context.scene
+    assert scene.render.engine == "CYCLES"
+    assert scene.cycles.samples == 128
+    assert scene.cycles.use_denoising is True
+    assert scene.cycles.denoising_prefilter == "ACCURATE"
+    assert scene.cycles.denoising_quality == "HIGH"
+    assert scene.cycles.max_bounces == 10
+    assert scene.cycles.transparent_max_bounces == 10
+    assert scene.cycles.transmission_bounces == 10
+    assert scene.cycles.diffuse_bounces == 4
+    assert scene.cycles.glossy_bounces == 4
+    assert scene.cycles.caustics_reflective is True
+    assert scene.cycles.caustics_refractive is True
+    assert scene.render.film_transparent is False
+
+
+@pytest.mark.general
+def test_blender_handler_configures_repeated_render_speedups_without_lowering_glass_quality() -> None:
+    import bpy
+
+    from metasim.sim.blender import BlenderHandler
+
+    handler = object.__new__(BlenderHandler)
+    handler.context = bpy.context
+    handler.scenario = SimpleNamespace(render=SimpleNamespace(samples=None, device="CPU"))
+
+    scene = bpy.context.scene
+    scene.render.use_persistent_data = False
+    scene.render.use_compositing = True
+    scene.render.use_sequencer = True
+    scene.render.image_settings.file_format = "PNG"
+
+    handler._configure_render()
+
+    assert scene.render.use_persistent_data is True
+    assert scene.render.use_compositing is False
+    assert scene.render.use_sequencer is False
+    assert scene.render.image_settings.file_format == "BMP"
+    assert scene.cycles.caustics_reflective is True
+    assert scene.cycles.caustics_refractive is True
+    assert scene.cycles.transmission_bounces == 10
+    assert scene.cycles.transparent_max_bounces == 10
+
+
+@pytest.mark.general
+def test_blender_handler_enables_gpu_denoising_for_gpu_final_settings() -> None:
+    import bpy
+
+    from metasim.sim.blender import BlenderHandler
+
+    handler = object.__new__(BlenderHandler)
+    handler.context = bpy.context
+    handler.scenario = SimpleNamespace(render=SimpleNamespace(samples=8, device="OPTIX"))
+    handler._configure_cycles_device = lambda _device: "OPTIX"
+
+    handler._configure_render()
+
+    assert bpy.context.scene.cycles.denoising_use_gpu is True
+
+
+@pytest.mark.general
+def test_blender_transparent_materials_use_transmission_for_realistic_glass() -> None:
+    from metasim.sim.blender.blender import _new_material_from_rgba
+
+    material = _new_material_from_rgba("glass", (0.6, 0.8, 1.0, 0.35))
+    bsdf = next(node for node in material.node_tree.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled")
+
+    assert material.blend_method != "BLEND"
+    assert bsdf.inputs["Alpha"].default_value == pytest.approx(1.0)
+    assert bsdf.inputs["Transmission Weight"].default_value == pytest.approx(1.0)
+    assert bsdf.inputs["IOR"].default_value == pytest.approx(1.45)
+
+
+@pytest.mark.general
+def test_blender_transparent_materials_use_asset_name_ior_presets() -> None:
+    from metasim.sim.blender.blender import _new_material_from_rgba
+
+    water = _new_material_from_rgba("water_tint", (0.55, 0.75, 0.95, 0.3))
+    acrylic = _new_material_from_rgba("clear_acrylic", (0.7, 0.9, 1.0, 0.3))
+
+    water_bsdf = next(node for node in water.node_tree.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled")
+    acrylic_bsdf = next(node for node in acrylic.node_tree.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled")
+
+    assert water_bsdf.inputs["IOR"].default_value == pytest.approx(1.333)
+    assert acrylic_bsdf.inputs["IOR"].default_value == pytest.approx(1.49)
 
 
 @pytest.mark.general

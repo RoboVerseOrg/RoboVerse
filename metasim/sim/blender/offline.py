@@ -16,8 +16,8 @@ from .blender import BlenderHandler
 @dataclass(frozen=True)
 class BlenderOfflineRenderCfg:
     output_dir: str | Path
-    samples: int = 64
-    device: str = "CPU"
+    samples: int | None = None
+    device: str = "AUTO"
     cameras: tuple[str, ...] | None = None
 
 
@@ -31,8 +31,9 @@ def _render_scenario_from_source(scenario: ScenarioCfg, cfg: BlenderOfflineRende
         missing = sorted(wanted - {camera.name for camera in render_scenario.cameras})
         if missing:
             raise ValueError(f"Unknown camera(s) for Blender offline render: {missing}")
-    setattr(render_scenario.render, "samples", int(cfg.samples))
-    setattr(render_scenario.render, "device", cfg.device)
+    if cfg.samples is not None:
+        render_scenario.render.samples = int(cfg.samples)
+    render_scenario.render.device = cfg.device
     return render_scenario
 
 
