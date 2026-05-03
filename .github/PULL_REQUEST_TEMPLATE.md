@@ -2,8 +2,8 @@
 
 <!--
 Thank you for your interest in sending a pull request. Please make sure to check the contribution guidelines.
--
-- Link: https://roboverse.wiki/metasim/developer_guide/precommit_hooks
+
+Link: https://roboverse.wiki/metasim/developer_guide/precommit_hooks
 -->
 
 Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
