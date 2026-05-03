@@ -257,7 +257,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Built-in trajectory pattern. Defaults to hold-initial-pose.",
     )
     parser.add_argument("--headless", dest="headless", action="store_true", default=False, help="Run without a viewer.")
-    parser.add_argument("--viewer", dest="headless", action="store_false", help="Open the simulator viewer when supported.")
+    parser.add_argument(
+        "--viewer", dest="headless", action="store_false", help="Open the simulator viewer when supported."
+    )
     parser.add_argument(
         "--physics-viewer",
         action="store_true",
@@ -299,7 +301,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default="AUTO",
         help="Cycles device for Blender rendering. AUTO selects the fastest available GPU and falls back to CPU.",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Validate task/robot selection without launching simulation.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate task/robot selection without launching simulation."
+    )
     return parser
 
 
@@ -452,7 +456,9 @@ def main() -> None:
         assert args.render_output is not None
 
         def render_frame_callback(frame_index: int, session: object) -> None:
-            live_rendered_frames.extend(str(path) for path in _write_blender_live_frame(args.render_output, frame_index, session))
+            live_rendered_frames.extend(
+                str(path) for path in _write_blender_live_frame(args.render_output, frame_index, session)
+            )
 
     result = run_native_task_teleop_flow(
         task=task_spec.name,

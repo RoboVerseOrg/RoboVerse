@@ -208,8 +208,7 @@ def _prepare_tensor_state_for_render_handler(physics_state, render_handler):
         for name, robot_state in physics_state.robots.items()
     }
     extras = {
-        key: _maybe_to_device(value, render_device)
-        for key, value in getattr(physics_state, "extras", {}).items()
+        key: _maybe_to_device(value, render_device) for key, value in getattr(physics_state, "extras", {}).items()
     }
     return replace(physics_state, objects=objects, robots=robots, cameras={}, extras=extras)
 
@@ -243,7 +242,9 @@ def _primary_robot_cfg(handler):
 def _canonical_control_joint_names(handler, robot_cfg) -> list[str]:
     available_joint_names = set(handler.get_joint_names(robot_cfg.name, sort=False))
     if getattr(robot_cfg, "default_joint_positions", None):
-        ordered = [joint_name for joint_name in robot_cfg.default_joint_positions if joint_name in available_joint_names]
+        ordered = [
+            joint_name for joint_name in robot_cfg.default_joint_positions if joint_name in available_joint_names
+        ]
         if ordered:
             return ordered
     if getattr(robot_cfg, "joint_limits", None):
@@ -283,10 +284,7 @@ def _current_joint_targets(handler, robot_cfg, joint_names: list[str]) -> tuple[
     sorted_joint_names = handler.get_joint_names(robot_cfg.name, sort=True)
     joint_values = _first_env_joint_values(robot_state.joint_pos)
     _expect_length(joint_values, len(sorted_joint_names), label="current joint state", robot_name=robot_cfg.name)
-    joint_value_by_name = {
-        joint_name: joint_values[index]
-        for index, joint_name in enumerate(sorted_joint_names)
-    }
+    joint_value_by_name = {joint_name: joint_values[index] for index, joint_name in enumerate(sorted_joint_names)}
     return tuple(joint_value_by_name[joint_name] for joint_name in joint_names)
 
 
@@ -330,8 +328,7 @@ def control_command_to_metasim_actions(handler, command: ControlCommand):
         {
             robot_cfg.name: {
                 "dof_pos_target": {
-                    joint_name: float(target_values[index])
-                    for index, joint_name in enumerate(joint_names)
+                    joint_name: float(target_values[index]) for index, joint_name in enumerate(joint_names)
                 },
                 "dof_effort_target": None,
             }

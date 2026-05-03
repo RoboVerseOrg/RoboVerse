@@ -6,15 +6,13 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-KNOWN_TELEOP_COMMANDS = frozenset(
-    {
-        "capture_zero",
-        "save_calibration",
-        "capture_reference",
-        "clear_calibration",
-        "calibrate_and_save",
-    }
-)
+KNOWN_TELEOP_COMMANDS = frozenset({
+    "capture_zero",
+    "save_calibration",
+    "capture_reference",
+    "clear_calibration",
+    "calibrate_and_save",
+})
 
 
 @dataclass(frozen=True)

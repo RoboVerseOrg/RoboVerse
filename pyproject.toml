@@ -172,6 +172,8 @@ roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "*
 ## For python files in docs and dashboard folder, allow no docstrings
 "docs/**.py" = ["D"]
 "dashboard/**.py" = ["D"]
+## Test names should carry behavior; requiring docstrings makes tests noisy
+"tests/**.py" = ["D"]
 ## For tasks, allow no docstrings in public modules
 "roboverse_pack/tasks/**/*.py" = ["D100"]
 ## For roboverse_learn, allow no docstrings, allow print

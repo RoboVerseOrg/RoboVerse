@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: D103
 import json
 from pathlib import Path
 
@@ -159,7 +158,9 @@ def test_runtime_decodes_canonical_targets_with_calibration_profile_and_retarget
         clip_target_pos=lambda pos: pos.astype(np.float32, copy=False),
         hand_retargeting_runtime=_FakeHandRetargeter(),
     )
-    zero_packet = _valid_packet(left_pos=(0.10, 0.00, 0.00), right_pos=(0.10, 0.00, 0.00), left_grip=0.0, right_grip=0.0)
+    zero_packet = _valid_packet(
+        left_pos=(0.10, 0.00, 0.00), right_pos=(0.10, 0.00, 0.00), left_grip=0.0, right_grip=0.0
+    )
     runtime.observe_packet(zero_packet)
 
     assert runtime.handle_command({"command": "capture_zero"}) is True

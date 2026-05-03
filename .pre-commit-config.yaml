@@ -1,0 +1,20 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: trailing-whitespace
+        exclude: '(^third_party|.*\.md|.*\.rst)'
+    -   id: end-of-file-fixer
+        exclude: '(^third_party|.*\.md|.*\.rst)'
+    -   id: check-added-large-files
+        exclude: '^metasim/data/'
+    -   id: debug-statements  # check for debugger imports or `breakpoint()`
+        exclude: '^roboverse_learn/'
+    -   id: check-yaml
+    -   id: check-toml
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.5
+    hooks:
+    -   id: ruff
+        args: [ --fix ]
+    -   id: ruff-format

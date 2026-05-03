@@ -48,7 +48,12 @@ class ControlCommand:
         meta: dict[str, Any] | None = None,
     ) -> ControlCommand:
         """Build a normalized action command."""
-        return cls(mode="normalized_action", source=source, normalized_action=tuple(float(value) for value in action), meta=meta)
+        return cls(
+            mode="normalized_action",
+            source=source,
+            normalized_action=tuple(float(value) for value in action),
+            meta=meta,
+        )
 
     @classmethod
     def from_joint_targets(
@@ -59,7 +64,12 @@ class ControlCommand:
         meta: dict[str, Any] | None = None,
     ) -> ControlCommand:
         """Build a joint target command."""
-        return cls(mode="joint_target_q", source=source, joint_target_q_rad=tuple(float(value) for value in joint_target_q_rad), meta=meta)
+        return cls(
+            mode="joint_target_q",
+            source=source,
+            joint_target_q_rad=tuple(float(value) for value in joint_target_q_rad),
+            meta=meta,
+        )
 
 
 @dataclass(frozen=True)
@@ -148,15 +158,23 @@ def teleop_targets_to_control_command(
     has_arm_targets = targets.left_arm_target_q_rad is not None or targets.right_arm_target_q_rad is not None
     has_hand_targets = targets.left_hand_target_q_rad is not None or targets.right_hand_target_q_rad is not None
     if has_arm_targets or has_hand_targets:
-        joint_targets = [0.0] * control_length if baseline_joint_targets is None else [float(value) for value in baseline_joint_targets]
+        joint_targets = (
+            [0.0] * control_length
+            if baseline_joint_targets is None
+            else [float(value) for value in baseline_joint_targets]
+        )
         _apply_joint_targets(joint_targets, left_arm_slice, targets.left_arm_target_q_rad, label="left arm target")
         _apply_joint_targets(joint_targets, right_arm_slice, targets.right_arm_target_q_rad, label="right arm target")
         _apply_joint_targets(joint_targets, left_hand_slice, targets.left_hand_target_q_rad, label="left hand target")
-        _apply_joint_targets(joint_targets, right_hand_slice, targets.right_hand_target_q_rad, label="right hand target")
+        _apply_joint_targets(
+            joint_targets, right_hand_slice, targets.right_hand_target_q_rad, label="right hand target"
+        )
         return ControlCommand.from_joint_targets(
             joint_targets,
             source="teleop",
-            meta=_teleop_meta(targets, control_mapping="direct_joint_targets" if has_arm_targets else "hand_joint_targets"),
+            meta=_teleop_meta(
+                targets, control_mapping="direct_joint_targets" if has_arm_targets else "hand_joint_targets"
+            ),
         )
 
     normalized_action = [0.0] * control_length
@@ -240,13 +258,17 @@ def _write_recorded_states(
     )
 
 
-def _validate_native_request(task_spec: BenchmarkTaskSpec, robot: str, simulator: str, renderer: str | None = None) -> None:
+def _validate_native_request(
+    task_spec: BenchmarkTaskSpec, robot: str, simulator: str, renderer: str | None = None
+) -> None:
     if simulator not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
         raise ValueError(f"task {task_spec.name} does not support simulator {simulator!r}; supported: {supported}")
     if renderer is not None and renderer != "blender" and renderer not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
-        raise ValueError(f"task {task_spec.name} does not support renderer {renderer!r}; supported: {supported}, blender")
+        raise ValueError(
+            f"task {task_spec.name} does not support renderer {renderer!r}; supported: {supported}, blender"
+        )
     task_spec.robot_profile(robot)
 
 
@@ -352,9 +374,7 @@ def run_native_task_teleop_flow(
         frame_count = 0
         restore_initial_state = getattr(session, "restore_state", None) if hold_initial_pose else None
         baseline_joint_targets = (
-            None
-            if callable(restore_initial_state)
-            else _session_joint_targets(session, initial_observation)
+            None if callable(restore_initial_state) else _session_joint_targets(session, initial_observation)
         )
         initial_joint_targets = baseline_joint_targets
         for packet in packets:
@@ -367,7 +387,9 @@ def run_native_task_teleop_flow(
                 targets = _decode_targets(teleop_runtime, packet)
                 control = teleop_targets_to_control_command(task_spec, selected_robot, targets, baseline_joint_targets)
                 step_result = session.step(control)
-            observation = getattr(step_result, "observation", step_result[0] if isinstance(step_result, tuple) else None)
+            observation = getattr(
+                step_result, "observation", step_result[0] if isinstance(step_result, tuple) else None
+            )
             if record_states_path is not None:
                 recorded_states.append(_state_for_recording(observation))
             if not hold_initial_pose:

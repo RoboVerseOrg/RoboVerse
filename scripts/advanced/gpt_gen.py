@@ -430,7 +430,9 @@ def main():
 
     print(
         Fore.RED
-        + emoji.emojize("⚠️ Please add this line in roboverse_pack/tasks/gpt/__init__.py to import the new metacfg class:")
+        + emoji.emojize(
+            "⚠️ Please add this line in roboverse_pack/tasks/gpt/__init__.py to import the new metacfg class:"
+        )
         + Style.RESET_ALL
     )
     print(Fore.WHITE + f"  from .metacfg.{snake_task_name_out} import {metacfg_class_name}" + Style.RESET_ALL + "\n")

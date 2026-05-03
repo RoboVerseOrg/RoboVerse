@@ -92,7 +92,9 @@ class CanonicalTeleopRuntime:
     teleop_ramp_start_time: float = field(default=0.0, init=False)
 
     def __post_init__(self) -> None:
-        self.transform_profile = get_profile(self.transform_profile) if isinstance(self.transform_profile, str) else self.transform_profile
+        self.transform_profile = (
+            get_profile(self.transform_profile) if isinstance(self.transform_profile, str) else self.transform_profile
+        )
         self.calibration_path = None if self.calibration_path is None else Path(self.calibration_path)
         if self.clip_target_pos is None:
             self.clip_target_pos = lambda pos: np.asarray(pos, dtype=np.float32)
@@ -160,7 +162,11 @@ class CanonicalTeleopRuntime:
         except (OSError, json.JSONDecodeError):
             self.teleop_status = "teleop:calibration:load-error"
             return False
-        if not isinstance(payload, dict) or not isinstance(payload.get("left"), dict) or not isinstance(payload.get("right"), dict):
+        if (
+            not isinstance(payload, dict)
+            or not isinstance(payload.get("left"), dict)
+            or not isinstance(payload.get("right"), dict)
+        ):
             self.teleop_status = "teleop:calibration:invalid-file"
             return False
         self.teleop_calibration = payload
@@ -270,7 +276,9 @@ class CanonicalTeleopRuntime:
         elapsed = float(self.clock()) - self.teleop_ramp_start_time
         return float(np.clip(elapsed / self.ramp_duration_s, 0.0, 1.0))
 
-    def apply_reference(self, hand_key: str, target_pos_cm: np.ndarray, target_quat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def apply_reference(
+        self, hand_key: str, target_pos_cm: np.ndarray, target_quat: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         reference = self.teleop_ramp_reference.get(hand_key)
         if not isinstance(reference, Mapping):
             return self._clip_target_pos(target_pos_cm), self._normalize_quat(
@@ -332,7 +340,9 @@ class CanonicalTeleopRuntime:
         }
         self.teleop_status = f"teleop:auto-zero:{hand_key}"
 
-    def apply_calibration(self, hand_key: str, device_pos_m: np.ndarray, device_quat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def apply_calibration(
+        self, hand_key: str, device_pos_m: np.ndarray, device_quat: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         calibration = self.runtime_teleop_calibration.get(hand_key)
         if not isinstance(calibration, dict):
             calibration = self.teleop_calibration.get(hand_key)
@@ -345,7 +355,12 @@ class CanonicalTeleopRuntime:
         device_zero_quat = np.asarray(calibration.get("device_zero_quat", []), dtype=np.float32).reshape(-1)
         sim_zero_pos = np.asarray(calibration.get("sim_zero_pos_cm", []), dtype=np.float32).reshape(-1)
         sim_zero_quat = np.asarray(calibration.get("sim_zero_quat", []), dtype=np.float32).reshape(-1)
-        if device_zero_pos.shape != (3,) or device_zero_quat.shape != (4,) or sim_zero_pos.shape != (3,) or sim_zero_quat.shape != (4,):
+        if (
+            device_zero_pos.shape != (3,)
+            or device_zero_quat.shape != (4,)
+            or sim_zero_pos.shape != (3,)
+            or sim_zero_quat.shape != (4,)
+        ):
             return self._clip_target_pos(device_pos_m * 100.0), self._normalize_quat(
                 device_quat, np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
             )
@@ -367,8 +382,12 @@ class CanonicalTeleopRuntime:
             right_work_pose_cm_xyzw=tuple(float(value) for value in right_pose.tolist()),
             left_close_ratio=float(left_close_ratio),
             right_close_ratio=float(right_close_ratio),
-            left_hand_target_q_rad=None if left_hand_target is None else tuple(float(value) for value in left_hand_target.tolist()),
-            right_hand_target_q_rad=None if right_hand_target is None else tuple(float(value) for value in right_hand_target.tolist()),
+            left_hand_target_q_rad=None
+            if left_hand_target is None
+            else tuple(float(value) for value in left_hand_target.tolist()),
+            right_hand_target_q_rad=None
+            if right_hand_target is None
+            else tuple(float(value) for value in right_hand_target.tolist()),
             transform_profile=self.transform_profile.name,
             status=self.teleop_status,
         )
@@ -438,7 +457,9 @@ class CanonicalTeleopRuntime:
 
     def _quat_slerp_xyzw(self, q0: np.ndarray, q1: np.ndarray, alpha: float) -> np.ndarray:
         alpha = float(np.clip(alpha, 0.0, 1.0))
-        q0_norm = self._normalize_quat(q0.astype(np.float32, copy=False), np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32))
+        q0_norm = self._normalize_quat(
+            q0.astype(np.float32, copy=False), np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
+        )
         q1_norm = self._normalize_quat(q1.astype(np.float32, copy=False), q0_norm)
         dot = float(np.dot(q0_norm, q1_norm))
         if dot < 0.0:

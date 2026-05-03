@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: D103
 import importlib.util
 import os
 import sys
@@ -477,9 +476,11 @@ def test_native_teleop_flow_invokes_render_frame_callback_after_reset_and_each_s
         session=session,
         record_run=False,
         hold_initial_pose=True,
-        render_frame_callback=lambda frame_index, frame_session: frame_calls.append(
-            (frame_index, frame_session, len(session.controls))
-        ),
+        render_frame_callback=lambda frame_index, frame_session: frame_calls.append((
+            frame_index,
+            frame_session,
+            len(session.controls),
+        )),
     )
 
     assert frame_calls == [(0, session, 0), (1, session, 1), (2, session, 2)]
@@ -900,24 +901,22 @@ def test_bidexbench_cube_reach_runner_accepts_offline_blender_render_options() -
     spec.loader.exec_module(module)
 
     parser = module._build_parser()
-    args = parser.parse_args(
-        [
-            "--sim",
-            "mujoco",
-            "--steps",
-            "3",
-            "--record-states",
-            "/tmp/cube_reach_states.pt",
-            "--offline-renderer",
-            "blender",
-            "--render-output",
-            "/tmp/cube_reach_blender",
-            "--render-samples",
-            "8",
-            "--render-device",
-            "CPU",
-        ]
-    )
+    args = parser.parse_args([
+        "--sim",
+        "mujoco",
+        "--steps",
+        "3",
+        "--record-states",
+        "/tmp/cube_reach_states.pt",
+        "--offline-renderer",
+        "blender",
+        "--render-output",
+        "/tmp/cube_reach_blender",
+        "--render-samples",
+        "8",
+        "--render-device",
+        "CPU",
+    ])
 
     assert args.record_states == Path("/tmp/cube_reach_states.pt")
     assert args.offline_renderer == "blender"
@@ -1178,7 +1177,9 @@ def test_elegant_glass_bottle_fbx_imports_as_single_blender_mesh_when_bpy_availa
     pytest.importorskip("bpy")
     from metasim.sim.blender.blender import import_mesh
 
-    asset_path = ROOT / "roboverse_pack" / "tasks" / "benchmark" / "assets" / "elegant_glass_bottle" / "elegant_glass_bottle.fbx"
+    asset_path = (
+        ROOT / "roboverse_pack" / "tasks" / "benchmark" / "assets" / "elegant_glass_bottle" / "elegant_glass_bottle.fbx"
+    )
 
     imported = import_mesh(str(asset_path))
 

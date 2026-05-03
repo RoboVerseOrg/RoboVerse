@@ -4,7 +4,6 @@ import sys
 from importlib.machinery import PathFinder
 from pathlib import Path
 
-
 METASIM_GITHUB_REF = "git+https://github.com/RoboVerseOrg/MetaSim.git@main"
 METASIM_DEPENDENCY = f"metasim @ {METASIM_GITHUB_REF}"
 METASIM_SIMULATOR_EXTRAS = [
