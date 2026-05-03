@@ -43,7 +43,7 @@ To upload images to a PR -- simply drag and drop an image while in edit mode and
 
 ## Checklist
 
-- [ ] I have run the applicable tests or checks for this change
+- [ ] I have run the [`pre-commit` checks](https://pre-commit.com/) with `pre-commit run --color=always --all-files`
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
