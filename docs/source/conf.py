@@ -201,6 +201,9 @@ autodoc_mock_imports = [
     "huggingface_hub",
     "dill",
     "pytorch3d",
+    # RoboVerse no longer vendors MetaSim; mock it for Pages docs builds that
+    # install only docs/requirements.txt.
+    "metasim",
 ]
 
 
