@@ -12,7 +12,7 @@ import pytest
 
 from roboverse_pack.benchmark import get_benchmark_task_spec, list_benchmark_task_specs
 from roboverse_pack.robots.openarm_bimanual_wuji_cfg import OpenarmBimanualWujiCfg
-from roboverse_pack.teleop.flow import run_native_task_teleop_flow
+from roboverse_pack.teleop.flow import run_native_task_teleop_flow, teleop_targets_to_control_command
 from roboverse_pack.teleop.runtime import CanonicalTeleopTargets
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +102,104 @@ def test_benchmark_cube_reach_chest_camera_points_at_task_volume() -> None:
     assert dot / (camera_norm * cube_norm) > 0.65
 
 
+def test_benchmark_cube_reach_cameras_render_native_1080p() -> None:
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="blender", headless=True)
+
+    assert {camera.name: (camera.width, camera.height) for camera in scenario.cameras} == {
+        "overview": (1920, 1080),
+        "chest": (1920, 1080),
+    }
+
+
+def test_benchmark_cube_reach_cube_starts_on_table_surface() -> None:
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="mujoco", headless=True)
+    objects = {obj.name: obj for obj in scenario.objects}
+    cube = objects["cube"]
+    table = objects["table"]
+
+    cube_bottom_z = cube.default_position[2] - cube.size[2] / 2.0
+    table_top_z = table.default_position[2] + table.size[2] / 2.0
+
+    assert cube_bottom_z == pytest.approx(table_top_z)
+
+
+def test_benchmark_cube_reach_scene_includes_physical_elegant_glass_bottle() -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import RigidObjCfg
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="mujoco", headless=True)
+    bottle = next(obj for obj in scenario.objects if obj.name == "elegant_glass_bottle")
+
+    assert isinstance(bottle, RigidObjCfg)
+    assert bottle.physics == PhysicStateType.RIGIDBODY
+    assert bottle.fix_base_link is False
+    assert bottle.collision_enabled is True
+    assert bottle.default_position == pytest.approx((0.24, -0.42, 0.20))
+    assert bottle.file_name("blender").endswith("elegant_glass_bottle/elegant_glass_bottle.fbx")
+    assert bottle.file_name("mujoco").endswith("elegant_glass_bottle/elegant_glass_bottle.xml")
+    assert bottle.mjcf_path.endswith("elegant_glass_bottle/elegant_glass_bottle.xml")
+    assert bottle.mesh_path.endswith("elegant_glass_bottle/elegant_glass_bottle.fbx")
+    assert Path(bottle.mjcf_path).is_file()
+    assert Path(bottle.mesh_path).is_file()
+
+
+def test_benchmark_cube_reach_scene_has_wide_table_and_physical_props() -> None:
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, RigidObjCfg
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="mujoco", headless=True)
+    objects = {obj.name: obj for obj in scenario.objects}
+
+    table = objects["table"]
+    assert isinstance(table, PrimitiveCubeCfg)
+    assert table.size == pytest.approx([1.20, 0.90, 0.04])
+    assert table.default_position == pytest.approx((0.0, -0.55, 0.18))
+
+    for name in ("crystal_tumbler", "glass_hurricane_holder"):
+        prop = objects[name]
+        assert isinstance(prop, RigidObjCfg)
+        assert prop.physics == PhysicStateType.RIGIDBODY
+        assert prop.collision_enabled is True
+        assert prop.fix_base_link is False
+        assert prop.file_name("mujoco").endswith(f"{name}/{name}.xml")
+        assert prop.file_name("blender").endswith(f"{name}/{name}.xml")
+        assert Path(prop.mjcf_path).is_file()
+
+    for name in ("articulated_clear_display_case", "articulated_desk_lamp"):
+        prop = objects[name]
+        assert isinstance(prop, ArticulationObjCfg)
+        assert prop.fix_base_link is True
+        assert prop.file_name("mujoco").endswith(f"{name}/{name}.xml")
+        assert prop.file_name("blender").endswith(f"{name}/{name}.xml")
+        assert Path(prop.mjcf_path).is_file()
+
+
+def test_benchmark_cube_reach_scene_keeps_mjcf_props_out_of_native_isaacsim() -> None:
+    from roboverse_pack.tasks.benchmark.base import build_benchmark_scenario
+
+    spec = get_benchmark_task_spec("cube_reach")
+    scenario = build_benchmark_scenario(spec, robot="openarm_bimanual_wuji", simulator="isaacsim", headless=True)
+    object_names = {obj.name for obj in scenario.objects}
+
+    assert "table" in object_names
+    assert "cube" in object_names
+    assert "elegant_glass_bottle" not in object_names
+    assert "crystal_tumbler" not in object_names
+    assert "glass_hurricane_holder" not in object_names
+    assert "articulated_clear_display_case" not in object_names
+    assert "articulated_desk_lamp" not in object_names
+
+
 def test_openarm_bimanual_wuji_robot_cfg_uses_roboverse_data_assets() -> None:
     robot = OpenarmBimanualWujiCfg()
 
@@ -174,6 +272,91 @@ def test_bidexbench_cube_reach_runner_accepts_initial_pose_hold_option() -> None
 
     assert parser.parse_args([]).hold_initial_pose is False
     assert parser.parse_args(["--hold-initial-pose"]).hold_initial_pose is True
+
+
+def test_bidexbench_cube_reach_runner_uses_trajectory_selector() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    parser = module._build_parser()
+
+    default_args = parser.parse_args([])
+    assert module._effective_trajectory(default_args) == "hold-initial-pose"
+    assert module._hold_initial_pose_enabled(default_args) is True
+
+    synthetic_args = parser.parse_args(["--trajectory", "synthetic-reach"])
+    assert module._effective_trajectory(synthetic_args) == "synthetic-reach"
+    assert module._hold_initial_pose_enabled(synthetic_args) is False
+
+    legacy_args = parser.parse_args(["--trajectory", "synthetic-reach", "--hold-initial-pose"])
+    assert module._effective_trajectory(legacy_args) == "hold-initial-pose"
+    assert module._hold_initial_pose_enabled(legacy_args) is True
+
+
+def test_bidexbench_cube_reach_runner_default_packet_source_holds_initial_pose() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    parser = module._build_parser()
+    args = parser.parse_args(["--steps", "3"])
+
+    packets = list(module._packet_source(args))
+
+    assert len(packets) == 3
+    assert not any(isinstance(packet, CanonicalTeleopTargets) for packet in packets)
+
+
+def test_bidexbench_cube_reach_runner_cube_reach_demo_moves_hands() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    parser = module._build_parser()
+    args = parser.parse_args(["--trajectory", "cube-reach-demo", "--steps", "5"])
+
+    packets = list(module._packet_source(args))
+
+    assert len(packets) == 5
+    assert all(isinstance(packet, CanonicalTeleopTargets) for packet in packets)
+    assert packets[0].transform_profile == "script:cube-reach-demo"
+    assert packets[0].left_work_pose_cm_xyzw != packets[-1].left_work_pose_cm_xyzw
+    assert packets[0].right_work_pose_cm_xyzw != packets[-1].right_work_pose_cm_xyzw
+    assert max(packet.left_close_ratio for packet in packets) > packets[0].left_close_ratio
+    assert max(packet.right_close_ratio for packet in packets) > packets[0].right_close_ratio
+
+
+def test_bidexbench_cube_reach_runner_cube_reach_demo_drives_arm_joint_targets() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    parser = module._build_parser()
+    args = parser.parse_args(["--trajectory", "cube-reach-demo", "--steps", "5"])
+    task_spec = get_benchmark_task_spec("cube_reach")
+    baseline = tuple(float(index) for index in range(54))
+
+    commands = [
+        teleop_targets_to_control_command(task_spec, "openarm_bimanual_wuji", packet, baseline)
+        for packet in module._packet_source(args)
+    ]
+
+    assert all(command.mode == "joint_target_q" for command in commands)
+    assert commands[0].joint_target_q_rad[:14] != pytest.approx(commands[-1].joint_target_q_rad[:14])
+    assert commands[0].meta["teleop"]["control_mapping"] == "direct_joint_targets"
 
 
 def test_bidexbench_cube_reach_runner_preconfigures_mujoco_egl_for_split_render(
@@ -280,6 +463,26 @@ def test_initial_pose_hold_restores_reset_state_without_stepping_when_available(
     assert result["frame_count"] == 2
     assert session.restored_states == [session.reset_observation, session.reset_observation]
     assert session.controls == []
+
+
+def test_native_teleop_flow_invokes_render_frame_callback_after_reset_and_each_step() -> None:
+    session = _FakeSession()
+    frame_calls = []
+
+    run_native_task_teleop_flow(
+        task="benchmark.cube_reach",
+        robot="openarm_bimanual_wuji",
+        simulator="isaacsim",
+        packets=[object(), object()],
+        session=session,
+        record_run=False,
+        hold_initial_pose=True,
+        render_frame_callback=lambda frame_index, frame_session: frame_calls.append(
+            (frame_index, frame_session, len(session.controls))
+        ),
+    )
+
+    assert frame_calls == [(0, session, 0), (1, session, 1), (2, session, 2)]
 
 
 def test_native_benchmark_session_current_joint_targets_reorders_tensor_state_by_joint_name() -> None:
@@ -420,6 +623,43 @@ def test_hybrid_teleop_flow_can_open_physics_backend_viewer(monkeypatch: pytest.
     assert [scenario.simulator for scenario in scenarios] == ["mujoco", "isaacsim"]
 
 
+def test_hybrid_teleop_flow_applies_blender_render_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    import roboverse_pack.teleop.flow as teleop_flow
+
+    task_spec = get_benchmark_task_spec("benchmark.cube_reach")
+
+    def _fake_build_benchmark_scenario(task_spec, *, robot, simulator, headless, camera_names=None):
+        return SimpleNamespace(
+            task_spec=task_spec,
+            robot=robot,
+            simulator=simulator,
+            headless=headless,
+            camera_names=camera_names,
+            render=SimpleNamespace(),
+        )
+
+    class _FakeHybridBenchmarkSession:
+        def __init__(self, physics_scenario, render_scenario) -> None:
+            self.physics_scenario = physics_scenario
+            self.render_scenario = render_scenario
+
+    monkeypatch.setattr("roboverse_pack.tasks.benchmark.base.build_benchmark_scenario", _fake_build_benchmark_scenario)
+    monkeypatch.setattr("roboverse_pack.tasks.benchmark.base.HybridBenchmarkSession", _FakeHybridBenchmarkSession)
+
+    session = teleop_flow._create_native_session(
+        task_spec,
+        "openarm_bimanual_wuji",
+        "mujoco",
+        renderer="blender",
+        headless=True,
+        render_samples=11,
+        render_device="CPU",
+    )
+
+    assert session.render_scenario.render.samples == 11
+    assert session.render_scenario.render.device == "CPU"
+
+
 def test_benchmark_session_applies_mujoco_dm_control_patch_before_launch(monkeypatch: pytest.MonkeyPatch) -> None:
     import roboverse_pack.tasks.benchmark.base as benchmark_base
 
@@ -530,6 +770,37 @@ def test_native_teleop_flow_maps_hand_targets_into_joint_control() -> None:
     assert control.joint_target_q_rad[14:34] == pytest.approx(tuple(0.1 for _ in range(20)))
     assert control.joint_target_q_rad[34:54] == pytest.approx(tuple(0.2 for _ in range(20)))
     assert control.meta["teleop"]["control_mapping"] == "hand_joint_targets"
+
+
+def test_native_teleop_flow_maps_arm_targets_into_joint_control() -> None:
+    session = _FakeSession()
+    targets = CanonicalTeleopTargets(
+        left_work_pose_cm_xyzw=(10.0, 20.0, 30.0, 0.0, 0.0, 0.0, 1.0),
+        right_work_pose_cm_xyzw=(40.0, 50.0, 60.0, 0.0, 0.0, 0.0, 1.0),
+        left_close_ratio=0.1,
+        right_close_ratio=0.9,
+        left_hand_target_q_rad=tuple(0.1 for _ in range(20)),
+        right_hand_target_q_rad=tuple(0.2 for _ in range(20)),
+        left_arm_target_q_rad=tuple(0.3 for _ in range(7)),
+        right_arm_target_q_rad=tuple(0.4 for _ in range(7)),
+    )
+
+    run_native_task_teleop_flow(
+        task="benchmark.cube_reach",
+        robot="openarm_bimanual_wuji",
+        simulator="isaacsim",
+        packets=[targets],
+        session=session,
+        record_run=False,
+    )
+
+    control = session.controls[0]
+    assert control.mode == "joint_target_q"
+    assert control.joint_target_q_rad[:7] == pytest.approx(tuple(0.3 for _ in range(7)))
+    assert control.joint_target_q_rad[7:14] == pytest.approx(tuple(0.4 for _ in range(7)))
+    assert control.joint_target_q_rad[14:34] == pytest.approx(tuple(0.1 for _ in range(20)))
+    assert control.joint_target_q_rad[34:54] == pytest.approx(tuple(0.2 for _ in range(20)))
+    assert control.meta["teleop"]["control_mapping"] == "direct_joint_targets"
 
 
 def test_native_teleop_flow_uses_grip_fallback_without_retargeted_hand_joints() -> None:
@@ -655,6 +926,21 @@ def test_bidexbench_cube_reach_runner_accepts_offline_blender_render_options() -
     assert args.render_device == "CPU"
 
 
+def test_bidexbench_cube_reach_runner_defaults_to_final_blender_settings_and_auto_device() -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    args = module._build_parser().parse_args([])
+
+    assert args.render_samples is None
+    assert args.render_device == "AUTO"
+    assert not hasattr(args, "render_quality")
+
+
 def test_bidexbench_cube_reach_runner_calls_blender_offline_renderer(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -738,7 +1024,67 @@ def test_bidexbench_cube_reach_runner_calls_blender_offline_renderer(
     assert cfg.device == "CPU"
 
 
-def test_bidexbench_cube_reach_runner_treats_renderer_blender_as_offline_renderer(
+def test_bidexbench_cube_reach_runner_writes_per_camera_blender_videos(tmp_path: Path) -> None:
+    script_path = ROOT / "scripts" / "advanced" / "run_bidexbench_cube_reach.py"
+    spec = importlib.util.spec_from_file_location("run_bidexbench_cube_reach_video", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    output_dir = tmp_path / "frames"
+    overview_dir = output_dir / "overview"
+    chest_dir = output_dir / "chest"
+    overview_dir.mkdir(parents=True)
+    chest_dir.mkdir()
+    (overview_dir / "frame_000001.png").write_bytes(b"overview-1")
+    (overview_dir / "frame_000000.png").write_bytes(b"overview-0")
+    (chest_dir / "frame_000000.png").write_bytes(b"chest-0")
+
+    read_paths = []
+    writer_calls = []
+
+    class _FakeWriter:
+        def __init__(self, path: Path, *, fps: int) -> None:
+            self.path = path
+            self.fps = fps
+            self.frames = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc, _tb) -> None:
+            writer_calls.append((self.path, self.fps, tuple(self.frames)))
+
+        def append_data(self, image) -> None:
+            self.frames.append(image)
+
+    class _FakeImageIO:
+        @staticmethod
+        def imread(path: Path):
+            read_paths.append(path)
+            return f"image:{path.name}"
+
+        @staticmethod
+        def get_writer(path: Path, *, fps: int, macro_block_size: int):
+            assert macro_block_size == 1
+            return _FakeWriter(path, fps=fps)
+
+    videos = module._write_camera_videos_from_frames(output_dir, fps=12, imageio_module=_FakeImageIO)
+
+    assert videos == [chest_dir / "chest.mp4", overview_dir / "overview.mp4"]
+    assert read_paths == [
+        chest_dir / "frame_000000.png",
+        overview_dir / "frame_000000.png",
+        overview_dir / "frame_000001.png",
+    ]
+    assert writer_calls == [
+        (chest_dir / "chest.mp4", 12, ("image:frame_000000.png",)),
+        (overview_dir / "overview.mp4", 12, ("image:frame_000000.png", "image:frame_000001.png")),
+    ]
+
+
+def test_bidexbench_cube_reach_runner_treats_renderer_blender_as_live_split_renderer(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -749,45 +1095,34 @@ def test_bidexbench_cube_reach_runner_treats_renderer_blender_as_offline_rendere
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    import torch
-
     flow_calls = []
-    render_calls = []
 
-    class _FakeBlenderOfflineRenderCfg:
-        def __init__(self, *, output_dir, samples, device) -> None:
-            self.output_dir = output_dir
-            self.samples = samples
-            self.device = device
+    def _fail_offline_render(*_args, **_kwargs):
+        raise AssertionError("--renderer blender should render during the MuJoCo step loop")
 
-    def _fake_render_state_sequence(scenario, states, cfg):
-        render_calls.append((scenario, states, cfg))
-        return [Path(cfg.output_dir) / "overview" / "frame_000000.png"]
-
-    fake_offline_module = SimpleNamespace(
-        BlenderOfflineRenderCfg=_FakeBlenderOfflineRenderCfg,
-        render_state_sequence=_fake_render_state_sequence,
-    )
-    monkeypatch.setitem(sys.modules, "metasim.sim.blender.offline", fake_offline_module)
+    monkeypatch.setattr(module, "_render_recorded_states_with_blender", _fail_offline_render)
 
     def _fake_flow(**kwargs):
         flow_calls.append(kwargs)
-        kwargs["record_states_path"].parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"states": ["reset-state"]}, kwargs["record_states_path"])
-        return {"frame_count": 0, "record_states_path": str(kwargs["record_states_path"])}
+        frame_callback = kwargs["render_frame_callback"]
+        assert callable(frame_callback)
+        frame_callback(0, "session")
+        frame_callback(1, "session")
+        return {"frame_count": 1}
+
+    frame_calls = []
+
+    def _fake_write_frame(output_dir, frame_index, session):
+        frame_calls.append((Path(output_dir), frame_index, session))
+        return [Path(output_dir) / "overview" / f"frame_{frame_index:06d}.png"]
 
     monkeypatch.setattr(module, "run_native_task_teleop_flow", _fake_flow)
-
-    built_scenarios = []
-
-    def _fake_build_benchmark_scenario(task_spec, *, robot, simulator, headless):
-        scenario = SimpleNamespace(task=task_spec.name, robot=robot, simulator=simulator, headless=headless)
-        built_scenarios.append(scenario)
-        return scenario
-
-    import roboverse_pack.tasks.benchmark.base as benchmark_base
-
-    monkeypatch.setattr(benchmark_base, "build_benchmark_scenario", _fake_build_benchmark_scenario)
+    monkeypatch.setattr(module, "_write_blender_live_frame", _fake_write_frame)
+    monkeypatch.setattr(
+        module,
+        "_write_camera_videos_from_frames",
+        lambda output_dir, *, fps: [Path(output_dir) / "overview" / "overview.mp4"],
+    )
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         sys,
@@ -808,13 +1143,14 @@ def test_bidexbench_cube_reach_runner_treats_renderer_blender_as_offline_rendere
 
     assert len(flow_calls) == 1
     assert flow_calls[0]["simulator"] == "mujoco"
-    assert flow_calls[0]["renderer"] is None
-    assert flow_calls[0]["record_states_path"] == Path("outputs") / "bidexbench_cube_reach_blender" / "states.pt"
-    assert len(render_calls) == 1
-    scenario, states, cfg = render_calls[0]
-    assert built_scenarios == [scenario]
-    assert states == ["reset-state"]
-    assert cfg.output_dir == Path("outputs") / "bidexbench_cube_reach_blender"
+    assert flow_calls[0]["renderer"] == "blender"
+    assert flow_calls[0]["render_samples"] is None
+    assert flow_calls[0]["render_device"] == "AUTO"
+    assert flow_calls[0]["record_states_path"] is None
+    assert frame_calls == [
+        (Path("outputs") / "bidexbench_cube_reach_blender", 0, "session"),
+        (Path("outputs") / "bidexbench_cube_reach_blender", 1, "session"),
+    ]
 
 
 def test_openarm_bimanual_wuji_usd_imports_in_blender_when_bpy_available() -> None:
@@ -836,3 +1172,16 @@ def test_openarm_bimanual_wuji_usd_imports_in_blender_when_bpy_available() -> No
     assert mesh_count > 0
     assert "left_palm_link" in named_links
     assert "right_palm_link" in named_links
+
+
+def test_elegant_glass_bottle_fbx_imports_as_single_blender_mesh_when_bpy_available() -> None:
+    pytest.importorskip("bpy")
+    from metasim.sim.blender.blender import import_mesh
+
+    asset_path = ROOT / "roboverse_pack" / "tasks" / "benchmark" / "assets" / "elegant_glass_bottle" / "elegant_glass_bottle.fbx"
+
+    imported = import_mesh(str(asset_path))
+
+    assert imported is not None
+    assert imported.type == "MESH"
+    assert imported.name.startswith("elegant_glass_bottle_visual")

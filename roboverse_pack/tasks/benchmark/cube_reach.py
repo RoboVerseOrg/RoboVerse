@@ -9,7 +9,7 @@ from roboverse_pack.benchmark.spec import (
 )
 
 CUBE_HALF_EXTENTS_CM = (2.25, 2.25, 2.25)
-LEFT_CUBE_REACH_POS_CM = (-12.0, -70.0, 25.75)
+LEFT_CUBE_REACH_POS_CM = (-12.0, -70.0, 22.25)
 
 OPENARM_BIMANUAL_WUJI_PROFILE = BenchmarkRobotTeleopProfile(
     robot="openarm_bimanual_wuji",
@@ -48,15 +48,15 @@ def build_cube_reach_spec() -> BenchmarkTaskSpec:
             camera_presets=(
                 BenchmarkCameraPreset(
                     name="overview",
-                    width=640,
-                    height=360,
+                    width=1920,
+                    height=1080,
                     pos=(1.20, 0.0, 0.95),
                     look_at=(0.0, -0.55, 0.24),
                 ),
                 BenchmarkCameraPreset(
                     name="chest",
-                    width=640,
-                    height=360,
+                    width=1920,
+                    height=1080,
                     pos=(0.0, -1.05, 0.55),
                     look_at=(0.0, -0.55, 0.25),
                 ),

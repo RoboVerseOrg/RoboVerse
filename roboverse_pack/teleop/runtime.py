@@ -43,6 +43,8 @@ class CanonicalTeleopTargets:
     right_close_ratio: float
     left_hand_target_q_rad: tuple[float, ...] | None = None
     right_hand_target_q_rad: tuple[float, ...] | None = None
+    left_arm_target_q_rad: tuple[float, ...] | None = None
+    right_arm_target_q_rad: tuple[float, ...] | None = None
     transform_profile: str = "identity"
     status: str = "teleop:decoded"
 
@@ -58,6 +60,12 @@ class CanonicalTeleopTargets:
             "right_hand_target_q_rad": None
             if self.right_hand_target_q_rad is None
             else [float(value) for value in self.right_hand_target_q_rad],
+            "left_arm_target_q_rad": None
+            if self.left_arm_target_q_rad is None
+            else [float(value) for value in self.left_arm_target_q_rad],
+            "right_arm_target_q_rad": None
+            if self.right_arm_target_q_rad is None
+            else [float(value) for value in self.right_arm_target_q_rad],
             "transform_profile": self.transform_profile,
             "status": self.status,
         }

@@ -1,0 +1,66 @@
+<mujoco model="articulated_clear_display_case">
+  <default>
+    <joint limited="true" damping="0.8" frictionloss="0.08" stiffness="1.5"/>
+    <geom condim="4" friction="0.9 0.01 0.001"/>
+  </default>
+  <asset>
+    <material name="clear_acrylic" rgba="0.72 0.90 1.0 0.24"/>
+    <material name="dark_tray" rgba="0.16 0.15 0.14 1.0"/>
+    <material name="brass_hinge" rgba="0.70 0.48 0.22 1.0"/>
+  </asset>
+  <worldbody>
+    <body name="display_case_base" pos="0 0 0">
+      <geom
+        name="display_case_tray"
+        type="box"
+        size="0.145 0.095 0.012"
+        pos="0 0 0.012"
+        mass="0.20"
+        material="dark_tray"
+      />
+      <geom
+        name="display_case_back_panel"
+        type="box"
+        size="0.145 0.004 0.055"
+        pos="0 0.095 0.075"
+        mass="0.025"
+        material="clear_acrylic"
+      />
+      <geom
+        name="display_case_left_panel"
+        type="box"
+        size="0.004 0.095 0.055"
+        pos="-0.145 0 0.075"
+        mass="0.020"
+        material="clear_acrylic"
+      />
+      <geom
+        name="display_case_right_panel"
+        type="box"
+        size="0.004 0.095 0.055"
+        pos="0.145 0 0.075"
+        mass="0.020"
+        material="clear_acrylic"
+      />
+      <body name="display_case_lid" pos="0 0.095 0.128">
+        <joint name="display_case_lid_hinge" type="hinge" axis="1 0 0" range="0 1.25"/>
+        <geom
+          name="display_case_lid_panel"
+          type="box"
+          size="0.145 0.095 0.006"
+          pos="0 -0.095 0"
+          mass="0.055"
+          material="clear_acrylic"
+        />
+        <geom
+          name="display_case_hinge_bar"
+          type="box"
+          size="0.145 0.008 0.008"
+          pos="0 0 0"
+          mass="0.035"
+          material="brass_hinge"
+        />
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

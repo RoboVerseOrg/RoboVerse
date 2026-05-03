@@ -2,18 +2,26 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, replace
+from pathlib import Path
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import PrimitiveCubeCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_handler, get_robot
 from roboverse_pack.benchmark import BenchmarkObjectSpec, BenchmarkTaskSpec
 from roboverse_pack.teleop.flow import ControlCommand, StepResult
 
 TABLE_POS_CM = (0.0, -55.0, 18.0)
-TABLE_SIZE_CM = (70.0, 70.0, 4.0)
+TABLE_SIZE_CM = (120.0, 90.0, 4.0)
 TABLE_COLOR_RGB = [0.33, 0.24, 0.18]
+BENCHMARK_ASSET_DIR = Path(__file__).resolve().parent / "assets"
+BOTTLE_ASSET_DIR = BENCHMARK_ASSET_DIR / "elegant_glass_bottle"
+BOTTLE_POS_M = (0.24, -0.42, 0.20)
+CRYSTAL_TUMBLER_POS_M = (-0.43, -0.34, 0.20)
+GLASS_HURRICANE_POS_M = (0.45, -0.31, 0.20)
+DISPLAY_CASE_POS_M = (0.40, -0.78, 0.20)
+DESK_LAMP_POS_M = (-0.43, -0.82, 0.20)
 
 
 def _cm_vec_to_m(values_cm: tuple[float, float, float]) -> tuple[float, float, float]:
@@ -46,6 +54,60 @@ def _table_cfg() -> PrimitiveCubeCfg:
         default_position=_cm_vec_to_m(TABLE_POS_CM),
         default_orientation=(1.0, 0.0, 0.0, 0.0),
     )
+
+
+def _elegant_glass_bottle_cfg() -> RigidObjCfg:
+    file_type = dict(RigidObjCfg.file_type)
+    file_type["blender"] = "mesh"
+    return RigidObjCfg(
+        name="elegant_glass_bottle",
+        physics=PhysicStateType.RIGIDBODY,
+        mjcf_path=str(BOTTLE_ASSET_DIR / "elegant_glass_bottle.xml"),
+        mesh_path=str(BOTTLE_ASSET_DIR / "elegant_glass_bottle.fbx"),
+        file_type=file_type,
+        default_position=BOTTLE_POS_M,
+        default_orientation=(1.0, 0.0, 0.0, 0.0),
+    )
+
+
+def _mjcf_blender_file_type(base_file_type: dict[str, str]) -> dict[str, str]:
+    file_type = dict(base_file_type)
+    file_type["blender"] = "mjcf"
+    return file_type
+
+
+def _rigid_mjcf_prop_cfg(name: str, default_position: tuple[float, float, float]) -> RigidObjCfg:
+    return RigidObjCfg(
+        name=name,
+        physics=PhysicStateType.RIGIDBODY,
+        mjcf_path=str(BENCHMARK_ASSET_DIR / name / f"{name}.xml"),
+        file_type=_mjcf_blender_file_type(RigidObjCfg.file_type),
+        default_position=default_position,
+        default_orientation=(1.0, 0.0, 0.0, 0.0),
+    )
+
+
+def _articulated_mjcf_prop_cfg(name: str, default_position: tuple[float, float, float]) -> ArticulationObjCfg:
+    return ArticulationObjCfg(
+        name=name,
+        mjcf_path=str(BENCHMARK_ASSET_DIR / name / f"{name}.xml"),
+        file_type=_mjcf_blender_file_type(ArticulationObjCfg.file_type),
+        fix_base_link=True,
+        default_position=default_position,
+        default_orientation=(1.0, 0.0, 0.0, 0.0),
+    )
+
+
+def _extra_object_cfgs(task_spec: BenchmarkTaskSpec, simulator: str) -> list[object]:
+    if task_spec.name == "benchmark.cube_reach" and simulator in {"mujoco", "blender"}:
+        return [
+            _elegant_glass_bottle_cfg(),
+            _rigid_mjcf_prop_cfg("crystal_tumbler", CRYSTAL_TUMBLER_POS_M),
+            _rigid_mjcf_prop_cfg("glass_hurricane_holder", GLASS_HURRICANE_POS_M),
+            _articulated_mjcf_prop_cfg("articulated_clear_display_case", DISPLAY_CASE_POS_M),
+            _articulated_mjcf_prop_cfg("articulated_desk_lamp", DESK_LAMP_POS_M),
+        ]
+    return []
 
 
 def _camera_cfgs(task_spec: BenchmarkTaskSpec, camera_names: tuple[str, ...] | None) -> list[PinholeCameraCfg]:
@@ -84,7 +146,11 @@ def build_benchmark_scenario(
     robot_cfg = get_robot(robot)
     return ScenarioCfg(
         robots=[robot_cfg],
-        objects=[_table_cfg(), *[_primitive_cube_cfg(obj) for obj in task_spec.scene.objects]],
+        objects=[
+            _table_cfg(),
+            *[_primitive_cube_cfg(obj) for obj in task_spec.scene.objects],
+            *_extra_object_cfgs(task_spec, simulator),
+        ],
         cameras=_camera_cfgs(task_spec, camera_names),
         simulator=simulator,
         headless=headless,
@@ -317,6 +383,10 @@ class NativeBenchmarkSession:
         joint_names = _canonical_control_joint_names(self.handler, robot_cfg)
         return _current_joint_targets(self.handler, robot_cfg, joint_names)
 
+    def render_state(self):
+        """Return the current handler state, including camera data when available."""
+        return self.handler.get_states(mode="tensor")
+
     def close(self) -> None:
         """Close the underlying MetaSim handler."""
         self.handler.close()
@@ -363,6 +433,10 @@ class HybridBenchmarkSession:
         robot_cfg = _primary_robot_cfg(self.physics_handler)
         joint_names = _canonical_control_joint_names(self.physics_handler, robot_cfg)
         return _current_joint_targets(self.physics_handler, robot_cfg, joint_names)
+
+    def render_state(self):
+        """Return the current render handler state, including rendered camera data."""
+        return self.render_handler.get_states(mode="tensor")
 
     def close(self) -> None:
         """Close both hybrid handlers."""

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Native-only teleoperation flow for benchmark tasks."""
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -137,21 +137,26 @@ def teleop_targets_to_control_command(
     baseline_joint_targets: Sequence[float] | None,
 ) -> ControlCommand:
     """Convert canonical teleop targets into robot joint control."""
+    left_arm_slice = _joint_slice(task_spec, robot, "left_arm")
+    right_arm_slice = _joint_slice(task_spec, robot, "right_arm")
     left_hand_slice = _joint_slice(task_spec, robot, "left_hand")
     right_hand_slice = _joint_slice(task_spec, robot, "right_hand")
     control_length = _control_length(task_spec, robot, baseline_joint_targets)
     if control_length <= 0:
         raise ValueError(f"task {task_spec.name} does not expose teleop control joints for robot {robot}")
 
+    has_arm_targets = targets.left_arm_target_q_rad is not None or targets.right_arm_target_q_rad is not None
     has_hand_targets = targets.left_hand_target_q_rad is not None or targets.right_hand_target_q_rad is not None
-    if has_hand_targets:
+    if has_arm_targets or has_hand_targets:
         joint_targets = [0.0] * control_length if baseline_joint_targets is None else [float(value) for value in baseline_joint_targets]
+        _apply_joint_targets(joint_targets, left_arm_slice, targets.left_arm_target_q_rad, label="left arm target")
+        _apply_joint_targets(joint_targets, right_arm_slice, targets.right_arm_target_q_rad, label="right arm target")
         _apply_joint_targets(joint_targets, left_hand_slice, targets.left_hand_target_q_rad, label="left hand target")
         _apply_joint_targets(joint_targets, right_hand_slice, targets.right_hand_target_q_rad, label="right hand target")
         return ControlCommand.from_joint_targets(
             joint_targets,
             source="teleop",
-            meta=_teleop_meta(targets, control_mapping="hand_joint_targets"),
+            meta=_teleop_meta(targets, control_mapping="direct_joint_targets" if has_arm_targets else "hand_joint_targets"),
         )
 
     normalized_action = [0.0] * control_length
@@ -239,9 +244,9 @@ def _validate_native_request(task_spec: BenchmarkTaskSpec, robot: str, simulator
     if simulator not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
         raise ValueError(f"task {task_spec.name} does not support simulator {simulator!r}; supported: {supported}")
-    if renderer is not None and renderer not in task_spec.supported_simulators:
+    if renderer is not None and renderer != "blender" and renderer not in task_spec.supported_simulators:
         supported = ", ".join(task_spec.supported_simulators)
-        raise ValueError(f"task {task_spec.name} does not support renderer {renderer!r}; supported: {supported}")
+        raise ValueError(f"task {task_spec.name} does not support renderer {renderer!r}; supported: {supported}, blender")
     task_spec.robot_profile(robot)
 
 
@@ -253,6 +258,8 @@ def _create_native_session(
     renderer: str | None,
     headless: bool,
     physics_viewer: bool = False,
+    render_samples: int | None = None,
+    render_device: str | None = None,
 ):
     from roboverse_pack.tasks.benchmark.base import (
         HybridBenchmarkSession,
@@ -269,9 +276,24 @@ def _create_native_session(
             camera_names=(),
         )
         render_scenario = build_benchmark_scenario(task_spec, robot=robot, simulator=renderer, headless=headless)
+        _apply_blender_render_settings(render_scenario, samples=render_samples, device=render_device)
         return HybridBenchmarkSession(physics_scenario, render_scenario)
     scenario = build_benchmark_scenario(task_spec, robot=robot, simulator=simulator, headless=headless)
+    if simulator == "blender":
+        _apply_blender_render_settings(scenario, samples=render_samples, device=render_device)
     return NativeBenchmarkSession(scenario)
+
+
+def _apply_blender_render_settings(
+    scenario,
+    *,
+    samples: int | None,
+    device: str | None,
+) -> None:
+    if samples is not None:
+        scenario.render.samples = int(samples)
+    if device is not None:
+        scenario.render.device = str(device)
 
 
 def run_native_task_teleop_flow(
@@ -285,9 +307,12 @@ def run_native_task_teleop_flow(
     teleop_runtime: CanonicalTeleopRuntime | None = None,
     record_run: bool = False,
     record_states_path: str | Path | None = None,
+    render_frame_callback: Callable[[int, object], None] | None = None,
     headless: bool = True,
     physics_viewer: bool = False,
     hold_initial_pose: bool = False,
+    render_samples: int | None = None,
+    render_device: str | None = None,
 ) -> dict[str, Any]:
     """Run native-only benchmark teleop packets through one simulation session."""
     if record_run:
@@ -307,6 +332,8 @@ def run_native_task_teleop_flow(
             renderer=selected_renderer,
             headless=headless,
             physics_viewer=physics_viewer,
+            render_samples=render_samples,
+            render_device=render_device,
         )
 
     try:
@@ -314,6 +341,8 @@ def run_native_task_teleop_flow(
         recorded_states: list[object] = []
         if record_states_path is not None:
             recorded_states.append(_state_for_recording(initial_observation))
+        if render_frame_callback is not None:
+            render_frame_callback(0, session)
         if teleop_runtime is None:
             teleop_runtime = CanonicalTeleopRuntime(
                 reference_pose_provider=_reference_pose_provider,
@@ -344,6 +373,8 @@ def run_native_task_teleop_flow(
             if not hold_initial_pose:
                 baseline_joint_targets = _session_joint_targets(session, observation) or baseline_joint_targets
             frame_count += 1
+            if render_frame_callback is not None:
+                render_frame_callback(frame_count, session)
 
         result = {
             "task": task_spec.name,
