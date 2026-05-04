@@ -8,7 +8,7 @@ import torch
 pytest.importorskip("bpy")
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_name_normalization_removes_numeric_suffix() -> None:
     from metasim.sim.blender.blender import _normalized_blender_name
 
@@ -18,7 +18,7 @@ def test_blender_name_normalization_removes_numeric_suffix() -> None:
     assert _normalized_blender_name("joint.abc") == "joint.abc"
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_body_object_selection_prefers_empty_with_children() -> None:
     import bpy
     from metasim.sim.blender.blender import _choose_body_object
@@ -39,7 +39,7 @@ def test_blender_body_object_selection_prefers_empty_with_children() -> None:
     assert _choose_body_object([mesh, empty]) is empty
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_body_object_selection_prefers_visible_import_instance() -> None:
     import bpy
     from metasim.sim.blender.blender import _choose_body_object
@@ -68,7 +68,7 @@ def test_blender_body_object_selection_prefers_visible_import_instance() -> None
     assert _choose_body_object([prototype, instance]) is instance
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_matrix_from_root_state_uses_wxyz_quaternion() -> None:
     from metasim.sim.blender.blender import _matrix_from_root_state
 
@@ -82,7 +82,7 @@ def test_blender_matrix_from_root_state_uses_wxyz_quaternion() -> None:
     assert matrix.to_quaternion().z == pytest.approx(0.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_apply_root_state_sets_world_pose_for_parented_object() -> None:
     import bpy
     from metasim.sim.blender.blender import _apply_root_state_to_object
@@ -107,7 +107,7 @@ def test_blender_apply_root_state_sets_world_pose_for_parented_object() -> None:
     assert tuple(round(value, 5) for value in child.matrix_world.to_scale()) == initial_world_scale
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_applies_robot_body_state_to_body_objects() -> None:
     import bpy
     from metasim.sim.blender import BlenderHandler
@@ -140,7 +140,7 @@ def test_blender_handler_applies_robot_body_state_to_body_objects() -> None:
     assert tuple(round(value, 5) for value in body_obj.location) == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_strips_usd_unit_scale_for_robot_body_pose() -> None:
     import bpy
     from metasim.sim.blender import BlenderHandler
@@ -181,7 +181,7 @@ def test_blender_handler_strips_usd_unit_scale_for_robot_body_pose() -> None:
     assert tuple(round(value, 5) for value in body_obj.matrix_world.to_scale()) == (1.0, 1.0, 1.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_uses_renderable_visual_object_for_body_pose() -> None:
     import bpy
     from metasim.sim.blender import BlenderHandler
@@ -220,7 +220,7 @@ def test_blender_handler_uses_renderable_visual_object_for_body_pose() -> None:
     assert tuple(round(value, 5) for value in visual_obj.matrix_world.translation) == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_reads_collada_diffuse_material_colors(tmp_path) -> None:
     from metasim.sim.blender.blender import _material_rgba_from_collada, _rgba_srgb_to_linear
 
@@ -258,7 +258,7 @@ def test_blender_reads_collada_diffuse_material_colors(tmp_path) -> None:
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_repairs_materials_from_asset_color_map_without_robot_context() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -282,7 +282,7 @@ def test_blender_repairs_materials_from_asset_color_map_without_robot_context() 
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_repairs_materialless_mesh_from_single_asset_color() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -308,7 +308,7 @@ def test_blender_repairs_materialless_mesh_from_single_asset_color() -> None:
     assert bsdf.inputs["Transmission Weight"].default_value == pytest.approx(1.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_matches_collada_material_suffix_on_imported_materials() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -332,7 +332,7 @@ def test_blender_matches_collada_material_suffix_on_imported_materials() -> None
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_resolves_asset_relative_mesh_paths_before_cwd(tmp_path, monkeypatch) -> None:
     from metasim.sim.blender.blender import _resolve_asset_path
 
@@ -349,7 +349,7 @@ def test_blender_resolves_asset_relative_mesh_paths_before_cwd(tmp_path, monkeyp
     assert _resolve_asset_path("meshes/link.dae", asset_dir) == asset_mesh.resolve()
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_repairs_empty_imported_material_node_tree() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -377,7 +377,7 @@ def test_blender_repairs_empty_imported_material_node_tree() -> None:
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_uses_distinct_asset_colors_for_material_slots() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -425,7 +425,7 @@ def test_blender_uses_distinct_asset_colors_for_material_slots() -> None:
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_repairs_revisited_usd_prototype_mesh_from_asset_colors() -> None:
     import bpy
     from metasim.sim.blender.blender import _repair_imported_materials, _rgba_srgb_to_linear
@@ -468,7 +468,7 @@ def test_blender_repairs_revisited_usd_prototype_mesh_from_asset_colors() -> Non
     )
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_maps_wuji_hand_body_names_to_usd_names() -> None:
     import bpy
     from metasim.sim.blender import BlenderHandler
@@ -510,7 +510,7 @@ def test_blender_handler_maps_wuji_hand_body_names_to_usd_names() -> None:
     assert tuple(round(value, 5) for value in palm_obj.location) == (4.0, 5.0, 6.0)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_applies_articulated_object_body_states() -> None:
     import bpy
 
@@ -546,7 +546,7 @@ def test_blender_handler_applies_articulated_object_body_states() -> None:
     assert tuple(round(value, 5) for value in lid_obj.location) == (0.2, -0.3, 0.4)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_imports_mjcf_rigid_object_visuals(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     from metasim.constants import PhysicStateType
     from metasim.scenario.objects import RigidObjCfg
@@ -609,7 +609,7 @@ def test_blender_handler_imports_mjcf_rigid_object_visuals(tmp_path, monkeypatch
     assert any(modifier.type == "WEIGHTED_NORMAL" for modifier in mesh.modifiers)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_imports_transparent_mjcf_cylinders_as_hollow_visual_shells(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -674,7 +674,7 @@ def test_blender_handler_imports_transparent_mjcf_cylinders_as_hollow_visual_she
     assert nonzero_radii[-2] < nonzero_radii[-1]
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_uses_more_realistic_default_render_settings() -> None:
     import bpy
 
@@ -702,7 +702,7 @@ def test_blender_handler_uses_more_realistic_default_render_settings() -> None:
     assert scene.render.film_transparent is False
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_configures_repeated_render_speedups_without_lowering_glass_quality() -> None:
     import bpy
 
@@ -730,7 +730,7 @@ def test_blender_handler_configures_repeated_render_speedups_without_lowering_gl
     assert scene.cycles.transparent_max_bounces == 10
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_enables_gpu_denoising_for_gpu_final_settings() -> None:
     import bpy
 
@@ -746,7 +746,7 @@ def test_blender_handler_enables_gpu_denoising_for_gpu_final_settings() -> None:
     assert bpy.context.scene.cycles.denoising_use_gpu is True
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_transparent_materials_use_transmission_for_realistic_glass() -> None:
     from metasim.sim.blender.blender import _new_material_from_rgba
 
@@ -759,7 +759,7 @@ def test_blender_transparent_materials_use_transmission_for_realistic_glass() ->
     assert bsdf.inputs["IOR"].default_value == pytest.approx(1.45)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_transparent_materials_use_asset_name_ior_presets() -> None:
     from metasim.sim.blender.blender import _new_material_from_rgba
 
@@ -773,7 +773,7 @@ def test_blender_transparent_materials_use_asset_name_ior_presets() -> None:
     assert acrylic_bsdf.inputs["IOR"].default_value == pytest.approx(1.49)
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_renders_primitive_cube_rgb(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     from metasim.constants import PhysicStateType
     from metasim.scenario.cameras import PinholeCameraCfg
@@ -837,7 +837,7 @@ def test_blender_handler_renders_primitive_cube_rgb(tmp_path, monkeypatch: pytes
     assert int(rgb.max()) > int(rgb.min())
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_get_states_retains_tensor_state_objects_and_robots(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -915,7 +915,7 @@ def test_blender_handler_get_states_retains_tensor_state_objects_and_robots(
     assert set(rendered.cameras) == {"overview"}
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_default_get_states_returns_camera_tensor_state(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -977,7 +977,7 @@ def test_blender_handler_default_get_states_returns_camera_tensor_state(
     assert rendered.cameras["overview"].rgb is not None
 
 
-@pytest.mark.general
+@pytest.mark.blender
 @pytest.mark.parametrize("refresh_method", ["refresh_render", "render"])
 def test_blender_handler_refresh_invalidates_cached_camera_state(
     tmp_path, monkeypatch: pytest.MonkeyPatch, refresh_method: str
@@ -1042,7 +1042,7 @@ def test_blender_handler_refresh_invalidates_cached_camera_state(
     assert second_camera_state is not first_camera_state
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_handler_set_dof_targets_fails_fast() -> None:
     from metasim.sim.blender import BlenderHandler
 
@@ -1052,7 +1052,7 @@ def test_blender_handler_set_dof_targets_fails_fast() -> None:
         handler.set_dof_targets([])
 
 
-@pytest.mark.general
+@pytest.mark.blender
 def test_blender_offline_renderer_writes_camera_frames(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     from metasim.constants import PhysicStateType
     from metasim.scenario.cameras import PinholeCameraCfg

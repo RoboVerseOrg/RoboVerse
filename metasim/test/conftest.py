@@ -1,7 +1,7 @@
 """Shared pytest utilities for simulator-backed tests.
 
 This module provides:
-- global marker registration (isaacsim/isaacgym/mujoco/mjx/newton/sim/general)
+- global marker registration (isaacsim/isaacgym/mujoco/mjx/newton/sim/general/blender)
 - a registry to associate test package prefixes with a scenario_fn
 - a generic `handler` fixture that creates a handler using the registered
   scenario builder for that package.
@@ -57,6 +57,7 @@ def pytest_configure(config):
         ("sapien3", "tests that require or target SAPIEN3"),
         ("sim(*sims)", "specify one or more simulator backends for a test"),
         ("general", "tests that require no simulator/handler"),
+        ("blender", "tests that require Blender/bpy"),
     ]:
         config.addinivalue_line("markers", f"{name}: {desc}")
 

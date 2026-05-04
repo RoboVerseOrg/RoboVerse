@@ -75,6 +75,7 @@ Use the existing marker model described in the autotest guide and `metasim/test/
 - `@pytest.mark.isaacsim`
 - `@pytest.mark.newton`
 - `@pytest.mark.sapien3`
+- `@pytest.mark.blender`
 - `@pytest.mark.sim(...)`
 - `@pytest.mark.general`
 
@@ -104,11 +105,16 @@ pytest metasim/test/ -k isaacsim
 # Newton only
 pytest metasim/test/ -k newton
 
+# Blender only (requires `bpy`)
+pytest metasim/test/ -k blender
+
 # General tests (no simulator)
 pytest metasim/test/ -k general
 ```
 
 For `sapien3` tests, first confirm the local SAPIEN environment mapping in [ENVIRONMENTS.md](./ENVIRONMENTS.md) or with the user, then run the relevant `pytest metasim/test/ -k sapien3` selection in that environment.
+
+For `blender` tests, use the `blender` environment mapping in [ENVIRONMENTS.md](./ENVIRONMENTS.md). These tests require an importable `bpy` module and should not be treated as covered by `isaacsim` test selection just because the local environment may be shared.
 
 ### Environment Correspondence
 
@@ -117,6 +123,7 @@ Read simulator-to-conda-env mapping from [ENVIRONMENTS.md](./ENVIRONMENTS.md).
 ### Test Selection Rule
 
 - Only run a simulator's tests when current changes affect that simulator or shared code used by it.
+- Run `blender` tests when changes affect `metasim/sim/blender`, Blender rendering/import behavior, or shared state/data paths used by the Blender backend.
 - For shared code changes, run the relevant backend tests one-by-one, not through improvised filtering logic unless necessary.
 - Always consider whether `general` tests should also be run for the changed area.
 - Run simulator-specific tests in an environment where the simulator can access a usable GPU when that backend expects or requires GPU execution.
@@ -133,6 +140,8 @@ Read simulator-to-conda-env mapping from [ENVIRONMENTS.md](./ENVIRONMENTS.md).
 - `isaacgym`, `isaacsim`, and `newton` test runs should be treated as GPU-backed simulator tests unless there is clear repo-specific evidence that a given run is intended to be CPU-only.
 - Before relying on simulator-backed test results, verify that the selected env can actually see a GPU.
 - If GPU access is missing, report that as an environment blocker instead of treating the run as a normal simulator test result.
+
+Blender tests require `bpy`; do not assume they require GPU access unless the specific test path or requested run is explicitly GPU-backed.
 
 ## AI-Agent Rules
 

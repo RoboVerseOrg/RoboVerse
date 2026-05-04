@@ -61,6 +61,7 @@ genesis = [
     "open3d",
 
 ]
+blender = ["bpy"]
 robosplatter = [
    "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git@v0.1.2",
    "setuptools==59.5.0"
