@@ -25,6 +25,7 @@ _DEFAULT_FILE_TYPE = {
     "mujoco": "mjcf",
     "mjx": "mjx_mjcf",
     "newton": "urdf",
+    "blender": "mesh",
 }
 
 
@@ -77,6 +78,12 @@ class _FileBasedMixin:
             return self.mjcf_path
         elif file_type == "mjx_mjcf":
             return self.mjx_mjcf_path
+        elif file_type == "mesh":
+            # Blender backend accepts either a direct mesh or a URDF (single-link
+            # rigid objects shipped as URDFs are common in roboverse_data).
+            if self.mesh_path:
+                return self.mesh_path
+            return getattr(self, "urdf_path", None)
         else:
             raise ValueError(f"Invalid file type: {file_type}")
 
@@ -209,6 +216,8 @@ class ArticulationObjCfg(_FileBasedMixin, BaseArticulationObjCfg):
 # This allows accessing it as RobotCfg.file_type
 _FileBasedMixin.file_type = _DEFAULT_FILE_TYPE.copy()
 ArticulationObjCfg.file_type = _DEFAULT_FILE_TYPE.copy()
+# Articulated objects need URDF in the Blender backend; rigid objects use mesh.
+ArticulationObjCfg.file_type["blender"] = "urdf"
 
 
 @configclass

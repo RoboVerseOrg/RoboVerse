@@ -118,6 +118,8 @@ class CameraState:
     .. warning::
         This is experimental and subject to change.
     """
+    normal: torch.Tensor | None = None
+    """Surface normal map in camera space, components in [-1, 1]. Shape is (num_envs, H, W, 3)."""
 
     ## Camera parameters
     pos: torch.Tensor | None = None  # TODO: remove N
