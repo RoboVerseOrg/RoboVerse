@@ -8,10 +8,10 @@ from pathlib import Path
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
 
-OPENARM_ASSET_ROOT = Path(os.environ.get("ROBOVERSE_OPENARM_ASSET_ROOT", "roboverse_data/robots/openarm"))
-OPENARM_URDF_PATH = OPENARM_ASSET_ROOT / "openarm_bimanual_wuji_generated.urdf"
+OPENARM_ASSET_ROOT = Path(os.environ.get("ROBOVERSE_OPENARM_ASSET_ROOT", "roboverse_data/robots/openarm_wuji"))
+OPENARM_URDF_PATH = OPENARM_ASSET_ROOT / "openarm_wuji.urdf"
 OPENARM_MJCF_PATH = OPENARM_ASSET_ROOT / "openarm_wuji.xml"
-OPENARM_USD_PATH = OPENARM_ASSET_ROOT / "openarm_bimanual_wuji.usd"
+OPENARM_USD_PATH = OPENARM_ASSET_ROOT / "openarm_wuji.usd"
 
 OPENARM_JOINT_NAMES: tuple[str, ...] = tuple(
     [f"openarm_left_joint{i}" for i in range(1, 8)]

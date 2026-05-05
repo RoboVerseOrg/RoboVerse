@@ -6,6 +6,7 @@ from pathlib import Path
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.scenario.lights import BaseLightCfg, DiskLightCfg, DomeLightCfg, SphereLightCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_handler, get_robot
@@ -22,6 +23,29 @@ CRYSTAL_TUMBLER_POS_M = (-0.43, -0.34, 0.20)
 GLASS_HURRICANE_POS_M = (0.45, -0.31, 0.20)
 DISPLAY_CASE_POS_M = (0.40, -0.78, 0.20)
 DESK_LAMP_POS_M = (-0.43, -0.82, 0.20)
+INDOOR_SCENE_SIMULATORS = {"mujoco", "blender"}
+
+
+def _uses_indoor_scene(task_spec: BenchmarkTaskSpec, simulator: str) -> bool:
+    return task_spec.name == "benchmark.cube_reach" and simulator in INDOOR_SCENE_SIMULATORS
+
+
+def _decor_cube_cfg(
+    name: str,
+    *,
+    size: tuple[float, float, float],
+    color: list[float],
+    position: tuple[float, float, float],
+) -> PrimitiveCubeCfg:
+    return PrimitiveCubeCfg(
+        name=name,
+        size=list(size),
+        mass=1.0,
+        physics=PhysicStateType.XFORM,
+        color=color,
+        default_position=position,
+        default_orientation=(1.0, 0.0, 0.0, 0.0),
+    )
 
 
 def _cm_vec_to_m(values_cm: tuple[float, float, float]) -> tuple[float, float, float]:
@@ -98,9 +122,189 @@ def _articulated_mjcf_prop_cfg(name: str, default_position: tuple[float, float, 
     )
 
 
+def _indoor_scene_cfgs() -> list[PrimitiveCubeCfg]:
+    return [
+        _decor_cube_cfg(
+            "indoor_floor",
+            size=(3.50, 1.90, 0.05),
+            color=[0.52, 0.49, 0.44],
+            position=(0.0, -0.50, -0.025),
+        ),
+        _decor_cube_cfg(
+            "cream_area_rug",
+            size=(1.55, 1.12, 0.012),
+            color=[0.86, 0.80, 0.68],
+            position=(0.0, -0.58, 0.006),
+        ),
+        _decor_cube_cfg(
+            "indoor_back_wall",
+            size=(3.50, 0.045, 1.40),
+            color=[0.84, 0.81, 0.74],
+            position=(0.0, 0.18, 0.70),
+        ),
+        _decor_cube_cfg(
+            "indoor_left_wall",
+            size=(0.045, 1.90, 1.40),
+            color=[0.74, 0.73, 0.68],
+            position=(-1.65, -0.50, 0.70),
+        ),
+        _decor_cube_cfg(
+            "indoor_right_wall",
+            size=(0.045, 1.90, 1.40),
+            color=[0.78, 0.76, 0.70],
+            position=(1.65, -0.50, 0.70),
+        ),
+        _decor_cube_cfg(
+            "walnut_console",
+            size=(1.36, 0.18, 0.12),
+            color=[0.24, 0.15, 0.09],
+            position=(0.0, 0.03, 0.24),
+        ),
+        _decor_cube_cfg(
+            "brass_wall_trim",
+            size=(1.86, 0.018, 0.026),
+            color=[0.76, 0.55, 0.25],
+            position=(0.0, 0.153, 0.57),
+        ),
+        _decor_cube_cfg(
+            "marble_display_plinth",
+            size=(0.26, 0.22, 0.08),
+            color=[0.78, 0.76, 0.71],
+            position=(-0.43, -0.34, 0.14),
+        ),
+        *_bedroom_scene_cfgs(),
+    ]
+
+
+def _bedroom_scene_cfgs() -> list[PrimitiveCubeCfg]:
+    return [
+        _decor_cube_cfg(
+            "bed_frame",
+            size=(1.05, 0.54, 0.10),
+            color=[0.25, 0.13, 0.07],
+            position=(-1.05, 0.11, 0.05),
+        ),
+        _decor_cube_cfg(
+            "bed_headboard",
+            size=(1.14, 0.06, 0.46),
+            color=[0.28, 0.16, 0.09],
+            position=(-1.05, 0.155, 0.25),
+        ),
+        _decor_cube_cfg(
+            "bed_mattress",
+            size=(0.98, 0.46, 0.08),
+            color=[0.88, 0.79, 0.66],
+            position=(-1.05, 0.08, 0.14),
+        ),
+        _decor_cube_cfg(
+            "bed_duvet",
+            size=(0.88, 0.34, 0.045),
+            color=[0.62, 0.28, 0.17],
+            position=(-1.05, 0.005, 0.205),
+        ),
+        _decor_cube_cfg(
+            "bed_pillow_left",
+            size=(0.33, 0.10, 0.055),
+            color=[0.96, 0.86, 0.72],
+            position=(-1.25, 0.22, 0.22),
+        ),
+        _decor_cube_cfg(
+            "bed_pillow_right",
+            size=(0.33, 0.10, 0.055),
+            color=[0.96, 0.86, 0.72],
+            position=(-0.85, 0.22, 0.22),
+        ),
+        _decor_cube_cfg(
+            "left_nightstand",
+            size=(0.24, 0.20, 0.22),
+            color=[0.22, 0.12, 0.07],
+            position=(-1.48, 0.03, 0.11),
+        ),
+        _decor_cube_cfg(
+            "right_nightstand",
+            size=(0.24, 0.20, 0.22),
+            color=[0.22, 0.12, 0.07],
+            position=(-0.43, 0.03, 0.11),
+        ),
+        _decor_cube_cfg(
+            "bedside_lamp_base",
+            size=(0.07, 0.07, 0.13),
+            color=[0.70, 0.46, 0.20],
+            position=(-0.43, 0.02, 0.285),
+        ),
+        _decor_cube_cfg(
+            "bedside_lamp_shade",
+            size=(0.16, 0.16, 0.12),
+            color=[0.96, 0.67, 0.34],
+            position=(-0.43, 0.02, 0.41),
+        ),
+        _decor_cube_cfg(
+            "wardrobe",
+            size=(0.44, 0.16, 0.88),
+            color=[0.30, 0.17, 0.09],
+            position=(1.34, 0.06, 0.44),
+        ),
+        _decor_cube_cfg(
+            "window_glow_panel",
+            size=(0.58, 0.014, 0.36),
+            color=[1.0, 0.62, 0.30],
+            position=(0.72, 0.151, 0.76),
+        ),
+        _decor_cube_cfg(
+            "window_frame_top",
+            size=(0.68, 0.02, 0.04),
+            color=[0.23, 0.13, 0.08],
+            position=(0.72, 0.142, 0.96),
+        ),
+        _decor_cube_cfg(
+            "window_frame_bottom",
+            size=(0.68, 0.02, 0.04),
+            color=[0.23, 0.13, 0.08],
+            position=(0.72, 0.142, 0.56),
+        ),
+        _decor_cube_cfg(
+            "window_frame_left",
+            size=(0.04, 0.02, 0.42),
+            color=[0.23, 0.13, 0.08],
+            position=(0.36, 0.142, 0.76),
+        ),
+        _decor_cube_cfg(
+            "window_frame_right",
+            size=(0.04, 0.02, 0.42),
+            color=[0.23, 0.13, 0.08],
+            position=(1.08, 0.142, 0.76),
+        ),
+    ]
+
+
+def _indoor_light_cfgs() -> list[BaseLightCfg]:
+    return [
+        DomeLightCfg(
+            name="indoor_warm_ambient",
+            intensity=28.0,
+            color=(0.95, 0.58, 0.26),
+        ),
+        DiskLightCfg(
+            name="indoor_ceiling_key",
+            intensity=360.0,
+            radius=0.85,
+            pos=(0.15, -0.55, 1.34),
+            color=(1.0, 0.68, 0.32),
+        ),
+        SphereLightCfg(
+            name="desk_lamp_warm_accent",
+            intensity=48.0,
+            radius=0.08,
+            pos=(-0.43, -0.82, 0.52),
+            color=(1.0, 0.48, 0.16),
+        ),
+    ]
+
+
 def _extra_object_cfgs(task_spec: BenchmarkTaskSpec, simulator: str) -> list[object]:
-    if task_spec.name == "benchmark.cube_reach" and simulator in {"mujoco", "blender"}:
+    if _uses_indoor_scene(task_spec, simulator):
         return [
+            *_indoor_scene_cfgs(),
             _elegant_glass_bottle_cfg(),
             _rigid_mjcf_prop_cfg("crystal_tumbler", CRYSTAL_TUMBLER_POS_M),
             _rigid_mjcf_prop_cfg("glass_hurricane_holder", GLASS_HURRICANE_POS_M),
@@ -144,7 +348,7 @@ def build_benchmark_scenario(
 ) -> ScenarioCfg:
     """Build a native MetaSim scenario for a benchmark task and robot."""
     robot_cfg = get_robot(robot)
-    return ScenarioCfg(
+    scenario = ScenarioCfg(
         robots=[robot_cfg],
         objects=[
             _table_cfg(),
@@ -157,6 +361,9 @@ def build_benchmark_scenario(
         env_spacing=3.0,
         decimation=17 if simulator == "mujoco" else 2,
     )
+    if _uses_indoor_scene(task_spec, simulator):
+        scenario.lights = _indoor_light_cfgs()
+    return scenario
 
 
 def _apply_dm_control_struct_compat_patch() -> None:
@@ -171,6 +378,58 @@ def _get_handler_with_mujoco_compat(scenario: ScenarioCfg):
             os.environ.setdefault("MUJOCO_GL", "egl")
         _apply_dm_control_struct_compat_patch()
     return get_handler(scenario)
+
+
+def _has_indoor_scene(scenario: ScenarioCfg) -> bool:
+    return any(getattr(obj, "name", None) == "indoor_floor" for obj in scenario.objects)
+
+
+def _add_blender_indoor_lights_if_supported(scenario: ScenarioCfg) -> None:
+    if scenario.simulator != "blender" or not _has_indoor_scene(scenario):
+        return
+
+    import bpy
+
+    scene = bpy.context.scene
+    scene.view_settings.exposure = -1.25
+    if scene.world is not None:
+        scene.world.color = (0.008, 0.007, 0.006)
+
+    for name, energy in (
+        ("metasim_key_area_light", 45.0),
+        ("metasim_fill_area_light", 10.0),
+        ("metasim_rim_area_light", 14.0),
+    ):
+        obj = bpy.data.objects.get(name)
+        if obj is not None and hasattr(obj, "data"):
+            obj.data.energy = energy
+
+    def add_area(name: str, location: tuple[float, float, float], energy: float, size: float) -> None:
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            bpy.ops.object.light_add(type="AREA", location=location)
+            obj = bpy.context.object
+            obj.name = name
+        obj.data.energy = energy
+        obj.data.size = size
+        obj.data.color = (1.0, 0.68, 0.32)
+        if hasattr(obj, "visible_camera"):
+            obj.visible_camera = False
+
+    def add_point(name: str, location: tuple[float, float, float], energy: float, radius: float) -> None:
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            bpy.ops.object.light_add(type="POINT", location=location)
+            obj = bpy.context.object
+            obj.name = name
+        obj.data.energy = energy
+        obj.data.shadow_soft_size = radius
+        obj.data.color = (1.0, 0.48, 0.16)
+        if hasattr(obj, "visible_camera"):
+            obj.visible_camera = False
+
+    add_area("indoor_ceiling_key", (0.15, -0.55, 1.34), 34.0, 0.85)
+    add_point("desk_lamp_warm_accent", DESK_LAMP_POS_M[:2] + (0.52,), 8.0, 0.20)
 
 
 def _maybe_to_device(value, device):
@@ -344,6 +603,7 @@ class NativeBenchmarkSession:
 
     def __post_init__(self) -> None:
         self.handler = _get_handler_with_mujoco_compat(self.scenario)
+        _add_blender_indoor_lights_if_supported(self.scenario)
         self.backend_label = f"{self.scenario.simulator}+native"
 
     def reset(self):
@@ -399,6 +659,7 @@ class HybridBenchmarkSession:
     def __post_init__(self) -> None:
         self.physics_handler = _get_handler_with_mujoco_compat(self.physics_scenario)
         self.render_handler = _get_handler_with_mujoco_compat(self.render_scenario)
+        _add_blender_indoor_lights_if_supported(self.render_scenario)
         self.backend_label = f"{self.physics_scenario.simulator}+{self.render_scenario.simulator}"
 
     def reset(self):

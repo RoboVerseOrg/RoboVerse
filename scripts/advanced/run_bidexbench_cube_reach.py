@@ -32,7 +32,7 @@ def _preconfigure_mujoco_gl(argv: list[str]) -> None:
 _preconfigure_mujoco_gl(sys.argv[1:])
 
 from roboverse_pack.benchmark import get_benchmark_task_spec
-from roboverse_pack.robots.openarm_bimanual_wuji_cfg import LEFT_ARM_DEFAULT_Q, RIGHT_ARM_DEFAULT_Q
+from roboverse_pack.robots.openarm_wuji_cfg import LEFT_ARM_DEFAULT_Q, RIGHT_ARM_DEFAULT_Q
 from roboverse_pack.teleop.flow import run_native_task_teleop_flow
 from roboverse_pack.teleop.runtime import CanonicalTeleopTargets
 
