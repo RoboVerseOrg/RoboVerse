@@ -13,13 +13,9 @@ ROBOT_DESCRIPTION_ROOT = REPO_ROOT / "roboverse_data" / "robots"
 MJCF_PATH = OPENARM_ROOT / "openarm_wuji.xml"
 URDF_PATH = OPENARM_ROOT / "openarm_wuji.urdf"
 USD_PATH = OPENARM_ROOT / "openarm_wuji.usd"
-LINK7_VISUAL_MESH = (
-    ROBOT_DESCRIPTION_ROOT / "openarm_description" / "meshes" / "arm" / "v10" / "visual" / "link7.stl"
-)
+LINK7_VISUAL_MESH = ROBOT_DESCRIPTION_ROOT / "openarm_description" / "meshes" / "arm" / "v10" / "visual" / "link7.stl"
 LEFT_PALM_MESH = ROBOT_DESCRIPTION_ROOT / "wuji_hand_description" / "meshes" / "left" / "left_palm_link.STL"
-RIGHT_PALM_MESH = (
-    ROBOT_DESCRIPTION_ROOT / "wuji_hand_description" / "meshes" / "right" / "right_palm_link.STL"
-)
+RIGHT_PALM_MESH = ROBOT_DESCRIPTION_ROOT / "wuji_hand_description" / "meshes" / "right" / "right_palm_link.STL"
 
 MAX_WRIST_PALM_VISUAL_OVERLAP_M = 0.001
 MAX_WRIST_PALM_VISUAL_GAP_M = 0.001
@@ -77,19 +73,13 @@ def _urdf_joint(root: ET.Element, name: str) -> ET.Element:
 def _mesh_paths_from_urdf(path: Path) -> list[Path]:
     root = ET.parse(path).getroot()
     return [
-        (path.parent / mesh.attrib["filename"]).resolve()
-        for mesh in root.iter("mesh")
-        if mesh.attrib.get("filename")
+        (path.parent / mesh.attrib["filename"]).resolve() for mesh in root.iter("mesh") if mesh.attrib.get("filename")
     ]
 
 
 def _mesh_paths_from_mjcf(path: Path) -> list[Path]:
     root = ET.parse(path).getroot()
-    return [
-        (path.parent / mesh.attrib["file"]).resolve()
-        for mesh in root.iter("mesh")
-        if mesh.attrib.get("file")
-    ]
+    return [(path.parent / mesh.attrib["file"]).resolve() for mesh in root.iter("mesh") if mesh.attrib.get("file")]
 
 
 @pytest.mark.parametrize(
