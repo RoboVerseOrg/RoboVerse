@@ -39,5 +39,10 @@ cp -a "$repo_root/docs/landing/." "$output_dir/"
 sphinx-build -b html "$repo_root/docs/source" "$output_dir/roboverse"
 sphinx-build -b html "$metasim_dir/docs/source" "$output_dir/metasim"
 
+if [[ -f "$metasim_dir/docs/source/images/tea.jpg" ]]; then
+    mkdir -p "$output_dir/metasim/_images"
+    cp "$metasim_dir/docs/source/images/tea.jpg" "$output_dir/metasim/_images/tea.jpg"
+fi
+
 printf "%s\n" "$cname" > "$output_dir/CNAME"
 touch "$output_dir/.nojekyll"

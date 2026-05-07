@@ -39,6 +39,8 @@ printf '<html>%s</html>\\n' "$src" > "$dst/index.html"
     metasim_dir = tmp_path / "MetaSim"
     (metasim_dir / "docs/source").mkdir(parents=True)
     (metasim_dir / "docs/source/index.md").write_text("# MetaSim\n", encoding="utf-8")
+    (metasim_dir / "docs/source/images").mkdir()
+    (metasim_dir / "docs/source/images/tea.jpg").write_bytes(b"fake image")
     output_dir = tmp_path / "public"
 
     env = os.environ.copy()
@@ -62,5 +64,6 @@ printf '<html>%s</html>\\n' "$src" > "$dst/index.html"
     assert (output_dir / "metasim/index.html").read_text(encoding="utf-8").endswith(
         "MetaSim/docs/source</html>\n"
     )
+    assert (output_dir / "metasim/_images/tea.jpg").read_bytes() == b"fake image"
     assert (output_dir / ".nojekyll").is_file()
     assert (output_dir / "CNAME").read_text(encoding="utf-8") == "roboverse.wiki\n"
