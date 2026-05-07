@@ -2,7 +2,7 @@
   <img src="docs/source/_static/RoboVerse86.22.svg" width="50%" alt="RoboVerse">
 </p>
 
-![RoboVerse](docs/source/metasim/images/tea.jpg)
+![RoboVerse](docs/source/_static/Robo.png)
 
 
 <p align="center">
@@ -22,9 +22,23 @@
 
 ## 🚀 Getting Started
 
-Please refer to the [documentation](https://roboverse.wiki/metasim/#).
+RoboVerse now installs as the downstream `roboverse-py` package. The core `metasim` Python package is resolved from the standalone [MetaSim repository](https://github.com/RoboVerseOrg/MetaSim), while this repository provides RoboVerse tasks, robots, scenes, assets, learning code, and examples.
 
-We also privide detailed [tutorials](https://roboverse.wiki/metasim/get_started/quick_start/0_static_scene) for getting started
+```bash
+git clone https://github.com/RoboVerseOrg/RoboVerse.git
+cd RoboVerse
+python -m pip install -e ".[mujoco]"
+```
+
+For development:
+
+```bash
+python -m pip install -e ".[dev,mujoco]"
+```
+
+Please refer to the [documentation](https://roboverse.wiki/metasim/) for simulator-specific installation details.
+
+We also provide detailed [tutorials](https://roboverse.wiki/metasim/get_started/quick_start/0_static_scene.html) for getting started.
 
 ## 🥰 Contributing
 Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for more details on how to contribute to this project.
@@ -37,6 +51,8 @@ You can also upvote the requests you find most relevant or important. We'll prio
 ## 📖 License and Acknowledgments
 
 The RoboVerse source code is licensed under the Apache License 2.0.
+
+The MetaSim core package is maintained separately in [RoboVerseOrg/MetaSim](https://github.com/RoboVerseOrg/MetaSim).
 
 RoboVerse makes use of the following simulation frameworks, renderers, and libraries:
 - [Isaac Lab](https://github.com/isaac-sim/IsaacLab), which is built on top of [Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)

@@ -5,7 +5,7 @@ import re
 import shutil
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../metasim/cfg/tasks"))
+TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../roboverse_pack/tasks"))
 OUTPUT_DIR = os.path.join(CUR_DIR, "tasks_md")
 VIDEO_BASE = "https://videos.example.com"
 DEFAULT_DESC = "No description provided."
@@ -66,11 +66,11 @@ def parse_docstring_metadata(docstring: str):
 
     # video_url
     if "video_url" not in meta and "title" in meta and "group" in meta:
-        meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
+        meta["video_url"] = f"/roboverse/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
 
     elif "video_url" in meta and not meta["video_url"].startswith("http"):
         meta["video_url"] = (
-            f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
+            f"/roboverse/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
         )
 
     return meta

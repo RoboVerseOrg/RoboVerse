@@ -15,15 +15,15 @@ from colorama import Fore, Style
 
 openai.api_key = ""
 
-OBJECT_LIST_JSON = "metasim/cfg/tasks/gpt/config/rigid_objects_init_list.json"
-ROBOT_LIST_JSON = "metasim/cfg/tasks/gpt/config/robots_init_list.json"
-TASKS_OUTPUT_FOLDER = "metasim/cfg/tasks/gpt/config/tasks"
+OBJECT_LIST_JSON = "roboverse_pack/tasks/gpt/config/rigid_objects_init_list.json"
+ROBOT_LIST_JSON = "roboverse_pack/tasks/gpt/config/robots_init_list.json"
+TASKS_OUTPUT_FOLDER = "roboverse_pack/tasks/gpt/config/tasks"
 
 # Where to save final PKLs
 PKL_OUTPUT_BASE = "roboverse_data/trajs/gpt"
 
 # Where to save the metacfg .py files
-METACFG_OUTPUT_FOLDER = "metasim/cfg/tasks/gpt/metacfg"
+METACFG_OUTPUT_FOLDER = "roboverse_pack/tasks/gpt/metacfg"
 
 
 # -------------- JSON LOADING UTILS --------------
@@ -244,7 +244,7 @@ def call_gpt_to_get_init_state(partial_task_json, all_objects_data, all_robots_d
 # ======================================
 def write_cfg_file(final_json, object_library):
     """
-    Generate a Python config file in metasim/cfg/tasks/gpt/metacfg/{snake_task_name}.py
+    Generate a Python config file in roboverse_pack/tasks/gpt/metacfg/{snake_task_name}.py
     Class name is {CamelCaseTaskName}Cfg, but the final run command will just
     use {CamelCaseTaskName} (without "Cfg").
     """
@@ -399,7 +399,7 @@ def main():
 
     # print(f"Task Cfg Python file saved to:\n  {metacfg_path}\n")
 
-    # print("Please add this line in metasim/cfg/tasks/__init__.py to import the new metacfg class:")
+    # print("Please add this line in roboverse_pack/tasks/__init__.py to import the new metacfg class:")
 
     # print(f"  from .gpt.metacfg.{snake_task_name_out} import {metacfg_class_name}\n")
 
@@ -430,7 +430,9 @@ def main():
 
     print(
         Fore.RED
-        + emoji.emojize("⚠️ Please add this line in metasim/cfg/tasks/gpt/__init__.py to import the new metacfg class:")
+        + emoji.emojize(
+            "⚠️ Please add this line in roboverse_pack/tasks/gpt/__init__.py to import the new metacfg class:"
+        )
         + Style.RESET_ALL
     )
     print(Fore.WHITE + f"  from .metacfg.{snake_task_name_out} import {metacfg_class_name}" + Style.RESET_ALL + "\n")

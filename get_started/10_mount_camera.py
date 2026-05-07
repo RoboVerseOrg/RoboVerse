@@ -253,7 +253,7 @@ init_states = [
     }
 ]
 handler.set_states(init_states)
-obs = handler.get_states()
+obs = handler.get_states(mode="tensor")
 os.makedirs("get_started/output", exist_ok=True)
 
 
@@ -282,7 +282,7 @@ for _ in range(100):
     ]
     handler.set_dof_targets(actions)
     handler.simulate()
-    obs = handler.get_states()
+    obs = handler.get_states(mode="tensor")
     obs_saver.add(obs)
     step += 1
 

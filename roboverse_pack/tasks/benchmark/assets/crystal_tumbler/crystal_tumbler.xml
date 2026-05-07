@@ -1,0 +1,39 @@
+<mujoco model="crystal_tumbler">
+  <default>
+    <geom condim="4" friction="0.9 0.01 0.001"/>
+  </default>
+  <asset>
+    <material name="clear_glass" rgba="0.72 0.90 1.0 0.32"/>
+    <material name="water_tint" rgba="0.55 0.75 0.95 0.30"/>
+  </asset>
+  <worldbody>
+    <body name="crystal_tumbler_body" pos="0 0 0">
+      <geom
+        name="tumbler_glass_collision"
+        type="cylinder"
+        size="0.038 0.055"
+        pos="0 0 0.055"
+        mass="0.16"
+        material="clear_glass"
+      />
+      <geom
+        name="tumbler_heavy_base"
+        type="cylinder"
+        size="0.041 0.010"
+        pos="0 0 0.010"
+        mass="0.08"
+        material="clear_glass"
+      />
+      <geom
+        name="tumbler_water_visual"
+        type="cylinder"
+        size="0.032 0.032"
+        pos="0 0 0.042"
+        contype="0"
+        conaffinity="0"
+        mass="0.001"
+        material="water_tint"
+      />
+    </body>
+  </worldbody>
+</mujoco>

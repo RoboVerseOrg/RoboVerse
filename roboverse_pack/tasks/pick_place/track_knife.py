@@ -341,7 +341,7 @@ class PickPlaceTrackKnife(PickPlaceBase):
         """Step with delta control, keeping gripper closed."""
         # print(actions[0])
         delta_actions = actions * self._action_scale
-        current_actions = self.handler.get_states().robots[self.robot_name].joint_pos
+        current_actions = self.handler.get_states(mode="tensor").robots[self.robot_name].joint_pos
         new_actions = current_actions + delta_actions
         # print(self._action_low, self._action_high)
         # print(self._action_scale)

@@ -10,6 +10,7 @@ import torch
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.rl_task import RLTaskEnv
+from metasim.types import Info, StateMode, StateOutput
 from metasim.utils.state import TensorState, list_state_to_tensor
 from roboverse_pack.robots.g1_tracking import G1TrackingCfg
 from roboverse_pack.tasks.beyondmimic.metasim.configs.cfg_base import BaseEnvCfg, CallbacksCfg
@@ -196,15 +197,15 @@ class LeggedRobotTask(RLTaskEnv):
         # self.handler.sim.forward()
 
         # update commands
-        self.commands.compute(self.handler.get_states())
-        env_states = self.handler.get_states()
+        self.commands.compute(self.handler.get_states(mode="tensor"))
+        env_states = self.handler.get_states(mode="tensor")
 
         # step interval events
         for _step_fn, _params in self.post_physics_step_callback.values():
             _step_fn(self, env_states, **_params)
 
         # compute observations after resets
-        self._obs_buf = self._observation(self.handler.get_states())
+        self._obs_buf = self._observation(self.handler.get_states(mode="tensor"))
 
     def _reset_idx(self, env_ids: torch.Tensor | list[int] | None = None):
         """Reset selected envs (defaults to all)."""
@@ -254,7 +255,7 @@ class LeggedRobotTask(RLTaskEnv):
     def step(
         self,
         actions: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
         """Apply actions, simulate for `decimation` steps, and compute RLTask-style outputs."""
         if actions.ndim == 1:
             actions = actions.unsqueeze(0)
@@ -303,22 +304,22 @@ class LeggedRobotTask(RLTaskEnv):
             # self.handler.sim.forward()
 
         # update commands
-        self.commands.compute(self.handler.get_states())
-        env_states = self.handler.get_states()
+        self.commands.compute(self.handler.get_states(mode="tensor"))
+        env_states = self.handler.get_states(mode="tensor")
 
         # step interval events
         for _step_fn, _params in self.post_physics_step_callback.values():
             _step_fn(self, env_states, **_params)
 
         # compute observations after resets
-        self._obs_buf = self._observation(self.handler.get_states())
+        self._obs_buf = self._observation(self.handler.get_states(mode="tensor"))
 
     def _physics_step(self, actions: torch.Tensor) -> TensorState:
         """Issue low-level actions and simulate one physics step."""
         # FIXME both `set_dof_targets()` and `simulate()` call `articulation.write_data_to_sim()`
         self.handler.set_dof_targets(actions)
         self.handler.simulate()
-        return self.handler.get_states()
+        return self.handler.get_states(mode="tensor")
 
     def _reward(self, env_states: TensorState):
         rew_buf = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -350,7 +351,7 @@ class LeggedRobotTask(RLTaskEnv):
 
     def _get_observations(self) -> dict[str, torch.Tensor]:
         """For compatibility with Isaac Lab native RSL-RL env wrapper."""
-        return self._observation(self.handler.get_states())
+        return self._observation(self.handler.get_states(mode="tensor"))
 
     def _get_initial_states(self):
         """Return list of per-env initial states derived from config."""
@@ -377,9 +378,9 @@ class LeggedRobotTask(RLTaskEnv):
         }
         return [deepcopy(template) for _ in range(self.scenario.num_envs)]
 
-    def get_states(self) -> TensorState:
-        """Get the current simulator state."""
-        return self.handler.get_states()
+    def get_states(self, env_ids: list[int] | None = None, mode: StateMode = "dict") -> StateOutput:
+        """Get the current simulator state through the handler state-mode contract."""
+        return self.handler.get_states(env_ids=env_ids, mode=mode)
 
     def set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set simulator state for selected env indexes."""

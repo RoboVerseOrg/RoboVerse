@@ -38,7 +38,7 @@ def ensure_clean_state(handler, expected_state=None):
 
     for step in range(max_steps):
         handler.simulate()
-        current_state = handler.get_states()
+        current_state = handler.get_states(mode="tensor")
 
         if step >= min_steps:
             if prev_state is not None:
@@ -70,12 +70,12 @@ def ensure_clean_state(handler, expected_state=None):
             prev_state = current_state
 
     if expected_state is not None:
-        final_state = handler.get_states()
+        final_state = handler.get_states(mode="tensor")
         is_final_correct = _validate_state_correctness(final_state, expected_state)
         if not is_final_correct:
             log.warning(f"State validation failed after {max_steps} steps - reset may not have taken full effect")
 
-    handler.get_states()
+    handler.get_states(mode="tensor")
 
 
 def _validate_state_correctness(current_state, expected_state):

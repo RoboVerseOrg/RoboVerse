@@ -10,7 +10,7 @@ import torch
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.rl_task import RLTaskEnv
-from metasim.types import Action, Reward, TensorState
+from metasim.types import Action, Reward, StateMode, StateOutput, TensorState
 from metasim.utils.state import list_state_to_tensor
 from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg, CallbacksCfg
 
@@ -86,9 +86,9 @@ class AgentTask(RLTaskEnv):
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def get_states(self) -> TensorState:
-        """Get the current simulator state."""
-        return self.handler.get_states()
+    def get_states(self, env_ids: list[int] | None = None, mode: StateMode = "dict") -> StateOutput:
+        """Get the current simulator state through the handler state-mode contract."""
+        return self.handler.get_states(env_ids=env_ids, mode=mode)
 
     def set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set simulator state for selected env indices."""
@@ -98,7 +98,7 @@ class AgentTask(RLTaskEnv):
         """Issue low-level actions and simulate one physics step."""
         self.handler.set_dof_targets(actions)
         self.handler.simulate()  # decimation control in task_env level
-        return self.handler.get_states()
+        return self.handler.get_states(mode="tensor")
 
     def _reward(self, env_states: TensorState) -> Reward:
         raise NotImplementedError

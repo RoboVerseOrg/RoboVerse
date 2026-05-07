@@ -468,7 +468,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
 
         obs, info = super(PickPlaceBase, self).reset(env_ids=env_ids)
 
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         if env_ids is None:
             env_ids_list = list(range(self.num_envs))
         else:
@@ -485,7 +485,7 @@ class PickPlaceTrackSpoon(PickPlaceBase):
 
     def step(self, actions):
         """Step with delta control, keeping gripper closed."""
-        current_joint_pos = self.handler.get_states().robots[self.robot_name].joint_pos
+        current_joint_pos = self.handler.get_states(mode="tensor").robots[self.robot_name].joint_pos
         delta_actions = actions * self._action_scale
         new_actions = current_joint_pos + delta_actions
 

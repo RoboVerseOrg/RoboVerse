@@ -238,7 +238,7 @@ class MotionCommand:
         env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
         self._resample_command(env_ids, env_states)  # resample when motion ends
 
-        env_states = self.env.handler.get_states()
+        env_states = self.env.handler.get_states(mode="tensor")
         robot_state = env_states.robots[self.env.name]
 
         # put reference motion at the robot's XY (rotate it so its heading matches the robot's heading) while keeping the motion's height (Z)
@@ -321,7 +321,7 @@ class MotionCommand:
             metric_value[env_ids] = 0.0
 
         # resample the command
-        self._resample(env_ids, self.env.handler.get_states())
+        self._resample(env_ids, self.env.handler.get_states(mode="tensor"))
 
         return extras
 
@@ -335,7 +335,7 @@ class MotionCommand:
         resample_env_ids = (self.time_left <= 0.0).nonzero().flatten()
         if len(resample_env_ids) > 0:
             self._resample(resample_env_ids, env_states)
-            env_states = self.handler.get_states()
+            env_states = self.handler.get_states(mode="tensor")
         # update the command
         self._update_command(env_states)
 

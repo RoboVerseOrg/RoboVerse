@@ -162,7 +162,7 @@ def main():
             env.handler.refresh_render()
         step += 1
 
-        states = env.handler.get_states()
+        states = env.handler.get_states(mode="tensor")
 
     env.handler.close()
 

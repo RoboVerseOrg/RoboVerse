@@ -94,6 +94,112 @@ a {
     padding-bottom: 0.0rem !important;
 }
 
+/* Keep the desktop top navigation in one compact row. */
+@media (min-width: 992px) {
+    .bd-header.navbar {
+        min-height: 4rem;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .bd-header .bd-header__inner {
+        align-items: center;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 1rem;
+        max-width: none;
+        width: 100%;
+    }
+
+    .bd-header .navbar-header-items__start {
+        flex: 0 0 auto;
+        max-width: none;
+        width: auto;
+    }
+
+    .bd-header .navbar-brand.logo {
+        align-items: center;
+        display: flex;
+        margin-right: 0;
+        min-height: 4rem;
+    }
+
+    .bd-header .navbar-brand.logo img.logo__image {
+        height: 2.6rem !important;
+        max-height: 2.6rem;
+        width: auto !important;
+    }
+
+    .bd-header .navbar-header-items {
+        align-items: center;
+        display: flex;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+        max-width: none;
+        min-width: 0;
+        width: auto;
+    }
+
+    .bd-header .navbar-header-items__center {
+        align-items: center;
+        display: flex;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        gap: 0.75rem;
+        min-width: 0;
+    }
+
+    .bd-header .navbar-header-items__center > .navbar-item {
+        flex: 0 0 auto;
+    }
+
+    .bd-header .navbar-header-items__center > .navbar-item:last-child {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .bd-header .bd-navbar-elements {
+        align-items: center;
+        display: flex;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+
+    .bd-header .bd-navbar-elements .nav-link {
+        font-size: 0.95rem;
+        padding-left: 0.45rem;
+        padding-right: 0.45rem;
+    }
+
+    .bd-header .navbar-header-items__end {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        gap: 0.35rem;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1400px) {
+    .bd-header .search-button__default-text,
+    .bd-header .search-button__kbd-shortcut {
+        display: none;
+    }
+
+    .bd-header .search-button__button {
+        min-width: 2.5rem;
+        width: 2.5rem;
+    }
+
+    .bd-header .bd-navbar-elements .nav-link {
+        font-size: 0.9rem;
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+}
+
 .bd-main .bd-content .bd-article-container {
     /* min-width: 100%; */
     max-width: 100%;  /* default is 60em */

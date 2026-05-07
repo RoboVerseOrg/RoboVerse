@@ -64,5 +64,5 @@ python -m roboverse_learn.rl.rsl_rl.ppo --task walk_g1_dof29 --robot g1 --sim is
 
 For detailed tutorials and infrastructure setup:
 
-- **Infrastructure Overview**: See [RL Infrastructure](../../metasim/get_started/advanced/rl_example/infrastructure.md) for complete setup
-- **Quick Examples**: See [Quick Start Examples](../../metasim/get_started/advanced/rl_example/quick_examples.md) for ready-to-run commands
+- **Infrastructure Overview**: See [RL Infrastructure](https://roboverse.wiki/metasim/get_started/advanced/rl_example/infrastructure.html) for complete setup
+- **Quick Examples**: See [Quick Start Examples](https://roboverse.wiki/metasim/get_started/advanced/rl_example/quick_examples.html) for ready-to-run commands

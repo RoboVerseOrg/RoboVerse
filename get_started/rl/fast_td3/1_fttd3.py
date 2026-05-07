@@ -315,7 +315,7 @@ def main() -> None:
         # Initialize video recording
         os.makedirs("get_started/output/rl", exist_ok=True)
         obs_saver = ObsSaver(video_path=f"get_started/output/rl/1_fttd3_{simulator}.mp4")
-        obs_orin = env.handler.get_states()
+        obs_orin = env.handler.get_states(mode="tensor")
         obs_saver.add(obs_orin)
 
         for _ in range(env.max_episode_steps):
@@ -324,7 +324,7 @@ def main() -> None:
             obs, _, terminated, time_out, _ = env.step(actions.float())
             done = terminated | time_out
 
-            obs_orin = env.handler.get_states()
+            obs_orin = env.handler.get_states(mode="tensor")
             obs_saver.add(obs_orin)
             if done.any():
                 break

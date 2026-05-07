@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 
@@ -228,6 +229,85 @@ def generate_task_markdown(app):
     )
 
 
+_NAVBAR_LABELS = {
+    "dataset_benchmark": {"short": "Dataset", "full": "Dataset and Benchmark"},
+    "roboverse_learn": {"short": "Learn", "full": "RoboVerse Learn"},
+    "FAQ": {"short": "FAQ", "full": "Frequently Asked Questions"},
+}
+
+
+def _active_navbar_section(pagename):
+    section = pagename.split("/", 1)[0]
+    return section if section in _NAVBAR_LABELS else None
+
+
+def _navbar_section_from_href(href, active_section):
+    if href == "#":
+        return active_section
+    for section in _NAVBAR_LABELS:
+        if href.endswith(f"{section}/index.html"):
+            return section
+    return None
+
+
+def _replace_navbar_item_label(match, active_section):
+    item_html = match.group(0)
+    href_match = re.search(r'href="([^"]+)"', item_html)
+    if href_match is None:
+        return item_html
+
+    section = _navbar_section_from_href(href_match.group(1), active_section)
+    if section is None:
+        return item_html
+
+    label_kind = "full" if section == active_section else "short"
+    label = _NAVBAR_LABELS[section][label_kind]
+    return re.sub(r"(>)[^<>]+(</a>)", rf"\1{label}\2", item_html, count=1)
+
+
+def _rewrite_navbar_labels(html, pagename):
+    active_section = _active_navbar_section(pagename)
+
+    def rewrite_navbar(match):
+        navbar_html = match.group(0)
+        return re.sub(
+            r'<li class="nav-item[^"]*">.*?</li>',
+            lambda item_match: _replace_navbar_item_label(item_match, active_section),
+            navbar_html,
+            flags=re.DOTALL,
+        )
+
+    return re.sub(
+        r'<ul class="bd-navbar-elements navbar-nav">.*?</ul>',
+        rewrite_navbar,
+        html,
+        flags=re.DOTALL,
+    )
+
+
+def normalize_navbar_labels(app, exception):
+    if exception is not None or app.builder.name != "html":
+        return
+
+    outdir = os.path.abspath(app.outdir)
+    for section in ("", *[f"{section}/" for section in _NAVBAR_LABELS]):
+        html_path = os.path.join(outdir, section, "index.html")
+        if not os.path.exists(html_path):
+            continue
+
+        pagename = "index" if section == "" else f"{section.rstrip('/')}/index"
+        with open(html_path, encoding="utf-8") as f:
+            html = f.read()
+
+        rewritten = _rewrite_navbar_labels(html, pagename)
+        if rewritten == html:
+            continue
+
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(rewritten)
+
+
 def setup(app):
     app.connect("autodoc-skip-member", skip_member)
     app.connect("builder-inited", generate_task_markdown)
+    app.connect("build-finished", normalize_navbar_labels)

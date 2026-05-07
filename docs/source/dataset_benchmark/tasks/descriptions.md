@@ -8,25 +8,25 @@ We are now actively collecting scenes from multiple sources and updating the exi
 
 | Source | Path in Roboverse | Categories & Amounts                      |
 | ------ | ------------------ | ----------------------- |
-| [ARNOLD](#arnold) | `metasim/cfg/tasks/arnold` | House (6) |
-| [CALVIN](#calvin) | `metasim/cfg/tasks/calvin` | CALVIN Table (4: Calvin Table A, B, C, D) |
-| [DMControl](#dmcontrol) | `metasim/cfg/tasks/dmcontrol` | Locomotion (1) |
-| Fetch | `metasim/cfg/tasks/fetch` | Manipulation (1) |
-| [GAPartManip](#gapartmanip) | `metasim/cfg/tasks/gapartmanip` | Manipulation (2) |
-| [GAPartNet](#gapartnet) | `metasim/cfg/tasks/gapartnet` | Manipulation (5) |
-| GPT(GPT Generated Tasks) | `metasim/cfg/tasks/gpt` | Manipulation (1) |
-| [GraspNet](#graspnet) | `metasim/cfg/tasks/graspnet` | Grasping (1) |
+| [ARNOLD](#arnold) | `roboverse_pack/tasks/arnold` | House (6) |
+| [CALVIN](#calvin) | `roboverse_pack/tasks/calvin` | CALVIN Table (4: Calvin Table A, B, C, D) |
+| [DMControl](#dmcontrol) | `roboverse_pack/tasks/dmcontrol` | Locomotion (1) |
+| Fetch | `roboverse_pack/tasks/fetch` | Manipulation (1) |
+| [GAPartManip](#gapartmanip) | `roboverse_pack/tasks/gapartmanip` | Manipulation (2) |
+| [GAPartNet](#gapartnet) | `roboverse_pack/tasks/gapartnet` | Manipulation (5) |
+| GPT(GPT Generated Tasks) | `roboverse_pack/tasks/gpt` | Manipulation (1) |
+| [GraspNet](#graspnet) | `roboverse_pack/tasks/graspnet` | Grasping (1) |
 | [HumanoidBench](#humanoidbench) | `roboverse_pack/tasks/humanoid_bench` | Humanoid (19) |
-| [IsaacgymEnvs](#isaacgymenvs) | `metasim/cfg/tasks/isaacgym_envs` | Locomotion (1) Manipulation (1) |
+| [IsaacgymEnvs](#isaacgymenvs) | `roboverse_pack/tasks/isaacgym_envs` | Locomotion (1) Manipulation (1) |
 | [LIBERO](#libero) | `roboverse_pack/tasks/libero` | Manipulation (10) |
 | [Maniskill](#maniskill) | `roboverse_pack/tasks/maniskill` | Manipulation (7) |
-| [MetaWorld](#metaworld) | `metasim/cfg/tasks/metaworld` | Manipulation (6) |
-| [Open6Dor](#open6dor) | `metasim/cfg/tasks/open6dor` | Manipulation (68) |
-| [RLAfford](#rlafford) | `metasim/cfg/tasks/rlafford` | Manipulation (1) |
+| [MetaWorld](#metaworld) | `roboverse_pack/tasks/metaworld` | Manipulation (6) |
+| [Open6Dor](#open6dor) | `roboverse_pack/tasks/open6dor` | Manipulation (68) |
+| [RLAfford](#rlafford) | `roboverse_pack/tasks/rlafford` | Manipulation (1) |
 | [RLBench](#rlbench) | `roboverse_pack/tasks/rlbench` | Manipulation (68) |
-| [RoboSuite](#robosuite) | `metasim/cfg/tasks/robosuite` | Manipulation (7) |
-| [SimplerEnv](#simplerenv) | `metasim/cfg/tasks/simpler_env` | Manipulation (1) |
-| [UH1](#uh1) | `metasim/cfg/tasks/uh1` | Humanoid (1) |
+| [RoboSuite](#robosuite) | `roboverse_pack/tasks/robosuite` | Manipulation (7) |
+| [SimplerEnv](#simplerenv) | `roboverse_pack/tasks/simpler_env` | Manipulation (1) |
+| [UH1](#uh1) | `roboverse_pack/tasks/uh1` | Humanoid (1) |
 
 ### ARNOLD
 

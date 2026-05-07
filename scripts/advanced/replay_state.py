@@ -375,7 +375,7 @@ def replay_single_variant(env, scenario, all_states, variant_id: int, args) -> s
         env.handler.set_states([state_dict] * num_envs)
 
         env.handler.refresh_render()
-        obs = env.handler.get_states()
+        obs = env.handler.get_states(mode="tensor")
         saver.add(obs)
 
         # Check success

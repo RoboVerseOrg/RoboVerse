@@ -50,7 +50,7 @@ def resample_commands(env: EnvTypes, env_states: TensorState = None):
     cfg.value[env_ids][final_env_ids, :] = 0.0
 
     if cfg.heading_command:
-        env_states = env.get_states() if env_states is None else env_states
+        env_states = env.get_states(mode="tensor") if env_states is None else env_states
         robot_state = env_states.robots[env.name]
         base_quat = robot_state.root_state[:, 3:7]
         forward = quat_apply(base_quat, env.forward_vec)  # quat:[w, x, y, z], forward:[x, y, z]
@@ -84,7 +84,7 @@ def push_by_setting_velocity(
     if len(push_env_ids) == 0:
         return
     velocity_range = torch.tensor(velocity_range, device=env.device)
-    # env_states = env.get_states()
+    # env_states = env.get_states(mode="tensor")
     env_states.robots[env.name].root_state[push_env_ids, 7:10] += sample_uniform(
         velocity_range[0], velocity_range[1], (len(push_env_ids), 3), device=env.device
     )

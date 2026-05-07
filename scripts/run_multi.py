@@ -2,13 +2,13 @@ import subprocess
 import time
 
 experiments = [
-    # "/isaac-sim/python.sh  metasim/scripts/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
+    # "/isaac-sim/python.sh  scripts/advanced/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
     #     --random.level=0 --all-rerender --no-table --headless",
-    # "/isaac-sim/python.sh  metasim/scripts/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
+    # "/isaac-sim/python.sh  scripts/advanced/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
     #     --random.level=1 --all-rerender --no-table --headless",
-    # "/isaac-sim/python.sh  metasim/scripts/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
+    # "/isaac-sim/python.sh  scripts/advanced/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
     #     --random.level=2 --all-rerender --no-table --headless",
-    # "/isaac-sim/python.sh  metasim/scripts/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
+    # "/isaac-sim/python.sh  scripts/advanced/collect_demo.py --num_envs=1 --task=square_d0 --robot=franka_stable \
     #     --random.level=3 --all-rerender --no-table --headless",
     # "rsync -rvp ji_10:/home/ghr/Projects/RoboVerse/data_isaaclab/demo/SquareD0-Level0 .",
     # "rsync -rvp ji_10:/home/ghr/Projects/RoboVerse/data_isaaclab/demo/SquareD0-Level1 .",
@@ -22,63 +22,63 @@ experiments = [
     # "rsync -rvp ji_10:/home/ghr/Projects/RoboVerse/data_isaaclab/demo/LiberoPickChocolatePudding-Level1 .",
     # "rsync -rvp ji_10:/home/ghr/Projects/RoboVerse/data_isaaclab/demo/LiberoPickChocolatePudding-Level2 .",
     # "rsync -rvp ji_10:/home/ghr/Projects/RoboVerse/data_isaaclab/demo/LiberoPickChocolatePudding-Level3 .",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 3000 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 3000 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 3000 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 3000 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 400 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 400 --max_demo_idx 700 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 700 --max_demo_idx 1000 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 400 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 400 --max_demo_idx 700 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 700 --max_demo_idx 1000 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 400 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 400 --max_demo_idx 700 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 700 --max_demo_idx 1000 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 400 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 400 --max_demo_idx 700 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackGreenCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackGreenCube \
     # --num_envs=1 --headless --demo_start_idx 700 --max_demo_idx 1000 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube \
     # --num_envs=1 --headless --demo_start_idx 800 --max_demo_idx 1000 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube \
     # --num_envs=1 --headless --demo_start_idx 800 --max_demo_idx 1000 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube \
     # --num_envs=1 --headless --demo_start_idx 800 --max_demo_idx 1000 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube \
     # --num_envs=1 --headless --demo_start_idx 800 --max_demo_idx 1000 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3",
     # "bash roboverse_learn/algorithms/diffusion_policy/train.sh CloseBox-Level0_90_3 90 0 0",
     # "bash roboverse_learn/algorithms/diffusion_policy/train.sh CloseBox-Level1_90_3 90 0 0",
@@ -93,19 +93,19 @@ experiments = [
     # "bash roboverse_learn/algorithms/diffusion_policy/train.sh StackGreenCube-Level1_900_3 900 0 0",
     # "bash roboverse_learn/algorithms/diffusion_policy/train.sh StackGreenCube-Level0_900_3 900 0 0",
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 --robot franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 --robot franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 --robot franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 0 --robot franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=SquareD0 \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=SquareD0 \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 0 --robot franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=SquareD0 \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=SquareD0 \
     # --num_envs=1 --headless --demo_start_idx 613 --max_demo_idx 1000 --random.level 1 --robot franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=SquareD0 \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=SquareD0 \
     # --num_envs=1 --headless --demo_start_idx 790 --max_demo_idx 1000 --random.level 2 --robot franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=SquareD0 \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=SquareD0 \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 --robot franka_stable",
     # "/isaac-sim/python.sh roboverse_learn/eval.py --task StackGreenCube --headless \
     # --random.level 1 --checkpoint_path /home/ghr/Projects/RoboVerse/outputs/SGC_900_3_1000_l1.ckpt",
@@ -151,46 +151,46 @@ experiments = [
     #   -v ~/docker/isaac-lab/logs:/workspace/isaaclab/logs:rw \
     #   -v ~/docker/isaac-lab/data:/workspace/isaaclab/data_storage:rw \
     #   rv:20250121
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 20 --random.level 0 \
     # --render.mode pathtracing --cust_name demo_path_tracing",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 20 --random.level 1  \
     # --render.mode pathtracing --cust_name demo_path_tracing",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 20 --max_demo_idx 40 --random.level 0 \
     # --render.mode pathtracing --cust_name demo_path_tracing_512",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 20 --max_demo_idx 40 --random.level 1 \
     # --render.mode pathtracing --cust_name demo_path_tracing_512",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 20 --random.level 3 \
     # --render.mode pathtracing --cust_name demo_path_tracing",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 1 \
     # --cust_name ray_tracing_real_sense1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 1 \
     # --cust_name ray_tracing_real_sense2",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 1 \
     # --cust_name ray_tracing_real_sense3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.level 1 \
     # --render.mode pathtracing  --cust_name path_tracing_real_sense1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 20 --random.level 2 \
     #  --cust_name demo",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.light --random.ground --random.reflection --random.table --random.wall \
     # --cust_name raytracing_real_sense1_randomcolor",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 100 --random.light --random.ground --random.reflection --random.table --random.wall \
     # --render.mode pathtracing  --cust_name pathtracing_real_sense1_randomcolor",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 10 --random.level 3 \
     # --render.mode pathtracing  --cust_name pathtracing_real_sense1_randomcolor  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 10 --random.level 3 \
     # --render.mode pathtracing  --cust_name pathtracing_real_sense1_randomcolor --robot franka_with_gripper_extension",
     # python roboverse_learn/algorithms/diffusion_policy/data2zarr_dp.py CloseBox-Level-all_450_1 450 \
@@ -214,70 +214,70 @@ experiments = [
     #   -v ~/docker/isaac-lab/logs:/workspace/isaaclab/logs:rw \
     #   -v ~/docker/isaac-lab/data:/workspace/isaaclab/data_storage:rw \
     #   rv:20250121
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_0 --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1 --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1 --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_2 --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=CloseBox  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=CloseBox  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_3 --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_2  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_3  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_0  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 1 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_0",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.scene \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_scene_0 --robot=franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.scene \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_scene_1 --robot=franka_with_gripper_extension",
-    "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
 --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.scene \
 --render.mode pathtracing  --cust_name new_render_256_pathtracing_scene_0 ",
-    "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=LiberoPickChocolatePudding  \
+    "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=LiberoPickChocolatePudding  \
 --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.scene \
 --render.mode pathtracing  --cust_name new_render_256_pathtracing_scene_1 ",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_3",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_2  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=PickCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=PickCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_3  --robot=franka_stable",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1  --robot=franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_1  --robot=franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=MoveSliderLeftA  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=MoveSliderLeftA  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 2 \
     # --render.mode pathtracing  --cust_name new_render_256_pathtracing_0  --robot=franka_with_gripper_extension",
-    # "/isaac-sim/python.sh metasim/scripts/collect_demo.py --task=StackCube  \
+    # "/isaac-sim/python.sh scripts/advanced/collect_demo.py --task=StackCube  \
     # --num_envs=1 --headless --demo_start_idx 0 --max_demo_idx 1000 --random.level 3 \
     # --cust_name new_render_256_raytracing_scene --random.scene",
 ]

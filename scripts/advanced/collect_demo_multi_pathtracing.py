@@ -54,9 +54,9 @@ for task in tasks_list:
         if (task, level) in already_rendered:
             continue
         time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        command = f"python metasim/scripts/collect_demo.py --task={task} --sim=isaaclab --render.mode pathtracing --run_unfinished --headless --cust_name pathtracing_render_{time_str} --random.level {level}"
+        command = f"python scripts/advanced/collect_demo.py --task={task} --sim=isaaclab --render.mode pathtracing --run_unfinished --headless --cust_name pathtracing_render_{time_str} --random.level {level}"
         print(command)
         os.system(command)
-        command = f"/isaac-sim/python.sh metasim/scripts/collect_demo.py --task={task} --render.mode pathtracing --run_unfinished --sim=isaaclab --headless --cust_name pathtracing_render_{time_str} --random.level {level}"
+        command = f"/isaac-sim/python.sh scripts/advanced/collect_demo.py --task={task} --render.mode pathtracing --run_unfinished --sim=isaaclab --headless --cust_name pathtracing_render_{time_str} --random.level {level}"
         print(command)
         os.system(command)

@@ -1,58 +1,60 @@
-# RoboVerse
+# RoboVerse Documentation
 
-![RoboVerse](./metasim/images/tea.jpg)
+![RoboVerse](./_static/Robo.png)
 
 <p align="center">
   <a href="https://roboverseorg.github.io"><img src="https://img.shields.io/badge/project-page-brightgreen" alt="Project Page"></a>
   <a href="https://arxiv.org/abs/2504.18904"><img src="https://img.shields.io/badge/paper-preprint-red" alt="Paper"></a>
-  <a href="https://roboverse.wiki"><img src="https://img.shields.io/badge/doc-page-orange" alt="Documentation"></a>
+  <a href="https://roboverse.wiki/roboverse/"><img src="https://img.shields.io/badge/doc-page-orange" alt="Documentation"></a>
   <a href="https://github.com/RoboVerseOrg/RoboVerse/issues"><img src="https://img.shields.io/github/issues/RoboVerseOrg/RoboVerse?color=yellow" alt="Issues"></a>
   <a href="https://github.com/RoboVerseOrg/RoboVerse/discussions"><img src="https://img.shields.io/github/discussions/RoboVerseOrg/RoboVerse?color=blueviolet" alt="Discussions"></a>
   <a href="https://discord.gg/6e2CPVnAD3"><img src="https://img.shields.io/discord/1356345436927168552?logo=discord&color=blue" alt="Discord"></a>
-  <a href="docs/source/_static/wechat.jpg"><img src="https://img.shields.io/badge/wechat-QR_code-green" alt="WeChat"></a>
 </p>
 
 ---
 
 ## What is RoboVerse?
 
-**RoboVerse** is a unified platform for scalable and generalizable robot learning. See the [project page](https://roboverseorg.github.io) and [paper](https://arxiv.org/abs/2504.18904) for more details.
+**RoboVerse** is the dataset, benchmark, task-pack, asset, and learning layer of the RoboVerse ecosystem.
+It builds the downstream `roboverse-py` package and depends on the standalone
+[MetaSim](https://github.com/RoboVerseOrg/MetaSim) simulator framework.
+
+Use the ecosystem landing page at <a href="/roboverse/">/roboverse/</a> for RoboVerse docs and
+<a href="/metasim/">/metasim/</a> for MetaSim docs.
 
 ---
 
 ## Quick Start
 
-Get started with RoboVerse in minutes:
-
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} Installation
-:link: metasim/get_started/installation
+:::{grid-item-card} Dataset & Benchmark
+:link: dataset_benchmark/index
 :link-type: doc
 
-Set up RoboVerse with pip or Docker
+Explore RoboVerse tasks, assets, robot configurations, and benchmark protocols.
 :::
 
-:::{grid-item-card} First Simulation
-:link: metasim/get_started/quick_start/0_static_scene
+:::{grid-item-card} RoboVerse Learn
+:link: roboverse_learn/index
 :link-type: doc
 
-Create your first robotic simulation
+Train and evaluate policies with IL, RL, and VLA workflows.
 :::
 
-:::{grid-item-card} Control a Robot
-:link: metasim/get_started/quick_start/1_control_robot
-:link-type: doc
+:::{grid-item-card} MetaSim Installation
+:link: /metasim/get_started/installation.html
+:link-type: url
 
-Learn to control robots with actions
+Install the simulator framework used by RoboVerse.
 :::
 
-:::{grid-item-card} Train a Policy
-:link: metasim/get_started/advanced/rl_example/quick_examples
-:link-type: doc
+:::{grid-item-card} MetaSim Quick Start
+:link: /metasim/get_started/quick_start/index.html
+:link-type: url
 
-Train RL/IL policies on tasks
+Create scenes and control robots through the standalone simulator docs.
 :::
 
 ::::
@@ -64,53 +66,48 @@ Train RL/IL policies on tasks
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} MetaSim User Guide
-:link: metasim/index
-:link-type: doc
-
-Core simulation framework documentation including installation, tutorials, concepts, and development guides.
-:::
-
 :::{grid-item-card} Dataset & Benchmark
 :link: dataset_benchmark/index
 :link-type: doc
 
-Explore tasks, robot configurations, object assets, and benchmark results.
+Explore tasks, robot configurations, object assets, scene definitions, and benchmark results.
 :::
 
 :::{grid-item-card} RoboVerse Learn
 :link: roboverse_learn/index
 :link-type: doc
 
-Learning algorithms: Imitation Learning (ACT, Diffusion Policy, VLA) and Reinforcement Learning (PPO, TD3, SAC).
+Learning algorithms: imitation learning, reinforcement learning, and vision-language-action methods.
 :::
 
-:::{grid-item-card} API Reference
-:link: API/index
-:link-type: doc
+:::{grid-item-card} MetaSim
+:link: /metasim/
+:link-type: url
 
-Complete API documentation for MetaSim modules.
+Simulation framework documentation, concepts, simulator support, and API reference.
+:::
+
+:::{grid-item-card} Ecosystem Landing
+:link: /
+:link-type: url
+
+Project overview, architecture, community links, and citation.
 :::
 
 ::::
 
 ---
 
-## System Architecture
+## RoboVerse Scope
 
-<p align="center">
-  <img src="_static/Robo.png"
-       alt="RoboVerse System Architecture"
-       style="max-width:100%; height:auto;" />
-</p>
+RoboVerse focuses on the content and learning pieces that sit on top of MetaSim:
 
-The RoboVerse ecosystem consists of three main components:
+- **RoboVerse Pack**: pre-configured robots, tasks, scene assets, and package-discovery entry points
+- **Dataset & Benchmark**: task inventory, asset descriptions, evaluation protocols, and benchmark results
+- **RoboVerse Learn**: imitation learning, reinforcement learning, and VLA training workflows
 
-- **MetaSim**: Core simulation framework with unified API across simulators
-- **RoboVerse Pack**: Pre-configured robots, tasks, and scene assets
-- **RoboVerse Learn**: Integrated learning algorithms (IL & RL)
-
-Learn more about the architecture in the [Architecture Overview](metasim/concept/architecture.md).
+For the core simulation architecture, state protocol, handler system, and API reference, use the
+[MetaSim documentation](https://roboverse.wiki/metasim/).
 
 ---
 
@@ -138,14 +135,11 @@ If you find this work useful in your research, please consider citing:
 }
 ```
 
-<!-- ## Table of Contents -->
 ```{toctree}
 :hidden:
 :titlesonly:
 
-metasim/index
-dataset_benchmark/index
-roboverse_learn/index
-API/index
-FAQ/index
+Dataset <dataset_benchmark/index>
+Learn <roboverse_learn/index>
+FAQ <FAQ/index>
 ```

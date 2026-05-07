@@ -255,8 +255,8 @@ visualizer = RerunVisualizer(spawn=False, connect=True)
 - **`rerun_demo.py`**: Main demo script with static and dynamic visualization
 - **`save_trajectory.py`**: Save trajectory recording with IK solver (requires GPU)
 - **`save_trajectory_simple.py`**: Save trajectory recording without IK solver (CPU-only, Mac compatible)
-- **`../../metasim/utils/rerun/rerun_util.py`**: Core visualization utilities
-- **`../../metasim/utils/rerun/rerun_env_wrapper.py`**: RL environment wrapper
+- **MetaSim `metasim/utils/rerun/rerun_util.py`**: Core visualization utilities
+- **MetaSim `metasim/utils/rerun/rerun_env_wrapper.py`**: RL environment wrapper
 
 ## Additional Resources
 
@@ -264,4 +264,3 @@ visualizer = RerunVisualizer(spawn=False, connect=True)
 - [Rerun Python API](https://ref.rerun.io/docs/python/)
 - [Rerun GitHub](https://github.com/rerun-io/rerun)
 - [RoboVerse Viser Integration](../viser/README.md) - Alternative web-based visualizer
-

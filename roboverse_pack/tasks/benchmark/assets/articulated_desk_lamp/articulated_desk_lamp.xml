@@ -1,0 +1,74 @@
+<mujoco model="articulated_desk_lamp">
+  <default>
+    <joint limited="true" damping="1.2" frictionloss="0.18" stiffness="4.0"/>
+    <geom condim="4" friction="0.8 0.01 0.001"/>
+  </default>
+  <asset>
+    <material name="matte_black" rgba="0.04 0.04 0.04 1.0"/>
+    <material name="brushed_gold" rgba="0.78 0.58 0.28 1.0"/>
+    <material name="frosted_lens" rgba="0.82 0.94 1.0 0.35"/>
+  </asset>
+  <worldbody>
+    <body name="lamp_base" pos="0 0 0">
+      <geom
+        name="lamp_weighted_base"
+        type="cylinder"
+        size="0.060 0.012"
+        pos="0 0 0.012"
+        mass="0.36"
+        material="matte_black"
+      />
+      <geom
+        name="lamp_base_collar"
+        type="cylinder"
+        size="0.020 0.024"
+        pos="0 0 0.048"
+        mass="0.08"
+        material="brushed_gold"
+      />
+      <body name="lamp_lower_arm" pos="0 0 0.072" quat="0.953717 -0.300706 0 0">
+        <joint name="lamp_lower_hinge" type="hinge" axis="1 0 0" range="-0.55 0.85"/>
+        <geom
+          name="lamp_lower_arm_bar"
+          type="box"
+          size="0.009 0.009 0.058"
+          pos="0 -0.020 0.052"
+          mass="0.055"
+          material="brushed_gold"
+        />
+        <body name="lamp_upper_arm" pos="0 -0.040 0.105" quat="0.953717 0.300706 0 0">
+          <joint name="lamp_elbow_hinge" type="hinge" axis="1 0 0" range="-0.85 0.85"/>
+          <geom
+            name="lamp_upper_arm_bar"
+            type="box"
+            size="0.009 0.009 0.052"
+            pos="0 0.020 0.046"
+            mass="0.045"
+            material="brushed_gold"
+          />
+          <body name="lamp_head" pos="0 0.042 0.095" quat="0.92388 -0.382683 0 0">
+            <joint name="lamp_head_hinge" type="hinge" axis="1 0 0" range="-0.90 0.60"/>
+            <geom
+              name="lamp_shade"
+              type="cylinder"
+              size="0.038 0.027"
+              pos="0 0 0"
+              mass="0.070"
+              material="matte_black"
+            />
+            <geom
+              name="lamp_frosted_lens"
+              type="sphere"
+              size="0.026"
+              pos="0 0 -0.026"
+              contype="0"
+              conaffinity="0"
+              mass="0.001"
+              material="frosted_lens"
+            />
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

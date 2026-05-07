@@ -8,6 +8,7 @@ from dataclasses import asdict
 import torch
 
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.types import Info
 from metasim.utils.state import TensorState
 from roboverse_pack.robots import G1Dof12Cfg, Go2Cfg
 from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
@@ -217,7 +218,7 @@ class LeggedRobotTask(AgentTask):
         self.commands_manager.resample(self)
 
         # for observation history
-        env_states = self.handler.get_states()
+        env_states = self.handler.get_states(mode="tensor")
         obs_single, priv_single = self._compute_task_observations(env_states)
         self.obs_buf_queue = deque(
             [deepcopy(obs_single * 0.0) for _ in range(self.cfg.obs_len_history)],
@@ -292,14 +293,14 @@ class LeggedRobotTask(AgentTask):
                 torch.mean(self.episode_not_terminations[key][env_ids]) / self.max_episode_steps
             )
             self.episode_not_terminations[key][env_ids] = 0.0
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         info = {"privileged_observation": self._privileged_observation(states)}
         return self.obs_buf, info
 
     def step(
         self,
         actions: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
         """Apply actions, simulate for `decimation` steps, and return Gymnasium-style outputs.
 
         Returns:
@@ -319,7 +320,7 @@ class LeggedRobotTask(AgentTask):
         processed_actions = (
             (self.actions * self.action_scale + self.actions_offset).clip(-self.action_clip, self.action_clip).clone()
         )
-        env_states = self.get_states()
+        env_states = self.get_states(mode="tensor")
         for _ in range(self.decimation):
             applied_action = (
                 self._compute_effort(processed_actions, env_states) if self.manual_pd_on else processed_actions
@@ -368,7 +369,7 @@ class LeggedRobotTask(AgentTask):
         if len(reset_env_idx) > 0:
             self.reset(env_ids=reset_env_idx)
             # Get updated states after reset
-            env_states = self.handler.get_states()
+            env_states = self.handler.get_states(mode="tensor")
 
         self.commands_manager.resample(self)
 

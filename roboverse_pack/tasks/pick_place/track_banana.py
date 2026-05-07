@@ -394,7 +394,7 @@ class PickPlaceTrackBanana(PickPlaceBase):
 
         obs, info = super(PickPlaceBase, self).reset(env_ids=env_ids)
 
-        states = self.handler.get_states()
+        states = self.handler.get_states(mode="tensor")
         if env_ids is None:
             env_ids_list = list(range(self.num_envs))
         else:

@@ -30,11 +30,11 @@ you can see video like this
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
     <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px;">
         <div style="width: 48%; text-align: center;">
-            <img src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_reaching.gif" style="width: 100%;" />
+            <img src="/roboverse/_static/standard_output/rl/2_skillblender_reaching.gif" style="width: 100%;" />
             <p style="margin-top: 5px;">Skillblender::Reaching</p>
         </div>
         <div style="width: 48%; text-align: center;">
-            <img src="https://roboverse.wiki/_static/standard_output/rl/2_skillblender_walking.gif" style="width: 100%;" />
+            <img src="/roboverse/_static/standard_output/rl/2_skillblender_walking.gif" style="width: 100%;" />
             <p style="margin-top: 5px;">Skillblender::Walking</p>
         </div>
     </div>
@@ -50,7 +50,7 @@ outputs/
 └── skillblender/
     └── h1_wrist_reaching/        # Task name
         └── 2025_0628_232507/     # Timestamped experiment folder
-            ├── reaching_cfg.py   # Config snapshot (copied from metasim/cfg/tasks/skillblender)
+            ├── reaching_cfg.py   # Config snapshot (copied from roboverse_pack/tasks/skillblender)
             ├── model_0.pt        # Checkpoint at iteration 0
             ├── model_500.pt      # Checkpoint at iteration 500
             └── ...
@@ -88,7 +88,7 @@ when play
 ## How to add new Task
 1. **Create your wrapper module**
     - Add a new file `abc_wrapper.py` under `roboverse_learn/skillblender_rl/env_wrappers`
-    - Add a config file `abc_cfg.py` under `metasim/cfg/tasks/skillblender`
+    - Add a config file `abc_cfg.py` under `roboverse_pack/tasks/skillblender`
     - define your reward functions in reward_fun_cfg.py, check whether the current states or variables are enough for reward computation.
 
 2. If states not enough, add global variable by overriding `_init_buffer()`
@@ -113,7 +113,7 @@ when play
     - modified `_post_physics_step` to reset variables you defined with `reset_env_idx`
 
 
-3. Add Cfg for your task `metasim/cfg/tasks/skillblender`
+3. Add Cfg for your task `roboverse_pack/tasks/skillblender`
 
 
 ## References and Acknowledgements

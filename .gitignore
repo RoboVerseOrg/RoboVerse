@@ -108,10 +108,14 @@ id_rsa*
 # for test cache
 .pytest_cache/
 
+docs/superpowers/
+
 *.pkl
 *.pt
 output
+public/
 
 .cursor/
 artifacts/
 nohup/
+.omx/

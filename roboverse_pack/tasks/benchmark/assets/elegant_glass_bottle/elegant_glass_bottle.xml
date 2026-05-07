@@ -1,0 +1,68 @@
+<mujoco model="elegant_glass_bottle">
+  <asset>
+    <material name="glass_green" rgba="0.48 0.66 0.38 0.38"/>
+    <material name="wine_red" rgba="0.34 0.02 0.015 0.78"/>
+    <material name="label_warm" rgba="0.92 0.87 0.72 1.0"/>
+    <material name="cork" rgba="0.74 0.67 0.50 1.0"/>
+  </asset>
+  <worldbody>
+    <body name="elegant_glass_bottle_body" pos="0 0 0">
+      <geom
+        name="bottle_body_collision"
+        type="cylinder"
+        size="0.041 0.120"
+        pos="0 0 0.120"
+        mass="0.18"
+        material="glass_green"
+        friction="0.85 0.01 0.001"
+      />
+      <geom
+        name="bottle_shoulder_collision"
+        type="sphere"
+        size="0.040"
+        pos="0 0 0.236"
+        mass="0.035"
+        material="glass_green"
+        friction="0.85 0.01 0.001"
+      />
+      <geom
+        name="bottle_neck_collision"
+        type="cylinder"
+        size="0.016 0.045"
+        pos="0 0 0.288"
+        mass="0.025"
+        material="glass_green"
+        friction="0.85 0.01 0.001"
+      />
+      <geom
+        name="bottle_wine_core"
+        type="cylinder"
+        size="0.034 0.082"
+        pos="0 0 0.098"
+        contype="0"
+        conaffinity="0"
+        mass="0.07"
+        material="wine_red"
+      />
+      <geom
+        name="bottle_label_visual"
+        type="cylinder"
+        size="0.0415 0.034"
+        pos="0 0 0.132"
+        contype="0"
+        conaffinity="0"
+        mass="0.001"
+        material="label_warm"
+      />
+      <geom
+        name="bottle_cork_collision"
+        type="cylinder"
+        size="0.018 0.014"
+        pos="0 0 0.347"
+        mass="0.008"
+        material="cork"
+        friction="0.85 0.01 0.001"
+      />
+    </body>
+  </worldbody>
+</mujoco>
