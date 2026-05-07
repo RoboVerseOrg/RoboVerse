@@ -10,6 +10,7 @@ Update it when the actual conda env names on the machine differ from the default
 - `mujoco` -> conda env `isaacgym`
 - `newton` -> conda env `newton`
 - `isaacsim` -> conda env `isaacsim`
+- `blender` -> conda env `isaacsim`
 
 ## Notes
 

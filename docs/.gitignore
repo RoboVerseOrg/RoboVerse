@@ -1,0 +1,9 @@
+old/
+build/
+
+# Docs autosummary
+_autosummary/
+
+!*.png
+!*.jpg
+source/dataset_benchmark/tasks/tasks_md/
