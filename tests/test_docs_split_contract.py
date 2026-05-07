@@ -4,7 +4,6 @@ import os
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -58,12 +57,8 @@ printf '<html>%s</html>\\n' "$src" > "$dst/index.html"
     landing = (output_dir / "index.html").read_text(encoding="utf-8")
     assert 'href="/metasim/get_started/installation.html"' in landing
     assert "/metasim/metasim/" not in landing
-    assert (output_dir / "roboverse/index.html").read_text(encoding="utf-8").endswith(
-        "docs/source</html>\n"
-    )
-    assert (output_dir / "metasim/index.html").read_text(encoding="utf-8").endswith(
-        "MetaSim/docs/source</html>\n"
-    )
+    assert (output_dir / "roboverse/index.html").read_text(encoding="utf-8").endswith("docs/source</html>\n")
+    assert (output_dir / "metasim/index.html").read_text(encoding="utf-8").endswith("MetaSim/docs/source</html>\n")
     assert (output_dir / "metasim/_images/tea.jpg").read_bytes() == b"fake image"
     assert (output_dir / ".nojekyll").is_file()
     assert (output_dir / "CNAME").read_text(encoding="utf-8") == "roboverse.wiki\n"
