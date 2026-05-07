@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-This page answers common questions about RoboVerse. For simulator-specific issues, see the [Troubleshooting](../metasim/troubleshooting/common.md) section.
+This page answers common questions about RoboVerse. For simulator-specific issues, see the [Troubleshooting](https://roboverse.wiki/metasim/troubleshooting/common.html) section.
 
 ---
 
@@ -12,7 +12,7 @@ RoboVerse is a unified platform for scalable and generalizable robot learning. S
 
 ### What simulators are supported?
 
-See the [Support Matrix](../metasim/features/support_matrix.rst) for the full list of supported simulators and features.
+See the [Support Matrix](https://roboverse.wiki/metasim/features/support_matrix.html) for the full list of supported simulators and features.
 
 ### What robots are available?
 
@@ -51,7 +51,7 @@ conda activate roboverse
 python -m pip install -e ".[mujoco]"
 ```
 
-See the [Installation Guide](../metasim/get_started/installation.rst) for detailed instructions.
+See the [Installation Guide](https://roboverse.wiki/metasim/get_started/installation.html) for detailed instructions.
 
 ### Can I use Docker?
 
@@ -62,7 +62,7 @@ docker pull roboverseorg/roboverse:latest
 docker run -it --gpus all roboverseorg/roboverse:latest
 ```
 
-See [Docker Guide](../metasim/get_started/docker.md) for more details.
+See [Docker Guide](https://roboverse.wiki/metasim/get_started/docker.html) for more details.
 
 ### How do I install optional dependencies?
 
@@ -82,7 +82,7 @@ python -m pip install -e ".[learn]"
 python -m pip install -e ".[vla]"
 ```
 
-See [Advanced Installation](../metasim/get_started/advanced_installation/index.md) for all options.
+See [Advanced Installation](https://roboverse.wiki/metasim/get_started/advanced_installation/index.html) for all options.
 
 ---
 
@@ -110,7 +110,7 @@ for _ in range(1000):
     handler.step()
 ```
 
-See [Quick Start Tutorials](../metasim/get_started/quick_start/index.md) for more examples.
+See [Quick Start Tutorials](https://roboverse.wiki/metasim/get_started/quick_start/index.html) for more examples.
 
 ### How do I switch between simulators?
 
@@ -191,7 +191,7 @@ Ensure you have:
 2. Isaac Sim 2023.1.1 or later installed
 3. Sufficient GPU memory (8GB+ recommended)
 
-See [Isaac Sim Troubleshooting](../metasim/troubleshooting/isaaclab.md) for more solutions.
+See [Isaac Sim Troubleshooting](https://roboverse.wiki/metasim/troubleshooting/isaaclab.html) for more solutions.
 
 ### How do I report a bug?
 
@@ -210,9 +210,9 @@ See [Isaac Sim Troubleshooting](../metasim/troubleshooting/isaaclab.md) for more
 
 We welcome contributions! See our guides:
 
-- [Contributing New Robots](../metasim/developer_guide/contributing_new_robot.md)
-- [Converting Assets](../metasim/developer_guide/converting_asset.md)
-- [Code Style Guide](../metasim/developer_guide/docstring.md)
+- [Contributing New Robots](https://roboverse.wiki/metasim/developer_guide/contributing_new_robot.html)
+- [Converting Assets](https://roboverse.wiki/metasim/developer_guide/converting_asset.html)
+- [Code Style Guide](https://roboverse.wiki/metasim/developer_guide/docstring.html)
 
 ### How do I add a new robot?
 
@@ -221,7 +221,7 @@ We welcome contributions! See our guides:
 3. Add tests for the new robot
 4. Submit a pull request
 
-See [Contributing New Robot](../metasim/developer_guide/contributing_new_robot.md) for details.
+See [Contributing New Robot](https://roboverse.wiki/metasim/developer_guide/contributing_new_robot.html) for details.
 
 ### How do I add a new task?
 
@@ -230,7 +230,7 @@ See [Contributing New Robot](../metasim/developer_guide/contributing_new_robot.m
 3. Configure default scenario with appropriate robots/objects
 4. Add to the task registry
 
-See [Task System](../metasim/concept/task.md) for the task API.
+See [Task System](https://roboverse.wiki/metasim/concept/task.html) for the task API.
 
 ---
 

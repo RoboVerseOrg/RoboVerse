@@ -69,5 +69,5 @@ CONFIG = {
 
 ## See Also
 
-- [RL Infrastructure](../../metasim/get_started/advanced/rl_example/infrastructure.md) - Complete setup guide
+- [RL Infrastructure](https://roboverse.wiki/metasim/get_started/advanced/rl_example/infrastructure.html) - Complete setup guide
 - [PPO Training](ppo.md) - Alternative on-policy algorithm

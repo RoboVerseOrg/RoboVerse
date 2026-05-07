@@ -66,11 +66,11 @@ def parse_docstring_metadata(docstring: str):
 
     # video_url
     if "video_url" not in meta and "title" in meta and "group" in meta:
-        meta["video_url"] = f"https://roboverse.wiki/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
+        meta["video_url"] = f"/roboverse/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
 
     elif "video_url" in meta and not meta["video_url"].startswith("http"):
         meta["video_url"] = (
-            f"https://roboverse.wiki/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
+            f"/roboverse/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
         )
 
     return meta

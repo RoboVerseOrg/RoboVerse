@@ -201,9 +201,6 @@ autodoc_mock_imports = [
     "huggingface_hub",
     "dill",
     "pytorch3d",
-    # RoboVerse no longer vendors MetaSim; mock it for Pages docs builds that
-    # install only docs/requirements.txt.
-    "metasim",
 ]
 
 
@@ -233,10 +230,8 @@ def generate_task_markdown(app):
 
 
 _NAVBAR_LABELS = {
-    "metasim": {"short": "MetaSim", "full": "MetaSim User Guide"},
     "dataset_benchmark": {"short": "Dataset", "full": "Dataset and Benchmark"},
     "roboverse_learn": {"short": "Learn", "full": "RoboVerse Learn"},
-    "API": {"short": "API", "full": "API"},
     "FAQ": {"short": "FAQ", "full": "Frequently Asked Questions"},
 }
 

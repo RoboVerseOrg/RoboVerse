@@ -27,8 +27,6 @@ Train policies through trial and error with PPO, TD3, SAC, and specialized algor
 
 ---
 
----
-
 ## Quick Start
 
 ### Training with Imitation Learning

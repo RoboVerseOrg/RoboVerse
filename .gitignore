@@ -113,6 +113,7 @@ docs/superpowers/
 *.pkl
 *.pt
 output
+public/
 
 .cursor/
 artifacts/

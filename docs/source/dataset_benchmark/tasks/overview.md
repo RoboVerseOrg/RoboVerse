@@ -20,4 +20,4 @@ ScenarioCfg(
 )
 ```
 
-<!-- You can find how to create/modify task configurations at [here](https://roboverse.wiki/metasim/user_guide/configuration/). -->
+<!-- You can find how to create/modify task configurations at [here](https://roboverse.wiki/metasim/concept/config.html). -->

@@ -2,7 +2,7 @@
   <img src="docs/source/_static/RoboVerse86.22.svg" width="50%" alt="RoboVerse">
 </p>
 
-![RoboVerse](docs/source/metasim/images/tea.jpg)
+![RoboVerse](docs/source/_static/Robo.png)
 
 
 <p align="center">
@@ -36,9 +36,9 @@ For development:
 python -m pip install -e ".[dev,mujoco]"
 ```
 
-Please refer to the [documentation](https://roboverse.wiki/metasim/#) for simulator-specific installation details.
+Please refer to the [documentation](https://roboverse.wiki/metasim/) for simulator-specific installation details.
 
-We also provide detailed [tutorials](https://roboverse.wiki/metasim/get_started/quick_start/0_static_scene) for getting started.
+We also provide detailed [tutorials](https://roboverse.wiki/metasim/get_started/quick_start/0_static_scene.html) for getting started.
 
 ## 🥰 Contributing
 Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for more details on how to contribute to this project.
