@@ -226,3 +226,40 @@ def pairwise_metrics(
     return {
         region: {m: _summarize(values) for m, values in metrics.items()} for region, metrics in region_pairs.items()
     }
+
+
+def vs_reference_metrics(
+    stack: np.ndarray,
+    reference: np.ndarray,
+    *,
+    runner: MetricRunner,
+    roi_boxes: dict[str, list[int]] | None,
+    roi_grouping: dict[str, list[str]] | None,
+) -> list[dict[str, float | int | None]]:
+    if stack.ndim != 4 or reference.ndim != 3:
+        raise ValueError(f"shape error: stack={stack.shape}, reference={reference.shape}")
+    if stack.shape[1:] != reference.shape:
+        raise ValueError(f"shape mismatch: stack frame {stack.shape[1:]} != reference {reference.shape}")
+    out: list[dict[str, float | int | None]] = []
+    for index in range(stack.shape[0]):
+        seed_img = stack[index]
+        global_metrics = _metrics_for_pair(runner, seed_img, reference)
+        row: dict[str, float | int | None] = {
+            "seed_index": index,
+            **{m: global_metrics[m] for m in _METRIC_NAMES},
+        }
+        if roi_boxes and roi_grouping:
+            per_roi_rmse: dict[str, float] = {}
+            per_roi_psnr: dict[str, float] = {}
+            for name, box in roi_boxes.items():
+                a = crop(seed_img, box)
+                b = crop(reference, box)
+                per_roi_rmse[name] = runner.rmse(a, b)
+                per_roi_psnr[name] = runner.psnr(a, b)
+            grouped_rmse = group_means(per_roi_rmse, roi_grouping)
+            grouped_psnr = group_means(per_roi_psnr, roi_grouping)
+            for group, value in grouped_rmse.items():
+                row[f"{group}_rmse"] = value
+                row[f"{group}_psnr"] = grouped_psnr.get(group, 0.0)
+        out.append(row)
+    return out
