@@ -155,3 +155,74 @@ class MetricRunner:
             a.astype(np.float32), b.astype(np.float32), "HDR", applyMagma=False, computeMeanError=True
         )
         return float(mean_error)
+
+
+def _summarize(values: list[float]) -> dict[str, float]:
+    if not values:
+        return {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0, "n_pairs": 0}
+    arr = np.asarray(values, dtype=np.float64)
+    return {
+        "mean": float(arr.mean()),
+        "std": float(arr.std(ddof=0)),
+        "min": float(arr.min()),
+        "max": float(arr.max()),
+        "n_pairs": int(arr.size),
+    }
+
+
+def _metrics_for_pair(runner: MetricRunner, a: np.ndarray, b: np.ndarray) -> dict[str, float | None]:
+    return {
+        "rmse": runner.rmse(a, b),
+        "mae": runner.mae(a, b),
+        "psnr": runner.psnr(a, b),
+        "lpips": runner.lpips(a, b),
+        "flip": runner.flip(a, b),
+    }
+
+
+_METRIC_NAMES: tuple[str, ...] = ("rmse", "mae", "psnr", "lpips", "flip")
+
+
+def pairwise_metrics(
+    stack: np.ndarray,
+    *,
+    runner: MetricRunner,
+    roi_boxes: dict[str, list[int]] | None,
+    roi_grouping: dict[str, list[str]] | None,
+) -> dict[str, dict[str, dict[str, float]]]:
+    if stack.ndim != 4:
+        raise ValueError(f"pairwise_metrics expects (N, H, W, C); got {stack.shape}")
+    n = stack.shape[0]
+    if n < 2:
+        raise ValueError(f"pairwise_metrics requires N >= 2; got N={n}")
+
+    region_pairs: dict[str, dict[str, list[float]]] = {
+        "global": {m: [] for m in _METRIC_NAMES},
+    }
+    if roi_boxes and roi_grouping:
+        for group in roi_grouping:
+            region_pairs[group] = {m: [] for m in _METRIC_NAMES}
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            a, b = stack[i], stack[j]
+            global_metrics = _metrics_for_pair(runner, a, b)
+            for m in _METRIC_NAMES:
+                v = global_metrics[m]
+                if v is not None:
+                    region_pairs["global"][m].append(v)
+            if roi_boxes and roi_grouping:
+                per_roi: dict[str, dict[str, float | None]] = {
+                    name: _metrics_for_pair(runner, crop(a, box), crop(b, box)) for name, box in roi_boxes.items()
+                }
+                for m in _METRIC_NAMES:
+                    per_roi_scalar = {n_: v[m] for n_, v in per_roi.items() if v[m] is not None}
+                    if not per_roi_scalar:
+                        continue
+                    grouped = group_means(per_roi_scalar, roi_grouping)
+                    for group, value in grouped.items():
+                        region_pairs[group][m].append(value)
+
+    return {
+        region: {m: _summarize(values) for m, values in metrics.items()} for region, metrics in region_pairs.items()
+    }
