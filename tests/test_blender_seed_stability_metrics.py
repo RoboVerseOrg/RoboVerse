@@ -63,3 +63,81 @@ def test_load_exr_stack_raises_on_missing_file(tmp_path) -> None:
     with pytest.raises(FileNotFoundError) as excinfo:
         ssm.load_exr_stack([a, missing])
     assert "missing.exr" in str(excinfo.value)
+
+
+def test_per_pixel_stack_stats_shape_and_dtype() -> None:
+    rng = np.random.default_rng(0)
+    stack = rng.random((5, 4, 4, 3), dtype=np.float32)
+    mean, std = ssm.per_pixel_stack_stats(stack)
+    assert mean.dtype == np.float32 and std.dtype == np.float32
+    assert mean.shape == (4, 4, 3) and std.shape == (4, 4, 3)
+
+
+def test_per_pixel_stack_stats_zero_for_identical_inputs() -> None:
+    base = np.full((4, 4, 3), 0.42, dtype=np.float32)
+    stack = np.stack([base, base, base, base], axis=0)
+    mean, std = ssm.per_pixel_stack_stats(stack)
+    assert np.allclose(mean, 0.42)
+    assert np.allclose(std, 0.0)
+
+
+def test_per_pixel_stack_stats_matches_numpy_population_std() -> None:
+    rng = np.random.default_rng(7)
+    stack = rng.random((6, 3, 3, 3), dtype=np.float32)
+    _, std = ssm.per_pixel_stack_stats(stack)
+    assert np.allclose(std, np.std(stack, axis=0, ddof=0), atol=1e-6)
+
+
+def test_crop_returns_a_view_into_the_image() -> None:
+    image = np.zeros((10, 10, 3), dtype=np.float32)
+    image[2:5, 3:6, :] = 0.7
+    crop = ssm.crop(image, [3, 2, 6, 5])
+    assert crop.shape == (3, 3, 3)
+    assert np.allclose(crop, 0.7)
+
+
+def test_crop_raises_on_empty_box() -> None:
+    image = np.zeros((10, 10, 3), dtype=np.float32)
+    with pytest.raises(ValueError):
+        ssm.crop(image, [3, 3, 3, 3])
+
+
+def test_group_means_collapses_named_rois() -> None:
+    per_roi = {
+        "left_display_case": 0.10,
+        "center_bottle": 0.20,
+        "robot_left_arm": 0.30,
+        "target_cube": 0.40,
+    }
+    grouping = {
+        "glass": ["left_display_case", "center_bottle"],
+        "non_glass": ["robot_left_arm", "target_cube"],
+    }
+    grouped = ssm.group_means(per_roi, grouping)
+    assert np.isclose(grouped["glass"], 0.15)
+    assert np.isclose(grouped["non_glass"], 0.35)
+
+
+def test_metric_runner_rmse_mae_psnr_zero_for_identical_inputs() -> None:
+    runner = ssm.MetricRunner.numerical_only()
+    a = np.full((8, 8, 3), 0.4, dtype=np.float32)
+    b = a.copy()
+    assert runner.rmse(a, b) == pytest.approx(0.0)
+    assert runner.mae(a, b) == pytest.approx(0.0)
+    assert runner.psnr(a, b) >= 99.0
+
+
+def test_metric_runner_psnr_clipping() -> None:
+    runner = ssm.MetricRunner.numerical_only()
+    a = np.zeros((4, 4, 3), dtype=np.float32)
+    b = np.full((4, 4, 3), 0.5, dtype=np.float32)
+    psnr = runner.psnr(a, b)
+    assert 5.0 < psnr < 15.0
+
+
+def test_metric_runner_skips_lpips_and_flip_when_disabled() -> None:
+    runner = ssm.MetricRunner.numerical_only()
+    a = np.zeros((4, 4, 3), dtype=np.float32)
+    b = np.zeros((4, 4, 3), dtype=np.float32)
+    assert runner.lpips(a, b) is None
+    assert runner.flip(a, b) is None
