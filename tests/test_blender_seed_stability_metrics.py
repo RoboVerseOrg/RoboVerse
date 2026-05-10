@@ -141,3 +141,39 @@ def test_metric_runner_skips_lpips_and_flip_when_disabled() -> None:
     b = np.zeros((4, 4, 3), dtype=np.float32)
     assert runner.lpips(a, b) is None
     assert runner.flip(a, b) is None
+
+
+def test_pairwise_metrics_zero_rmse_for_identical_inputs() -> None:
+    img = np.full((4, 4, 3), 0.5, dtype=np.float32)
+    stack = np.stack([img, img, img], axis=0)
+    summary = ssm.pairwise_metrics(stack, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None)
+    assert summary["global"]["rmse"]["mean"] == pytest.approx(0.0)
+    assert summary["global"]["mae"]["mean"] == pytest.approx(0.0)
+    assert summary["global"]["rmse"]["std"] == pytest.approx(0.0)
+
+
+def test_pairwise_metrics_counts_unordered_pairs() -> None:
+    rng = np.random.default_rng(1)
+    stack = rng.random((4, 4, 4, 3), dtype=np.float32)
+    summary = ssm.pairwise_metrics(stack, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None)
+    assert summary["global"]["rmse"]["n_pairs"] == 6
+
+
+def test_pairwise_metrics_emits_grouped_roi_keys() -> None:
+    rng = np.random.default_rng(2)
+    stack = rng.random((3, 8, 8, 3), dtype=np.float32)
+    boxes = {"glass_a": [0, 0, 4, 4], "non_glass_a": [4, 4, 8, 8]}
+    grouping = {"glass": ["glass_a"], "non_glass": ["non_glass_a"]}
+    summary = ssm.pairwise_metrics(
+        stack, runner=ssm.MetricRunner.numerical_only(), roi_boxes=boxes, roi_grouping=grouping
+    )
+    assert "glass" in summary
+    assert "non_glass" in summary
+    assert summary["glass"]["rmse"]["n_pairs"] == 3
+
+
+def test_pairwise_metrics_raises_for_fewer_than_two_images() -> None:
+    img = np.zeros((4, 4, 3), dtype=np.float32)
+    stack = np.stack([img], axis=0)
+    with pytest.raises(ValueError):
+        ssm.pairwise_metrics(stack, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None)
