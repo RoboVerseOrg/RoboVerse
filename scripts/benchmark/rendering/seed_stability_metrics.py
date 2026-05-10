@@ -263,3 +263,26 @@ def vs_reference_metrics(
                 row[f"{group}_psnr"] = grouped_psnr.get(group, 0.0)
         out.append(row)
     return out
+
+
+def render_std_map(std_image: np.ndarray, out_path: Path, *, color_scale: float | None) -> float:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    if std_image.ndim != 3 or std_image.shape[-1] != 3:
+        raise ValueError(f"render_std_map expects (H, W, 3); got {std_image.shape}")
+    intensity = std_image.mean(axis=-1)
+    scale = color_scale if color_scale is not None else float(np.max(intensity))
+    if scale <= 0:
+        scale = 1.0
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=120)
+    im = ax.imshow(intensity, cmap="magma", vmin=0.0, vmax=scale)
+    ax.set_axis_off()
+    fig.colorbar(im, ax=ax, label="linear-EXR std")
+    fig.tight_layout()
+    fig.savefig(out_path)
+    plt.close(fig)
+    return scale

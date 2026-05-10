@@ -223,3 +223,16 @@ def test_vs_reference_metrics_emits_grouped_roi_columns() -> None:
     assert "glass_rmse" in rows[0]
     assert "non_glass_rmse" in rows[0]
     assert rows[0]["glass_rmse"] == pytest.approx(0.0)
+
+
+def test_render_std_map_writes_png_and_returns_max(tmp_path) -> None:
+    rng = np.random.default_rng(4)
+    std_image = rng.random((16, 16, 3), dtype=np.float32) * 0.05
+    out = tmp_path / "std.png"
+    max_value = ssm.render_std_map(std_image, out, color_scale=None)
+    assert out.exists()
+    assert max_value > 0.0
+    second = tmp_path / "std2.png"
+    second_max = ssm.render_std_map(std_image, second, color_scale=max_value)
+    assert second.exists()
+    assert second_max == pytest.approx(max_value)
