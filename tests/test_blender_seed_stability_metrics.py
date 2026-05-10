@@ -177,3 +177,49 @@ def test_pairwise_metrics_raises_for_fewer_than_two_images() -> None:
     stack = np.stack([img], axis=0)
     with pytest.raises(ValueError):
         ssm.pairwise_metrics(stack, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None)
+
+
+def test_vs_reference_metrics_returns_n_rows() -> None:
+    rng = np.random.default_rng(3)
+    stack = rng.random((4, 8, 8, 3), dtype=np.float32)
+    reference = rng.random((8, 8, 3), dtype=np.float32)
+    rows = ssm.vs_reference_metrics(
+        stack, reference, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None
+    )
+    assert len(rows) == 4
+    for index, row in enumerate(rows):
+        assert row["seed_index"] == index
+        for m in ("rmse", "mae", "psnr"):
+            assert m in row
+
+
+def test_vs_reference_metrics_zero_when_seed_equals_reference() -> None:
+    img = np.full((4, 4, 3), 0.25, dtype=np.float32)
+    stack = np.stack([img, img], axis=0)
+    rows = ssm.vs_reference_metrics(
+        stack, img, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None
+    )
+    assert rows[0]["rmse"] == pytest.approx(0.0)
+    assert rows[1]["rmse"] == pytest.approx(0.0)
+
+
+def test_vs_reference_metrics_raises_on_shape_mismatch() -> None:
+    stack = np.zeros((2, 4, 4, 3), dtype=np.float32)
+    reference = np.zeros((8, 8, 3), dtype=np.float32)
+    with pytest.raises(ValueError):
+        ssm.vs_reference_metrics(
+            stack, reference, runner=ssm.MetricRunner.numerical_only(), roi_boxes=None, roi_grouping=None
+        )
+
+
+def test_vs_reference_metrics_emits_grouped_roi_columns() -> None:
+    img = np.full((8, 8, 3), 0.3, dtype=np.float32)
+    stack = np.stack([img, img], axis=0)
+    boxes = {"glass_a": [0, 0, 4, 4], "non_glass_a": [4, 4, 8, 8]}
+    grouping = {"glass": ["glass_a"], "non_glass": ["non_glass_a"]}
+    rows = ssm.vs_reference_metrics(
+        stack, img, runner=ssm.MetricRunner.numerical_only(), roi_boxes=boxes, roi_grouping=grouping
+    )
+    assert "glass_rmse" in rows[0]
+    assert "non_glass_rmse" in rows[0]
+    assert rows[0]["glass_rmse"] == pytest.approx(0.0)
