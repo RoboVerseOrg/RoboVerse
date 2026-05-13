@@ -167,37 +167,8 @@ class BaseLocomotionEnv(RLTaskEnv):
         return terminated
 
 
-# @register_task("humanoid.walk", "walk", "h1.walk")
-class WalkEnv(BaseLocomotionEnv):
-    """Walking task for humanoid robots."""
-
-    max_episode_steps = 1000
-
-    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
-        self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=1.0)]
-        self.reward_weights = [1.0]
-
-
-# @register_task("humanoid.run", "run", "h1.run")
-class RunEnv(BaseLocomotionEnv):
-    """Run task for humanoid robots."""
-
-    max_episode_steps = 1000
-
-    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
-        self.reward_functions = BaseLocomotionReward(self.robot_name, move_speed=5.0)
-        self.reward_weights = [1.0]
-
-
-# @register_task("humanoid.stand", "stand", "h1.stand")
-class StandEnv(BaseLocomotionEnv):
-    """Stand task for humanoid robots."""
-
-    max_episode_steps = 1000
-
-    def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
-        super().__init__(scenario, device)
-        self.reward_functions = [BaseLocomotionReward(self.robot_name, move_speed=0.0)]
-        self.reward_weights = [1.0]
+# ``WalkEnv`` / ``RunEnv`` / ``StandEnv`` are the registered, canonical
+# implementations in metasim — re-exported here so ``humanoid_bench``
+# remains a single import point without keeping a second copy that can
+# drift from the registered one.
+from metasim.example.example_pack.tasks.humanoid_env import RunEnv, StandEnv, WalkEnv  # noqa: F401
