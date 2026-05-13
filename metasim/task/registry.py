@@ -86,7 +86,13 @@ def _discover_task_modules() -> None:
                 except Exception as e:
                     err_str = f"{type(e).__name__}: {e}"
                     _DISCOVERY_FAILURES[module_name] = err_str
-                    log.debug(f"Task discovery: skip module '{module_name}': {err_str}")
+                    # Log at WARNING (not DEBUG): a discovery failure makes
+                    # tasks disappear silently from the registry — the user
+                    # then can't run the affected task with no clue why. The
+                    # message is also surfaced inside any KeyError raised by
+                    # ``get_task_class`` so users hitting an unknown-task
+                    # error see related discovery failures.
+                    log.warning(f"Task discovery: skip module '{module_name}': {err_str}")
         except Exception as e:
             log.error(f"Task discovery: error scanning package '{pkg_name}': {e}")
 
