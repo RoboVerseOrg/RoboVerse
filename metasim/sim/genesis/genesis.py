@@ -59,6 +59,10 @@ except ImportError:
 
 
 class GenesisHandler(BaseSimHandler):
+    # ``_set_states`` indexes ``state["objects"]`` directly, so it only
+    # accepts the list-of-dict form; the base converts TensorState input.
+    _set_states_input_type = "dict"
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
         self._actions_cache: CompatActionInput = []

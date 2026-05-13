@@ -140,6 +140,9 @@ def load_actor_from_urdf(
 class Sapien3Handler(BaseSimHandler):
     """Sapien3 Handler class."""
 
+    # ``_set_states`` indexes per-env dicts; the base converts TensorState input.
+    _set_states_input_type = "dict"
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         assert parse_version(sapien.__version__) >= parse_version("3.0.0a0"), "Sapien3 is required"
         assert parse_version(sapien.__version__) < parse_version("4.0.0"), "Sapien3 is required"

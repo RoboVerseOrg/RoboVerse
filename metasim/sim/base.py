@@ -26,7 +26,17 @@ except ImportError:
 
 
 class BaseSimHandler(ABC):
-    """Base class for simulation handler."""
+    """Base class for simulation handler.
+
+    Backends declare what their ``_set_states`` accepts via the class
+    attribute ``_set_states_input_type``. ``"both"`` (the default) passes
+    the caller's input through untouched; ``"dict"`` means the handler
+    only consumes ``list[DictEnvState]`` and the base converts a
+    ``TensorState`` for it. This lets task code call ``set_states`` with
+    either shape regardless of the active backend.
+    """
+
+    _set_states_input_type: Literal["dict", "both"] = "both"
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
@@ -92,7 +102,14 @@ class BaseSimHandler(ABC):
     def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
         self._invalidate_state_caches()
-        self._set_states(states, env_ids)
+        self._set_states(self._normalise_set_states_input(states), env_ids)
+
+    def _normalise_set_states_input(self, states):
+        """Coerce ``states`` to the shape declared by ``_set_states_input_type``."""
+        wanted = type(self)._set_states_input_type
+        if wanted == "dict" and isinstance(states, TensorState):
+            return state_tensor_to_nested(self, states)
+        return states
 
     @abstractmethod
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
