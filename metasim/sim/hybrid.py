@@ -83,7 +83,23 @@ class HybridSimHandler(BaseSimHandler):
     def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set states in both physics and render handlers."""
         self.physics_handler._set_states(states, env_ids)
-        self.render_handler._set_states(states, env_ids)
+        # Pull the physics-resolved tensor state (with body_state filled in by
+        # whatever FK the physics handler runs) and forward that to the render
+        # handler. Necessary for articulations: render handlers typically have
+        # no FK of their own and rely on per-body world transforms from physics.
+        # Mirrors what ``_simulate`` does after stepping.
+        try:
+            physics_states = self.physics_handler._get_states(env_ids)
+        except Exception:
+            physics_states = None
+        if physics_states is not None:
+            try:
+                self.render_handler._set_states(physics_states, env_ids)
+            except TypeError:
+                states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
+                self.render_handler._set_states(states_nested, env_ids)
+        else:
+            self.render_handler._set_states(states, env_ids)
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get states from physics handler and camera data from render handler."""
