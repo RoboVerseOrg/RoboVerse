@@ -286,8 +286,23 @@ class MJXHandler(BaseSimHandler):
         self._data = self._forward(self._mjx_model, self._data)
 
     def close(self):
-        if hasattr(self, "_viewer") and self._renderer is not None:
-            self._viewer.close()
+        # ``self._renderer`` is only assigned when ``self.cameras`` is non-empty
+        # (see launch); ``self._viewer`` only exists when not headless. Without
+        # independent guards, a camera-less or headless run hit
+        # ``AttributeError`` on close — silently aborting any orderly
+        # teardown downstream of it.
+        viewer = getattr(self, "_viewer", None)
+        if viewer is not None:
+            try:
+                viewer.close()
+            except Exception:
+                pass
+        renderer = getattr(self, "_renderer", None)
+        if renderer is not None:
+            try:
+                renderer.close()
+            except Exception:
+                pass
 
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""
