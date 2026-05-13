@@ -111,11 +111,38 @@ class BaseRandomizerType:
             )
         else:
             self._actual_handler = handler
-        # Initialize IsaacSimAdapter for USD operations
-        self.adapter = IsaacSimAdapter(self._actual_handler)
+        # IsaacSimAdapter wraps Omniverse USD APIs (``omni`` / ``pxr`` / …).
+        # Importing it on a non-Isaac backend (mujoco, pybullet, sapien,
+        # genesis, blender, …) raises ImportError on ``import omni`` and
+        # crashes the entire randomization subsystem at bind time, even if the
+        # randomizer's logic could otherwise be a no-op on the non-Isaac path.
+        # Construct only when the bound handler is actually IsaacSim; subclass
+        # randomizers default ``self.adapter = None`` and guard usage.
+        self.adapter = self._maybe_build_isaacsim_adapter(self._actual_handler)
         # Initialize and populate ObjectRegistry (lazy, on first bind)
         self.registry = ObjectRegistry.get_instance(self._actual_handler)
         self._scan_and_register_handler_objects(self._actual_handler, self.registry)
+
+    @staticmethod
+    def _maybe_build_isaacsim_adapter(actual_handler) -> "IsaacSimAdapter | None":
+        """Return an IsaacSimAdapter for IsaacSim handlers, else None.
+
+        The check is duck-typed (class-name match) to avoid importing the
+        IsaacSim handler module on non-Isaac envs — `IsaacsimHandler` itself
+        imports `omni` at module load.
+        """
+        cls_name = type(actual_handler).__name__
+        if cls_name not in {"IsaacsimHandler", "IsaaclabHandler"}:
+            return None
+        try:
+            return IsaacSimAdapter(actual_handler)
+        except ImportError as exc:
+            logger.warning(
+                "IsaacSim handler detected but IsaacSimAdapter import failed (%s); "
+                "USD-based randomizers will be no-ops",
+                exc,
+            )
+            return None
 
     def _is_hybrid_handler(self, handler) -> bool:
         """Check if handler is a HybridSimHandler.
