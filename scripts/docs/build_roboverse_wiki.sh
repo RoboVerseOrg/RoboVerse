@@ -7,6 +7,7 @@ metasim_repo="${METASIM_REPO:-https://github.com/RoboVerseOrg/MetaSim.git}"
 metasim_ref="${METASIM_REF:-main}"
 metasim_dir="${METASIM_DIR:-}"
 cname="${ROBOVERSE_WIKI_CNAME:-roboverse.wiki}"
+python_bin="${PYTHON:-python}"
 
 if [[ -z "$output_dir" || "$output_dir" == "/" ]]; then
     echo "Refusing to clean unsafe output directory: ${output_dir:-<empty>}" >&2
@@ -36,8 +37,8 @@ rm -rf "$output_dir"
 mkdir -p "$output_dir"
 
 cp -a "$repo_root/docs/landing/." "$output_dir/"
-sphinx-build -b html "$repo_root/docs/source" "$output_dir/roboverse"
-sphinx-build -b html "$metasim_dir/docs/source" "$output_dir/metasim"
+"$python_bin" -m sphinx -b html "$repo_root/docs/source" "$output_dir/roboverse"
+"$python_bin" -m sphinx -b html "$metasim_dir/docs/source" "$output_dir/metasim"
 
 if [[ -f "$metasim_dir/docs/source/images/tea.jpg" ]]; then
     mkdir -p "$output_dir/metasim/_images"

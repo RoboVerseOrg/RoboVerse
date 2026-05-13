@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -19,21 +20,38 @@ def test_roboverse_docs_root_exposes_only_roboverse_sections():
     assert '"API"' not in conf
 
 
+def test_docs_deployment_requirements_avoid_runtime_and_live_preview_packages():
+    requirements = (REPO_ROOT / "docs/requirements.txt").read_text(encoding="utf-8")
+
+    assert "sphinx==8.1.3" in requirements
+    for package in [
+        "metasim",
+        "torch",
+        "torchvision",
+        "gymnasium",
+        "sphinx-autobuild",
+        "sphinxcontrib.spelling",
+    ]:
+        assert package not in requirements
+
+
 def test_split_site_build_script_assembles_landing_roboverse_and_metasim(tmp_path):
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    fake_sphinx = fake_bin / "sphinx-build"
-    fake_sphinx.write_text(
-        """#!/usr/bin/env bash
-set -euo pipefail
-src="${3:?missing source}"
-dst="${4:?missing destination}"
-mkdir -p "$dst"
-printf '<html>%s</html>\\n' "$src" > "$dst/index.html"
+    fake_pythonpath = tmp_path / "pythonpath"
+    fake_sphinx = fake_pythonpath / "sphinx"
+    fake_sphinx.mkdir(parents=True)
+    (fake_sphinx / "__main__.py").write_text(
+        """from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+src = sys.argv[3]
+dst = Path(sys.argv[4])
+dst.mkdir(parents=True, exist_ok=True)
+(dst / "index.html").write_text(f"<html>{src}</html>\\n", encoding="utf-8")
 """,
         encoding="utf-8",
     )
-    fake_sphinx.chmod(0o755)
 
     metasim_dir = tmp_path / "MetaSim"
     (metasim_dir / "docs/source").mkdir(parents=True)
@@ -43,7 +61,8 @@ printf '<html>%s</html>\\n' "$src" > "$dst/index.html"
     output_dir = tmp_path / "public"
 
     env = os.environ.copy()
-    env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
+    env["PYTHON"] = sys.executable
+    env["PYTHONPATH"] = str(fake_pythonpath)
     env["METASIM_DIR"] = str(metasim_dir)
 
     subprocess.run(

@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Local live-preview and docs QA tools. Keep production deploys on
+# docs/requirements.txt so Cloudflare does not install extra packages.
+sphinx-autobuild==2024.10.3
+sphinxcontrib.spelling
