@@ -989,21 +989,29 @@ def _import_mjcf_visual_tree(
     root_empty.scale = tuple(float(s) for s in default_scale)
 
     body_objects: dict[str, object] = {}
+    # Mirror mujoco's convention: unnamed ``<body>`` elements get
+    # ``unnamed_body_<N>`` where N counts unnamed bodies across the model.
+    # This matters because the physics handler reports body states by these
+    # auto-generated names, so the Blender side has to register them under
+    # the same names for ``_apply_body_state`` to find them.
+    unnamed_counter = [0]
 
     def visit_body(body: ET.Element, parent) -> None:
         body_name = body.get("name")
+        if not body_name:
+            body_name = f"unnamed_body_{unnamed_counter[0]}"
+            unnamed_counter[0] += 1
         body_parent = parent
-        if body_name:
-            body_empty = bpy.data.objects.new(body_name, None)
-            bpy.context.collection.objects.link(body_empty)
-            body_empty.parent = parent
-            _set_local_transform(
-                body_empty,
-                _float_tuple(body.get("pos"), (0.0, 0.0, 0.0)),
-                _mjcf_local_quat(body),
-            )
-            body_objects[body_name] = body_empty
-            body_parent = body_empty
+        body_empty = bpy.data.objects.new(body_name, None)
+        bpy.context.collection.objects.link(body_empty)
+        body_empty.parent = parent
+        _set_local_transform(
+            body_empty,
+            _float_tuple(body.get("pos"), (0.0, 0.0, 0.0)),
+            _mjcf_local_quat(body),
+        )
+        body_objects[body_name] = body_empty
+        body_parent = body_empty
 
         geom_list = _dedupe_overlapping_geoms(body.findall("geom"), geom_defaults)
         for geom in geom_list:
