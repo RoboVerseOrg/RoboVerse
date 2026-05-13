@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import struct
 import tempfile
 import xml.etree.ElementTree as ET
 from math import cos, sin, tau
@@ -43,16 +44,30 @@ def import_mesh(path):
     before_names = set(bpy.data.objects.keys())
     _, extension = os.path.splitext(path)
     extension = extension.lower()
+    # Blender 4.x → 5.x renamed mesh importers: ``bpy.ops.import_mesh.ply``
+    # → ``bpy.ops.wm.ply_import``, same for STL. Try the new API first, fall
+    # back to the legacy one for older Blender installs.
     if extension == ".ply":
-        bpy.ops.import_mesh.ply(filepath=path)
+        if hasattr(bpy.ops.wm, "ply_import"):
+            bpy.ops.wm.ply_import(filepath=path)
+        else:
+            bpy.ops.import_mesh.ply(filepath=path)
     elif extension == ".stl":
-        bpy.ops.import_mesh.stl(filepath=path)
+        if hasattr(bpy.ops.wm, "stl_import"):
+            bpy.ops.wm.stl_import(filepath=path)
+        else:
+            bpy.ops.import_mesh.stl(filepath=path)
     elif extension == ".fbx":
         bpy.ops.import_scene.fbx(filepath=path)
     elif extension == ".obj":
         bpy.ops.wm.obj_import(filepath=path)
+    elif extension == ".msh":
+        return _import_mujoco_msh(path)
+    elif extension == ".dae":
+        # COLLADA is supported by every Blender version via wm.collada_import.
+        bpy.ops.wm.collada_import(filepath=path)
     else:
-        raise ValueError("bad mesh extension")
+        raise ValueError(f"bad mesh extension: {extension!r}")
 
     imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
     active = bpy.context.object
@@ -62,6 +77,58 @@ def import_mesh(path):
     if mesh_objects:
         return mesh_objects[0]
     return active
+
+
+def _import_mujoco_msh(path: str):
+    """Import a MuJoCo binary mesh (``.msh``) into the active scene.
+
+    Format (little-endian):
+        uint32 nvertex, uint32 nnormal, uint32 ntexcoord, uint32 nface
+        float32 * 3 * nvertex   (vertex positions)
+        float32 * 3 * nnormal   (per-vertex normals)
+        float32 * 2 * ntexcoord (per-vertex texcoords)
+        int32   * 3 * nface     (triangle indices)
+
+    Used widely by LIBERO / robosuite / Open6DOR-derived assets. Blender has
+    no built-in .msh importer, so build the mesh directly with from_pydata.
+    """
+    with open(path, "rb") as fh:
+        header = fh.read(16)
+        if len(header) < 16:
+            raise ValueError(f"MuJoCo .msh file {path!r} is shorter than 16-byte header")
+        nv, nn, nt, nf = struct.unpack("<IIII", header)
+        vertex_bytes = fh.read(nv * 3 * 4)
+        # Normals are recomputed by Blender from polygons, skip.
+        fh.seek(nn * 3 * 4, os.SEEK_CUR)
+        texcoord_bytes = fh.read(nt * 2 * 4)
+        face_bytes = fh.read(nf * 3 * 4)
+
+    vertices = np.frombuffer(vertex_bytes, dtype="<f4").reshape((nv, 3)) if nv else np.empty((0, 3))
+    faces = np.frombuffer(face_bytes, dtype="<i4").reshape((nf, 3)) if nf else np.empty((0, 3), dtype=np.int32)
+    texcoords = (
+        np.frombuffer(texcoord_bytes, dtype="<f4").reshape((nt, 2)) if nt else None
+    )
+
+    name = Path(path).stem
+    mesh_data = bpy.data.meshes.new(f"{name}_mesh")
+    mesh_data.from_pydata([tuple(v) for v in vertices.tolist()], [], [tuple(f) for f in faces.tolist()])
+    mesh_data.update()
+
+    if texcoords is not None and len(texcoords) == nv and nf > 0:
+        # MuJoCo .msh stores per-vertex UVs; Blender wants per-loop UVs (one
+        # per triangle corner). Index into the per-vertex array using each
+        # polygon's loop's vertex_index. Flip V because mujoco's convention
+        # is top-left origin and Blender's is bottom-left.
+        uv_layer = mesh_data.uv_layers.new(name="UVMap")
+        loop_uvs = np.empty((len(mesh_data.loops), 2), dtype=np.float32)
+        for loop in mesh_data.loops:
+            u, v = texcoords[loop.vertex_index]
+            loop_uvs[loop.index] = (float(u), 1.0 - float(v))
+        uv_layer.data.foreach_set("uv", loop_uvs.reshape(-1))
+
+    obj = bpy.data.objects.new(name, mesh_data)
+    bpy.context.collection.objects.link(obj)
+    return obj
 
 
 _BLENDER_NUMERIC_SUFFIX_RE = re.compile(r"\.\d{3}$")
@@ -481,6 +548,20 @@ def _set_local_transform(obj, pos: tuple[float, ...], quat: Quaternion) -> None:
     obj.rotation_quaternion = quat
 
 
+def _normalized_scale(scale) -> tuple[float, float, float]:
+    """``RigidObjCfg.scale`` may be scalar or 3-tuple post __post_init__; coerce."""
+    if isinstance(scale, (int, float)):
+        return (float(scale), float(scale), float(scale))
+    if scale is None:
+        return (1.0, 1.0, 1.0)
+    values = tuple(float(s) for s in scale)
+    if len(values) == 1:
+        return (values[0],) * 3
+    if len(values) >= 3:
+        return values[:3]
+    raise ValueError(f"Cannot interpret scale {scale!r}")
+
+
 def _mjcf_material_rgba(root: ET.Element) -> dict[str, tuple[float, float, float, float]]:
     materials: dict[str, tuple[float, float, float, float]] = {}
     for material in root.findall(".//material"):
@@ -494,13 +575,253 @@ def _mjcf_material_rgba(root: ET.Element) -> dict[str, tuple[float, float, float
     return materials
 
 
+def _mjcf_material_textures(root: ET.Element, mjcf_dir: Path) -> dict[str, Path]:
+    """Map MJCF material name → resolved image-texture file path.
+
+    Parses ``<asset><texture name=... file=...>`` and
+    ``<asset><material name=... texture=...>`` references. Honours
+    ``<compiler texturedir="...">`` and falls back to the MJCF's own
+    directory. Returns only entries whose texture file exists on disk.
+    """
+    compiler = root.find("compiler")
+    texdir = compiler.get("texturedir") if compiler is not None else None
+    base_dir = (mjcf_dir / texdir).resolve() if texdir else mjcf_dir
+    textures: dict[str, Path] = {}
+    for texture in root.findall(".//asset/texture"):
+        name = texture.get("name")
+        filename = texture.get("file")
+        if not name or not filename:
+            continue
+        resolved = _resolve_asset_path(filename, base_dir)
+        if resolved is not None:
+            textures[name] = resolved
+    material_textures: dict[str, Path] = {}
+    for material in root.findall(".//asset/material"):
+        name = material.get("name")
+        tex_ref = material.get("texture")
+        if not name or not tex_ref or tex_ref not in textures:
+            continue
+        material_textures[name] = textures[tex_ref]
+    return material_textures
+
+
+def _apply_texture_to_material(material, texture_path: Path) -> None:
+    """Add an Image Texture node to ``material`` and route it to Base Color.
+
+    Idempotent — re-applying replaces the existing image. Uses UV coords from
+    the mesh's active UV map.
+    """
+    material.use_nodes = True
+    nt = material.node_tree
+    bsdf = next(
+        (node for node in nt.nodes if node.bl_idname == "ShaderNodeBsdfPrincipled"),
+        None,
+    )
+    if bsdf is None:
+        return
+    tex_node = next(
+        (node for node in nt.nodes if node.bl_idname == "ShaderNodeTexImage"),
+        None,
+    )
+    if tex_node is None:
+        tex_node = nt.nodes.new("ShaderNodeTexImage")
+        tex_node.location = (-300, 300)
+    tex_node.image = bpy.data.images.load(str(texture_path), check_existing=True)
+    uv_node = next(
+        (node for node in nt.nodes if node.bl_idname == "ShaderNodeUVMap"),
+        None,
+    )
+    if uv_node is None:
+        uv_node = nt.nodes.new("ShaderNodeUVMap")
+        uv_node.location = (-500, 300)
+    nt.links.new(uv_node.outputs["UV"], tex_node.inputs["Vector"])
+    nt.links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
+
+
+def _dedupe_overlapping_geoms(
+    geoms: list[ET.Element], geom_defaults: dict[str, dict[str, str]]
+) -> list[ET.Element]:
+    """Drop duplicate geoms at the same (type, size, pos, quat) within a body.
+
+    URDF→MJCF converters (notably the one RLBench uses for close_box) emit
+    two stacked geoms per face: a named one carrying a class-default material
+    (often a placeholder colour like the ``visualgeom`` green), and an
+    anonymous one with an explicit ``rgba``. Both end up at group=1 and
+    z-fight in Cycles. We keep one per signature, preferring the variant
+    with an explicit ``rgba``, and deprioritising class-default ``material``
+    assignments where the material name matches the class name — that's the
+    classic "this is just a placeholder colour" pattern.
+    """
+    def key(geom):
+        a = _mjcf_geom_resolved_attrs(geom, geom_defaults)
+        return (
+            (a.get("type") or "sphere").lower(),
+            a.get("size", ""),
+            a.get("pos", ""),
+            a.get("quat", ""),
+            (a.get("mesh") or ""),
+        )
+
+    def score(geom):
+        # Higher = better (kept).
+        own = geom.attrib  # attributes set ON the geom itself
+        a = _mjcf_geom_resolved_attrs(geom, geom_defaults)
+        s = 0
+        rgba_text = (own.get("rgba") or "").strip()
+        if rgba_text:
+            parts = rgba_text.split()
+            if len(parts) >= 4:
+                try:
+                    if float(parts[3]) > 0.0:
+                        s += 10
+                except ValueError:
+                    pass
+            else:
+                s += 5
+        if "material" in own:
+            # Material set directly on the geom — strong intent.
+            s += 3
+        else:
+            class_name = own.get("class")
+            inherited_mat = a.get("material")
+            if class_name and inherited_mat and inherited_mat == class_name:
+                # Class default placeholder ("visualgeom"-style) — actively
+                # penalise so an anonymous unstyled sibling wins.
+                s -= 2
+            elif inherited_mat:
+                s += 1
+        name = own.get("name", "")
+        if not (name.endswith("_collision") or name.endswith("_col")):
+            s += 1
+        return s
+
+    by_key: dict[tuple, ET.Element] = {}
+    for geom in geoms:
+        k = key(geom)
+        prev = by_key.get(k)
+        if prev is None or score(geom) > score(prev):
+            by_key[k] = geom
+    kept_ids = {id(g) for g in by_key.values()}
+    return [g for g in geoms if id(g) in kept_ids]
+
+
+def _is_mjcf_collision_only_geom(attrs: dict[str, str]) -> bool:
+    """Heuristic: is this geom collision-only and should be skipped at render time.
+
+    MJCFs use several conventions to mark collision-only geoms — there isn't
+    one canonical flag. We treat any of these as collision:
+      * ``group="3"`` — mujoco's default split (franka style)
+      * ``class`` containing "collision" — explicit class naming
+      * ``rgba`` with alpha 0 — author flagged invisible (libero / open6dor style)
+      * ``name`` ending in ``_collision`` — naming convention from URDF→MJCF
+        converters (RLBench close_box-style: each face has a ``*_collision``
+        geom overlapping a plain rgba geom, both technically group="1",
+        author intent being that the unnamed one is the visual representation)
+
+    All four checks together let us strip the collision shells from real
+    asset packs (libero, robosuite, open6dor, RLBench MJCFs) without losing
+    legitimate visuals.
+    """
+    if attrs.get("group") == "3":
+        return True
+    class_name = attrs.get("class", "")
+    if class_name and "collision" in class_name.lower():
+        return True
+    name = attrs.get("name", "")
+    if name.endswith("_collision") or name.endswith("_col"):
+        return True
+    rgba_text = attrs.get("rgba")
+    if rgba_text:
+        parts = rgba_text.split()
+        if len(parts) >= 4:
+            try:
+                if float(parts[3]) <= 0.0:
+                    return True
+            except ValueError:
+                pass
+    return False
+
+
+def _mjcf_geom_default_attrs(root: ET.Element) -> dict[str, dict[str, str]]:
+    """Resolve ``<default class="..."><geom .../></default>`` attribute inheritance.
+
+    MJCF lets geoms inherit attributes from named default classes — e.g.
+    franka's ``<default class="visual"><geom type="mesh" ... /></default>``
+    means any geom with ``class="visual"`` and no own ``type`` attribute is
+    a mesh. Without this expansion such geoms silently fall back to spheres.
+
+    Nested defaults (``<default class="panda"><default class="visual">...</default></default>``)
+    inherit from their lexical parent. We walk the tree recursively, accumulating
+    geom attributes class-by-class. Returns ``{class_name: {attr: value}}``.
+    """
+    result: dict[str, dict[str, str]] = {}
+
+    def walk(element: ET.Element, inherited: dict[str, str]) -> None:
+        own = inherited.copy()
+        for geom_default in element.findall("geom"):
+            for attr, value in geom_default.attrib.items():
+                own[attr] = value
+        class_name = element.get("class")
+        if class_name is not None:
+            result[class_name] = own
+        for child in element.findall("default"):
+            walk(child, own)
+
+    for top in root.findall("default"):
+        walk(top, {})
+    return result
+
+
+def _mjcf_geom_resolved_attrs(
+    geom: ET.Element, defaults: dict[str, dict[str, str]]
+) -> dict[str, str]:
+    """Merge a geom's own attrs over its class default attrs."""
+    class_name = geom.get("class")
+    merged: dict[str, str] = dict(defaults.get(class_name, {})) if class_name else {}
+    merged.update(geom.attrib)
+    return merged
+
+
+def _mjcf_mesh_assets(
+    root: ET.Element, mjcf_dir: Path
+) -> dict[str, tuple[Path, tuple[float, float, float]]]:
+    """Parse ``<asset><mesh name=... file=... scale=...>`` references.
+
+    Honours ``<compiler meshdir="...">`` for path resolution. Returns a map
+    of asset name → (resolved absolute path, xyz scale). Entries whose file
+    cannot be resolved are dropped (caller logs / errors elsewhere).
+    """
+    compiler = root.find("compiler")
+    meshdir = compiler.get("meshdir") if compiler is not None else None
+    base_dir = (mjcf_dir / meshdir).resolve() if meshdir else mjcf_dir
+    assets: dict[str, tuple[Path, tuple[float, float, float]]] = {}
+    for mesh in root.findall(".//asset/mesh"):
+        filename = mesh.get("file")
+        if not filename:
+            continue
+        # MJCF spec: if ``name`` is omitted the mesh's name defaults to the
+        # file's stem (e.g. ``<mesh file="link0_0.obj"/>`` → name "link0_0").
+        name = mesh.get("name") or Path(filename).stem
+        resolved = _resolve_asset_path(filename, base_dir)
+        if resolved is None:
+            continue
+        scale = _float_tuple(mesh.get("scale"), (1.0, 1.0, 1.0))
+        if len(scale) < 3:
+            scale = (scale[0],) * 3
+        assets[name] = (resolved, (float(scale[0]), float(scale[1]), float(scale[2])))
+    return assets
+
+
 def _mjcf_geom_material(
-    geom: ET.Element, materials: dict[str, tuple[float, float, float, float]]
+    geom: ET.Element,
+    materials: dict[str, tuple[float, float, float, float]],
+    geom_defaults: dict[str, dict[str, str]] | None = None,
 ) -> tuple[tuple[float, float, float, float], str | None]:
-    material_name = geom.get("material")
+    attrs = _mjcf_geom_resolved_attrs(geom, geom_defaults or {})
+    material_name = attrs.get("material")
     if material_name is not None and material_name in materials:
         return materials[material_name], material_name
-    rgba_text = geom.get("rgba")
+    rgba_text = attrs.get("rgba")
     if rgba_text:
         rgba = _rgba_from_text(rgba_text)
         if rgba is not None:
@@ -582,12 +903,16 @@ def _create_mjcf_geom_visual(
     material_rgba,
     material_name: str | None,
     parent,
+    mesh_assets: dict[str, tuple[Path, tuple[float, float, float]]] | None = None,
+    geom_defaults: dict[str, dict[str, str]] | None = None,
+    material_textures: dict[str, Path] | None = None,
 ):
-    geom_type = (geom.get("type") or "sphere").lower()
-    size = _float_tuple(geom.get("size"), (0.05,))
-    name = geom.get("name") or f"{body_name}_{geom_type}"
-    pos = _float_tuple(geom.get("pos"), (0.0, 0.0, 0.0))
-    quat = _mjcf_local_quat(geom)
+    attrs = _mjcf_geom_resolved_attrs(geom, geom_defaults or {})
+    geom_type = (attrs.get("type") or "sphere").lower()
+    size = _float_tuple(attrs.get("size"), (0.05,))
+    name = attrs.get("name") or f"{body_name}_{geom_type}"
+    pos = _float_tuple(attrs.get("pos"), (0.0, 0.0, 0.0))
+    quat = Quaternion(_float_tuple(attrs.get("quat"), (1.0, 0.0, 0.0, 0.0)))
     transmissive = _is_transmissive_rgba(material_rgba)
     visual_name = f"{name} {material_name or ''}"
 
@@ -605,16 +930,43 @@ def _create_mjcf_geom_visual(
     elif geom_type == "sphere":
         bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=32, radius=float(size[0]))
         obj = bpy.context.object
+    elif geom_type == "mesh":
+        mesh_ref = attrs.get("mesh")
+        if not mesh_ref or mesh_assets is None or mesh_ref not in mesh_assets:
+            raise ValueError(
+                f"MJCF mesh geom {name!r} references unknown mesh asset {mesh_ref!r}"
+            )
+        mesh_path, mesh_scale = mesh_assets[mesh_ref]
+        obj = import_mesh(str(mesh_path))
+        obj.scale = mesh_scale
     else:
         raise ValueError(f"Unsupported MJCF geom type for Blender visual import: {geom_type!r}")
 
     obj.name = name
     obj.parent = parent
     _set_local_transform(obj, pos, quat)
-    obj.data.materials.append(_new_material_from_rgba(material_name or f"{name}_material", material_rgba))
+    material = _new_material_from_rgba(material_name or f"{name}_material", material_rgba)
+    if material_name and material_textures and material_name in material_textures:
+        _apply_texture_to_material(material, material_textures[material_name])
+    _assign_material(obj, material)
     if transmissive:
         _polish_transmissive_visual(obj, bevel_amount=_transmissive_bevel_amount(size))
     return obj
+
+
+def _assign_material(obj, material) -> None:
+    """Replace ``obj``'s first material slot with ``material`` (or append if empty).
+
+    ``import_mesh`` on a ``.obj`` with a missing ``.mtl`` leaves a stub default
+    material in slot 0 that all face-loops are bound to — appending another
+    slot doesn't help because faces don't re-bind. Replacing the slot does.
+    """
+    if getattr(obj, "data", None) is None or not hasattr(obj.data, "materials"):
+        return
+    if obj.data.materials:
+        obj.data.materials[0] = material
+    else:
+        obj.data.materials.append(material)
 
 
 def _import_mjcf_visual_tree(
@@ -623,12 +975,18 @@ def _import_mjcf_visual_tree(
     root_name: str,
     default_position: tuple[float, float, float],
     default_orientation: tuple[float, float, float, float],
+    default_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
 ) -> tuple[object, dict[str, object]]:
+    mjcf_path = Path(mjcf_path)
     root = ET.parse(mjcf_path).getroot()
     materials = _mjcf_material_rgba(root)
+    mesh_assets = _mjcf_mesh_assets(root, mjcf_path.parent)
+    geom_defaults = _mjcf_geom_default_attrs(root)
+    material_textures = _mjcf_material_textures(root, mjcf_path.parent)
     root_empty = bpy.data.objects.new(root_name, None)
     bpy.context.collection.objects.link(root_empty)
     _set_local_transform(root_empty, default_position, Quaternion(default_orientation))
+    root_empty.scale = tuple(float(s) for s in default_scale)
 
     body_objects: dict[str, object] = {}
 
@@ -647,23 +1005,33 @@ def _import_mjcf_visual_tree(
             body_objects[body_name] = body_empty
             body_parent = body_empty
 
-        for geom in body.findall("geom"):
-            material_rgba, material_name = _mjcf_geom_material(geom, materials)
+        geom_list = _dedupe_overlapping_geoms(body.findall("geom"), geom_defaults)
+        for geom in geom_list:
+            attrs = _mjcf_geom_resolved_attrs(geom, geom_defaults)
+            if _is_mjcf_collision_only_geom(attrs):
+                continue
+            material_rgba, material_name = _mjcf_geom_material(geom, materials, geom_defaults)
             _create_mjcf_geom_visual(
                 geom,
                 body_name=body_name or root_name,
                 material_rgba=material_rgba,
                 material_name=material_name,
                 parent=body_parent,
+                mesh_assets=mesh_assets,
+                geom_defaults=geom_defaults,
+                material_textures=material_textures,
             )
         for child in body.findall("body"):
             visit_body(child, body_parent)
 
     worldbody = root.find("worldbody")
-    if worldbody is None:
-        raise ValueError(f"MJCF asset {mjcf_path!s} has no worldbody")
-    for body in worldbody.findall("body"):
-        visit_body(body, root_empty)
+    # Some MJCFs are pure asset libraries with no ``<worldbody>`` (e.g. the
+    # humanoid_bench tunnel.xml referenced by h1.crawl). Treat that as an
+    # empty visual tree rather than an error so the surrounding pipeline
+    # keeps going.
+    if worldbody is not None:
+        for body in worldbody.findall("body"):
+            visit_body(body, root_empty)
 
     bpy.context.view_layer.update()
     return root_empty, body_objects
@@ -734,6 +1102,12 @@ class BlenderHandler(BaseSimHandler):
         self._camera_objs: dict[str, object] = {}
         self._last_camera_states: dict[str, CameraState] = {}
         self._last_tensor_state: TensorState | None = None
+        # Dirty-tracks whether the active scene transforms have changed since
+        # the camera images in ``_last_camera_states`` were rendered. ``True``
+        # means the next ``_get_states`` must re-render before returning, so
+        # the first frame after ``set_states`` reflects the requested pose
+        # rather than the launch-time defaults.
+        self._render_dirty: bool = True
         self._tmp_dir = Path(tempfile.mkdtemp(prefix="metasim_blender_"))
 
     def launch(self) -> None:
@@ -839,9 +1213,7 @@ class BlenderHandler(BaseSimHandler):
 
     def _add_lights(self) -> None:
         scene = self.context.scene
-        if scene.world is None:
-            scene.world = bpy.data.worlds.new("metasim_world")
-        scene.world.color = (0.02, 0.02, 0.025)
+        self._setup_world(scene)
         for name, location, energy, size in (
             ("metasim_key_area_light", (0.0, -2.2, 3.0), 300.0, 5.0),
             ("metasim_fill_area_light", (-2.2, 0.4, 1.8), 45.0, 5.0),
@@ -852,6 +1224,116 @@ class BlenderHandler(BaseSimHandler):
             light.name = name
             light.data.energy = energy
             light.data.size = size
+        self._add_default_ground(scene)
+
+    def _setup_world(self, scene) -> None:
+        """World environment lighting.
+
+        Priority:
+          1. ``scenario.render.hdri_path`` set → image-based lighting (random
+             pick if a directory).
+          2. Otherwise a procedural sky gradient (warm top, cool ground) so
+             renders have varied reflections without requiring asset files.
+
+        Any external scene-augmentation tool (e.g.
+        ``metasim.sim.blender.utils.scene_aug.setup_world_hdri``) can rewrite
+        the world node graph after launch to replace either default.
+        """
+        if scene.world is None:
+            scene.world = bpy.data.worlds.new("metasim_world")
+        render_cfg = getattr(self.scenario, "render", None)
+        hdri_path = getattr(render_cfg, "hdri_path", None) if render_cfg else None
+        if hdri_path and self._setup_world_from_hdri(scene, hdri_path):
+            return
+        scene.world.color = (0.18, 0.20, 0.24)
+        scene.world.use_nodes = True
+        nt = scene.world.node_tree
+        nt.nodes.clear()
+        output = nt.nodes.new("ShaderNodeOutputWorld")
+        output.location = (400, 0)
+        background = nt.nodes.new("ShaderNodeBackground")
+        background.location = (200, 0)
+        background.inputs["Strength"].default_value = 0.85
+        gradient_mix = nt.nodes.new("ShaderNodeMixRGB")
+        gradient_mix.location = (0, 0)
+        gradient_mix.inputs["Color1"].default_value = (0.42, 0.48, 0.56, 1.0)  # cool ground glow
+        gradient_mix.inputs["Color2"].default_value = (0.78, 0.74, 0.66, 1.0)  # warm sky glow
+        gradient = nt.nodes.new("ShaderNodeValToRGB")
+        gradient.location = (-220, 0)
+        gradient.color_ramp.elements[0].position = 0.32
+        gradient.color_ramp.elements[0].color = (0.16, 0.18, 0.22, 1.0)
+        gradient.color_ramp.elements[1].position = 0.65
+        gradient.color_ramp.elements[1].color = (0.78, 0.74, 0.66, 1.0)
+        separate = nt.nodes.new("ShaderNodeSeparateXYZ")
+        separate.location = (-440, 0)
+        tex_coord = nt.nodes.new("ShaderNodeTexCoord")
+        tex_coord.location = (-660, 0)
+        nt.links.new(tex_coord.outputs["Generated"], separate.inputs["Vector"])
+        nt.links.new(separate.outputs["Z"], gradient.inputs["Fac"])
+        nt.links.new(gradient.outputs["Color"], gradient_mix.inputs["Fac"])
+        nt.links.new(gradient_mix.outputs["Color"], background.inputs["Color"])
+        nt.links.new(background.outputs["Background"], output.inputs["Surface"])
+
+    def _setup_world_from_hdri(self, scene, hdri_path: str) -> bool:
+        """Load ``hdri_path`` as image-based world lighting. ``hdri_path`` may
+        be a file or a directory of .hdr/.exr files (random pick).
+        Returns True on success."""
+        import random as _random
+
+        path = Path(hdri_path)
+        candidates: list[Path] = []
+        if path.is_dir():
+            for ext in (".hdr", ".exr", ".HDR", ".EXR"):
+                candidates.extend(path.rglob(f"*{ext}"))
+        elif path.is_file():
+            candidates = [path]
+        if not candidates:
+            return False
+        chosen = _random.choice(sorted(candidates))
+
+        scene.world.use_nodes = True
+        nt = scene.world.node_tree
+        nt.nodes.clear()
+        output = nt.nodes.new("ShaderNodeOutputWorld")
+        output.location = (400, 0)
+        background = nt.nodes.new("ShaderNodeBackground")
+        background.location = (200, 0)
+        background.inputs["Strength"].default_value = 1.0
+        env = nt.nodes.new("ShaderNodeTexEnvironment")
+        env.location = (-100, 0)
+        env.image = bpy.data.images.load(str(chosen), check_existing=True)
+        mapping = nt.nodes.new("ShaderNodeMapping")
+        mapping.location = (-300, 0)
+        mapping.inputs["Rotation"].default_value[2] = _random.uniform(-3.14159, 3.14159)
+        tex_coord = nt.nodes.new("ShaderNodeTexCoord")
+        tex_coord.location = (-500, 0)
+        nt.links.new(tex_coord.outputs["Generated"], mapping.inputs["Vector"])
+        nt.links.new(mapping.outputs["Vector"], env.inputs["Vector"])
+        nt.links.new(env.outputs["Color"], background.inputs["Color"])
+        nt.links.new(background.outputs["Background"], output.inputs["Surface"])
+        return True
+
+    def _add_default_ground(self, scene) -> None:
+        """Add a 4×4m neutral ground plane *just below* z=0 so renders have a
+        floor instead of objects floating in a void. The slight downward
+        offset avoids z-fighting when callers add their own ground at z=0
+        (e.g. ``scene_aug.add_ground_plane`` in the photoreal demo). To opt
+        out: delete the ``metasim_ground`` object after handler.launch()."""
+        existing = bpy.data.objects.get("metasim_ground")
+        if existing is not None:
+            return
+        bpy.ops.mesh.primitive_plane_add(size=4.0, location=(0.0, 0.0, -0.001))
+        plane = bpy.context.object
+        plane.name = "metasim_ground"
+        material = bpy.data.materials.new("metasim_ground_material")
+        material.use_nodes = True
+        bsdf = material.node_tree.nodes.get("Principled BSDF")
+        if bsdf is not None:
+            bsdf.inputs["Base Color"].default_value = (0.32, 0.32, 0.34, 1.0)
+            bsdf.inputs["Roughness"].default_value = 0.85
+            if "Specular IOR Level" in bsdf.inputs:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.4
+        plane.data.materials.append(material)
 
     def _make_material(self, name: str, color: list[float] | None):
         mat = bpy.data.materials.new(name=f"{name}_material")
@@ -894,31 +1376,59 @@ class BlenderHandler(BaseSimHandler):
         return obj
 
     def _import_rigid_object(self, obj_cfg: RigidObjCfg):
+        scale = _normalized_scale(obj_cfg.scale)
         blender_path = obj_cfg.file_name("blender")
-        if blender_path and Path(blender_path).suffix.lower() in {".xml", ".mjcf"}:
-            root, _ = _import_mjcf_visual_tree(
-                blender_path,
-                root_name=obj_cfg.name,
-                default_position=obj_cfg.default_position,
-                default_orientation=obj_cfg.default_orientation,
-            )
-            return root
+        if blender_path:
+            suffix = Path(blender_path).suffix.lower()
+            if suffix in {".xml", ".mjcf"}:
+                root, _ = _import_mjcf_visual_tree(
+                    blender_path,
+                    root_name=obj_cfg.name,
+                    default_position=obj_cfg.default_position,
+                    default_orientation=obj_cfg.default_orientation,
+                    default_scale=scale,
+                )
+                return root
+            if suffix in {".usd", ".usda", ".usdc", ".usdz"}:
+                return self._import_usd_rigid(blender_path, obj_cfg, scale)
         if obj_cfg.mesh_path is None:
             raise ValueError(f"Rigid object {obj_cfg.name!r} requires mesh_path for Blender")
         obj = import_mesh(obj_cfg.mesh_path)
         obj.name = obj_cfg.name
+        obj.scale = scale
         return obj
+
+    def _import_usd_rigid(self, usd_path: str, obj_cfg: RigidObjCfg, scale: tuple[float, float, float]):
+        asset_material_rgba = _asset_material_rgba(obj_cfg)
+        before_names = set(bpy.data.objects.keys())
+        result = bpy.ops.wm.usd_import(filepath=str(usd_path))
+        if "FINISHED" not in result:
+            raise RuntimeError(f"Failed to import USD for {obj_cfg.name!r}: {result}")
+        imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
+        if not imported:
+            raise RuntimeError(f"USD import for {obj_cfg.name!r} produced no Blender objects")
+        _repair_imported_materials(imported, asset_material_rgba)
+        root = bpy.data.objects.new(obj_cfg.name, None)
+        bpy.context.collection.objects.link(root)
+        _set_local_transform(root, obj_cfg.default_position, Quaternion(obj_cfg.default_orientation))
+        root.scale = scale
+        for obj in imported:
+            if obj.parent is None:
+                obj.parent = root
+        return root
 
     def _import_articulation(self, obj_cfg: ArticulationObjCfg) -> None:
         usd_path = obj_cfg.file_name("blender")
         if not usd_path:
             raise ValueError(f"{type(obj_cfg).__name__} {obj_cfg.name!r} requires usd_path for Blender")
+        scale = _normalized_scale(getattr(obj_cfg, "scale", 1.0))
         if Path(usd_path).suffix.lower() in {".xml", ".mjcf"}:
             _, body_objects = _import_mjcf_visual_tree(
                 usd_path,
                 root_name=obj_cfg.name,
                 default_position=obj_cfg.default_position,
                 default_orientation=obj_cfg.default_orientation,
+                default_scale=scale,
             )
             self._body_objs[obj_cfg.name] = body_objects
             self._body_names[obj_cfg.name] = sorted(body_objects)
@@ -976,6 +1486,9 @@ class BlenderHandler(BaseSimHandler):
             self._last_tensor_state = None
         else:
             raise TypeError(f"Unsupported Blender state type: {type(states)!r}")
+        # Scene transforms changed — invalidate the cached render so the next
+        # ``_get_states`` re-renders the cameras instead of returning stale RGB.
+        self._render_dirty = True
         self.refresh_render()
 
     def _apply_tensor_state(self, state: TensorState) -> None:
@@ -1017,6 +1530,11 @@ class BlenderHandler(BaseSimHandler):
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids not in (None, [0]):
             raise ValueError("BlenderHandler currently supports only one environment")
+        if self._render_dirty:
+            # Cached cameras are stale (e.g. user just called set_states without a
+            # subsequent simulate). Re-render before returning so the caller sees
+            # the requested pose, not the launch-time defaults.
+            self.refresh_render()
         if self._last_tensor_state is None:
             return TensorState(objects={}, robots={}, cameras=self._last_camera_states)
         return TensorState(
@@ -1050,6 +1568,7 @@ class BlenderHandler(BaseSimHandler):
         for camera in self.cameras:
             camera_states[camera.name] = self._render_camera(camera)
         self._last_camera_states = camera_states
+        self._render_dirty = False
         self._invalidate_state_caches()
 
     def _render_camera(self, camera: PinholeCameraCfg) -> CameraState:

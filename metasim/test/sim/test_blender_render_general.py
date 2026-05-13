@@ -1113,3 +1113,111 @@ def test_blender_offline_renderer_writes_camera_frames(tmp_path, monkeypatch: py
     assert outputs == [tmp_path / "renders" / "overview" / "frame_000000.png"]
     assert outputs[0].is_file()
     assert outputs[0].stat().st_size > 0
+
+
+@pytest.mark.blender
+def test_blender_import_mesh_reads_mujoco_msh_binary_format(tmp_path) -> None:
+    """The .msh path in import_mesh handles MuJoCo's binary mesh format
+    used by LIBERO / robosuite / Open6DOR derived assets."""
+    import struct
+
+    import bpy
+    from metasim.sim.blender.blender import import_mesh
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    msh_path = tmp_path / "tetra.msh"
+    vertices = [
+        (0.0, 0.0, 0.0),
+        (1.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, 0.0, 1.0),
+    ]
+    faces = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
+    nv, nn, nt, nf = len(vertices), len(vertices), 0, len(faces)
+    payload = struct.pack("<IIII", nv, nn, nt, nf)
+    for v in vertices:
+        payload += struct.pack("<fff", *v)
+    for v in vertices:
+        payload += struct.pack("<fff", 0.0, 0.0, 1.0)  # bogus normals
+    for f in faces:
+        payload += struct.pack("<iii", *f)
+    msh_path.write_bytes(payload)
+
+    obj = import_mesh(str(msh_path))
+    assert obj is not None
+    assert obj.type == "MESH"
+    assert len(obj.data.vertices) == nv
+    assert len(obj.data.polygons) == nf
+
+
+@pytest.mark.blender
+def test_blender_mjcf_visual_tree_imports_mesh_geom_from_obj_asset(tmp_path, monkeypatch) -> None:
+    """MJCF visual tree handles ``<asset><mesh file=...>`` + ``<geom type='mesh' mesh=...>``
+    by resolving the file path (honouring ``<compiler meshdir=...>``) and calling
+    import_mesh on it."""
+    import bpy
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.blender import BlenderHandler
+
+    monkeypatch.chdir(tmp_path)
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    meshdir = tmp_path / "meshes"
+    meshdir.mkdir()
+    # minimal triangle .obj
+    (meshdir / "tri.obj").write_text(
+        "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+        encoding="utf-8",
+    )
+
+    asset_path = tmp_path / "object.xml"
+    asset_path.write_text(
+        """
+<mujoco model="thing">
+  <compiler meshdir="meshes"/>
+  <asset>
+    <mesh name="tri_mesh" file="tri.obj"/>
+    <material name="plain" rgba="0.3 0.6 0.9 1.0"/>
+  </asset>
+  <worldbody>
+    <body name="thing_body">
+      <geom name="thing_visual" type="mesh" mesh="tri_mesh" material="plain"/>
+    </body>
+  </worldbody>
+</mujoco>
+""".strip(),
+        encoding="utf-8",
+    )
+    file_type = dict(RigidObjCfg.file_type)
+    file_type["blender"] = "mjcf"
+    scenario = ScenarioCfg(
+        objects=[
+            RigidObjCfg(
+                name="thing",
+                physics=PhysicStateType.RIGIDBODY,
+                mjcf_path=str(asset_path),
+                file_type=file_type,
+            )
+        ],
+        robots=[],
+        cameras=[],
+        simulator="blender",
+        headless=True,
+    )
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        root = handler._objs["thing"]
+        body = root.children[0]
+        mesh = body.children[0]
+        assert mesh.type == "MESH"
+        assert len(mesh.data.vertices) == 3
+        assert len(mesh.data.polygons) == 1
+    finally:
+        handler.close()
