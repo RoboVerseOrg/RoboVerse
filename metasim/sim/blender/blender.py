@@ -1326,22 +1326,75 @@ class BlenderHandler(BaseSimHandler):
         floor instead of objects floating in a void. The slight downward
         offset avoids z-fighting when callers add their own ground at z=0
         (e.g. ``scene_aug.add_ground_plane`` in the photoreal demo). To opt
-        out: delete the ``metasim_ground`` object after handler.launch()."""
-        existing = bpy.data.objects.get("metasim_ground")
-        if existing is not None:
-            return
-        bpy.ops.mesh.primitive_plane_add(size=4.0, location=(0.0, 0.0, -0.001))
-        plane = bpy.context.object
-        plane.name = "metasim_ground"
-        material = bpy.data.materials.new("metasim_ground_material")
+        out: delete the ``metasim_ground`` object after handler.launch().
+
+        Also adds a ``metasim_table`` plane at z=0 — a smaller, warmer
+        tabletop where manipulation tasks place their objects (most
+        roboverse scenarios assume z=0 *is* the working surface, not the
+        floor). The floor stays underneath to fill out the periphery and
+        give HDRI lighting something to bounce off.
+        """
+        if bpy.data.objects.get("metasim_ground") is None:
+            bpy.ops.mesh.primitive_plane_add(size=4.0, location=(0.0, 0.0, -0.011))
+            plane = bpy.context.object
+            plane.name = "metasim_ground"
+            material = bpy.data.materials.new("metasim_ground_material")
+            material.use_nodes = True
+            bsdf = material.node_tree.nodes.get("Principled BSDF")
+            if bsdf is not None:
+                bsdf.inputs["Base Color"].default_value = (0.20, 0.20, 0.22, 1.0)
+                bsdf.inputs["Roughness"].default_value = 0.92
+                if "Specular IOR Level" in bsdf.inputs:
+                    bsdf.inputs["Specular IOR Level"].default_value = 0.35
+            plane.data.materials.append(material)
+
+        if bpy.data.objects.get("metasim_table") is None:
+            self._add_default_table(scene)
+
+    def _add_default_table(self, scene) -> None:
+        """Wooden tabletop at z=0 (~1.6×1.2 m), warm tan with subtle noise.
+
+        Sits ~10 mm above the floor, slightly larger than typical
+        manipulation workspaces so robot bases + scene objects all rest on
+        a believable surface instead of a featureless plane.
+
+        Opt out: delete the ``metasim_table`` object after
+        ``handler.launch()`` (its presence is checked but never enforced).
+        """
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, -0.005))
+        table = bpy.context.object
+        table.name = "metasim_table"
+        # Box scaled to 1.6 m × 1.2 m × 0.01 m (a thin slab so the top is at z≈0).
+        table.scale = (1.6, 1.2, 0.01)
+        bpy.context.view_layer.objects.active = table
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+        material = bpy.data.materials.new("metasim_table_material")
         material.use_nodes = True
-        bsdf = material.node_tree.nodes.get("Principled BSDF")
-        if bsdf is not None:
-            bsdf.inputs["Base Color"].default_value = (0.32, 0.32, 0.34, 1.0)
-            bsdf.inputs["Roughness"].default_value = 0.85
-            if "Specular IOR Level" in bsdf.inputs:
-                bsdf.inputs["Specular IOR Level"].default_value = 0.4
-        plane.data.materials.append(material)
+        nt = material.node_tree
+        nt.nodes.clear()
+        output = nt.nodes.new("ShaderNodeOutputMaterial")
+        output.location = (400, 0)
+        bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+        bsdf.location = (200, 0)
+        bsdf.inputs["Base Color"].default_value = (0.42, 0.30, 0.20, 1.0)  # warm walnut tan
+        bsdf.inputs["Roughness"].default_value = 0.55
+        if "Specular IOR Level" in bsdf.inputs:
+            bsdf.inputs["Specular IOR Level"].default_value = 0.5
+        # Subtle noise mixed into the base color → grain hint without an asset.
+        noise = nt.nodes.new("ShaderNodeTexNoise")
+        noise.location = (-300, 0)
+        noise.inputs["Scale"].default_value = 18.0
+        noise.inputs["Detail"].default_value = 2.5
+        noise.inputs["Roughness"].default_value = 0.55
+        color_ramp = nt.nodes.new("ShaderNodeValToRGB")
+        color_ramp.location = (-80, 0)
+        color_ramp.color_ramp.elements[0].color = (0.32, 0.22, 0.14, 1.0)
+        color_ramp.color_ramp.elements[1].color = (0.55, 0.39, 0.26, 1.0)
+        nt.links.new(noise.outputs["Fac"], color_ramp.inputs["Fac"])
+        nt.links.new(color_ramp.outputs["Color"], bsdf.inputs["Base Color"])
+        nt.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+        table.data.materials.append(material)
 
     def _make_material(self, name: str, color: list[float] | None):
         mat = bpy.data.materials.new(name=f"{name}_material")
