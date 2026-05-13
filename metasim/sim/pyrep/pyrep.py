@@ -1,112 +1,53 @@
+"""PyRep handler — currently unmaintained.
+
+The previous implementation predates the current ``BaseSimHandler``
+contract: ``launch`` referenced attributes the base doesn't define,
+``_set_states`` / ``_get_states`` dropped the ``env_ids`` parameter,
+and ``_simulate`` was missing entirely. Rather than carry a handler
+that fails opaquely on first use, this placeholder raises a clear
+``NotImplementedError`` at construction.
+
+``SimType.PYREP`` still dispatches here so the registry stays complete;
+the abstract methods keep the ``BaseSimHandler`` signatures so a future
+port has a working skeleton to fill in.
+"""
+
 from __future__ import annotations
 
-import numpy as np
-import torch
-from loguru import logger as log
-from pyrep import PyRep
-from pyrep.objects.object import Object
-from pyrep.robots.arms.panda import Panda
-from pyrep.robots.end_effectors.panda_gripper import PandaGripper
-from rlbench.backend.robot import Robot
-
 from metasim.sim import BaseSimHandler
-from metasim.types import ActionBatch, CompatActionInput, DictEnvState, Extra, Obs, Reward, Success, TimeOut
-from metasim.utils import to_snake_case
-from metasim.utils.state import action_input_to_dict_batch
+from metasim.types import CompatActionInput, DictStateBatch, TensorState
 
-# TODO: try best to be independent from RLBench
-
-## Joint names correspondence dict
-jd = {
-    "franka": {
-        "Panda_joint1": "panda_joint1",
-        "Panda_joint2": "panda_joint2",
-        "Panda_joint3": "panda_joint3",
-        "Panda_joint4": "panda_joint4",
-        "Panda_joint5": "panda_joint5",
-        "Panda_joint6": "panda_joint6",
-        "Panda_joint7": "panda_joint7",
-        "Panda_gripper_joint1": "panda_finger_joint1",
-        "Panda_gripper_joint2": "panda_finger_joint2",
-    }
-}
+_UNMAINTAINED_MSG = (
+    "PyrepHandler is currently unmaintained — it diverged from the "
+    "BaseSimHandler contract and was never ported. Use a maintained "
+    "backend (mujoco, isaacsim, sapien3, genesis, mjx, pybullet, blender, "
+    "newton), or open an issue if you need PyRep support reinstated."
+)
 
 
 class PyrepHandler(BaseSimHandler):
-    def launch(self) -> None:
-        self.sim = PyRep()
-        self.sim.launch("third_party/rlbench/rlbench/task_design.ttt", headless=False)  # TODO: set headless from cfg
-        # self.sim.set_simulation_timestep(1 / 60)  # Control frequency 60Hz, TODO: set control frequency from cfg
-        task_name = to_snake_case(self.task.__class__.__name__.replace("Cfg", ""))
-        base_object = self.sim.import_model(f"third_party/rlbench/rlbench/task_ttms/{task_name}.ttm")
+    """Placeholder PyRep handler — raises ``NotImplementedError`` on construction."""
 
-        self.arm, self.gripper = Panda(), PandaGripper()
-        self.robot_inst = Robot(self.arm, self.gripper)
-        self.sim.start()
-        self.sim.step()
-        # TODO: initialize rlbench scene and task
+    def __init__(self, *args, **kwargs):  # noqa: D401
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
-    ############################################################
-    ## Gymnasium main methods
-    ############################################################
-    def step(self, action: CompatActionInput) -> tuple[Obs, Reward, Success, TimeOut, Extra]:
-        self._set_dof_targets(action)
-        self.sim.step()
-        self.arm.set_joint_target_positions(self.arm.get_joint_positions())
-        self.gripper.set_joint_target_positions(self.gripper.get_joint_positions())
-        return None, None, torch.tensor([False]), torch.tensor([False]), None
+    # Abstract methods kept with their BaseSimHandler signatures so the
+    # class stays concrete and a future port has a skeleton to fill in.
 
-    def reset(self) -> tuple[Obs, Extra]:
-        return None, None
-
-    def close(self) -> None:
-        self.sim.stop()
-        self.sim.shutdown()
+    def _set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
-        action_batch: ActionBatch = action_input_to_dict_batch(self, actions)
-        if len(action_batch) != 1:
-            raise ValueError("PyrepHandler only supports a single environment")
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
-        robot_name = self.robot.name
-        dof_targets = (action_batch[0].get(robot_name) or {}).get("dof_pos_target")
-        if dof_targets is None:
-            return
-        arm_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.arm.joints]
-        gripper_action = [dof_targets[jd[robot_name][joint.get_name()]] for joint in self.gripper.joints]
-        self.arm.set_joint_target_positions(arm_action)
-        self.gripper.set_joint_target_positions(gripper_action)
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
-    ############################################################
-    ## Set states
-    ############################################################
-    def _set_states(self, states: list[DictEnvState]) -> None:
-        assert len(states) == 1  # PyRep only supports one env
-        state = states[0]
+    def _simulate(self) -> None:
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
-        ## Set robot
-        joint_pos = np.zeros(len(self.arm.joints))
-        for i, joint_inst in enumerate(self.arm.joints):
-            joint_name = joint_inst.get_name()
-            joint_pos[i] = state[self.robot.name]["dof_pos"][joint_name]
-        self.arm.set_joint_positions(joint_pos[:7])
-        self.gripper.set_joint_positions(joint_pos[7:])
-        # TODO: set robot pose #!
+    def launch(self) -> None:
+        raise NotImplementedError(_UNMAINTAINED_MSG)
 
-        ## Set objects
-        for obj in self.objects:
-            obj_inst = Object.get_object(obj.name)
-            obj_inst.set_position(state[obj.name]["pos"].numpy())
-            obj_inst.set_orientation(state[obj.name]["rot"].numpy())
-
-            log.debug("Set object", obj.name, "to", state[obj.name]["pos"], state[obj.name]["rot"])
-
-    ############################################################
-    ## Get states
-    ############################################################
-    def _get_states(self) -> TensorState:
-        pass
-
-    @property
-    def robot(self):
-        return self.robots[0]
+    def close(self) -> None:
+        return None
