@@ -59,7 +59,6 @@ from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_recursive
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
-
 from roboverse_pack.blender.asset_paths import get_hdri_dir, get_material_library
 
 
