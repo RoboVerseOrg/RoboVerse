@@ -53,15 +53,7 @@ def get_sim_handler_class(sim: SimType):
     Returns:
         The simulator handler class.
     """
-    if sim == SimType.ISAACLAB:
-        try:
-            from metasim.sim.isaaclab import IsaaclabHandler
-
-            return IsaaclabHandler
-        except ImportError as e:
-            log.error("IsaacLab is not installed, please install it first")
-            raise e
-    elif sim == SimType.ISAACGYM:
+    if sim == SimType.ISAACGYM:
         try:
             from metasim.sim.isaacgym import IsaacgymHandler
 

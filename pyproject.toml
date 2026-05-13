@@ -146,7 +146,6 @@ include = ["metasim", "metasim.*"]
 metasim = ["data/**/*"]
 
 [tool.ruff.lint.per-file-ignores]
-"metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
 ## For unit test, allow no docstrings
 "metasim/test/**.py" = ["D"]
 ## For python files in docs, allow no docstrings

@@ -36,14 +36,17 @@ class ScenarioCfg:
     sim_params: SimParamCfg = SimParamCfg()
     simulator: (
         Literal[
-            "isaaclab",
+            "isaacsim",
             "isaacgym",
+            "genesis",
+            "pyrep",
+            "mujoco",
+            "mjx",
+            "pybullet",
             "sapien2",
             "sapien3",
-            "genesis",
-            "pybullet",
-            "mujoco",
             "blender",
+            "newton",
         ]
         | None
     ) = None

@@ -17,7 +17,6 @@ class PhysicStateType(enum.IntEnum):
 class SimType(enum.Enum):
     """Simulator type."""
 
-    ISAACLAB = "isaaclab"
     ISAACSIM = "isaacsim"
     ISAACGYM = "isaacgym"
     GENESIS = "genesis"

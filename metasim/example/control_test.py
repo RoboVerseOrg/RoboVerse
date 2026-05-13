@@ -33,7 +33,7 @@ if __name__ == "__main__":
     class Args:
         """Arguments for the static scene."""
 
-        sim: Literal["isaacsim", "isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = (
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = (
             "mujoco"
         )
         num_envs: int = 1
