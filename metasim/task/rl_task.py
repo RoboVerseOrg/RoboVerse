@@ -34,7 +34,10 @@ class RLTaskEnv(BaseTaskEnv):
         super().__init__(scenario, device)
 
         self.num_envs = scenario.num_envs
-        self.robot = scenario.robots[0]
+        # ``self.robots`` (list) and ``self.robot`` (first, scalar) are both
+        # part of the contract subclasses rely on — keep them in sync here.
+        self.robots: list = list(scenario.robots) if scenario.robots else []
+        self.robot = self.robots[0] if self.robots else None
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
         # Observation buffers for RSL-RL compatibility
