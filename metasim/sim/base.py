@@ -133,14 +133,39 @@ class BaseSimHandler(ABC):
         raise NotImplementedError
 
     def _invalidate_state_caches(self) -> None:
-        """Mark both tensor and dict state caches as stale."""
+        """Mark both tensor and dict state caches as stale.
+
+        Called automatically by ``set_states``/``simulate``. Subclasses or
+        custom mutation paths (e.g. randomizers that poke the underlying
+        sim outside the public API) must call ``invalidate_state_caches``
+        themselves, since the base handler cannot detect those edits.
+        """
         self._tensor_state_cache = None
         self._dict_state_cache = None
 
-    def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
-        """Set the states of the environment."""
+    def invalidate_state_caches(self) -> None:
+        """Public alias for ``_invalidate_state_caches``.
+
+        Use this from any code path that mutates physics state outside
+        ``set_states``/``simulate`` so subsequent ``get_states`` calls
+        refetch from the simulator instead of returning stale values.
+        """
         self._invalidate_state_caches()
-        self._set_states(self._normalise_set_states_input(states), env_ids)
+
+    def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
+        """Set the states of the environment.
+
+        Input is first normalised to the shape the backend declared via
+        ``_set_states_input_type``. Cache invalidation runs *after*
+        ``_set_states`` returns (via try/finally): if anything inside the
+        mutation re-enters ``get_states``, the pre-mutation cache must
+        not survive past it.
+        """
+        normalised = self._normalise_set_states_input(states)
+        try:
+            self._set_states(normalised, env_ids)
+        finally:
+            self._invalidate_state_caches()
 
     def _normalise_set_states_input(self, states):
         """Coerce ``states`` to the shape declared by ``_set_states_input_type``."""
@@ -237,9 +262,15 @@ class BaseSimHandler(ABC):
         raise NotImplementedError
 
     def simulate(self):
-        """Simulate the environment."""
-        self._invalidate_state_caches()
-        self._simulate()
+        """Simulate the environment.
+
+        See ``set_states`` for the rationale on invalidating after the
+        mutation rather than before.
+        """
+        try:
+            self._simulate()
+        finally:
+            self._invalidate_state_caches()
 
     ############################################################
     ## Misc
