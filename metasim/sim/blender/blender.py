@@ -41,6 +41,7 @@ from metasim.types import (
     TensorState,
     Termination,
 )
+from metasim.utils.state import state_tensor_to_nested
 
 from .importers import MJCF_SUFFIXES, USD_SUFFIXES, import_usd_visuals
 from .lights import add_scenario_lights
@@ -2158,10 +2159,24 @@ class BlenderHandler(BaseSimHandler):
             extras=self._last_tensor_state.extras,
         )
 
-    def get_states(self, env_ids: list[int] | None = None, mode: str = "tensor") -> TensorState:
-        if mode != "tensor":
-            raise NotImplementedError("BlenderHandler only supports tensor state output")
-        return super().get_states(env_ids=env_ids, mode="tensor")
+    def get_states(self, env_ids: list[int] | None = None, mode: str = "dict"):
+        """Return current state in ``tensor`` or ``dict`` form.
+
+        Blender is render-only — it carries cameras but no independent
+        physics state, so ``_get_states`` can return a TensorState with
+        empty ``objects``/``robots``. ``state_tensor_to_nested`` assumes
+        at least one object or robot exists, so the empty case is handled
+        here directly instead.
+        """
+        tensor_state = self._get_states(env_ids=env_ids)
+        if mode == "tensor":
+            return tensor_state
+        if mode != "dict":
+            raise ValueError(f"Unknown state mode {mode!r}")
+        if not tensor_state.objects and not tensor_state.robots:
+            num_envs = max(1, getattr(self, "num_envs", 1))
+            return [{"objects": {}, "robots": {}} for _ in range(num_envs)]
+        return state_tensor_to_nested(self, tensor_state)
 
     def reset(self, env_ids: list[int] | None = None) -> tuple[Obs, Any]:
         if env_ids is None:
