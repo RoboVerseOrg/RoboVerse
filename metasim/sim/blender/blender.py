@@ -7,7 +7,6 @@ import shutil
 import struct
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from math import cos, sin, tau
 from pathlib import Path
@@ -30,6 +29,7 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from metasim.types import (
     CameraState,
     CompatActionInput,

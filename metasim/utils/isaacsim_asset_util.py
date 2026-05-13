@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 
 from loguru import logger as log

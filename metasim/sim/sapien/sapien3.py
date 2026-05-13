@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 import os
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from copy import deepcopy
 
 import numpy as np

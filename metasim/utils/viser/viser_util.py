@@ -12,7 +12,7 @@ import os
 import tempfile
 import threading
 import time
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from dataclasses import MISSING
 from pathlib import Path
 from typing import Any

@@ -9,6 +9,7 @@ description = "MetaSim: A unified simulation framework for robotics"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
 dependencies = [
+    "defusedxml",
     "gymnasium",
     "huggingface-hub",
     "imageio[ffmpeg]",

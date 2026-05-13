@@ -123,6 +123,7 @@ def test_pyproject_runtime_dependencies_are_metasim_owned():
     pyproject = _load_pyproject()
 
     assert pyproject["project"]["dependencies"] == [
+        "defusedxml",  # M4: hardened XML parser for untrusted MJCF/URDF
         "gymnasium",
         "huggingface-hub",
         "imageio[ffmpeg]",
