@@ -54,6 +54,7 @@ if __name__ == "__main__":
                 "sapien2",
                 "sapien3",
                 "mujoco",
+                "blender",
             ]
             | None
         ) = "isaacsim"
@@ -77,7 +78,10 @@ if __name__ == "__main__":
     )
 
     # add cameras
-    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
+    # NB: camera deliberately off the (1,-1,1) body-diagonal of the cube so the
+    # default-oriented PrimitiveCubeCfg presents a 3-face cube silhouette
+    # rather than a hexagonal corner-on view.
+    scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.2, -1.6, 1.4), look_at=(0.0, 0.0, 0.0))]
 
     # add objects
     scenario.objects = [
@@ -109,6 +113,24 @@ if __name__ == "__main__":
             mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
         ),
     ]
+
+    # Align Blender visual loading with mujoco's MJCF kinematics so link
+    # frames match exactly (avoids the USD-baked-rotation gripper-flip class
+    # of bug when physics ≠ Blender). Also gives us MJCF-driven textures.
+    # Also enable photoreal HDRI lighting by default — RoboVerse bundles a
+    # 4-image sample set and asset_paths.get_hdri_dir picks the first that
+    # exists locally (bundled, third_party, or downloaded).
+    if args.renderer == "blender":
+        for robot_cfg in scenario.robots:
+            robot_cfg.file_type = {**robot_cfg.file_type, "blender": "mjcf"}
+        for obj_cfg in scenario.objects:
+            if hasattr(obj_cfg, "file_type") and getattr(obj_cfg, "mjcf_path", None):
+                obj_cfg.file_type = {**obj_cfg.file_type, "blender": "mjcf"}
+        from roboverse_pack.blender.asset_paths import get_hdri_dir as _get_hdri_dir
+
+        hdri_dir = _get_hdri_dir(download=False)
+        if hdri_dir is not None:
+            scenario.render.hdri_path = str(hdri_dir)
 
     if args.renderer is None:
         log.info(f"Using simulator: {args.sim}")

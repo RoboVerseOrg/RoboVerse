@@ -157,7 +157,7 @@ exclude = ["metasim", "metasim.*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "**/*.yaml"]
+roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "**/*.yaml", "**/*.hdr"]
 
 [tool.ruff.lint.per-file-ignores]
 ## For normal scripts, allow print statements, allow no docstrings
