@@ -14,6 +14,7 @@ Architecture:
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -22,6 +23,22 @@ from loguru import logger as log
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
+
+
+def _derive_seed(base_seed: int | None, key: str) -> int | None:
+    """Derive a deterministic per-randomizer sub-seed from ``base_seed``.
+
+    Each named randomizer (``"material.wall.wall_front"``,
+    ``"light.disk.0.<name>"``, …) gets its own 32-bit seed via a stable
+    hash of ``f"{base_seed}/{key}"``, so distinct randomizers never share
+    a seed and ``base_seed=0`` is treated like any other integer.
+    ``blake2b`` (not ``hash()``) keeps the result reproducible across
+    processes.
+    """
+    if base_seed is None:
+        return None
+    digest = hashlib.blake2b(f"{int(base_seed)}/{key}".encode(), digest_size=4).digest()
+    return int.from_bytes(digest, "little")
 
 # Try to import randomization components
 try:
@@ -289,7 +306,7 @@ class DomainRandomizationManager:
         if mode == 0:
             table_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
-                seed=seed + 2 if seed is not None else None,
+                seed=_derive_seed(seed, "material.table"),
             )
             table_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(table_mat)
@@ -298,23 +315,22 @@ class DomainRandomizationManager:
         if mode < 2 and level >= 1:
             floor_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone")),
-                seed=seed + 101 if seed is not None else None,
+                seed=_derive_seed(seed, "material.floor"),
             )
             floor_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(floor_mat)
 
-            wall_seed = seed + 102 if seed is not None else None
             for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
                 wall_mat = MaterialRandomizer(
                     MaterialPresets.mdl_family_object(wall_name, family=("masonry", "architecture")),
-                    seed=wall_seed,
+                    seed=_derive_seed(seed, f"material.wall.{wall_name}"),
                 )
                 wall_mat.bind_handler(self.handler)
                 self.randomizers["material_dynamic"].append(wall_mat)
 
             ceiling_mat = MaterialRandomizer(
                 MaterialPresets.mdl_family_object("ceiling", family=("architecture", "wall_board")),
-                seed=seed + 103 if seed is not None else None,
+                seed=_derive_seed(seed, "material.ceiling"),
             )
             ceiling_mat.bind_handler(self.handler)
             self.randomizers["material_dynamic"].append(ceiling_mat)
@@ -354,7 +370,7 @@ class DomainRandomizationManager:
                             enabled=True,
                         ),
                     ),
-                    seed=seed + 4 + i if seed is not None else None,
+                    seed=_derive_seed(seed, f"light.disk.{i}.{light_name}"),
                 )
             elif isinstance(light, SphereLightCfg):
                 # Corner lights with position and color
@@ -372,14 +388,14 @@ class DomainRandomizationManager:
                             enabled=True,
                         ),
                     ),
-                    seed=seed + 5 + i if seed is not None else None,
+                    seed=_derive_seed(seed, f"light.sphere.{i}.{light_name}"),
                 )
             elif isinstance(light, DomeLightCfg):
                 # Dome light (ambient)
                 from metasim.randomization.presets.light_presets import LightPresets
 
                 config = LightPresets.dome_ambient(light_name)
-                light_rand = LightRandomizer(config, seed=seed + 4 + i if seed else None)
+                light_rand = LightRandomizer(config, seed=_derive_seed(seed, f"light.dome.{i}.{light_name}"))
             else:
                 continue
 
@@ -392,7 +408,7 @@ class DomainRandomizationManager:
         if not cameras:
             return
 
-        for camera in cameras:
+        for i, camera in enumerate(cameras):
             camera_name = getattr(camera, "name", "camera")
 
             cam_config = CameraRandomCfg(
@@ -405,7 +421,7 @@ class DomainRandomizationManager:
                 ),
             )
 
-            cam_rand = CameraRandomizer(cam_config, seed=seed + 10 if seed is not None else None)
+            cam_rand = CameraRandomizer(cam_config, seed=_derive_seed(seed, f"camera.{i}.{camera_name}"))
             cam_rand.bind_handler(self.handler)
             self.randomizers["camera"].append(cam_rand)
             self.randomizers.setdefault("camera_originals", {})[camera_name] = camera.pos
