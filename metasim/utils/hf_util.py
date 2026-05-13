@@ -29,7 +29,22 @@ except ImportError:
 
 REPO_ID = "RoboVerseOrg/roboverse_data"
 DATA_REPO_IDS = (REPO_ID, "SomaStacksOrg/roboverse_data")
-LOCAL_DIR = "roboverse_data"
+
+
+def _resolve_local_dir() -> str:
+    """Resolve the asset-cache root to an absolute path.
+
+    Resolved once at import so the cache location doesn't drift with the
+    process CWD between calls. ``ROBOVERSE_DATA_DIR`` overrides the
+    default ``./roboverse_data`` for shared caches in deployments / CI.
+    """
+    env_dir = os.environ.get("ROBOVERSE_DATA_DIR")
+    if env_dir:
+        return os.path.abspath(os.path.expanduser(env_dir))
+    return os.path.abspath("roboverse_data")
+
+
+LOCAL_DIR = _resolve_local_dir()
 
 hf_api = HfApi()
 
@@ -120,8 +135,20 @@ def check_and_download_single(filepath: str):
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
         # Use POSIX-style paths for the HF dataset API (Windows uses backslashes by default)
         relpath = os.path.relpath(filepath, LOCAL_DIR)
-        relpath_posix = relpath.replace(os.sep, "/")
         is_optional_file = filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga"))
+        # A malformed asset descriptor with ``..`` segments would resolve
+        # outside LOCAL_DIR — refuse it rather than send the escaped path
+        # to the HF API. Optional files warn-and-skip; required files raise.
+        if relpath.split(os.sep, 1)[0] == "..":
+            msg = (
+                f"Refusing to fetch {filepath!r}: resolves outside LOCAL_DIR "
+                f"({LOCAL_DIR}) via relative-path traversal ({relpath!r})."
+            )
+            if is_optional_file:
+                log.warning(msg + " Skipping optional file.")
+                return
+            raise ValueError(msg)
+        relpath_posix = relpath.replace(os.sep, "/")
         repo_id = _find_data_repo(relpath_posix, is_optional_file=is_optional_file)
 
         if repo_id is None:
