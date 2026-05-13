@@ -32,14 +32,20 @@ def _worker(
 ):
     parent_remote.close()
 
+    # Bind ``env`` before the try-block so the ``finally`` can guard on it:
+    # if ``handler_class()`` raises, ``env.close()`` must not shadow the
+    # construction error with a NameError.
+    env: BaseSimHandler | None = None
     try:
-        env: BaseSimHandler = handler_class()
+        env = handler_class()
         while True:
             cmd, data = remote.recv()
             if cmd == "launch":
                 env.launch()
             elif cmd == "render":
                 env.render()
+            elif cmd == "refresh_render":
+                env.refresh_render()
             elif cmd == "close":
                 remote.close()
                 break
@@ -54,7 +60,7 @@ def _worker(
                 names = env.get_joint_names(data[0], data[1])
                 remote.send(names)
             elif cmd == "get_body_names":
-                names = env.get_body_names(data[0])
+                names = env.get_body_names(data[0], data[1])
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0])
@@ -75,7 +81,11 @@ def _worker(
         error_queue.put((type(err).__name__, str(err), tb_str))
         sys.exit(1)
     finally:
-        env.close()
+        if env is not None:
+            try:
+                env.close()
+            except Exception as close_err:
+                log.warning(f"env.close() raised during worker teardown: {close_err}")
 
 
 def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
@@ -135,6 +145,12 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for remote in self.remotes:
                 remote.send(("launch", (None,)))
             self.waiting = False
+            # ``launch`` sends no reply; handshake round-trips so every
+            # worker has finished launching before the wrapper returns.
+            for remote in self.remotes:
+                remote.send(("handshake", (None,)))
+            for remote in self.remotes:
+                remote.recv()
             self._check_error()
 
         def close(self):
@@ -154,6 +170,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                 payload = states[0]
                 for env_idx in env_ids:
                     self.remotes[env_idx].send(("set_states", ([payload],)))
+                self._check_error()
                 return
 
             if len(states) != len(env_ids):
@@ -164,6 +181,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
 
             for local_idx, env_idx in enumerate(env_ids):
                 self.remotes[env_idx].send(("set_states", ([states[local_idx]],)))
+            self._check_error()
 
         def _get_states(self, env_ids: list[int] | None = None, **kwargs) -> TensorState:
             if env_ids is None:
@@ -189,6 +207,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                     )
                 for i, remote in enumerate(self.remotes):
                     remote.send(("set_dof_targets", ([action_batch[i]],)))
+                self._check_error()
                 return
 
             action_tensor = torch.as_tensor(actions)
@@ -197,26 +216,34 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             if action_tensor.shape[0] == 1 and len(self.remotes) > 1:
                 for remote in self.remotes:
                     remote.send(("set_dof_targets", (action_tensor.clone(),)))
+                self._check_error()
                 return
             if action_tensor.shape[0] != len(self.remotes):
                 raise ValueError(f"Expected tensor batch size {len(self.remotes)}, got {action_tensor.shape[0]}.")
             for i, remote in enumerate(self.remotes):
                 remote.send(("set_dof_targets", (action_tensor[i : i + 1].clone(),)))
+            self._check_error()
 
         def _simulate(self):
             for remote in self.remotes:
                 remote.send(("simulate", (None,)))
+            # ``simulate`` sends no reply, so a worker that dies mid-step
+            # would stay silent until the next blocking ``recv`` — drain
+            # the error queue now instead.
+            self._check_error()
 
         def refresh_render(self):
-            log.error("Rendering not supported in parallel mode")
+            for remote in self.remotes:
+                remote.send(("refresh_render", (None,)))
+            self._check_error()
 
         def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
             self.remotes[0].send(("get_joint_names", (obj_name, sort)))
             names = self.remotes[0].recv()
             return names
 
-        def get_body_names(self, obj_name: str) -> list[str]:
-            self.remotes[0].send(("get_body_names", (obj_name,)))
+        def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            self.remotes[0].send(("get_body_names", (obj_name, sort)))
             names = self.remotes[0].recv()
             return names
 
