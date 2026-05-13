@@ -84,9 +84,16 @@ class BaseTaskEnv:
 
         Args:
             scenario: The scenario configuration
+
+        ``extra_spec`` is read *before* the handler exists, so a subclass
+        ``_extra_spec`` may reference ``self.handler`` (it will be ``None``,
+        not undefined) but must not require a live handler — queries are
+        bound later, inside ``handler.launch()``.
         """
         handler_class = get_sim_handler_class(SimType(scenario.simulator))
-        self.handler: BaseSimHandler = handler_class(scenario, self.extra_spec)
+        self.handler: BaseSimHandler | None = None
+        queries = self.extra_spec
+        self.handler = handler_class(scenario, queries)
         self.handler.launch()
 
     def _prepare_callbacks(self) -> None:
