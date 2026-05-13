@@ -487,8 +487,15 @@ class Sapien3Handler(BaseSimHandler):
             self._build_gs_background()
 
     def close(self):
-        if not self.headless:
-            self.viewer.close()
+        # ``self.viewer`` is only set once ``_build_sapien`` runs, so it may
+        # not exist if ``launch`` failed earlier — guard so a teardown error
+        # doesn't mask the original launch failure.
+        viewer = getattr(self, "viewer", None)
+        if not self.headless and viewer is not None:
+            try:
+                viewer.close()
+            except Exception as err:
+                log.warning(f"Sapien3 viewer.close() raised during teardown: {err}")
         self.scene = None
 
     def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:
