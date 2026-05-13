@@ -57,6 +57,21 @@ class BaseSimHandler(ABC):
         self._tensor_state_cache: TensorState | None = None
         self._dict_state_cache: DictStateBatch | None = None
 
+        # When True, ``flush_visual_updates`` is deferred — the domain
+        # randomization pipeline sets this to batch many visual edits and
+        # flush once. Declared on the base so randomizers can set it
+        # uniformly regardless of backend.
+        self._defer_all_visual_flushes: bool = False
+
+    def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
+        """Settle pending visual edits (no-op by default).
+
+        Backends that drive a renderer independently from the physics
+        step (Isaac Sim, hybrid Blender) override this to step the render
+        pipeline forward; physics-only backends keep the no-op.
+        """
+        return
+
     def launch(self) -> None:
         """Launch the simulation."""
         if self.optional_queries is None:
