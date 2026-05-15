@@ -10,9 +10,9 @@ from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-ROBOT_NAME = "openarm_bimanual_wuji"
+ROBOT_NAME = "openarm_wuji"
 ASSET_ROOT = "roboverse_data/assets/box_task/local_pack_box"
-TRAJ_PATH = "roboverse_data/trajs/box_task/task3_openarm_bimanual_wuji_v2.pkl"
+TRAJ_PATH = "roboverse_data/trajs/box_task/task3_openarm_wuji_v2.pkl"
 
 
 @register_task("box_task.replay", "box_task")

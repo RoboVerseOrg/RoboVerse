@@ -16,8 +16,8 @@ OPENARM_USD_PATH = OPENARM_ASSET_ROOT / "openarm_wuji.usd"
 OPENARM_JOINT_NAMES: tuple[str, ...] = tuple(
     [f"openarm_left_joint{i}" for i in range(1, 8)]
     + [f"openarm_right_joint{i}" for i in range(1, 8)]
-    + [f"left_finger{finger}_joint{joint}" for finger in range(1, 6) for joint in range(1, 5)]
-    + [f"right_finger{finger}_joint{joint}" for finger in range(1, 6) for joint in range(1, 5)]
+    + [f"left_hand_finger{finger}_joint{joint}" for finger in range(1, 6) for joint in range(1, 5)]
+    + [f"right_hand_finger{finger}_joint{joint}" for finger in range(1, 6) for joint in range(1, 5)]
 )
 
 LEFT_ARM_DEFAULT_Q = (-0.4, -0.2, 0.0, 1.2, 0.0, 0.0, 0.0)
@@ -33,7 +33,7 @@ class _JointMetadata:
 
 
 def _is_hand_joint(joint_name: str) -> bool:
-    return joint_name.startswith(("left_finger", "right_finger"))
+    return joint_name.startswith(("left_hand_finger", "right_hand_finger"))
 
 
 def _fallback_joint_metadata() -> dict[str, _JointMetadata]:
@@ -131,4 +131,16 @@ class OpenarmBimanualWujiCfg(RobotCfg):
     joint_names: list[str] = list(OPENARM_JOINT_NAMES)
 
 
-__all__ = ["OPENARM_JOINT_NAMES", "OpenarmBimanualWujiCfg"]
+@configclass
+class OpenarmWujiCfg(OpenarmBimanualWujiCfg):
+    """Short-name alias for the bimanual OpenArm Wuji robot.
+
+    Same robot definition as ``OpenarmBimanualWujiCfg`` but advertises
+    ``name = "openarm_wuji"``. The bundled recording artifacts (USD
+    asset, MJCF, demo trajectory pkl) all key by this short name.
+    """
+
+    name: str = "openarm_wuji"
+
+
+__all__ = ["OPENARM_JOINT_NAMES", "OpenarmBimanualWujiCfg", "OpenarmWujiCfg"]
