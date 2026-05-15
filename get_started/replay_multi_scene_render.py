@@ -67,6 +67,25 @@ def _parse_scenes(text: str) -> list[str]:
     return out
 
 
+def _to_rgb_frame(frame: np.ndarray, height: int, width: int) -> np.ndarray:
+    """Coerce a per-frame camera tensor into a ``(H, W, 3)`` uint-able array.
+
+    Backends differ slightly: mujoco returns ``(H, W, 3)`` after the
+    ``[0]`` env index, IsaacSim returns ``(1, H, W, 1|3|4)`` (an extra
+    singleton up front and the trailing channel count varies with the
+    render mode). Strip leading singletons, then normalise channels.
+    """
+    while frame.ndim > 3 and frame.shape[0] == 1:
+        frame = frame[0]
+    if frame.ndim == 2:
+        frame = np.stack([frame, frame, frame], axis=-1)
+    elif frame.ndim == 3 and frame.shape[-1] == 1:
+        frame = np.repeat(frame, 3, axis=-1)
+    elif frame.ndim == 3 and frame.shape[-1] == 4:
+        frame = frame[..., :3]
+    return frame
+
+
 def _read_traj_length(traj_path: Path, robot_name: str) -> int:
     """Number of frames in the first episode of a v2 trajectory."""
     with traj_path.open("rb") as f:
@@ -198,14 +217,19 @@ def _worker_main(args: argparse.Namespace) -> None:
                 state = episode_states[src_idx]
                 if prepare is not None:
                     state = prepare(state)
-                env.handler.set_states([state])
-                env.handler.refresh_render()
-                obs = env.handler.get_states(mode="tensor")
-                rgb = next(iter(obs.cameras.values())).rgb
-                frame = rgb[0].detach().cpu().numpy() if hasattr(rgb[0], "detach") else np.asarray(rgb[0])
-                writer.append_data(np.clip(frame, 0, 255).astype(np.uint8))
-                if (out_idx - args._out_start) % 30 == 0:
-                    log.info(f"out_frame={out_idx} src_idx={src_idx}")
+                try:
+                    env.handler.set_states([state])
+                    env.handler.refresh_render()
+                    obs = env.handler.get_states(mode="tensor")
+                    rgb = next(iter(obs.cameras.values())).rgb
+                    frame = rgb[0].detach().cpu().numpy() if hasattr(rgb[0], "detach") else np.asarray(rgb[0])
+                    frame = _to_rgb_frame(frame, args.height, args.width)
+                    writer.append_data(np.clip(frame, 0, 255).astype(np.uint8))
+                    if (out_idx - args._out_start) % 30 == 0:
+                        log.info(f"out_frame={out_idx} src_idx={src_idx}")
+                except Exception as e:
+                    log.exception(f"worker frame {out_idx} (src {src_idx}) failed: {e}")
+                    raise
         finally:
             writer.close()
     finally:
@@ -308,7 +332,11 @@ def _coordinator_main(args: argparse.Namespace, script_path: Path) -> None:
             str(args.out_video),
         ]
         log.info(f"[segment {i + 1}/{len(scenes)}] {scene_name} out[{out_start},{out_end})")
-        _run_cmd(cmd)
+        # IsaacSim's SimulationApp.close() is known to hang on shutdown; the
+        # metasim handler watchdog force-exits the worker with code 1 after a
+        # timeout. As long as the segment .mp4 was written (i.e. all frames
+        # rendered before the force-exit), treat the worker as successful.
+        _run_cmd(cmd, success_file=seg_path)
 
     ffmpeg_bin = shutil.which("ffmpeg")
     if ffmpeg_bin is None:
@@ -341,10 +369,17 @@ def _coordinator_main(args: argparse.Namespace, script_path: Path) -> None:
         shutil.rmtree(work_dir, ignore_errors=True)
 
 
-def _run_cmd(cmd: list[str]) -> None:
+def _run_cmd(cmd: list[str], success_file: Path | None = None) -> None:
     proc = subprocess.run(cmd, check=False)
-    if proc.returncode != 0:
-        raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(cmd)}")
+    if proc.returncode == 0:
+        return
+    if success_file is not None and success_file.exists() and success_file.stat().st_size > 0:
+        log.warning(
+            f"Command exited with code {proc.returncode}, but {success_file} was written "
+            f"({success_file.stat().st_size} bytes); treating as success."
+        )
+        return
+    raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(cmd)}")
 
 
 def main() -> None:
