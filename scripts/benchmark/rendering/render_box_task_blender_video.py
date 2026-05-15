@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -33,6 +36,44 @@ def positive_int(text: str) -> int:
     if value <= 0:
         raise argparse.ArgumentTypeError(f"Expected a positive integer, got {text!r}")
     return value
+
+
+def frame_path(frame_dir: Path, frame_index: int) -> Path:
+    return frame_dir / f"frame_{frame_index:06d}.png"
+
+
+def select_work_dir(*, bundle_root: Path, tmp_dir: Path | None, pid: int | None = None) -> Path:
+    selected_pid = os.getpid() if pid is None else pid
+    root = tmp_dir.expanduser().resolve() if tmp_dir is not None else bundle_root / ".tmp_box_task_blender"
+    return root / f"render_work_{selected_pid}"
+
+
+def ffmpeg_command(*, ffmpeg_bin: str, frame_dir: Path, fps: int, out_video: Path) -> list[str]:
+    return [
+        ffmpeg_bin,
+        "-y",
+        "-framerate",
+        str(fps),
+        "-i",
+        str(frame_dir / "frame_%06d.png"),
+        "-pix_fmt",
+        "yuv420p",
+        "-vcodec",
+        "libx264",
+        str(out_video),
+    ]
+
+
+def assemble_video(*, frame_dir: Path, fps: int, out_video: Path) -> None:
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if ffmpeg_bin is None:
+        raise RuntimeError("ffmpeg not found in PATH")
+    out_video.parent.mkdir(parents=True, exist_ok=True)
+    command = ffmpeg_command(ffmpeg_bin=ffmpeg_bin, frame_dir=frame_dir, fps=fps, out_video=out_video)
+    proc = subprocess.run(command, text=True, capture_output=True, check=False)
+    if proc.returncode != 0:
+        message = "\n".join(part for part in (proc.stderr.strip(), proc.stdout.strip()) if part)
+        raise RuntimeError(f"ffmpeg failed with exit code {proc.returncode}: {message[-1000:]}")
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

@@ -116,3 +116,36 @@ def test_dry_run_prints_render_plan(tmp_path: Path, capsys) -> None:
     assert payload["out_frames"] == 6
     assert payload["scene_frame_bounds"] == [[0, 3], [3, 6]]
     assert payload["out_video"].endswith("out.mp4")
+
+
+def test_frame_pattern_uses_zero_padded_pngs(tmp_path: Path) -> None:
+    assert cli.frame_path(tmp_path, 12).name == "frame_000012.png"
+
+
+def test_ffmpeg_command_uses_yuv420p_for_compatibility(tmp_path: Path) -> None:
+    command = cli.ffmpeg_command(
+        ffmpeg_bin="/usr/bin/ffmpeg",
+        frame_dir=tmp_path / "frames",
+        fps=30,
+        out_video=tmp_path / "video.mp4",
+    )
+
+    assert command == [
+        "/usr/bin/ffmpeg",
+        "-y",
+        "-framerate",
+        "30",
+        "-i",
+        str(tmp_path / "frames" / "frame_%06d.png"),
+        "-pix_fmt",
+        "yuv420p",
+        "-vcodec",
+        "libx264",
+        str(tmp_path / "video.mp4"),
+    ]
+
+
+def test_work_dir_defaults_under_bundle_root(tmp_path: Path) -> None:
+    bundle = _make_bundle(tmp_path)
+    work_dir = cli.select_work_dir(bundle_root=bundle, tmp_dir=None, pid=123)
+    assert work_dir == bundle / ".tmp_box_task_blender" / "render_work_123"
