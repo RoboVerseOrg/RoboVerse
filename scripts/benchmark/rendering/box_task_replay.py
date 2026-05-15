@@ -253,6 +253,19 @@ def resolve_decode_bundle_paths(
     return BoxTaskBundlePaths.from_root(resolved_traj_path.parents[2], traj_path=resolved_traj_path)
 
 
+def save_decoded_tensor_states(states: dict[int, Any], path: Path) -> None:
+    import torch
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(states, path)
+
+
+def load_decoded_tensor_states(path: Path) -> dict[int, Any]:
+    import torch
+
+    return torch.load(path, map_location="cpu", weights_only=False)
+
+
 def install_numpy_pickle_aliases() -> list[str]:
     """Install NumPy 1.x/2.x module aliases needed by pickled trajectories."""
     import importlib

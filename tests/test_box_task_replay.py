@@ -421,6 +421,35 @@ def test_load_raw_v2_pickle_removes_temporary_numpy_aliases(tmp_path: Path, monk
     assert alias_name not in sys.modules
 
 
+def test_decoded_tensor_state_helpers_use_torch_serialization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state_path = tmp_path / "nested" / "decoded.pt"
+    states = {5: "state-5"}
+    calls: dict[str, object] = {}
+    fake_torch = ModuleType("torch")
+
+    def fake_save(payload, path):
+        calls["save"] = (payload, Path(path))
+        Path(path).write_text("serialized", encoding="utf-8")
+
+    def fake_load(path, *, map_location=None, weights_only=None):
+        calls["load"] = (Path(path), map_location, weights_only)
+        return states
+
+    fake_torch.save = fake_save
+    fake_torch.load = fake_load
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    replay.save_decoded_tensor_states(states, state_path)
+    loaded = replay.load_decoded_tensor_states(state_path)
+
+    assert calls["save"] == (states, state_path)
+    assert calls["load"] == (state_path, "cpu", False)
+    assert loaded is states
+
+
 def test_patch_isaacsim_render_settings_falls_back_without_replicator(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

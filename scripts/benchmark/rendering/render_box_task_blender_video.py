@@ -21,7 +21,9 @@ from scripts.benchmark.rendering.box_task_replay import (
     compute_output_frames,
     decode_trajectory_tensor_states,
     frame_to_source_indices,
+    load_decoded_tensor_states,
     parse_scene_tokens,
+    save_decoded_tensor_states,
     scene_frame_bounds,
 )
 
@@ -94,11 +96,19 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--camera-pos", type=parse_vec3, default=(1.45, -1.0, 0.95))
     parser.add_argument("--camera-look-at", type=parse_vec3, default=(0.55, 0.0, 0.38))
     parser.add_argument("--head-light-intensity", type=float, default=10000.0)
-    parser.add_argument("--out-video", type=Path, required=True)
+    parser.add_argument("--out-video", type=Path, default=None)
     parser.add_argument("--tmp-dir", type=Path, default=None)
     parser.add_argument("--keep-intermediates", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
-    return parser.parse_args(argv)
+    parser.add_argument("--decode-source-indices-json", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--decode-states-out", type=Path, default=None, help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    is_decode_worker = args.decode_source_indices_json is not None or args.decode_states_out is not None
+    if is_decode_worker and (args.decode_source_indices_json is None or args.decode_states_out is None):
+        parser.error("--decode-source-indices-json and --decode-states-out must be used together")
+    if not is_decode_worker and args.out_video is None:
+        parser.error("--out-video is required unless decoding states")
+    return args
 
 
 def build_plan(args: argparse.Namespace) -> dict[str, object]:
@@ -170,11 +180,13 @@ def render_frames(
     frame_dir: Path,
 ) -> None:
     unique_source_indices = sorted({int(index) for index in frame_to_src})
-    tensor_states_by_source = decode_trajectory_tensor_states(
-        paths.traj_path,
-        unique_source_indices,
-        bundle_paths=paths,
+    decoded_state_path = frame_dir.parent / "decoded_tensor_states.pt"
+    decode_trajectory_tensor_states_subprocess(
+        paths=paths,
+        source_indices=unique_source_indices,
+        state_path=decoded_state_path,
     )
+    tensor_states_by_source = load_decoded_tensor_states(decoded_state_path)
 
     for scene, (start_frame, end_frame) in zip(
         scenes,
@@ -201,6 +213,33 @@ def render_frames(
             samples=args.samples,
             device=args.device,
         )
+
+
+def decode_trajectory_tensor_states_subprocess(
+    *,
+    paths: BoxTaskBundlePaths,
+    source_indices: Sequence[int],
+    state_path: Path,
+    python_bin: str = sys.executable,
+    script_path: Path | None = None,
+) -> None:
+    worker_script = Path(__file__).resolve() if script_path is None else script_path
+    command = [
+        python_bin,
+        str(worker_script),
+        "--bundle-root",
+        str(paths.bundle_root),
+        "--traj-path",
+        str(paths.traj_path),
+        "--decode-source-indices-json",
+        json.dumps([int(index) for index in source_indices]),
+        "--decode-states-out",
+        str(state_path),
+    ]
+    proc = subprocess.run(command, text=True, capture_output=True, check=False)
+    if proc.returncode != 0:
+        message = "\n".join(part for part in (proc.stderr.strip(), proc.stdout.strip()) if part)
+        raise RuntimeError(f"decode worker failed with exit code {proc.returncode}: {message[-1000:]}")
 
 
 def render_scene_segment(
@@ -273,13 +312,28 @@ def _enable_cycles_devices(preferences: Any, devices: Any = None) -> None:
 
 
 def apply_state_to_handler(handler: Any, state: Any) -> None:
+    set_blender_image_format_if_loaded(file_format="BMP", color_mode="RGB")
     try:
         handler.set_states(state)
     except TypeError:
         handler.set_states([state])
+    if getattr(handler, "set_states_refreshes", False):
+        return
     refresh_render = getattr(handler, "refresh_render", None)
     if callable(refresh_render):
         refresh_render()
+
+
+def set_blender_image_format_if_loaded(*, file_format: str, color_mode: str) -> None:
+    bpy = sys.modules.get("bpy")
+    if bpy is None:
+        return
+    scene = getattr(getattr(bpy, "context", None), "scene", None)
+    image_settings = getattr(getattr(scene, "render", None), "image_settings", None)
+    if image_settings is None:
+        return
+    image_settings.file_format = file_format
+    image_settings.color_mode = color_mode
 
 
 def camera_object_for(handler: Any, camera: Any) -> Any:
@@ -296,6 +350,8 @@ def render_png_frame(*, handler: Any, camera: Any, path: Path) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     scene = bpy.context.scene
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGB"
     scene.camera = camera_object_for(handler, camera)
     scene.render.resolution_x = int(camera.width)
     scene.render.resolution_y = int(camera.height)
@@ -304,8 +360,29 @@ def render_png_frame(*, handler: Any, camera: Any, path: Path) -> None:
     bpy.ops.render.render(write_still=True)
 
 
+def run_decode_worker(args: argparse.Namespace) -> int:
+    paths = BoxTaskBundlePaths.from_root(args.bundle_root, traj_path=args.traj_path)
+    source_indices = json.loads(args.decode_source_indices_json)
+    states = decode_trajectory_tensor_states(paths.traj_path, source_indices, bundle_paths=paths)
+    save_decoded_tensor_states(states, args.decode_states_out)
+    print(
+        json.dumps(
+            {
+                "status": "decoded",
+                "states": str(args.decode_states_out),
+                "source_frames": len(source_indices),
+            }
+        )
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.decode_source_indices_json is not None or args.decode_states_out is not None:
+        if args.decode_source_indices_json is None or args.decode_states_out is None:
+            raise ValueError("--decode-source-indices-json and --decode-states-out must be used together")
+        return run_decode_worker(args)
     plan = build_plan(args)
     if args.dry_run:
         print(json.dumps(plan, indent=2))

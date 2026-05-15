@@ -198,7 +198,7 @@ def test_render_plan_calls_frame_renderer_once_per_output_frame(
     assert (tmp_path / "out.mp4").read_bytes() == b"fake mp4"
 
 
-def test_render_frames_materializes_unique_source_frames_before_scene_render(
+def test_render_frames_decodes_unique_source_frames_in_subprocess_before_scene_render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     paths = cli.BoxTaskBundlePaths.from_root(_make_bundle(tmp_path))
@@ -206,8 +206,11 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
     tensor_states = {2: "state-2", 5: "state-5", 9: "state-9"}
     calls: dict[str, object] = {"segments": []}
 
-    def fake_decode(traj_path, requested_indices, bundle_paths=None):
-        calls["decode"] = (traj_path, list(requested_indices), bundle_paths)
+    def fake_decode_subprocess(**kwargs):
+        calls["decode_subprocess"] = kwargs
+
+    def fake_load_decoded(path):
+        calls["load_decoded"] = path
         return tensor_states
 
     def fake_build_scenario(**kwargs):
@@ -216,10 +219,12 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
     def fake_render_scene_segment(**kwargs):
         calls["segments"].append(kwargs)
 
-    monkeypatch.setattr(cli, "decode_trajectory_tensor_states", fake_decode)
+    monkeypatch.setattr(cli, "decode_trajectory_tensor_states_subprocess", fake_decode_subprocess)
+    monkeypatch.setattr(cli, "load_decoded_tensor_states", fake_load_decoded)
     monkeypatch.setattr(cli, "build_box_task_scenario", fake_build_scenario)
     monkeypatch.setattr(cli, "render_scene_segment", fake_render_scene_segment)
 
+    frame_dir = tmp_path / "work" / "frames"
     cli.render_frames(
         args=SimpleNamespace(
             width=320,
@@ -233,10 +238,13 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
         paths=paths,
         scenes=["scene-a", "scene-b"],
         frame_to_src=source_indices,
-        frame_dir=tmp_path / "frames",
+        frame_dir=frame_dir,
     )
 
-    assert calls["decode"] == (paths.traj_path, [2, 5, 9], paths)
+    assert calls["decode_subprocess"]["paths"] is paths
+    assert calls["decode_subprocess"]["source_indices"] == [2, 5, 9]
+    assert calls["decode_subprocess"]["state_path"] == frame_dir.parent / "decoded_tensor_states.pt"
+    assert calls["load_decoded"] == frame_dir.parent / "decoded_tensor_states.pt"
     assert len(calls["segments"]) == 2
     assert calls["segments"][0]["scenario"] == {"scene": "scene-a", "width": 320, "height": 240}
     assert calls["segments"][0]["out_start"] == 0
@@ -246,6 +254,107 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
     assert calls["segments"][1]["scenario"]["scene"] == "scene-b"
     assert calls["segments"][1]["out_start"] == 3
     assert calls["segments"][1]["out_end"] == 6
+
+
+def test_decode_subprocess_command_passes_bundle_traj_indices_and_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = cli.BoxTaskBundlePaths.from_root(_make_bundle(tmp_path))
+    state_path = tmp_path / "states.pt"
+    calls: dict[str, object] = {}
+
+    def fake_run(command, *, text, capture_output, check):
+        calls["command"] = command
+        calls["run_kwargs"] = {"text": text, "capture_output": capture_output, "check": check}
+        return SimpleNamespace(returncode=0, stdout="decoded", stderr="")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    cli.decode_trajectory_tensor_states_subprocess(
+        paths=paths,
+        source_indices=[5, 2, 5],
+        state_path=state_path,
+        python_bin="/python",
+        script_path=Path("/repo/render.py"),
+    )
+
+    assert calls["command"] == [
+        "/python",
+        "/repo/render.py",
+        "--bundle-root",
+        str(paths.bundle_root),
+        "--traj-path",
+        str(paths.traj_path),
+        "--decode-source-indices-json",
+        "[5, 2, 5]",
+        "--decode-states-out",
+        str(state_path),
+    ]
+    assert calls["run_kwargs"] == {"text": True, "capture_output": True, "check": False}
+
+
+def test_decode_subprocess_reports_worker_output_tail_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = cli.BoxTaskBundlePaths.from_root(_make_bundle(tmp_path))
+
+    def fake_run(command, *, text, capture_output, check):
+        return SimpleNamespace(returncode=7, stdout="stdout detail", stderr="stderr detail")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="decode worker failed with exit code 7"):
+        cli.decode_trajectory_tensor_states_subprocess(
+            paths=paths,
+            source_indices=[1],
+            state_path=tmp_path / "states.pt",
+            python_bin="/python",
+            script_path=Path("/repo/render.py"),
+        )
+
+
+def test_decode_worker_mode_writes_decoded_states_without_rendering(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    bundle = _make_bundle(tmp_path)
+    calls: dict[str, object] = {}
+
+    def fake_decode(traj_path, source_indices, bundle_paths=None):
+        calls["decode"] = (traj_path, list(source_indices), bundle_paths)
+        return {2: "state-2", 5: "state-5"}
+
+    def fake_save(states, path):
+        calls["save"] = (states, path)
+
+    def fail_render_video(args):
+        raise AssertionError("decode worker mode must not render")
+
+    monkeypatch.setattr(cli, "decode_trajectory_tensor_states", fake_decode)
+    monkeypatch.setattr(cli, "save_decoded_tensor_states", fake_save)
+    monkeypatch.setattr(cli, "render_video", fail_render_video)
+
+    state_path = tmp_path / "decoded.pt"
+    exit_code = cli.main(
+        [
+            "--bundle-root",
+            str(bundle),
+            "--decode-source-indices-json",
+            "[5, 2, 5]",
+            "--decode-states-out",
+            str(state_path),
+        ]
+    )
+
+    assert exit_code == 0
+    decoded_paths = calls["decode"][2]
+    assert calls["decode"] == (decoded_paths.traj_path, [5, 2, 5], decoded_paths)
+    assert calls["save"] == ({2: "state-2", 5: "state-5"}, state_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {"status": "decoded", "states": str(state_path), "source_frames": 3}
 
 
 def test_camera_object_lookup_prefers_public_then_private_mapping() -> None:
@@ -276,8 +385,9 @@ def test_configure_blender_for_video_sets_cpu_and_gpu_devices(monkeypatch: pytes
             return self.devices
 
     cycles_prefs = FakePreferences()
+    image_settings = SimpleNamespace(file_format=None, color_mode=None)
     scene = SimpleNamespace(
-        render=SimpleNamespace(engine=None, image_settings=SimpleNamespace(file_format=None, color_mode=None)),
+        render=SimpleNamespace(engine=None, image_settings=image_settings),
         cycles=SimpleNamespace(samples=None, device=None),
         view_settings=SimpleNamespace(view_transform=None, exposure=None, gamma=None),
     )
@@ -353,7 +463,13 @@ def test_render_png_frame_sets_camera_resolution_and_filepath(monkeypatch: pytes
     render_calls: list[dict[str, object]] = []
     scene = SimpleNamespace(
         camera=None,
-        render=SimpleNamespace(resolution_x=None, resolution_y=None, resolution_percentage=None, filepath=None),
+        render=SimpleNamespace(
+            resolution_x=None,
+            resolution_y=None,
+            resolution_percentage=None,
+            filepath=None,
+            image_settings=SimpleNamespace(file_format="BMP", color_mode="RGB"),
+        ),
     )
     bpy = ModuleType("bpy")
     bpy.context = SimpleNamespace(scene=scene)
@@ -372,7 +488,38 @@ def test_render_png_frame_sets_camera_resolution_and_filepath(monkeypatch: pytes
     assert scene.render.resolution_y == 240
     assert scene.render.resolution_percentage == 100
     assert scene.render.filepath == str(out_path)
+    assert scene.render.image_settings.file_format == "PNG"
+    assert scene.render.image_settings.color_mode == "RGB"
     assert render_calls == [{"write_still": True}]
+
+
+def test_apply_state_to_handler_uses_blender_readback_format_for_handler_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scene = SimpleNamespace(render=SimpleNamespace(image_settings=SimpleNamespace(file_format="PNG", color_mode="RGBA")))
+    bpy = ModuleType("bpy")
+    bpy.context = SimpleNamespace(scene=scene)
+    monkeypatch.setitem(sys.modules, "bpy", bpy)
+    calls: list[tuple[object, str, str]] = []
+
+    class FakeRefreshingHandler:
+        set_states_refreshes = True
+
+        def set_states(self, state):
+            calls.append(
+                (
+                    state,
+                    scene.render.image_settings.file_format,
+                    scene.render.image_settings.color_mode,
+                )
+            )
+
+        def refresh_render(self):
+            raise AssertionError("set_states already refreshes")
+
+    cli.apply_state_to_handler(FakeRefreshingHandler(), "tensor-state")
+
+    assert calls == [("tensor-state", "BMP", "RGB")]
 
 
 def test_apply_state_to_handler_passes_tensor_state_directly_falls_back_to_list_and_refreshes() -> None:
