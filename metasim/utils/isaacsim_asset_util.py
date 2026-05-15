@@ -117,6 +117,22 @@ def convert_mjcf_to_usd_cached(mjcf_path: str) -> str:
 
     log.info(f"Converting MJCF to USD: {mjcf_path_obj}")
 
+    # The MJCF importer lives in a separate Kit extension; it isn't loaded
+    # automatically by the standard isaaclab app launch. Enable it before
+    # instantiating the converter, otherwise the underlying
+    # ``MJCFCreateImportConfig`` Kit command is not registered.
+    try:
+        from isaacsim.core.utils.extensions import enable_extension
+
+        for ext_id in ("isaacsim.asset.importer.mjcf", "omni.importer.mjcf"):
+            try:
+                enable_extension(ext_id)
+                break
+            except Exception:  # extension name varies across Isaac Sim versions
+                continue
+    except ImportError:  # pragma: no cover - depends on Isaac Sim runtime
+        pass
+
     try:
         try:
             from omni.isaac.lab.sim.converters import MjcfConverter, MjcfConverterCfg
