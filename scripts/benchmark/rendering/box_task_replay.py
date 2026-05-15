@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableMapping
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 import inspect
@@ -207,6 +208,26 @@ def disable_metasim_forced_exit_on_close() -> None:
     os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] = "0"
 
 
+@contextmanager
+def local_bundle_decode_runtime(hf_util: Any):
+    original_force_exit = os.environ.get("METASIM_FORCE_EXIT_ON_CLOSE")
+    original_download_check = hf_util.check_and_download_recursive
+    restore_render_settings = lambda: None
+    try:
+        disable_metasim_forced_exit_on_close()
+        # The replay bundle is local and complete; avoid recursive Hub downloads during decode.
+        hf_util.check_and_download_recursive = lambda *args, **kwargs: None
+        restore_render_settings = _patch_isaacsim_render_settings_for_decode()
+        yield
+    finally:
+        hf_util.check_and_download_recursive = original_download_check
+        if original_force_exit is None:
+            os.environ.pop("METASIM_FORCE_EXIT_ON_CLOSE", None)
+        else:
+            os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] = original_force_exit
+        restore_render_settings()
+
+
 def tensorize_replay_state(state: dict[str, Any], tensor_factory: Any | None = None) -> dict[str, Any]:
     if tensor_factory is None:
         import torch
@@ -220,6 +241,16 @@ def close_decode_env_without_closing_kit(env: Any) -> None:
     if handler is not None:
         setattr(handler, "_owns_simulation_app", False)
     env.close()
+
+
+def resolve_decode_bundle_paths(
+    traj_path: Path,
+    bundle_paths: BoxTaskBundlePaths | None = None,
+) -> BoxTaskBundlePaths:
+    if bundle_paths is not None:
+        return bundle_paths
+    resolved_traj_path = Path(traj_path).expanduser().resolve()
+    return BoxTaskBundlePaths.from_root(resolved_traj_path.parents[2], traj_path=resolved_traj_path)
 
 
 def install_numpy_pickle_aliases() -> list[str]:
@@ -324,62 +355,62 @@ def load_v2_init_state(traj_path: Path, robot_name: str = "openarm_wuji") -> dic
     return convert_v2_state_to_v3(init_state, robot_name)
 
 
-def decode_trajectory_tensor_states(traj_path: Path, source_indices) -> dict[int, Any]:
+def decode_trajectory_tensor_states(
+    traj_path: Path,
+    source_indices,
+    bundle_paths: BoxTaskBundlePaths | None = None,
+) -> dict[int, Any]:
     import torch
     from metasim.utils import hf_util
     from metasim.task.base import BaseTaskEnv
 
-    disable_metasim_forced_exit_on_close()
-    # The replay bundle is local and complete; avoid recursive Hub downloads during smoke renders.
-    hf_util.check_and_download_recursive = lambda filepaths, n_processes=16: None
-    _patch_isaacsim_render_settings_for_decode()
+    with local_bundle_decode_runtime(hf_util):
+        episode_states = load_v2_episode_states(traj_path)
+        init_state = load_v2_init_state(traj_path)
+        unique_indices = sorted({int(index) for index in source_indices})
+        robot_name = "openarm_wuji"
+        decode_paths = resolve_decode_bundle_paths(traj_path, bundle_paths)
+        decode_scenario = build_decode_scenario(paths=decode_paths)
 
-    episode_states = load_v2_episode_states(traj_path)
-    init_state = load_v2_init_state(traj_path)
-    unique_indices = sorted({int(index) for index in source_indices})
-    robot_name = "openarm_wuji"
-    bundle_paths = BoxTaskBundlePaths.from_root(traj_path.parents[2], traj_path=traj_path)
-    decode_scenario = build_decode_scenario(paths=bundle_paths)
+        class BoxTaskDecodeEnv(BaseTaskEnv):
+            scenario = decode_scenario
 
-    class BoxTaskDecodeEnv(BaseTaskEnv):
-        scenario = decode_scenario
+            def _get_initial_states(self) -> list[dict[str, Any]]:
+                if init_state is not None:
+                    initial_state = patch_state_for_replay(init_state, robot_name=robot_name)
+                    initial_state.setdefault("cameras", {})
+                    initial_state.setdefault("extras", {})
+                    return [tensorize_replay_state(initial_state)]
+                return [{"objects": {}, "robots": {}, "cameras": {}, "extras": {}}]
 
-        def _get_initial_states(self) -> list[dict[str, Any]]:
-            if init_state is not None:
-                initial_state = patch_state_for_replay(init_state, robot_name=robot_name)
-                initial_state.setdefault("cameras", {})
-                initial_state.setdefault("extras", {})
-                return [tensorize_replay_state(initial_state)]
-            return [{"objects": {}, "robots": {}, "cameras": {}, "extras": {}}]
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = None
-    try:
-        env = BoxTaskDecodeEnv(scenario=BoxTaskDecodeEnv.scenario, device=device)
-        tensor_states: dict[int, Any] = {}
-        for source_index in unique_indices:
-            state = patch_state_for_replay(episode_states[source_index], robot_name=robot_name)
-            state = tensorize_replay_state(state)
-            env.handler.set_states([state])
-            tensor_states[source_index] = env.handler.get_states(mode="tensor")
-        return tensor_states
-    finally:
-        if env is not None:
-            close_decode_env_without_closing_kit(env)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        env = None
+        try:
+            env = BoxTaskDecodeEnv(scenario=BoxTaskDecodeEnv.scenario, device=device)
+            tensor_states: dict[int, Any] = {}
+            for source_index in unique_indices:
+                state = patch_state_for_replay(episode_states[source_index], robot_name=robot_name)
+                state = tensorize_replay_state(state)
+                env.handler.set_states([state])
+                tensor_states[source_index] = env.handler.get_states(mode="tensor")
+            return tensor_states
+        finally:
+            if env is not None:
+                close_decode_env_without_closing_kit(env)
 
 
-def _patch_isaacsim_render_settings_for_decode() -> None:
+def _patch_isaacsim_render_settings_for_decode():
     import importlib
 
     isaacsim_module = importlib.import_module("metasim.sim.isaacsim.isaacsim")
     handler_cls = getattr(isaacsim_module, "IsaacsimHandler")
     original = handler_cls._load_render_settings
     if getattr(original, "_box_task_decode_patch", False):
-        return
+        return lambda: None
 
-    def load_render_settings_without_replicator(self) -> None:
+    def load_render_settings_without_replicator(self, *args, **kwargs) -> None:
         try:
-            return original(self)
+            return original(self, *args, **kwargs)
         except ModuleNotFoundError as exc:
             if exc.name is None or not exc.name.startswith("omni.replicator"):
                 raise
@@ -397,6 +428,12 @@ def _patch_isaacsim_render_settings_for_decode() -> None:
 
     load_render_settings_without_replicator._box_task_decode_patch = True
     handler_cls._load_render_settings = load_render_settings_without_replicator
+
+    def restore_render_settings() -> None:
+        if getattr(handler_cls, "_load_render_settings", None) is load_render_settings_without_replicator:
+            handler_cls._load_render_settings = original
+
+    return restore_render_settings
 
 
 def _rewrite_legacy_joint_keys(field_state: MutableMapping[str, Any], mapping: dict[str, str]) -> None:

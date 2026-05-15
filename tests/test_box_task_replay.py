@@ -257,6 +257,53 @@ def test_disable_metasim_forced_exit_on_close_overrides_default(monkeypatch: pyt
     assert os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] == "0"
 
 
+def test_local_bundle_decode_runtime_restores_process_wide_patches(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeSettings:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+
+        def set_string(self, key: str, value: str) -> None:
+            self.values[key] = value
+
+    class FakeHandler:
+        def _load_render_settings(self) -> None:
+            raise ModuleNotFoundError("No module named 'omni.replicator'", name="omni.replicator")
+
+    fake_settings = FakeSettings()
+    fake_carb = ModuleType("carb")
+    fake_carb.settings = SimpleNamespace(get_settings=lambda: fake_settings)
+    fake_isaacsim = ModuleType("metasim.sim.isaacsim.isaacsim")
+    fake_isaacsim.IsaacsimHandler = FakeHandler
+    original_render_settings = FakeHandler._load_render_settings
+    original_download_check = object()
+    fake_hf_util = SimpleNamespace(check_and_download_recursive=original_download_check)
+    monkeypatch.setitem(sys.modules, "carb", fake_carb)
+    monkeypatch.setitem(sys.modules, "metasim.sim.isaacsim.isaacsim", fake_isaacsim)
+    monkeypatch.setenv("METASIM_FORCE_EXIT_ON_CLOSE", "1")
+
+    with replay.local_bundle_decode_runtime(fake_hf_util):
+        assert os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] == "0"
+        assert fake_hf_util.check_and_download_recursive is not original_download_check
+        assert fake_hf_util.check_and_download_recursive(["local"], n_processes=1, optional=True) is None
+        handler = FakeHandler()
+        handler.scenario = SimpleNamespace(render=SimpleNamespace(mode="pathtracing"))
+        handler._load_render_settings()
+        assert fake_settings.values["/rtx/rendermode"] == "PathTracing"
+
+    assert os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] == "1"
+    assert fake_hf_util.check_and_download_recursive is original_download_check
+    assert FakeHandler._load_render_settings is original_render_settings
+
+
+def test_resolve_decode_bundle_paths_prefers_validated_bundle_paths(tmp_path: Path) -> None:
+    paths = _make_bundle(tmp_path)
+    external_traj = tmp_path / "external" / "task.pkl"
+    external_traj.parent.mkdir()
+    external_traj.write_bytes(b"pickle-bytes")
+
+    assert replay.resolve_decode_bundle_paths(external_traj, paths) is paths
+
+
 def test_tensorize_replay_state_converts_pose_arrays_without_mutating_input() -> None:
     state = {
         "objects": {

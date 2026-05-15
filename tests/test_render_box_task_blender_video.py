@@ -206,8 +206,8 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
     tensor_states = {2: "state-2", 5: "state-5", 9: "state-9"}
     calls: dict[str, object] = {"segments": []}
 
-    def fake_decode(traj_path, requested_indices):
-        calls["decode"] = (traj_path, list(requested_indices))
+    def fake_decode(traj_path, requested_indices, bundle_paths=None):
+        calls["decode"] = (traj_path, list(requested_indices), bundle_paths)
         return tensor_states
 
     def fake_build_scenario(**kwargs):
@@ -236,7 +236,7 @@ def test_render_frames_materializes_unique_source_frames_before_scene_render(
         frame_dir=tmp_path / "frames",
     )
 
-    assert calls["decode"] == (paths.traj_path, [2, 5, 9])
+    assert calls["decode"] == (paths.traj_path, [2, 5, 9], paths)
     assert len(calls["segments"]) == 2
     assert calls["segments"][0]["scenario"] == {"scene": "scene-a", "width": 320, "height": 240}
     assert calls["segments"][0]["out_start"] == 0

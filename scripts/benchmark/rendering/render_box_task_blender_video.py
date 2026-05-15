@@ -170,7 +170,11 @@ def render_frames(
     frame_dir: Path,
 ) -> None:
     unique_source_indices = sorted({int(index) for index in frame_to_src})
-    tensor_states_by_source = decode_trajectory_tensor_states(paths.traj_path, unique_source_indices)
+    tensor_states_by_source = decode_trajectory_tensor_states(
+        paths.traj_path,
+        unique_source_indices,
+        bundle_paths=paths,
+    )
 
     for scene, (start_frame, end_frame) in zip(
         scenes,
