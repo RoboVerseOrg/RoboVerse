@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -17,7 +17,9 @@ from scripts.benchmark.rendering.box_task_replay import (
     DEFAULT_BUNDLE_ROOT,
     DEFAULT_SRC_TOTAL_FRAMES,
     BoxTaskBundlePaths,
+    build_box_task_scenario,
     compute_output_frames,
+    decode_trajectory_tensor_states,
     frame_to_source_indices,
     parse_scene_tokens,
     scene_frame_bounds,
@@ -128,7 +130,174 @@ def build_plan(args: argparse.Namespace) -> dict[str, object]:
 
 
 def render_video(args: argparse.Namespace) -> int:
-    raise NotImplementedError("Real rendering is added in the next task")
+    paths = BoxTaskBundlePaths.from_root(args.bundle_root, traj_path=args.traj_path)
+    scenes = parse_scene_tokens(args.scenes)
+    out_frames = compute_output_frames(
+        src_total_frames=args.src_total_frames,
+        fps=args.fps,
+        duration_sec=args.duration_sec,
+        out_frames=args.out_frames,
+    )
+    source_indices = frame_to_source_indices(src_total_frames=args.src_total_frames, out_frames=out_frames)
+    out_video = args.out_video.expanduser().resolve()
+    work_dir = select_work_dir(bundle_root=paths.bundle_root, tmp_dir=args.tmp_dir)
+    frame_dir = work_dir / "frames"
+    frame_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        render_frames(
+            args=args,
+            paths=paths,
+            scenes=scenes,
+            frame_to_src=source_indices,
+            frame_dir=frame_dir,
+        )
+        assemble_video(frame_dir=frame_dir, fps=args.fps, out_video=out_video)
+    finally:
+        if not args.keep_intermediates:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    print(json.dumps({"status": "ok", "out_video": str(out_video), "frames": out_frames}))
+    return 0
+
+
+def render_frames(
+    *,
+    args: argparse.Namespace,
+    paths: BoxTaskBundlePaths,
+    scenes: Sequence[str],
+    frame_to_src,
+    frame_dir: Path,
+) -> None:
+    unique_source_indices = sorted({int(index) for index in frame_to_src})
+    tensor_states_by_source = decode_trajectory_tensor_states(paths.traj_path, unique_source_indices)
+
+    for scene, (start_frame, end_frame) in zip(
+        scenes,
+        scene_frame_bounds(out_frames=len(frame_to_src), scene_count=len(scenes)),
+        strict=True,
+    ):
+        scenario = build_box_task_scenario(
+            paths=paths,
+            simulator="blender",
+            scene=scene,
+            width=args.width,
+            height=args.height,
+            camera_pos=args.camera_pos,
+            camera_look_at=args.camera_look_at,
+            head_light_intensity=args.head_light_intensity,
+        )
+        render_scene_segment(
+            scenario=scenario,
+            tensor_states_by_src=tensor_states_by_source,
+            frame_to_src=frame_to_src,
+            frame_dir=frame_dir,
+            out_start=start_frame,
+            out_end=end_frame,
+            samples=args.samples,
+            device=args.device,
+        )
+
+
+def render_scene_segment(
+    *,
+    scenario: Any,
+    tensor_states_by_src: dict[int, Any],
+    frame_to_src,
+    frame_dir: Path,
+    out_start: int,
+    out_end: int,
+    samples: int,
+    device: str,
+) -> None:
+    from metasim.sim.blender.blender import BlenderHandler
+
+    handler = BlenderHandler(scenario)
+    try:
+        handler.launch()
+        configure_blender_for_video(samples=samples, device=device)
+        camera = scenario.cameras[0]
+        for output_frame in range(out_start, out_end):
+            source_index = int(frame_to_src[output_frame])
+            apply_state_to_handler(handler, tensor_states_by_src[source_index])
+            render_png_frame(handler=handler, camera=camera, path=frame_path(frame_dir, output_frame))
+    finally:
+        handler.close()
+
+
+def configure_blender_for_video(*, samples: int, device: str) -> None:
+    import bpy
+
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples = int(samples)
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGB"
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.exposure = 0.0
+    scene.view_settings.gamma = 1.0
+
+    requested_device = device.upper()
+    if requested_device == "CPU":
+        scene.cycles.device = "CPU"
+        return
+
+    scene.cycles.device = "GPU"
+    preferences = bpy.context.preferences.addons["cycles"].preferences
+    device_types = ("OPTIX", "CUDA") if requested_device == "AUTO" else (requested_device,)
+    last_error: Exception | None = None
+    for device_type in device_types:
+        try:
+            preferences.compute_device_type = device_type
+            devices = preferences.get_devices()
+            _enable_cycles_devices(preferences, devices)
+            return
+        except Exception as exc:  # pragma: no cover - depends on Blender build/device support
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+
+
+def _enable_cycles_devices(preferences: Any, devices: Any = None) -> None:
+    if devices is None:
+        devices = getattr(preferences, "devices", ())
+    for cycles_device in devices:
+        if isinstance(cycles_device, (list, tuple)):
+            _enable_cycles_devices(preferences, cycles_device)
+        else:
+            cycles_device.use = True
+
+
+def apply_state_to_handler(handler: Any, state: Any) -> None:
+    try:
+        handler.set_states(state)
+    except TypeError:
+        handler.set_states([state])
+    refresh_render = getattr(handler, "refresh_render", None)
+    if callable(refresh_render):
+        refresh_render()
+
+
+def camera_object_for(handler: Any, camera: Any) -> Any:
+    camera_name = getattr(camera, "name", camera)
+    for attr_name in ("camera_objs", "_camera_objs"):
+        camera_objs = getattr(handler, attr_name, None)
+        if camera_objs is not None and camera_name in camera_objs:
+            return camera_objs[camera_name]
+    raise KeyError(f"Camera object not found: {camera_name}")
+
+
+def render_png_frame(*, handler: Any, camera: Any, path: Path) -> None:
+    import bpy
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    scene = bpy.context.scene
+    scene.camera = camera_object_for(handler, camera)
+    scene.render.resolution_x = int(camera.width)
+    scene.render.resolution_y = int(camera.height)
+    scene.render.resolution_percentage = 100
+    scene.render.filepath = str(path)
+    bpy.ops.render.render(write_still=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import pickle
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -210,6 +212,198 @@ def test_patch_state_for_replay_ignores_non_dict_fields() -> None:
     assert replay.patch_state_for_replay(state) == state
 
 
+def test_patch_openarm_wuji_robot_cfg_rewrites_legacy_joint_config() -> None:
+    legacy_actuator = object()
+    canonical_actuator = object()
+    robot_cfg = SimpleNamespace(
+        name="openarm_wuji",
+        joint_names=["openarm_left_joint1", "left_hand_finger1_joint1"],
+        left_hand_joint_names=["left_hand_finger1_joint1"],
+        right_hand_joint_names=["right_hand_finger5_joint4"],
+        ee_joint_names=["right_hand_finger5_joint4"],
+        joint_limits={
+            "left_hand_finger1_joint1": (-0.5, 1.6),
+            "right_hand_finger1_joint1": (0.058, 1.6),
+        },
+        default_joint_positions={"left_hand_finger1_joint1": 0.1, "right_hand_finger1_joint1": 0.0},
+        actuators={"left_hand_finger1_joint1": legacy_actuator, "left_finger1_joint1": canonical_actuator},
+        control_type={"right_hand_finger5_joint4": "position"},
+        left_ee_body_name="left_hand_palm_link",
+        right_ee_body_name="right_hand_palm_link",
+        ee_body_name="right_hand_palm_link",
+    )
+
+    patched = replay.patch_openarm_wuji_robot_cfg(robot_cfg)
+
+    assert patched is robot_cfg
+    assert robot_cfg.joint_names == ["openarm_left_joint1", "left_finger1_joint1"]
+    assert robot_cfg.left_hand_joint_names == ["left_finger1_joint1"]
+    assert robot_cfg.right_hand_joint_names == ["right_finger5_joint4"]
+    assert robot_cfg.ee_joint_names == ["right_finger5_joint4"]
+    assert robot_cfg.joint_limits == {"left_finger1_joint1": (-0.5, 1.6), "right_finger1_joint1": (0.058, 1.6)}
+    assert robot_cfg.default_joint_positions == {"left_finger1_joint1": 0.1, "right_finger1_joint1": 0.1}
+    assert robot_cfg.actuators == {"left_finger1_joint1": canonical_actuator}
+    assert robot_cfg.control_type == {"right_finger5_joint4": "position"}
+    assert robot_cfg.left_ee_body_name == "left_palm_link"
+    assert robot_cfg.right_ee_body_name == "right_palm_link"
+    assert robot_cfg.ee_body_name == "right_palm_link"
+
+
+def test_disable_metasim_forced_exit_on_close_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("METASIM_FORCE_EXIT_ON_CLOSE", "1")
+
+    replay.disable_metasim_forced_exit_on_close()
+
+    assert os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] == "0"
+
+
+def test_tensorize_replay_state_converts_pose_arrays_without_mutating_input() -> None:
+    state = {
+        "objects": {
+            "cardboard_box": {
+                "pos": np.array([0.1, 0.2, 0.3]),
+                "rot": [1.0, 0.0, 0.0, 0.0],
+            }
+        },
+        "robots": {
+            "openarm_wuji": {
+                "pos": np.array([0.0, 0.0, 0.0]),
+                "rot": [1.0, 0.0, 0.0, 0.0],
+                "dof_pos": {"left_finger1_joint1": 0.5},
+            }
+        },
+    }
+
+    def fake_tensor(value):
+        if isinstance(value, np.ndarray):
+            return ("tensor", tuple(value.tolist()))
+        return ("tensor", tuple(value))
+
+    tensorized = replay.tensorize_replay_state(state, tensor_factory=fake_tensor)
+
+    assert tensorized["objects"]["cardboard_box"]["pos"] == ("tensor", (0.1, 0.2, 0.3))
+    assert tensorized["objects"]["cardboard_box"]["rot"] == ("tensor", (1.0, 0.0, 0.0, 0.0))
+    assert tensorized["robots"]["openarm_wuji"]["pos"] == ("tensor", (0.0, 0.0, 0.0))
+    assert tensorized["robots"]["openarm_wuji"]["rot"] == ("tensor", (1.0, 0.0, 0.0, 0.0))
+    assert tensorized["robots"]["openarm_wuji"]["dof_pos"] == {"left_finger1_joint1": 0.5}
+    assert isinstance(state["objects"]["cardboard_box"]["pos"], np.ndarray)
+
+
+def test_close_decode_env_without_closing_kit_marks_handler_as_shared() -> None:
+    class FakeHandler:
+        def __init__(self) -> None:
+            self._owns_simulation_app = True
+
+    class FakeEnv:
+        def __init__(self) -> None:
+            self.handler = FakeHandler()
+            self.closed = False
+
+        def close(self) -> None:
+            assert self.handler._owns_simulation_app is False
+            self.closed = True
+
+    env = FakeEnv()
+
+    replay.close_decode_env_without_closing_kit(env)
+
+    assert env.closed is True
+
+
+def test_load_v2_episode_states_converts_first_episode_to_v3_shape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    flat_state = {
+        "openarm_wuji": {
+            "pos": [0.1, 0.2, 0.3],
+            "rot": [1.0, 0.0, 0.0, 0.0],
+            "dof_pos": {"left_hand_finger1_joint1": 0.4},
+        },
+        "cardboard_box": {"pos": [0.5, 0.0, 0.4], "rot": [1.0, 0.0, 0.0, 0.0]},
+        "feast_soda_can": {"pos": [0.6, 0.1, 0.4], "rot": [1.0, 0.0, 0.0, 0.0]},
+    }
+    flat_init = {
+        "openarm_wuji": {"pos": [0.0, 0.0, 0.0]},
+        "cardboard_box": {"pos": [0.4, 0.0, 0.4]},
+    }
+    payload = {"openarm_wuji": [{"states": [flat_state], "init_state": flat_init}]}
+    monkeypatch.setattr(replay, "load_raw_v2_pickle", lambda path: payload)
+
+    states = replay.load_v2_episode_states(tmp_path / "traj.pkl")
+
+    assert states == [
+        {
+            "robots": {"openarm_wuji": flat_state["openarm_wuji"]},
+            "objects": {
+                "cardboard_box": flat_state["cardboard_box"],
+                "feast_soda_can": flat_state["feast_soda_can"],
+            },
+        }
+    ]
+    assert states[0]["robots"]["openarm_wuji"]["dof_pos"]["left_hand_finger1_joint1"] == 0.4
+
+    init_state = replay.load_v2_init_state(tmp_path / "traj.pkl")
+    assert init_state == {
+        "robots": {"openarm_wuji": flat_init["openarm_wuji"]},
+        "objects": {"cardboard_box": flat_init["cardboard_box"]},
+    }
+
+
+def test_load_v2_episode_states_rejects_empty_states(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = {"openarm_wuji": [{"states": []}]}
+    monkeypatch.setattr(replay, "load_raw_v2_pickle", lambda path: payload)
+
+    with pytest.raises(ValueError, match="states"):
+        replay.load_v2_episode_states(tmp_path / "traj.pkl")
+
+
+def test_load_raw_v2_pickle_removes_temporary_numpy_aliases(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    alias_name = "temporary.numpy.alias"
+    traj_path = tmp_path / "traj.pkl"
+    traj_path.write_bytes(pickle.dumps({"ok": True}))
+
+    def fake_install_aliases() -> list[str]:
+        sys.modules[alias_name] = ModuleType(alias_name)
+        return [alias_name]
+
+    monkeypatch.setattr(replay, "install_numpy_pickle_aliases", fake_install_aliases)
+
+    assert replay.load_raw_v2_pickle(traj_path) == {"ok": True}
+    assert alias_name not in sys.modules
+
+
+def test_patch_isaacsim_render_settings_falls_back_without_replicator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeSettings:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+
+        def set_string(self, key: str, value: str) -> None:
+            self.values[key] = value
+
+    class FakeHandler:
+        def _load_render_settings(self) -> None:
+            raise ModuleNotFoundError("No module named 'omni.replicator'", name="omni.replicator")
+
+    fake_settings = FakeSettings()
+    fake_carb = ModuleType("carb")
+    fake_carb.settings = SimpleNamespace(get_settings=lambda: fake_settings)
+    fake_isaacsim = ModuleType("metasim.sim.isaacsim.isaacsim")
+    fake_isaacsim.IsaacsimHandler = FakeHandler
+    monkeypatch.setitem(sys.modules, "carb", fake_carb)
+    monkeypatch.setitem(sys.modules, "metasim.sim.isaacsim.isaacsim", fake_isaacsim)
+
+    replay._patch_isaacsim_render_settings_for_decode()
+
+    handler = FakeHandler()
+    handler.scenario = SimpleNamespace(render=SimpleNamespace(mode="pathtracing"))
+    handler._load_render_settings()
+    assert fake_settings.values["/rtx/rendermode"] == "PathTracing"
+
+
 def test_bundle_paths_validate_required_files(tmp_path: Path) -> None:
     bundle = tmp_path / "bundle"
     (bundle / "assets" / "traj").mkdir(parents=True)
@@ -313,6 +507,16 @@ def test_build_decode_scenario_uses_isaacsim() -> None:
         "feast_soda_can",
         "feast_scented_candle",
     }
+
+
+def test_build_decode_scenario_can_use_bundle_object_assets(tmp_path: Path) -> None:
+    paths = _make_bundle(tmp_path)
+    scenario = replay.build_decode_scenario(paths=paths)
+    objects = {obj.name: obj for obj in scenario.objects}
+
+    assert objects["cardboard_box"].usd_path == str(paths.cardboard_box_usd)
+    assert objects["feast_soda_can"].usd_path == str(paths.soda_can_usd)
+    assert objects["feast_scented_candle"].usd_path == str(paths.scented_candle_usd)
 
 
 def test_scenario_builders_set_renderer_and_scene_when_constructor_lacks_fields(
