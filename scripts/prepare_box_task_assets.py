@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Stage the bundled box_task assets into ``roboverse_data/`` and patch them
-for the canonical naming the rest of RoboVerse expects.
+"""Stage the bundled box_task assets into ``roboverse_data/`` so the
+``box_task.replay`` env can find them.
 
 Run once per checkout. The bundle (``box_task_replay_render_bundle_clean``)
-is the upstream recording artifact, so we copy from there rather than
+is the upstream recording artifact; we copy from there rather than
 distribute the same files in two places.
 
 What this script does:
@@ -12,17 +12,15 @@ What this script does:
    ``roboverse_data/robots/openarm_wuji/`` and patches the MJCF in place:
    - drops the IK-target ``mocap_left`` / ``mocap_right`` bodies (mujoco
      refuses to compile when they are nested under another body)
-   - renames legacy hand joints / actuators ``{side}_hand_finger`` →
-     ``{side}_finger`` to match ``OpenarmBimanualWujiCfg``
    - renames arm motor actuators ``{side}_joint{N}_ctrl`` →
      ``openarm_{side}_joint{N}`` so actuator names equal joint names
 2. Copies the three object MJCFs alongside their USDs under
    ``roboverse_data/assets/box_task/local_pack_box/``.
-3. Converts the legacy v2 trajectory pkl
-   (``...task3_meshycup_openarm_wuji_..._v2.pkl``) into the canonical
-   ``task3_openarm_bimanual_wuji_v2.pkl`` — same conversion the
-   ``convert_box_task_legacy_traj.py`` script provides, invoked here so
-   one command stages everything.
+3. Copies the upstream v2 trajectory pkl into
+   ``roboverse_data/trajs/box_task/task3_openarm_wuji_v2.pkl``. The
+   pkl is keyed by the robot's short name (``openarm_wuji``) and uses
+   legacy ``*_hand_finger*`` joint keys; both match the robot cfg as
+   shipped, so no remap is needed.
 
 Usage::
 
@@ -33,14 +31,13 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import re
 import shutil
 from pathlib import Path
 
 OBJECT_NAMES = ("cardboard_box", "feast_soda_can", "feast_scented_candle")
-LEGACY_TRAJ_NAME = "task3_meshycup_openarm_wuji_20260513_232823_0_v2.pkl"
-CANONICAL_TRAJ_NAME = "task3_openarm_bimanual_wuji_v2.pkl"
+BUNDLE_TRAJ_NAME = "task3_meshycup_openarm_wuji_20260513_232823_0_v2.pkl"
+STAGED_TRAJ_NAME = "task3_openarm_wuji_v2.pkl"
 
 
 def _stage_robot(bundle_root: Path, dest_root: Path) -> Path:
@@ -61,24 +58,20 @@ def _stage_robot(bundle_root: Path, dest_root: Path) -> Path:
 
 
 def _patch_robot_mjcf(mjcf_path: Path) -> None:
-    """Strip mocap bodies; rename joints + actuators to cfg convention."""
+    """Strip mocap bodies and align arm motor names with cfg expectations.
+
+    Finger joints are left alone — the bundle MJCF uses the
+    ``{side}_hand_finger{i}_joint{j}`` naming that the cfg also expects,
+    so a rename would break joint↔actuator binding.
+    """
     text = mjcf_path.read_text()
 
-    # Drop the two single-line mocap bodies (visualization-only IK targets).
-    # They must be world children in MJCF, which breaks when MetaSim
-    # attaches the robot under another parent.
     text = re.sub(
         r'    <body name="mocap_(left|right)" mocap="true"[^/]*>\s*\n[^\n]*\n    </body>\n',
         "",
         text,
     )
 
-    # ``{side}_hand_finger{i}_joint{j}`` → ``{side}_finger{i}_joint{j}``
-    # (both the joint definitions and the position-actuator names refer to it).
-    text = re.sub(r"(left|right)_hand_finger(\d)_joint(\d)", r"\1_finger\2_joint\3", text)
-
-    # Arm motor names ``{side}_joint{N}_ctrl`` → ``openarm_{side}_joint{N}``
-    # so actuator-name and joint-name agree (the cfg expects them to match).
     text = re.sub(
         r'<motor name="(left|right)_joint(\d)_ctrl"',
         lambda m: f'<motor name="openarm_{m.group(1)}_joint{m.group(2)}"',
@@ -102,17 +95,11 @@ def _stage_object_mjcfs(bundle_root: Path, dest_root: Path) -> list[Path]:
     return out
 
 
-def _convert_trajectory(bundle_root: Path, dest_root: Path, repo_root: Path) -> Path:
-    """Run the v2 converter, returning the staged canonical pkl path."""
-    src = bundle_root / "assets" / "traj" / LEGACY_TRAJ_NAME
-    dst = dest_root / "trajs" / "box_task" / CANONICAL_TRAJ_NAME
+def _stage_trajectory(bundle_root: Path, dest_root: Path) -> Path:
+    src = bundle_root / "assets" / "traj" / BUNDLE_TRAJ_NAME
+    dst = dest_root / "trajs" / "box_task" / STAGED_TRAJ_NAME
     dst.parent.mkdir(parents=True, exist_ok=True)
-
-    converter_path = repo_root / "scripts" / "convert_box_task_legacy_traj.py"
-    spec = importlib.util.spec_from_file_location("convert_box_task", converter_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    mod.convert(src, dst)
+    shutil.copy2(src, dst)
     return dst
 
 
@@ -121,12 +108,12 @@ def prepare(bundle_root: Path, repo_root: Path) -> None:
     robot_mjcf = _stage_robot(bundle_root, dest_root)
     _patch_robot_mjcf(robot_mjcf)
     obj_mjcfs = _stage_object_mjcfs(bundle_root, dest_root)
-    traj_path = _convert_trajectory(bundle_root, dest_root, repo_root)
+    traj_path = _stage_trajectory(bundle_root, dest_root)
 
-    print(f"robot MJCF:        {robot_mjcf}")
+    print(f"robot MJCF:     {robot_mjcf}")
     for o in obj_mjcfs:
-        print(f"object MJCF:       {o}")
-    print(f"converted traj:    {traj_path}")
+        print(f"object MJCF:    {o}")
+    print(f"staged traj:    {traj_path}")
 
 
 def main() -> None:
