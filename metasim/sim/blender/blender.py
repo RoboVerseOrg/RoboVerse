@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import ctypes
 import os
 import re
 import shutil
 import struct
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from math import cos, sin, tau
 from pathlib import Path
 from typing import Any
@@ -38,6 +41,9 @@ from metasim.types import (
     TensorState,
     Termination,
 )
+
+from .importers import MJCF_SUFFIXES, USD_SUFFIXES, import_usd_visuals
+from .lights import add_scenario_lights
 
 
 def import_mesh(path):
@@ -151,6 +157,61 @@ _CYCLES_FINAL_RENDER_SETTINGS = {
 }
 
 
+@dataclass(frozen=True)
+class UsdMaterialSpec:
+    """Authored USD material inputs resolved from the source stage."""
+
+    name: str
+    base_color: tuple[float, float, float, float] | None = None
+    base_color_texture: Path | None = None
+    metallic: float | None = None
+    roughness: float | None = None
+    opacity: float | None = None
+
+
+class UsdPythonBindingsUnavailable(RuntimeError):
+    """Raised when optional pxr/USD Python bindings cannot be imported."""
+
+
+def _clamp01(value: float) -> float:
+    return min(max(float(value), 0.0), 1.0)
+
+
+def _scene_orientation_wxyz(scene_cfg) -> tuple[float, float, float, float]:
+    """Return a Blender wxyz quaternion for a SceneCfg.
+
+    IsaacSim applies ``SceneCfg.quat`` directly as ``(w, x, y, z)``.
+    Blender must preserve that convention to render the same room pose.
+    """
+    default_orientation = getattr(scene_cfg, "default_orientation", None)
+    if default_orientation is not None:
+        values = tuple(float(value) for value in default_orientation)
+        if len(values) != 4:
+            raise ValueError(
+                f"Scene {getattr(scene_cfg, 'name', None)!r} orientation must have 4 values, got {values!r}"
+            )
+        return values
+
+    quat = getattr(scene_cfg, "quat", None)
+    if quat is None:
+        return (1.0, 0.0, 0.0, 0.0)
+    values = tuple(float(value) for value in quat)
+    if len(values) != 4:
+        raise ValueError(f"Scene {getattr(scene_cfg, 'name', None)!r} orientation must have 4 values, got {values!r}")
+    return values
+
+
+def _scene_usd_xform_matrix(scene_cfg) -> Matrix:
+    position = getattr(scene_cfg, "default_position", None) or (0.0, 0.0, 0.0)
+    scale = getattr(scene_cfg, "scale", (1.0, 1.0, 1.0)) or (1.0, 1.0, 1.0)
+    orientation = Quaternion(_scene_orientation_wxyz(scene_cfg))
+    return (
+        orientation.to_matrix().to_4x4()
+        @ Matrix.Translation(Vector(tuple(float(value) for value in position[:3])))
+        @ Matrix.Diagonal(tuple(float(value) for value in scale[:3]) + (1.0,))
+    )
+
+
 def _srgb_channel_to_linear(value: float) -> float:
     if value <= 0.04045:
         return value / 12.92
@@ -178,9 +239,14 @@ def _normalized_material_name(name: str) -> str:
 
 def _material_name_candidates(name: str) -> tuple[str, ...]:
     normalized = _normalized_material_name(name)
+    candidates = [normalized]
     if normalized.endswith("-material"):
-        return (normalized, normalized.removesuffix("-material"))
-    return (normalized,)
+        candidates.append(normalized.removesuffix("-material"))
+    for prefix in ("material_", "material-"):
+        for candidate in tuple(candidates):
+            if candidate.startswith(prefix) and len(candidate) > len(prefix):
+                candidates.append(candidate[len(prefix) :])
+    return tuple(dict.fromkeys(candidates))
 
 
 def _is_visible_object(obj) -> bool:
@@ -281,6 +347,15 @@ def _resolve_robot_body_object(body_map: dict[str, object], body_name: str) -> o
     return next((obj for obj in visual_candidates if obj is not None), None)
 
 
+def _object_hierarchy_depth(obj) -> int:
+    depth = 0
+    parent = getattr(obj, "parent", None)
+    while parent is not None:
+        depth += 1
+        parent = getattr(parent, "parent", None)
+    return depth
+
+
 def _rgba_from_material(material) -> tuple[float, float, float, float]:
     match = _MATERIAL_HEX_COLOR_RE.search(material.name)
     if match:
@@ -323,6 +398,368 @@ def _resolve_asset_path(path: str | Path, base_dir: Path | None = None) -> Path 
         if resolved.exists():
             return resolved.resolve()
     return None
+
+
+def _preload_current_libpython() -> None:
+    """Make the current CPython shared library visible before loading Kit USD bindings."""
+    lib_name = f"libpython{sys.version_info.major}.{sys.version_info.minor}.so.1.0"
+    candidate = Path(sys.prefix) / "lib" / lib_name
+    if candidate.is_file():
+        ctypes.CDLL(str(candidate), mode=ctypes.RTLD_GLOBAL)
+
+
+def _usd_python_candidate_paths() -> list[Path]:
+    candidates: list[Path] = []
+    env_python_path = os.environ.get("METASIM_USD_PYTHON_PATH")
+    if env_python_path:
+        candidates.append(Path(env_python_path))
+    env_root = os.environ.get("METASIM_USD_ROOT")
+    if env_root:
+        candidates.append(Path(env_root) / "lib" / "python")
+
+    py_tag = f"py{sys.version_info.major}{sys.version_info.minor}"
+    packman_root = Path.home() / ".cache" / "packman" / "chk"
+    if packman_root.is_dir():
+        candidates.extend(sorted(packman_root.glob(f"usd.{py_tag}*/**/lib/python"), reverse=True))
+
+    seen: set[Path] = set()
+    existing: list[Path] = []
+    for candidate in candidates:
+        resolved = candidate.expanduser()
+        if resolved in seen or not resolved.is_dir():
+            continue
+        seen.add(resolved)
+        existing.append(resolved)
+    return existing
+
+
+def _import_pxr_modules():
+    try:
+        from pxr import Usd, UsdShade
+
+        return Usd, UsdShade
+    except Exception as direct_err:
+        last_err: Exception = direct_err
+
+    try:
+        _preload_current_libpython()
+    except Exception as preload_err:
+        last_err = preload_err
+
+    for python_path in _usd_python_candidate_paths():
+        path_str = str(python_path)
+        if path_str not in sys.path:
+            sys.path.insert(0, path_str)
+        try:
+            from pxr import Usd, UsdShade
+
+            return Usd, UsdShade
+        except Exception as err:
+            last_err = err
+
+    raise UsdPythonBindingsUnavailable(
+        "USD Python bindings are required to import authored USD materials for Blender. "
+        "Install pxr bindings, or set METASIM_USD_PYTHON_PATH / METASIM_USD_ROOT to a Kit USD Python path."
+    ) from last_err
+
+
+def _usd_value_as_color(value) -> tuple[float, float, float, float] | None:
+    if value is None:
+        return None
+    try:
+        values = tuple(float(item) for item in value)
+    except TypeError:
+        try:
+            scalar = float(value)
+        except (TypeError, ValueError):
+            return None
+        return (_clamp01(scalar), _clamp01(scalar), _clamp01(scalar), 1.0)
+    if len(values) >= 4:
+        return tuple(_clamp01(item) for item in values[:4])
+    if len(values) >= 3:
+        return tuple(_clamp01(item) for item in values[:3]) + (1.0,)
+    if len(values) == 1:
+        return (_clamp01(values[0]), _clamp01(values[0]), _clamp01(values[0]), 1.0)
+    return None
+
+
+def _usd_value_as_scalar(value) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        values = tuple(float(item) for item in value)
+    except TypeError:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+    if not values:
+        return None
+    return sum(values[: min(3, len(values))]) / min(3, len(values))
+
+
+def _usd_embodiedgen_texture_fallback_path(raw: str, base_dir: Path) -> Path | None:
+    candidate = Path(raw)
+    if candidate.is_absolute() or not raw.startswith("textures/"):
+        return None
+
+    basename = candidate.name
+    if not basename:
+        return None
+
+    for fallback in (
+        base_dir / ".." / "result" / "mesh" / basename,
+        base_dir / ".." / "mjcf" / "mesh" / basename,
+        base_dir / ".." / basename,
+    ):
+        if fallback.is_file():
+            return fallback.resolve()
+    return None
+
+
+def _usd_asset_path(value, base_dir: Path) -> Path | None:
+    if value is None:
+        return None
+    raw = str(getattr(value, "resolvedPath", "") or getattr(value, "path", "") or value).strip()
+    if not raw:
+        return None
+    raw = raw.strip("@")
+    if raw in {"DefaultTexture", "./DefaultTexture"}:
+        return None
+    resolved = _resolve_asset_path(raw, base_dir)
+    if resolved is not None:
+        return resolved if resolved.is_file() else None
+    return _usd_embodiedgen_texture_fallback_path(raw, base_dir)
+
+
+def _usd_input_value(values: dict[str, object], names: tuple[str, ...]):
+    for name in names:
+        if name in values:
+            return values[name]
+    return None
+
+
+def _usd_shader_input_values(material_prim, UsdShade) -> dict[str, object]:
+    values: dict[str, object] = {}
+    for child in material_prim.GetChildren():
+        if child.GetTypeName() != "Shader":
+            continue
+        child_name = child.GetName().lower()
+        shader = UsdShade.Shader(child)
+        child_values: dict[str, object] = {}
+        for shader_input in shader.GetInputs():
+            child_values[shader_input.GetBaseName()] = shader_input.Get()
+            values[shader_input.GetBaseName()] = child_values[shader_input.GetBaseName()]
+        if any(token in child_name for token in ("diffuse", "basecolor", "albedo")):
+            file_value = child_values.get("file")
+            if file_value is not None:
+                values["BaseColor_Tex"] = file_value
+                values["IsBaseColorTex"] = 1.0
+    return values
+
+
+def _usd_material_specs_from_stage(usd_path: str | Path) -> dict[str, UsdMaterialSpec]:
+    path = Path(usd_path)
+    if not path.is_absolute():
+        path = path.resolve()
+    Usd, UsdShade = _import_pxr_modules()
+    stage = Usd.Stage.Open(str(path))
+    if stage is None:
+        raise RuntimeError(f"Could not open USD stage for Blender material import: {path}")
+
+    specs: dict[str, UsdMaterialSpec] = {}
+    for prim in stage.Traverse(Usd.PrimAllPrimsPredicate):
+        if prim.GetTypeName() != "Material":
+            continue
+        material_name = prim.GetName()
+        values = _usd_shader_input_values(prim, UsdShade)
+
+        base_color = _usd_value_as_color(
+            _usd_input_value(
+                values,
+                (
+                    "BaseColor_Color",
+                    "diffuse_color_constant",
+                    "diffuseColor",
+                    "base_color",
+                    "diffuse_color",
+                ),
+            )
+        )
+        base_texture_value = _usd_input_value(values, ("BaseColor_Tex", "diffuse_texture", "albedo_texture"))
+        texture_enabled = _usd_value_as_scalar(_usd_input_value(values, ("IsBaseColorTex", "use_diffuse_texture")))
+        base_texture = _usd_asset_path(base_texture_value, path.parent) if (texture_enabled or 0.0) > 0.5 else None
+        if base_texture is None and "BaseColor_Tex" not in values:
+            base_texture = _usd_asset_path(base_texture_value, path.parent)
+
+        roughness = _usd_value_as_scalar(
+            _usd_input_value(values, ("reflection_roughness_constant", "roughness", "Roughness"))
+        )
+        if roughness is None:
+            gloss = _usd_value_as_scalar(_usd_input_value(values, ("Gloss_Color", "glossiness", "Glossiness")))
+            if gloss is not None:
+                roughness = 1.0 - gloss
+        metallic = _usd_value_as_scalar(
+            _usd_input_value(values, ("Metallic_Color", "metallic", "metallic_constant", "Metallic"))
+        )
+        opacity = _usd_value_as_scalar(_usd_input_value(values, ("Opacity", "opacity", "opacity_constant")))
+
+        if all(value is None for value in (base_color, base_texture, roughness, metallic, opacity)):
+            continue
+        spec = UsdMaterialSpec(
+            name=material_name,
+            base_color=base_color,
+            base_color_texture=base_texture,
+            metallic=_clamp01(metallic) if metallic is not None else None,
+            roughness=_clamp01(roughness) if roughness is not None else None,
+            opacity=_clamp01(opacity) if opacity is not None else None,
+        )
+        specs[material_name] = spec
+        specs[_normalized_material_name(material_name)] = spec
+    return specs
+
+
+def _gf_matrix_to_blender(matrix) -> Matrix:
+    """Convert a USD/Gf row-vector matrix into Blender's column-vector Matrix."""
+    return Matrix(tuple(tuple(float(matrix[col][row]) for col in range(4)) for row in range(4)))
+
+
+def _usd_prim_has_authored_references(prim) -> bool:
+    has_authored_references = getattr(prim, "HasAuthoredReferences", None)
+    if has_authored_references is not None:
+        return bool(has_authored_references())
+    return prim.GetMetadata("references") is not None
+
+
+def _usd_reference_xforms_by_name(usd_path: str | Path) -> dict[str, list[Matrix]]:
+    path = Path(usd_path)
+    if not path.is_absolute():
+        path = path.resolve()
+    Usd, _UsdShade = _import_pxr_modules()
+    from pxr import UsdGeom
+
+    stage = Usd.Stage.Open(str(path))
+    if stage is None:
+        raise RuntimeError(f"Could not open USD stage for Blender reference transform import: {path}")
+
+    entries: dict[str, list[tuple[str, Matrix]]] = {}
+    for prim in stage.Traverse(Usd.PrimAllPrimsPredicate):
+        if not _usd_prim_has_authored_references(prim):
+            continue
+        if not prim.IsA(UsdGeom.Xformable):
+            continue
+        world_matrix = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+        entries.setdefault(prim.GetName(), []).append((str(prim.GetPath()), _gf_matrix_to_blender(world_matrix)))
+
+    return {
+        name: [matrix for _path, matrix in sorted(values, key=lambda item: item[0])]
+        for name, values in entries.items()
+    }
+
+
+def _apply_usd_reference_xforms(usd_path: str | Path, imported: list) -> None:
+    reference_xforms = _usd_reference_xforms_by_name(usd_path)
+    if not reference_xforms:
+        return
+    imported_set = set(imported)
+    root_objects = sorted(
+        [obj for obj in imported if getattr(obj, "parent", None) not in imported_set],
+        key=lambda obj: obj.name,
+    )
+    xform_indices = {name: 0 for name in reference_xforms}
+
+    for obj in root_objects:
+        name = _normalized_blender_name(obj.name)
+        xforms = reference_xforms.get(name)
+        if not xforms:
+            continue
+        index = min(xform_indices[name], len(xforms) - 1)
+        xform_indices[name] += 1
+        obj.matrix_basis = xforms[index] @ obj.matrix_basis
+
+
+def _apply_usd_material_spec_to_material(material, spec: UsdMaterialSpec) -> None:
+    base_color = spec.base_color or tuple(float(value) for value in material.diffuse_color[:4])
+    opacity = spec.opacity if spec.opacity is not None else base_color[3]
+    rgba = (base_color[0], base_color[1], base_color[2], opacity)
+
+    material.use_nodes = True
+    material.node_tree.nodes.clear()
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
+    output = nodes.new(type="ShaderNodeOutputMaterial")
+    _set_principled_input(bsdf, "Base Color", rgba)
+    _set_principled_input(bsdf, "Metallic", spec.metallic if spec.metallic is not None else 0.0)
+    _set_principled_input(bsdf, "Roughness", spec.roughness if spec.roughness is not None else 0.55)
+    _set_principled_input(bsdf, "Alpha", opacity)
+
+    if spec.base_color_texture is not None:
+        image = bpy.data.images.load(str(spec.base_color_texture), check_existing=True)
+        try:
+            image.colorspace_settings.name = "sRGB"
+        except TypeError:
+            pass
+        tex = nodes.new(type="ShaderNodeTexImage")
+        tex.image = image
+        links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+
+    links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    material.diffuse_color = rgba
+    material.blend_method = "BLEND" if opacity < 1.0 - _TRANSMISSIVE_ALPHA_EPSILON else "OPAQUE"
+    if hasattr(material, "use_screen_refraction"):
+        material.use_screen_refraction = opacity < 1.0 - _TRANSMISSIVE_ALPHA_EPSILON
+    if hasattr(material, "show_transparent_back"):
+        material.show_transparent_back = False
+
+
+def _apply_usd_material_specs(imported: list, specs: dict[str, UsdMaterialSpec]) -> None:
+    seen_objects: set[str] = set()
+    seen_collections: set[str] = set()
+    seen_materials: set[str] = set()
+
+    def visit_object(obj) -> None:
+        if obj.name in seen_objects:
+            return
+        seen_objects.add(obj.name)
+        if getattr(obj, "type", None) == "MESH":
+            for slot in obj.material_slots:
+                material = slot.material
+                if material is None or material.name in seen_materials:
+                    continue
+                seen_materials.add(material.name)
+                spec = next(
+                    (specs[name] for name in _material_name_candidates(material.name) if name in specs),
+                    None,
+                )
+                if spec is not None:
+                    _apply_usd_material_spec_to_material(material, spec)
+        collection = getattr(obj, "instance_collection", None)
+        if collection is not None and collection.name not in seen_collections:
+            seen_collections.add(collection.name)
+            for child in collection.objects:
+                visit_object(child)
+        for child in getattr(obj, "children", ()):
+            visit_object(child)
+
+    for obj in imported:
+        visit_object(obj)
+
+
+def _apply_optional_usd_stage_enhancements(usd_path: str | Path, imported: list) -> None:
+    """Apply pxr-backed USD reference transforms and materials when available."""
+    try:
+        _apply_usd_reference_xforms(usd_path, imported)
+    except UsdPythonBindingsUnavailable:
+        pass
+
+    try:
+        specs = _usd_material_specs_from_stage(usd_path)
+    except UsdPythonBindingsUnavailable:
+        return
+    _apply_usd_material_specs(imported, specs)
 
 
 def _material_rgba_from_collada(collada_path: str | Path) -> dict[str, tuple[float, float, float, float]]:
@@ -560,6 +997,14 @@ def _normalized_scale(scale) -> tuple[float, float, float]:
     if len(values) >= 3:
         return values[:3]
     raise ValueError(f"Cannot interpret scale {scale!r}")
+
+
+def _pose_matrix(pos: tuple[float, ...], quat: Quaternion) -> Matrix:
+    return Matrix.Translation(Vector(tuple(float(value) for value in pos[:3]))) @ quat.to_matrix().to_4x4()
+
+
+def _scale_tuple(scale) -> tuple[float, float, float]:
+    return _normalized_scale(scale)
 
 
 def _mjcf_material_rgba(root: ET.Element) -> dict[str, tuple[float, float, float, float]]:
@@ -969,6 +1414,47 @@ def _assign_material(obj, material) -> None:
         obj.data.materials.append(material)
 
 
+def _create_compiled_mjcf_mesh_visual(
+    *,
+    model,
+    mesh_id: int,
+    name: str,
+    parent,
+    geom_pos: tuple[float, ...],
+    geom_quat: Quaternion,
+    material_rgba: tuple[float, float, float, float],
+    material_name: str | None,
+    material_textures: dict[str, Path] | None = None,
+):
+    vert_adr = int(model.mesh_vertadr[mesh_id])
+    vert_num = int(model.mesh_vertnum[mesh_id])
+    face_adr = int(model.mesh_faceadr[mesh_id])
+    face_num = int(model.mesh_facenum[mesh_id])
+    vertices = [
+        tuple(float(value) for value in vertex)
+        for vertex in model.mesh_vert[vert_adr : vert_adr + vert_num]
+    ]
+    faces = [
+        tuple(int(value) for value in face)
+        for face in model.mesh_face[face_adr : face_adr + face_num]
+    ]
+
+    mesh = bpy.data.meshes.new(f"{name}_mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.parent = parent
+    mesh_quat = Quaternion(tuple(float(value) for value in model.mesh_quat[mesh_id]))
+    obj.matrix_basis = _pose_matrix(geom_pos, geom_quat) @ _pose_matrix(tuple(model.mesh_pos[mesh_id]), mesh_quat)
+    material = _new_material_from_rgba(material_name or f"{name}_material", material_rgba)
+    if material_name and material_textures and material_name in material_textures:
+        _apply_texture_to_material(material, material_textures[material_name])
+    _assign_material(obj, material)
+    return obj
+
+
 def _import_mjcf_visual_tree(
     mjcf_path: str | Path,
     *,
@@ -983,6 +1469,25 @@ def _import_mjcf_visual_tree(
     mesh_assets = _mjcf_mesh_assets(root, mjcf_path.parent)
     geom_defaults = _mjcf_geom_default_attrs(root)
     material_textures = _mjcf_material_textures(root, mjcf_path.parent)
+    compiled_model = None
+    mesh_name_to_id: dict[str, int] = {}
+    mesh_refs = {
+        attrs["mesh"]
+        for geom in root.findall(".//geom")
+        for attrs in (_mjcf_geom_resolved_attrs(geom, geom_defaults),)
+        if attrs.get("mesh")
+    }
+    if mesh_refs:
+        try:
+            import mujoco
+        except ImportError:
+            compiled_model = None
+        else:
+            compiled_model = mujoco.MjModel.from_xml_path(str(mjcf_path))
+            mesh_name_to_id = {
+                mujoco.mj_id2name(compiled_model, mujoco.mjtObj.mjOBJ_MESH, mesh_id): mesh_id
+                for mesh_id in range(compiled_model.nmesh)
+            }
     root_empty = bpy.data.objects.new(root_name, None)
     bpy.context.collection.objects.link(root_empty)
     _set_local_transform(root_empty, default_position, Quaternion(default_orientation))
@@ -1019,6 +1524,23 @@ def _import_mjcf_visual_tree(
             if _is_mjcf_collision_only_geom(attrs):
                 continue
             material_rgba, material_name = _mjcf_geom_material(geom, materials, geom_defaults)
+            mesh_name = attrs.get("mesh")
+            if mesh_name and compiled_model is not None:
+                mesh_id = mesh_name_to_id.get(mesh_name)
+                if mesh_id is None:
+                    raise ValueError(f"MJCF mesh geom {geom.get('name') or mesh_name!r} references unknown mesh {mesh_name!r}")
+                _create_compiled_mjcf_mesh_visual(
+                    model=compiled_model,
+                    mesh_id=mesh_id,
+                    name=attrs.get("name") or f"{body_name or root_name}_mesh",
+                    parent=body_parent,
+                    geom_pos=_float_tuple(attrs.get("pos"), (0.0, 0.0, 0.0)),
+                    geom_quat=Quaternion(_float_tuple(attrs.get("quat"), (1.0, 0.0, 0.0, 0.0))),
+                    material_rgba=material_rgba,
+                    material_name=material_name,
+                    material_textures=material_textures,
+                )
+                continue
             _create_mjcf_geom_visual(
                 geom,
                 body_name=body_name or root_name,
@@ -1046,7 +1568,8 @@ def _import_mjcf_visual_tree(
 
 
 def _repair_imported_materials(
-    imported: list, asset_material_rgba: dict[str, tuple[float, float, float, float]] | None = None
+    imported: list,
+    asset_material_rgba: dict[str, tuple[float, float, float, float]] | None = None,
 ) -> None:
     seen_objects: set[str] = set()
     seen_collections: set[str] = set()
@@ -1107,6 +1630,7 @@ class BlenderHandler(BaseSimHandler):
         self._objs: dict[str, object] = {}
         self._body_objs: dict[str, dict[str, object]] = {}
         self._body_names: dict[str, list[str]] = {}
+        self._scene_objs: list[object] = []
         self._camera_objs: dict[str, object] = {}
         self._last_camera_states: dict[str, CameraState] = {}
         self._last_tensor_state: TensorState | None = None
@@ -1122,6 +1646,7 @@ class BlenderHandler(BaseSimHandler):
         super().launch()
         self._clear_scene()
         self._configure_render()
+        self._import_scene()
         self._add_lights()
 
         for obj_cfg in self.objects:
@@ -1219,19 +1744,28 @@ class BlenderHandler(BaseSimHandler):
             enabled += int(use_device)
         return enabled > 0
 
+    def _import_scene(self) -> None:
+        scene_cfg = getattr(self.scenario, "scene", None)
+        if scene_cfg is None:
+            return
+        scene_path = scene_cfg.file_name("blender")
+        if not scene_path:
+            raise ValueError(f"Scene {scene_cfg.name!r} has no Blender asset path")
+        result = import_usd_visuals(
+            scene_path,
+            root_name=scene_cfg.name,
+            default_position=getattr(scene_cfg, "default_position", None) or (0.0, 0.0, 0.0),
+            default_orientation=_scene_orientation_wxyz(scene_cfg),
+            scale=_scale_tuple(getattr(scene_cfg, "scale", (1.0, 1.0, 1.0))),
+        )
+        result.root.matrix_basis = _scene_usd_xform_matrix(scene_cfg)
+        _apply_optional_usd_stage_enhancements(scene_path, result.imported)
+        self._scene_objs.append(result.root)
+
     def _add_lights(self) -> None:
         scene = self.context.scene
         self._setup_world(scene)
-        for name, location, energy, size in (
-            ("metasim_key_area_light", (0.0, -2.2, 3.0), 300.0, 5.0),
-            ("metasim_fill_area_light", (-2.2, 0.4, 1.8), 45.0, 5.0),
-            ("metasim_rim_area_light", (1.8, 0.6, 2.4), 70.0, 2.4),
-        ):
-            bpy.ops.object.light_add(type="AREA", location=location)
-            light = bpy.context.object
-            light.name = name
-            light.data.energy = energy
-            light.data.size = size
+        add_scenario_lights(list(getattr(self.scenario, "lights", []) or []))
         self._add_default_ground(scene)
 
     def _setup_world(self, scene) -> None:
@@ -1439,71 +1973,73 @@ class BlenderHandler(BaseSimHandler):
     def _import_rigid_object(self, obj_cfg: RigidObjCfg):
         scale = _normalized_scale(obj_cfg.scale)
         blender_path = obj_cfg.file_name("blender")
-        if blender_path:
-            suffix = Path(blender_path).suffix.lower()
-            if suffix in {".xml", ".mjcf"}:
-                root, _ = _import_mjcf_visual_tree(
-                    blender_path,
-                    root_name=obj_cfg.name,
-                    default_position=obj_cfg.default_position,
-                    default_orientation=obj_cfg.default_orientation,
-                    default_scale=scale,
-                )
-                return root
-            if suffix in {".usd", ".usda", ".usdc", ".usdz"}:
-                return self._import_usd_rigid(blender_path, obj_cfg, scale)
-        if obj_cfg.mesh_path is None:
-            raise ValueError(f"Rigid object {obj_cfg.name!r} requires mesh_path for Blender")
-        obj = import_mesh(obj_cfg.mesh_path)
-        obj.name = obj_cfg.name
-        obj.scale = scale
-        return obj
-
-    def _import_usd_rigid(self, usd_path: str, obj_cfg: RigidObjCfg, scale: tuple[float, float, float]):
-        asset_material_rgba = _asset_material_rgba(obj_cfg)
-        before_names = set(bpy.data.objects.keys())
-        result = bpy.ops.wm.usd_import(filepath=str(usd_path))
-        if "FINISHED" not in result:
-            raise RuntimeError(f"Failed to import USD for {obj_cfg.name!r}: {result}")
-        imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
-        if not imported:
-            raise RuntimeError(f"USD import for {obj_cfg.name!r} produced no Blender objects")
-        _repair_imported_materials(imported, asset_material_rgba)
-        root = bpy.data.objects.new(obj_cfg.name, None)
-        bpy.context.collection.objects.link(root)
-        _set_local_transform(root, obj_cfg.default_position, Quaternion(obj_cfg.default_orientation))
-        root.scale = scale
-        for obj in imported:
-            if obj.parent is None:
-                obj.parent = root
-        return root
+        suffix = Path(blender_path).suffix.lower() if blender_path else ""
+        if blender_path and suffix in MJCF_SUFFIXES:
+            root, _ = _import_mjcf_visual_tree(
+                blender_path,
+                root_name=obj_cfg.name,
+                default_position=obj_cfg.default_position,
+                default_orientation=obj_cfg.default_orientation,
+                default_scale=scale,
+            )
+            return root
+        if blender_path and suffix in USD_SUFFIXES:
+            result = import_usd_visuals(
+                blender_path,
+                root_name=obj_cfg.name,
+                default_position=obj_cfg.default_position,
+                default_orientation=obj_cfg.default_orientation,
+                scale=scale,
+            )
+            _repair_imported_materials(result.imported, _asset_material_rgba(obj_cfg))
+            _apply_optional_usd_stage_enhancements(blender_path, result.imported)
+            return result.root
+        if obj_cfg.mesh_path is not None:
+            obj = import_mesh(obj_cfg.mesh_path)
+            obj.name = obj_cfg.name
+            obj.scale = scale
+            return obj
+        raise ValueError(
+            f"Rigid object {obj_cfg.name!r} cannot be imported by Blender: "
+            f"file_type={obj_cfg.file_type.get('blender')!r}, path={blender_path!r}, "
+            "supported suffixes are .usd/.usda/.usdc/.xml/.mjcf or mesh_path"
+        )
 
     def _import_articulation(self, obj_cfg: ArticulationObjCfg) -> None:
         usd_path = obj_cfg.file_name("blender")
         if not usd_path:
             raise ValueError(f"{type(obj_cfg).__name__} {obj_cfg.name!r} requires usd_path for Blender")
         scale = _normalized_scale(getattr(obj_cfg, "scale", 1.0))
-        if Path(usd_path).suffix.lower() in {".xml", ".mjcf"}:
-            _, body_objects = _import_mjcf_visual_tree(
+        suffix = Path(usd_path).suffix.lower()
+        if suffix in MJCF_SUFFIXES:
+            root, body_objects = _import_mjcf_visual_tree(
                 usd_path,
                 root_name=obj_cfg.name,
                 default_position=obj_cfg.default_position,
                 default_orientation=obj_cfg.default_orientation,
                 default_scale=scale,
             )
+            self._objs[obj_cfg.name] = root
             self._body_objs[obj_cfg.name] = body_objects
             self._body_names[obj_cfg.name] = sorted(body_objects)
             return
+        if suffix not in USD_SUFFIXES:
+            raise ValueError(
+                f"{type(obj_cfg).__name__} {obj_cfg.name!r} cannot be imported by Blender: "
+                f"path={usd_path!r}, supported suffixes are .usd/.usda/.usdc/.xml/.mjcf"
+            )
         asset_material_rgba = _asset_material_rgba(obj_cfg)
-        before_names = set(bpy.data.objects.keys())
-        result = bpy.ops.wm.usd_import(filepath=str(usd_path))
-        if "FINISHED" not in result:
-            raise RuntimeError(f"Failed to import USD for {obj_cfg.name!r}: {result}")
-        imported = [obj for obj in bpy.data.objects if obj.name not in before_names]
-        if not imported:
-            raise RuntimeError(f"USD import for {obj_cfg.name!r} produced no Blender objects")
-        _repair_imported_materials(imported, asset_material_rgba)
-        self._register_body_objects(obj_cfg.name, imported)
+        result = import_usd_visuals(
+            usd_path,
+            root_name=obj_cfg.name,
+            default_position=obj_cfg.default_position,
+            default_orientation=obj_cfg.default_orientation,
+            scale=scale,
+        )
+        _repair_imported_materials(result.imported, asset_material_rgba)
+        _apply_optional_usd_stage_enhancements(usd_path, result.imported)
+        self._objs[obj_cfg.name] = result.root
+        self._register_body_objects(obj_cfg.name, result.imported)
 
     def _register_body_objects(self, obj_name: str, imported: list) -> None:
         bpy.context.view_layer.update()
@@ -1556,7 +2092,7 @@ class BlenderHandler(BaseSimHandler):
         for obj_name, obj_state in state.objects.items():
             if obj_name in self._objs:
                 _apply_root_state_to_object(self._objs[obj_name], obj_state.root_state[0])
-            elif obj_name in self._body_objs:
+            if obj_name in self._body_objs:
                 self._apply_body_state(obj_name, obj_state, use_robot_aliases=False)
         for robot_name, robot_state in state.robots.items():
             self._apply_robot_body_state(robot_name, robot_state)
@@ -1567,6 +2103,7 @@ class BlenderHandler(BaseSimHandler):
     def _apply_body_state(self, obj_name: str, obj_state, *, use_robot_aliases: bool) -> None:
         body_map = self._body_objs.get(obj_name, {})
         missing = []
+        mapped = []
         for body_index, body_name in enumerate(obj_state.body_names):
             obj = (
                 _resolve_robot_body_object(body_map, body_name)
@@ -1576,17 +2113,33 @@ class BlenderHandler(BaseSimHandler):
             if obj is None:
                 missing.append(body_name)
                 continue
-            _apply_root_state_to_object(obj, obj_state.body_state[0, body_index], _robot_body_pose_scale(obj))
+            mapped.append((_object_hierarchy_depth(obj), body_index, obj))
+        for _, body_index, obj in sorted(mapped, key=lambda item: item[0]):
+            scale_override = _robot_body_pose_scale(obj) if use_robot_aliases else None
+            _apply_root_state_to_object(obj, obj_state.body_state[0, body_index], scale_override)
         if missing:
             raise ValueError(f"Blender could not map bodies for {obj_name}: {missing[:10]}")
 
     def _apply_dict_state(self, state: DictEnvState) -> None:
+        """Apply root-only dict states; exact articulated replay requires TensorState."""
         for obj_name, obj_state in state["objects"].items():
             if obj_name in self._objs:
                 root = torch.zeros(13)
                 root[:3] = obj_state["pos"]
                 root[3:7] = obj_state["rot"]
                 _apply_root_state_to_object(self._objs[obj_name], root)
+            elif obj_name in self._body_objs and "body_state" not in obj_state:
+                raise ValueError(
+                    f"Blender dict state for articulated object {obj_name!r} lacks body_state. "
+                    "Use TensorState/body_state for exact articulated replay."
+                )
+
+        for robot_name, robot_state in state.get("robots", {}).items():
+            if "body_state" not in robot_state:
+                raise ValueError(
+                    f"Blender dict state for robot {robot_name!r} cannot apply dof_pos directly. "
+                    "Use TensorState/body_state captured from a simulator for exact robot replay."
+                )
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids not in (None, [0]):

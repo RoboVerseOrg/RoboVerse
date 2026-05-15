@@ -43,6 +43,7 @@ class ScenarioCfg:
             "genesis",
             "pybullet",
             "mujoco",
+            "blender",
         ]
         | None
     ) = None

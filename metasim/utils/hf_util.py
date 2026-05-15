@@ -28,9 +28,32 @@ except ImportError:
     pass
 
 REPO_ID = "RoboVerseOrg/roboverse_data"
+DATA_REPO_IDS = (REPO_ID, "SomaStacksOrg/roboverse_data")
 LOCAL_DIR = "roboverse_data"
 
 hf_api = HfApi()
+
+
+def _find_data_repo(relpath_posix: str, *, is_optional_file: bool = False) -> str | None:
+    """Return the first configured data repo containing ``relpath_posix``."""
+    errors: list[tuple[str, Exception]] = []
+    for repo_id in DATA_REPO_IDS:
+        try:
+            if hf_api.file_exists(repo_id, relpath_posix, repo_type="dataset"):
+                return repo_id
+        except Exception as exc:
+            errors.append((repo_id, exc))
+
+    if errors:
+        msg = "; ".join(f"{repo_id}: {exc}" for repo_id, exc in errors)
+        if is_optional_file:
+            log.warning(
+                f"Optional file {relpath_posix} could not be checked in HuggingFace data sources ({msg}), skipping."
+            )
+            return None
+        raise Exception(f"Could not check {relpath_posix} in HuggingFace data sources ({msg}).") from errors[-1][1]
+
+    return None
 
 
 def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
@@ -99,21 +122,16 @@ def check_and_download_single(filepath: str):
         relpath = os.path.relpath(filepath, LOCAL_DIR)
         relpath_posix = relpath.replace(os.sep, "/")
         is_optional_file = filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga"))
-        try:
-            hf_exists = hf_api.file_exists(REPO_ID, relpath_posix, repo_type="dataset")
-        except Exception as e:
-            if is_optional_file:
-                log.warning(f"Optional file {filepath} could not be checked in HuggingFace dataset ({e}), skipping.")
-                return
-            raise
+        repo_id = _find_data_repo(relpath_posix, is_optional_file=is_optional_file)
 
-        if not hf_exists:
+        if repo_id is None:
             if is_optional_file:
-                log.warning(f"Optional file {filepath} not found in HuggingFace dataset, skipping.")
+                log.warning(f"Optional file {filepath} not found in HuggingFace data sources, skipping.")
                 return
 
             raise Exception(
-                f"File {filepath} neither exists in the local directory nor exists in the huggingface dataset. Please"
+                f"File {filepath} neither exists in the local directory nor exists in the HuggingFace data sources "
+                f"{DATA_REPO_IDS}. Please"
                 " report this issue to the developers."
             )
 
@@ -128,12 +146,12 @@ def check_and_download_single(filepath: str):
         try:
             # Ensure the filename uses POSIX separators when requesting from HF hub
             hf_hub_download(
-                repo_id=REPO_ID,
+                repo_id=repo_id,
                 filename=relpath_posix,
                 repo_type="dataset",
                 local_dir=LOCAL_DIR,
             )
-            log.info(f"File {filepath} downloaded from the huggingface dataset.")
+            log.info(f"File {filepath} downloaded from the HuggingFace dataset {repo_id}.")
         except Exception as e:
             raise e
 
@@ -191,7 +209,8 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
                     for texture_name in common_texture_names:
                         texture_relpath = os.path.join(textures_relpath, texture_name)
                         # Check if this specific file exists on HuggingFace
-                        if hf_api.file_exists(REPO_ID, texture_relpath, repo_type="dataset"):
+                        texture_relpath = texture_relpath.replace(os.sep, "/")
+                        if _find_data_repo(texture_relpath, is_optional_file=True) is not None:
                             texture_path = os.path.join(LOCAL_DIR, texture_relpath)
                             new_filepaths.append(texture_path)
             except Exception as e:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+import metasim.utils.hf_util as hf_util
 from metasim.scenario.objects import (
     ArticulationObjCfg,
     PrimitiveCubeCfg,
@@ -33,6 +34,35 @@ class _FakeScene:
 def test_check_and_download_single_accepts_none():
     """None filepath must be a no-op (regression: old code hit os.path.exists(None) -> TypeError)."""
     check_and_download_single(None)
+
+
+@pytest.mark.general
+def test_check_and_download_single_falls_back_to_private_roboverse_data(monkeypatch):
+    """Assets missing from the public data repo can be downloaded from the private company repo."""
+    filepath = "roboverse_data/private/object.usd"
+    file_exists_calls = []
+    download_calls = []
+
+    def fake_file_exists(repo_id, filename, repo_type):
+        file_exists_calls.append((repo_id, filename, repo_type))
+        return repo_id == "SomaStacksOrg/roboverse_data"
+
+    def fake_hf_hub_download(repo_id, filename, repo_type, local_dir):
+        download_calls.append((repo_id, filename, repo_type, local_dir))
+
+    monkeypatch.setattr(hf_util.os.path, "exists", lambda path: False)
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", fake_file_exists)
+    monkeypatch.setattr(hf_util, "hf_hub_download", fake_hf_hub_download)
+
+    check_and_download_single(filepath)
+
+    assert file_exists_calls == [
+        ("RoboVerseOrg/roboverse_data", "private/object.usd", "dataset"),
+        ("SomaStacksOrg/roboverse_data", "private/object.usd", "dataset"),
+    ]
+    assert download_calls == [
+        ("SomaStacksOrg/roboverse_data", "private/object.usd", "dataset", "roboverse_data"),
+    ]
 
 
 @pytest.mark.general

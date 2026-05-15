@@ -55,6 +55,11 @@ def render_state_sequence(
     states: Iterable[TensorState],
     cfg: BlenderOfflineRenderCfg,
 ) -> list[Path]:
+    """Render exact one-env TensorState frames in Blender.
+
+    Blender does not run physics or articulation kinematics here. Robot and
+    articulated-object poses must already be expressed as body_state transforms.
+    """
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
