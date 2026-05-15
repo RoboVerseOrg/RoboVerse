@@ -101,15 +101,75 @@ def convert_urdf_to_usd_cached(urdf_path: str) -> str:
     return str(generated_path)
 
 
-def resolve_isaacsim_file_path(cfg) -> str:
-    """Resolve the concrete file path IsaacSim should load for a config object."""
-    usd_path = getattr(cfg, "usd_path", None)
-    if usd_path:
-        return str(Path(os.path.expanduser(str(usd_path))).resolve())
+def convert_mjcf_to_usd_cached(mjcf_path: str) -> str:
+    """Convert an MJCF asset to USD once and reuse the generated file.
 
-    urdf_path = getattr(cfg, "urdf_path", None)
-    if urdf_path:
-        return convert_urdf_to_usd_cached(str(urdf_path))
+    Mirrors ``convert_urdf_to_usd_cached`` so cfgs that ship only an MJCF
+    (no URDF, no pre-built USD) still resolve under IsaacSim.
+    """
+    mjcf_path_obj = Path(mjcf_path).expanduser().resolve()
+    if not mjcf_path_obj.is_file():
+        raise FileNotFoundError(f"MJCF file not found: {mjcf_path_obj}")
+
+    usd_output = mjcf_path_obj.with_suffix(".usd")
+    if usd_output.exists():
+        return str(usd_output)
+
+    log.info(f"Converting MJCF to USD: {mjcf_path_obj}")
+
+    try:
+        try:
+            from omni.isaac.lab.sim.converters import MjcfConverter, MjcfConverterCfg
+        except ImportError:
+            from isaaclab.sim.converters import MjcfConverter, MjcfConverterCfg
+    except Exception as exc:  # pragma: no cover - depends on IsaacLab runtime
+        raise RuntimeError("IsaacSim MJCF fallback requires IsaacLab MjcfConverter support") from exc
+
+    cfg = MjcfConverterCfg(
+        asset_path=str(mjcf_path_obj),
+        usd_dir=os.path.abspath(str(usd_output.parent)),
+        usd_file_name=usd_output.name,
+        fix_base=False,
+        force_usd_conversion=True,
+        make_instanceable=True,
+    )
+    converter = MjcfConverter(cfg)
+    generated_path = Path(converter.usd_path).expanduser().resolve()
+
+    if not generated_path.exists():
+        raise RuntimeError(f"MJCF conversion did not produce USD output: {generated_path}")
+    return str(generated_path)
+
+
+def _existing_path(maybe_path) -> Path | None:
+    if not maybe_path:
+        return None
+    p = Path(os.path.expanduser(str(maybe_path))).resolve()
+    return p if p.is_file() else None
+
+
+def resolve_isaacsim_file_path(cfg) -> str:
+    """Resolve the concrete file path IsaacSim should load for a config object.
+
+    Looks for an existing USD first; if the configured ``usd_path`` is
+    missing on disk, falls through to URDF and then MJCF, converting
+    each to USD on demand. ``cfg`` is treated as a duck type — anything
+    with ``usd_path`` / ``urdf_path`` / ``mjcf_path`` attributes works.
+    """
+    existing_usd = _existing_path(getattr(cfg, "usd_path", None))
+    if existing_usd is not None:
+        return str(existing_usd)
+
+    urdf = _existing_path(getattr(cfg, "urdf_path", None))
+    if urdf is not None:
+        return convert_urdf_to_usd_cached(str(urdf))
+
+    mjcf = _existing_path(getattr(cfg, "mjcf_path", None))
+    if mjcf is not None:
+        return convert_mjcf_to_usd_cached(str(mjcf))
 
     name = getattr(cfg, "name", "<unnamed>")
-    raise ValueError(f"{type(cfg).__name__} '{name}' requires either usd_path or urdf_path for isaacsim")
+    raise ValueError(
+        f"{type(cfg).__name__} '{name}' requires an existing usd_path, "
+        "urdf_path, or mjcf_path for isaacsim"
+    )
