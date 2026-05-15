@@ -1,11 +1,109 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 
 import numpy as np
 import pytest
 
 from scripts.benchmark.rendering import box_task_replay as replay
+
+
+def _make_bundle(tmp_path: Path) -> replay.BoxTaskBundlePaths:
+    bundle = tmp_path / "bundle"
+    for rel in (
+        "assets/traj",
+        "assets/local_pack_box/cardboard_box",
+        "assets/local_pack_box/feast_soda_can",
+        "assets/local_pack_box/feast_scented_candle",
+    ):
+        (bundle / rel).mkdir(parents=True)
+    (bundle / "assets/traj/task.pkl").write_bytes(b"pickle-bytes")
+    for rel in (
+        "assets/local_pack_box/cardboard_box/cardboard_box.usd",
+        "assets/local_pack_box/feast_soda_can/feast_soda_can.usd",
+        "assets/local_pack_box/feast_scented_candle/feast_scented_candle.usd",
+    ):
+        (bundle / rel).write_text("#usda\n", encoding="utf-8")
+    return replay.BoxTaskBundlePaths.from_root(bundle, traj_path=bundle / "assets/traj/task.pkl")
+
+
+def _install_fake_metasim_without_renderer_scene(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SimpleCfg:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class ScenarioCfg(SimpleCfg):
+        def __init__(
+            self,
+            *,
+            objects=None,
+            robots=None,
+            cameras=None,
+            lights=None,
+            sim_params=None,
+            decimation=None,
+            simulator=None,
+            headless=None,
+            num_envs=None,
+            render=None,
+        ):
+            super().__init__(
+                objects=objects,
+                robots=robots,
+                cameras=cameras,
+                lights=lights,
+                sim_params=sim_params,
+                decimation=decimation,
+                simulator=simulator,
+                headless=headless,
+                num_envs=num_envs,
+                render=render,
+            )
+
+    modules = {
+        "metasim": ModuleType("metasim"),
+        "metasim.constants": ModuleType("metasim.constants"),
+        "metasim.scenario": ModuleType("metasim.scenario"),
+        "metasim.scenario.cameras": ModuleType("metasim.scenario.cameras"),
+        "metasim.scenario.lights": ModuleType("metasim.scenario.lights"),
+        "metasim.scenario.objects": ModuleType("metasim.scenario.objects"),
+        "metasim.scenario.render": ModuleType("metasim.scenario.render"),
+        "metasim.scenario.scenario": ModuleType("metasim.scenario.scenario"),
+    }
+    modules["metasim.constants"].PhysicStateType = SimpleNamespace(RIGIDBODY="rigidbody")
+    modules["metasim.scenario.cameras"].PinholeCameraCfg = SimpleCfg
+    modules["metasim.scenario.lights"].SphereLightCfg = SimpleCfg
+    modules["metasim.scenario.objects"].PrimitiveCubeCfg = SimpleCfg
+    modules["metasim.scenario.objects"].RigidObjCfg = SimpleCfg
+    modules["metasim.scenario.render"].RenderCfg = SimpleCfg
+    modules["metasim.scenario.scenario"].ScenarioCfg = ScenarioCfg
+    modules["metasim.scenario.scenario"].SimParamCfg = SimpleCfg
+
+    for name, module in modules.items():
+        monkeypatch.setitem(sys.modules, name, module)
+
+
+def _cfg_names(items: list[object]) -> list[str]:
+    return [str(getattr(item, "name", item)) for item in items]
+
+
+def _cfg_class_name(item: object) -> str:
+    return type(item).__name__.lower()
+
+
+def _render_mode(render: object) -> str:
+    mode = getattr(render, "mode", render)
+    return str(mode).lower().replace("_", "").replace("-", "")
+
+
+def _assert_kujiale_scene_0021(scene: object) -> None:
+    scene_name = getattr(scene, "name", scene)
+    assert scene_name in ("kujiale_scene_0021", "kujiale_0021")
+    scene_usd_path = getattr(scene, "usd_path", None)
+    if scene_usd_path is not None:
+        assert "021.usda" in str(scene_usd_path)
 
 
 def test_normalize_scene_token_accepts_supported_forms() -> None:
@@ -153,3 +251,89 @@ def test_bundle_paths_reject_directory_where_file_required(tmp_path: Path) -> No
 
     with pytest.raises(FileNotFoundError, match="task.pkl"):
         replay.BoxTaskBundlePaths.from_root(bundle, traj_path=bundle / "assets/traj/task.pkl")
+
+
+def test_build_box_task_scenario_uses_bundle_assets(tmp_path: Path) -> None:
+    paths = _make_bundle(tmp_path)
+
+    scenario = replay.build_box_task_scenario(
+        paths=paths,
+        simulator="blender",
+        scene="kujiale_scene_0021",
+        width=640,
+        height=480,
+        camera_pos=(1.45, -1.0, 0.95),
+        camera_look_at=(0.55, 0.0, 0.38),
+        head_light_intensity=1200.0,
+    )
+
+    objects = {obj.name: obj for obj in scenario.objects}
+    assert scenario.simulator == "blender"
+    assert scenario.renderer == "blender"
+    assert _cfg_names(scenario.robots) == ["openarm_wuji"]
+    assert scenario.headless is True
+    assert scenario.num_envs == 1
+    assert scenario.requested_scene_name == "kujiale_scene_0021"
+    _assert_kujiale_scene_0021(scenario.scene)
+    camera = scenario.cameras[0]
+    assert camera.name == "camera0"
+    assert camera.data_types == ["rgb"]
+    assert camera.width == 640
+    assert camera.height == 480
+    assert tuple(camera.pos) == (1.45, -1.0, 0.95)
+    assert tuple(camera.look_at) == (0.55, 0.0, 0.38)
+    assert "primitivecube" in _cfg_class_name(objects["front_table"])
+    assert "rigidobj" in _cfg_class_name(objects["cardboard_box"])
+    assert "rigidobj" in _cfg_class_name(objects["feast_soda_can"])
+    assert "rigidobj" in _cfg_class_name(objects["feast_scented_candle"])
+    assert objects["cardboard_box"].usd_path == str(paths.cardboard_box_usd)
+    assert objects["feast_soda_can"].usd_path == str(paths.soda_can_usd)
+    assert objects["feast_scented_candle"].usd_path == str(paths.scented_candle_usd)
+    assert scenario.lights[0].name == "overhead_light"
+    assert "spherelight" in _cfg_class_name(scenario.lights[0])
+    assert scenario.lights[0].intensity == 1200.0
+    assert scenario.sim_params.dt == 0.005
+    assert scenario.decimation == 4
+    assert _render_mode(scenario.render) == "pathtracing"
+
+
+def test_build_decode_scenario_uses_isaacsim() -> None:
+    scenario = replay.build_decode_scenario()
+
+    assert scenario.simulator == "isaacsim"
+    assert scenario.renderer == "isaacsim"
+    assert _cfg_names(scenario.robots) == ["openarm_wuji"]
+    assert scenario.headless is True
+    assert scenario.num_envs == 1
+    assert scenario.sim_params.dt == 0.005
+    assert scenario.decimation == 4
+    assert set(_cfg_names(scenario.objects)) >= {
+        "front_table",
+        "cardboard_box",
+        "feast_soda_can",
+        "feast_scented_candle",
+    }
+
+
+def test_scenario_builders_set_renderer_and_scene_when_constructor_lacks_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_fake_metasim_without_renderer_scene(monkeypatch)
+    paths = _make_bundle(tmp_path)
+
+    scenario = replay.build_box_task_scenario(
+        paths=paths,
+        simulator="blender",
+        scene="kujiale_scene_0021",
+        width=640,
+        height=480,
+        camera_pos=(1.45, -1.0, 0.95),
+        camera_look_at=(0.55, 0.0, 0.38),
+        head_light_intensity=1200.0,
+    )
+    decode_scenario = replay.build_decode_scenario()
+
+    assert scenario.renderer == "blender"
+    assert scenario.requested_scene_name == "kujiale_scene_0021"
+    assert scenario.scene == "kujiale_scene_0021"
+    assert decode_scenario.renderer == "isaacsim"

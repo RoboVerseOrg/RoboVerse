@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from copy import deepcopy
 from dataclasses import dataclass
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -171,3 +172,157 @@ def _rewrite_legacy_joint_keys(field_state: MutableMapping[str, Any], mapping: d
         if legacy_name in field_state:
             value = field_state.pop(legacy_name)
             field_state.setdefault(replay_name, value)
+
+
+def _build_scenario_cfg(scenario_cls: type, deferred_attrs: dict[str, Any], **kwargs: Any) -> Any:
+    supported_kwargs = _supported_constructor_kwargs(scenario_cls, kwargs)
+    scenario = scenario_cls(**supported_kwargs)
+    for name, value in deferred_attrs.items():
+        if name not in supported_kwargs:
+            _set_scenario_attr(scenario, name, value)
+    return scenario
+
+
+def _supported_constructor_kwargs(scenario_cls: type, kwargs: dict[str, Any]) -> dict[str, Any]:
+    try:
+        parameters = inspect.signature(scenario_cls).parameters.values()
+    except (TypeError, ValueError):
+        return kwargs
+
+    if any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters):
+        return kwargs
+
+    supported_names = {
+        parameter.name
+        for parameter in parameters
+        if parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    }
+    supported_names.discard("self")
+    return {name: value for name, value in kwargs.items() if name in supported_names}
+
+
+def _set_scenario_attr(scenario: Any, name: str, value: Any) -> None:
+    try:
+        setattr(scenario, name, value)
+        return
+    except (AttributeError, TypeError, ValueError):
+        pass
+
+    scenario_dict = getattr(scenario, "__dict__", None)
+    if isinstance(scenario_dict, dict):
+        scenario_dict[name] = value
+        return
+
+    raise AttributeError(f"ScenarioCfg does not allow setting {name!r} after construction")
+
+
+def build_box_task_scenario(
+    *,
+    paths: BoxTaskBundlePaths,
+    simulator: str,
+    scene: str,
+    width: int,
+    height: int,
+    camera_pos: tuple[float, float, float],
+    camera_look_at: tuple[float, float, float],
+    head_light_intensity: float,
+):
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.lights import SphereLightCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+    from metasim.scenario.render import RenderCfg
+    from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
+
+    scenario = _build_scenario_cfg(
+        ScenarioCfg,
+        deferred_attrs={"renderer": simulator, "scene": scene, "requested_scene_name": scene},
+        objects=[
+            PrimitiveCubeCfg(
+                name="front_table",
+                size=(0.60, 0.70, 0.04),
+                mass=80.0,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(0.85, 0.78, 0.62),
+                fix_base_link=True,
+                default_position=(0.55, 0.0, 0.33),
+                default_orientation=(1.0, 0.0, 0.0, 0.0),
+            ),
+            RigidObjCfg(
+                name="cardboard_box",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path=str(paths.cardboard_box_usd),
+            ),
+            RigidObjCfg(
+                name="feast_soda_can",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path=str(paths.soda_can_usd),
+            ),
+            RigidObjCfg(
+                name="feast_scented_candle",
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path=str(paths.scented_candle_usd),
+            ),
+        ],
+        robots=["openarm_wuji"],
+        cameras=[
+            PinholeCameraCfg(
+                name="camera0",
+                data_types=["rgb"],
+                width=width,
+                height=height,
+                pos=camera_pos,
+                look_at=camera_look_at,
+            )
+        ],
+        lights=[
+            SphereLightCfg(
+                name="overhead_light",
+                intensity=float(head_light_intensity),
+                color=(1.0, 1.0, 1.0),
+                radius=0.15,
+                pos=(0.55, 0.0, 1.45),
+                is_global=False,
+            )
+        ],
+        sim_params=SimParamCfg(dt=0.005),
+        decimation=4,
+        simulator=simulator,
+        renderer=simulator,
+        headless=True,
+        num_envs=1,
+        scene=scene,
+        render=RenderCfg(mode="pathtracing"),
+    )
+    return scenario
+
+
+def build_decode_scenario():
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
+
+    return _build_scenario_cfg(
+        ScenarioCfg,
+        deferred_attrs={"renderer": "isaacsim"},
+        objects=[
+            PrimitiveCubeCfg(
+                name="front_table",
+                size=(0.60, 0.70, 0.04),
+                mass=80.0,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(0.85, 0.78, 0.62),
+                fix_base_link=True,
+            ),
+            RigidObjCfg(name="cardboard_box", physics=PhysicStateType.RIGIDBODY),
+            RigidObjCfg(name="feast_soda_can", physics=PhysicStateType.RIGIDBODY),
+            RigidObjCfg(name="feast_scented_candle", physics=PhysicStateType.RIGIDBODY),
+        ],
+        robots=["openarm_wuji"],
+        sim_params=SimParamCfg(dt=0.005),
+        decimation=4,
+        simulator="isaacsim",
+        renderer="isaacsim",
+        headless=True,
+        num_envs=1,
+    )
