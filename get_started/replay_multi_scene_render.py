@@ -322,10 +322,10 @@ def _coordinator_main(args: argparse.Namespace, script_path: Path) -> None:
             str(args.height),
             "--render-mode",
             args.render_mode,
-            "--camera-pos",
-            args.camera_pos,
-            "--camera-lookat",
-            args.camera_lookat,
+            # Use ``--flag=value`` form so leading-negative values
+            # (e.g. ``-0.15,0.0,0.95``) don't get re-parsed as flags.
+            f"--camera-pos={args.camera_pos}",
+            f"--camera-lookat={args.camera_lookat}",
             "--head-light-intensity",
             str(args.head_light_intensity),
             "--out-video",
