@@ -105,9 +105,11 @@ def test_reset_calls_checker_reset_before_super(monkeypatch):
 
     # Patch super().reset to record ordering.
     from metasim.task.base import BaseTaskEnv
+
     def _super_reset(self, states=None, env_ids=None):
         order.append("super")
         return "sentinel"
+
     monkeypatch.setattr(BaseTaskEnv, "reset", _super_reset)
 
     result = task.reset(env_ids=[0])
@@ -123,6 +125,7 @@ def test_reset_tolerates_missing_checker(monkeypatch):
     task.checker = None
 
     from metasim.task.base import BaseTaskEnv
+
     monkeypatch.setattr(BaseTaskEnv, "reset", lambda self, states=None, env_ids=None: "ok")
 
     assert task.reset(env_ids=[0]) == "ok"
