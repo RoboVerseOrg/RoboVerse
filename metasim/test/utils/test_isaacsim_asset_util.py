@@ -89,5 +89,10 @@ def test_resolve_isaacsim_file_path_raises_without_usd_or_urdf() -> None:
         mjcf_path="/tmp/asset.xml",
     )
 
-    with pytest.raises(ValueError, match="requires either usd_path or urdf_path"):
+    # Commit ``e61505d isaacsim_asset_util: fall through to URDF/MJCF when
+    # configured USD missing`` widened the resolver to consider mjcf_path as
+    # well, and updated the error message to surface all three accepted paths.
+    # The test still asserts the same behaviour (a non-existent mjcf path
+    # cannot rescue absent usd/urdf), only the error string changed.
+    with pytest.raises(ValueError, match="requires an existing usd_path, urdf_path, or mjcf_path"):
         resolve_isaacsim_file_path(cfg)
