@@ -20,17 +20,26 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_handler_class
 
 
+# ``ISAACLAB`` is a deprecated alias kept for backward compatibility with
+# downstream callers (e.g. RoboVerse's ``scripts/conversion/convert_traj_v1_to_v2.py``).
+# The dispatcher rewrites it to ``ISAACSIM`` with a DeprecationWarning.
+# It must NOT appear in the ``ScenarioCfg.simulator`` Literal — new
+# code should be steered to ``isaacsim``.
+_DEPRECATED_SIMTYPE_VALUES: frozenset[str] = frozenset({"isaaclab"})
+
+
 @pytest.mark.general
 def test_no_dead_isaaclab_reference():
-    """The IsaacLab handler module was removed in a prior refactor; make
-    sure nothing in the public surface still advertises it."""
-    assert not hasattr(SimType, "ISAACLAB"), (
-        "SimType.ISAACLAB was removed because metasim/sim/isaaclab/ no longer exists; "
-        "if reintroducing, restore the module first"
+    """The standalone IsaacLab handler module was removed in C3
+    (b752bb2). The enum value survives as a deprecated alias so existing
+    callers keep working, but the Literal must not advertise it."""
+    # SimType.ISAACLAB exists as a deprecated alias only.
+    assert hasattr(SimType, "ISAACLAB"), (
+        "SimType.ISAACLAB must remain importable as a deprecated alias "
+        "(see metasim/utils/setup_util.py for the dispatcher shim)"
     )
     hints = get_type_hints(ScenarioCfg, include_extras=False)
     simulator_hint = hints.get("simulator")
-    # Unwrap "Literal[…] | None"
     sim_args = ()
     if get_origin(simulator_hint) is not None:
         for arg in get_args(simulator_hint):
@@ -38,12 +47,16 @@ def test_no_dead_isaaclab_reference():
             if inner:
                 sim_args = inner
                 break
-    assert "isaaclab" not in sim_args, "ScenarioCfg.simulator Literal must not advertise isaaclab"
+    assert "isaaclab" not in sim_args, (
+        "ScenarioCfg.simulator Literal must not advertise isaaclab — "
+        "new code should use isaacsim instead"
+    )
 
 
 @pytest.mark.general
 def test_simulator_literal_covers_every_sim_type():
-    """The ``ScenarioCfg.simulator`` Literal must list every ``SimType`` value."""
+    """The ``ScenarioCfg.simulator`` Literal must list every ``SimType``
+    value, *except* explicitly deprecated aliases."""
     hints = get_type_hints(ScenarioCfg, include_extras=False)
     simulator_hint = hints.get("simulator")
     sim_args: tuple[str, ...] = ()
@@ -54,12 +67,12 @@ def test_simulator_literal_covers_every_sim_type():
                 sim_args = inner
                 break
     literal_values = set(sim_args)
-    sim_type_values = {st.value for st in SimType}
+    sim_type_values = {st.value for st in SimType} - _DEPRECATED_SIMTYPE_VALUES
     missing_from_literal = sim_type_values - literal_values
     assert not missing_from_literal, (
         f"ScenarioCfg.simulator Literal missing entries that exist in SimType: {sorted(missing_from_literal)}"
     )
-    extras_in_literal = literal_values - sim_type_values
+    extras_in_literal = literal_values - sim_type_values - _DEPRECATED_SIMTYPE_VALUES
     assert not extras_in_literal, (
         f"ScenarioCfg.simulator Literal has entries with no matching SimType: {sorted(extras_in_literal)}"
     )

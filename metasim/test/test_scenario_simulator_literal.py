@@ -23,10 +23,17 @@ from metasim.constants import SimType
 from metasim.scenario.scenario import ScenarioCfg
 
 
+# ``ISAACLAB`` is a deprecated alias kept for backward compatibility with
+# downstream callers. The dispatcher rewrites it to ``ISAACSIM`` with a
+# DeprecationWarning. It must NOT appear in the Literal — new code should
+# be steered to ``isaacsim``.
+_DEPRECATED_SIMTYPE_VALUES: frozenset[str] = frozenset({"isaaclab"})
+
+
 @pytest.mark.general
 def test_scenario_simulator_literal_matches_simtype():
     """The set of strings accepted by ``ScenarioCfg.simulator`` must be
-    exactly the values of ``SimType``."""
+    exactly the values of ``SimType``, minus explicitly deprecated aliases."""
     hints = get_type_hints(ScenarioCfg)
     sim_field_type = hints["simulator"]
 
@@ -39,10 +46,10 @@ def test_scenario_simulator_literal_matches_simtype():
             literal_values.extend(arg.__args__)
 
     literal_set = set(literal_values)
-    simtype_set = {sim.value for sim in SimType}
+    simtype_set = {sim.value for sim in SimType} - _DEPRECATED_SIMTYPE_VALUES
 
     missing_from_literal = simtype_set - literal_set
-    extra_in_literal = literal_set - simtype_set
+    extra_in_literal = literal_set - simtype_set - _DEPRECATED_SIMTYPE_VALUES
 
     assert not missing_from_literal, (
         f"ScenarioCfg.simulator is missing these SimType values: {sorted(missing_from_literal)}"
