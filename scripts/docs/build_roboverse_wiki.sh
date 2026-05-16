@@ -36,8 +36,10 @@ fi
 rm -rf "$output_dir"
 mkdir -p "$output_dir"
 
-cp -a "$repo_root/docs/landing/." "$output_dir/"
-"$python_bin" -m sphinx -b html "$repo_root/docs/source" "$output_dir/roboverse"
+# RoboVerse docs are the homepage — built directly at the site root so
+# visiting roboverse.wiki/ lands on the Sphinx RoboVerse intro, matching
+# the pre-#764 deployment layout. MetaSim docs live under /metasim/.
+"$python_bin" -m sphinx -b html "$repo_root/docs/source" "$output_dir"
 "$python_bin" -m sphinx -b html "$metasim_dir/docs/source" "$output_dir/metasim"
 
 if [[ -f "$metasim_dir/docs/source/images/tea.jpg" ]]; then

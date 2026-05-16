@@ -1,6 +1,6 @@
-# RoboVerse Documentation
+# RoboVerse
 
-![RoboVerse](./_static/Robo.png)
+![RoboVerse](./_static/tea.jpg)
 
 <p align="center">
   <a href="https://roboverseorg.github.io"><img src="https://img.shields.io/badge/project-page-brightgreen" alt="Project Page"></a>
@@ -136,10 +136,58 @@ If you find this work useful in your research, please consider citing:
 ```
 
 ```{toctree}
-:hidden:
+:caption: Dataset & Benchmark
+:maxdepth: 2
 :titlesonly:
+:hidden:
 
-Dataset <dataset_benchmark/index>
-Learn <roboverse_learn/index>
-FAQ <FAQ/index>
+Overview <dataset_benchmark/index>
+Tasks Overview <dataset_benchmark/tasks/overview>
+Task Descriptions <dataset_benchmark/tasks/descriptions>
+Task Groups <dataset_benchmark/tasks/task_groups>
+Robots <dataset_benchmark/dataset/robots>
+Objects <dataset_benchmark/dataset/objects>
+Scenes <dataset_benchmark/dataset/scenes>
+Benchmark Overview <dataset_benchmark/benchmark/overview>
+Benchmark Results <dataset_benchmark/benchmark/results>
+Benchmark Usage <dataset_benchmark/benchmark/usage>
+```
+
+```{toctree}
+:caption: Imitation Learning
+:maxdepth: 2
+:titlesonly:
+:hidden:
+
+Overview <roboverse_learn/index>
+Diffusion Policy <roboverse_learn/imitation_learning/diffusion_policy>
+ACT <roboverse_learn/imitation_learning/ACT>
+OpenVLA <roboverse_learn/imitation_learning/openvla>
+SmolVLA <roboverse_learn/imitation_learning/smolvla>
+RDT <roboverse_learn/imitation_learning/rdt>
+Octo <roboverse_learn/imitation_learning/octo>
+Contributing <roboverse_learn/imitation_learning/contributing>
+```
+
+```{toctree}
+:caption: Reinforcement Learning
+:maxdepth: 2
+:titlesonly:
+:hidden:
+
+PPO <roboverse_learn/reinforcement_learning/ppo>
+FastTD3 <roboverse_learn/reinforcement_learning/fast_td3>
+SAC <roboverse_learn/reinforcement_learning/sac>
+TD3 <roboverse_learn/reinforcement_learning/td3>
+SkillBlender <roboverse_learn/reinforcement_learning/skillblender_rl>
+Humanoid <roboverse_learn/reinforcement_learning/humanoid>
+```
+
+```{toctree}
+:caption: FAQ
+:maxdepth: 2
+:titlesonly:
+:hidden:
+
+FAQ/index
 ```

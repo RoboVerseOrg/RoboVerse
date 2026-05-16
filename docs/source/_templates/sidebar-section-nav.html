@@ -1,0 +1,25 @@
+{# Renders the full captioned toctree in the left sidebar on EVERY page,
+   including the homepage. Equivalent to pydata's built-in
+   ``sidebar-nav-bs.html`` but with ``startdepth=0`` so the root page also
+   gets a populated sidebar (pydata's default suppresses the toctree on
+   the root page because ``_get_ancestor_pagename`` returns None there).
+
+   We deliberately use a different filename so that layout.html's
+   ``sidebars | reject('in', 'sidebar-nav-bs.html')`` rule does not strip
+   this template out on pages it considers ancestor-less. #}
+<nav class="bd-docs-nav bd-links"
+     aria-label="{{ _('Section Navigation') }}">
+  <p class="bd-links__title" role="heading" aria-level="1">{{ _("Section Navigation") }}</p>
+  <div class="bd-toc-item navbar-nav">
+    {{- generate_toctree_html(
+      "sidebar",
+      startdepth=0,
+      show_nav_level=theme_show_nav_level | int,
+      maxdepth=theme_navigation_depth | int,
+      collapse=theme_collapse_navigation | tobool,
+      includehidden=True,
+      titles_only=True
+      )
+    -}}
+  </div>
+</nav>
