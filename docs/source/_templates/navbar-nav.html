@@ -1,0 +1,15 @@
+{# Override pydata_sphinx_theme's navbar-nav: render ONLY ``external_links``,
+   not the top-level toctree entries. We use the left sidebar (configured via
+   html_sidebars = {"**": ["globaltoc.html"]}) for in-site navigation, so the
+   top bar is reserved for the two cross-subsite links (MetaSim ↔ RoboVerse). #}
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    {%- for external_link in theme_external_links %}
+    <li class="nav-item">
+      <a class="nav-link nav-external" href="{{ external_link.url }}">
+        {{ external_link.name }}
+      </a>
+    </li>
+    {%- endfor %}
+  </ul>
+</nav>

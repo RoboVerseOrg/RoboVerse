@@ -54,7 +54,16 @@ html_theme_options = {
     "logo": {
         "image_dark": "_static/RoboVerse86.22.svg",
     },
+    # Top navbar shows only the two cross-subsite links (MetaSim ↔ RoboVerse)
+    # via ``external_links`` (which pydata renders inside ``navbar-nav``).
+    # All in-site navigation lives in the left sidebar — see ``html_sidebars``
+    # below.
     "navbar_center": ["navbar-nav"],
+    "external_links": [
+        {"name": "MetaSim", "url": "/metasim/"},
+        {"name": "RoboVerse", "url": "/roboverse/"},
+        {"name": "FAQ", "url": "/FAQ/"},
+    ],
     "show_version_warning_banner": False,
     "sidebarwidth": "150px",
 }
@@ -71,6 +80,15 @@ html_css_files = ["css/custom.css"]
 html_show_copyright = True
 html_show_sphinx = False
 html_static_path = ["_static"]
+
+# Use our custom sidebar-section-nav template on every page (including the
+# homepage). It renders the same captioned toctree as pydata's default
+# ``sidebar-nav-bs.html`` but with ``startdepth=0`` + ``includehidden=True``
+# so the root page also shows the full TOC — matching the look of the
+# deployed roboverse.wiki/metasim/ build.
+html_sidebars = {
+    "**": ["sidebar-section-nav.html"],
+}
 
 autoclass_content = "class"
 autodoc_typehints = "signature"

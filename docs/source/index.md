@@ -1,5 +1,7 @@
 # MetaSim
 
+![MetaSim](./_static/Robo.png)
+
 **MetaSim** is the standalone core simulation framework used by RoboVerse, providing a unified interface for robotic simulation across multiple physics engines.
 
 ---
