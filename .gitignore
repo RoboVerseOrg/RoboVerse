@@ -119,3 +119,11 @@ public/
 artifacts/
 nohup/
 .omx/
+
+# local-only: exp52 scratch (scripts + rollout outputs) and replay scratch
+.tmp_replay_render/
+get_started/exp52_*.py
+get_started/exp52_*/
+
+# local-only: kujiale interior scene USDs (not part of upstream assets)
+roboverse_pack/asset/*.usda
