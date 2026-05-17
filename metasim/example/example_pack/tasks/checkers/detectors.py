@@ -242,13 +242,15 @@ class Relative3DSphereDetector(BaseDetector):
         if env_ids is None:
             env_ids = list(range(handler.num_envs))
 
-        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32)  # [3]
-        base_pos = handler.get_pos(self.base_obj_name, env_ids=env_ids)
+        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32, device=handler.device)  # [3]
+        # Use the module-level helper (the handler base class has no
+        # `get_pos` method — every other detector goes through this path).
+        base_pos = get_pos(handler, self.base_obj_name, env_ids=env_ids)
 
         self.checker_pos = base_pos + relative_pos
 
     def is_detected(self, handler: BaseSimHandler, obj_name: str) -> torch.BoolTensor:
-        obj_pos = handler.get_pos(obj_name)
+        obj_pos = get_pos(handler, obj_name)
 
         object_in_checker = torch.norm(obj_pos - self.checker_pos, p=2, dim=-1) < self.radius
 
