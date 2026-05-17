@@ -239,8 +239,15 @@ class Sapien3Handler(BaseSimHandler):
                 if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
-                        stiffness = object.actuators[joint.get_name()].stiffness
-                        damping = object.actuators[joint.get_name()].damping
+                        # Robots with passive DoFs (mobile-base wheels, suspension,
+                        # sensor masts) declare more active joints in the URDF than
+                        # the RobotCfg's `actuators` dict covers. Skip those — they
+                        # stay un-driven instead of crashing with KeyError.
+                        actuator = object.actuators.get(joint.get_name())
+                        if actuator is None:
+                            continue
+                        stiffness = actuator.stiffness
+                        damping = actuator.damping
                         if stiffness is not None and damping is not None:
                             joint.set_drive_property(stiffness, damping)
                 else:
@@ -249,9 +256,11 @@ class Sapien3Handler(BaseSimHandler):
                         joint.set_drive_property(0, 0)
 
                 if hasattr(object, "default_joint_positions") and object.default_joint_positions:
+                    # Fill missing joints (passive DoFs the cfg doesn't enumerate) with
+                    # 0.0 instead of crashing with KeyError.
                     qpos_list = []
                     for i, joint_name in enumerate(cur_joint_names):
-                        qpos_list.append(object.default_joint_positions[joint_name])
+                        qpos_list.append(float(object.default_joint_positions.get(joint_name, 0.0)))
                     curr_id.set_qpos(qpos_list)
 
                 # if agent.dof.init:
