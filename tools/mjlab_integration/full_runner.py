@@ -70,7 +70,7 @@ def _yam_scenario(task: inv.MjlabTask):
         fix_base_link=True,
         mjcf_path=str(task.asset.xml_path),
         enabled_gravity=True,
-        enabled_self_collisions=False,  # MetaSim has no "mujoco-default filtering" option; False adds all-pairs excludes (over-restrictive) and True flips filterparent=disable (over-permissive). False matches raw closely for these robots.
+        enabled_self_collisions="mujoco_default",  # match raw mujoco's stock contact filtering (parent-child filtered, others collide); new sentinel added in MetaSim/fix/mujoco-self-collisions-mujoco-default
         control_type={},  # no PD wrap; cfg ctrl directly
     )
     return ScenarioCfg(
@@ -95,7 +95,7 @@ def _quadruped_scenario(task: inv.MjlabTask, name: str = "go1"):
         fix_base_link=False,
         mjcf_path=str(task.asset.xml_path),
         enabled_gravity=True,
-        enabled_self_collisions=False,  # MetaSim has no "mujoco-default filtering" option; False adds all-pairs excludes (over-restrictive) and True flips filterparent=disable (over-permissive). False matches raw closely for these robots.
+        enabled_self_collisions="mujoco_default",  # match raw mujoco's stock contact filtering (parent-child filtered, others collide); new sentinel added in MetaSim/fix/mujoco-self-collisions-mujoco-default
         control_type={},
     )
     return ScenarioCfg(
@@ -120,7 +120,7 @@ def _humanoid_scenario(task: inv.MjlabTask, name: str = "g1"):
         fix_base_link=False,
         mjcf_path=str(task.asset.xml_path),
         enabled_gravity=True,
-        enabled_self_collisions=False,  # MetaSim has no "mujoco-default filtering" option; False adds all-pairs excludes (over-restrictive) and True flips filterparent=disable (over-permissive). False matches raw closely for these robots.
+        enabled_self_collisions="mujoco_default",  # match raw mujoco's stock contact filtering (parent-child filtered, others collide); new sentinel added in MetaSim/fix/mujoco-self-collisions-mujoco-default
         control_type={},
     )
     return ScenarioCfg(
