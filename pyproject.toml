@@ -162,6 +162,7 @@ roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "*
 [tool.ruff.lint.per-file-ignores]
 ## For normal scripts, allow print statements, allow no docstrings
 "scripts/**.py" = ["T20", "D"]
+"tools/**.py" = ["T20", "D"]  # research / diagnostic harnesses
 "roboverse_pack/tasks/open6dor/utils/**.py" = ["T20", "D"]
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For get_started scripts, allow no docstrings
