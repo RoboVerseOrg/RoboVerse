@@ -422,14 +422,26 @@ class MujocoHandler(BaseSimHandler):
         return mjcf_model
 
     def _configure_self_collision_policy(self, mjcf_model: mjcf.RootElement) -> None:
-        """Use MuJoCo's native dynamic contact pipeline for robot self-collision.
+        """Configure MuJoCo's self-collision behaviour from each robot's flag.
 
-        MuJoCo filters parent-child contacts by default. When any robot enables
-        self-collision, disable that global filter so same-tree collisions are
-        handled dynamically. Robots that disable self-collision are handled with
-        body-pair excludes in `_exclude_robot_self_collisions`.
+        Three policies are supported on `RobotCfg.enabled_self_collisions`:
+
+        - ``True`` — all-self-collision: set ``filterparent="disable"`` so
+          parent-child geom pairs *also* collide. No body-pair excludes added.
+        - ``False`` — no-self-collision: leave ``filterparent`` at MuJoCo's
+          default (enabled) and add an exclude for every body pair inside the
+          robot via ``_exclude_robot_self_collisions``.
+        - ``"mujoco_default"`` — MuJoCo's stock semantics: leave both knobs
+          alone. Parent-child pairs are filtered (MuJoCo default), all other
+          intra-robot pairs collide naturally. Use this when matching a raw
+          ``mujoco.MjModel.from_xml_path`` rollout — neither of the other two
+          options does, because both bias the geom-pair set in opposite
+          directions.
+
+        Only the ``True`` branch needs a global mjcf-level edit; the other
+        two are entirely per-robot and handled in ``_add_robots_to_model``.
         """
-        if any(robot.enabled_self_collisions for robot in self.robots):
+        if any(getattr(robot, "enabled_self_collisions", False) is True for robot in self.robots):
             mjcf_model.option.flag.filterparent = "disable"
 
     def _add_ground(self, mjcf_model: mjcf.RootElement) -> None:
@@ -669,7 +681,12 @@ class MujocoHandler(BaseSimHandler):
                 robot_attached.pos = list(user_pos + mjcf_root_offset)
             if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
                 robot_attached.quat = robot.default_orientation
-            if not robot.enabled_self_collisions:
+            # Only the explicit `False` branch installs all-pair excludes.
+            # `True` already disabled filterparent globally; the
+            # `"mujoco_default"` sentinel intentionally leaves both knobs
+            # at MuJoCo's stock semantics so parity sweeps can match raw
+            # `mujoco.MjModel.from_xml_path` rollouts.
+            if robot.enabled_self_collisions is False:
                 self._exclude_robot_self_collisions(mjcf_model, robot_attached)
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
