@@ -30,6 +30,10 @@ class ScenarioCfg:
     cameras: list[BaseCameraCfg] = []
     gs_scene: GSSceneCfg | None = None
     ground: GroundCfg | None = None
+    add_default_ground: bool = True
+    """When `ground` is None, attach a backend-default ground plane. Set False
+    to opt out for scenes whose MJCF already provides its own floor (e.g.
+    dm_control-style cartpole, mjlab playgrounds)."""
 
     # runtime
     render: RenderCfg = RenderCfg()

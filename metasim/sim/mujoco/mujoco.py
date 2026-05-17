@@ -435,7 +435,7 @@ class MujocoHandler(BaseSimHandler):
     def _add_ground(self, mjcf_model: mjcf.RootElement) -> None:
         if self.scenario.ground is not None:
             self._add_custom_ground(mjcf_model)
-        else:
+        elif getattr(self.scenario, "add_default_ground", True):
             self._add_default_ground(mjcf_model)
 
     def _apply_default_joint_positions(self) -> None:
@@ -614,18 +614,59 @@ class MujocoHandler(BaseSimHandler):
             if hasattr(robot, "scale") and robot.scale != (1.0, 1.0, 1.0):
                 self._apply_scale_to_mjcf(robot_xml, robot.scale)
 
+            # Promote any author-declared freejoint to the attachment wrapper
+            # *before* attaching, so MuJoCo still sees one (and only one) free
+            # joint and it's anchored on a top-level body. mjlab's unitree_go1
+            # and unitree_g1 ship `<freejoint name="floating_base_joint"/>`
+            # inside their root body — once wrapped, that body stops being
+            # top-level and MuJoCo errors out. Removing the inner freejoint
+            # and re-adding it to `robot_attached` preserves the floating-base
+            # contract without losing user-set range/damping (freejoints don't
+            # take those attributes in MJCF).
+            inner_freejoint_found = False
+            for body in robot_xml.find_all("body"):
+                for child in list(body.all_children()):
+                    if child.tag in ("freejoint",) or (
+                        child.tag == "joint" and getattr(child, "type", None) == "free"
+                    ):
+                        child.remove()
+                        inner_freejoint_found = True
+
             robot_attached = mjcf_model.attach(robot_xml)
-            if not robot.fix_base_link:
+            if not robot.fix_base_link or inner_freejoint_found:
                 robot_attached.add("freejoint")
+            # Track any pose the MJCF author baked into the robot's root body so
+            # we can compose it with a user-supplied default_position below. The
+            # re-rooting branch hoists the root body's pos onto the attachment
+            # wrapper, so without composition the user's default_position would
+            # silently overwrite the MJCF-intended world placement (e.g. cartpole
+            # has its cart body at z=1 — losing that drops the cart into the
+            # ground plane and breaks physics).
+            mjcf_root_offset = np.zeros(3, dtype=float)
             if not hasattr(robot_attached, "inertial") or robot_attached.inertial is None:
-                child_body = robot_attached.find_all("body")[0]
-                pos = child_body.inertial.pos
-                robot_attached.pos = child_body.pos
-                child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
-                robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
-                robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+                child_bodies = robot_attached.find_all("body")
+                if child_bodies:
+                    child_body = child_bodies[0]
+                    # Some MJCFs rely on MuJoCo to compute inertia from geoms and
+                    # therefore omit an explicit <inertial> tag; fall back to the
+                    # body origin so the dummy inertial we add below still has a
+                    # sane location.
+                    child_inertial = getattr(child_body, "inertial", None)
+                    pos = child_inertial.pos if child_inertial is not None else (0.0, 0.0, 0.0)
+                    child_root_pos = child_body.pos
+                    if child_root_pos is not None:
+                        mjcf_root_offset = np.asarray(child_root_pos, dtype=float)
+                    robot_attached.pos = child_body.pos
+                    child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
+                    robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
+                    robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
             if hasattr(robot, "default_position") and robot.default_position is not None:
-                robot_attached.pos = list(robot.default_position)
+                # Compose with the MJCF root offset preserved above so authored
+                # body frames survive when the user keeps the field's (0, 0, 0)
+                # default. When the MJCF root body was at origin (the common
+                # URDF case), mjcf_root_offset is zero and behavior is unchanged.
+                user_pos = np.asarray(robot.default_position, dtype=float)
+                robot_attached.pos = list(user_pos + mjcf_root_offset)
             if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
                 robot_attached.quat = robot.default_orientation
             if not robot.enabled_self_collisions:
