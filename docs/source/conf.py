@@ -42,7 +42,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/RoboVerseOrg/MetaSim",
+            "url": "https://github.com/RoboVerseOrg/RoboVerse",
             "icon": "fa-brands fa-github",
         },
         {
