@@ -71,7 +71,7 @@ done
 # Keep tags/summary current with what's actually in the report; this is the
 # source of truth for the hub manifest entries owned by `roboverse`.
 SUBREPORTS=(
-    "roboverse_overview|⭐ RoboVerse 总览 (6 子报告统一索引, 中文多页)|总览,维护,集成,中文,多页|14 页 vlm_robot 风格汇总: 维护 / 新仿真器集成 / 横向主题 / 时间线。突出 G1 真 walking + 10+ MetaSim 修复 + 跨报告痛点汇总。"
+    "roboverse_overview|⭐ RoboVerse 项目主报告 (维护 + 集成 + 路线)|总览,维护,集成,roadmap,中文,多页|22 页项目主报告: 框架健康度 (架构/状态/积压/修复/技术债/兼容/测试) + 新生态集成 (mjlab/maniskill/robotwin + 接入流程 + 候选未来) + 横向主题 + 路线图 (P0-P3, 0.3→1.0)。G1 真 walking 嵌入首页。"
     "mjlab_integration|mjlab → MetaSim/MuJoCo (含 G1 RL demo, 多页中文)|mjlab,mujoco,g1,rl,humanoid,中文,多页|14 页报告。G1 walking 本地训 + 12 任务物理对齐 ≤1e-9 + 7 个 MetaSim 修复 (5 分支, 11 回归测试)。"
     "maniskill_integration|ManiSkill → MetaSim/Sapien 集成 (中文报告)|maniskill,sapien,parity,中文|4 桌面任务 harness + maniskill.pick_cube_v1 几何 port (3/10 项) + 10 项 spec 缺口分析。"
     "robotwin_integration|RoboTwin → MetaSim/Sapien 集成 (中文报告)|robotwin,sapien,中文|ALOHA-AgileX 38 DoF 加载 + 渲染 + 50 任务清单 + 3 集成路线方案。痛点: sapien 3.0.0b1 / mplib 0.2.1 / curobo 依赖冲突。"
@@ -118,3 +118,16 @@ if [ -n "$MSG" ]; then SYNC_ARGS+=("-m" "$MSG"); fi
 echo ""
 echo "==> sync hub + deploy"
 "$PUBLISH" "${SYNC_ARGS[@]}"
+
+# sync_to_github.py 在 "no new changes" 时会 skip push, 但本地可能仍有 unpushed
+# commit (比如先跑了 --no-push 后再跑普通 publish)。手动确保 push 到位。
+if [ "$DO_PUSH" = "1" ]; then
+    HUB_REPO="/home/ghr/projects/research_report"
+    if [ -d "$HUB_REPO/.git" ]; then
+        ahead=$(cd "$HUB_REPO" && git status --short --branch 2>/dev/null | head -1 | grep -oP 'ahead \K[0-9]+' || echo "0")
+        if [ "${ahead:-0}" -gt 0 ]; then
+            echo "==> hub repo ahead ${ahead} — push manually"
+            (cd "$HUB_REPO" && git push origin main 2>&1 | tail -3)
+        fi
+    fi
+fi
