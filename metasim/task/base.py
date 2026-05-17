@@ -60,6 +60,12 @@ class BaseTaskEnv:
             scenario: The scenario configuration. If None, it will use the class variable "scenario".
             device: The device to use for the environment. If None, it will use "cuda" if available, otherwise "cpu".
         """
+        if scenario is None:
+            scenario = type(self).scenario  # the docstring contract for class-level defaults
+            if scenario is None:
+                raise ValueError(
+                    f"{type(self).__name__} requires a scenario — pass one to __init__ or set the class attribute."
+                )
         self.scenario = scenario
         self.num_envs = self.scenario.num_envs
 
