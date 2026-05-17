@@ -703,16 +703,41 @@ class MujocoHandler(BaseSimHandler):
     def _mirror_state_to_native(self):
         self._mj_data = self.physics._data._data
 
-    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
-        """Get states of all objects and robots."""
-        object_states = {}
+    def _read_joint_qpos(self, full_name: str, qpos_snapshot: np.ndarray) -> float:
+        """Read a single-dof joint's qpos from a frozen qpos snapshot.
 
-        # print("=== MuJoCo body names & positions ===")
-        # for i in range(self.physics.model.nbody):
-        #     body_name = self.physics.model.body(i).name
-        #     body_pos = self.physics.data.xpos[i]  # (3,) np.array
-        #     print(f"[{i}] {body_name} : pos = {body_pos}")
-        # print("=====================================")
+        We deliberately avoid ``self.physics.data.joint(name).qpos.item()``
+        — that NamedIndexer path has produced alternating-arm corruption
+        under tight ``set_states → simulate → get_states`` loops
+        (271/300 rollouts in downstream BC training showed ~150° spikes
+        on otherwise-smooth trajectories — see
+        ``bug_get_states_arm_qpos_alternating_corruption.md``).
+        Using ``model.joint(name).qposadr`` indexed into a freshly
+        copied buffer removes that aliasing surface.
+        """
+        adr = int(self.physics.model.joint(full_name).qposadr[0])
+        return float(qpos_snapshot[adr])
+
+    def _read_joint_qvel(self, full_name: str, qvel_snapshot: np.ndarray) -> float:
+        """Read a single-dof joint's qvel via stable ``dofadr``; see ``_read_joint_qpos``."""
+        adr = int(self.physics.model.joint(full_name).dofadr[0])
+        return float(qvel_snapshot[adr])
+
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
+        """Get states of all objects and robots.
+
+        Buffers (``qpos`` / ``qvel`` / ``ctrl`` / ``actuator_force``) are
+        snapshotted up-front so every joint/body read in this call sees
+        the same internally-consistent state — regardless of any
+        NamedIndexer or view-aliasing oddity in dm_control.
+        """
+        data = self.physics.data
+        qpos_snapshot = np.array(data.qpos, copy=True)
+        qvel_snapshot = np.array(data.qvel, copy=True)
+        ctrl_snapshot = np.array(data.ctrl, copy=True)
+        actuator_force_snapshot = np.array(data.actuator_force, copy=True)
+
+        object_states = {}
         for obj in self.objects:
             model_name = self.mj_objects[obj.name].model
 
@@ -727,10 +752,10 @@ class MujocoHandler(BaseSimHandler):
                     body_names=self._get_body_names(obj.name),
                     body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                     joint_pos=torch.tensor([
-                        self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
+                        self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names
                     ]).unsqueeze(0),
                     joint_vel=torch.tensor([
-                        self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
+                        self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
                     ]).unsqueeze(0),
                 )
             else:
@@ -755,16 +780,16 @@ class MujocoHandler(BaseSimHandler):
                 root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                 body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
                 joint_pos=torch.tensor([
-                    self.physics.data.joint(f"{model_name}/{jn}").qpos.item() for jn in joint_names
+                    self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names
                 ]).unsqueeze(0),
                 joint_vel=torch.tensor([
-                    self.physics.data.joint(f"{model_name}/{jn}").qvel.item() for jn in joint_names
+                    self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
                 ]).unsqueeze(0),
-                joint_pos_target=torch.from_numpy(self.physics.data.ctrl[actuator_reindex]).unsqueeze(0),
+                joint_pos_target=torch.from_numpy(ctrl_snapshot[actuator_reindex]).unsqueeze(0),
                 joint_vel_target=torch.from_numpy(self._current_vel_target).unsqueeze(0)
                 if self._current_vel_target is not None
                 else None,
-                joint_effort_target=torch.from_numpy(self.physics.data.actuator_force[actuator_reindex]).unsqueeze(0),
+                joint_effort_target=torch.from_numpy(actuator_force_snapshot[actuator_reindex]).unsqueeze(0),
             )
             robot_states[robot.name] = state
 
