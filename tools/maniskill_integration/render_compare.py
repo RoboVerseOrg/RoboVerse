@@ -119,12 +119,24 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     out_dir = Path(args.out)
 
-    # ManiSkill native
+    # ManiSkill native — drive a small sinusoid so the arm visibly moves.
+    import math
+
     print("[render_compare] running ManiSkill PickCube-v1...")
+
+    def _sine(t, q):
+        a = np.zeros(8, dtype=np.float32)
+        # Slow oscillation on joint2 (shoulder) so the arm sweeps in/out.
+        a[1] = 0.6 * math.sin(2 * math.pi * t / 30.0)
+        # Slight bias to push arm down toward cube.
+        a[3] = -0.2
+        return a
+
     ms = rollout_maniskill(
         "PickCube-v1",
         n_steps=args.n_steps,
         seed=0,
+        action_fn=_sine,
         render=True,
         render_size=(320, 240),
     )
