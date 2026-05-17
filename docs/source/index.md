@@ -141,7 +141,6 @@ If you find this work useful in your research, please consider citing:
 :titlesonly:
 :hidden:
 
-Overview <dataset_benchmark/index>
 Tasks Overview <dataset_benchmark/tasks/overview>
 Task Descriptions <dataset_benchmark/tasks/descriptions>
 Task Groups <dataset_benchmark/tasks/task_groups>
@@ -159,7 +158,6 @@ Benchmark Usage <dataset_benchmark/benchmark/usage>
 :titlesonly:
 :hidden:
 
-Overview <roboverse_learn/index>
 Diffusion Policy <roboverse_learn/imitation_learning/diffusion_policy>
 ACT <roboverse_learn/imitation_learning/ACT>
 OpenVLA <roboverse_learn/imitation_learning/openvla>

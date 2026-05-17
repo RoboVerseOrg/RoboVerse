@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # RoboVerse Learn
 
 **RoboVerse Learn** provides a comprehensive suite of learning algorithms for robot policy training. It integrates seamlessly with MetaSim environments, enabling end-to-end training pipelines for both imitation learning and reinforcement learning.
@@ -115,30 +119,3 @@ pip install -e ".[vla]"
 ## Contributing
 
 Want to add a new algorithm? See our [Contributing Guide](imitation_learning/contributing.md) for instructions on integrating new methods.
-
----
-
-```{toctree}
-:caption: Imitation Learning
-:titlesonly:
-
-imitation_learning/diffusion_policy
-imitation_learning/ACT
-imitation_learning/openvla
-imitation_learning/smolvla
-imitation_learning/rdt
-imitation_learning/octo
-imitation_learning/contributing
-```
-
-```{toctree}
-:caption: Reinforcement Learning
-:titlesonly:
-
-reinforcement_learning/ppo
-reinforcement_learning/fast_td3
-reinforcement_learning/sac
-reinforcement_learning/td3
-reinforcement_learning/skillblender_rl
-reinforcement_learning/humanoid
-```

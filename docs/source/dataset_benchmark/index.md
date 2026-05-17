@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Dataset and Benchmark
 
 This section documents the RoboVerse task suite, asset library, and evaluation protocols.
@@ -63,31 +67,3 @@ See [Benchmark Overview](benchmark/overview.md) for detailed evaluation protocol
 
 ---
 
-## Table of Contents
-
-```{toctree}
-:caption: RoboVerse Tasks
-:titlesonly:
-
-tasks/overview
-tasks/descriptions
-tasks/task_groups
-```
-
-```{toctree}
-:caption: RoboVerse Dataset
-:titlesonly:
-
-dataset/robots
-dataset/objects
-dataset/scenes
-```
-
-```{toctree}
-:caption: RoboVerse Benchmark
-:titlesonly:
-
-benchmark/overview
-benchmark/results
-benchmark/usage
-```
