@@ -51,3 +51,27 @@ class MjlabLiftCubeYam(BaseTaskEnv):
 
     scenario = _yam_scenario()
     max_episode_steps = 2500  # mjlab episode_length_s = 5s / dt 0.002
+
+
+@register_task("mjlab.lift_cube_yam_rgb")
+class MjlabLiftCubeYamRgb(BaseTaskEnv):
+    """RGB-observation variant; physics is identical to the parent task."""
+
+    scenario = _yam_scenario()
+    max_episode_steps = 2500
+
+
+@register_task("mjlab.lift_cube_yam_depth")
+class MjlabLiftCubeYamDepth(BaseTaskEnv):
+    """Depth-observation variant; physics is identical to the parent task."""
+
+    scenario = _yam_scenario()
+    max_episode_steps = 2500
+
+
+@register_task("mjlab.multi_cube_seg_yam")
+class MjlabMultiCubeSegYam(BaseTaskEnv):
+    """Multi-cube segmentation variant; physics is identical to the parent task."""
+
+    scenario = _yam_scenario()
+    max_episode_steps = 2500

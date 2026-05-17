@@ -138,8 +138,15 @@ SCENARIO_BUILDERS: dict[str, Callable[[inv.MjlabTask], object]] = {
     "mjlab.cartpole_balance": _cartpole_scenario,
     "mjlab.cartpole_swingup": _cartpole_scenario,
     "mjlab.lift_cube_yam": _yam_scenario,
+    "mjlab.lift_cube_yam_rgb": _yam_scenario,
+    "mjlab.lift_cube_yam_depth": _yam_scenario,
+    "mjlab.multi_cube_seg_yam": _yam_scenario,
     "mjlab.velocity_flat_go1": _quadruped_scenario,
+    "mjlab.velocity_rough_go1": _quadruped_scenario,
     "mjlab.velocity_flat_g1": _humanoid_scenario,
+    "mjlab.velocity_rough_g1": _humanoid_scenario,
+    "mjlab.tracking_flat_g1": _humanoid_scenario,
+    "mjlab.tracking_flat_g1_no_state_est": _humanoid_scenario,
 }
 
 

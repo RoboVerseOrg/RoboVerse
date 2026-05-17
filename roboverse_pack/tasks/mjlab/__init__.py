@@ -15,13 +15,32 @@ Parity numbers vs raw mujoco (see
 from __future__ import annotations
 
 from .cartpole import MjlabCartpoleBalance, MjlabCartpoleSwingup
-from .floating_base import MjlabVelocityFlatG1, MjlabVelocityFlatGo1
-from .lift_cube import MjlabLiftCubeYam
+from .floating_base import (
+    MjlabTrackingFlatG1,
+    MjlabTrackingFlatG1NoStateEst,
+    MjlabVelocityFlatG1,
+    MjlabVelocityFlatGo1,
+    MjlabVelocityRoughG1,
+    MjlabVelocityRoughGo1,
+)
+from .lift_cube import (
+    MjlabLiftCubeYam,
+    MjlabLiftCubeYamDepth,
+    MjlabLiftCubeYamRgb,
+    MjlabMultiCubeSegYam,
+)
 
 __all__ = [
     "MjlabCartpoleBalance",
     "MjlabCartpoleSwingup",
     "MjlabLiftCubeYam",
+    "MjlabLiftCubeYamDepth",
+    "MjlabLiftCubeYamRgb",
+    "MjlabMultiCubeSegYam",
+    "MjlabTrackingFlatG1",
+    "MjlabTrackingFlatG1NoStateEst",
     "MjlabVelocityFlatG1",
     "MjlabVelocityFlatGo1",
+    "MjlabVelocityRoughG1",
+    "MjlabVelocityRoughGo1",
 ]

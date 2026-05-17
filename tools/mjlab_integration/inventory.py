@@ -135,6 +135,20 @@ ALL_TASKS = [
         description="Quadruped velocity tracking on flat terrain (Go1).",
     ),
     MjlabTask(
+        task_id="Mjlab-Velocity-Rough-Unitree-Go1",
+        metasim_name="mjlab.velocity_rough_go1",
+        asset=GO1_ASSET,
+        decimation=4,
+        episode_length_s=20.0,
+        control_mode="joint_pos",
+        action_scale=0.25,
+        description=(
+            "Quadruped velocity tracking on rough terrain (Go1). Physics-step "
+            "parity here only compares the bare robot — mjlab's terrain "
+            "generator scene wrapper is not yet ported into MetaSim."
+        ),
+    ),
+    MjlabTask(
         task_id="Mjlab-Velocity-Flat-Unitree-G1",
         metasim_name="mjlab.velocity_flat_g1",
         asset=G1_ASSET,
@@ -145,6 +159,42 @@ ALL_TASKS = [
         description="Humanoid velocity tracking on flat terrain (G1).",
     ),
     MjlabTask(
+        task_id="Mjlab-Velocity-Rough-Unitree-G1",
+        metasim_name="mjlab.velocity_rough_g1",
+        asset=G1_ASSET,
+        decimation=4,
+        episode_length_s=20.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description=(
+            "Humanoid velocity tracking on rough terrain (G1). Same caveat as "
+            "the Go1 rough variant — robot physics only, no terrain wrapper."
+        ),
+    ),
+    MjlabTask(
+        task_id="Mjlab-Tracking-Flat-Unitree-G1",
+        metasim_name="mjlab.tracking_flat_g1",
+        asset=G1_ASSET,
+        decimation=4,
+        episode_length_s=10.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description="Humanoid reference-trajectory tracking on flat terrain (G1).",
+    ),
+    MjlabTask(
+        task_id="Mjlab-Tracking-Flat-Unitree-G1-No-State-Estimation",
+        metasim_name="mjlab.tracking_flat_g1_no_state_est",
+        asset=G1_ASSET,
+        decimation=4,
+        episode_length_s=10.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description=(
+            "Tracking variant that drops privileged state estimation features. "
+            "Same physical model, so the parity diff matches the parent task."
+        ),
+    ),
+    MjlabTask(
         task_id="Mjlab-Lift-Cube-Yam",
         metasim_name="mjlab.lift_cube_yam",
         asset=YAM_ASSET,
@@ -153,6 +203,36 @@ ALL_TASKS = [
         control_mode="joint_pos",
         action_scale=0.5,
         description="YAM arm lifts a cube to a target height.",
+    ),
+    MjlabTask(
+        task_id="Mjlab-Lift-Cube-Yam-Rgb",
+        metasim_name="mjlab.lift_cube_yam_rgb",
+        asset=YAM_ASSET,
+        decimation=4,
+        episode_length_s=5.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description="Lift-Cube-Yam with RGB observation (camera added; physics unchanged).",
+    ),
+    MjlabTask(
+        task_id="Mjlab-Lift-Cube-Yam-Depth",
+        metasim_name="mjlab.lift_cube_yam_depth",
+        asset=YAM_ASSET,
+        decimation=4,
+        episode_length_s=5.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description="Lift-Cube-Yam with depth observation (camera added; physics unchanged).",
+    ),
+    MjlabTask(
+        task_id="Mjlab-Multi-Cube-Seg-Yam",
+        metasim_name="mjlab.multi_cube_seg_yam",
+        asset=YAM_ASSET,
+        decimation=4,
+        episode_length_s=5.0,
+        control_mode="joint_pos",
+        action_scale=0.5,
+        description="Multi-cube segmentation variant of YAM lift (segmentation camera).",
     ),
 ]
 

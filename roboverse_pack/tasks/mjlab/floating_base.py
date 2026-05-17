@@ -52,9 +52,41 @@ class MjlabVelocityFlatG1(BaseTaskEnv):
     max_episode_steps = 4000  # mjlab episode_length_s = 20s / dt 0.005
 
 
+@register_task("mjlab.velocity_rough_g1")
+class MjlabVelocityRoughG1(BaseTaskEnv):
+    """G1 humanoid on rough terrain (terrain wrapper not yet ported)."""
+
+    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    max_episode_steps = 4000
+
+
 @register_task("mjlab.velocity_flat_go1")
 class MjlabVelocityFlatGo1(BaseTaskEnv):
     """Unitree Go1 quadruped scaffold (12 DoF)."""
 
     scenario = _floating_scenario("go1", _GO1_XML, num_joints=12)
     max_episode_steps = 4000
+
+
+@register_task("mjlab.velocity_rough_go1")
+class MjlabVelocityRoughGo1(BaseTaskEnv):
+    """Go1 quadruped on rough terrain (terrain wrapper not yet ported)."""
+
+    scenario = _floating_scenario("go1", _GO1_XML, num_joints=12)
+    max_episode_steps = 4000
+
+
+@register_task("mjlab.tracking_flat_g1")
+class MjlabTrackingFlatG1(BaseTaskEnv):
+    """G1 humanoid reference-trajectory tracking on flat ground."""
+
+    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    max_episode_steps = 2000  # mjlab episode_length_s = 10s / dt 0.005
+
+
+@register_task("mjlab.tracking_flat_g1_no_state_est")
+class MjlabTrackingFlatG1NoStateEst(BaseTaskEnv):
+    """Same physical scaffold as Tracking-Flat-G1; observation differs in mjlab."""
+
+    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    max_episode_steps = 2000
