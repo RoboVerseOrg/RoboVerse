@@ -54,6 +54,85 @@ def test_omnipbr_adapter_maps_base_color_texture():
     assert spec.conversion_policy == "direct_graph"
 
 
+def test_omnipbr_adapter_sets_texture_uv_set_and_transform_from_bindings():
+    context = MaterialContext(
+        source_path=Path("scene.usda"),
+        texture_base_dir=Path("."),
+        material_path="/World/Looks/Mat",
+        bound_prim_paths=("/World/Mesh",),
+        uv_primvars_by_prim={"/World/Mesh": ("st", "st1")},
+    )
+
+    spec = OmniPBRAdapter().convert(
+        _raw(
+            values={
+                "BaseColor_Tex": "textures/wood.png",
+                "MaxTexCoordIndex": 1,
+                "BaseColor_UVA": (2.0, 3.0, 0.25, 0.5),
+            }
+        ),
+        context,
+    )
+
+    assert spec.base_color.texture is not None
+    assert spec.base_color.texture.uv_set.primvar_name == "st1"
+    assert spec.base_color.texture.uv_set.requested_index == 1
+    assert spec.base_color.texture.uv_set.resolution_status == "matched"
+    assert spec.base_color.texture.uv_transform is not None
+    assert spec.base_color.texture.uv_transform.scale == (2.0, 3.0)
+    assert spec.base_color.texture.uv_transform.translation == (0.25, 0.5)
+    assert spec.base_color.texture.uv_transform.source_input == "BaseColor_UVA"
+
+
+def test_omnipbr_adapter_prefers_slot_uv_index_over_global_index():
+    context = MaterialContext(
+        source_path=Path("scene.usda"),
+        texture_base_dir=Path("."),
+        material_path="/World/Looks/Mat",
+        bound_prim_paths=("/World/Mesh",),
+        uv_primvars_by_prim={"/World/Mesh": ("st", "st1")},
+    )
+
+    spec = OmniPBRAdapter().convert(
+        _raw(
+            values={
+                "BaseColor_Tex": "textures/wood.png",
+                "MaxTexCoordIndex": 0,
+                "BaseColor_MaxTexCoordIndex": 1,
+            }
+        ),
+        context,
+    )
+
+    assert spec.base_color.texture is not None
+    assert spec.base_color.texture.uv_set.primvar_name == "st1"
+    assert spec.base_color.texture.uv_set.requested_index == 1
+    assert spec.base_color.texture.uv_set.resolution_status == "matched"
+
+
+def test_omnipbr_adapter_does_not_false_match_disjoint_bound_uv_sets():
+    context = MaterialContext(
+        source_path=Path("scene.usda"),
+        texture_base_dir=Path("."),
+        material_path="/World/Looks/Mat",
+        bound_prim_paths=("/World/MeshA", "/World/MeshB"),
+        uv_primvars_by_prim={
+            "/World/MeshA": ("st1",),
+            "/World/MeshB": ("uv",),
+        },
+    )
+
+    spec = OmniPBRAdapter().convert(
+        _raw(values={"BaseColor_Tex": "textures/wood.png", "BaseColor_MaxTexCoordIndex": 1}),
+        context,
+    )
+
+    assert spec.base_color.texture is not None
+    assert spec.base_color.texture.uv_set.primvar_name == "st"
+    assert spec.base_color.texture.uv_set.requested_index == 1
+    assert spec.base_color.texture.uv_set.resolution_status == "guessed_or_missing"
+
+
 def test_omnipbr_adapter_inverts_glossiness_scalar_to_roughness():
     spec = OmniPBRAdapter().convert(_raw(values={"glossiness": 0.25}), _context())
 

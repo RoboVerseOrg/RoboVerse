@@ -174,6 +174,19 @@ def extract_material(material_prim: Any, UsdShade: Any) -> RawMaterialSpec:
     )
 
 
+def iter_material_prims(stage: Any, UsdShade: Any | None = None) -> Any:
+    for prim in stage.Traverse():
+        if UsdShade is not None:
+            try:
+                if prim.IsA(UsdShade.Material):
+                    yield prim
+                    continue
+            except Exception:
+                pass
+        if getattr(prim, "GetTypeName", lambda: None)() == "Material":
+            yield prim
+
+
 def shader_ids(material_prim: Any, Usd: Any, UsdShade: Any) -> list[str]:
     ids = []
     for descendant in Usd.PrimRange(material_prim):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .schema import InputSpec, PreviewMaterialSpec, TextureSpec
+from .schema import InputSpec, PreviewMaterialSpec, TextureSpec, UVTransformSpec
 
 _COLOR_INPUTS = {"diffuseColor", "emissiveColor", "specularColor"}
 _TEXTURE_OUTPUT_TYPES = {
@@ -44,11 +44,24 @@ def author_texture_chain(
     reader.CreateIdAttr("UsdPrimvarReader_float2")
     reader.CreateInput("varname", Sdf.ValueTypeNames.String).Set(texture_spec.uv_set.primvar_name)
     reader.CreateOutput("result", Sdf.ValueTypeNames.Float2)
+    st_source = reader
+
+    if texture_spec.uv_transform is not None:
+        st_source = author_transform2d(
+            stage,
+            material_path,
+            slot_name,
+            texture_spec.uv_transform,
+            reader,
+            "result",
+            Sdf,
+            UsdShade,
+        )
 
     texture = UsdShade.Shader.Define(stage, material_path.AppendChild(f"{slot_name}_Texture"))
     texture.CreateIdAttr("UsdUVTexture")
     texture.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(Sdf.AssetPath(texture_spec.file))
-    texture.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(reader.ConnectableAPI(), "result")
+    texture.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(st_source.ConnectableAPI(), "result")
     texture.CreateInput("sourceColorSpace", Sdf.ValueTypeNames.Token).Set(texture_spec.source_color_space)
     if texture_spec.scale is not None:
         texture.CreateInput("scale", Sdf.ValueTypeNames.Float4).Set(texture_spec.scale)
@@ -61,6 +74,26 @@ def author_texture_chain(
         texture.CreateOutput(output_name, _value_type(Sdf, type_name))
 
     return texture
+
+
+def author_transform2d(
+    stage: Any,
+    material_path: Any,
+    slot_name: str,
+    transform_spec: UVTransformSpec,
+    prior_source: Any,
+    prior_output: str,
+    Sdf: Any,
+    UsdShade: Any,
+) -> Any:
+    transform = UsdShade.Shader.Define(stage, material_path.AppendChild(f"{slot_name}_Transform2d"))
+    transform.CreateIdAttr("UsdTransform2d")
+    transform.CreateInput("in", Sdf.ValueTypeNames.Float2).ConnectToSource(prior_source.ConnectableAPI(), prior_output)
+    transform.CreateInput("scale", Sdf.ValueTypeNames.Float2).Set(transform_spec.scale)
+    transform.CreateInput("rotation", Sdf.ValueTypeNames.Float).Set(transform_spec.rotation_degrees)
+    transform.CreateInput("translation", Sdf.ValueTypeNames.Float2).Set(transform_spec.translation)
+    transform.CreateOutput("result", Sdf.ValueTypeNames.Float2)
+    return transform
 
 
 def _preview_input_type(input_name: str, Sdf: Any) -> Any:

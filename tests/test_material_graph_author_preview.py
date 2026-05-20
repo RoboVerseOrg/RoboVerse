@@ -10,6 +10,8 @@ from roboverse_pack.blender.usd.material_graph.schema import (
     PreviewMaterialSpec,
     RawMaterialSpec,
     TextureSpec,
+    UVSetSpec,
+    UVTransformSpec,
     freeze_values,
 )
 
@@ -88,6 +90,10 @@ def _reader(stage, slot_name, material_path="/World/Looks/Mat"):
     return UsdShade.Shader.Get(stage, f"{material_path}/{slot_name}_Primvar")
 
 
+def _transform(stage, slot_name, material_path="/World/Looks/Mat"):
+    return UsdShade.Shader.Get(stage, f"{material_path}/{slot_name}_Transform2d")
+
+
 def _connected_source(stage, input_name, material_path="/World/Looks/Mat"):
     return _preview(stage, material_path).GetInput(input_name).GetConnectedSource()
 
@@ -152,6 +158,35 @@ def test_primvar_reader_varname_is_authored_as_string_not_token():
     )
 
     assert 'string inputs:varname = "st"' in stage.GetRootLayer().ExportToString()
+
+
+def test_texture_chain_authors_transform2d_and_custom_uv_varname():
+    stage = _stage_for(
+        _spec(
+            base_color=_texture_input(
+                "textures/albedo.png",
+                source_color_space="sRGB",
+                uv_set=UVSetSpec("st1", 1, "matched"),
+                uv_transform=UVTransformSpec(
+                    scale=(2.0, 3.0),
+                    rotation_degrees=45.0,
+                    translation=(0.25, 0.5),
+                ),
+            )
+        )
+    )
+
+    reader = _reader(stage, "base_color")
+    transform = _transform(stage, "base_color")
+    texture = _texture(stage, "base_color")
+
+    assert reader.GetInput("varname").Get() == "st1"
+    assert transform.GetIdAttr().Get() == "UsdTransform2d"
+    assert transform.GetInput("scale").Get() == Gf.Vec2f(2.0, 3.0)
+    assert transform.GetInput("rotation").Get() == pytest.approx(45.0)
+    assert transform.GetInput("translation").Get() == Gf.Vec2f(0.25, 0.5)
+    assert transform.GetInput("in").GetConnectedSource()[0].GetPath() == reader.GetPath()
+    assert texture.GetInput("st").GetConnectedSource()[0].GetPath() == transform.GetPath()
 
 
 def test_normal_texture_authors_raw_source_color_space_and_scale_bias():

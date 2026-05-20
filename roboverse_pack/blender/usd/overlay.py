@@ -9,8 +9,9 @@ from typing import Any
 
 from .material_graph.adapters import convert_material
 from .material_graph.author_preview import author_preview_material
+from .material_graph.bindings import collect_material_binding_contexts
 from .material_graph.context import MaterialContext
-from .material_graph.extract import extract_material, surface_shader
+from .material_graph.extract import extract_material, iter_material_prims, surface_shader
 from .material_graph.report import failed_material_entry, material_entry_from_spec, write_conversion_reports
 
 
@@ -64,15 +65,19 @@ def _extract_convert_and_author_material(
     Gf: Any,
     Sdf: Any,
     authoring_usdshade: Any,
+    binding_contexts: dict[str, Any] | None = None,
 ) -> None:
     material_path = _prim_path_string(prim)
     try:
         raw = extract_material(prim, UsdShade)
         material_path = raw.material_path
+        binding_context = (binding_contexts or {}).get(raw.material_path)
         context = MaterialContext(
             source_path=source_path,
             texture_base_dir=source_path.parent,
             material_path=raw.material_path,
+            bound_prim_paths=binding_context.bound_prim_paths if binding_context is not None else (),
+            uv_primvars_by_prim=binding_context.uv_primvars_by_prim if binding_context is not None else None,
         )
         spec = convert_material(raw, context)
         report["materials"][spec.material_path] = material_entry_from_spec(spec)
@@ -91,7 +96,7 @@ def generate_blender_overlay(
     resolution: int = 2048,
     samples: int = 16,
 ) -> dict[str, Any]:
-    from pxr import Gf, Sdf, Usd, UsdShade
+    from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade
 
     source_path = Path(input_path)
     overlay = Path(overlay_path)
@@ -116,11 +121,19 @@ def generate_blender_overlay(
         "materials": {},
     }
 
-    for prim in source_stage.Traverse():
-        if not prim.IsA(UsdShade.Material):
-            continue
-
-        _extract_convert_and_author_material(prim, UsdShade, source_path, report, overlay_stage, Gf, Sdf, UsdShade)
+    binding_contexts = collect_material_binding_contexts(source_stage, UsdShade, UsdGeom)
+    for prim in iter_material_prims(source_stage, UsdShade):
+        _extract_convert_and_author_material(
+            prim,
+            UsdShade,
+            source_path,
+            report,
+            overlay_stage,
+            Gf,
+            Sdf,
+            UsdShade,
+            binding_contexts,
+        )
 
     overlay_layer.Save()
     root_layer = _clear_or_create_layer(root, Sdf)

@@ -8,8 +8,21 @@ from ..context import MaterialContext
 from ..extract import asset_path_string, coerce_float
 from ..fallback import CLASS_FALLBACKS, find_material_class
 from ..aliases import IOR_ALIASES
+from ..bindings import resolve_uv_set
 from ..schema import InputSpec, PreviewMaterialSpec, RawMaterialSpec, TextureSpec
 from ..slots import SLOT_REGISTRY, SlotSpec
+from ..uv import resolve_slot_uv_transform
+
+_SLOT_PREFIXES = {
+    "base_color": "BaseColor",
+    "normal": "Normal",
+    "metallic": "Metallic",
+    "roughness": "Roughness",
+    "glossiness": "Gloss",
+    "specular": "Specular",
+    "emissive": "Emissive",
+    "opacity": "Opacity",
+}
 
 
 class OmniPBRAdapter:
@@ -22,7 +35,7 @@ class OmniPBRAdapter:
         return 80 if any("omnipbr" in candidate.lower() for candidate in candidates) else 0
 
     def convert(self, raw: RawMaterialSpec, context: MaterialContext) -> PreviewMaterialSpec:
-        base_color = _input_from_slot(raw.values, SLOT_REGISTRY["base_color"])
+        base_color = _input_from_slot(raw.values, SLOT_REGISTRY["base_color"], context)
         material_class = find_material_class(raw.material_path, raw.connected_surface_shader_id)
         quality_notes: list[str] = []
         if base_color is None:
@@ -32,12 +45,12 @@ class OmniPBRAdapter:
                 base_color = InputSpec(value=(0.5, 0.5, 0.5))
             quality_notes.append("No diffuse color or texture alias found.")
 
-        roughness = _input_from_slot(raw.values, SLOT_REGISTRY["roughness"])
-        glossiness = _input_from_slot(raw.values, SLOT_REGISTRY["glossiness"])
+        roughness = _input_from_slot(raw.values, SLOT_REGISTRY["roughness"], context)
+        glossiness = _input_from_slot(raw.values, SLOT_REGISTRY["glossiness"], context)
         if roughness is None and glossiness is not None:
             roughness = glossiness
 
-        specular = _input_from_slot(raw.values, SLOT_REGISTRY["specular"])
+        specular = _input_from_slot(raw.values, SLOT_REGISTRY["specular"], context)
 
         return PreviewMaterialSpec(
             material_path=raw.material_path,
@@ -45,12 +58,12 @@ class OmniPBRAdapter:
             source_shader_ids=raw.shader_ids,
             mdl_source_asset=raw.mdl_source_asset,
             base_color=base_color,
-            normal=_input_from_slot(raw.values, SLOT_REGISTRY["normal"]),
-            metallic=_input_from_slot(raw.values, SLOT_REGISTRY["metallic"]),
+            normal=_input_from_slot(raw.values, SLOT_REGISTRY["normal"], context),
+            metallic=_input_from_slot(raw.values, SLOT_REGISTRY["metallic"], context),
             roughness=roughness,
             specular_color=specular,
-            emissive_color=_input_from_slot(raw.values, SLOT_REGISTRY["emissive"]),
-            opacity=_input_from_slot(raw.values, SLOT_REGISTRY["opacity"]),
+            emissive_color=_input_from_slot(raw.values, SLOT_REGISTRY["emissive"], context),
+            opacity=_input_from_slot(raw.values, SLOT_REGISTRY["opacity"], context),
             ior=_ior(raw.values),
             use_specular_workflow=specular is not None,
             material_class=material_class,
@@ -59,7 +72,7 @@ class OmniPBRAdapter:
         )
 
 
-def _input_from_slot(values: Mapping[str, object], slot: SlotSpec) -> InputSpec | None:
+def _input_from_slot(values: Mapping[str, object], slot: SlotSpec, context: MaterialContext) -> InputSpec | None:
     if not _slot_enabled(values, slot):
         return None
 
@@ -69,11 +82,15 @@ def _input_from_slot(values: Mapping[str, object], slot: SlotSpec) -> InputSpec 
             continue
         scale = (-1.0, -1.0, -1.0, -1.0) if slot.invert_to_roughness else slot.scale
         bias = (1.0, 1.0, 1.0, 1.0) if slot.invert_to_roughness else slot.bias
+        slot_prefix = _SLOT_PREFIXES[slot.name]
+        requested_uv_index = _first_int(values, (f"{slot_prefix}_MaxTexCoordIndex", "MaxTexCoordIndex"))
         return InputSpec(
             texture=TextureSpec(
                 file=texture_file,
                 source_color_space=slot.color_space,
                 channel=slot.texture_output,
+                uv_set=resolve_uv_set(requested_uv_index, _common_uv_primvars(context)),
+                uv_transform=resolve_slot_uv_transform(values, slot_prefix, slot.uva_aliases),
                 scale=scale,
                 bias=bias,
                 source_input=alias,
@@ -135,6 +152,37 @@ def _coerce_scalar_value(value: object) -> float | None:
         return float(value[0])  # type: ignore[index]
     except (TypeError, ValueError, IndexError):
         return None
+
+
+def _first_int(values: Mapping[str, object], aliases: tuple[str, ...]) -> int | None:
+    for alias in aliases:
+        if alias not in values or values.get(alias) is None:
+            continue
+        value = values.get(alias)
+        try:
+            return int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            try:
+                return int(float(value))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _common_uv_primvars(context: MaterialContext) -> tuple[str, ...]:
+    if not context.uv_primvars_by_prim:
+        return ("st",)
+
+    paths = context.bound_prim_paths or tuple(context.uv_primvars_by_prim)
+    sets = [set(context.uv_primvars_by_prim.get(path, ())) for path in paths]
+    if not sets:
+        return ("st",)
+
+    intersection = set.intersection(*sets)
+    if intersection:
+        return tuple(sorted(intersection))
+
+    return ("st",)
 
 
 def _ior(values: Mapping[str, object]) -> float | None:
