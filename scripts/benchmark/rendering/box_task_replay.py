@@ -208,6 +208,24 @@ def disable_metasim_forced_exit_on_close() -> None:
     os.environ["METASIM_FORCE_EXIT_ON_CLOSE"] = "0"
 
 
+def kujiale_hdri_path(scene: str) -> Path | None:
+    scene_name = str(scene)
+    if scene_name.startswith("kujiale_scene_"):
+        scene_id = scene_name.removeprefix("kujiale_scene_")
+    elif scene_name.startswith("kujiale_"):
+        scene_id = scene_name.removeprefix("kujiale_")
+    elif scene_name.isdigit():
+        scene_id = f"{int(scene_name):04d}"
+    else:
+        return None
+
+    directory = Path(__file__).resolve().parents[3] / "third_party" / "InteriorAgent" / f"kujiale_{scene_id}"
+    try:
+        return next(iter(sorted(directory.glob("*.hdr"))))
+    except StopIteration:
+        return None
+
+
 @contextmanager
 def local_bundle_decode_runtime(hf_util: Any):
     original_force_exit = os.environ.get("METASIM_FORCE_EXIT_ON_CLOSE")
@@ -609,10 +627,15 @@ def build_box_task_scenario(
 ):
     from metasim.constants import PhysicStateType
     from metasim.scenario.cameras import PinholeCameraCfg
-    from metasim.scenario.lights import SphereLightCfg
+    from metasim.scenario.lights import DistantLightCfg, DomeLightCfg, SphereLightCfg
     from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
     from metasim.scenario.render import RenderCfg
     from metasim.scenario.scenario import ScenarioCfg, SimParamCfg
+
+    dome_light = DomeLightCfg(name="box_task_dome", intensity=400.0)
+    hdri_path = kujiale_hdri_path(scene)
+    if hdri_path is not None:
+        _set_object_attr(dome_light, "texture_file", str(hdri_path))
 
     scenario = _build_scenario_cfg(
         ScenarioCfg,
@@ -656,6 +679,8 @@ def build_box_task_scenario(
             )
         ],
         lights=[
+            dome_light,
+            DistantLightCfg(name="box_task_key", intensity=2000.0, polar=35.0, azimuth=-35.0),
             SphereLightCfg(
                 name="overhead_light",
                 intensity=float(head_light_intensity),

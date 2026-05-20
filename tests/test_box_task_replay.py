@@ -76,6 +76,8 @@ def _install_fake_metasim_without_renderer_scene(monkeypatch: pytest.MonkeyPatch
     }
     modules["metasim.constants"].PhysicStateType = SimpleNamespace(RIGIDBODY="rigidbody")
     modules["metasim.scenario.cameras"].PinholeCameraCfg = SimpleCfg
+    modules["metasim.scenario.lights"].DistantLightCfg = SimpleCfg
+    modules["metasim.scenario.lights"].DomeLightCfg = SimpleCfg
     modules["metasim.scenario.lights"].SphereLightCfg = SimpleCfg
     modules["metasim.scenario.objects"].PrimitiveCubeCfg = SimpleCfg
     modules["metasim.scenario.objects"].RigidObjCfg = SimpleCfg
@@ -559,9 +561,15 @@ def test_build_box_task_scenario_uses_bundle_assets(tmp_path: Path) -> None:
     assert objects["cardboard_box"].usd_path == str(paths.cardboard_box_usd)
     assert objects["feast_soda_can"].usd_path == str(paths.soda_can_usd)
     assert objects["feast_scented_candle"].usd_path == str(paths.scented_candle_usd)
-    assert scenario.lights[0].name == "overhead_light"
-    assert "spherelight" in _cfg_class_name(scenario.lights[0])
-    assert scenario.lights[0].intensity == 1200.0
+    lights = {light.name: light for light in scenario.lights}
+    assert "domelight" in _cfg_class_name(lights["box_task_dome"])
+    assert lights["box_task_dome"].intensity == 400.0
+    assert "distantlight" in _cfg_class_name(lights["box_task_key"])
+    assert lights["box_task_key"].intensity == 2000.0
+    assert lights["box_task_key"].polar == 35.0
+    assert lights["box_task_key"].azimuth == -35.0
+    assert "spherelight" in _cfg_class_name(lights["overhead_light"])
+    assert lights["overhead_light"].intensity == 1200.0
     assert scenario.sim_params.dt == 0.005
     assert scenario.decimation == 4
     assert _render_mode(scenario.render) == "pathtracing"

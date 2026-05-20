@@ -62,6 +62,13 @@ def test_parse_args_accepts_target_video_options(tmp_path: Path) -> None:
     assert args.duration_sec == 1.5
     assert args.fps == 30
     assert args.dry_run is True
+    assert args.scene_task_offset == "none"
+    assert args.scene_import_offset == "auto"
+    assert args.clear_task_volume is True
+    assert args.camera_pos == (1.45, -1.0, 0.95)
+    assert args.camera_look_at == (0.55, 0.0, 0.38)
+    assert args.head_light_intensity == 400.0
+    assert args.exposure == -2.0
 
 
 @pytest.mark.parametrize("option", ["--fps", "--width", "--height", "--samples", "--out-frames"])
@@ -368,6 +375,113 @@ def test_camera_object_lookup_prefers_public_then_private_mapping() -> None:
         cli.camera_object_for(private_only, "missing")
 
 
+def test_scene_task_offset_auto_uses_negative_scene_default_position() -> None:
+    scenario = SimpleNamespace(scene=SimpleNamespace(default_position=(-5.8, 1.8, 0.0)))
+
+    assert cli.resolve_scene_task_offset("auto", scenario) == (5.8, -1.8, -0.0)
+    assert cli.resolve_scene_task_offset("none", scenario) == (0.0, 0.0, 0.0)
+    assert cli.resolve_scene_task_offset("1.0,2.0,3.0", scenario) == (1.0, 2.0, 3.0)
+
+
+def test_scene_import_offset_auto_uses_scene_default_position() -> None:
+    scenario = SimpleNamespace(scene=SimpleNamespace(default_position=(-5.8, 1.8, 0.0)))
+
+    assert cli.resolve_scene_import_offset("auto", scenario) == (-5.8, 1.8, 0.0)
+    assert cli.resolve_scene_import_offset("none", scenario) == (0.0, 0.0, 0.0)
+    assert cli.resolve_scene_import_offset("1.0,2.0,3.0", scenario) == (1.0, 2.0, 3.0)
+
+
+def test_apply_scene_task_offset_moves_cameras_and_lights() -> None:
+    camera = SimpleNamespace(pos=(1.45, -1.0, 0.95), look_at=(0.55, 0.0, 0.38))
+    light = SimpleNamespace(pos=(0.55, 0.0, 1.45))
+    scenario = SimpleNamespace(cameras=[camera], lights=[light])
+
+    cli.apply_scene_task_offset_to_scenario(scenario, (5.8, -1.8, 0.0))
+
+    assert camera.pos == (7.25, -2.8, 0.95)
+    assert camera.look_at == (6.35, -1.8, 0.38)
+    assert light.pos == (6.35, -1.8, 1.45)
+
+
+def test_apply_scene_import_offset_moves_blender_scene_roots(monkeypatch: pytest.MonkeyPatch) -> None:
+    update_calls: list[str] = []
+    bpy = ModuleType("bpy")
+    bpy.context = SimpleNamespace(view_layer=SimpleNamespace(update=lambda: update_calls.append("update")))
+    monkeypatch.setitem(sys.modules, "bpy", bpy)
+
+    root = SimpleNamespace(location=[10.0, -2.0, 0.0])
+    handler = SimpleNamespace(_scene_objs=[root])
+
+    cli.apply_scene_import_offset_to_handler(handler, (-5.8, 1.8, 0.0))
+
+    assert root.location == pytest.approx([4.2, -0.2, 0.0])
+    assert update_calls == ["update"]
+
+
+def test_clear_task_volume_hides_intersecting_scene_meshes_but_keeps_floor() -> None:
+    class IdentityMatrix:
+        def __matmul__(self, point):
+            return point
+
+    def obj(name: str, bounds, obj_type: str = "MESH"):
+        return SimpleNamespace(
+            name=name,
+            type=obj_type,
+            bound_box=[
+                (bounds[0][0], bounds[0][1], bounds[0][2]),
+                (bounds[0][0], bounds[0][1], bounds[1][2]),
+                (bounds[0][0], bounds[1][1], bounds[0][2]),
+                (bounds[0][0], bounds[1][1], bounds[1][2]),
+                (bounds[1][0], bounds[0][1], bounds[0][2]),
+                (bounds[1][0], bounds[0][1], bounds[1][2]),
+                (bounds[1][0], bounds[1][1], bounds[0][2]),
+                (bounds[1][0], bounds[1][1], bounds[1][2]),
+            ],
+            matrix_world=IdentityMatrix(),
+            children=[],
+            hide_render=False,
+            hide_viewport=False,
+        )
+
+    wall = obj("wall", ((-0.1, -1.0, 0.0), (0.1, 1.0, 2.0)))
+    floor = obj("floor", ((-2.0, -2.0, -0.02), (2.0, 2.0, 0.02)))
+    far_cabinet = obj("cabinet", ((5.0, 5.0, 0.0), (6.0, 6.0, 1.0)))
+    handler = SimpleNamespace(_scene_objs=[SimpleNamespace(children=[wall, floor, far_cabinet])])
+
+    status = cli.clear_task_volume_for_replay(handler, center=(0.0, 0.0, 0.0), half_extents=(1.0, 1.0, 2.0))
+
+    assert status == {"status": "applied", "hidden_count": 1}
+    assert wall.hide_render is True
+    assert wall.hide_viewport is True
+    assert floor.hide_render is False
+    assert far_cabinet.hide_render is False
+
+
+def test_translate_tensor_state_offsets_root_and_body_positions_without_mutating_source() -> None:
+    state = SimpleNamespace(
+        objects={
+            "box": SimpleNamespace(
+                root_state=np.array([[0.55, 0.0, 0.42, 1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+                body_state=None,
+            )
+        },
+        robots={
+            "robot": SimpleNamespace(
+                root_state=np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+                body_state=np.array([[[0.1, 0.2, 0.3, 1.0, 0.0, 0.0, 0.0]]], dtype=np.float32),
+            )
+        },
+        cameras={},
+    )
+
+    shifted = cli.translate_tensor_state(state, (5.8, -1.8, 0.0))
+
+    np.testing.assert_allclose(shifted.objects["box"].root_state[0, :3], [6.35, -1.8, 0.42])
+    np.testing.assert_allclose(shifted.robots["robot"].root_state[0, :3], [5.8, -1.8, 0.0])
+    np.testing.assert_allclose(shifted.robots["robot"].body_state[0, 0, :3], [5.9, -1.6, 0.3])
+    np.testing.assert_allclose(state.objects["box"].root_state[0, :3], [0.55, 0.0, 0.42])
+
+
 def test_configure_blender_for_video_sets_cpu_and_gpu_devices(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeDevice:
         def __init__(self, device_type: str):
@@ -401,16 +515,82 @@ def test_configure_blender_for_video_sets_cpu_and_gpu_devices(monkeypatch: pytes
     assert scene.cycles.device == "CPU"
     assert scene.render.image_settings.file_format == "PNG"
     assert scene.render.image_settings.color_mode == "RGB"
+    assert scene.render.use_compositing is False
+    assert scene.render.use_sequencer is False
     assert scene.view_settings.view_transform == "Standard"
-    assert scene.view_settings.exposure == 0.0
+    assert scene.view_settings.exposure == -2.0
     assert scene.view_settings.gamma == 1.0
+    assert scene.cycles.use_denoising is True
+    assert scene.cycles.denoiser == "OPTIX"
+    assert scene.cycles.denoising_input_passes == "RGB_ALBEDO_NORMAL"
+    assert scene.cycles.denoising_prefilter == "ACCURATE"
+    assert scene.cycles.denoising_quality == "HIGH"
+    assert scene.cycles.use_adaptive_sampling is False
+    assert scene.cycles.max_bounces == 10
+    assert scene.cycles.diffuse_bounces == 4
+    assert scene.cycles.glossy_bounces == 4
+    assert scene.cycles.transmission_bounces == 10
+    assert scene.cycles.transparent_max_bounces == 10
+    assert scene.cycles.caustics_reflective is True
+    assert scene.cycles.caustics_refractive is True
+    assert scene.cycles.sample_clamp_indirect == 10.0
+    assert scene.cycles.blur_glossy == 1.0
 
-    cli.configure_blender_for_video(samples=8, device="AUTO")
+    cli.configure_blender_for_video(samples=8, device="AUTO", exposure=-1.25)
     assert scene.cycles.device == "GPU"
     assert scene.cycles.samples == 8
+    assert scene.view_settings.exposure == -1.25
     assert cycles_prefs.compute_device_type == "OPTIX"
     assert cycles_prefs.get_devices_calls == 1
     assert all(device.use for device in cycles_prefs.devices)
+
+
+def test_repair_imported_scene_materials_uses_metasim_helper(monkeypatch: pytest.MonkeyPatch) -> None:
+    scene_objects = [object(), object()]
+    update_calls: list[str] = []
+    bpy = ModuleType("bpy")
+    bpy.context = SimpleNamespace(
+        scene=SimpleNamespace(objects=scene_objects),
+        view_layer=SimpleNamespace(update=lambda: update_calls.append("update")),
+    )
+    monkeypatch.setitem(sys.modules, "bpy", bpy)
+
+    repair_calls: list[tuple[list[object], dict[str, tuple[float, float, float, float]]]] = []
+    blender_module = ModuleType("metasim.sim.blender.blender")
+    blender_module._repair_imported_materials = lambda objects, overrides: repair_calls.append((objects, overrides))
+    monkeypatch.setitem(sys.modules, "metasim", ModuleType("metasim"))
+    monkeypatch.setitem(sys.modules, "metasim.sim", ModuleType("metasim.sim"))
+    monkeypatch.setitem(sys.modules, "metasim.sim.blender", ModuleType("metasim.sim.blender"))
+    monkeypatch.setitem(sys.modules, "metasim.sim.blender.blender", blender_module)
+
+    status = cli.repair_imported_scene_materials()
+
+    assert status["status"] == "applied"
+    assert status["object_count"] == 2
+    assert status["override_count"] > 0
+    assert repair_calls == [(scene_objects, cli.KUJIALE_MATERIAL_OVERRIDES)]
+    assert "Wall" in repair_calls[0][1]
+    assert update_calls == ["update"]
+
+
+def test_local_bundle_render_runtime_disables_hf_download_checks(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    hf_util = ModuleType("metasim.utils.hf_util")
+    hf_util.check_and_download_single = lambda filepath: calls.append(f"single:{filepath}")
+    hf_util.check_and_download_recursive = lambda filepaths, n_processes=16: calls.append("recursive")
+    monkeypatch.setitem(sys.modules, "metasim", ModuleType("metasim"))
+    monkeypatch.setitem(sys.modules, "metasim.utils", ModuleType("metasim.utils"))
+    monkeypatch.setitem(sys.modules, "metasim.utils.hf_util", hf_util)
+
+    original_single = hf_util.check_and_download_single
+    original_recursive = hf_util.check_and_download_recursive
+    with cli.local_bundle_render_runtime():
+        hf_util.check_and_download_single("missing.png")
+        hf_util.check_and_download_recursive(["missing.png"])
+
+    assert calls == []
+    assert hf_util.check_and_download_single is original_single
+    assert hf_util.check_and_download_recursive is original_recursive
 
 
 def test_render_scene_segment_launches_handler_before_rendering(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -434,7 +614,22 @@ def test_render_scene_segment_launches_handler_before_rendering(monkeypatch: pyt
     monkeypatch.setitem(sys.modules, "metasim.sim", ModuleType("metasim.sim"))
     monkeypatch.setitem(sys.modules, "metasim.sim.blender", ModuleType("metasim.sim.blender"))
     monkeypatch.setitem(sys.modules, "metasim.sim.blender.blender", blender_module)
-    monkeypatch.setattr(cli, "configure_blender_for_video", lambda *, samples, device: events.append("configure"))
+    monkeypatch.setattr(
+        cli,
+        "apply_scene_import_offset_to_handler",
+        lambda handler, offset: events.append(f"scene_offset:{offset}"),
+    )
+    monkeypatch.setattr(cli, "configure_blender_for_video", lambda *, samples, device, exposure=-2.0: events.append("configure"))
+    monkeypatch.setattr(
+        cli,
+        "repair_imported_scene_materials",
+        lambda: events.append("repair") or {"status": "applied"},
+    )
+    monkeypatch.setattr(
+        cli,
+        "clear_task_volume_for_replay",
+        lambda handler, center: events.append(f"clear:{center}") or {"status": "applied", "hidden_count": 2},
+    )
     monkeypatch.setattr(cli, "apply_state_to_handler", lambda handler, state: events.append(f"state:{state}"))
     monkeypatch.setattr(
         cli,
@@ -453,10 +648,22 @@ def test_render_scene_segment_launches_handler_before_rendering(monkeypatch: pyt
         frame_dir=tmp_path,
         samples=8,
         device="CPU",
+        scene_import_offset=(1.0, 2.0, 3.0),
     )
 
     assert created_handlers[0].scenario is scenario
-    assert events == ["launch", "configure", "state:state-7", "render:camera0:frame_000000.png", "close"]
+    assert scenario._box_task_room_material_repair == {"status": "applied"}
+    assert scenario._box_task_volume_clearance == {"status": "applied", "hidden_count": 2}
+    assert events == [
+        "launch",
+        "scene_offset:(1.0, 2.0, 3.0)",
+        "clear:(0.0, 0.0, 0.0)",
+        "repair",
+        "configure",
+        "state:state-7",
+        "render:camera0:frame_000000.png",
+        "close",
+    ]
 
 
 def test_render_png_frame_sets_camera_resolution_and_filepath(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -491,6 +698,45 @@ def test_render_png_frame_sets_camera_resolution_and_filepath(monkeypatch: pytes
     assert scene.render.image_settings.file_format == "PNG"
     assert scene.render.image_settings.color_mode == "RGB"
     assert render_calls == [{"write_still": True}]
+
+
+def test_apply_state_to_handler_uses_private_tensor_path_without_readback_render(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    update_calls: list[str] = []
+    bpy = ModuleType("bpy")
+    bpy.context = SimpleNamespace(view_layer=SimpleNamespace(update=lambda: update_calls.append("update")))
+    monkeypatch.setitem(sys.modules, "bpy", bpy)
+
+    class FastTensorHandler:
+        def __init__(self):
+            self.applied = []
+            self.invalidated = 0
+            self._last_tensor_state = None
+            self._render_dirty = False
+
+        def _invalidate_state_caches(self):
+            self.invalidated += 1
+
+        def _apply_tensor_state(self, state):
+            self.applied.append(state)
+
+        def set_states(self, state):
+            raise AssertionError("fast TensorState path must not call set_states")
+
+        def refresh_render(self):
+            raise AssertionError("fast TensorState path must not render readback")
+
+    state = SimpleNamespace(objects={}, robots={}, cameras={})
+    handler = FastTensorHandler()
+
+    cli.apply_state_to_handler(handler, state)
+
+    assert handler.applied == [state]
+    assert handler.invalidated == 1
+    assert handler._last_tensor_state is state
+    assert handler._render_dirty is True
+    assert update_calls == ["update"]
 
 
 def test_apply_state_to_handler_uses_blender_readback_format_for_handler_refresh(
