@@ -137,16 +137,33 @@ def extract_paths_from_mjcf(xml_file_path: str) -> list[str]:
     mujoco_xml = path.read_text(encoding="utf-8", errors="replace")
     root = ET.fromstring(mujoco_xml)
 
+    # Parse compiler asset directories. Per the MJCF spec, `assetdir` sets the
+    # default search path for BOTH meshes and textures; `meshdir`/`texturedir`,
+    # when present, override it for their respective asset types. Honoring
+    # `assetdir` lets robots that use only the combined attribute (e.g. several
+    # mujoco_menagerie models: google_robot, hello_robot_stretch) resolve their
+    # meshes locally instead of falling through to a doomed HuggingFace fetch.
+    compiler_node = root.find(".//compiler")
+    assetdir = compiler_node.get("assetdir") if compiler_node is not None else None
+    meshdir = compiler_node.get("meshdir") if compiler_node is not None else None
+    texturedir = compiler_node.get("texturedir") if compiler_node is not None else None
+
     # Handle texture paths
+    texture_basepath = path.parent
+    if texturedir is not None:
+        texture_basepath = texture_basepath / texturedir
+    elif assetdir is not None:
+        texture_basepath = texture_basepath / assetdir
     texture_nodes = root.findall(".//texture")
     texture_relpaths = [texture.get("file") for texture in texture_nodes if texture.get("file") is not None]
-    texture_abspaths = [path.parent / rel for rel in texture_relpaths]
+    texture_abspaths = [texture_basepath / rel for rel in texture_relpaths]
 
-    # Parse meshdir
+    # Parse meshdir (falls back to assetdir)
     mesh_basepath = path.parent
-    compiler_node = root.find(".//compiler")
-    if compiler_node is not None and compiler_node.get("meshdir") is not None:
-        mesh_basepath = mesh_basepath / compiler_node.get("meshdir")
+    if meshdir is not None:
+        mesh_basepath = mesh_basepath / meshdir
+    elif assetdir is not None:
+        mesh_basepath = mesh_basepath / assetdir
 
     # Handle mesh paths
     mesh_nodes = root.findall(".//mesh")
