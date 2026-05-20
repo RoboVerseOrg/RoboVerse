@@ -13,6 +13,7 @@ MDL baking is a later policy-first path, not score-first adapter selection.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 from ..context import MaterialContext
 from ..schema import PreviewMaterialSpec, RawMaterialSpec
@@ -44,4 +45,5 @@ def convert_material(
     context: MaterialContext,
     adapters: Sequence[MaterialAdapter] | None = None,
 ) -> PreviewMaterialSpec:
-    return select_adapter(raw, adapters).convert(raw, context)
+    adapter = select_adapter(raw, adapters)
+    return replace(adapter.convert(raw, context), adapter_name=adapter.name)

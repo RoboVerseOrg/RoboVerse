@@ -83,6 +83,7 @@ class PreviewMaterialSpec:
     material_class: str | None = None
     conversion_policy: ConversionPolicy = "direct_graph"
     quality_notes: tuple[str, ...] = ()
+    adapter_name: str | None = None
 
 
 def freeze_values(values: Mapping[str, object]) -> Mapping[str, object]:

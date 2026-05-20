@@ -12,7 +12,12 @@ from .material_graph.author_preview import author_preview_material
 from .material_graph.bindings import collect_material_binding_contexts
 from .material_graph.context import MaterialContext
 from .material_graph.extract import extract_material, iter_material_prims, surface_shader
-from .material_graph.report import failed_material_entry, material_entry_from_spec, write_conversion_reports
+from .material_graph.report import (
+    ConversionReport,
+    failed_material_entry,
+    material_entry_from_spec,
+    write_conversion_reports,
+)
 
 
 def _clear_or_create_layer(path: Path, Sdf: Any) -> Any:
@@ -38,15 +43,21 @@ def _convert_and_author_material(
     Gf: Any,
     Sdf: Any,
     UsdShade: Any,
+    *,
+    conversion_report: ConversionReport | None = None,
 ) -> None:
     try:
         spec = convert_material(raw, context)
         report["materials"][spec.material_path] = material_entry_from_spec(spec)
+        if conversion_report is not None:
+            conversion_report.add_material(spec)
         if spec.conversion_policy == "preserve_existing_preview":
             return
         author_preview_material(overlay_stage, spec, Gf, Sdf, UsdShade)
     except Exception as exc:
         report["materials"][raw.material_path] = failed_material_entry(exc)
+        if conversion_report is not None:
+            conversion_report.add_failed_material(raw.material_path, f"conversion failed: {exc}")
 
 
 def _prim_path_string(prim: Any) -> str:
@@ -66,6 +77,8 @@ def _extract_convert_and_author_material(
     Sdf: Any,
     authoring_usdshade: Any,
     binding_contexts: dict[str, Any] | None = None,
+    *,
+    conversion_report: ConversionReport | None = None,
 ) -> None:
     material_path = _prim_path_string(prim)
     try:
@@ -81,11 +94,15 @@ def _extract_convert_and_author_material(
         )
         spec = convert_material(raw, context)
         report["materials"][spec.material_path] = material_entry_from_spec(spec)
+        if conversion_report is not None:
+            conversion_report.add_material(spec)
         if spec.conversion_policy == "preserve_existing_preview":
             return
         author_preview_material(overlay_stage, spec, Gf, Sdf, authoring_usdshade)
     except Exception as exc:
         report["materials"][material_path] = failed_material_entry(exc)
+        if conversion_report is not None:
+            conversion_report.add_failed_material(material_path, f"conversion failed: {exc}")
 
 
 def generate_blender_overlay(
@@ -120,6 +137,13 @@ def generate_blender_overlay(
         "samples": samples,
         "materials": {},
     }
+    conversion_report = ConversionReport(
+        input_path=str(source_path),
+        overlay_path=str(overlay),
+        root_path=str(root),
+        resolution=resolution,
+        samples=samples,
+    )
 
     binding_contexts = collect_material_binding_contexts(source_stage, UsdShade, UsdGeom)
     for prim in iter_material_prims(source_stage, UsdShade):
@@ -133,6 +157,7 @@ def generate_blender_overlay(
             Sdf,
             UsdShade,
             binding_contexts,
+            conversion_report=conversion_report,
         )
 
     overlay_layer.Save()
@@ -141,7 +166,9 @@ def generate_blender_overlay(
     root_layer.subLayerPaths = [_sublayer_path(overlay, root_parent), _sublayer_path(source_path, root_parent)]
     root_layer.Save()
 
-    write_conversion_reports(report, cache)
+    deep_report = conversion_report.to_dict()
+    report["deep_report"] = deep_report
+    write_conversion_reports(conversion_report, cache)
     return report
 
 

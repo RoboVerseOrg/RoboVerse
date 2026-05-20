@@ -280,7 +280,9 @@ def test_generate_overlay_authors_direct_diffuse_texture_chain_and_reports(tmp_p
     assert (cache / "conversion_report.json").exists()
     assert (cache / "conversion_report.md").exists()
     report = json.loads((cache / "conversion_report.json").read_text(encoding="utf-8"))
-    assert report["materials"]["/World/Looks/Textured"]["status"] == "converted"
+    textured = next(entry for entry in report["materials"] if entry["material_path"] == "/World/Looks/Textured")
+    assert textured["policy"] == "direct_graph"
+    assert textured["slots"]["base_color"]["status"] == "texture"
 
 
 def test_generate_overlay_can_rerun_over_existing_overlay(tmp_path):
