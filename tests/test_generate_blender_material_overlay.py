@@ -101,8 +101,8 @@ def test_direct_diffuse_texture_mapping_is_preserved(tmp_path):
     assert "textures/wood.png" in overlay_text
 
     stage = Usd.Stage.Open(str(overlay))
-    texture_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewTexture")
-    reader_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewSTReader")
+    texture_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/base_color_Texture")
+    reader_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/base_color_Primvar")
     preview_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewSurface")
 
     assert texture_shader.GetIdAttr().Get() == "UsdUVTexture"
@@ -174,7 +174,7 @@ def test_alias_matrix_freezes_current_omnipbr_aliases(tmp_path):
         'def Material "DiffuseColorConstant"',
         'def Material "BaseColorTex"',
         'def Material "DiffuseTexture"',
-        'def Shader "PreviewTexture"',
+        'def Shader "base_color_Texture"',
         "@./textures/base.png@",
         "@./textures/diffuse.png@",
         "float inputs:roughness = 0.31",
@@ -198,8 +198,8 @@ def test_alias_matrix_freezes_current_omnipbr_aliases(tmp_path):
 
     base_texture = _preview_shader(stage, "/World/Looks/BaseColorTex").GetInput("diffuseColor").GetConnectedSource()
     diffuse_texture = _preview_shader(stage, "/World/Looks/DiffuseTexture").GetInput("diffuseColor").GetConnectedSource()
-    assert base_texture[0].GetPath() == Sdf.Path("/World/Looks/BaseColorTex/PreviewTexture")
-    assert diffuse_texture[0].GetPath() == Sdf.Path("/World/Looks/DiffuseTexture/PreviewTexture")
+    assert base_texture[0].GetPath() == Sdf.Path("/World/Looks/BaseColorTex/base_color_Texture")
+    assert diffuse_texture[0].GetPath() == Sdf.Path("/World/Looks/DiffuseTexture/base_color_Texture")
 
     assert _preview_input(stage, "/World/Looks/ReflectionRoughness", "roughness") == pytest.approx(0.31)
     assert _preview_input(stage, "/World/Looks/RoughnessAlias", "roughness") == pytest.approx(0.62)
@@ -265,8 +265,8 @@ def test_generate_overlay_authors_direct_diffuse_texture_chain_and_reports(tmp_p
     generate_blender_overlay(source, overlay, root, cache)
 
     stage = Usd.Stage.Open(str(overlay))
-    texture_shader = UsdShade.Shader.Get(stage, "/World/Looks/Textured/PreviewTexture")
-    reader_shader = UsdShade.Shader.Get(stage, "/World/Looks/Textured/PreviewSTReader")
+    texture_shader = UsdShade.Shader.Get(stage, "/World/Looks/Textured/base_color_Texture")
+    reader_shader = UsdShade.Shader.Get(stage, "/World/Looks/Textured/base_color_Primvar")
     preview_shader = UsdShade.Shader.Get(stage, "/World/Looks/Textured/PreviewSurface")
 
     assert texture_shader.GetIdAttr().Get() == "UsdUVTexture"
