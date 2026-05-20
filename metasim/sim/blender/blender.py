@@ -155,6 +155,10 @@ _CYCLES_FINAL_RENDER_SETTINGS = {
     "caustics_reflective": True,
     "caustics_refractive": True,
 }
+_ROBOVERSE_MATERIAL_POLICY_KEY = "roboverse:material_conversion_policy"
+_ROBOVERSE_MATERIAL_GRAPH_VERSION_KEY = "roboverse:material_graph_version"
+_ROBOVERSE_MATERIAL_GRAPH_VERSION = "v1"
+_PRESERVED_ROBOVERSE_MATERIAL_POLICIES = {"direct_graph", "mdl_bake"}
 
 
 @dataclass(frozen=True)
@@ -730,6 +734,8 @@ def _apply_usd_material_specs(imported: list, specs: dict[str, UsdMaterialSpec])
                 if material is None or material.name in seen_materials:
                     continue
                 seen_materials.add(material.name)
+                if has_preserved_roboverse_material_graph(material):
+                    continue
                 spec = next(
                     (specs[name] for name in _material_name_candidates(material.name) if name in specs),
                     None,
@@ -881,6 +887,40 @@ def _material_has_surface_shader(material) -> bool:
             continue
         surface = node.inputs.get("Surface")
         if surface is not None and surface.links:
+            return True
+    return False
+
+
+def _custom_property_value(owner: object, key: str) -> object | None:
+    get_value = getattr(owner, "get", None)
+    if callable(get_value):
+        try:
+            value = get_value(key)
+        except Exception:
+            value = None
+        if value is not None:
+            return value
+    try:
+        return owner[key]  # type: ignore[index]
+    except Exception:
+        return None
+
+
+def _roboverse_custom_property_owners(material: object):
+    yield material
+    node_tree = getattr(material, "node_tree", None)
+    if node_tree is None:
+        return
+    yield node_tree
+    for node in getattr(node_tree, "nodes", ()) or ():
+        yield node
+
+
+def has_preserved_roboverse_material_graph(material: object) -> bool:
+    for owner in _roboverse_custom_property_owners(material):
+        policy = _custom_property_value(owner, _ROBOVERSE_MATERIAL_POLICY_KEY)
+        version = _custom_property_value(owner, _ROBOVERSE_MATERIAL_GRAPH_VERSION_KEY)
+        if version == _ROBOVERSE_MATERIAL_GRAPH_VERSION and policy in _PRESERVED_ROBOVERSE_MATERIAL_POLICIES:
             return True
     return False
 
@@ -1591,6 +1631,8 @@ def _repair_imported_materials(
                 if material.name in seen_materials:
                     continue
                 seen_materials.add(material.name)
+                if has_preserved_roboverse_material_graph(material):
+                    continue
                 rgba = next(
                     (
                         asset_material_rgba[name]
