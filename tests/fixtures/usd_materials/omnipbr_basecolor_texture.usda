@@ -1,0 +1,32 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "Wood"
+        {
+            token outputs:surface.connect = </World/Looks/Wood/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                asset inputs:BaseColor_Tex = @./textures/wood.png@
+                float inputs:Gloss_Color = 0.7
+                int inputs:IsBaseColorTex = 1
+                token outputs:surface
+            }
+        }
+    }
+
+    def Mesh "Board"
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        rel material:binding = </World/Looks/Wood>
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "faceVarying"
+        )
+    }
+}

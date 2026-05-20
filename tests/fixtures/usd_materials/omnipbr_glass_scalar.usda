@@ -1,0 +1,22 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "GlassPane"
+        {
+            token outputs:surface.connect = </World/Looks/GlassPane/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:BaseColor_Color = (0.8, 0.9, 1.0)
+                float inputs:SwitchRefraction = 1
+                float inputs:ior = 1.45
+                float inputs:opacity_constant = 0.35
+                token outputs:surface
+            }
+        }
+    }
+}

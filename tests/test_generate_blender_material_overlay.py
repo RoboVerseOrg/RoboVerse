@@ -1,6 +1,8 @@
 import hashlib
 import json
 import os
+import shutil
+from pathlib import Path
 
 import pytest
 
@@ -12,9 +14,26 @@ from roboverse_pack.blender.usd.overlay import (
     verify_overlay_material_coverage,
 )
 
+FIXTURE_DIR = Path(__file__).parent / "fixtures" / "usd_materials"
+
 
 def _source_hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _copy_fixture(tmp_path, fixture_name):
+    source = tmp_path / fixture_name
+    if not source.exists():
+        shutil.copyfile(FIXTURE_DIR / fixture_name, source)
+    return source
+
+
+def _generate_fixture_overlay(tmp_path, fixture_name):
+    source = _copy_fixture(tmp_path, fixture_name)
+    overlay = source.with_suffix(".blender_materials.usda")
+    root = source.with_suffix(".blender_root.usda")
+    report = generate_blender_overlay(source, overlay, root, tmp_path / "cache")
+    return overlay, root, report
 
 
 def _write_overlay_fixture(path):
@@ -49,6 +68,160 @@ def _preview_shader(stage, material_path):
     source_info = material.ComputeSurfaceSource()
     assert source_info
     return UsdShade.Shader(source_info[0])
+
+
+def _preview_input(stage, material_path, input_name):
+    return _preview_shader(stage, material_path).GetInput(input_name).Get()
+
+
+def test_root_sublayers_overlay_before_source(tmp_path):
+    overlay, root, _report = _generate_fixture_overlay(tmp_path, "omnipbr_basecolor_scalar.usda")
+    source = tmp_path / "omnipbr_basecolor_scalar.usda"
+
+    root_layer = Sdf.Layer.FindOrOpen(str(root))
+    assert root_layer.subLayerPaths[:2] == [str(overlay), str(source)]
+
+
+def test_generate_overlay_does_not_modify_source_usd(tmp_path):
+    source = _copy_fixture(tmp_path, "omnipbr_basecolor_scalar.usda")
+    before_hash = _source_hash(source)
+
+    _generate_fixture_overlay(tmp_path, "omnipbr_basecolor_scalar.usda")
+
+    assert _source_hash(source) == before_hash
+
+
+def test_direct_diffuse_texture_mapping_is_preserved(tmp_path):
+    overlay, _root, _report = _generate_fixture_overlay(tmp_path, "omnipbr_basecolor_texture.usda")
+
+    overlay_text = overlay.read_text(encoding="utf-8")
+    assert "UsdUVTexture" in overlay_text
+    assert "UsdPrimvarReader_float2" in overlay_text
+    assert "inputs:file" in overlay_text
+    assert "textures/wood.png" in overlay_text
+
+    stage = Usd.Stage.Open(str(overlay))
+    texture_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewTexture")
+    reader_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewSTReader")
+    preview_shader = UsdShade.Shader.Get(stage, "/World/Looks/Wood/PreviewSurface")
+
+    assert texture_shader.GetIdAttr().Get() == "UsdUVTexture"
+    assert texture_shader.GetInput("file").Get().path == "./textures/wood.png"
+    assert reader_shader.GetIdAttr().Get() == "UsdPrimvarReader_float2"
+    diffuse_connection = preview_shader.GetInput("diffuseColor").GetConnectedSource()
+    assert diffuse_connection[0].GetPath() == texture_shader.GetPath()
+    assert diffuse_connection[1] == "rgb"
+
+
+def test_scalar_roughness_metallic_opacity_emissive_are_preserved(tmp_path):
+    _overlay, root, _report = _generate_fixture_overlay(tmp_path, "omnipbr_basecolor_scalar.usda")
+
+    stage = Usd.Stage.Open(str(root))
+    shader = _preview_shader(stage, "/World/Looks/Paint")
+
+    assert shader.GetInput("roughness").Get() == pytest.approx(0.25)
+    assert shader.GetInput("metallic").Get() == pytest.approx(0.0)
+    assert shader.GetInput("opacity").Get() == pytest.approx(1.0)
+    assert shader.GetInput("emissiveColor").Get() == Gf.Vec3f(0.0, 0.0, 0.0)
+
+
+def test_glass_class_fallback_is_preserved(tmp_path):
+    _overlay, root, report = _generate_fixture_overlay(tmp_path, "omnipbr_glass_scalar.usda")
+
+    entry = report["materials"]["/World/Looks/GlassPane"]
+    assert entry["material_class"] == "glass"
+    assert entry["status"] == "converted"
+
+    stage = Usd.Stage.Open(str(root))
+    shader = _preview_shader(stage, "/World/Looks/GlassPane")
+    assert shader.GetInput("opacity").Get() == pytest.approx(0.35)
+    assert shader.GetInput("ior").Get() == pytest.approx(1.45)
+
+
+def test_report_includes_material_status_and_quality_warnings(tmp_path):
+    _overlay, _root, report = _generate_fixture_overlay(tmp_path, "omnipbr_basecolor_scalar.usda")
+
+    assert set(report["materials"]) == {"/World/Looks/Paint"}
+    material_path = "/World/Looks/Paint"
+    entry = report["materials"][material_path]
+    assert set(entry) == {"status", "warnings", "material_class"}
+    assert entry["status"] == "converted"
+    assert entry["warnings"] == []
+    assert entry["material_class"] is None
+
+
+def test_existing_preview_surface_values_are_preserved(tmp_path):
+    _overlay, root, report = _generate_fixture_overlay(tmp_path, "preview_surface_existing.usda")
+
+    entry = report["materials"]["/World/Looks/Previewed"]
+    assert entry["status"] == "converted"
+    assert entry["material_class"] is None
+    assert entry["warnings"] == []
+
+    stage = Usd.Stage.Open(str(root))
+    shader = _preview_shader(stage, "/World/Looks/Previewed")
+    assert shader.GetIdAttr().Get() == "UsdPreviewSurface"
+    assert shader.GetInput("diffuseColor").Get() == Gf.Vec3f(0.1, 0.2, 0.3)
+    assert shader.GetInput("roughness").Get() == pytest.approx(0.4)
+
+
+def test_alias_matrix_freezes_current_omnipbr_aliases(tmp_path):
+    overlay, root, report = _generate_fixture_overlay(tmp_path, "omnipbr_alias_matrix.usda")
+
+    overlay_text = overlay.read_text(encoding="utf-8")
+    for snippet in [
+        'def Material "BaseColorColor"',
+        'def Material "DiffuseColorConstant"',
+        'def Material "BaseColorTex"',
+        'def Material "DiffuseTexture"',
+        'def Shader "PreviewTexture"',
+        "@./textures/base.png@",
+        "@./textures/diffuse.png@",
+        "float inputs:roughness = 0.31",
+        "float inputs:roughness = 0.62",
+        "float inputs:metallic = 0.73",
+        "float inputs:metallic = 0.84",
+        "float inputs:opacity = 0.45",
+        "float inputs:opacity = 0.56",
+        "color3f inputs:emissiveColor = (0.1, 0.2, 0.3)",
+        "color3f inputs:emissiveColor = (0.3, 0.2, 0.1)",
+        'def Material "WallPanel"',
+        'def Material "FloorTile"',
+        'def Material "CabinetDoor"',
+        'def Material "GlassFallback"',
+    ]:
+        assert snippet in overlay_text
+
+    stage = Usd.Stage.Open(str(root))
+    assert _preview_input(stage, "/World/Looks/BaseColorColor", "diffuseColor") == Gf.Vec3f(0.2, 0.3, 0.4)
+    assert _preview_input(stage, "/World/Looks/DiffuseColorConstant", "diffuseColor") == Gf.Vec3f(0.4, 0.3, 0.2)
+
+    base_texture = _preview_shader(stage, "/World/Looks/BaseColorTex").GetInput("diffuseColor").GetConnectedSource()
+    diffuse_texture = _preview_shader(stage, "/World/Looks/DiffuseTexture").GetInput("diffuseColor").GetConnectedSource()
+    assert base_texture[0].GetPath() == Sdf.Path("/World/Looks/BaseColorTex/PreviewTexture")
+    assert diffuse_texture[0].GetPath() == Sdf.Path("/World/Looks/DiffuseTexture/PreviewTexture")
+
+    assert _preview_input(stage, "/World/Looks/ReflectionRoughness", "roughness") == pytest.approx(0.31)
+    assert _preview_input(stage, "/World/Looks/RoughnessAlias", "roughness") == pytest.approx(0.62)
+    assert _preview_input(stage, "/World/Looks/MetallicConstant", "metallic") == pytest.approx(0.73)
+    assert _preview_input(stage, "/World/Looks/MetallicAlias", "metallic") == pytest.approx(0.84)
+    assert _preview_input(stage, "/World/Looks/OpacityConstant", "opacity") == pytest.approx(0.45)
+    assert _preview_input(stage, "/World/Looks/OpacityAlias", "opacity") == pytest.approx(0.56)
+    assert _preview_input(stage, "/World/Looks/EmissiveColorOmni", "emissiveColor") == Gf.Vec3f(0.1, 0.2, 0.3)
+    assert _preview_input(stage, "/World/Looks/EmissiveColorAlias", "emissiveColor") == Gf.Vec3f(0.3, 0.2, 0.1)
+
+    assert _preview_input(stage, "/World/Looks/WallPanel", "diffuseColor") == Gf.Vec3f(0.72, 0.72, 0.68)
+    assert _preview_input(stage, "/World/Looks/FloorTile", "diffuseColor") == Gf.Vec3f(0.55, 0.50, 0.44)
+    assert _preview_input(stage, "/World/Looks/CabinetDoor", "diffuseColor") == Gf.Vec3f(0.60, 0.46, 0.32)
+    assert _preview_input(stage, "/World/Looks/GlassFallback", "diffuseColor") == Gf.Vec3f(0.78, 0.90, 0.96)
+    assert _preview_input(stage, "/World/Looks/GlassFallback", "opacity") == pytest.approx(0.35)
+    assert _preview_input(stage, "/World/Looks/GlassFallback", "ior") == pytest.approx(1.45)
+
+    assert report["materials"]["/World/Looks/ReflectionRoughness"]["warnings"] == [
+        "No diffuse color or texture alias found."
+    ]
+    for material_path in report["materials"]:
+        verify_overlay_material_coverage(root, [material_path])
 
 
 def test_generate_overlay_authors_root_sublayers_and_preview_values(tmp_path):

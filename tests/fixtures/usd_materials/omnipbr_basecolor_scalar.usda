@@ -1,0 +1,23 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "Paint"
+        {
+            token outputs:surface.connect = </World/Looks/Paint/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:BaseColor_Color = (0.2, 0.3, 0.4)
+                color3f inputs:Emissive_Color = (0, 0, 0)
+                float inputs:metallic_constant = 0
+                float inputs:opacity_constant = 1
+                float inputs:reflection_roughness_constant = 0.25
+                token outputs:surface
+            }
+        }
+    }
+}

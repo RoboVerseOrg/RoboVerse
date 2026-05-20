@@ -1,0 +1,195 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "BaseColorColor"
+        {
+            token outputs:surface.connect = </World/Looks/BaseColorColor/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:BaseColor_Color = (0.2, 0.3, 0.4)
+                token outputs:surface
+            }
+        }
+
+        def Material "DiffuseColorConstant"
+        {
+            token outputs:surface.connect = </World/Looks/DiffuseColorConstant/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:diffuse_color_constant = (0.4, 0.3, 0.2)
+                token outputs:surface
+            }
+        }
+
+        def Material "BaseColorTex"
+        {
+            token outputs:surface.connect = </World/Looks/BaseColorTex/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                asset inputs:BaseColor_Tex = @./textures/base.png@
+                token outputs:surface
+            }
+        }
+
+        def Material "DiffuseTexture"
+        {
+            token outputs:surface.connect = </World/Looks/DiffuseTexture/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                asset inputs:diffuse_texture = @./textures/diffuse.png@
+                token outputs:surface
+            }
+        }
+
+        def Material "ReflectionRoughness"
+        {
+            token outputs:surface.connect = </World/Looks/ReflectionRoughness/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:reflection_roughness_constant = 0.31
+                token outputs:surface
+            }
+        }
+
+        def Material "RoughnessAlias"
+        {
+            token outputs:surface.connect = </World/Looks/RoughnessAlias/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:roughness = 0.62
+                token outputs:surface
+            }
+        }
+
+        def Material "MetallicConstant"
+        {
+            token outputs:surface.connect = </World/Looks/MetallicConstant/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:metallic_constant = 0.73
+                token outputs:surface
+            }
+        }
+
+        def Material "MetallicAlias"
+        {
+            token outputs:surface.connect = </World/Looks/MetallicAlias/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:metallic = 0.84
+                token outputs:surface
+            }
+        }
+
+        def Material "OpacityConstant"
+        {
+            token outputs:surface.connect = </World/Looks/OpacityConstant/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:opacity_constant = 0.45
+                token outputs:surface
+            }
+        }
+
+        def Material "OpacityAlias"
+        {
+            token outputs:surface.connect = </World/Looks/OpacityAlias/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                float inputs:opacity = 0.56
+                token outputs:surface
+            }
+        }
+
+        def Material "EmissiveColorOmni"
+        {
+            token outputs:surface.connect = </World/Looks/EmissiveColorOmni/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:Emissive_Color = (0.1, 0.2, 0.3)
+                token outputs:surface
+            }
+        }
+
+        def Material "EmissiveColorAlias"
+        {
+            token outputs:surface.connect = </World/Looks/EmissiveColorAlias/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                color3f inputs:emissiveColor = (0.3, 0.2, 0.1)
+                token outputs:surface
+            }
+        }
+
+        def Material "WallPanel"
+        {
+            token outputs:surface.connect = </World/Looks/WallPanel/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                token outputs:surface
+            }
+        }
+
+        def Material "FloorTile"
+        {
+            token outputs:surface.connect = </World/Looks/FloorTile/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                token outputs:surface
+            }
+        }
+
+        def Material "CabinetDoor"
+        {
+            token outputs:surface.connect = </World/Looks/CabinetDoor/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                token outputs:surface
+            }
+        }
+
+        def Material "GlassFallback"
+        {
+            token outputs:surface.connect = </World/Looks/GlassFallback/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "OmniPBR"
+                token outputs:surface
+            }
+        }
+    }
+}

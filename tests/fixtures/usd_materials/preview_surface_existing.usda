@@ -1,0 +1,20 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "Previewed"
+        {
+            token outputs:surface.connect = </World/Looks/Previewed/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.1, 0.2, 0.3)
+                float inputs:roughness = 0.4
+                token outputs:surface
+            }
+        }
+    }
+}
