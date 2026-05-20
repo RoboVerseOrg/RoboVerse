@@ -6,12 +6,22 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .schema import PreviewMaterialSpec
+
 
 def material_entry(material_path: str) -> dict[str, Any]:
     return {
         "status": "converted",
         "warnings": [],
         "material_class": None,
+    }
+
+
+def material_entry_from_spec(spec: PreviewMaterialSpec) -> dict[str, Any]:
+    return {
+        "status": "converted",
+        "warnings": list(spec.quality_notes),
+        "material_class": spec.material_class,
     }
 
 
@@ -42,4 +52,3 @@ def write_conversion_reports(report: dict[str, Any], cache: str | Path) -> None:
     report_md = output_dir / "conversion_report.md"
     report_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     write_conversion_report_md(report, report_md)
-
