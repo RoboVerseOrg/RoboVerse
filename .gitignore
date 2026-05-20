@@ -119,3 +119,11 @@ public/
 artifacts/
 nohup/
 .omx/
+
+# Blender USD material overlay artifacts
+*.blender_materials.usda
+*.blender_root.usda
+roboverse_data/material_cache/
+reports/*_material_audit.json
+reports/*_conversion_report.json
+reports/*_conversion_report.md
