@@ -21,6 +21,7 @@ from .base import MaterialAdapter
 from .existing_preview import ExistingPreviewSurfaceAdapter
 from .fallback import ScalarFallbackAdapter, SemanticClassFallbackAdapter
 from .generic import GenericTextureGraphAdapter
+from .mdl_bake import MdlBakeAdapter, choose_conversion_policy
 from .omnipbr import OmniPBRAdapter
 
 ADAPTERS: tuple[MaterialAdapter, ...] = (
@@ -40,10 +41,38 @@ def select_adapter(
     return max(registry, key=lambda adapter: adapter.score(raw))
 
 
+def select_adapter_by_policy(raw: RawMaterialSpec, *, enable_mdl_bake: bool = False) -> MaterialAdapter:
+    policy = choose_conversion_policy(raw)
+    if policy == "preserve_existing_preview":
+        return ExistingPreviewSurfaceAdapter()
+    if policy == "mdl_bake":
+        if enable_mdl_bake:
+            return MdlBakeAdapter()
+        if raw.values:
+            return ScalarFallbackAdapter()
+        return SemanticClassFallbackAdapter()
+    if policy == "direct_graph":
+        omnipbr = OmniPBRAdapter()
+        if omnipbr.score(raw) > 0:
+            return omnipbr
+        return GenericTextureGraphAdapter()
+    if policy == "scalar_fallback":
+        return ScalarFallbackAdapter()
+    return SemanticClassFallbackAdapter()
+
+
 def convert_material(
     raw: RawMaterialSpec,
     context: MaterialContext,
     adapters: Sequence[MaterialAdapter] | None = None,
 ) -> PreviewMaterialSpec:
-    adapter = select_adapter(raw, adapters)
-    return replace(adapter.convert(raw, context), adapter_name=adapter.name)
+    if adapters is not None:
+        adapter = select_adapter(raw, adapters)
+        return replace(adapter.convert(raw, context), adapter_name=adapter.name)
+
+    policy = choose_conversion_policy(raw)
+    adapter = select_adapter_by_policy(raw, enable_mdl_bake=context.enable_mdl_bake)
+    spec = replace(adapter.convert(raw, context), adapter_name=adapter.name)
+    if policy == "mdl_bake" and not context.enable_mdl_bake:
+        return replace(spec, quality_notes=(*spec.quality_notes, "mdl_bake_unavailable"))
+    return spec
