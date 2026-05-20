@@ -9,6 +9,7 @@ from ..context import MaterialContext
 from ..extract import asset_path_string
 from ..normalize import normalize_material
 from ..schema import PreviewMaterialSpec, RawMaterialSpec
+from ..texture_paths import normalize_texture_asset_path
 
 
 class GenericTextureGraphAdapter:
@@ -21,4 +22,18 @@ class GenericTextureGraphAdapter:
         return 0
 
     def convert(self, raw: RawMaterialSpec, context: MaterialContext) -> PreviewMaterialSpec:
-        return replace(normalize_material(raw), conversion_policy="direct_graph")
+        spec = replace(normalize_material(raw), conversion_policy="direct_graph")
+        texture = spec.base_color.texture
+        if texture is None:
+            return spec
+
+        path_result = normalize_texture_asset_path(texture.file, context.texture_base_dir)
+        base_color = replace(
+            spec.base_color,
+            texture=replace(texture, file=path_result.normalized, role="base_color"),
+        )
+        return replace(
+            spec,
+            base_color=base_color,
+            quality_notes=(*spec.quality_notes, *path_result.warnings),
+        )
