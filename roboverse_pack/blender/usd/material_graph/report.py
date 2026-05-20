@@ -18,10 +18,19 @@ def material_entry(material_path: str) -> dict[str, Any]:
 
 
 def material_entry_from_spec(spec: PreviewMaterialSpec) -> dict[str, Any]:
+    status = "skipped" if spec.conversion_policy == "preserve_existing_preview" else "converted"
     return {
-        "status": "converted",
+        "status": status,
         "warnings": list(spec.quality_notes),
         "material_class": spec.material_class,
+    }
+
+
+def failed_material_entry(error: Exception) -> dict[str, Any]:
+    return {
+        "status": "failed",
+        "warnings": [f"conversion failed: {error}"],
+        "material_class": None,
     }
 
 

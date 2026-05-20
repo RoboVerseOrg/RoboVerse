@@ -11,9 +11,8 @@ TEXTURE_ALIASES = (
     "base_color_texture",
     "diffuseColor_texture",
 )
-ROUGHNESS_ALIASES = ("roughness", "reflection_roughness_constant")
-METALLIC_ALIASES = ("metallic", "metallic_constant")
+ROUGHNESS_ALIASES = ("roughness", "reflection_roughness_constant", "Roughness")
+METALLIC_ALIASES = ("metallic", "metallic_constant", "Metallic_Color", "Metallic")
 OPACITY_ALIASES = ("opacity", "opacity_constant")
 EMISSIVE_ALIASES = ("emissiveColor", "Emissive_Color")
-IOR_ALIASES = ("ior", "glass_ior", "index_of_refraction")
-
+IOR_ALIASES = ("ior", "glass_ior", "index_of_refraction", "IOR", "FresnelB")

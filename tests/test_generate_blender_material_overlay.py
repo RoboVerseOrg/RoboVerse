@@ -154,9 +154,9 @@ def test_existing_preview_surface_values_are_preserved(tmp_path):
     _overlay, root, report = _generate_fixture_overlay(tmp_path, "preview_surface_existing.usda")
 
     entry = report["materials"]["/World/Looks/Previewed"]
-    assert entry["status"] == "converted"
+    assert entry["status"] == "skipped"
     assert entry["material_class"] is None
-    assert entry["warnings"] == []
+    assert entry["warnings"] == ["source UsdPreviewSurface graph preserved without overlay opinion"]
 
     stage = Usd.Stage.Open(str(root))
     shader = _preview_shader(stage, "/World/Looks/Previewed")

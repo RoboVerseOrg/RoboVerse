@@ -7,10 +7,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .material_graph.adapters import convert_material
 from .material_graph.author_preview import author_preview_material
+from .material_graph.context import MaterialContext
 from .material_graph.extract import extract_material, surface_shader
-from .material_graph.normalize import normalize_material
-from .material_graph.report import material_entry_from_spec, write_conversion_report_md, write_conversion_reports
+from .material_graph.report import failed_material_entry, material_entry_from_spec, write_conversion_reports
 
 
 def _clear_or_create_layer(path: Path, Sdf: Any) -> Any:
@@ -26,6 +27,60 @@ def _sublayer_path(layer_path: Path, root_parent: Path) -> str:
     if layer_path.is_absolute():
         return str(layer_path)
     return os.path.relpath(layer_path, root_parent)
+
+
+def _convert_and_author_material(
+    raw: Any,
+    context: MaterialContext,
+    report: dict[str, Any],
+    overlay_stage: Any,
+    Gf: Any,
+    Sdf: Any,
+    UsdShade: Any,
+) -> None:
+    try:
+        spec = convert_material(raw, context)
+        report["materials"][spec.material_path] = material_entry_from_spec(spec)
+        if spec.conversion_policy == "preserve_existing_preview":
+            return
+        author_preview_material(overlay_stage, spec, Gf, Sdf, UsdShade)
+    except Exception as exc:
+        report["materials"][raw.material_path] = failed_material_entry(exc)
+
+
+def _prim_path_string(prim: Any) -> str:
+    try:
+        return str(prim.GetPath())
+    except Exception:
+        return "<unknown material>"
+
+
+def _extract_convert_and_author_material(
+    prim: Any,
+    UsdShade: Any,
+    source_path: Path,
+    report: dict[str, Any],
+    overlay_stage: Any,
+    Gf: Any,
+    Sdf: Any,
+    authoring_usdshade: Any,
+) -> None:
+    material_path = _prim_path_string(prim)
+    try:
+        raw = extract_material(prim, UsdShade)
+        material_path = raw.material_path
+        context = MaterialContext(
+            source_path=source_path,
+            texture_base_dir=source_path.parent,
+            material_path=raw.material_path,
+        )
+        spec = convert_material(raw, context)
+        report["materials"][spec.material_path] = material_entry_from_spec(spec)
+        if spec.conversion_policy == "preserve_existing_preview":
+            return
+        author_preview_material(overlay_stage, spec, Gf, Sdf, authoring_usdshade)
+    except Exception as exc:
+        report["materials"][material_path] = failed_material_entry(exc)
 
 
 def generate_blender_overlay(
@@ -65,11 +120,7 @@ def generate_blender_overlay(
         if not prim.IsA(UsdShade.Material):
             continue
 
-        raw = extract_material(prim, UsdShade)
-        spec = normalize_material(raw)
-        author_preview_material(overlay_stage, spec, Gf, Sdf, UsdShade)
-
-        report["materials"][spec.material_path] = material_entry_from_spec(spec)
+        _extract_convert_and_author_material(prim, UsdShade, source_path, report, overlay_stage, Gf, Sdf, UsdShade)
 
     overlay_layer.Save()
     root_layer = _clear_or_create_layer(root, Sdf)
