@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .report import adapter_from_policy
 from .schema import InputSpec, PreviewMaterialSpec, TextureSpec, UVTransformSpec
 
 _COLOR_INPUTS = {"diffuseColor", "emissiveColor", "specularColor"}
@@ -26,6 +27,15 @@ _ALPHA_CHANNEL_SOURCE_INPUTS = {
 def connect_surface(material: Any, shader: Any) -> None:
     output = material.CreateSurfaceOutput()
     output.ConnectToSource(shader.ConnectableAPI(), "surface")
+
+
+def _author_roboverse_custom_data(material: Any, spec: PreviewMaterialSpec) -> None:
+    prim = material.GetPrim()
+    custom_data = dict(prim.GetCustomData())
+    custom_data["roboverse:material_conversion_policy"] = spec.conversion_policy
+    custom_data["roboverse:material_adapter"] = spec.adapter_name or adapter_from_policy(spec.conversion_policy)
+    custom_data["roboverse:material_graph_version"] = "v1"
+    prim.SetCustomData(custom_data)
 
 
 def _value_type(Sdf: Any, type_name: str) -> Any:
@@ -158,6 +168,7 @@ def connect_or_set(
 def author_material(stage: Any, spec: PreviewMaterialSpec, Gf: Any, Sdf: Any, UsdShade: Any) -> None:
     material_path = Sdf.Path(spec.material_path)
     overlay_material = UsdShade.Material.Define(stage, material_path)
+    _author_roboverse_custom_data(overlay_material, spec)
     preview = UsdShade.Shader.Define(stage, material_path.AppendChild("PreviewSurface"))
     preview.CreateIdAttr("UsdPreviewSurface")
     connect_surface(overlay_material, preview)

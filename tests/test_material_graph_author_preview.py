@@ -39,6 +39,7 @@ def _spec(**overrides):
         material_class=overrides.pop("material_class", None),
         conversion_policy=overrides.pop("conversion_policy", "direct_graph"),
         quality_notes=overrides.pop("quality_notes", ()),
+        adapter_name=overrides.pop("adapter_name", None),
     )
 
 
@@ -80,6 +81,10 @@ def _stage_for(spec):
 
 def _preview(stage, material_path="/World/Looks/Mat"):
     return UsdShade.Shader.Get(stage, f"{material_path}/PreviewSurface")
+
+
+def _material(stage, material_path="/World/Looks/Mat"):
+    return UsdShade.Material.Get(stage, material_path)
 
 
 def _texture(stage, slot_name, material_path="/World/Looks/Mat"):
@@ -130,6 +135,24 @@ def test_resolved_texture_channel_for_a_or_r(source_input, expected):
     )
 
     assert _resolved_texture_channel(texture) == expected
+
+
+@pytest.mark.parametrize(
+    ("conversion_policy", "adapter_name"),
+    [
+        ("direct_graph", "omnipbr"),
+        ("scalar_fallback", "scalar_fallback"),
+        ("mdl_bake", "mdl_bake"),
+    ],
+)
+def test_authored_material_custom_data_tags_conversion_metadata(conversion_policy, adapter_name):
+    stage = _stage_for(_spec(conversion_policy=conversion_policy, adapter_name=adapter_name))
+
+    custom_data = _material(stage).GetPrim().GetCustomData()
+
+    assert custom_data["roboverse:material_conversion_policy"] == conversion_policy
+    assert custom_data["roboverse:material_adapter"] == adapter_name
+    assert custom_data["roboverse:material_graph_version"] == "v1"
 
 
 def test_base_color_texture_chain_connects_rgb_to_diffuse_color():
