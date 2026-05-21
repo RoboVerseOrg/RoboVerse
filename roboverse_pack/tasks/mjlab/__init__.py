@@ -14,7 +14,20 @@ Parity numbers vs raw mujoco (see
 
 from __future__ import annotations
 
+from ._passthrough import MjlabPassthroughEnv, register_mjlab_passthrough_tasks
 from .cartpole import MjlabCartpoleBalance, MjlabCartpoleSwingup
+from .cartpole_train import MjlabCartpoleBalanceTrain, MjlabCartpoleSwingupTrain
+
+# Auto-register all mjlab tasks under MjlabPassthrough/<task_id>
+try:
+    register_mjlab_passthrough_tasks()
+except Exception:
+    pass  # mjlab not installed or registry issue
+# v2 manager-based ports — register ``mjlab.*_v2`` task IDs via @register_task.
+from . import cartpole_v2 as _cartpole_v2  # noqa: F401
+from . import lift_cube_yam_v2 as _lift_cube_yam_v2  # noqa: F401
+from . import velocity_g1_v2 as _velocity_g1_v2  # noqa: F401
+from . import velocity_go1_v2 as _velocity_go1_v2  # noqa: F401
 from .floating_base import (
     MjlabTrackingFlatG1,
     MjlabTrackingFlatG1NoStateEst,
@@ -32,7 +45,9 @@ from .lift_cube import (
 
 __all__ = [
     "MjlabCartpoleBalance",
+    "MjlabCartpoleBalanceTrain",
     "MjlabCartpoleSwingup",
+    "MjlabCartpoleSwingupTrain",
     "MjlabLiftCubeYam",
     "MjlabLiftCubeYamDepth",
     "MjlabLiftCubeYamRgb",
