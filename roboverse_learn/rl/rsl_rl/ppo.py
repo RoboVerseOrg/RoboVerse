@@ -18,11 +18,18 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from metasim.task.registry import get_task_class
+from metasim.task.registry import _discover_task_modules, get_task_class
 
 
 def make_roboverse_env(args: RslRlPPOConfig):
     """Create RoboVerse task environment"""
+    # Force full task discovery — by import time, RslRlPPOConfig's transitive
+    # imports have already registered a handful of humanoid locomotion tasks,
+    # so get_task_class's "if registry empty" gate skips the rest of the
+    # package walk. Calling discovery explicitly is idempotent (re-importing
+    # already-imported modules is a no-op) and surfaces all registered tasks
+    # — including new ones added under roboverse_pack/tasks/mjlab/ etc.
+    _discover_task_modules()
     task_cls = get_task_class(args.task)
 
     # Load environment configuration from task
@@ -94,12 +101,25 @@ def train(args: RslRlPPOConfig):
         init_at_random_ep_len=True
     )
 
-    # Export policy
+    # Export policy. Newer rsl_rl uses ``torch.distributions.Normal`` inside
+    # ``GaussianDistribution``, which TorchScript cannot script. Fall back to a
+    # plain ``state_dict`` ckpt so the run completes either way.
     print("Exporting policy...")
     policy = runner.get_inference_policy()
     policy_path = os.path.join(args.model_dir, "policy.pt")
-    torch.jit.script(policy).save(policy_path)
-    print(f"Policy exported to {policy_path}")
+    try:
+        torch.jit.script(policy).save(policy_path)
+        print(f"Policy (TorchScript) exported to {policy_path}")
+    except RuntimeError as e:
+        if "_distribution" in str(e) or "Normal" in str(e):
+            state_path = os.path.join(args.model_dir, "policy_state_dict.pt")
+            torch.save(policy.state_dict(), state_path)
+            print(
+                f"TorchScript export skipped (Gaussian distribution not scriptable); "
+                f"saved state_dict to {state_path} instead"
+            )
+        else:
+            raise
 
     if args.use_wandb:
         wandb.finish()

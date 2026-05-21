@@ -108,6 +108,29 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
         policy_cfg = self.policy.to_dict() if hasattr(self.policy, "to_dict") else dict(self.policy.__dict__)
         algo_cfg = self.algorithm.to_dict() if hasattr(self.algorithm, "to_dict") else dict(self.algorithm.__dict__)
 
+        # Newer rsl_rl (>= ?) expects separate ``actor`` / ``critic`` MLPModel
+        # config dicts in train_cfg instead of the combined ``policy`` cfg;
+        # older versions read ``policy``. Emit both keys so the trainer is
+        # compatible with either rsl_rl version. The single source of truth
+        # remains ``self.policy`` (RslRlPpoActorCriticCfg).
+        actor_cfg = {
+            "class_name": "MLPModel",
+            "hidden_dims": list(self.policy.actor_hidden_dims),
+            "activation": self.policy.activation,
+            "obs_normalization": self.policy.actor_obs_normalization,
+            "distribution_cfg": {
+                "class_name": "GaussianDistribution",
+                "init_std": self.policy.init_noise_std,
+                "std_type": "log" if self.policy.noise_std_type == "log" else "scalar",
+            },
+        }
+        critic_cfg = {
+            "class_name": "MLPModel",
+            "hidden_dims": list(self.policy.critic_hidden_dims),
+            "activation": self.policy.activation,
+            "obs_normalization": self.policy.critic_obs_normalization,
+        }
+
         self.train_cfg = {
             "seed": self.seed,
             "device": self.device,
@@ -124,7 +147,9 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
             "load_run": self.load_run,
             "load_checkpoint": self.load_checkpoint,
             "obs_groups": self.obs_groups,
-            "policy": policy_cfg,
+            "policy": policy_cfg,       # legacy rsl_rl key
+            "actor": actor_cfg,         # new rsl_rl key
+            "critic": critic_cfg,       # new rsl_rl key
             "algorithm": algo_cfg,
         }
 
