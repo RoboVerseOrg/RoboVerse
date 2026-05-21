@@ -20,10 +20,16 @@ import scipy.spatial.transform as tr
 import warp as wp
 from newton import Contacts
 from newton._src.sim.articulation import eval_fk
-from newton._src.sim.joints import JointType
-from newton.sensors import SensorContact, SensorTiledCamera, populate_contacts
+from newton.sensors import SensorContact, SensorTiledCamera
 from newton.solvers import SolverMuJoCo
 from newton.viewer import ViewerGL
+
+# Version-sensitive symbols are isolated in _newton_compat to keep
+# this handler readable. Backward-compat: works on newton < 1.2 (where
+# JointType lived under _src.sim.joints and populate_contacts was a
+# free function) AND newton >= 1.2 (public JointType, contacts
+# auto-populated by solver). See _newton_compat.py.
+from ._newton_compat import JointType, add_mjcf, populate_contacts, set_current_world
 
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
@@ -187,18 +193,31 @@ class NewtonHandler(BaseSimHandler):
         if use_mujoco_contacts is None:
             use_mujoco_contacts = False
 
+        # Forward optional solver-iteration overrides (mjlab parity for stiff PD: 10/20).
+        _iter_kw = {}
+        if getattr(sim_params, "newton_mujoco_iterations", None) is not None:
+            _iter_kw["iterations"] = sim_params.newton_mujoco_iterations
+        if getattr(sim_params, "newton_mujoco_ls_iterations", None) is not None:
+            _iter_kw["ls_iterations"] = sim_params.newton_mujoco_ls_iterations
+        # mjlab uses MujocoCfg(disableflags=("contact",)) for cartpole — disable
+        # contact computation to keep the cart-on-rails system bit-deterministic.
+        if getattr(sim_params, "newton_mujoco_disable_contacts", False):
+            _iter_kw["disable_contacts"] = True
+
         if use_mujoco_contacts:
             self._solver = SolverMuJoCo(
                 self._model,
                 njmax=sim_params.njmax,
                 nconmax=sim_params.nconmax,
                 use_mujoco_contacts=use_mujoco_contacts,
+                **_iter_kw,
             )
         else:  # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
             self._solver = SolverMuJoCo(
                 self._model,
                 njmax=sim_params.njmax,
                 nconmax=sim_params.nconmax,
+                **_iter_kw,
             )
         self._use_mujoco_contacts = bool(use_mujoco_contacts)
 
@@ -383,8 +402,10 @@ class NewtonHandler(BaseSimHandler):
 
         # dt is set during solver.step()
 
-        # Add ground plane (global, shared across all worlds)
-        builder.current_world = -1
+        # Add ground plane (global, shared across all worlds).
+        # newton < 1.2 lets you set current_world = -1 to mark global;
+        # newton 1.2+ makes any add outside begin_world() global by default.
+        set_current_world(builder, -1)
         self._shape_color_overrides = {}
         ground_shape_cfg = self._get_ground_shape_cfg(builder)
         ground_shape_idx = builder.add_ground_plane(cfg=ground_shape_cfg)
@@ -434,20 +455,51 @@ class NewtonHandler(BaseSimHandler):
         log.debug(f"Newton model built: {self._model.body_count} bodies, {self._model.joint_count} joints")
 
     def _add_robot_to_builder(self, builder: newton.ModelBuilder, robot) -> None:
-        """Add a robot to the model builder using URDF import."""
-        # Try to import URDF
-        urdf_path = self._sanitize_urdf(robot.urdf_path)
-        if urdf_path is None:
-            log.error(f"Robot {robot.name} has no URDF path defined")
-            raise ValueError(f"Robot {robot.name} requires urdf_path for Newton")
+        """Add a robot to the model builder.
 
-        # Parse URDF into builder
-        ret = builder.add_urdf(
+        Dispatches on asset format based on file extension: .xml → MJCF
+        (mjlab cartpole/Go1/G1/YAM etc.), .urdf → URDF (legacy assets).
+        MJCF support uses newton 1.2's ``parse_mjcf`` (still present but
+        not exposed as ``ModelBuilder.add_mjcf`` after the 1.2 refactor —
+        compat shim in ``_newton_compat.add_mjcf`` handles both APIs).
+        """
+        # Pick MJCF first if present (mjlab assets prefer mjcf_path),
+        # else fall back to URDF (legacy).
+        mjcf_path = getattr(robot, "mjcf_path", None)
+        urdf_path = self._sanitize_urdf(robot.urdf_path)
+
+        xform = wp.transform(
+            wp.vec3(*robot.default_position),
+            wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
+        )
+
+        if mjcf_path and isinstance(mjcf_path, str) and mjcf_path.endswith(".xml"):
+            # For MJCF: pass floating=None so the parser respects the joints
+            # already defined in the XML (e.g. mjlab cartpole has a slider
+            # joint that injecting a fixed/free root would clobber). URDF
+            # path below still uses fix_base_link since URDF doesn't natively
+            # model "base attaches via a constrained joint" — it's always
+            # fully fixed or fully floating.
+            add_mjcf(
+                builder,
+                mjcf_path,
+                xform=xform,
+                floating=None,
+                enable_self_collisions=robot.enabled_self_collisions,
+                ignore_inertial_definitions=False,
+                collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
+            )
+            return
+
+        if urdf_path is None:
+            log.error(f"Robot {robot.name} has no MJCF (.xml) or URDF path")
+            raise ValueError(
+                f"Robot {robot.name} requires mjcf_path (.xml) or urdf_path for Newton"
+            )
+
+        builder.add_urdf(
             urdf_path,
-            xform=wp.transform(
-                wp.vec3(*robot.default_position),
-                wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
-            ),
+            xform=xform,
             floating=not robot.fix_base_link,
             enable_self_collisions=robot.enabled_self_collisions,
             ignore_inertial_definitions=False,
@@ -2331,6 +2383,91 @@ class NewtonHandler(BaseSimHandler):
             forces = torch.zeros((net_force_np.shape[0], 3), device=self.device)
 
         return forces
+
+    def get_net_contact_forces_by_body(self) -> tuple[torch.Tensor, list[str]]:
+        """Per-env, per-body world-frame net contact force.
+
+        Reads the SolverMuJoCo (mujoco_warp) batched contact buffer directly —
+        contacts are stored in a single shared MuJoCo model with a ``worldid``
+        per contact, so this works for *all* envs at once (unlike the env-0
+        :meth:`get_contact_forces` / :class:`ContactForces` path). Used by the
+        downstream ContactSensor's Newton branch so sensor-dependent rewards
+        (feet_air_time / soft_landing / feet_slip / …) fire on the GPU path.
+
+        Returns:
+            ``(forces, body_names)`` where ``forces`` is ``(num_envs, nbody, 3)``
+            world-frame net contact force per MuJoCo body, and ``body_names`` is
+            the length-``nbody`` list of model body names (shared across envs).
+            On any failure returns zeros + names so callers stay finite.
+        """
+        sv = self._solver
+        mjm = getattr(sv, "mj_model", None) if sv is not None else None
+        if mjm is None:
+            return torch.zeros((self.num_envs, 0, 3), device=self.device), []
+        body_names = [mjm.body(i).name for i in range(mjm.nbody)]
+        out = torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device)
+        try:
+            import warp as wp
+            import mujoco_warp._src.support as _mjw_support
+
+            d = sv.mjw_data
+            m = sv.mjw_model
+            nacon = int(np.asarray(d.nacon.numpy()).reshape(-1)[0])
+            if nacon <= 0:
+                return out, body_names
+            dev = d.contact.geom.device
+            cids = wp.array(np.arange(nacon, dtype=np.int32), dtype=wp.int32, device=dev)
+            force_wp = wp.zeros(nacon, dtype=wp.spatial_vectorf, device=dev)
+            # World-frame 6D contact force; linear part is the first 3 comps.
+            _mjw_support.contact_force(m, d, cids, True, force_wp)
+            wp.synchronize()
+            lin = np.asarray(force_wp.numpy())[:, :3]
+            geom = np.asarray(d.contact.geom.numpy())[:nacon]
+            wid = np.asarray(d.contact.worldid.numpy())[:nacon]
+            gbody = np.asarray(m.geom_bodyid.numpy())
+            acc = np.zeros((self.num_envs, mjm.nbody, 3), dtype=np.float32)
+            for i in range(nacon):
+                w = int(wid[i])
+                if w < 0 or w >= self.num_envs:
+                    continue
+                g1, g2 = int(geom[i][0]), int(geom[i][1])
+                # action–reaction: geom2's body feels +F, geom1's body feels -F.
+                if 0 <= g2 < gbody.shape[0]:
+                    acc[w, int(gbody[g2])] += lin[i]
+                if 0 <= g1 < gbody.shape[0]:
+                    acc[w, int(gbody[g1])] -= lin[i]
+            out = torch.from_numpy(acc).to(self.device)
+        except Exception as exc:  # noqa: BLE001 — stay finite on any drift
+            log.warning(f"get_net_contact_forces_by_body failed ({type(exc).__name__}: {exc}); returning zeros")
+            return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
+        return out, body_names
+
+    def get_subtree_field(self, field: str) -> tuple[torch.Tensor, list[str]]:
+        """Per-env, per-body mujoco_warp subtree field (e.g. ``subtree_angmom``,
+        ``subtree_linvel``, ``subtree_com``).
+
+        mujoco_warp computes these on the batched data, so they are available
+        on Newton just like contacts. Used by the downstream BuiltinSensor's
+        Newton branch (whole-body angular momentum reward etc.).
+
+        Returns ``(values, body_names)`` where ``values`` is ``(num_envs, nbody, 3)``
+        and ``body_names`` is the length-``nbody`` model body-name list. Zeros on
+        any failure.
+        """
+        sv = self._solver
+        mjm = getattr(sv, "mj_model", None) if sv is not None else None
+        if mjm is None:
+            return torch.zeros((self.num_envs, 0, 3), device=self.device), []
+        body_names = [mjm.body(i).name for i in range(mjm.nbody)]
+        try:
+            arr = getattr(sv.mjw_data, field, None)
+            if arr is None:
+                return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
+            v = np.asarray(arr.numpy()).reshape(self.num_envs, mjm.nbody, 3)
+            return torch.from_numpy(v).to(self.device), body_names
+        except Exception as exc:  # noqa: BLE001
+            log.warning(f"get_subtree_field({field}) failed ({type(exc).__name__}: {exc}); returning zeros")
+            return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
 
     def close(self) -> None:
         """Clean up Newton resources."""

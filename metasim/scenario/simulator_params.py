@@ -44,6 +44,13 @@ class SimParamCfg:
     njmax: int | None = None
     # If None, Newton defaults to MuJoCo contacts when using SolverMuJoCo
     newton_use_mujoco_contacts: bool | None = None
+    # Newton SolverMuJoCo solver iterations. None = solver default. mjlab native
+    # passes (iterations=10, ls_iterations=20) for humanoid tasks.
+    newton_mujoco_iterations: int | None = None
+    newton_mujoco_ls_iterations: int | None = None
+    # Disable contact computation in Newton's SolverMuJoCo — mjlab uses this on
+    # contact-free tasks (cartpole) where rail/cart contacts would add noise.
+    newton_mujoco_disable_contacts: bool = False
 
     ## Resource management
     num_threads: int = 0
