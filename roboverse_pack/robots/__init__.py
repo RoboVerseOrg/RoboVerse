@@ -36,6 +36,10 @@ from .kinova_gen3_cfg import KinovaGen3Cfg
 from .kinova_gen3_robotiq_2f85 import KinovaGen3Robotiq2f85Cfg
 from .koch_mjcf_cfg import KochCfg
 from .lite6_mjcf_cfg import Lite6Cfg
+from .mjlab_cartpole_cfg import MjlabCartpoleCfg
+from .mjlab_g1_cfg import MjlabG1Cfg
+from .mjlab_go1_cfg import MjlabGo1Cfg
+from .mjlab_yam_cfg import MjlabYamCfg
 from .openarm_wuji_cfg import OpenarmBimanualWujiCfg, OpenarmWujiCfg
 from .psihand_left_cfg import PsihandLeftCfg
 from .psihand_right_cfg import PsihandRightCfg
