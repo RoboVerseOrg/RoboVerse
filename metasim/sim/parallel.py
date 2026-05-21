@@ -169,8 +169,16 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
 
+            # ``join_tensor_states`` requires per-worker TensorStates. The public
+            # ``SimHandler.get_states`` calls ``_get_states(env_ids=...)`` WITHOUT
+            # forwarding ``mode``, so workers would default to ``mode="dict"`` and
+            # return the legacy list/dict format → join would crash with
+            # "'list'/'dict' object has no attribute 'objects'". Force tensor mode
+            # on the workers; the public method still handles dict-mode conversion
+            # + caching on top, so this stays backward-compatible.
+            worker_kwargs = {**kwargs, "mode": "tensor"}
             for i in env_ids:
-                self.remotes[i].send(("get_states", (kwargs,)))
+                self.remotes[i].send(("get_states", (worker_kwargs,)))
             states_list = []
             for i in env_ids:
                 states = self.remotes[i].recv()
