@@ -26,6 +26,7 @@ limits) which is a separate task. See M-Plan task #62.
 from __future__ import annotations
 
 import math
+import os
 
 import mujoco
 import numpy as np
@@ -491,6 +492,23 @@ class _Go1TaskBase(ManagerBasedRVEnv):
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
             scenario.robots = []
+        elif scenario is not None and sim == "newton":
+            # CRITICAL: go1.xml has NO <actuator> elements (mjlab adds them at
+            # runtime). Without actuators (mj nu=0) the Newton SolverMuJoCo
+            # applies ZERO position-control torque -> go1 free-falls. The mujoco
+            # scene path patches PD actuators in; the Newton RobotCfg path must
+            # do the same. Point the go1 robot at an actuator-patched MJCF so
+            # nu=12 and the PD (kp=GO1_KP) actually holds the stance.
+            for r in scenario.robots:
+                mjcf = getattr(r, "mjcf_path", None)
+                if getattr(r, "name", None) == "go1" and mjcf:
+                    src = mjcf if os.path.isabs(mjcf) else os.path.abspath(mjcf)
+                    try:
+                        r.mjcf_path = patch_mjcf_with_pd_actuators(src, GO1_KP)
+                    except Exception as e:  # noqa: BLE001
+                        import warnings
+
+                        warnings.warn(f"go1 Newton actuator patch failed ({e}); go1 will not stand", RuntimeWarning)
         self.num_actions = 12
         # Cache joint qpos/qvel indices for fast write in _apply_action
         # (lazy — set on first call, since handler isn't constructed yet)
@@ -643,7 +661,18 @@ class _Go1TaskBase(ManagerBasedRVEnv):
         """
         target = self.action_manager.process(processed_action)
         if not hasattr(self.handler, "physics"):
-            self.handler.set_dof_targets(target)
+            # The action_manager produces targets in cfg (_GO1_JOINTS) order, but
+            # the Newton handler's tensor set_dof_targets applies them in
+            # get_joint_names(sort=True) (alphabetical) order. Without reordering,
+            # PD targets land on the WRONG joints -> go1 collapses. Build the
+            # cfg->sorted permutation once and reorder.
+            if getattr(self, "_cfg_to_sorted", None) is None:
+                sorted_bare = [n.split("/")[-1] for n in self.handler.get_joint_names("go1", sort=True)]
+                cfg_order = list(_GO1_JOINTS.joint_names)
+                self._cfg_to_sorted = torch.tensor(
+                    [cfg_order.index(b) for b in sorted_bare], device=target.device, dtype=torch.long
+                )
+            self.handler.set_dof_targets(target[..., self._cfg_to_sorted])
             return
         target_np = target.detach().cpu().numpy().reshape(-1)
         self.handler.physics.data.ctrl[:12] = target_np

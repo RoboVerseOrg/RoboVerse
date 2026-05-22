@@ -26,14 +26,22 @@ _GO1_JOINTS = (
     "RL_calf_joint",
 )
 
-# Default stance (matches velocity_go1_v2._GO1_DEFAULT_POSE_NP)
-_GO1_DEFAULTS = {
-    name: val
-    for name, val in zip(
-        _GO1_JOINTS,
-        [0.0, 0.9, -1.8] * 4,
-    )
-}
+# Default stance — MUST match mjlab INIT_STATE (go1_constants.py): thigh=0.9,
+# calf=-1.8, and asymmetric hips R_hip=+0.1 / L_hip=-0.1. The earlier symmetric
+# hip=0.0 here (Newton path never got the r7 ±0.1 fix) gave an unstable stance
+# that, together with the wrong 0.42 init height, made go1 collapse under PD on
+# Newton (couldn't even stand). FR/RR are the "R" legs, FL/RL the "L" legs.
+def _go1_default(name: str) -> float:
+    if "thigh" in name:
+        return 0.9
+    if "calf" in name:
+        return -1.8
+    if "hip" in name:
+        return 0.1 if name[1] == "R" else -0.1
+    return 0.0
+
+
+_GO1_DEFAULTS = {name: _go1_default(name) for name in _GO1_JOINTS}
 
 
 @configclass
@@ -72,5 +80,5 @@ class MjlabGo1Cfg(RobotCfg):
     default_joint_positions: dict[str, float] = _GO1_DEFAULTS
     default_joint_velocities: dict[str, float] = {n: 0.0 for n in _GO1_JOINTS}
     control_type: dict[str, Literal["position", "effort"]] = {n: "position" for n in _GO1_JOINTS}
-    default_pos: tuple[float, float, float] = (0.0, 0.0, 0.42)
+    default_pos: tuple[float, float, float] = (0.0, 0.0, 0.278)  # mjlab INIT_STATE height (was 0.42 -> 14cm drop -> collapse)
     default_rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
