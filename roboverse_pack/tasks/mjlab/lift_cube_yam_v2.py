@@ -95,7 +95,7 @@ def _yam_newton_objects() -> list:
     return [table, cube]
 
 
-_YAM_XML = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/i2rt_yam/xmls/yam.xml"
+_YAM_XML = "asset_zoo/robots/i2rt_yam/xmls/yam.xml"
 _YAM_JOINTS_NAMES: tuple[str, ...] = ("joint1", "joint2", "joint3", "joint4", "joint5", "joint6")
 _YAM_JOINTS = SceneEntityCfg("yam", joint_names=_YAM_JOINTS_NAMES)
 

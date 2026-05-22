@@ -84,11 +84,11 @@ Each item ≈ 30–90 min of focused edit; ≈ 1 day total for PickCube-v1.
 conda activate roboverse
 pip install mani_skill  # 3.0.1
 
-cd /home/ghr/projects/RoboVerse/RoboVerse
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+cd "$ROBOVERSE"  # repo root
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   python -m tools.maniskill_integration.run_sweep --n-steps 50 --seed 0
 ```
 
-Artefacts: `/home/ghr/projects/RoboVerse/reports/maniskill_integration/`
+Artefacts: `reports/maniskill_integration/`
 (`maniskill_summary.json`, plus `runs/<task>/maniskill.{npz,mp4}` and
 `summary.json`).

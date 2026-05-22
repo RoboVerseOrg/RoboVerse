@@ -77,14 +77,14 @@ python -c "from huggingface_hub import snapshot_download; \
                     local_dir='.', repo_type='dataset')"
 unzip -q embodiments.zip
 
-cd /home/ghr/projects/RoboVerse/MetaSim
+cd "$METASIM"
 git checkout fix/sapien3-passive-joints
 
-cd /home/ghr/projects/RoboVerse/RoboVerse
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+cd "$ROBOVERSE"  # repo root
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   python -m tools.robotwin_integration.aloha_demo
 ```
 
-Artefact: `/home/ghr/projects/RoboVerse/reports/robotwin_integration/
+Artefact: `reports/robotwin_integration/
 aloha_demo_summary.json` with the load summary (38 DoF / 38 active
 joints / 60 steps OK).

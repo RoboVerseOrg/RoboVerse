@@ -15,7 +15,7 @@ class MjlabYamCfg(RobotCfg):
     """YAM 6-DOF arm. name='yam' matches v2 task SceneEntityCfg."""
 
     name: str = "yam"
-    mjcf_path: str = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/i2rt_yam/xmls/yam.xml"
+    mjcf_path: str = "roboverse_data/robots/mjlab/asset_zoo/robots/i2rt_yam/xmls/yam.xml"
     urdf_path: str = mjcf_path
     usd_path: str = mjcf_path
 

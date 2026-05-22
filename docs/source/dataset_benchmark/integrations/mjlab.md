@@ -41,10 +41,13 @@ swingup).
 
 ## Asset layout
 
-mjlab is treated as an external sibling clone. The locator searches
-`~/projects/mjlab` and `/home/ghr/projects/mjlab`, or you can set
-`MJLAB_REPO=/path/to/mjlab`. See
-`roboverse_pack/tasks/mjlab/_locator.py`.
+MJCF assets resolve in two ways (see `roboverse_pack/tasks/mjlab/_locator.py`):
+
+1. **Local mjlab clone** — `~/projects/mjlab`, or set `MJLAB_REPO=/path/to/mjlab`.
+   Used for development so the canonical mjlab bytes drive parity checks.
+2. **HuggingFace fallback** — with no clone present, the referenced XML and its
+   meshes are downloaded on demand from `RoboVerseOrg/roboverse_data` under
+   `robots/mjlab/…`. This is what lets a fresh checkout run without cloning mjlab.
 
 MJCFs we currently consume:
 
@@ -147,27 +150,27 @@ PR will add a `self_collisions = "mujoco_default"` sentinel.
 
 ```bash
 conda activate roboverse
-cd /home/ghr/projects/RoboVerse/RoboVerse
+cd "$ROBOVERSE"  # repo root
 
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   python -m tools.mjlab_integration.runner --no-render --n-steps 200          # loader-only
 
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   MUJOCO_GL=egl \
   python -m tools.mjlab_integration.full_runner --n-steps 200                 # full pipeline
 
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   MUJOCO_GL=egl \
   python -m tools.mjlab_integration.render_sweep --frame-stride 3             # side-by-side mp4
 
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse:/home/ghr/projects/RoboVerse/MetaSim \
+PYTHONPATH="$ROBOVERSE:$METASIM" \
   python -m tools.mjlab_integration.reward_sweep                              # reward parity
 
-cd /home/ghr/projects/RoboVerse/MetaSim
+cd "$METASIM"
 MUJOCO_GL=egl pytest metasim/test/test_mujoco_scene_and_attach.py -v          # regression tests
 ```
 
-Artefacts land at `/home/ghr/projects/RoboVerse/reports/mjlab_integration/`
+Artefacts land at `reports/mjlab_integration/`
 (`summary_full.json`, `reward_summary.json`, `render_summary.json`, plus
 `runs/<task>/qpos_compare_full.png` / `side_by_side_full.mp4` /
 `reward_compare.png`).

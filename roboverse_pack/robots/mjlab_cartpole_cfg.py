@@ -21,7 +21,7 @@ class MjlabCartpoleCfg(RobotCfg):
     # in roboverse_pack/tasks/mjlab/cartpole_v2.py — that way the same task
     # works on both backends (mujoco scene-MJCF path + newton RobotCfg path).
     name: str = "cartpole"
-    mjcf_path: str = "/home/ghr/projects/mjlab/src/mjlab/tasks/cartpole/cartpole.xml"
+    mjcf_path: str = "roboverse_data/robots/mjlab/tasks/cartpole/cartpole.xml"
     urdf_path: str = mjcf_path  # mjcf only
     usd_path: str = mjcf_path
 

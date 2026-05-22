@@ -110,7 +110,7 @@ _G1_DEFAULT_POSE_NP = np.array(
     dtype=np.float64,
 )
 
-_G1_XML = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/unitree_g1/xmls/g1.xml"
+_G1_XML = "asset_zoo/robots/unitree_g1/xmls/g1.xml"
 
 # All 29 actuated joints (excludes the floating-base freejoint).
 _G1_ALL_JOINT_NAMES: tuple[str, ...] = (

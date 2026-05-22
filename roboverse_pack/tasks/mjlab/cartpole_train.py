@@ -103,7 +103,7 @@ class _MjlabCartpoleTrainBase(BaseTaskEnv):
 
     # ---- spaces ----
     # mjlab cartpole obs: 5D, term order = [cart_pos, pole_angle_cos, pole_angle_sin, cart_vel, pole_vel]
-    # See /home/ghr/projects/mjlab/src/mjlab/tasks/cartpole/cartpole_env_cfg.py:157-174
+    # See mjlab/src/mjlab/tasks/cartpole/cartpole_env_cfg.py:157-174
     #   "cart_pos":   joint_pos_rel(cart_cfg)   = qpos[slider] - default = qpos[0]   (1D)
     #   "pole_angle": pole_angle_cos_sin(hinge) = [cos(qpos[1]), sin(qpos[1])]       (2D)
     #   "cart_vel":   joint_vel_rel(cart_cfg)   = qvel[slider] = qvel[0]             (1D)

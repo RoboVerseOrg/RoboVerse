@@ -30,7 +30,7 @@ def _resolve_robotwin_assets() -> Path:
         p = Path(env).expanduser().resolve()
         if p.exists():
             return p
-    for c in (Path.home() / "projects" / "robotwin" / "assets", Path("/home/ghr/projects/robotwin/assets")):
+    for c in (Path.home() / "projects" / "robotwin" / "assets",):
         if (c / "embodiments" / "aloha-agilex" / "urdf").exists():
             return c
     raise FileNotFoundError(

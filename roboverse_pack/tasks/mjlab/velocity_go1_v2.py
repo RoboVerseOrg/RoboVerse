@@ -83,7 +83,7 @@ from .mdp.sensors import (
 )
 from .mdp.terrain import TerrainLevelsCfg, TerrainLevelsManager
 
-_GO1_XML = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/unitree_go1/xmls/go1.xml"
+_GO1_XML = "asset_zoo/robots/unitree_go1/xmls/go1.xml"
 
 # Selector for all 12 actuated joints (regex). Floating-base freejoint is
 # excluded — it's not control-able.

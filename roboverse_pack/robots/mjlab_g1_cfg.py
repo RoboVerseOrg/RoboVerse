@@ -259,7 +259,7 @@ class MjlabG1Cfg(RobotCfg):
     """G1 humanoid — exact mjlab actuator + KNEES_BENT init pose. name='g1'."""
 
     name: str = "g1"
-    mjcf_path: str = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/unitree_g1/xmls/g1.xml"
+    mjcf_path: str = "roboverse_data/robots/mjlab/asset_zoo/robots/unitree_g1/xmls/g1.xml"
     urdf_path: str = mjcf_path
     usd_path: str = mjcf_path
 

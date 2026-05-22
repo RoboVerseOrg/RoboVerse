@@ -45,7 +45,7 @@ class MjlabGo1Cfg(RobotCfg):
     """
 
     name: str = "go1"
-    mjcf_path: str = "/home/ghr/projects/mjlab/src/mjlab/asset_zoo/robots/unitree_go1/xmls/go1.xml"
+    mjcf_path: str = "roboverse_data/robots/mjlab/asset_zoo/robots/unitree_go1/xmls/go1.xml"
     urdf_path: str = mjcf_path
     usd_path: str = mjcf_path
 
