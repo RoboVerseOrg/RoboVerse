@@ -727,10 +727,26 @@ class NewtonHandler(BaseSimHandler):
         for env_id in range(self.num_envs):
             for obj in (*self.robots, *self.objects):
                 joint_map = {}
-                for joint_idx in self._get_joint_indices(env_id, obj.name):
+                indices = list(self._get_joint_indices(env_id, obj.name))
+                for joint_idx in indices:
                     joint_name = self._model.joint_key[joint_idx]
                     if joint_name not in joint_map:
                         joint_map[joint_name] = joint_idx
+                # Additive bare-name aliases (capability-preserving): callers
+                # (RobotCfg actuators, _get_initial_states dof_pos, obs/action
+                # managers) often use the bare joint name ("FR_hip_joint") while
+                # Newton registers the full scoped MJCF path
+                # ("go1/worldbody/.../FR_hip_joint"). Alias each UNAMBIGUOUS bare
+                # suffix to its index so bare-name lookups resolve. Full-path keys
+                # are untouched -> zero change for callers using scoped names.
+                bare_counts: dict[str, int] = {}
+                for joint_idx in indices:
+                    bare = self._model.joint_key[joint_idx].split("/")[-1]
+                    bare_counts[bare] = bare_counts.get(bare, 0) + 1
+                for joint_idx in indices:
+                    bare = self._model.joint_key[joint_idx].split("/")[-1]
+                    if bare_counts[bare] == 1 and bare not in joint_map:
+                        joint_map[bare] = joint_idx
                 if joint_map:
                     self._obj_joint_name_cache[env_id][obj.name] = joint_map
 
@@ -1060,10 +1076,26 @@ class NewtonHandler(BaseSimHandler):
         joint_map: dict[str, int] = {}
         if self._model is None:
             return joint_map
-        for joint_idx in self._get_joint_indices(env_id, obj_name):
+        joint_indices = list(self._get_joint_indices(env_id, obj_name))
+        for joint_idx in joint_indices:
             joint_name = self._model.joint_key[joint_idx]
             if joint_name not in joint_map:
                 joint_map[joint_name] = joint_idx
+        # Additive bare-name aliases (capability-preserving): callers (RobotCfg
+        # actuators, _get_initial_states dof_pos, obs/action managers) often use
+        # the bare joint name ("FR_hip_joint"), while Newton registers the full
+        # scoped MJCF path ("go1/worldbody/.../FR_hip_joint"). Alias each
+        # UNAMBIGUOUS bare suffix to its index so bare-name lookups resolve.
+        # Full-path keys are left untouched -> zero change for callers that
+        # already pass the scoped name.
+        bare_counts: dict[str, int] = {}
+        for joint_idx in joint_indices:
+            bare = self._model.joint_key[joint_idx].split("/")[-1]
+            bare_counts[bare] = bare_counts.get(bare, 0) + 1
+        for joint_idx in joint_indices:
+            bare = self._model.joint_key[joint_idx].split("/")[-1]
+            if bare_counts[bare] == 1 and bare not in joint_map:
+                joint_map[bare] = joint_idx
         self._obj_joint_name_cache[env_id][obj_name] = joint_map
         return joint_map
 
