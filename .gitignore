@@ -128,3 +128,6 @@ get_started/exp52_*/
 # local-only: kujiale interior scene USDs (not part of upstream assets)
 roboverse_pack/asset/*.usda
 training_logs/
+
+# local-only: report-hub publish wrappers (reports live in the external report repo)
+tools/publish_report*.sh
