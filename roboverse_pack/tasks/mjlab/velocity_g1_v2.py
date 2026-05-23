@@ -415,7 +415,25 @@ class _G1CurriculumCfg:
     )
 
 
-def _g1_scenario() -> ScenarioCfg:
+def _g1_rough_ground():
+    """Continuous random-noise rough terrain (mjlab-like) via scenario.ground.
+
+    Same continuous-noise approach as go1 (zero-slope ``SlopeCfg`` + ``random``
+    → ``random_uniform_terrain``); ``vertical_scale=0.005`` so the ±0.05 m noise
+    doesn't discretize to 0.
+    """
+    from metasim.scenario.grounds import GroundCfg, SlopeCfg
+
+    g = GroundCfg(width=12.0, length=12.0, vertical_scale=0.005)
+    for key in g.elements:
+        g.elements[key].clear()
+    g.elements["slope"].append(
+        SlopeCfg(origin=[0.0, 0.0], size=[12.0, 12.0], slope=0.0, random=True, platform_size=0.5)
+    )
+    return g
+
+
+def _g1_scenario(rough: bool = False) -> ScenarioCfg:
     # Smaller dt + larger decimation for 29-DOF humanoid stability under explicit Euler
     patched_xml = patch_mjcf_with_pd_actuators(mjlab_asset(_G1_XML), G1_KP)
     return ScenarioCfg(
@@ -435,7 +453,8 @@ def _g1_scenario() -> ScenarioCfg:
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=True,
+        ground=_g1_rough_ground() if rough else None,
+        add_default_ground=not rough,
     )
 
 
@@ -621,6 +640,7 @@ class VelocityRoughG1Task(_G1TaskBase):
     scan).
     """
 
+    scenario = _g1_scenario(rough=True)
     _obs_cfg_cls = _G1RoughObsCfg
     _use_terrain_scan = True
 
