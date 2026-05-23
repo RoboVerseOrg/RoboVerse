@@ -476,7 +476,28 @@ class _Go1CurriculumCfg:
 # ---------------------------------------------------------------------------
 
 
-def _go1_scenario() -> ScenarioCfg:
+def _go1_rough_ground():
+    """Continuous random-noise rough terrain (mjlab-like) via scenario.ground.
+
+    A zero-slope ``SlopeCfg`` with ``random=True`` triggers
+    ``random_uniform_terrain`` (±0.05 m noise over the whole field) — a
+    continuous heightfield, unlike the sparse obstacle/stone primitives.
+    """
+    from metasim.scenario.grounds import GroundCfg, SlopeCfg
+
+    # vertical_scale must be fine enough that the ±0.05 m noise (step 0.005)
+    # doesn't discretize to 0 (the default 0.1 would → ZeroDivisionError in
+    # random_uniform_terrain). 0.005 = 5 mm height resolution.
+    g = GroundCfg(width=12.0, length=12.0, vertical_scale=0.005)
+    for key in g.elements:
+        g.elements[key].clear()
+    g.elements["slope"].append(
+        SlopeCfg(origin=[0.0, 0.0], size=[12.0, 12.0], slope=0.0, random=True, platform_size=0.5)
+    )
+    return g
+
+
+def _go1_scenario(rough: bool = False) -> ScenarioCfg:
     # Patch the MJCF at load time to add 12 <position> actuators with mjlab PD gains.
     # Also force smaller dt (0.002 = MuJoCo's default) since the patched
     # XML's stiff PD (kp ≈ 16-36) is numerically unstable under explicit
@@ -492,7 +513,10 @@ def _go1_scenario() -> ScenarioCfg:
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=True,
+        # Rough: MetaSim builds a continuous random-noise hfield from
+        # scenario.ground (native terrain path). Flat keeps the default plane.
+        ground=_go1_rough_ground() if rough else None,
+        add_default_ground=not rough,
     )
 
 
@@ -743,5 +767,6 @@ class VelocityRoughGo1Task(_Go1TaskBase):
     remaining step for full rough 1:1.
     """
 
+    scenario = _go1_scenario(rough=True)
     _obs_cfg_cls = _Go1RoughObsCfg
     _use_terrain_scan = True
