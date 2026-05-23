@@ -14,7 +14,7 @@ and scripts/test_mjlab_v2_backward_compat.py):
 
 from __future__ import annotations
 
-from ._passthrough import MjlabPassthroughEnv, register_mjlab_passthrough_tasks
+from ._passthrough import register_mjlab_passthrough_tasks
 from .cartpole import MjlabCartpoleBalance, MjlabCartpoleSwingup
 from .cartpole_train import MjlabCartpoleBalanceTrain, MjlabCartpoleSwingupTrain
 

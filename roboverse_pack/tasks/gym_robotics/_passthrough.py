@@ -6,8 +6,9 @@ from typing import Any
 
 
 def _ensure_imported():
-    import gymnasium_robotics
     import gymnasium as gym
+    import gymnasium_robotics
+
     gym.register_envs(gymnasium_robotics)
     return gymnasium_robotics
 
@@ -15,6 +16,7 @@ def _ensure_imported():
 def register_gymnasium_robotics_passthrough(prefix: str = "GymRobotics/") -> list[str]:
     """Register all gymnasium-robotics envs under GymRobotics/<env_id> namespace."""
     from gymnasium.envs.registration import register, registry
+
     _ensure_imported()
     import gymnasium as gym
 
@@ -47,4 +49,5 @@ def register_gymnasium_robotics_passthrough(prefix: str = "GymRobotics/") -> lis
 def _make_env(base_id: str, **kwargs: Any):
     _ensure_imported()
     import gymnasium as gym
+
     return gym.make(base_id, **kwargs)

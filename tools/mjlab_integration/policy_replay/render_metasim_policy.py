@@ -14,10 +14,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import rootutils
 import torch
 
 os.environ.setdefault("MUJOCO_GL", "egl")
-sys.path.insert(0, "/home/ghr/projects/RoboVerse/RoboVerse")
+rootutils.setup_root(__file__, pythonpath=True)
 
 import roboverse_pack  # noqa: F401  register tasks
 from metasim.task.registry import get_task_class

@@ -11,13 +11,13 @@
 
 set -uo pipefail
 
-source /home/ghr/miniconda3/etc/profile.d/conda.sh
+source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate roboverse
 
-REPO="/home/ghr/projects/RoboVerse/RoboVerse"
-MJLAB="/home/ghr/projects/mjlab"
+REPO="${ROBOVERSE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../.. && pwd)}"
+MJLAB="${MJLAB_DIR:-$HOME/projects/mjlab}"
 LOG_ROOT="$REPO/training_logs/rsl_rl"
-RUNS="/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs"
+RUNS="${ROBOVERSE_REPORTS_DIR:-$REPO/outputs/reports}/mjlab_integration/runs"
 RENDER_SCRIPT="$REPO/tools/mjlab_integration/policy_replay/render_one_task.sh"
 
 # Tunable per-task. Format: "task_id|experiment_name|max_iter|num_envs|steps|extra_args"

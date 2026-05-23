@@ -17,14 +17,17 @@ manipulation (PickCube etc.), and 100+ envs total.
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
+
+from loguru import logger as log
 
 
 def _ensure_maniskill_imported():
     """Triggers ManiSkill envs registration."""
     os.environ.setdefault("MUJOCO_GL", "egl")
     import mani_skill
-    import mani_skill.envs  # noqa: F401 — triggers env registry side-effect
+    import mani_skill.envs
+
     return mani_skill
 
 
@@ -35,6 +38,7 @@ def list_maniskill3_envs() -> list[str]:
     """Return all ManiSkill 3-registered env IDs (after triggering import)."""
     _ensure_maniskill_imported()
     import gymnasium as gym
+
     ids = []
     for spec in gym.envs.registry.values():
         ep = spec.entry_point
@@ -50,17 +54,19 @@ def register_maniskill3_passthrough(prefix: str = "ManiSkill3/") -> list[str]:
     Idempotent. Returns list of registered (or already-present) env ids.
     """
     from gymnasium.envs.registration import register, registry
-    _ensure_maniskill_imported()
-    import gymnasium as gym
 
+    _ensure_maniskill_imported()
     # Find all mani_skill envs. ManiSkill 3 wraps with functools.partial(mani_skill.envs.make).
     # Identify by the additional_wrappers field which references mani_skill, or by name pattern.
     import functools
+
+    import gymnasium as gym
+
     base_ids = []
     for spec in list(gym.envs.registry.values()):
         is_ms = False
         # 1. Check additional_wrappers (ManiSkill always wraps with MSTimeLimit)
-        for w in (getattr(spec, "additional_wrappers", None) or []):
+        for w in getattr(spec, "additional_wrappers", None) or []:
             if "mani_skill" in str(getattr(w, "entry_point", "")):
                 is_ms = True
                 break
@@ -82,16 +88,16 @@ def register_maniskill3_passthrough(prefix: str = "ManiSkill3/") -> list[str]:
         try:
             register(
                 id=ns_id,
-                entry_point=f"roboverse_pack.tasks.maniskill._passthrough_v3:_make_maniskill_env",
+                entry_point="roboverse_pack.tasks.maniskill._passthrough_v3:_make_maniskill_env",
                 kwargs={"base_id": base_id},
             )
             registered.append(ns_id)
         except Exception as e:
             failed.append((ns_id, str(e)))
     if failed:
-        print(f"[maniskill_passthrough] {len(failed)} registration failures:")
+        log.warning(f"[maniskill_passthrough] {len(failed)} registration failures:")
         for ns_id, err in failed[:3]:
-            print(f"  {ns_id}: {err}")
+            log.warning(f"  {ns_id}: {err}")
     return registered
 
 
@@ -99,4 +105,5 @@ def _make_maniskill_env(base_id: str, **kwargs: Any):
     """Factory for namespaced env — just gym.make the underlying base id."""
     _ensure_maniskill_imported()
     import gymnasium as gym
+
     return gym.make(base_id, **kwargs)

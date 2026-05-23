@@ -18,11 +18,14 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import rootutils
 import torch
 
 os.environ.setdefault("MUJOCO_GL", "egl")
-sys.path.insert(0, "/home/ghr/projects/RoboVerse/RoboVerse")
-sys.path.insert(0, "/home/ghr/projects/mjlab/src")
+rootutils.setup_root(__file__, pythonpath=True)
+_MJLAB = os.environ.get("MJLAB_DIR", os.path.expanduser("~/projects/mjlab"))
+sys.path.insert(0, os.path.join(_MJLAB, "src"))
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 # Import mjlab's reward + tolerance helpers
 from mjlab.tasks.cartpole.cartpole_env_cfg import (
@@ -125,7 +128,7 @@ def main() -> int:
     print("=" * 70)
     # Load a trajectory.npz captured from a real mjlab run and compute MY reward
     # at each step. Then compare to what mjlab's RewardManager would log.
-    traj_path = "/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs/mjlab.cartpole_balance/trajectory.npz"
+    traj_path = os.path.join(_REPORTS, "mjlab_integration/runs/mjlab.cartpole_balance/trajectory.npz")
     if not Path(traj_path).exists():
         print(f"  [skip] no trajectory at {traj_path}")
         return 0

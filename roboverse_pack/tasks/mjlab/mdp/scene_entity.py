@@ -40,12 +40,14 @@ class SceneEntityCfg:
 
     @property
     def joint_ids(self) -> torch.Tensor:
+        """Return the resolved joint indices, raising if not yet resolved."""
         if self._joint_ids is None:
             raise RuntimeError(f"SceneEntityCfg({self.name!r}).joint_ids accessed before resolve_joint_ids() called")
         return self._joint_ids
 
     @property
     def body_ids(self) -> torch.Tensor:
+        """Return the resolved body indices, raising if not yet resolved."""
         if self._body_ids is None:
             raise RuntimeError(f"SceneEntityCfg({self.name!r}).body_ids accessed before resolve_body_ids() called")
         return self._body_ids
@@ -103,8 +105,9 @@ def _entity_is_registered_robot(env, name: str) -> bool:
 
 
 def _global_mujoco_joint_names(env) -> list[str]:
-    """Sorted-by-id MuJoCo joint name list. Used for scene-MJCF assets
-    that aren't registered as RobotCfg entities.
+    """Return the MuJoCo joint names sorted by id.
+
+    Used for scene-MJCF assets that aren't registered as RobotCfg entities.
     """
     import mujoco
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -15,6 +16,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 _TXT_PATTERN = __import__("re").compile(
     r"\[iter\s+(\d+)/\d+\]\s+steps=\s*\d+\s+step_r=([\d.\-]+)\s+ep_r=\s*([\d.\-nan]+)"
@@ -68,13 +71,15 @@ def main(argv=None) -> int:
         nargs="+",
         default=[
             "/tmp/metasim_train_cartpole_v3.log_jsonl",  # backed up earlier; may not exist
-            "/home/ghr/projects/RoboVerse/RoboVerse/training_logs/metasim_native/mjlab_cartpole_balance_train/training_log.jsonl",
+            os.path.join("training_logs", "metasim_native/mjlab_cartpole_balance_train/training_log.jsonl"),
         ],
     )
     p.add_argument("--labels", nargs="+", default=None, help="Per-log display labels. If None, derives from path.")
     p.add_argument(
         "--out",
-        default="/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs/mjlab.cartpole_balance/metasim_native_training_curve.png",
+        default=os.path.join(
+            _REPORTS, "mjlab_integration/runs/mjlab.cartpole_balance/metasim_native_training_curve.png"
+        ),
     )
     p.add_argument("--mjlab-reference", type=float, default=49.93)
     p.add_argument("--title", default="MetaSim-native cartpole_balance training (in-framework PPO)")

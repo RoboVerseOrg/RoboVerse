@@ -26,6 +26,8 @@ import torch
 
 
 class VelocityStage(TypedDict, total=False):
+    """One velocity-curriculum stage (step threshold and command ranges)."""
+
     step: int
     lin_vel_x: tuple[float, float]
     lin_vel_y: tuple[float, float]
@@ -68,6 +70,8 @@ def commands_vel(
 
 
 class RewardStage(TypedDict):
+    """One reward-curriculum stage (step threshold and target weight)."""
+
     step: int
     weight: float
 
@@ -110,7 +114,7 @@ def terrain_levels_vel(
 
     Walks the same logic as mjlab:
       ``move_up   = distance > row_size``
-      ``move_down = distance < fail_factor × command_norm × episode_length``
+      ``move_down = distance < fail_factor * command_norm * episode_length``
 
     Returns dict logged under ``Curriculum/terrain_levels/{mean,max}``.
     """
@@ -142,7 +146,7 @@ def terrain_levels_vel(
         if str(e):
             import warnings as _w
 
-            _w.warn(f"terrain_levels_vel: {type(e).__name__}: {e}", RuntimeWarning)
+            _w.warn(f"terrain_levels_vel: {type(e).__name__}: {e}", RuntimeWarning, stacklevel=2)
         return None
 
     # Distance from this env's origin (the position when it was last reset).

@@ -129,6 +129,7 @@ class PickCubeV1DenseTask(DenseRLResetMixin, PickCubeV1Task):
 
     def _reward(self, env_states):
         import torch
+
         from metasim.utils.math import quat_rotate
 
         rs = env_states.robots["franka"]

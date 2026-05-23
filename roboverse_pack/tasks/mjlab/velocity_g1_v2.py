@@ -184,9 +184,10 @@ def reset_g1_default_pose(
 
 @configclass
 class _G1ObsCfg:
-    """mjlab velocity actor obs (G1): base_lin_vel(3) + base_ang_vel(3) +
-    projected_gravity(3) + joint_pos(29) + joint_vel(29) + actions(29) +
-    command(3) = 99D, same term order as mjlab ``velocity_env_cfg``.
+    """mjlab velocity actor obs (G1), 99D in mjlab ``velocity_env_cfg`` term order.
+
+    Terms: base_lin_vel(3) + base_ang_vel(3) + projected_gravity(3) +
+    joint_pos(29) + joint_vel(29) + actions(29) + command(3) = 99D.
     (Tracking tasks inherit this velocity obs; their motion-command obs is a
     separate 1:1 follow-up.)
     """
@@ -412,7 +413,9 @@ def _g1_scenario() -> ScenarioCfg:
 
 @configclass
 class VelocityFlatG1EnvCfg(ManagerBasedRVEnvCfg):
-    decimation = 4  # matches scenario.decimation (mjlab parity: dt=0.005 × 4 = 20ms = 50Hz)
+    """Manager-based env config for G1 velocity tracking on flat ground."""
+
+    decimation = 4  # matches scenario.decimation (mjlab parity: dt=0.005 x 4 = 20ms = 50Hz)
     max_episode_length_s = 20.0
     is_finite_horizon = False
     observation_group_names = ("actor", "critic")
@@ -594,8 +597,10 @@ _G1_TRACKING_BODY_NAMES: tuple[str, ...] = (
 
 @configclass
 class _G1TrackingRewardsCfg(_G1RewardsCfg):
-    """Tracking-flat-G1 reward set = base G1 velocity rewards + 6 motion-tracking
-    anchor/body error terms (mjlab tracking_env_cfg.rewards).
+    """Tracking-flat-G1 reward set.
+
+    Base G1 velocity rewards + 6 motion-tracking anchor/body error terms
+    (mjlab tracking_env_cfg.rewards).
     """
 
     track_anchor_pos = RewTerm(
@@ -682,8 +687,7 @@ import os as _os
 
 @register_task("mjlab.tracking_flat_g1_v2")
 class TrackingFlatG1Task(_G1TrackingTaskBase):
-    """G1 motion-tracking on flat ground. Uses MotionCommand + 6 motion_*
-    rewards.
+    """G1 motion-tracking on flat ground, using MotionCommand + 6 motion_* rewards.
 
     Motion file is selected by env var ``MJLAB_G1_MOTION_FILE`` (path to
     npz with mjlab MotionLoader schema). If the env var is unset and
@@ -694,6 +698,7 @@ class TrackingFlatG1Task(_G1TrackingTaskBase):
 
     @property
     def motion_file(self) -> str | None:  # type: ignore[override]
+        """Resolve the motion npz path from env var, then the /tmp fallback, else None."""
         env_path = _os.environ.get("MJLAB_G1_MOTION_FILE")
         if env_path and _os.path.exists(env_path):
             return env_path
@@ -705,9 +710,10 @@ class TrackingFlatG1Task(_G1TrackingTaskBase):
 
 @register_task("mjlab.tracking_flat_g1_no_state_est_v2")
 class TrackingFlatG1NoStateEstTask(_G1TrackingTaskBase):
-    """``tracking_flat_g1_v2`` no-state-est variant — drops base lin/ang
-    velocity from actor obs (matches mjlab's asymmetric observation
-    setup). Currently inherits the symmetric obs from the base — this
-    matches the existing observation_group_names structure; mjlab's
+    """``tracking_flat_g1_v2`` no-state-est variant.
+
+    Drops base lin/ang velocity from actor obs (matches mjlab's asymmetric
+    observation setup). Currently inherits the symmetric obs from the base -
+    this matches the existing observation_group_names structure; mjlab's
     actor-side noise on state-est is the next refinement.
     """

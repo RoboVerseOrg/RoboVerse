@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -23,6 +24,8 @@ from . import inventory as inv
 from .diff import diff_rollouts
 from .plot import plot_trajectory_pair
 from .raw_rollout import RolloutResult, raw_mujoco_rollout, sinusoid_ctrl, zero_ctrl
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 
 def _cartpole_scenario(task: inv.MjlabTask):
@@ -351,7 +354,7 @@ def _align_by_jointname(a: RolloutResult, b: RolloutResult):
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "mjlab_integration"))
     p.add_argument("--n-steps", type=int, default=200)
     p.add_argument("--tasks", nargs="*")
     args = p.parse_args(argv)

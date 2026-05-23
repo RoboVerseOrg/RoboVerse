@@ -13,5 +13,6 @@ This package mirrors the mjlab/maniskill harness layout:
 
 Full task ports (per-task asset wiring + reward replication) are
 deferred — see the report at
-/home/ghr/projects/RoboVerse/reports/robotwin_integration/index.html.
+`outputs/reports/robotwin_integration/index.html` (overridable via the
+`ROBOVERSE_REPORTS_DIR` env var).
 """

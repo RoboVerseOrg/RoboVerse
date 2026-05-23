@@ -45,10 +45,10 @@ control + ELU + init_std=1.0 to match mjlab's RSL-RL setup.
 ## Quick start
 
 ```bash
-source /home/ghr/miniconda3/etc/profile.d/conda.sh && conda activate roboverse
+source "$(conda info --base)/etc/profile.d/conda.sh" && conda activate roboverse
 
 # (1) Action-replay one task. Uses mjlab public ckpt for Tracking-Flat-G1.
-cd /home/ghr/projects/RoboVerse/RoboVerse/tools/mjlab_integration/policy_replay
+cd tools/mjlab_integration/policy_replay
 STEPS=400 HEIGHT=360 WIDTH=640 bash render_one_task.sh \
   Mjlab-Tracking-Flat-Unitree-G1 \
   /tmp/mjlab_cache/demo_ckpt.pt \
@@ -63,20 +63,22 @@ NCONMAX=1024 STEPS=400 bash render_one_task.sh \
 bash train_all_missing.sh
 
 # (3) MetaSim-native train of cartpole_balance (no mjlab runtime).
-PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse MUJOCO_GL=egl \
+PYTHONPATH=$(pwd) MUJOCO_GL=egl \
   python -m tools.mjlab_integration.policy_replay.train_metasim_cartpole \
     --task mjlab.cartpole_balance_train \
     --num-envs 64 --total-iter 4000 --num-steps 32 \
     --activation elu --init-std 1.0 --obs-norm 0 --lr-schedule adaptive
 
 # Plot the curve:
-python /home/ghr/projects/RoboVerse/RoboVerse/tools/mjlab_integration/policy_replay/plot_metasim_curve.py
+python tools/mjlab_integration/policy_replay/plot_metasim_curve.py
 ```
 
 ## Output layout
 
+Report outputs default to `outputs/reports/` (override with `ROBOVERSE_REPORTS_DIR`):
+
 ```
-/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs/<task>/
+outputs/reports/mjlab_integration/runs/<task>/
   ├── mjlab_native.mp4              # left side
   ├── metasim_replay.mp4            # right side
   ├── policy_side_by_side.mp4       # stitched
@@ -86,7 +88,7 @@ python /home/ghr/projects/RoboVerse/RoboVerse/tools/mjlab_integration/policy_rep
   ├── training_curve.png            # if mjlab native trained the task here
   └── metasim_native_training_curve.png  # if MetaSim-native trained too
 
-/home/ghr/projects/RoboVerse/RoboVerse/training_logs/
+training_logs/
   ├── rsl_rl/<task>/<timestamp>/    # mjlab RSL-RL checkpoints + tensorboard
   └── metasim_native/<task>/        # MetaSim-native CleanRL training_log.jsonl + agent_final.pt
 ```
@@ -96,7 +98,7 @@ python /home/ghr/projects/RoboVerse/RoboVerse/tools/mjlab_integration/policy_rep
 - **Conda env**: `roboverse`. Most scripts source it automatically (`render_one_task.sh`).
 - **MUJOCO_GL=egl** required for headless rendering. Scripts set it.
 - **GPU**: mjlab uses mujoco-warp (heavy GPU). MetaSim-native trainer uses CPU mujoco + GPU policy (light). Run mjlab training serially, then MetaSim-native concurrently.
-- **PYTHONPATH** must include `/home/ghr/projects/RoboVerse/RoboVerse` for the `tools.mjlab_integration.*` modules to resolve.
+- **PYTHONPATH** must include the repo root (e.g. `PYTHONPATH=$(pwd)`) for the `tools.mjlab_integration.*` modules to resolve.
 - **Wandb**: disabled via `--agent.logger tensorboard`. If you don't pass that, training crashes with "No API key configured".
 - **Tracking tasks**: training needs `--env.commands.motion.motion-file /path/to/motion.npz`. `train_all_missing.sh` passes this automatically.
 - **Rough terrain rendering**: needs `NCONMAX=1024` (mujoco-warp default of 35 overflows).
@@ -104,7 +106,7 @@ python /home/ghr/projects/RoboVerse/RoboVerse/tools/mjlab_integration/policy_rep
 
 ## See also
 
-- Main report: `/home/ghr/projects/RoboVerse/reports/roboverse_overview/doc/INT_MJLAB_PARITY.html`
+- Main report: `outputs/reports/roboverse_overview/doc/INT_MJLAB_PARITY.html` (override base dir with `ROBOVERSE_REPORTS_DIR`)
   — full results table + side-by-side videos + training curves + the "matches original repo" honest discussion.
 - Task ports: `roboverse_pack/tasks/mjlab/cartpole_train.py` (the trainable variant; the existing
   `cartpole.py` is physics-only thin wrapper used for parity-test only).

@@ -125,7 +125,7 @@ class TerrainLevelsCfg:
     """Half-distance the robot needs to walk to advance a level (mjlab
     uses ``terrain_generator.size[0] / 2``)."""
     fail_factor: float = 0.5
-    """Robots that walked less than ``fail_factor × commanded_dist`` go
+    """Robots that walked less than ``fail_factor * commanded_dist`` go
     back a level (mjlab terrain_levels_vel default 0.5)."""
 
 
@@ -178,8 +178,10 @@ class TerrainLevelsManager:
 
     @property
     def mean_level(self) -> torch.Tensor:
+        """Return the mean terrain level across all envs."""
         return self.terrain_levels.float().mean()
 
     @property
     def max_level_seen(self) -> torch.Tensor:
+        """Return the highest terrain level reached by any env."""
         return self.terrain_levels.max()

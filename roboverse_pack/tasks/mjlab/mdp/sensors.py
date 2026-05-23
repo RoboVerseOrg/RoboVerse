@@ -213,6 +213,7 @@ class ContactSensor:
         return out
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        """Zero the contact-sensor state buffers for the given envs."""
         if env_ids is None or env_ids.numel() == 0:
             return
         ids = env_ids if isinstance(env_ids, torch.Tensor) else torch.as_tensor(env_ids)
@@ -228,9 +229,11 @@ class ContactSensor:
             self._force_history[ids] = 0.0
 
     def _update_newton(self, dt: float | None = None) -> None:
-        """Newton path: per-env per-foot contact force via the handler's
-        mujoco_warp contact reader. Mirrors the MuJoCo update's outputs
-        (found / force + air-time) so all sensor-dependent rewards fire.
+        """Update contact state on the Newton path via the handler's contact reader.
+
+        Reads per-env per-foot contact force from the mujoco_warp contact
+        reader and mirrors the MuJoCo update's outputs (found / force +
+        air-time) so all sensor-dependent rewards fire.
         """
         forces, names = self.env.handler.get_net_contact_forces_by_body()
         # (num_envs, nbody, 3), names length nbody
@@ -380,6 +383,7 @@ class ContactSensor:
         return is_in_contact & within_dt
 
     def compute_first_air(self, dt: float, abs_tol: float = 1e-6) -> torch.Tensor:
+        """Return ``[B, P]`` bool for primaries that left contact within the last dt seconds."""
         is_in_air = self._current_air_time > 0.0
         within_dt = self._current_air_time < (dt + abs_tol)
         return is_in_air & within_dt
@@ -392,6 +396,8 @@ class ContactSensor:
 
 @dataclass
 class TerrainHeightSensorCfg:
+    """Config for the per-site downward ray-cast terrain-height sensor."""
+
     name: str = "foot_height_scan"
     primary_sites: tuple[str, ...] = ()
     """Site names (or body names — fallback). One ray per primary."""
@@ -407,6 +413,8 @@ class TerrainHeightSensorCfg:
 
 @dataclass
 class TerrainHeightData:
+    """Output of the terrain-height sensor (per-primary heights above terrain)."""
+
     heights: torch.Tensor | None = None  # (N, P) height above terrain
     num_frames: int = 0  # mjlab parity (len(primary_sites|primary_bodies))
 
@@ -459,6 +467,7 @@ class TerrainHeightSensor:
 
     @property
     def data(self) -> TerrainHeightData:
+        """Return the current terrain-height sensor reading."""
         return TerrainHeightData(
             heights=self._heights,
             num_frames=self._P,
@@ -466,9 +475,11 @@ class TerrainHeightSensor:
 
     @property
     def num_frames(self) -> int:
+        """Return the number of ray-cast primaries."""
         return self._P
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        """Zero the cached terrain heights for the given envs."""
         if env_ids is None or env_ids.numel() == 0:
             return
         ids = env_ids.long().to(self.device)
@@ -499,6 +510,7 @@ class TerrainHeightSensor:
                 self._heights[:, p] = 0.0
 
     def update(self, dt: float | None = None) -> None:
+        """Ray-cast each primary downward and cache the height above terrain."""
         if self._newton:
             self._update_newton(dt)
             return
@@ -551,6 +563,8 @@ class TerrainHeightSensor:
 
 @dataclass
 class BuiltinSensorCfg:
+    """Config for a sensor that wraps one ``mjData`` subtree field for a body."""
+
     name: str = "root_angmom"
     field: Literal["subtree_angmom", "subtree_linvel", "subtree_com"] = "subtree_angmom"
     """Which ``mjData`` field to read."""
@@ -590,14 +604,17 @@ class BuiltinSensor:
 
     @property
     def data(self) -> torch.Tensor:
+        """Return the current ``(N, 3)`` sensor reading."""
         return self._data
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        """Zero the cached sensor value for the given envs."""
         if env_ids is None or env_ids.numel() == 0:
             return
         self._data[env_ids.long().to(self.device)] = 0.0
 
     def update(self, dt: float | None = None) -> None:
+        """Read the configured ``mjData`` subtree field for the target body."""
         if self._newton:
             vals, names = self.env.handler.get_subtree_field(self.cfg.field)
             if self._newton_body_col is None:

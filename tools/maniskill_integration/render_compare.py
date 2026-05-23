@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import argparse
 import copy
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
 from .maniskill_rollout import rollout_maniskill
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 
 def _label_frame(img, text):
@@ -114,7 +117,7 @@ def side_by_side(maniskill_frames, metasim_frames, out_mp4: Path, fps: int = 20)
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/maniskill_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "maniskill_integration"))
     p.add_argument("--n-steps", type=int, default=30)
     args = p.parse_args(argv)
     out_dir = Path(args.out)

@@ -17,11 +17,11 @@ roboverse_pack.tasks.mjlab.cartpole_train.* — those are full 1:1 ports.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import gymnasium as gym
 import numpy as np
 import torch
+from loguru import logger as log
 
 
 # Defer mjlab import — only triggered when user actually instantiates a passthrough env
@@ -57,8 +57,8 @@ class MjlabPassthroughEnv(gym.Env):
         task_id: str,
         num_envs: int = 1,
         play: bool = False,
-        motion_file: Optional[str] = None,
-        device: Optional[str] = None,
+        motion_file: str | None = None,
+        device: str | None = None,
         height: int = 480,
         width: int = 640,
     ):
@@ -82,7 +82,7 @@ class MjlabPassthroughEnv(gym.Env):
         self.action_space = self._mjlab_env.action_space
 
     # --- gym.Env API ---
-    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+    def reset(self, *, seed: int | None = None, options: dict | None = None):
         if seed is not None:
             self._mjlab_env.seed(seed)
         obs, info = self._mjlab_env.reset()
@@ -139,7 +139,7 @@ def register_mjlab_passthrough_tasks(prefix: str = "MjlabPassthrough/") -> list[
 
         task_ids = list_tasks()
     except Exception as e:
-        print(f"[mjlab_passthrough] could not list mjlab tasks: {e}")
+        log.warning(f"[mjlab_passthrough] could not list mjlab tasks: {e}")
         return []
     registered = []
     failed = []
@@ -158,7 +158,7 @@ def register_mjlab_passthrough_tasks(prefix: str = "MjlabPassthrough/") -> list[
         except Exception as e:
             failed.append((env_id, str(e)))
     if failed:
-        print(f"[mjlab_passthrough] {len(failed)} registration failures:")
+        log.warning(f"[mjlab_passthrough] {len(failed)} registration failures:")
         for env_id, err in failed[:3]:
-            print(f"  {env_id}: {err}")
+            log.warning(f"  {env_id}: {err}")
     return registered

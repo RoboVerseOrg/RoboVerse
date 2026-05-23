@@ -15,16 +15,16 @@
 set -euo pipefail
 
 # Activate conda env (idempotent; safe to re-source).
-if command -v conda &>/dev/null && [ -f /home/ghr/miniconda3/etc/profile.d/conda.sh ]; then
+if command -v conda &>/dev/null && [ -f "$(conda info --base)/etc/profile.d/conda.sh" ]; then
     # shellcheck disable=SC1091
-    source /home/ghr/miniconda3/etc/profile.d/conda.sh
+    source "$(conda info --base)/etc/profile.d/conda.sh"
     conda activate roboverse
 fi
 
-REPO_ROOT="/home/ghr/projects/RoboVerse/RoboVerse"
-MJLAB_DIR="/home/ghr/projects/mjlab"
+REPO_ROOT="${ROBOVERSE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../.. && pwd)}"
+MJLAB_DIR="${MJLAB_DIR:-$HOME/projects/mjlab}"
 LOG_ROOT="${REPO_ROOT}/training_logs/rsl_rl/g1_velocity"
-OUT_DIR="/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs/g1_walking"
+OUT_DIR="${ROBOVERSE_REPORTS_DIR:-$REPO_ROOT/outputs/reports}/mjlab_integration/runs/g1_walking"
 
 # Find latest run dir under g1_velocity/ if no explicit ckpt arg.
 if [ "$#" -ge 1 ]; then

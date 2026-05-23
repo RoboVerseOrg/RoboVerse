@@ -11,10 +11,12 @@ import os
 
 from dm_control import mjcf
 
+_MJLAB = os.environ.get("MJLAB_DIR", os.path.expanduser("~/projects/mjlab"))
+
 
 def main():
     os.environ.setdefault("MUJOCO_GL", "egl")
-    raw_xml = "/home/ghr/projects/mjlab/src/mjlab/tasks/cartpole/cartpole.xml"
+    raw_xml = os.path.join(_MJLAB, "src/mjlab/tasks/cartpole/cartpole.xml")
 
     # Mirror MetaSim's _add_robots_to_model logic step-by-step
     parent = mjcf.RootElement()

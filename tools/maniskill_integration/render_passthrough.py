@@ -12,8 +12,10 @@ import os
 import sys
 from pathlib import Path
 
+import rootutils
+
 os.environ.setdefault("MUJOCO_GL", "egl")
-sys.path.insert(0, "/home/ghr/projects/RoboVerse/RoboVerse")
+rootutils.setup_root(__file__, pythonpath=True)
 
 import numpy as np
 
@@ -26,8 +28,6 @@ def main() -> int:
     p.add_argument("--num-envs", type=int, default=1)
     args = p.parse_args()
 
-    import roboverse_pack
-    import roboverse_pack.tasks.maniskill  # triggers passthrough register
     import gymnasium as gym
 
     env_id = f"ManiSkill3/{args.task}"
@@ -59,6 +59,7 @@ def main() -> int:
         print("[maniskill_passthrough] no frames; aborting")
         return 1
     import imageio
+
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     imageio.mimwrite(args.out, frames, fps=30, codec="libx264", quality=7)
     print(f"[maniskill_passthrough] wrote {args.out}")

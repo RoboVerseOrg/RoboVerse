@@ -9,15 +9,18 @@ behaving sensibly.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
+
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/robotwin_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "robotwin_integration"))
     p.add_argument("--n-steps", type=int, default=60)
     args = p.parse_args(argv)
     out_dir = Path(args.out)

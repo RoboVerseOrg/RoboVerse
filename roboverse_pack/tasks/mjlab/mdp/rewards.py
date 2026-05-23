@@ -707,6 +707,7 @@ def motion_global_anchor_position_error_exp(
     command_name: str,
     std: float = 0.3,
 ) -> torch.Tensor:
+    """Return the exponential reward for global anchor position tracking error."""
     mgr = _get_motion_command(env, command_name)
     if mgr is None:
         _warn_once(
@@ -725,6 +726,7 @@ def motion_global_anchor_orientation_error_exp(
     command_name: str,
     std: float = 0.4,
 ) -> torch.Tensor:
+    """Return the exponential reward for global anchor orientation tracking error."""
     mgr = _get_motion_command(env, command_name)
     if mgr is None:
         _warn_once(
@@ -774,6 +776,7 @@ def motion_relative_body_position_error_exp(
     std: float = 0.3,
     body_names: tuple[str, ...] | None = None,
 ) -> torch.Tensor:
+    """Return the exponential reward for relative body position tracking error."""
     return _motion_body_subset_error(env, command_name, std, body_names, "body_pos_relative_w", "robot_body_pos_w")
 
 
@@ -785,6 +788,7 @@ def motion_relative_body_orientation_error_exp(
     std: float = 0.4,
     body_names: tuple[str, ...] | None = None,
 ) -> torch.Tensor:
+    """Return the exponential reward for relative body orientation tracking error."""
     return _motion_body_subset_error(
         env,
         command_name,
@@ -804,6 +808,7 @@ def motion_global_body_linear_velocity_error_exp(
     std: float = 1.0,
     body_names: tuple[str, ...] | None = None,
 ) -> torch.Tensor:
+    """Return the exponential reward for global body linear-velocity tracking error."""
     return _motion_body_subset_error(env, command_name, std, body_names, "body_lin_vel_w", "robot_body_lin_vel_w")
 
 
@@ -815,6 +820,7 @@ def motion_global_body_angular_velocity_error_exp(
     std: float = 1.0,
     body_names: tuple[str, ...] | None = None,
 ) -> torch.Tensor:
+    """Return the exponential reward for global body angular-velocity tracking error."""
     return _motion_body_subset_error(env, command_name, std, body_names, "body_ang_vel_w", "robot_body_ang_vel_w")
 
 

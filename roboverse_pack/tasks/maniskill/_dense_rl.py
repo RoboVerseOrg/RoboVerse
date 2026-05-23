@@ -26,7 +26,7 @@ class DenseRLResetMixin:
     """Randomized resets (cube on table + goal pose) without demo data."""
 
     cube_z: float = 0.02
-    xy_range: float = 0.1            # object xy ~ uniform[-xy_range, xy_range]
+    xy_range: float = 0.1  # object xy ~ uniform[-xy_range, xy_range]
     goal_z_range: tuple[float, float] = (0.02, 0.02)  # on-table by default
     reset_seed: int = 0
     # Dense RL tasks generate their own randomized initial states, so they
@@ -35,7 +35,7 @@ class DenseRLResetMixin:
 
     # Skip ManiskillBaseTask's demo-trajectory download — call BaseTaskEnv
     # directly so the dense task doesn't depend on replay data.
-    def __init__(self, scenario, device=None) -> None:  # noqa: D401
+    def __init__(self, scenario, device=None) -> None:
         BaseTaskEnv.__init__(self, scenario, device)
 
     def _get_initial_states(self) -> list[dict]:
@@ -55,13 +55,15 @@ class DenseRLResetMixin:
             objs: dict[str, dict] = {}
             for name in obj_names:
                 if "goal" in name.lower():
-                    pos = torch.tensor([u(-self.xy_range, self.xy_range),
-                                        u(-self.xy_range, self.xy_range),
-                                        u(*self.goal_z_range)], dtype=torch.float32)
+                    pos = torch.tensor(
+                        [u(-self.xy_range, self.xy_range), u(-self.xy_range, self.xy_range), u(*self.goal_z_range)],
+                        dtype=torch.float32,
+                    )
                 else:  # cube / manipuland — rest on the table surface
-                    pos = torch.tensor([u(-self.xy_range, self.xy_range),
-                                        u(-self.xy_range, self.xy_range),
-                                        self.cube_z], dtype=torch.float32)
+                    pos = torch.tensor(
+                        [u(-self.xy_range, self.xy_range), u(-self.xy_range, self.xy_range), self.cube_z],
+                        dtype=torch.float32,
+                    )
                 objs[name] = {"pos": pos, "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])}
             states.append({
                 "objects": objs,

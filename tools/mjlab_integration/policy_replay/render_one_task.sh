@@ -10,15 +10,15 @@
 
 set -euo pipefail
 
-if command -v conda &>/dev/null && [ -f /home/ghr/miniconda3/etc/profile.d/conda.sh ]; then
+if command -v conda &>/dev/null && [ -f "$(conda info --base)/etc/profile.d/conda.sh" ]; then
     # shellcheck disable=SC1091
-    source /home/ghr/miniconda3/etc/profile.d/conda.sh
+    source "$(conda info --base)/etc/profile.d/conda.sh"
     conda activate roboverse
 fi
 
-REPO="/home/ghr/projects/RoboVerse/RoboVerse"
-MJLAB="/home/ghr/projects/mjlab"
-RUNS="/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs"
+REPO="${ROBOVERSE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../.. && pwd)}"
+MJLAB="${MJLAB_DIR:-$HOME/projects/mjlab}"
+RUNS="${ROBOVERSE_REPORTS_DIR:-$REPO/outputs/reports}/mjlab_integration/runs"
 
 TASK="${1:?task id required, e.g. Mjlab-Tracking-Flat-Unitree-G1}"
 CKPT="${2:?ckpt path required}"

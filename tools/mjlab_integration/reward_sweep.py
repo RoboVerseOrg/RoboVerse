@@ -27,6 +27,8 @@ from . import inventory as inv
 from . import rewards as rew
 from .render_sweep import _load_npz
 
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
+
 REWARD_FNS = {
     "mjlab.cartpole_balance": rew.cartpole_reward,
     "mjlab.cartpole_swingup": rew.cartpole_reward,
@@ -57,7 +59,7 @@ def _plot(raw_r: np.ndarray, meta_r: np.ndarray, out_path: Path, title: str) -> 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "mjlab_integration"))
     args = p.parse_args(argv)
 
     os.environ.setdefault("MUJOCO_GL", "egl")

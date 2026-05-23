@@ -138,7 +138,7 @@ def camera_rgb(env, env_states, *, camera_name: str, scale: float = 1.0 / 255.0)
     is missing or rgb is None, returns zeros (one-shot warning).
 
     For mjlab's ``lift_cube_yam_rgb`` the camera was a wrist-mounted
-    256×256 RGB cam ⇒ obs dim = 256·256·3 = 196608. The exact resolution
+    256x256 RGB cam => obs dim = 256*256*3 = 196608. The exact resolution
     is configured by the camera cfg in the task scenario.
     """
     cameras = getattr(env_states, "cameras", {}) or {}

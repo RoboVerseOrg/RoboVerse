@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 # experiment_name → metasim task name (for output dir)
 TASK_MAP = {
@@ -106,11 +109,9 @@ def plot_run(run_dir: Path, task_name: str, out_png: Path, scalars: dict) -> dic
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--logs-root", default="/home/ghr/projects/RoboVerse/RoboVerse/training_logs/rsl_rl")
-    p.add_argument("--runs-root", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs")
-    p.add_argument(
-        "--summary-out", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration/training_summary.json"
-    )
+    p.add_argument("--logs-root", default=os.path.join("training_logs", "rsl_rl"))
+    p.add_argument("--runs-root", default=os.path.join(_REPORTS, "mjlab_integration/runs"))
+    p.add_argument("--summary-out", default=os.path.join(_REPORTS, "mjlab_integration/training_summary.json"))
     args = p.parse_args(argv)
 
     logs_root = Path(args.logs_root)

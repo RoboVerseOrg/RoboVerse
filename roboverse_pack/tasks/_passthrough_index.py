@@ -31,6 +31,7 @@ PASSTHROUGH_PREFIXES = [
 def list_passthrough_envs() -> dict[str, list[str]]:
     """Return {benchmark_name: [env_id, ...]} for all currently-registered passthrough envs."""
     import gymnasium as gym
+
     out: dict[str, list[str]] = {}
     for prefix in PASSTHROUGH_PREFIXES:
         bench = prefix.rstrip("/")
@@ -44,9 +45,9 @@ def print_passthrough_summary() -> None:
     """Print a one-line summary per benchmark."""
     envs = list_passthrough_envs()
     total = sum(len(v) for v in envs.values())
-    print(f"# RoboVerse Passthrough — {total} envs across {len(envs)} benchmarks")
-    print()
+    print(f"# RoboVerse Passthrough - {total} envs across {len(envs)} benchmarks")  # noqa: T201
+    print()  # noqa: T201
     for bench, ids in envs.items():
-        print(f"  {bench:25s} {len(ids):4d}  example: {ids[0]}")
-    print()
-    print(f"  TOTAL                     {total}")
+        print(f"  {bench:25s} {len(ids):4d}  example: {ids[0]}")  # noqa: T201
+    print()  # noqa: T201
+    print(f"  TOTAL                     {total}")  # noqa: T201

@@ -5,9 +5,12 @@ from __future__ import annotations
 import os
 import sys
 
+import rootutils
+
 os.environ.setdefault("MUJOCO_GL", "egl")
-sys.path.insert(0, "/home/ghr/projects/RoboVerse/RoboVerse")
-sys.path.insert(0, "/home/ghr/projects/mjlab/src")
+rootutils.setup_root(__file__, pythonpath=True)
+_MJLAB = os.environ.get("MJLAB_DIR", os.path.expanduser("~/projects/mjlab"))
+sys.path.insert(0, os.path.join(_MJLAB, "src"))
 
 import numpy as np
 import torch

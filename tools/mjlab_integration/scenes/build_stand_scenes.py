@@ -19,13 +19,15 @@ Run as a script to (re)build the cached scenes:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 import mujoco
 import numpy as np
 
-MJLAB_ROOT = Path("/home/ghr/projects/mjlab")
+_MJLAB = os.environ.get("MJLAB_DIR", os.path.expanduser("~/projects/mjlab"))
+MJLAB_ROOT = Path(_MJLAB)
 CACHE_DIR = Path(__file__).parent / "_cache"
 
 

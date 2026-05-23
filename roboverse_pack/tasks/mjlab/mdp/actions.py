@@ -187,9 +187,10 @@ class JointPositionActionManager:
         self._clip = resolve_clip_t(self.cfg, self._joint_names, self._device)
 
     def process(self, raw_action: torch.Tensor) -> torch.Tensor:
-        """Apply mjlab BaseAction processing: ``scale * raw + offset``, clip,
-        subtract encoder_bias if present on env. Returns same shape as
-        ``raw_action``.
+        """Apply mjlab BaseAction processing: ``scale * raw + offset``, clip, subtract encoder_bias.
+
+        The encoder_bias is subtracted only if present on env. Returns the
+        same shape as ``raw_action``.
         """
         if self._scale is None or self._offset is None:
             self._rebuild_tensors()
@@ -205,10 +206,12 @@ class JointPositionActionManager:
     # --- runtime mutation -------------------------------------------------
 
     def set_scale(self, scale: float | dict[str, float]) -> None:
+        """Set the action scale at runtime and rebuild the scale tensor."""
         self.cfg.scale = scale
         self._scale = resolve_scale_t(self.cfg, self._joint_names, self._device)
 
     def set_offset(self, offset: float | dict[str, float]) -> None:
+        """Set the action offset at runtime and rebuild the offset tensor."""
         self.cfg.offset = offset
         self.cfg.use_default_offset = False
         self._offset = resolve_offset_t(self.cfg, self._joint_names, self._defaults, self._device)

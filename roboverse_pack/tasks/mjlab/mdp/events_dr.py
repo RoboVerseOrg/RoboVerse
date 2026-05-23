@@ -220,9 +220,14 @@ def geom_friction(
     lo, hi = ranges
     if distribution == "log_uniform":
         log_lo, log_hi = np.log(max(lo, 1e-10)), np.log(max(hi, 1e-10))
-        sample_fn = lambda shape: np.exp(rng.uniform(log_lo, log_hi, size=shape))
+
+        def sample_fn(shape):
+            return np.exp(rng.uniform(log_lo, log_hi, size=shape))
+
     else:
-        sample_fn = lambda shape: rng.uniform(lo, hi, size=shape)
+
+        def sample_fn(shape):
+            return rng.uniform(lo, hi, size=shape)
 
     if shared_random:
         # Same sample for every selected geom (good for "all foot geoms same μ").

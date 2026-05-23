@@ -74,6 +74,7 @@ class VelocityCommandManager:
 
     @property
     def dt(self) -> float:
+        """Return the control step in seconds (sim dt times decimation)."""
         cfg = getattr(self.env, "cfg", None)
         if cfg is None:
             return 0.02  # fallback (mjlab 50Hz)
@@ -166,6 +167,8 @@ class VelocityCommandManager:
 
 @dataclass
 class ObjectPoseRange:
+    """Sampling ranges for the object's reset pose (x, y, z, yaw)."""
+
     x: tuple[float, float] = (0.2, 0.4)
     y: tuple[float, float] = (-0.2, 0.2)
     z: tuple[float, float] = (0.02, 0.05)
@@ -174,6 +177,8 @@ class ObjectPoseRange:
 
 @dataclass
 class TargetPositionRange:
+    """Sampling ranges for the target lift position (x, y, z)."""
+
     x: tuple[float, float] = (0.1, 0.5)
     y: tuple[float, float] = (-0.3, 0.3)
     z: tuple[float, float] = (0.2, 0.4)
@@ -222,11 +227,13 @@ class LiftingCommandManager:
 
     @property
     def dt(self) -> float:
+        """Return the control step in seconds (sim dt times decimation)."""
         sim_dt = self.env.scenario.sim_params.dt or 0.005
         decimation = getattr(self.env.cfg, "decimation", 4)
         return float(sim_dt * decimation)
 
     def resample(self, env_ids: torch.Tensor) -> None:
+        """Sample a fresh target position for the given envs."""
         if env_ids.numel() == 0:
             return
         n = env_ids.numel()
@@ -244,6 +251,7 @@ class LiftingCommandManager:
         self._next_resample_time[env_ids] = self._time[env_ids] + (torch.empty(n, device=device).uniform_(*rrt))
 
     def update(self) -> None:
+        """Advance time, resample expired envs, and latch goal success."""
         self._time += self.dt
         expired = self._time >= self._next_resample_time
         if expired.any():
@@ -256,6 +264,7 @@ class LiftingCommandManager:
             self._episode_success = torch.maximum(self._episode_success, at_goal)
 
     def reset(self, env_ids: torch.Tensor) -> None:
+        """Reset time, success, and target for the given envs; teleport object on MuJoCo."""
         if env_ids.numel() == 0:
             return
         self._time[env_ids] = 0.0
@@ -266,14 +275,17 @@ class LiftingCommandManager:
             self._teleport_object_mujoco()
 
     def current(self) -> torch.Tensor:
+        """Return the current (num_envs, 3) target world-frame position."""
         return self._target_pos
 
     @property
     def target_pos(self) -> torch.Tensor:
+        """Return the current (num_envs, 3) target world-frame position."""
         return self._target_pos
 
     @property
     def episode_success(self) -> torch.Tensor:
+        """Return the per-env latched goal-success flag (0 or 1)."""
         return self._episode_success
 
     def _object_pos_w(self) -> torch.Tensor | None:
@@ -477,11 +489,13 @@ class MotionCommandManager:
 
     @property
     def dt(self) -> float:
+        """Return the control step in seconds (sim dt times decimation)."""
         sim_dt = self.env.scenario.sim_params.dt or 0.005
         decimation = getattr(self.env.cfg, "decimation", 4)
         return float(sim_dt * decimation)
 
     def resample(self, env_ids: torch.Tensor) -> None:
+        """Sample a fresh motion start frame for the given envs."""
         if env_ids.numel() == 0:
             return
         if self.motion._is_identity:
@@ -533,6 +547,7 @@ class MotionCommandManager:
         return (starts + jitter).clamp(max=T - 1).long()
 
     def update(self) -> None:
+        """Advance motion time, step the frame, and resample expired envs."""
         self._time_acc += self.dt
         if not self.motion._is_identity:
             self.time_steps = (self.time_steps + 1) % self.motion.time_step_total
@@ -563,14 +578,16 @@ class MotionCommandManager:
             self._bin_failed_count[bin_idx[i]] = 0.99 * self._bin_failed_count[bin_idx[i]] + 0.01 * failed[i]
 
     def reset(self, env_ids: torch.Tensor) -> None:
+        """Reset motion time and resample start frames for the given envs."""
         if env_ids.numel() == 0:
             return
         self._time_acc[env_ids] = 0.0
         self.resample(env_ids)
 
     def current(self) -> torch.Tensor:
-        """Return ``(N, J*2)`` concatenated joint_pos+joint_vel reference at
-        current motion frame. Empty if identity-tracking mode.
+        """Return ``(N, J*2)`` concatenated joint_pos+joint_vel reference at the current frame.
+
+        Empty if identity-tracking mode.
         """
         return torch.cat(
             [self.motion.joint_pos[self.time_steps], self.motion.joint_vel[self.time_steps]],
@@ -582,9 +599,10 @@ class MotionCommandManager:
     # ------------------------------------------------------------------
 
     def _robot_body_state_w(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Return per-body (pos, quat, lin_vel, ang_vel) for all tracked
-        bodies on the robot side. MuJoCo path; falls back to identity for
-        Newton (caller will see all-zeros and rewards collapse to 1.0).
+        """Return per-body (pos, quat, lin_vel, ang_vel) for all tracked robot bodies.
+
+        MuJoCo path; falls back to identity for Newton (caller will see
+        all-zeros and rewards collapse to 1.0).
         """
         device = self.env.device
         N = self.env.num_envs
@@ -633,26 +651,32 @@ class MotionCommandManager:
 
     @property
     def robot_body_pos_w(self) -> torch.Tensor:
+        """Return per-body world-frame positions on the robot side."""
         return self._robot_body_state_w()[0]
 
     @property
     def robot_body_quat_w(self) -> torch.Tensor:
+        """Return per-body world-frame orientations on the robot side."""
         return self._robot_body_state_w()[1]
 
     @property
     def robot_body_lin_vel_w(self) -> torch.Tensor:
+        """Return per-body world-frame linear velocities on the robot side."""
         return self._robot_body_state_w()[2]
 
     @property
     def robot_body_ang_vel_w(self) -> torch.Tensor:
+        """Return per-body world-frame angular velocities on the robot side."""
         return self._robot_body_state_w()[3]
 
     @property
     def robot_anchor_pos_w(self) -> torch.Tensor:
+        """Return the robot anchor body's world-frame position."""
         return self.robot_body_pos_w[:, self._anchor_idx]
 
     @property
     def robot_anchor_quat_w(self) -> torch.Tensor:
+        """Return the robot anchor body's world-frame orientation."""
         return self.robot_body_quat_w[:, self._anchor_idx]
 
     @property
@@ -666,35 +690,41 @@ class MotionCommandManager:
 
     @property
     def body_quat_w(self) -> torch.Tensor:
+        """Return target body orientations at the current motion frame."""
         if self.motion._is_identity:
             return self.robot_body_quat_w
         return self.motion.body_quat_w[self.time_steps]
 
     @property
     def body_lin_vel_w(self) -> torch.Tensor:
+        """Return target body linear velocities at the current motion frame."""
         if self.motion._is_identity:
             return self.robot_body_lin_vel_w
         return self.motion.body_lin_vel_w[self.time_steps]
 
     @property
     def body_ang_vel_w(self) -> torch.Tensor:
+        """Return target body angular velocities at the current motion frame."""
         if self.motion._is_identity:
             return self.robot_body_ang_vel_w
         return self.motion.body_ang_vel_w[self.time_steps]
 
     @property
     def anchor_pos_w(self) -> torch.Tensor:
+        """Return the target anchor body's world-frame position."""
         return self.body_pos_w[:, self._anchor_idx]
 
     @property
     def anchor_quat_w(self) -> torch.Tensor:
+        """Return the target anchor body's world-frame orientation."""
         return self.body_quat_w[:, self._anchor_idx]
 
     @property
     def body_pos_relative_w(self) -> torch.Tensor:
-        """Mjlab parity: relative-body positions are computed by aligning
-        the target anchor to the robot anchor (so motion is replayed at
-        the current robot location).
+        """Return target body positions aligned to the robot anchor.
+
+        Mjlab parity: the target anchor is aligned to the robot anchor so
+        the motion is replayed at the current robot location.
         """
         target = self.body_pos_w
         target_anchor = target[:, self._anchor_idx : self._anchor_idx + 1]
@@ -703,6 +733,7 @@ class MotionCommandManager:
 
     @property
     def body_quat_relative_w(self) -> torch.Tensor:
+        """Return target body orientations relative to the robot anchor."""
         # Approximation: hand back the target quaternions unchanged. mjlab
         # rotates each body's quat by the anchor delta; for parity we'd
         # need quat composition utilities. Defer this refinement until a

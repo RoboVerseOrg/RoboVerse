@@ -23,6 +23,8 @@ from . import inventory as inv
 from .raw_rollout import RolloutResult
 from .render import side_by_side_video
 
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
+
 
 def _load_npz(path: Path) -> RolloutResult | None:
     if not path.exists():
@@ -158,7 +160,7 @@ def render_all(reports_dir: Path, n_steps: int = 200, frame_stride: int = 2) -> 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "mjlab_integration"))
     p.add_argument("--n-steps", type=int, default=200)
     p.add_argument("--frame-stride", type=int, default=2)
     args = p.parse_args(argv)

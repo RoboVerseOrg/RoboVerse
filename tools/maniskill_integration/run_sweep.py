@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -23,6 +24,8 @@ import numpy as np
 
 from . import inventory as inv
 from .maniskill_rollout import rollout_maniskill, save_rollout
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 
 def _maybe_write_mp4(out_path: Path, frames: list, fps: float = 20.0) -> str | None:
@@ -89,7 +92,7 @@ def run_all(reports_dir: Path, n_steps: int = 50, seed: int = 0) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/maniskill_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "maniskill_integration"))
     p.add_argument("--n-steps", type=int, default=50)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args(argv)

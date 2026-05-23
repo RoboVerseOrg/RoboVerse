@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-DEFAULT_OUT = Path("/home/ghr/projects/RoboVerse/reports/mjlab_integration/runs/g1_pretrained")
+DEFAULT_OUT = Path(os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")) / "mjlab_integration/runs/g1_pretrained"
 
 
 def _wrap_actions(action_shape, agent_cfg):

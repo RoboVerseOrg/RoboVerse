@@ -14,6 +14,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+_MJLAB = os.environ.get("MJLAB_DIR", os.path.expanduser("~/projects/mjlab"))
+
 
 def mjlab_repo_path() -> Path:
     env = os.environ.get("MJLAB_REPO")
@@ -24,7 +26,7 @@ def mjlab_repo_path() -> Path:
         return p
     candidates = [
         Path.home() / "projects" / "mjlab",
-        Path("/home/ghr/projects/mjlab"),
+        Path(_MJLAB),
     ]
     for c in candidates:
         if (c / "src" / "mjlab").exists():

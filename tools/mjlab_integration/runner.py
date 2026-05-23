@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -19,6 +20,8 @@ from .diff import diff_rollouts
 from .plot import plot_ctrl, plot_trajectory_pair
 from .raw_rollout import RolloutResult, raw_mujoco_rollout, sinusoid_ctrl, zero_ctrl
 from .render import configure_offscreen_gl, replay_to_video
+
+_REPORTS = os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")
 
 
 def _ctrl_for_asset(asset_name: str, nu: int, dt: float):
@@ -166,7 +169,7 @@ def run_one_task(task: inv.MjlabTask, runs_dir: Path, *, n_steps: int, render: b
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/reports/mjlab_integration")
+    p.add_argument("--out", default=os.path.join(_REPORTS, "mjlab_integration"))
     p.add_argument("--n-steps", type=int, default=200)
     p.add_argument("--tasks", nargs="*", help="Subset of tasks (metasim names) to run.")
     p.add_argument("--no-render", action="store_true")

@@ -7,7 +7,7 @@ in `roboverse_pack.tasks.mjlab.cartpole_train` is sufficient to reproduce
 mjlab native training results inside our framework.
 
 Usage:
-    PYTHONPATH=/home/ghr/projects/RoboVerse/RoboVerse MUJOCO_GL=egl \\
+    PYTHONPATH=$(pwd) MUJOCO_GL=egl \\
       python -m tools.mjlab_integration.policy_replay.train_metasim_cartpole \\
       --task mjlab.cartpole_balance_train --num-envs 8 --total-iter 200
 """
@@ -79,8 +79,10 @@ def make_factory(task_name: str):
 
 # --- PPO --------------------------------------------------------------------
 
+_SQRT2 = float(np.sqrt(2.0))
 
-def layer_init(layer, std=np.sqrt(2.0), bias=0.0):
+
+def layer_init(layer, std=_SQRT2, bias=0.0):
     nn.init.orthogonal_(layer.weight, std)
     nn.init.constant_(layer.bias, bias)
     return layer
@@ -174,7 +176,7 @@ def main(argv=None) -> int:
         "--value-clip", type=int, default=1, choices=[0, 1], help="RSL-RL style value loss clipping (mjlab default = 1)"
     )
     p.add_argument("--device", default=("cuda" if torch.cuda.is_available() else "cpu"))
-    p.add_argument("--out", default="/home/ghr/projects/RoboVerse/RoboVerse/training_logs/metasim_native")
+    p.add_argument("--out", default=os.path.join("training_logs", "metasim_native"))
     args = p.parse_args(argv)
 
     device = torch.device(args.device)

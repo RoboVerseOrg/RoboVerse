@@ -126,8 +126,7 @@ class StackCubeDenseTask(DenseRLResetMixin, StackCubeTask):
 
         ungrasp = rs.joint_pos[:, 7:9].sum(dim=-1) / _SC_GRIPPER_WIDTH
         ungrasp = torch.where(is_grasped, ungrasp, torch.ones_like(ungrasp))
-        static = 1.0 - torch.tanh(torch.linalg.norm(cubeA_vel, dim=-1) * 10.0
-                                  + torch.linalg.norm(cubeA_ang, dim=-1))
+        static = 1.0 - torch.tanh(torch.linalg.norm(cubeA_vel, dim=-1) * 10.0 + torch.linalg.norm(cubeA_ang, dim=-1))
 
         offset_ab = cubeA - cubeB
         xy_flag = torch.linalg.norm(offset_ab[:, :2], dim=-1) <= (math.hypot(_SC_HALF, _SC_HALF) + 0.005)

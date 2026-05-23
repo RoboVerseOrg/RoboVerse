@@ -41,7 +41,7 @@ from .scenes.build_stand_scenes import (
     build_compiled_model,
 )
 
-DEFAULT_OUT = Path("/home/ghr/projects/RoboVerse/reports/mjlab_integration")
+DEFAULT_OUT = Path(os.environ.get("ROBOVERSE_REPORTS_DIR", "outputs/reports")) / "mjlab_integration"
 
 
 def _actuator_target_indices(model: mujoco.MjModel, joint_names: list[str]) -> list[int]:

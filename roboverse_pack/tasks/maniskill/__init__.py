@@ -32,6 +32,7 @@ _auto_import_submodules()
 # Auto-register ManiSkill 3 envs under ManiSkill3/<env_id> namespace
 try:
     from roboverse_pack.tasks.maniskill._passthrough_v3 import register_maniskill3_passthrough
+
     register_maniskill3_passthrough()
 except Exception:
     pass  # mani_skill not installed or registration issue

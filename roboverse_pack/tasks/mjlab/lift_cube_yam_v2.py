@@ -72,7 +72,7 @@ def _yam_newton_objects() -> list:
     """Cube + static table as scene objects for the Newton (RobotCfg) path.
 
     Mirrors ``patch_mjcf_add_cube_and_table`` geometry: a 5cm dynamic cube
-    on top of a 0.4×0.4×0.04 m static table at (0.3, 0, 0). The mujoco path
+    on top of a 0.4x0.4x0.04 m static table at (0.3, 0, 0). The mujoco path
     bakes these into the MJCF; Newton adds them as MetaSim scene objects.
     """
     from metasim.constants import PhysicStateType
@@ -122,9 +122,11 @@ def _get_ee_pos(env) -> np.ndarray:
 
 
 def reward_ee_to_cube(env, env_states, *, std: float = 0.3) -> torch.Tensor:
-    """Reach reward: exp(-||ee - cube|| / std). Gentler than squared (std=0.1
-    earlier gave virtually 0 gradient at start distance 0.22m). Use std=0.3 so
-    even from 0.3m there's meaningful gradient signal.
+    """Reach reward exp(-||ee - cube|| / std).
+
+    Gentler than squared (std=0.1 earlier gave virtually 0 gradient at start
+    distance 0.22m). Use std=0.3 so even from 0.3m there's meaningful gradient
+    signal.
     """
     cube_p = _get_cube_pos(env)
     ee_p = _get_ee_pos(env)
@@ -293,7 +295,9 @@ def _yam_scenario() -> ScenarioCfg:
 
 @configclass
 class LiftCubeYamEnvCfg(ManagerBasedRVEnvCfg):
-    decimation = 10  # 10 × 2ms = 20ms control_dt = 50Hz
+    """Manager-based env config for the YAM arm lift-cube task."""
+
+    decimation = 10  # 10 x 2ms = 20ms control_dt = 50Hz
     max_episode_length_s = 5.0
     is_finite_horizon = False
     observation_group_names = ("actor", "critic")
@@ -411,7 +415,7 @@ def _yam_wrist_camera(name: str, data_types: list[str]) -> PinholeCameraCfg:
     once a real YAM RobotCfg is wired, switch back to
     ``mount_to="yam"`` + ``mount_link="tcp_site"``.
 
-    64×64 default → small enough for fast smoke + flat obs concat;
+    64x64 default -> small enough for fast smoke + flat obs concat;
     raise via PinholeCameraCfg overrides when training real policies.
     """
     # NB: do NOT use straight-down look-at — the MetaSim mujoco backend
@@ -445,6 +449,8 @@ class _YamDepthObsCfg(_YamObsCfg):
 
 @configclass
 class LiftCubeYamDepthEnvCfg(LiftCubeYamEnvCfg):
+    """Lift-cube env config with an added depth-camera observation."""
+
     observations = _YamDepthObsCfg()
 
 
@@ -464,6 +470,8 @@ class _YamRgbObsCfg(_YamObsCfg):
 
 @configclass
 class LiftCubeYamRgbEnvCfg(LiftCubeYamEnvCfg):
+    """Lift-cube env config with an added RGB-camera observation."""
+
     observations = _YamRgbObsCfg()
 
 
@@ -483,6 +491,8 @@ class _YamSegObsCfg(_YamObsCfg):
 
 @configclass
 class MultiCubeSegYamEnvCfg(LiftCubeYamEnvCfg):
+    """Lift-cube env config with an added instance-segmentation observation."""
+
     observations = _YamSegObsCfg()
 
 
@@ -493,7 +503,7 @@ class LiftCubeYamDepthTask(_YamTaskBase):
     Mjlab parity: mjlab.lift_cube_yam_depth — same state rewards as
     lift_cube_yam, obs adds a flattened depth tensor. Camera positioned
     above + behind the arm base looking at the cube spawn area; resolution
-    64×64 (raise via PinholeCameraCfg overrides).
+    64x64 (raise via PinholeCameraCfg overrides).
 
     NB: requires ``MUJOCO_GL=egl`` (or ``osmesa``) env var for headless
     rendering when no display is attached.

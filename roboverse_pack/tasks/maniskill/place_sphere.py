@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import torch
+
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
 from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-
-import torch
 
 from ._dense_rl import DenseRLResetMixin
 from .maniskill_base import ManiskillBaseTask
@@ -85,8 +85,8 @@ class PlaceSphereTask(ManiskillBaseTask):
 # ---------------------------------------------------------------------------
 
 _PS_RADIUS = 0.03
-_PS_BLOCK_HALF0 = 0.0025          # short_side_half_size
-_PS_BIN_TOP_DZ = _PS_BLOCK_HALF0 + _PS_RADIUS   # 0.0325
+_PS_BLOCK_HALF0 = 0.0025  # short_side_half_size
+_PS_BIN_TOP_DZ = _PS_BLOCK_HALF0 + _PS_RADIUS  # 0.0325
 _PS_GRIPPER_WIDTH = 0.08
 _PS_TCP_OFFSET = (0.0, 0.0, 0.10312)
 
@@ -121,10 +121,10 @@ class PlaceSphereDenseTask(DenseRLResetMixin, PlaceSphereTask):
 
     scenario = ScenarioCfg(
         objects=[
-            _Cube(name="bin", size=(0.05, 0.05, 0.05), color=(0.4, 0.3, 0.2),
-                  physics=PhysicStateType.GEOM),
-            PrimitiveSphereCfg(name="sphere", radius=_PS_RADIUS, mass=0.001,
-                               physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.0, 0.0)),
+            _Cube(name="bin", size=(0.05, 0.05, 0.05), color=(0.4, 0.3, 0.2), physics=PhysicStateType.GEOM),
+            PrimitiveSphereCfg(
+                name="sphere", radius=_PS_RADIUS, mass=0.001, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.0, 0.0)
+            ),
         ],
         robots=["franka"],
     )

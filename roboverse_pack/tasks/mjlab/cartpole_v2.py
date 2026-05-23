@@ -1,4 +1,4 @@
-"""Cartpole balance / swingup ported to the canonical ManagerBasedRVEnv pattern.
+r"""Cartpole balance / swingup ported to the canonical ManagerBasedRVEnv pattern.
 
 Successor to ``roboverse_pack/tasks/mjlab/cartpole_train.py`` (the
 single-env hand-coded ``BaseTaskEnv`` port). This version uses the
@@ -76,8 +76,7 @@ def reset_cartpole(
     hinge_pos_range: tuple[float, float] = (-0.034, 0.034),
     velocity_range: tuple[float, float] = (-0.01, 0.01),
 ) -> None:
-    """Reset cartpole state in place. Sim-aware (mujoco scene-MJCF path or
-    newton batched path).
+    """Reset cartpole state in place, sim-aware (mujoco scene-MJCF or newton batched path).
 
     Mirrors mjlab's ``reset_joints_by_offset`` for the slider + hinge.
     Swing-up tasks pass ``hinge_init=math.pi``.
@@ -183,6 +182,8 @@ def _cartpole_scenario() -> ScenarioCfg:
 
 @configclass
 class CartpoleBalanceEnvCfg(ManagerBasedRVEnvCfg):
+    """Manager-based env config for the cartpole balance task."""
+
     decimation = 5
     max_episode_length_s = 50.0  # mjlab uses 50.0; perfect ep_r sum ≈ 50
     is_finite_horizon = False
@@ -195,6 +196,8 @@ class CartpoleBalanceEnvCfg(ManagerBasedRVEnvCfg):
 
 @configclass
 class CartpoleSwingupEnvCfg(CartpoleBalanceEnvCfg):
+    """Cartpole swingup env config (pole starts pointing down)."""
+
     events = _CartpoleSwingupEventsCfg()
 
 

@@ -197,12 +197,13 @@ def reset_go1_default_pose(
 
 @configclass
 class _Go1ObsCfg:
-    """mjlab ``velocity_env_cfg`` actor obs, term-for-term + same order:
+    """mjlab ``velocity_env_cfg`` actor obs, term-for-term in the same order.
+
     base_lin_vel(3) + base_ang_vel(3) + projected_gravity(3) + joint_pos(12)
     + joint_vel(12) + actions(12) + command(3) = 48D. (height_scan is rough-only
     and wired via the rough subclass.) Previously this was 36D (joint state +
     action only), which omitted the command + base velocity the policy needs to
-    track velocity — see [[mjlab-dual-path-newton]] "Go1 only learned to stand".
+    track velocity - see [[mjlab-dual-path-newton]] "Go1 only learned to stand".
     """
 
     @configclass
@@ -468,7 +469,9 @@ def _go1_scenario() -> ScenarioCfg:
 
 @configclass
 class VelocityFlatGo1EnvCfg(ManagerBasedRVEnvCfg):
-    decimation = 10  # matches scenario.decimation; step_dt = sim_dt × decimation = 0.02s = 50Hz
+    """Manager-based env config for Go1 velocity tracking on flat ground."""
+
+    decimation = 10  # matches scenario.decimation; step_dt = sim_dt x decimation = 0.02s = 50Hz
     max_episode_length_s = 20.0
     is_finite_horizon = False
     observation_group_names = ("actor", "critic")
@@ -505,10 +508,14 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                     src = mjcf if os.path.isabs(mjcf) else os.path.abspath(mjcf)
                     try:
                         r.mjcf_path = patch_mjcf_with_pd_actuators(src, GO1_KP)
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         import warnings
 
-                        warnings.warn(f"go1 Newton actuator patch failed ({e}); go1 will not stand", RuntimeWarning)
+                        warnings.warn(
+                            f"go1 Newton actuator patch failed ({e}); go1 will not stand",
+                            RuntimeWarning,
+                            stacklevel=2,
+                        )
         self.num_actions = 12
         # Cache joint qpos/qvel indices for fast write in _apply_action
         # (lazy — set on first call, since handler isn't constructed yet)
