@@ -122,6 +122,7 @@ class PushCubeDenseTask(DenseRLResetMixin, PushCubeCfg):
 
     def _reward(self, env_states):
         import torch
+
         from metasim.utils.math import quat_rotate
 
         rs = env_states.robots["franka"]

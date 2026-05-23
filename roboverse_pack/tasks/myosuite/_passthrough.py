@@ -7,6 +7,7 @@ from typing import Any
 
 def _ensure_myosuite_imported():
     import myosuite  # registers envs as side effect
+
     return myosuite
 
 
@@ -16,6 +17,7 @@ def register_myosuite_passthrough(prefix: str = "MyoSuite/") -> list[str]:
     Returns list of registered (or already-present) env ids.
     """
     from gymnasium.envs.registration import register, registry
+
     _ensure_myosuite_imported()
     import gymnasium as gym
 
@@ -44,4 +46,5 @@ def register_myosuite_passthrough(prefix: str = "MyoSuite/") -> list[str]:
 def _make_myo_env(base_id: str, **kwargs: Any):
     _ensure_myosuite_imported()
     import gymnasium as gym
+
     return gym.make(base_id, **kwargs)

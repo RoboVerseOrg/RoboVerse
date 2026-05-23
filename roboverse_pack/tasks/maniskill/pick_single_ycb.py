@@ -66,10 +66,10 @@ class PickSingleYcbDenseTask(DenseRLResetMixin, _PickSingleYcbBaseTask):
     goal_z_range = (0.10, 0.30)
     scenario = ScenarioCfg(
         objects=[
-            PrimitiveCubeCfg(name="obj", size=(0.04, 0.04, 0.04), mass=0.02,
-                             physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.5, 0.0)),
-            PrimitiveSphereCfg(name="goal_site", radius=0.025,
-                               physics=PhysicStateType.XFORM, color=(0.0, 1.0, 0.0)),
+            PrimitiveCubeCfg(
+                name="obj", size=(0.04, 0.04, 0.04), mass=0.02, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.5, 0.0)
+            ),
+            PrimitiveSphereCfg(name="goal_site", radius=0.025, physics=PhysicStateType.XFORM, color=(0.0, 1.0, 0.0)),
         ],
         robots=["franka"],
     )

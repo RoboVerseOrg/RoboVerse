@@ -10,7 +10,9 @@ import numpy as np
 def register_dm_control_passthrough(prefix: str = "DMControl/") -> list[str]:
     """Register all dm_control suite tasks under DMControl/<domain>-<task> namespace."""
     from gymnasium.envs.registration import register, registry
+
     import dm_control.suite as suite
+
     registered = []
     failed = []
     for domain, task in suite.ALL_TASKS:
@@ -43,18 +45,24 @@ class _DMControlGymWrapper(gym.Env):
     def __init__(self, domain: str, task: str, **kwargs):
         super().__init__()
         from dm_control import suite
-        self._env = suite.load(domain_name=domain, task_name=task,
-                                visualize_reward=kwargs.pop("visualize_reward", False))
+
+        self._env = suite.load(
+            domain_name=domain, task_name=task, visualize_reward=kwargs.pop("visualize_reward", False)
+        )
         spec = self._env.observation_spec()
         # Concatenate all obs into a single Box (typical practice for dm_control)
         import gymnasium as gym
+
         self._obs_keys = sorted(spec.keys())
         obs_dim = sum(int(np.prod(spec[k].shape)) for k in self._obs_keys)
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
         a_spec = self._env.action_spec()
-        self.action_space = gym.spaces.Box(low=a_spec.minimum.astype(np.float32),
-                                           high=a_spec.maximum.astype(np.float32),
-                                           shape=a_spec.shape, dtype=np.float32)
+        self.action_space = gym.spaces.Box(
+            low=a_spec.minimum.astype(np.float32),
+            high=a_spec.maximum.astype(np.float32),
+            shape=a_spec.shape,
+            dtype=np.float32,
+        )
         self._domain = domain
         self._task = task
 
@@ -63,7 +71,6 @@ class _DMControlGymWrapper(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         if seed is not None:
-            import dm_control.rl.control as ctl  # for seeding if available
             self._env.task.random.seed(seed)
         ts = self._env.reset()
         return self._flatten_obs(ts.observation), {}

@@ -505,7 +505,7 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                     src = mjcf if os.path.isabs(mjcf) else os.path.abspath(mjcf)
                     try:
                         r.mjcf_path = patch_mjcf_with_pd_actuators(src, GO1_KP)
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         import warnings
 
                         warnings.warn(f"go1 Newton actuator patch failed ({e}); go1 will not stand", RuntimeWarning)

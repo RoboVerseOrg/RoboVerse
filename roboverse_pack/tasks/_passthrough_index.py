@@ -31,6 +31,7 @@ PASSTHROUGH_PREFIXES = [
 def list_passthrough_envs() -> dict[str, list[str]]:
     """Return {benchmark_name: [env_id, ...]} for all currently-registered passthrough envs."""
     import gymnasium as gym
+
     out: dict[str, list[str]] = {}
     for prefix in PASSTHROUGH_PREFIXES:
         bench = prefix.rstrip("/")

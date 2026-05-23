@@ -63,8 +63,8 @@ class LiftPegUprightTask(ManiskillBaseTask):
 # ``compute_dense_reward`` (mani_skill/envs/tasks/tabletop/lift_peg_upright.py).
 # ---------------------------------------------------------------------------
 
-_LP_HALF_LENGTH = 0.12   # peg_length / 2 — target z when upright
-_LP_HALF_WIDTH = 0.025   # peg_widdth / 2 — rest height lying flat
+_LP_HALF_LENGTH = 0.12  # peg_length / 2 — target z when upright
+_LP_HALF_WIDTH = 0.025  # peg_widdth / 2 — rest height lying flat
 _LP_TCP_OFFSET = (0.0, 0.0, 0.10312)
 _LP_UPRIGHT_COS = float(torch.cos(torch.tensor(0.08)))  # ManiSkill 0.08 rad tol
 

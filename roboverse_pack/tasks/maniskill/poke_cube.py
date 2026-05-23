@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import torch
+
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
 from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-
-import torch
 
 from ._dense_rl import DenseRLResetMixin
 from .maniskill_base import ManiskillBaseTask
@@ -136,12 +136,25 @@ class PokeCubeDenseTask(DenseRLResetMixin, PokeCubeCfg):
 
     scenario = ScenarioCfg(
         objects=[
-            _Cyl(name="goal_region", radius=0.05, height=0.0001, color=[0.0, 0.0, 1.0],
-                 collision_enabled=False, physics=PhysicStateType.XFORM, fix_base_link=True),
-            _Cube(name="cube", size=[0.04, 0.04, 0.04], mass=0.02,
-                  physics=PhysicStateType.RIGIDBODY, color=[1.0, 0.0, 0.0]),
-            _Cube(name="peg", size=[0.24, 0.05, 0.05], mass=0.05,
-                  physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]),
+            _Cyl(
+                name="goal_region",
+                radius=0.05,
+                height=0.0001,
+                color=[0.0, 0.0, 1.0],
+                collision_enabled=False,
+                physics=PhysicStateType.XFORM,
+                fix_base_link=True,
+            ),
+            _Cube(
+                name="cube",
+                size=[0.04, 0.04, 0.04],
+                mass=0.02,
+                physics=PhysicStateType.RIGIDBODY,
+                color=[1.0, 0.0, 0.0],
+            ),
+            _Cube(
+                name="peg", size=[0.24, 0.05, 0.05], mass=0.05, physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]
+            ),
         ],
         robots=["franka"],
     )
