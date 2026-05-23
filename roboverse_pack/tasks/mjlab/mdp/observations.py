@@ -29,9 +29,26 @@ from .scene_entity import (
 # ---------------------------------------------------------------------------
 
 
-def base_lin_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Body-frame base linear velocity. mjlab ``builtin_sensor(imu_lin_vel)``."""
-    return base_lin_vel_b(env, env_states, asset_cfg.name)
+def base_lin_vel(env, env_states, asset_cfg: SceneEntityCfg, imu_offset=None) -> torch.Tensor:
+    """Body-frame base linear velocity. mjlab ``builtin_sensor(imu_lin_vel)``.
+
+    mjlab's ``base_lin_vel`` obs term reads the ``imu_lin_vel`` velocimeter,
+    which measures the linear velocity at the IMU **site** -- offset
+    ``imu_offset`` (in body frame) from the base body origin -- not at the
+    origin itself. A velocimeter on a rigid body therefore reports
+    ``v_base_b + omega_b x r_imu``. When ``imu_offset`` is given we add that
+    ``omega x r`` term so the observation matches the sensor 1:1; when it is
+    ``None`` we return the plain body-origin velocity (back-compat for tasks
+    with no offset IMU). NOTE: the velocity-tracking *reward* uses the true
+    body velocity (mjlab ``root_link_lin_vel_b``), so this offset must stay in
+    the observation path only and never leak into the reward.
+    """
+    v_b = base_lin_vel_b(env, env_states, asset_cfg.name)
+    if imu_offset is None:
+        return v_b
+    w_b = base_ang_vel_b(env, env_states, asset_cfg.name)
+    r = torch.tensor(imu_offset, device=v_b.device, dtype=v_b.dtype).expand_as(v_b)
+    return v_b + torch.linalg.cross(w_b, r, dim=-1)
 
 
 def base_ang_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:

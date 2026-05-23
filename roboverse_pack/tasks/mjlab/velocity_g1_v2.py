@@ -194,7 +194,12 @@ class _G1ObsCfg:
 
     @configclass
     class ActorCfg:
-        base_lin_vel = ObsTerm(func=obs.base_lin_vel, params={"asset_cfg": _G1_TRUNK})
+        # mjlab reads base_lin_vel from the `imu_lin_vel` velocimeter at the g1
+        # `imu_in_pelvis` site (offset from pelvis in g1.xml); match with omega x r.
+        base_lin_vel = ObsTerm(
+            func=obs.base_lin_vel,
+            params={"asset_cfg": _G1_TRUNK, "imu_offset": (0.04525, 0.0, -0.08339)},
+        )
         base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
         projected_gravity = ObsTerm(func=obs.projected_gravity, params={"asset_cfg": _G1_TRUNK})
         joint_pos = ObsTerm(
