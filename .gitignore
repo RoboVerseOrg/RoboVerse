@@ -131,3 +131,7 @@ training_logs/
 
 # local-only: report-hub publish wrappers (reports live in the external report repo)
 tools/publish_report*.sh
+
+# local-only: personal agent rules (commit identity, push habits, private infra) and env override
+CLAUDE.local.md
+ENVIRONMENTS.local.md
