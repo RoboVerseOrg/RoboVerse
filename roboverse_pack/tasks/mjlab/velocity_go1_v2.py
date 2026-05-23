@@ -79,6 +79,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    TerrainGridScanSensor,
+    TerrainGridScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -223,6 +225,28 @@ class _Go1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _GO1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
+class _Go1RoughObsCfg(_Go1ObsCfg):
+    """Rough-terrain obs = flat obs + mjlab ``height_scan`` (terrain grid scan).
+
+    mjlab's velocity base cfg has ``height_scan`` in both actor and critic; the
+    flat cfg deletes it, rough keeps it (as the LAST actor term). The 187-ray
+    grid (1.6x1.0 @ res 0.1) is read from the ``terrain_scan``
+    :class:`TerrainGridScanSensor` registered by :class:`VelocityRoughGo1Task`.
+    """
+
+    @configclass
+    class ActorCfg(_Go1ObsCfg.ActorCfg):
+        height_scan = ObsTerm(func=obs.height_scan, params={"sensor_name": "terrain_scan", "num_rays": 187})
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -491,9 +515,13 @@ class _Go1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all go1 velocity variants (flat / rough)."""
 
     scenario = _go1_scenario()
+    # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
+    _obs_cfg_cls: type = _Go1ObsCfg
+    _use_terrain_scan: bool = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         cfg = VelocityFlatGo1EnvCfg()
+        cfg.observations = self._obs_cfg_cls()  # rough swaps in the height_scan obs group
         # Two-path scenario handling (mirror cartpole_v2):
         #   mujoco: scene-MJCF self-contained — drop trainer-injected robots
         #   newton: needs RobotCfg list — keep trainer-injected mjlab_go1
@@ -575,6 +603,13 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                 target_height=0.0,
             ),
         )
+        # Rough terrain: the trunk-centered grid scan that feeds the height_scan
+        # obs term (flat task omits this — mjlab deletes height_scan on flat).
+        if self._use_terrain_scan:
+            self._mjlab_sensors["terrain_scan"] = TerrainGridScanSensor(
+                self,
+                TerrainGridScanSensorCfg(name="terrain_scan", base_body="trunk", size=(1.6, 1.0), resolution=0.1),
+            )
         # BuiltinSensor (subtree_angmom) works on both backends now (Newton reads
         # mujoco_warp's batched subtree_angmom). Completes 6/6 sensor rewards on GPU.
         self._mjlab_sensors["robot/root_angmom"] = BuiltinSensor(
@@ -697,4 +732,16 @@ class VelocityFlatGo1Task(_Go1TaskBase):
 
 @register_task("mjlab.velocity_rough_go1_v2")
 class VelocityRoughGo1Task(_Go1TaskBase):
-    """Same scaffold as flat go1. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """Go1 velocity on rough terrain.
+
+    Adds the mjlab ``height_scan`` terrain obs (187-ray trunk grid via
+    :class:`TerrainGridScanSensor`) that the flat task omits — so the obs is
+    structurally 1:1 with mjlab's rough policy input. NOTE: the heightfield
+    terrain itself is not yet injected into the scene MJCF, so on the current
+    flat ground the scan reads a uniform trunk height; wiring the heightfield
+    (``mdp.terrain.generate_rough_hfield_mjcf``) into the scenario is the
+    remaining step for full rough 1:1.
+    """
+
+    _obs_cfg_cls = _Go1RoughObsCfg
+    _use_terrain_scan = True

@@ -132,17 +132,22 @@ def object_to_goal_distance(env, env_states, *, object_name: str, command_name: 
     return (target - obj_t).unsqueeze(0).expand(env.num_envs, -1)
 
 
-def height_scan(env, env_states, *, sensor_name: str = "terrain_scan") -> torch.Tensor:
+def height_scan(env, env_states, *, sensor_name: str = "terrain_scan", num_rays: int = 187) -> torch.Tensor:
     """Terrain height scan. mjlab velocity-rough ``height_scan``.
 
     Reads a :class:`~..sensors.TerrainGridScanSensor` registered on
     ``env._mjlab_sensors[sensor_name]`` → ``(N, num_rays)`` (frame_z - hit_z per
-    grid ray). Returns zeros if the sensor isn't wired (keeps obs dim stable).
+    grid ray). Returns a ``(N, num_rays)`` zero tensor when the sensor isn't
+    registered yet — important because the obs manager assembles the obs space
+    *before* the task registers its ``_mjlab_sensors`` (sensors are set after
+    ``super().__init__``), so the term must report its final width immediately
+    or the obs dim would lock to the wrong size. ``num_rays`` must match the
+    sensor's grid (go1/g1 default 1.6x1.0 @ res 0.1 → 187).
     """
     sensors = getattr(env, "_mjlab_sensors", {})
     sensor = sensors.get(sensor_name)
     if sensor is None or sensor.data.heights is None:
-        return torch.zeros(env.num_envs, 1, device=env.device)
+        return torch.zeros(env.num_envs, num_rays, device=env.device)
     return sensor.data.heights
 
 
