@@ -151,6 +151,82 @@ def height_scan(env, env_states, *, sensor_name: str = "terrain_scan", num_rays:
     return sensor.data.heights
 
 
+def _motion_cmd(env, command_name: str):
+    """Resolve the MotionCommand(Manager) or return None."""
+    return getattr(env, "command_managers", {}).get(command_name)
+
+
+def motion_anchor_pos_b(env, env_states, *, command_name: str = "motion") -> torch.Tensor:
+    """Motion anchor position error in the robot anchor frame. mjlab ``motion_anchor_pos_b``."""
+    from metasim.utils.math import subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    pos, _ = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w, cmd.robot_anchor_quat_w, cmd.anchor_pos_w, cmd.anchor_quat_w
+    )
+    return pos.view(env.num_envs, -1)
+
+
+def motion_anchor_ori_b(env, env_states, *, command_name: str = "motion") -> torch.Tensor:
+    """Motion anchor orientation (6D) in the robot anchor frame. mjlab ``motion_anchor_ori_b``."""
+    from metasim.utils.math import matrix_from_quat, subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, 6, device=env.device)
+    _, ori = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w, cmd.robot_anchor_quat_w, cmd.anchor_pos_w, cmd.anchor_quat_w
+    )
+    mat = matrix_from_quat(ori)
+    return mat[..., :2].reshape(mat.shape[0], -1)
+
+
+def robot_body_pos_b(env, env_states, *, command_name: str = "motion", num_bodies: int = 11) -> torch.Tensor:
+    """Tracked-body positions in the robot anchor frame. mjlab ``robot_body_pos_b``.
+
+    ``num_bodies`` sets the fallback width (the motion command is registered
+    after the obs manager assembles, so the term must report its final width
+    immediately): num_bodies*3.
+    """
+    from metasim.utils.math import subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, num_bodies * 3, device=env.device)
+    nb = len(cmd.cfg.body_names)
+    pos_b, _ = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_anchor_quat_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_body_pos_w,
+        cmd.robot_body_quat_w,
+    )
+    return pos_b.reshape(env.num_envs, -1)
+
+
+def robot_body_ori_b(env, env_states, *, command_name: str = "motion", num_bodies: int = 11) -> torch.Tensor:
+    """Tracked-body orientations (6D each) in the robot anchor frame. mjlab ``robot_body_ori_b``.
+
+    ``num_bodies`` sets the fallback width (num_bodies*6) — see
+    :func:`robot_body_pos_b`.
+    """
+    from metasim.utils.math import matrix_from_quat, subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, num_bodies * 6, device=env.device)
+    nb = len(cmd.cfg.body_names)
+    _, ori_b = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_anchor_quat_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_body_pos_w,
+        cmd.robot_body_quat_w,
+    )
+    mat = matrix_from_quat(ori_b)
+    return mat[..., :2].reshape(mat.shape[0], -1)
+
+
 def joint_pos_rel(env, env_states, asset_cfg: SceneEntityCfg, default=None) -> torch.Tensor:
     """Joint positions, optionally relative to a default pose (mjlab 1:1).
 

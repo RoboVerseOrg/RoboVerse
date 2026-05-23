@@ -704,10 +704,49 @@ class _G1TrackingRewardsCfg(_G1RewardsCfg):
 
 
 @configclass
+class _G1TrackingObsCfg:
+    """mjlab tracking_env_cfg actor obs, term-for-term in mjlab's order.
+
+    motion_anchor_pos_b(3) + motion_anchor_ori_b(6) + base_lin_vel(3) +
+    base_ang_vel(3) + joint_pos(29) + joint_vel(29) + actions(29) = 102D.
+    (mjlab also lists a ``command``=generated_commands(motion) term, but for
+    this MotionCommandManager that obs is 0-D — dropped to avoid an
+    assemble-time vs runtime width mismatch; the obs vector is identical.)
+    The critic adds robot_body_pos_b(33) + robot_body_ori_b(66), matching
+    mjlab's privileged critic group.
+    """
+
+    @configclass
+    class ActorCfg:
+        motion_anchor_pos_b = ObsTerm(func=obs.motion_anchor_pos_b, params={"command_name": "motion"})
+        motion_anchor_ori_b = ObsTerm(func=obs.motion_anchor_ori_b, params={"command_name": "motion"})
+        base_lin_vel = ObsTerm(
+            func=obs.base_lin_vel,
+            params={"asset_cfg": _G1_TRUNK, "imu_offset": (0.04525, 0.0, -0.08339)},
+        )
+        base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
+        joint_pos = ObsTerm(
+            func=obs.joint_pos_rel,
+            params={"asset_cfg": _G1_JOINTS, "default": _G1_DEFAULT_POSE_NP.tolist()},
+        )
+        joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
+        last_action = ObsTerm(func=obs.last_action)
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        robot_body_pos_b = ObsTerm(func=obs.robot_body_pos_b, params={"command_name": "motion", "num_bodies": 11})
+        robot_body_ori_b = ObsTerm(func=obs.robot_body_ori_b, params={"command_name": "motion", "num_bodies": 11})
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
 class TrackingFlatG1EnvCfg(VelocityFlatG1EnvCfg):
     """Tracking-flat-G1 cfg = velocity cfg with rewards swapped to tracking."""
 
     rewards = _G1TrackingRewardsCfg()
+    observations = _G1TrackingObsCfg()
 
 
 class _G1TrackingTaskBase(_G1TaskBase):
@@ -729,6 +768,7 @@ class _G1TrackingTaskBase(_G1TaskBase):
 
     motion_file: str | None = None  # subclass / cfg can override
     cfg: TrackingFlatG1EnvCfg
+    _obs_cfg_cls = _G1TrackingObsCfg  # mjlab tracking obs (motion anchors + base + joints)
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         super().__init__(scenario=scenario, device=device)
