@@ -30,6 +30,7 @@ examples = [
     "imageio[ffmpeg]",
     "opencv-python",
     "pygame",
+    "pynput",
     "rich",
     "rootutils",
     "stable-baselines3",
