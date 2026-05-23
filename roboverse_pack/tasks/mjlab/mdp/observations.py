@@ -11,6 +11,13 @@ from __future__ import annotations
 import torch
 
 from ._math import base_ang_vel_b, base_lin_vel_b, projected_gravity_b
+from .rewards import (
+    _mujoco_body_pos_w,
+    _mujoco_site_pos_w,
+    _newton_object_pos_w,
+    _newton_robot_ee_pos_w,
+    _read_command_tensor,
+)
 from .scene_entity import (
     SceneEntityCfg,
     entity_joint_pos,
@@ -74,6 +81,55 @@ def generated_commands(env, env_states, *, command_name: str) -> torch.Tensor:
     if not isinstance(cur, torch.Tensor):
         return torch.zeros(env.num_envs, 3, device=env.device)
     return cur
+
+
+def ee_to_object_distance(env, env_states, *, object_name: str, site_name: str = "tcp_site") -> torch.Tensor:
+    """Distance vector ``object - end_effector``. mjlab ``ee_to_object_distance``.
+
+    mjlab returns the vector in the robot *base* frame
+    (``quat_apply(quat_inv(base_quat), obj_w - ee_w)``). The yam lift task is a
+    **fixed-base** arm mounted at identity orientation, so the base frame equals
+    the world frame and we return the world-frame vector directly (1:1). Reuses
+    the same world-position readers as the lift rewards, so mujoco and Newton
+    paths stay consistent. Shape ``(num_envs, 3)``.
+    """
+    if not hasattr(env.handler, "physics"):  # Newton path (per-env tensors)
+        ee = _newton_robot_ee_pos_w(env, site_name if site_name and site_name != "tcp_site" else None)
+        obj = _newton_object_pos_w(env, object_name)
+        if ee is None or obj is None:
+            return torch.zeros(env.num_envs, 3, device=env.device)
+        return (obj - ee).to(env.device, torch.float32)
+    ee = _mujoco_site_pos_w(env, site_name)
+    obj = _mujoco_body_pos_w(env, object_name)
+    if ee is None or obj is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    vec = torch.as_tensor(obj - ee, device=env.device, dtype=torch.float32)
+    return vec.unsqueeze(0).expand(env.num_envs, -1)
+
+
+def object_to_goal_distance(env, env_states, *, object_name: str, command_name: str) -> torch.Tensor:
+    """Distance vector ``goal - object``. mjlab ``object_to_goal_distance``.
+
+    Goal is the ``LiftingCommand`` target read via
+    ``command_managers[command_name].current()[:, :3]``. World frame == base
+    frame for the fixed-base yam (see :func:`ee_to_object_distance`). Shape
+    ``(num_envs, 3)``.
+    """
+    cmd = _read_command_tensor(env, command_name)
+    if cmd is None or cmd.shape[-1] < 3:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    if not hasattr(env.handler, "physics"):  # Newton path
+        obj = _newton_object_pos_w(env, object_name)
+        if obj is None:
+            return torch.zeros(env.num_envs, 3, device=env.device)
+        target = cmd[:, :3].to(obj.device, torch.float32)
+        return (target - obj).to(env.device, torch.float32)
+    obj = _mujoco_body_pos_w(env, object_name)
+    if obj is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    obj_t = torch.as_tensor(obj, device=env.device, dtype=torch.float32)
+    target = cmd[0, :3].to(env.device, torch.float32)
+    return (target - obj_t).unsqueeze(0).expand(env.num_envs, -1)
 
 
 def joint_pos_rel(env, env_states, asset_cfg: SceneEntityCfg, default=None) -> torch.Tensor:

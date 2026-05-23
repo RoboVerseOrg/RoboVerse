@@ -183,6 +183,13 @@ class _YamObsCfg:
     class ActorCfg:
         joint_pos = ObsTerm(func=obs.joint_pos_rel, params={"asset_cfg": _YAM_JOINTS})
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _YAM_JOINTS})
+        # mjlab lift_cube obs order: joint_pos, joint_vel, ee_to_cube,
+        # cube_to_goal, actions. Without the cube/goal terms the policy could
+        # not see the object or the target (a real 1:1 gap vs mjlab).
+        ee_to_cube = ObsTerm(func=obs.ee_to_object_distance, params={"object_name": "cube", "site_name": "tcp_site"})
+        cube_to_goal = ObsTerm(
+            func=obs.object_to_goal_distance, params={"object_name": "cube", "command_name": "lift_height"}
+        )
         last_action = ObsTerm(func=obs.last_action)
 
     @configclass
