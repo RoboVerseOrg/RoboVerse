@@ -22,7 +22,7 @@ Live report (with embedded videos and gap analysis):
   `T=20`, `final_cube_z=0.0198 m` under zero-delta target). It is a
   RoboVerse-flavored task, not a 1:1 reimplementation of PickCube-v1.
 - **Gap to numeric parity**: 10 items, all localised to one task
-  module. See the [gap analysis section](#what-it-takes-to-reach-1-1-parity)
+  module. See the [gap analysis section](maniskill-gap-analysis)
   below.
 
 ## Coverage
@@ -37,6 +37,7 @@ Live report (with embedded videos and gap analysis):
 All four roll out + render under the harness; zero-action reward sums
 range 2.3–5.4 (no task is succeeded by a stationary robot, as expected).
 
+(maniskill-gap-analysis)=
 ## What it takes to reach 1:1 parity
 
 `roboverse_pack/tasks/maniskill/pick_cube.py` needs:

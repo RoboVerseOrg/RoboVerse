@@ -65,5 +65,3 @@ The RoboVerse Benchmark provides standardized evaluation protocols for:
 
 See [Benchmark Overview](benchmark/overview.md) for detailed evaluation protocols.
 
----
-
