@@ -62,6 +62,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    TerrainGridScanSensor,
+    TerrainGridScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -209,6 +211,27 @@ class _G1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
+class _G1RoughObsCfg(_G1ObsCfg):
+    """Rough-terrain obs = flat obs + mjlab ``height_scan`` (terrain grid scan).
+
+    Adds the 187-ray trunk grid scan (1.6x1.0 @ res 0.1) as the LAST actor term,
+    matching mjlab's rough obs (flat deletes height_scan, rough keeps it). Read
+    from the ``terrain_scan`` :class:`TerrainGridScanSensor` on the pelvis.
+    """
+
+    @configclass
+    class ActorCfg(_G1ObsCfg.ActorCfg):
+        height_scan = ObsTerm(func=obs.height_scan, params={"sensor_name": "terrain_scan", "num_rays": 187})
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -435,9 +458,13 @@ class _G1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all G1 velocity variants (flat / rough)."""
 
     scenario = _g1_scenario()
+    # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
+    _obs_cfg_cls: type = _G1ObsCfg
+    _use_terrain_scan: bool = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         cfg = VelocityFlatG1EnvCfg()
+        cfg.observations = self._obs_cfg_cls()  # rough swaps in the height_scan obs group
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
             scenario.robots = []
@@ -486,6 +513,12 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 target_height=0.0,
             ),
         )
+        # Rough terrain: trunk(pelvis)-centered grid scan feeding height_scan obs.
+        if self._use_terrain_scan:
+            self._mjlab_sensors["terrain_scan"] = TerrainGridScanSensor(
+                self,
+                TerrainGridScanSensorCfg(name="terrain_scan", base_body="pelvis", size=(1.6, 1.0), resolution=0.1),
+            )
         # BuiltinSensor (subtree_angmom) works on both backends (Newton reads
         # mujoco_warp's batched subtree_angmom). Completes 6/6 sensor rewards.
         self._mjlab_sensors["robot/root_angmom"] = BuiltinSensor(
@@ -579,7 +612,17 @@ class VelocityFlatG1Task(_G1TaskBase):
 
 @register_task("mjlab.velocity_rough_g1_v2")
 class VelocityRoughG1Task(_G1TaskBase):
-    """Same scaffold as flat. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """G1 velocity on rough terrain.
+
+    Adds mjlab's ``height_scan`` terrain obs (187-ray pelvis grid via
+    :class:`TerrainGridScanSensor`) the flat task omits → obs structurally 1:1
+    with mjlab's rough input. Heightfield terrain injection into the scene MJCF
+    is the remaining step for full numerical rough 1:1 (currently flat → uniform
+    scan).
+    """
+
+    _obs_cfg_cls = _G1RoughObsCfg
+    _use_terrain_scan = True
 
 
 # Bodies tracked by mjlab tracking_flat_g1 — the G1 humanoid's principal
