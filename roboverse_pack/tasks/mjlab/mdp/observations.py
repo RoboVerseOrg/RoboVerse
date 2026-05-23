@@ -132,6 +132,20 @@ def object_to_goal_distance(env, env_states, *, object_name: str, command_name: 
     return (target - obj_t).unsqueeze(0).expand(env.num_envs, -1)
 
 
+def height_scan(env, env_states, *, sensor_name: str = "terrain_scan") -> torch.Tensor:
+    """Terrain height scan. mjlab velocity-rough ``height_scan``.
+
+    Reads a :class:`~..sensors.TerrainGridScanSensor` registered on
+    ``env._mjlab_sensors[sensor_name]`` → ``(N, num_rays)`` (frame_z - hit_z per
+    grid ray). Returns zeros if the sensor isn't wired (keeps obs dim stable).
+    """
+    sensors = getattr(env, "_mjlab_sensors", {})
+    sensor = sensors.get(sensor_name)
+    if sensor is None or sensor.data.heights is None:
+        return torch.zeros(env.num_envs, 1, device=env.device)
+    return sensor.data.heights
+
+
 def joint_pos_rel(env, env_states, asset_cfg: SceneEntityCfg, default=None) -> torch.Tensor:
     """Joint positions, optionally relative to a default pose (mjlab 1:1).
 
