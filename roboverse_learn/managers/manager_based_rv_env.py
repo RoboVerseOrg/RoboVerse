@@ -547,10 +547,17 @@ class ManagerBasedRVEnv(RLTaskEnv):
             term = getattr(group, name)
             params = term.params or {}
             obs = term.func(self, env_states, **params).clone()
+            # Pipeline mirrors mjlab ObservationManager: noise -> clip -> scale.
             noise_range = getattr(term, "noise_range", None)
             if noise_range is not None:
                 lo, hi = noise_range
                 obs = obs + (torch.rand_like(obs) * (hi - lo) + lo)
+            clip = getattr(term, "clip", None)
+            if clip is not None:
+                obs = obs.clip(min=clip[0], max=clip[1])
+            scale = getattr(term, "scale", None)
+            if scale is not None:
+                obs = obs * scale
             parts.append(obs)
         return torch.cat(parts, dim=-1)
 

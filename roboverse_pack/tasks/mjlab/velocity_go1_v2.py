@@ -246,7 +246,14 @@ class _Go1RoughObsCfg(_Go1ObsCfg):
 
     @configclass
     class ActorCfg(_Go1ObsCfg.ActorCfg):
-        height_scan = ObsTerm(func=obs.height_scan, params={"sensor_name": "terrain_scan", "num_rays": 187})
+        # mjlab scales height_scan by 1/terrain_scan.max_distance (=1/5.0); see
+        # velocity_env_cfg.py:108. Obs kept deterministic (no Unoise) to match
+        # this file's parity-first convention (mjlab enable_corruption=False).
+        height_scan = ObsTerm(
+            func=obs.height_scan,
+            params={"sensor_name": "terrain_scan", "num_rays": 187},
+            scale=1.0 / 5.0,
+        )
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -632,7 +639,9 @@ class _Go1TaskBase(ManagerBasedRVEnv):
         if self._use_terrain_scan:
             self._mjlab_sensors["terrain_scan"] = TerrainGridScanSensor(
                 self,
-                TerrainGridScanSensorCfg(name="terrain_scan", base_body="trunk", size=(1.6, 1.0), resolution=0.1),
+                TerrainGridScanSensorCfg(
+                    name="terrain_scan", base_body="trunk", size=(1.6, 1.0), resolution=0.1, max_distance=5.0
+                ),
             )
         # BuiltinSensor (subtree_angmom) works on both backends now (Newton reads
         # mujoco_warp's batched subtree_angmom). Completes 6/6 sensor rewards on GPU.
