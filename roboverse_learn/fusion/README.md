@@ -49,6 +49,15 @@ Supported checkpoint formats (auto-detected): TorchScript `policy.pt`, a raw
 `actor_state_dict` / bare `mlp.*` dict, or an rsl-rl `model_*.pt` runner
 checkpoint. For continuous locomotion (no success checker) pass `--keep_all`.
 
+**Task scope.** Demo collection targets *standard manipulation tasks* whose
+state exposes the robot as a `RobotCfg` plus objects and a camera (the same
+tasks `il/data2zarr_dp.py` consumes, e.g. `StackCube_franka`, `lift_*`). The
+mjlab manager tasks (cartpole / velocity g1/go1) load their articulation as a
+**scene MJCF**, so `handler.get_states().robots` is empty and `save_demo` has no
+robot to serialise — the collector detects this and raises a clear error rather
+than producing a broken demo. Those locomotion policies are evaluated with the
+RL eval/parity tooling instead.
+
 ## IL → RL: warm-start an RL actor from a BC policy
 
 `bc_warmstart.load_bc_into_actor_critic` copies a behaviour-cloning MLP's Linear

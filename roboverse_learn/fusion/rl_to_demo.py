@@ -205,7 +205,17 @@ def collect_demos_from_policy(
 
     # Per-env trajectory caches (lists of single-env DictEnvState).
     env.reset()
-    init_nested = state_tensor_to_nested(handler, handler.get_states(mode="tensor"))
+    tensor_state = handler.get_states(mode="tensor")
+    if not tensor_state.robots and not tensor_state.objects:
+        raise RuntimeError(
+            f"Task {task!r} exposes no RobotCfg-registered robot/object in its state "
+            f"(its handler.get_states().robots is empty). This is typical of scene-MJCF "
+            f"manager tasks (e.g. mjlab cartpole / velocity), whose articulation lives in "
+            f"the scene MJCF rather than as a MetaSim RobotCfg. The RL->IL demo bridge "
+            f"targets standard manipulation tasks (robot + objects + camera), which is also "
+            f"what il/data2zarr_dp.py expects. Use a manipulation-task checkpoint."
+        )
+    init_nested = state_tensor_to_nested(handler, tensor_state)
     caches: list[list] = [[init_nested[i]] for i in range(num_envs)]
 
     collected = 0
