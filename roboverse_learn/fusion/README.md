@@ -58,6 +58,21 @@ robot to serialise — the collector detects this and raises a clear error rathe
 than producing a broken demo. Those locomotion policies are evaluated with the
 RL eval/parity tooling instead.
 
+## One command: the whole loop
+
+`pipeline.py` chains the existing entry points (it shells out to each; it does
+not reimplement any trainer). `--dry_run` prints the exact commands without
+running them.
+
+```bash
+# already have an RL checkpoint -> collect + to-zarr + il-train:
+python -m roboverse_learn.fusion.pipeline --task mjlab.lift_cube_yam_v2 \
+    --name lift --checkpoint outputs/lift/policy.pt --num_demos 100
+# or train the RL policy first too:
+python -m roboverse_learn.fusion.pipeline --task mjlab.lift_cube_yam_v2 --name lift \
+    --stages rl-train,collect,to-zarr,il-train --rl_iterations 1500
+```
+
 ## IL → RL: warm-start an RL actor from a BC policy
 
 `bc_warmstart.load_bc_into_actor_critic` copies a behaviour-cloning MLP's Linear
