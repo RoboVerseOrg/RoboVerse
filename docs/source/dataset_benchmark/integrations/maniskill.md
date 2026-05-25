@@ -6,9 +6,6 @@ MetaSim already speaks SAPIEN3, so the integration goal is task-level
 parity: a `roboverse_pack.tasks.maniskill.*` task should behave like
 the ManiSkill `gym.make("...-v1")` env it mirrors.
 
-Live report (with embedded videos and gap analysis):
-<http://localhost:8000/#roboverse/maniskill_integration>.
-
 ## Status
 
 - **Harness**: `tools/maniskill_integration/` mirrors the mjlab harness
@@ -69,8 +66,6 @@ range 2.3–5.4 (no task is succeeded by a stationary robot, as expected).
 Each item ≈ 30–90 min of focused edit; ≈ 1 day total for PickCube-v1.
 
 ## Known Sapien3 handler gaps
-
-(Pulled forward from the [recon report](http://localhost:8000/#roboverse/maniskill_sapien_repro_2026_05_16).)
 
 - No contact-force query on `BaseSimHandler` — ManiSkill's `is_grasped`
   needs pairwise contacts at both finger pads.

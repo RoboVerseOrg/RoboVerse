@@ -25,8 +25,8 @@ phase):
   evaluated
 
 These are tracked items 3/4/5/7/8 of the parity recipe in the
-integration report:
-<http://localhost:8000/#roboverse/maniskill_integration>.
+ManiSkill integration docs
+(``docs/source/dataset_benchmark/integrations/maniskill.md``).
 """
 
 from __future__ import annotations

@@ -11,9 +11,6 @@ what mjlab's underlying `mj_step` produces. Once physics parity holds,
 reward functions and observation manager ports become straightforward
 because they read from identical state.
 
-A live report with embedded videos and parity tables is at
-<http://localhost:8000/#roboverse/mjlab_integration>.
-
 ## Coverage
 
 All 12 mjlab-registered task IDs are wrapped under

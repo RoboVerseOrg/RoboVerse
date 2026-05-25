@@ -6,9 +6,6 @@ Tasks live under `envs/<task>.py` and each declares its own scene
 setup, success criterion, and scripted-policy data collector via raw
 SAPIEN API.
 
-Live report:
-<http://localhost:8000/#roboverse/robotwin_integration>.
-
 ## Status
 
 - **What works**: RoboTwin's ALOHA-AgileX embodiment
