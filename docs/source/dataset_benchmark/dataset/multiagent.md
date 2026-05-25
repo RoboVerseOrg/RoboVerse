@@ -53,7 +53,7 @@ one arm or many. Multi-agent loading requires the v3 namespaced format
 (`v2_as_v3=True`, the default); `v2_as_v3=False` with a robot list raises, since
 namespacing is what keeps each agent's actions indexed by name.
 
-## Runnable example
+## Runnable examples
 
 `get_started/8_multiagent_dataset.py` builds a coordinated two-Franka handover
 trajectory, saves it as a real `*_v2.pkl`, loads it back through `get_traj`, and
@@ -62,6 +62,23 @@ replays both arms simultaneously to video:
 ```bash
 MUJOCO_GL=egl python get_started/8_multiagent_dataset.py --sim mujoco
 ```
+
+`get_started/9_maniskill_two_robot_stack_cube.py` does the same round trip with
+**real ManiSkill data**: it fetches the official `TwoRobotStackCube-v1`
+demonstrations, converts one episode into the name-keyed `*_v2` format, loads
+both Panda arms through `get_traj`, and replays the recorded states on MuJoCo:
+
+```bash
+MUJOCO_GL=egl python get_started/9_maniskill_two_robot_stack_cube.py --sim mujoco
+```
+
+The ManiSkill `.h5` stores one articulation per agent
+(`panda_wristcam-agent-0` / `-agent-1`) plus the shared cubes; converting it is
+just a regrouping into one keyed entry per agent. Replay uses the recorded
+**states** (kinematic playback) rather than open-loop action targets: the demos
+were collected under SAPIEN's `pd_joint_delta_pos` controller, and closed-loop
+contact dynamics do not transfer across simulators, so state replay is the
+faithful cross-sim view of the dataset.
 
 ## Single-embodiment bimanual vs. two agents
 
