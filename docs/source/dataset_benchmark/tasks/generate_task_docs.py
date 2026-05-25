@@ -7,8 +7,21 @@ import shutil
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../roboverse_pack/tasks"))
 OUTPUT_DIR = os.path.join(CUR_DIR, "tasks_md")
-VIDEO_BASE = "https://videos.example.com"
 DEFAULT_DESC = "No description provided."
+
+# Where rendered task/training media live on disk and how they are referenced
+# from the published docs. We only emit a <video>/<img> tag when the file
+# actually exists under STANDARD_OUTPUT_DIR, so a missing asset shows a
+# "coming soon" note instead of a broken player.
+STANDARD_OUTPUT_DIR = os.path.abspath(os.path.join(CUR_DIR, "../../_static/standard_output"))
+STANDARD_OUTPUT_URL = "/roboverse/_static/standard_output"
+
+# Documented entrypoint that instantiates any registered task from its config
+# and rolls it out (get_started/9_cfg_task.py). It takes the task name plus a
+# simulator backend; the robot comes from the task's own scenario.
+RUN_ENTRYPOINT = "get_started/9_cfg_task.py"
+# Backend preference when a task declares which platforms it supports.
+SIM_PREFERENCE = ["mujoco", "isaacsim", "sapien3", "isaacgym", "genesis", "newton"]
 
 GROUPS = [
     "Maniskill",
@@ -64,14 +77,10 @@ def parse_docstring_metadata(docstring: str):
     if "badges" in meta and isinstance(meta["badges"], list):
         meta["badges"] = {b.strip(): True for b in meta["badges"] if isinstance(b, str)}
 
-    # video_url
-    if "video_url" not in meta and "title" in meta and "group" in meta:
-        meta["video_url"] = f"/roboverse/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
-
-    elif "video_url" in meta and not meta["video_url"].startswith("http"):
-        meta["video_url"] = (
-            f"/roboverse/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
-        )
+    # Keep only the raw video filename if the docstring declares one; the
+    # actual path resolution + on-disk existence check happen in generate_md.
+    if "video_url" in meta and isinstance(meta["video_url"], str):
+        meta["video_url"] = os.path.basename(meta["video_url"].strip())
 
     return meta
 
@@ -95,6 +104,106 @@ def render_badges(meta):
     return "\n".join(display_lines + [""] + definition_lines) if display_lines else ""
 
 
+def choose_task_id(task_ids: list, title: str) -> str:
+    """Pick the registered id that best matches a page title.
+
+    A task file may register several variants (e.g. ``maniskill.stack_cube`` and
+    ``maniskill.stack_cube_dense``). Prefer the one whose last segment equals the
+    page title, otherwise the shortest last segment (the base variant rather than
+    a ``_dense`` / ``_rgb`` derivative).
+    """
+    title_l = title.strip().lower()
+    exact = [t for t in task_ids if t.split(".")[-1].lower() == title_l]
+    if exact:
+        return exact[0]
+    return min(task_ids, key=lambda t: (len(t.split(".")[-1]), t))
+
+
+def pick_sim(meta: dict) -> str:
+    """Choose a backend for the run command from the task's declared platforms."""
+    platforms = meta.get("platforms")
+    if isinstance(platforms, dict):
+        for sim in SIM_PREFERENCE:
+            if platforms.get(sim) == "✅":
+                return sim
+    return "mujoco"
+
+
+def resolve_media(group: str, filename: str):
+    """Return (web_url, exists) for a media file under standard_output/tasks/<group>/."""
+    if not filename:
+        return None, False
+    disk_path = os.path.join(STANDARD_OUTPUT_DIR, "tasks", group, filename)
+    web_url = f"{STANDARD_OUTPUT_URL}/tasks/{group}/{filename}"
+    return web_url, os.path.isfile(disk_path)
+
+
+def render_video_section(meta: dict) -> str:
+    group = meta.get("group", "Unknown")
+    title = meta.get("title", "")
+    filename = meta.get("video_url") or (f"{title}.mp4" if title else "")
+    web_url, exists = resolve_media(group, filename)
+    if not exists:
+        return "## Task Video\n\n_Task rollout video coming soon._\n"
+    return f"""## Task Video
+
+<div style="display: flex; justify-content: center; margin-bottom: 20px;">
+    <div style="width: 100%; max-width: 512px; text-align: center;">
+        <video width="100%" autoplay loop muted playsinline style="border-radius: 0px;">
+            <source src="{web_url}" type="video/mp4">
+        </video>
+        <p style="margin-top: 5px;"></p>
+    </div>
+</div>
+"""
+
+
+def render_training_section(meta: dict) -> str:
+    """Render a training-curve image if one exists on disk, else a placeholder."""
+    group = meta.get("group", "Unknown")
+    title = meta.get("title", "")
+    web_url, exists = (None, False)
+    for ext in ("png", "jpg", "gif", "mp4"):
+        web_url, exists = resolve_media(group, f"{title}_train.{ext}")
+        if exists:
+            break
+    if not exists:
+        return "## Training Visualization\n\n_Training curve coming soon._\n"
+    if web_url.endswith(".mp4"):
+        media = f'<video width="100%" autoplay loop muted playsinline><source src="{web_url}" type="video/mp4"></video>'
+    else:
+        media = f'<img src="{web_url}" width="100%" alt="training curve">'
+    return f"""## Training Visualization
+
+<div style="display: flex; justify-content: center; margin-bottom: 20px;">
+    <div style="width: 100%; max-width: 512px; text-align: center;">
+        {media}
+    </div>
+</div>
+"""
+
+
+def render_run_section(meta: dict) -> str:
+    # Only emit a run command when we resolved a real registered task id, so we
+    # never print a bogus `--task <helper-module>` for non-task files.
+    task_id = meta.get("task_id")
+    if not task_id:
+        return ""
+    sim = pick_sim(meta)
+    return f"""## How to Run
+
+Instantiate and roll out this task with the standard task entrypoint
+(the robot is taken from the task's own scenario):
+
+```bash
+python {RUN_ENTRYPOINT} --task {task_id} --sim {sim}
+```
+
+Swap `--sim` for any backend the task supports (see the platform table in
+[Task Groups](../task_groups.md)).
+"""
+
+
 def generate_md(tid: str, meta: dict) -> str:
     title = meta.get("title", tid)
     desc = meta.get("description", DEFAULT_DESC)
@@ -115,8 +224,6 @@ def generate_md(tid: str, meta: dict) -> str:
 
     randoms = format_list_field(meta.get("randomizations", "None."))
     success = format_list_field(meta.get("success", "None."))
-    video_url = meta.get("video_url")
-    poster_url = meta.get("poster_url", "")
     official_url = meta.get("official_url", "")
     badge_section = render_badges(meta)
     official_link = f"\n**[🔗 Official Task Page]({official_url})**\n" if official_url else ""
@@ -132,43 +239,66 @@ def generate_md(tid: str, meta: dict) -> str:
 
 **Success Conditions:**{success}
 
-
-<div style="display: flex; justify-content: center; margin-bottom: 20px;">
-    <div style="width: 100%; max-width: 512px; text-align: center;">
-        <video width="100%" autoplay loop muted playsinline style="border-radius: 0px;">
-            <source src="{video_url}" type="video/mp4">
-        </video>
-        <p style="margin-top: 5px;"></p>
-    </div>
-</div>
-"""
+{render_run_section(meta)}
+{render_video_section(meta)}
+{render_training_section(meta)}"""
 
 
 def discover_all_tasks():
     task_meta = {}
     for py_path in glob.glob(os.path.join(TASK_CFG_ROOT, "*", "*.py")):
-        if os.path.basename(py_path).startswith("__"):
-            continue  # pass __init__.py
+        if os.path.basename(py_path).startswith("_"):
+            continue  # skip __init__.py and private infra modules (_passthrough, _locator, ...)
 
         try:
             with open(py_path) as f:
                 doc = f.read()
             tree = ast.parse(doc)
 
-            # docstring
-            docstring = ""
+            # Find the first class registered via @register_task: it carries the
+            # canonical task id (its first decorator arg) and usually the
+            # metadata docstring. Fall back to the first *Cfg class for the
+            # docstring if the registered class has none.
+            task_ids = []
+            deco_node = None
+            cfg_node = None
             for node in tree.body:
-                if isinstance(node, ast.ClassDef) and node.name.endswith("Cfg"):
-                    docstring = ast.get_docstring(node)
-                    break
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                if cfg_node is None and node.name.endswith("Cfg"):
+                    cfg_node = node
+                for deco in node.decorator_list:
+                    if (
+                        isinstance(deco, ast.Call)
+                        and getattr(deco.func, "id", "") == "register_task"
+                        and deco.args
+                        and isinstance(deco.args[0], ast.Constant)
+                        and isinstance(deco.args[0].value, str)
+                    ):
+                        task_ids.append(deco.args[0].value)
+                        if deco_node is None:
+                            deco_node = node
+                        break
 
-            meta = parse_docstring_metadata(docstring or "")
+            docstring = ""
+            if deco_node is not None:
+                docstring = ast.get_docstring(deco_node) or ""
+            if not docstring and cfg_node is not None:
+                docstring = ast.get_docstring(cfg_node) or ""
+
+            meta = parse_docstring_metadata(docstring)
+            meta["_task_ids"] = task_ids
 
             # title
             title = meta.get("title") or os.path.splitext(os.path.basename(py_path))[0].replace("_cfg", "")
             meta["title"] = title
             safe_title = re.sub(r"\W+", "_", title.strip().lower())
             meta["md_path"] = f"tasks_md/{safe_title}.md"
+
+            # canonical run-command task id (prefer the variant matching the title)
+            task_ids = meta.pop("_task_ids", [])
+            if task_ids:
+                meta["task_id"] = choose_task_id(task_ids, title)
 
             # group
             group_raw = os.path.basename(os.path.dirname(py_path))
