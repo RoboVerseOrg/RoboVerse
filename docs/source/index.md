@@ -147,6 +147,7 @@ Task Groups <dataset_benchmark/tasks/task_groups>
 Robots <dataset_benchmark/dataset/robots>
 Objects <dataset_benchmark/dataset/objects>
 Scenes <dataset_benchmark/dataset/scenes>
+Multi-Agent Datasets <dataset_benchmark/dataset/multiagent>
 Benchmark Overview <dataset_benchmark/benchmark/overview>
 Benchmark Results <dataset_benchmark/benchmark/results>
 Benchmark Usage <dataset_benchmark/benchmark/usage>
