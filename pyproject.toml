@@ -206,3 +206,6 @@ convention = "google"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "general: lightweight test that needs no simulator backend",
+]
