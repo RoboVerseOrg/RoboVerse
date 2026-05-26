@@ -82,10 +82,48 @@ PANDA_JOINTS = [
     "panda_finger_joint2",
 ]
 
-# A ManiSkill articulation state row is [pos(3), quat(4), linvel(3), angvel(3),
-# qpos(9), qvel(9)] = 31; an actor row is [pos(3), quat(4), linvel(3), angvel(3)]
-# = 13. Both use wxyz quaternions, matching RoboVerse.
+# ManiSkill packs an articulation env_state as (see mani_skill/utils/structs/
+# articulation.py::Articulation.get_state):
+#     torch.hstack([pose.p(3), pose.q(4), lin_vel(3), ang_vel(3), qpos, qvel])
+# so qpos starts at index 13 (matching set_state's `state[:, 13:13+max_dof]`).
+# An actor row is [pos(3), quat(4), lin_vel(3), ang_vel(3)] = 13. Quaternions are
+# SAPIEN poses, which are scalar-first **wxyz** (identity Pose.q == [1, 0, 0, 0]),
+# matching RoboVerse's convention -- so pos = row[:3], rot(wxyz) = row[3:7].
+_POSE_QUAT_SLICE = slice(3, 7)
 _QPOS_SLICE = slice(13, 13 + len(PANDA_JOINTS))
+# Minimum articulation row width we read (through the end of qpos).
+_MIN_ART_WIDTH = _QPOS_SLICE.stop
+
+
+def _validate_schema(traj) -> None:
+    """Fail loud if the recorded ManiSkill layout differs from what we slice.
+
+    Guards the hardcoded agent keys and qpos slice so a schema change raises a
+    clear error instead of silently reading the wrong columns as qpos.
+
+    Args:
+        traj: One episode group from the demo ``.h5``.
+
+    Raises:
+        KeyError: If an expected articulation/actor key is missing.
+        ValueError: If an articulation row is narrower than ``_MIN_ART_WIDTH``.
+    """
+    for articulation in AGENT_TO_ARTICULATION.values():
+        key = f"env_states/articulations/{articulation}"
+        if key not in traj:
+            available = list(traj["env_states/articulations"].keys())
+            raise KeyError(f"Expected articulation '{key}' not in demo; found articulations: {available}")
+        width = traj[key].shape[1]
+        if width < _MIN_ART_WIDTH:
+            raise ValueError(
+                f"Articulation '{articulation}' row width {width} < {_MIN_ART_WIDTH}; the ManiSkill state "
+                f"layout changed and qpos slice {_QPOS_SLICE} would read wrong columns."
+            )
+    for name in OBJECT_NAMES:
+        key = f"env_states/actors/{name}"
+        if key not in traj:
+            available = list(traj["env_states/actors"].keys())
+            raise KeyError(f"Expected actor '{key}' not in demo; found actors: {available}")
 
 
 def _ensure_demo(h5_glob: str, out_dir: str) -> str:
@@ -115,12 +153,12 @@ def _agent_slice(traj, articulation: str, agent_name: str) -> dict:
         state = {
             agent_name: {
                 "pos": art[i, :3].tolist(),
-                "rot": art[i, 3:7].tolist(),
+                "rot": art[i, _POSE_QUAT_SLICE].tolist(),  # wxyz
                 "dof_pos": dict(zip(PANDA_JOINTS, qpos.tolist())),
             }
         }
         for name, rows in objs.items():
-            state[name] = {"pos": rows[i, :3].tolist(), "rot": rows[i, 3:7].tolist()}
+            state[name] = {"pos": rows[i, :3].tolist(), "rot": rows[i, _POSE_QUAT_SLICE].tolist()}
         return state
 
     states = [frame_state(i) for i in range(n_frames)]
@@ -145,6 +183,7 @@ def convert_demo_to_v2(h5_path: str, out_path: str, demo_index: int | None) -> i
         else:
             key = next((k for k in keys if bool(f[k]["success"][-1])), keys[0])
         traj = f[key]
+        _validate_schema(traj)
         dataset = {
             name: [_agent_slice(traj, articulation, name)] for name, articulation in AGENT_TO_ARTICULATION.items()
         }
@@ -224,10 +263,14 @@ def main():
         obs_saver.add(handler.get_states(mode="tensor"))
 
     # 4. Replay the recorded states (kinematic playback) for both arms at once.
+    #    Pure state replay: set the recorded state, refresh the render, and read
+    #    it back -- NO handler.simulate(), which would advance one physics step
+    #    and perturb the just-set pose (this mirrors replay_demo.py's
+    #    `object_states` branch: set_states -> refresh_render -> get_states).
     for step, state in enumerate(states):
         log.debug(f"Step {step}")
         handler.set_states([state] * scenario.num_envs)
-        handler.simulate()
+        handler.refresh_render()
         if obs_saver is not None:
             obs_saver.add(handler.get_states(mode="tensor"))
 
