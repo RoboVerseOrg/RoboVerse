@@ -214,7 +214,7 @@ class Sapien3Handler(BaseSimHandler):
             # camera_id.set_pose(sapien.Pose(p=[2, 0, 0], q=[0, 0, -1, 0]))
             # self.camera_ids[camera.name] = camera_id
 
-        for object in [*self.objects, self.robot]:
+        for object in [*self.objects, *self.robots]:
             if isinstance(object, (ArticulationObjCfg, RobotCfg)):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
@@ -553,7 +553,7 @@ class Sapien3Handler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for robot in [self.robot]:
+        for robot in self.robots:
             robot_inst = self.object_ids[robot.name]
             assert isinstance(robot_inst, sapien_core.physx.PhysxArticulation)
             pose = robot_inst.get_pose()
