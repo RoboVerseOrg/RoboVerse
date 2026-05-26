@@ -28,7 +28,6 @@ try:
 except ImportError:
     pass
 
-import math
 import os
 from dataclasses import dataclass
 
@@ -50,74 +49,10 @@ from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 from roboverse_pack.robots import FrankaCfg
 
-# The two agents of the bimanual cell. Any number of agents works the same way.
-AGENT_NAMES = ["franka_left", "franka_right"]
-
-# Franka home pose, shared by both arms.
-FRANKA_HOME = {
-    "panda_joint1": 0.0,
-    "panda_joint2": -0.785398,
-    "panda_joint3": 0.0,
-    "panda_joint4": -2.356194,
-    "panda_joint5": 0.0,
-    "panda_joint6": 1.570796,
-    "panda_joint7": 0.785398,
-    "panda_finger_joint1": 0.04,
-    "panda_finger_joint2": 0.04,
-}
-
-
-def _agent_init_state(name: str, base_y: float) -> dict:
-    """Per-agent init entry: base pose + home joints, mirrored across the table."""
-    return {
-        name: {
-            "pos": [0.0, base_y, 0.0],
-            "rot": [1.0, 0.0, 0.0, 0.0],
-            "dof_pos": dict(FRANKA_HOME),
-        },
-        # Shared object the two arms coordinate around (a handover cube).
-        "cube": {"pos": [0.45, 0.0, 0.05], "rot": [1.0, 0.0, 0.0, 0.0]},
-    }
-
-
-def _scripted_action(name: str, phase: float) -> dict:
-    """A smooth coordinated reach: both arms sweep toward the center cube.
-
-    ``franka_right`` mirrors ``franka_left`` on joint 1 so the two arms move as a
-    coordinated pair rather than independently -- the visual signature of a
-    bimanual task.
-    """
-    s = 0.5 - 0.5 * math.cos(phase * math.pi)  # ease-in-out 0 -> 1 -> 0 over [0, 2]
-    mirror = -1.0 if name == "franka_right" else 1.0
-    target = dict(FRANKA_HOME)
-    target["panda_joint1"] = mirror * 0.8 * s
-    target["panda_joint2"] = -0.785398 + 0.5 * s
-    target["panda_joint4"] = -2.356194 + 0.6 * s
-    # Close the gripper as the arms converge, open as they retract.
-    grip = 0.04 - 0.035 * s
-    target["panda_finger_joint1"] = grip
-    target["panda_finger_joint2"] = grip
-    return {"dof_pos_target": target}
-
-
-def build_multiagent_dataset(num_steps: int) -> dict:
-    """Build a format-faithful multi-agent dataset: ``{robot_name: [demo, ...]}``."""
-    dataset: dict = {}
-    base_y = {"franka_left": 0.45, "franka_right": -0.45}
-    for name in AGENT_NAMES:
-        actions = []
-        for t in range(num_steps):
-            phase = 2.0 * t / max(num_steps - 1, 1)  # 0 -> 2
-            actions.append(_scripted_action(name, phase))
-        dataset[name] = [
-            {
-                "init_state": _agent_init_state(name, base_y[name]),
-                "actions": actions,
-                "states": None,
-            }
-        ]
-    dataset["metadata"] = {"num_agents": len(AGENT_NAMES), "agents": list(AGENT_NAMES)}
-    return dataset
+# The trajectory builder and constants live with the registered task (single
+# source of truth). The same dataset is replayable through the canonical pipeline:
+#   python scripts/advanced/replay_demo.py --task bimanual.franka_handover --sim mujoco
+from roboverse_pack.tasks.bimanual.franka_handover import AGENT_NAMES, CUBE_NAME, build_multiagent_dataset
 
 
 @dataclass
@@ -160,7 +95,7 @@ def main():
         robots=robots,
         objects=[
             PrimitiveCubeCfg(
-                name="cube", size=(0.05, 0.05, 0.05), color=[1.0, 0.2, 0.2], physics=PhysicStateType.RIGIDBODY
+                name=CUBE_NAME, size=(0.05, 0.05, 0.05), color=[1.0, 0.2, 0.2], physics=PhysicStateType.RIGIDBODY
             )
         ],
         cameras=[camera] if args.save_video else [],

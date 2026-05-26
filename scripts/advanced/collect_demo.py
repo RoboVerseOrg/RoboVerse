@@ -407,6 +407,20 @@ def main():
     global global_step, tot_success, tot_give_up
     task_cls = get_task_class(args.task)
 
+    # NOTE (multi-agent limitation): this collection script is single-robot by
+    # construction -- it builds the scenario with ``robots=[args.robot]`` and the
+    # DR / save pipeline below assumes one robot. Multi-agent (bimanual)
+    # *replay* is supported via scripts/advanced/replay_demo.py, but collecting
+    # fresh multi-agent demos here is not yet wired up. Fail loud rather than
+    # silently collecting only one arm of a multi-agent task.
+    _task_robots = task_cls.scenario.robots
+    if _task_robots is not None and len(_task_robots) > 1:
+        raise NotImplementedError(
+            f"Task '{args.task}' declares {len(_task_robots)} robots (multi-agent). collect_demo.py only "
+            "supports single-robot collection; use scripts/advanced/replay_demo.py to replay multi-agent "
+            "trajectories, or extend this script before collecting multi-agent demos."
+        )
+
     if args.task in {"stack_cube", "pick_cube", "pick_butter"}:
         dp_camera = True
     else:
