@@ -63,6 +63,15 @@ replays both arms simultaneously to video:
 MUJOCO_GL=egl python get_started/8_multiagent_dataset.py --sim mujoco
 ```
 
+The same trajectory is also exposed as a registered task, so it replays through
+the **canonical pipeline** (`scripts/advanced/replay_demo.py`) — which now passes
+the full robot list to `get_traj` whenever a task declares more than one robot:
+
+```bash
+MUJOCO_GL=egl python scripts/advanced/replay_demo.py \
+    --task bimanual.franka_handover --sim mujoco --headless
+```
+
 `get_started/9_maniskill_two_robot_stack_cube.py` does the same round trip with
 **real ManiSkill data**: it fetches the official `TwoRobotStackCube-v1`
 demonstrations, converts one episode into the name-keyed `*_v2` format, loads
@@ -89,3 +98,16 @@ Two distinct cases share this format:
   [RoboTwin Integration](../integrations/robotwin.md).
 - **Two independent agents** (two separate robot entities) — the case above,
   one keyed entry per agent.
+
+The single-embodiment bimanual case is demonstrated by
+`get_started/10_robotwin_aloha_replay.py`, but note:
+
+```{warning}
+`get_started/10_robotwin_aloha_replay.py` is **experimental** and **not
+out-of-the-box** (unlike examples 8 and 9, which run from a clean MuJoCo
+install). It needs a local RoboTwin clone, its ~3.74 GB asset pack, a separate
+`robotwin` conda env, and a curobo build for the local GPU arch to collect a
+bridge pickle first. The manipulated object is rendered as a primitive-cube
+proxy (not the real mesh), and only joint *motion* — not task *success* — has
+been confirmed. Treat it as a data-bridge demo, not a benchmark.
+```

@@ -1,5 +1,23 @@
 """Replay a RoboTwin bimanual demonstration in RoboVerse (ALOHA-AgileX).
 
+.. warning::
+
+   **EXPERIMENTAL — not an out-of-the-box path.** Unlike examples 8 and 9, this
+   one cannot be run from a clean RoboVerse install. It requires, on the local
+   machine:
+
+   - a cloned RoboTwin repo and its ~3.74 GB asset pack (incl. the ALOHA-AgileX
+     ``embodiments.zip`` whose URDF this script loads);
+   - a separate ``robotwin`` conda env, plus a curobo build for the local GPU
+     arch (e.g. sm_120), to *collect* a bridge pickle with
+     ``tools/robotwin_integration/collect_bridge.py``;
+   - the resulting bridge pickle passed via ``--bridge``.
+
+   It is also **only a partial-fidelity** view: the manipulated object is drawn
+   as a primitive-cube proxy (not RoboTwin's real mesh), and only joint *motion*
+   has been confirmed to replay -- task *success* has not been verified in
+   RoboVerse. Treat this as a data-bridge demo, not a benchmark result.
+
 RoboTwin is a dual-arm manipulation benchmark whose demos are *single-embodiment
 bimanual*: one articulation (the ALOHA-AgileX: two arx5 arms on an AgileX base)
 whose action spans both arms. RoboVerse's trajectory format expresses this as a
