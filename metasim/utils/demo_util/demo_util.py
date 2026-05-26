@@ -69,15 +69,34 @@ def _get_traj_multiagent(
     the per-agent v3 streams are merged in lock-step into a single namespaced
     trajectory. Multi-agent trajectories require the v3 namespaced format, because
     that is what keeps each agent's observations and actions indexed by name.
+
+    Agents are aligned to the shortest common length: if they carry a differing
+    number of demos (or differing per-demo horizons), the merge keeps the overlap
+    and warns. Robot names must be unique, since each agent's slice is addressed
+    by ``robot.name``; duplicate names raise rather than silently collapse.
     """
     if not robots:
         raise ValueError("get_traj received an empty robot list")
     if not v2_as_v3:
         raise ValueError("Multi-agent trajectories require the v3 namespaced format; call get_traj with v2_as_v3=True")
 
-    log.info(f"Reading multi-agent trajectory for {len(robots)} agents: {[r.name for r in robots]}")
+    names = [robot.name for robot in robots]
+    if len(set(names)) != len(names):
+        raise ValueError(
+            f"Multi-agent robots must have unique names so each agent's slice is addressable by name, "
+            f"but got duplicates in {names}. Give each agent a distinct name, e.g. robot.replace(name=...)."
+        )
+
+    log.info(f"Reading multi-agent trajectory for {len(robots)} agents: {names}")
     per_agent = [get_traj(traj_filepath, robot, handler=handler, v2_as_v3=True) for robot in robots]
     init_list, action_list, state_list = zip(*per_agent)
+
+    demo_counts = [len(init) for init in init_list]
+    if len(set(demo_counts)) > 1:
+        log.warning(
+            f"Multi-agent agents have differing demo counts {dict(zip(names, demo_counts))}; "
+            f"merging the {min(demo_counts)} demo(s) common to all agents."
+        )
     return (
         _merge_agent_init_states(init_list),
         _merge_agent_actions(action_list),

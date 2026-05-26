@@ -116,3 +116,45 @@ def test_multiagent_empty_robot_list(tmp_path):
     path = _write_dataset(tmp_path, ["franka_left"])
     with pytest.raises(ValueError, match="empty robot list"):
         get_traj(path, [])
+
+
+@pytest.mark.general
+def test_multiagent_duplicate_names_rejected(tmp_path):
+    """Duplicate robot names would collapse two agents into one -> must raise.
+
+    Each agent's slice is addressed by ``robot.name``; two robots sharing a name
+    read the same slice and the name-keyed union silently keeps only one. Reject
+    it up front instead.
+    """
+    path = _write_dataset(tmp_path, ["franka_left", "franka_right"])
+    with pytest.raises(ValueError, match="unique names"):
+        get_traj(path, [_robot("franka_left"), _robot("franka_left")])
+
+
+@pytest.mark.general
+def test_multiagent_uneven_demo_counts_warns_and_truncates(tmp_path):
+    """Agents with differing demo counts merge to the common overlap and warn."""
+    from loguru import logger
+
+    # franka_left has 2 demos, franka_right has 1.
+    dataset = {
+        "franka_left": [_agent_demo("franka_left", 0, False), _agent_demo("franka_left", 5, False)],
+        "franka_right": [_agent_demo("franka_right", 1, False)],
+        "metadata": {"num_agents": 2, "agents": ["franka_left", "franka_right"]},
+    }
+    path = str(tmp_path / "uneven_v2.pkl")
+    save_traj_file(dataset, path)
+
+    messages: list[str] = []
+    sink_id = logger.add(messages.append, level="WARNING")
+    try:
+        init_states, all_actions, _ = get_traj(path, [_robot("franka_left"), _robot("franka_right")])
+    finally:
+        logger.remove(sink_id)
+
+    # Aligned to the shortest agent (1 demo), both arms still present.
+    assert len(init_states) == 1
+    assert set(init_states[0]["robots"]) == {"franka_left", "franka_right"}
+    assert len(all_actions) == 1
+    # The truncation was surfaced, not silent.
+    assert any("differing demo counts" in str(m) for m in messages)
