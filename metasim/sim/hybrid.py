@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
+from loguru import logger
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -90,7 +91,17 @@ class HybridSimHandler(BaseSimHandler):
         # Mirrors what ``_simulate`` does after stepping.
         try:
             physics_states = self.physics_handler._get_states(env_ids)
-        except Exception:
+        except Exception as exc:
+            # WHY this catch exists: most render handlers (Blender) can't apply a dict-state
+            # robot directly (need body_state from physics FK). When physics _get_states fails
+            # we fall through to pass the original dict to render, which then often raises a
+            # less actionable error ("cannot apply dof_pos directly"). Surface the underlying
+            # reason at WARN level so callers can debug (e.g. EGL thread-affinity issues where
+            # physics rendering happens on a non-main thread).
+            logger.warning(
+                "HybridSimHandler.set_states: physics._get_states raised "
+                f"({type(exc).__name__}: {exc}); falling back to dict-state path on render handler."
+            )
             physics_states = None
         if physics_states is not None:
             try:
