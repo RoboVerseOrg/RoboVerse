@@ -1755,6 +1755,12 @@ class BlenderHandler(BaseSimHandler):
 
     def _configure_cycles_device(self, device: str) -> str:
         scene = self.context.scene
+        # Hardware override: Blender 4.2 Cycles cannot compile CUDA kernels for
+        # Hopper sm_90 (GH200) -> GPU renders all-black. Allow forcing the device
+        # via env (e.g. METASIM_CYCLES_DEVICE=CPU) without editing every script.
+        _env_dev = os.environ.get("METASIM_CYCLES_DEVICE")
+        if _env_dev:
+            device = _env_dev
         normalized = device.upper()
         if normalized == "CPU":
             scene.cycles.device = "CPU"
