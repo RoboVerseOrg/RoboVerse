@@ -77,6 +77,21 @@ class HybridSimHandler(BaseSimHandler):
         finally:
             self.render_handler.close()
 
+    def set_seed(self, seed: int) -> None:
+        """Forward the reproducibility seed to both wrapped handlers.
+
+        ``BaseSimHandler.set_seed`` seeds Python ``random`` + NumPy + Torch
+        globally — once per process, not per handler — so calling it from
+        the hybrid handler alone is technically enough today. We still
+        forward explicitly: if either wrapped backend later adds a
+        backend-specific override (Newton warp RNG, Sapien physics
+        noise), hybrid keeps the contract intact without further code
+        changes.
+        """
+        super().set_seed(seed)
+        self.physics_handler.set_seed(seed)
+        self.render_handler.set_seed(seed)
+
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set the dof targets of the robot in the physics handler."""
         self.physics_handler.set_dof_targets(actions)

@@ -195,3 +195,25 @@ def test_recv_or_surface_raises_clear_message_when_queue_empty():
 
     with pytest.raises(RuntimeError, match=r"died without reporting"):
         handler._recv_or_surface(0)
+
+
+@pytest.mark.general
+def test_set_seed_forwards_to_every_worker():
+    """Reproducibility contract for parallel rollouts: ``set_seed(N)`` on
+    the parent must seed each worker process. Without per-worker
+    forwarding, ``env.reset(seed=42)`` only seeds the parent's RNG and
+    the actual per-env rollouts diverge despite the seed."""
+    remotes = [_FakeRemote(), _FakeRemote(), _FakeRemote()]
+    handler = _make_parallel_stub_handler(
+        remotes=remotes,
+        processes=[_FakeProcess(alive=True), _FakeProcess(alive=True), _FakeProcess(alive=True)],
+    )
+
+    handler.set_seed(123)
+
+    # Each worker's pipe should have received a ("set_seed", (123,)) command.
+    for i, remote in enumerate(remotes):
+        assert remote.sent, f"worker {i} received no command"
+        cmd, payload = remote.sent[-1]
+        assert cmd == "set_seed", f"worker {i} got {cmd!r}, expected 'set_seed'"
+        assert payload == (123,), f"worker {i} got payload {payload!r}, expected (123,)"

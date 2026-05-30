@@ -58,6 +58,8 @@ def _worker(
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0])
+            elif cmd == "set_seed":
+                env.set_seed(data[0])
             elif cmd == "handshake":
                 # This is used to make sure that the environment is initialized before sending any commands
                 remote.send("handshake")
@@ -256,6 +258,27 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def _simulate(self):
             for remote in self.remotes:
                 remote.send(("simulate", (None,)))
+            self._check_error()
+
+        def set_seed(self, seed: int) -> None:
+            """Seed the parent + every worker process.
+
+            ``BaseSimHandler.set_seed`` seeds the parent's NumPy / Torch /
+            random — but each multiprocessing worker has its own process-
+            level RNG that the parent's seed never reaches. Forward to
+            each worker so a single ``env.reset(seed=42)`` makes the whole
+            parallel rollout reproducible, not just the parent's view.
+
+            Note that deriving a distinct per-worker seed (e.g. ``seed + rank``)
+            would also be defensible — we use the same seed everywhere
+            because that matches what most gym wrappers do; if a caller
+            wants per-env seeds they can call ``set_seed`` per remote
+            themselves, which still works because each worker's
+            ``env.set_seed`` is forwarded one-to-one.
+            """
+            super().set_seed(seed)
+            for remote in self.remotes:
+                remote.send(("set_seed", (seed,)))
             self._check_error()
 
         def refresh_render(self):
