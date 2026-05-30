@@ -95,6 +95,47 @@ _BACKEND_METHOD_PARAMS = [
 ]
 
 
+# Public properties every concrete handler must expose. Captured here
+# separately because ``__qualname__`` checks (used for methods above)
+# don't apply to properties — the descriptor lives on the class and
+# we need ``fget.__qualname__`` instead. ``actions_cache`` previously
+# slipped past the method test entirely because it's a property, and
+# only the dynamic-attribute fallback in subclasses kept Parallel /
+# Hybrid working until this contract landed at the base.
+_REQUIRED_PROPERTIES = (
+    "actions_cache",
+    "device",
+)
+
+
+_BACKEND_PROPERTY_PARAMS = [
+    pytest.param(cls, p, id=f"{cls.__name__}-{p}")
+    for cls in _import_all_backend_handlers()
+    for p in _REQUIRED_PROPERTIES
+]
+
+
+@pytest.mark.general
+@pytest.mark.parametrize("cls,prop", _BACKEND_PROPERTY_PARAMS)
+def test_backend_exposes_contract_property(cls: type[BaseSimHandler], prop: str):
+    """Every concrete handler must expose each documented contract
+    property — not as a method, not as a plain attribute, but as a
+    real ``@property``-style descriptor on the class.
+
+    Previously ``actions_cache`` was implemented as a property on 8
+    concrete backends but missing from base, ParallelHandler, and
+    HybridSimHandler — so ``handler.actions_cache`` raised
+    ``AttributeError`` on the parallel path even though tests asserted
+    it. The contract is now owned by the base; this test guards the
+    surface so the same gap can't reopen.
+    """
+    descriptor = getattr(cls, prop, None)
+    assert descriptor is not None, (
+        f"{cls.__name__} does not expose the contract property {prop!r}. "
+        f"Add it to the base or override on the subclass."
+    )
+
+
 @pytest.mark.general
 @pytest.mark.parametrize("cls,method", _BACKEND_METHOD_PARAMS)
 def test_backend_overrides_contract_method(cls: type[BaseSimHandler], method: str):
