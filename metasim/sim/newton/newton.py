@@ -24,13 +24,6 @@ from newton.sensors import SensorContact, SensorTiledCamera
 from newton.solvers import SolverMuJoCo
 from newton.viewer import ViewerGL
 
-# Version-sensitive symbols are isolated in _newton_compat to keep
-# this handler readable. Backward-compat: works on newton < 1.2 (where
-# JointType lived under _src.sim.joints and populate_contacts was a
-# free function) AND newton >= 1.2 (public JointType, contacts
-# auto-populated by solver). See _newton_compat.py.
-from ._newton_compat import JointType, add_mjcf, populate_contacts, set_current_world
-
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
@@ -44,6 +37,13 @@ from metasim.utils.state import (
     action_input_to_tensor,
     state_tensor_to_nested,
 )
+
+# Version-sensitive symbols are isolated in _newton_compat to keep
+# this handler readable. Backward-compat: works on newton < 1.2 (where
+# JointType lived under _src.sim.joints and populate_contacts was a
+# free function) AND newton >= 1.2 (public JointType, contacts
+# auto-populated by solver). See _newton_compat.py.
+from ._newton_compat import JointType, add_mjcf, populate_contacts, set_current_world
 
 
 def _physics_mode_name(obj) -> str | None:
@@ -493,9 +493,7 @@ class NewtonHandler(BaseSimHandler):
 
         if urdf_path is None:
             log.error(f"Robot {robot.name} has no MJCF (.xml) or URDF path")
-            raise ValueError(
-                f"Robot {robot.name} requires mjcf_path (.xml) or urdf_path for Newton"
-            )
+            raise ValueError(f"Robot {robot.name} requires mjcf_path (.xml) or urdf_path for Newton")
 
         builder.add_urdf(
             urdf_path,
@@ -993,9 +991,33 @@ class NewtonHandler(BaseSimHandler):
                     if actuator.armature is not None:
                         joint_armature[qd_start:qd_end] = actuator.armature
                         updated = True
+                    stiffness_overridden = (actuator.stiffness is not None) or (actuator.damping is not None)
                     if actuator.effort_limit_sim is not None:
                         joint_effort_limit[qd_start:qd_end] = actuator.effort_limit_sim
                         updated = True
+                    elif stiffness_overridden and env_id == 0:
+                        # Same partial-override warning as MuJoCo: the cfg replaced
+                        # the asset-authored PD gain but left effort_limit_sim
+                        # unset, so Newton's joint_effort_limit (lifted from the
+                        # MJCF/URDF the model was built from) silently dominates
+                        # the new PD output. Warn once per (robot, joint).
+                        try:
+                            existing_limit = float(joint_effort_limit[qd_start])
+                        except Exception:
+                            existing_limit = float("inf")
+                        if existing_limit > 0 and existing_limit < 1e30:
+                            cache_key = (robot.name, joint_name)
+                            warned = getattr(self, "_actuator_force_limit_warned", set())
+                            if cache_key not in warned:
+                                log.warning(
+                                    f"Newton actuator '{robot.name}:{joint_name}': cfg overrides "
+                                    f"stiffness/damping but leaves effort_limit_sim unset — the "
+                                    f"asset-authored joint_effort_limit ({existing_limit}) stays "
+                                    f"active and may clamp the new PD output. Cross-backend behaviour "
+                                    f"will diverge unless effort_limit_sim is specified."
+                                )
+                                warned.add(cache_key)
+                                self._actuator_force_limit_warned = warned
 
                     vel_limit = (
                         actuator.velocity_limit_sim
@@ -1105,13 +1127,42 @@ class NewtonHandler(BaseSimHandler):
         return obj_map.get(joint_name)
 
     def _collect_joint_names(self, env_id: int, obj_name: str) -> list[str]:
-        """Collect 1-DoF joint names for an object in a given env."""
-        names: list[str] = []
+        """Collect 1-DoF joint names for an object in a given env.
+
+        Newton stores joints under fully-scoped MJCF paths
+        (e.g. ``box_base/box_joint``). Every other backend (mujoco /
+        sapien3 / isaacgym / isaacsim) returns the bare joint name
+        (e.g. ``box_joint``) in ``_get_joint_names`` and uses it as
+        the ``dof_pos`` dict key in ``get_states(mode="dict")``. Cross-
+        platform tasks that do ``dof_pos["box_joint"]`` silently broke
+        on Newton before this normalization landed.
+
+        Strip the object prefix when the bare suffix is unambiguous
+        within this object — matches the alias logic in
+        ``_get_obj_joint_name_map``. Falls back to the full Newton key
+        when two joints would collide on the bare name, so we never
+        lose information for objects with sub-articulations.
+        """
+        joint_indices: list[int] = []
         for joint_idx in self._get_joint_indices(env_id, obj_name):
             qd_start = self._joint_qd_starts[joint_idx]
             qd_end = self._joint_qd_starts[joint_idx + 1]
             if qd_end - qd_start == 1:
-                names.append(self._model.joint_key[joint_idx])
+                joint_indices.append(joint_idx)
+
+        # Count bare-name occurrences to detect ambiguity.
+        bare_counts: dict[str, int] = {}
+        for joint_idx in joint_indices:
+            bare = self._model.joint_key[joint_idx].split("/")[-1]
+            bare_counts[bare] = bare_counts.get(bare, 0) + 1
+
+        names: list[str] = []
+        for joint_idx in joint_indices:
+            full = self._model.joint_key[joint_idx]
+            bare = full.split("/")[-1]
+            # Only strip when unambiguous within this object; full key
+            # also remains resolvable via _get_obj_joint_name_map.
+            names.append(bare if bare_counts[bare] == 1 else full)
         return names
 
     @staticmethod
@@ -1362,7 +1413,8 @@ class NewtonHandler(BaseSimHandler):
                             depth_tensor = depth_tensor[use_env_ids]
 
                     intrinsics = (
-                        torch.tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
+                        torch
+                        .tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
                         .unsqueeze(0)
                         .expand(len(use_env_ids), -1, -1)
                     )
@@ -2094,6 +2146,20 @@ class NewtonHandler(BaseSimHandler):
         )
         joint_f = wp2torch(self._control.joint_f) if self._control.joint_f is not None else None
 
+        # Silent-no-op guard: if ALL three control buffers are None, no write here
+        # can possibly land. Warn once per handler so the caller knows their
+        # action was dropped — same antipattern that broke MuJoCo set_states.
+        if joint_target_pos is None and joint_target_vel is None and joint_f is None:
+            if not getattr(self, "_set_dof_targets_warned_no_control", False):
+                log.warning(
+                    "NewtonHandler._set_dof_targets: model.control() has no joint_target_pos, "
+                    "joint_target_vel, or joint_f buffers — every action is being silently "
+                    "dropped. Check that the model includes position/velocity/effort actuators "
+                    "for the targeted joints."
+                )
+                self._set_dof_targets_warned_no_control = True
+            return
+
         # Fast path: tensor/ndarray actions (vectorized envs).
         if isinstance(actions, (torch.Tensor, np.ndarray)):
             if not self.robots:
@@ -2439,8 +2505,8 @@ class NewtonHandler(BaseSimHandler):
         body_names = [mjm.body(i).name for i in range(mjm.nbody)]
         out = torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device)
         try:
-            import warp as wp
             import mujoco_warp._src.support as _mjw_support
+            import warp as wp
 
             d = sv.mjw_data
             m = sv.mjw_model
@@ -2469,7 +2535,7 @@ class NewtonHandler(BaseSimHandler):
                 if 0 <= g1 < gbody.shape[0]:
                     acc[w, int(gbody[g1])] -= lin[i]
             out = torch.from_numpy(acc).to(self.device)
-        except Exception as exc:  # noqa: BLE001 — stay finite on any drift
+        except Exception as exc:
             log.warning(f"get_net_contact_forces_by_body failed ({type(exc).__name__}: {exc}); returning zeros")
             return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
         return out, body_names
@@ -2497,7 +2563,7 @@ class NewtonHandler(BaseSimHandler):
                 return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
             v = np.asarray(arr.numpy()).reshape(self.num_envs, mjm.nbody, 3)
             return torch.from_numpy(v).to(self.device), body_names
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning(f"get_subtree_field({field}) failed ({type(exc).__name__}: {exc}); returning zeros")
             return torch.zeros((self.num_envs, mjm.nbody, 3), device=self.device), body_names
 
