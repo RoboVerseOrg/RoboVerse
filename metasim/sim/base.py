@@ -122,11 +122,16 @@ class BaseSimHandler(ABC):
         except ImportError:  # pragma: no cover — torch is a hard dep
             pass
 
-    # Recognised dict-state keys. Anything outside this set is either a typo or
-    # a control input (dof_pos_target / dof_vel_target / dof_torque) that should
-    # be sent via ``set_dof_targets`` instead — ``set_states`` is for hard teleport.
-    _SET_STATES_VALID_OBJECT_KEYS = frozenset({"pos", "rot", "vel", "ang_vel", "dof_pos", "dof_vel"})
-    _SET_STATES_VALID_ROBOT_KEYS = frozenset({"pos", "rot", "vel", "ang_vel", "dof_pos", "dof_vel"})
+    # Keys that ``_set_states`` actually writes to the simulator.
+    _SET_STATES_VALID_OBJECT_KEYS = frozenset({"pos", "rot", "dof_pos"})
+    _SET_STATES_VALID_ROBOT_KEYS = frozenset({"pos", "rot", "dof_pos"})
+    # Velocity fields are populated by ``get_states`` but no backend honours
+    # them in ``_set_states`` today (MuJoCo zeros qvel, Sapien3's
+    # ``set_velocity`` calls are commented out). Listing them here makes the
+    # silent drop visible instead of letting callers believe they are
+    # initialising momentum.
+    _SET_STATES_READ_ONLY_KEYS = frozenset({"vel", "ang_vel", "dof_vel"})
+    # Control inputs that belong in ``set_dof_targets``, not ``set_states``.
     _SET_STATES_CONTROL_KEYS = frozenset({"dof_pos_target", "dof_vel_target", "dof_torque"})
 
     def _warn_set_states_keys(self, states: DictStateBatch) -> None:
@@ -186,6 +191,15 @@ class BaseSimHandler(ABC):
                                 f"set_states received '{key}' under '{role}' — this is a control "
                                 f"input, not a state. set_states will NOT apply it. "
                                 f"Use set_dof_targets(...) to drive joints to a target."
+                            )
+                        elif key in self._SET_STATES_READ_ONLY_KEYS:
+                            log.warning(
+                                f"set_states received '{key}' under '{role}' — velocity fields are "
+                                f"populated by get_states for inspection, but no backend currently "
+                                f"writes them in _set_states (MuJoCo zeros qvel, Sapien3 ignores). "
+                                f"The value will be dropped. Pass it through simulate() with a "
+                                f"non-zero initial action instead, or open a feature request for "
+                                f"backend-side velocity initialisation."
                             )
                         else:
                             log.warning(

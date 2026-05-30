@@ -128,6 +128,34 @@ def test_distinct_unknown_keys_each_warn_once(loguru_warnings):
 
 
 @pytest.mark.general
+def test_read_only_velocity_keys_warn(loguru_warnings):
+    """``vel`` / ``ang_vel`` / ``dof_vel`` are populated by get_states
+    but no backend writes them in _set_states — must warn so callers
+    don't believe they are initialising momentum."""
+    handler = _StubHandler()
+    handler.set_states(_state(robot_keys={"vel": [1, 0, 0]}))
+    handler.set_states(_state(robot_keys={"ang_vel": [0, 1, 0]}))
+    handler.set_states(_state(robot_keys={"dof_vel": {"j0": 0.5}}))
+    out = "\n".join(loguru_warnings)
+    assert "vel" in out
+    assert "no backend currently" in out
+    # Each key should warn exactly once (dedupe).
+    assert out.count("MuJoCo zeros qvel") == 3
+
+
+@pytest.mark.general
+def test_read_only_velocity_warning_dedupes(loguru_warnings):
+    """Hot-path replay (set_states(get_states())) must not spam."""
+    handler = _StubHandler()
+    state = _state(robot_keys={"vel": [1, 0, 0]})
+    for _ in range(5):
+        handler.set_states(state)
+    out = "\n".join(loguru_warnings)
+    assert out.count("vel") >= 1
+    assert out.count("MuJoCo zeros qvel") == 1
+
+
+@pytest.mark.general
 def test_object_role_warns_with_object_in_message(loguru_warnings):
     handler = _StubHandler()
     states = _state(object_keys={"dof_pos_target": {"j0": 0.5}})
