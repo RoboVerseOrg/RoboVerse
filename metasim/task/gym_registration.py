@@ -57,7 +57,11 @@ class GymEnvWrapper(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset the environment and return the initial observation."""
         super().reset(seed=seed)
-        obs, info = self.task_env.reset()
+        # Forward the seed to the task so it can propagate to the handler.
+        # Before: ``task_env.reset()`` was called without the seed, so
+        # ``env.reset(seed=42)`` only seeded gym's base RNG and rollouts were
+        # not actually reproducible on the simulator side.
+        obs, info = self.task_env.reset(seed=seed)
         return obs, info
 
     def step(self, action):
@@ -117,7 +121,9 @@ class GymVectorEnvAdapter(VectorEnv):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""
-        obs, info = self.task_env.reset()
+        # Forward the seed so it can propagate to the handler — see the
+        # single-env adapter above for the rationale.
+        obs, info = self.task_env.reset(seed=seed)
         return obs, info
 
     def step_async(self, actions) -> None:

@@ -101,16 +101,32 @@ class RLTaskEnv(BaseTaskEnv):
     # -------------------------------------------------------------------------
     # env api
     # -------------------------------------------------------------------------
-    def reset(self, states=None, env_ids=None) -> tuple[torch.Tensor, Info]:
+    def reset(self, states=None, env_ids=None, seed: int | None = None) -> tuple[torch.Tensor, Info]:
         """Reset selected envs.
 
         Args:
             env_ids: Indices to reset; None resets all.
             states: Optional external states to set for the selected envs. If None, use initial states.
+            seed: Optional reproducibility seed forwarded to ``handler.set_seed`` when
+                the backend implements it. See ``TaskBase.reset`` for the warn-if-
+                unsupported semantics.
 
         Returns:
             (obs, info).
         """
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
+            elif not getattr(self, "_seed_unsupported_warned", False):
+                from loguru import logger as _log
+
+                _log.warning(
+                    f"{type(self).__name__}: handler "
+                    f"{type(self.handler).__name__} does not implement set_seed; "
+                    f"reset(seed={seed}) is a no-op on the simulator side."
+                )
+                self._seed_unsupported_warned = True
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 

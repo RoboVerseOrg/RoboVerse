@@ -181,18 +181,42 @@ class BaseTaskEnv:
         self,
         states=None,
         env_ids: list[int] | None = None,
+        seed: int | None = None,
     ) -> tuple[Obs, Info | None]:
         """Reset the environment.
 
         Args:
             env_ids: The environment ids to reset
             states: Optional external states to set for the selected envs. If None, use initial states.
+            seed: Optional reproducibility seed. Propagated to ``handler.set_seed`` when
+                the backend implements it. If the backend doesn't yet implement
+                ``set_seed``, a one-shot warning is logged so the caller knows the
+                ``env.reset(seed=N)`` contract isn't fully honoured on that backend
+                rather than silently believing the rollout is reproducible.
 
         Returns:
             obs: The observation
             priv_obs: The privileged observation
             info: The info
         """
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
+            else:
+                # Warn once per task instance, not per reset — RL training resets
+                # thousands of times and a per-call warning would drown the log.
+                if not getattr(self, "_seed_unsupported_warned", False):
+                    from loguru import logger as _log
+
+                    _log.warning(
+                        f"{type(self).__name__}: handler "
+                        f"{type(self.handler).__name__} does not implement set_seed; "
+                        f"env.reset(seed={seed}) only seeds the gym base RNG, not the "
+                        f"simulator. Rollouts will not be bit-reproducible across runs "
+                        f"until the backend adds set_seed."
+                    )
+                    self._seed_unsupported_warned = True
         if env_ids is None:
             env_ids = list(range(self.handler.num_envs))
 
