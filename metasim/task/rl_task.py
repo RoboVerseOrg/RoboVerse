@@ -171,7 +171,14 @@ class RLTaskEnv(BaseTaskEnv):
         states = self.handler.get_states(mode="tensor")
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
-        reward = self._reward(states)
+        # Cross-backend contract: normalise reward to (num_envs,) float32 on
+        # self.device. Individual ``_reward`` implementations may return a
+        # tensor on whatever device / dtype get_states produced
+        # (e.g. MuJoCo CPU vs Newton CUDA), which then leaked into the
+        # gym-side reward tuple — same task → different reward dtype per
+        # backend. Forcing the cast here keeps the public step() contract
+        # uniform without requiring every task to remember to convert.
+        reward = self._reward(states).to(device=self.device, dtype=torch.float32)
         terminated = self._terminated(states).bool().to(self.device)
         time_out = self._time_out(states).bool().to(self.device)
 
